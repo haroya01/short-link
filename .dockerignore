@@ -1,0 +1,13 @@
+.git
+.github
+.gradle
+.idea
+build
+logs
+resources
+*.md
+.gitattributes
+.gitignore
+.gitmodules
+.tool-versions
+lefthook.yml
