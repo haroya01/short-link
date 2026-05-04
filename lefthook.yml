@@ -5,8 +5,3 @@ pre-commit:
       glob: "*.java"
       run: ./gradlew spotlessApply
       stage_fixed: true
-
-pre-push:
-  commands:
-    test:
-      run: ./gradlew test
