@@ -61,6 +61,14 @@ jobs:
 
       - run: ./gradlew test
 
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: build/reports/jacoco/test/jacocoTestReport.xml
+          fail_ci_if_error: false
+
       - run: ./gradlew build -x test -x spotlessCheck
 
       - name: Stop backing services
