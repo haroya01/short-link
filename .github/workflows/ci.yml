@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - uses: actions/setup-java@v4
         with:
@@ -23,8 +25,43 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Start backing services
+        run: docker compose -f resources/docker-compose.yml up -d
+
+      - name: Wait for MySQL
+        run: |
+          for i in {1..30}; do
+            if docker exec short-link-mysql mysqladmin ping -h localhost -u short_link -pharoya0117! --silent 2>/dev/null; then
+              echo "MySQL ready"
+              exit 0
+            fi
+            echo "Waiting for MySQL... ($i/30)"
+            sleep 2
+          done
+          echo "MySQL failed to start"
+          docker compose -f resources/docker-compose.yml logs
+          exit 1
+
+      - name: Wait for Redis
+        run: |
+          for i in {1..30}; do
+            if docker exec short-link-redis redis-cli -a haroya0117! ping 2>/dev/null | grep -q PONG; then
+              echo "Redis ready"
+              exit 0
+            fi
+            echo "Waiting for Redis... ($i/30)"
+            sleep 2
+          done
+          echo "Redis failed to start"
+          docker compose -f resources/docker-compose.yml logs
+          exit 1
+
       - run: ./gradlew spotlessCheck
 
       - run: ./gradlew test
 
       - run: ./gradlew build -x test -x spotlessCheck
+
+      - name: Stop backing services
+        if: always()
+        run: docker compose -f resources/docker-compose.yml down -v
