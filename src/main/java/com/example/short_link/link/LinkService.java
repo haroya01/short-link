@@ -1,21 +1,26 @@
 package com.example.short_link.link;
 
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class LinkService {
 
   private static final int MAX_ATTEMPTS = 5;
 
   private final LinkRepository repository;
   private final ShortCodeGenerator generator;
+  private final String baseUrl;
 
-  @Value("${short-link.base-url}")
-  private String baseUrl;
+  public LinkService(
+      LinkRepository repository,
+      ShortCodeGenerator generator,
+      @Value("${short-link.base-url}") String baseUrl) {
+    this.repository = repository;
+    this.generator = generator;
+    this.baseUrl = baseUrl;
+  }
 
   @Transactional
   public CreateLinkResponse create(String url) {
