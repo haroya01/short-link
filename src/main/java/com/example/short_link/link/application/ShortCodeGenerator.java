@@ -1,4 +1,4 @@
-package com.example.short_link.link;
+package com.example.short_link.link.application;
 
 import java.security.SecureRandom;
 import org.springframework.stereotype.Component;

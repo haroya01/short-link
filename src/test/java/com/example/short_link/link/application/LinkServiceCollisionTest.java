@@ -1,4 +1,4 @@
-package com.example.short_link.link;
+package com.example.short_link.link.application;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -8,6 +8,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.domain.LinkRepository;
 import org.junit.jupiter.api.Test;
 
 class LinkServiceCollisionTest {
@@ -19,7 +20,7 @@ class LinkServiceCollisionTest {
     when(generator.generate()).thenReturn("abc1234");
     when(repository.existsByShortCode("abc1234")).thenReturn(true);
 
-    LinkService service = new LinkService(repository, generator, "http://localhost");
+    LinkService service = new LinkService(repository, generator);
 
     assertThatThrownBy(() -> service.create("https://example.com"))
         .isInstanceOf(ShortCodeGenerationException.class);

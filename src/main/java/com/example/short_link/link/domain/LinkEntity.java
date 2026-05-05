@@ -1,4 +1,4 @@
-package com.example.short_link.link;
+package com.example.short_link.link.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,4 +1,4 @@
-package com.example.short_link.link;
+package com.example.short_link.link.application;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

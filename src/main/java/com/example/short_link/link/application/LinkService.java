@@ -1,6 +1,7 @@
-package com.example.short_link.link;
+package com.example.short_link.link.application;
 
-import org.springframework.beans.factory.annotation.Value;
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,24 +12,18 @@ public class LinkService {
 
   private final LinkRepository repository;
   private final ShortCodeGenerator generator;
-  private final String baseUrl;
 
-  public LinkService(
-      LinkRepository repository,
-      ShortCodeGenerator generator,
-      @Value("${short-link.base-url}") String baseUrl) {
+  public LinkService(LinkRepository repository, ShortCodeGenerator generator) {
     this.repository = repository;
     this.generator = generator;
-    this.baseUrl = baseUrl;
   }
 
   @Transactional
-  public CreateLinkResponse create(String url) {
+  public LinkEntity create(String url) {
     for (int i = 0; i < MAX_ATTEMPTS; i++) {
       String code = generator.generate();
       if (!repository.existsByShortCode(code)) {
-        LinkEntity saved = repository.save(new LinkEntity(url, code));
-        return new CreateLinkResponse(saved.getShortCode(), baseUrl + "/" + saved.getShortCode());
+        return repository.save(new LinkEntity(url, code));
       }
     }
     throw new ShortCodeGenerationException();

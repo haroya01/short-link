@@ -1,6 +1,8 @@
-package com.example.short_link.link;
+package com.example.short_link.link.api;
 
+import static org.hamcrest.Matchers.startsWith;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -27,7 +29,8 @@ class LinkControllerTest {
             post("/api/v1/links")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"url\":\"https://example.com/path\"}"))
-        .andExpect(status().isOk())
+        .andExpect(status().isCreated())
+        .andExpect(header().string("Location", startsWith("http://localhost:8080/")))
         .andExpect(jsonPath("$.shortCode").isString())
         .andExpect(jsonPath("$.shortUrl").isString());
   }
@@ -45,6 +48,16 @@ class LinkControllerTest {
             post("/api/v1/links")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"url\":\"not-a-valid-url\"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void rejectsTooLongUrl() throws Exception {
+    String longUrl = "https://example.com/" + "a".repeat(3000);
+    mvc.perform(
+            post("/api/v1/links")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"" + longUrl + "\"}"))
         .andExpect(status().isBadRequest());
   }
 }
