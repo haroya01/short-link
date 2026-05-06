@@ -1,10 +1,12 @@
 package com.example.short_link.link.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import java.time.Instant;
@@ -25,14 +27,29 @@ class RedirectControllerTest {
 
   @Autowired private MockMvc mvc;
   @Autowired private LinkRepository repository;
+  @Autowired private ClickEventRepository clickRepository;
 
   @Test
   void redirectsToOriginalUrl() throws Exception {
     repository.save(new LinkEntity("https://example.com/destination", "abc1234"));
 
     mvc.perform(get("/abc1234"))
-        .andExpect(status().isMovedPermanently())
-        .andExpect(header().string("Location", "https://example.com/destination"));
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "https://example.com/destination"))
+        .andExpect(header().string("Cache-Control", "private, max-age=90"));
+  }
+
+  @Test
+  void recordsClickEventOnRedirect() throws Exception {
+    LinkEntity link = repository.save(new LinkEntity("https://example.com", "click01"));
+
+    mvc.perform(
+            get("/click01")
+                .header("Referer", "https://instagram.com")
+                .header("User-Agent", "Mozilla/5.0 (iPhone)"))
+        .andExpect(status().isFound());
+
+    assertThat(clickRepository.countByLinkId(link.getId())).isEqualTo(1);
   }
 
   @Test

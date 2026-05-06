@@ -25,7 +25,7 @@ public class LinkManagementService {
       link.changeExpiresAt(expiresAt);
     }
     return new MyLink(
-        link.getShortCode(), link.getOriginalUrl(), link.getCreatedAt(), link.getExpiresAt());
+        link.getShortCode(), link.getOriginalUrl(), link.getCreatedAt(), link.getExpiresAt(), 0L);
   }
 
   @Transactional
