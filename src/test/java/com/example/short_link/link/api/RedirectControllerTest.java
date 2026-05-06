@@ -2,6 +2,7 @@ package com.example.short_link.link.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.link.domain.LinkEntity;
@@ -34,11 +35,18 @@ class RedirectControllerTest {
 
   @Test
   void returns404ForUnknownCode() throws Exception {
-    mvc.perform(get("/zzzzzzz")).andExpect(status().isNotFound());
+    mvc.perform(get("/zzzzzzz"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("LINK_NOT_FOUND"))
+        .andExpect(jsonPath("$.status").value(404))
+        .andExpect(jsonPath("$.timestamp").exists())
+        .andExpect(jsonPath("$.detail").value("link not found: zzzzzzz"));
   }
 
   @Test
   void returns404ForMalformedCode() throws Exception {
-    mvc.perform(get("/too-short")).andExpect(status().isNotFound());
+    mvc.perform(get("/too-short"))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("NOT_FOUND"));
   }
 }

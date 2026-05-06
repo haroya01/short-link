@@ -48,7 +48,11 @@ class LinkControllerTest {
             post("/api/v1/links")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"url\":\"not-a-valid-url\"}"))
-        .andExpect(status().isBadRequest());
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
+        .andExpect(jsonPath("$.status").value(400))
+        .andExpect(jsonPath("$.timestamp").exists())
+        .andExpect(jsonPath("$.errors[0].field").value("url"));
   }
 
   @Test
