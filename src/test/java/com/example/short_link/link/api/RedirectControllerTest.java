@@ -7,6 +7,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,5 +50,19 @@ class RedirectControllerTest {
     mvc.perform(get("/too-short"))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
+  void returns410ForExpiredLink() throws Exception {
+    repository.save(
+        new LinkEntity(
+            "https://example.com/expired",
+            "exp1234",
+            null,
+            Instant.now().minus(1, ChronoUnit.MINUTES)));
+
+    mvc.perform(get("/exp1234"))
+        .andExpect(status().isGone())
+        .andExpect(jsonPath("$.code").value("LINK_EXPIRED"));
   }
 }
