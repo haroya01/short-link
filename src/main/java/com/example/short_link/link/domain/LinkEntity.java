@@ -1,12 +1,13 @@
-package com.example.short_link.link;
+package com.example.short_link.link.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,11 +29,15 @@ public class LinkEntity {
   private String shortCode;
 
   @Column(name = "created_at", nullable = false, updatable = false)
-  private LocalDateTime createdAt;
+  private Instant createdAt;
 
   public LinkEntity(String originalUrl, String shortCode) {
     this.originalUrl = originalUrl;
     this.shortCode = shortCode;
-    this.createdAt = LocalDateTime.now();
+  }
+
+  @PrePersist
+  void prePersist() {
+    this.createdAt = Instant.now();
   }
 }
