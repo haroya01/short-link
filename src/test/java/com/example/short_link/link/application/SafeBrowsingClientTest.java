@@ -32,7 +32,7 @@ class SafeBrowsingClientTest {
         .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
     SafeBrowsingClient client = new SafeBrowsingClient(builder.build(), properties);
 
-    assertThat(client.isSafe("https://safe.example")).isTrue();
+    assertThat(client.isSafeForKey("https://safe.example", "https://safe.example/page")).isTrue();
     server.verify();
   }
 
@@ -48,7 +48,8 @@ class SafeBrowsingClientTest {
                 "{\"matches\":[{\"threatType\":\"MALWARE\"}]}", MediaType.APPLICATION_JSON));
     SafeBrowsingClient client = new SafeBrowsingClient(builder.build(), properties);
 
-    assertThat(client.isSafe("https://malware.example")).isFalse();
+    assertThat(client.isSafeForKey("https://malware.example", "https://malware.example/exploit"))
+        .isFalse();
   }
 
   @Test
@@ -59,7 +60,9 @@ class SafeBrowsingClientTest {
     server.expect(method(HttpMethod.POST)).andRespond(withServerError());
     SafeBrowsingClient client = new SafeBrowsingClient(builder.build(), properties);
 
-    assertThatThrownBy(() -> client.isSafe("https://timeout.example"))
+    assertThatThrownBy(
+            () ->
+                client.isSafeForKey("https://timeout.example", "https://timeout.example/anywhere"))
         .isInstanceOf(RuntimeException.class);
   }
 }
