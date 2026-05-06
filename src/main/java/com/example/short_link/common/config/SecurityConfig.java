@@ -49,7 +49,9 @@ public class SecurityConfig {
         .exceptionHandling(e -> e.authenticationEntryPoint(authenticationEntryPoint))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers(HttpMethod.PATCH, "/api/v1/links/*")
+                auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
+                    .permitAll()
+                    .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*")
                     .authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/links/*")
                     .authenticated()
