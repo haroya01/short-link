@@ -41,7 +41,7 @@ out/
 .env.*
 !.env.example
 
-### Claude ###
+### Local agent state ###
 .claude/
 
 ### GeoIP ###
