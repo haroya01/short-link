@@ -99,6 +99,11 @@ public class LinkStatsService {
             .map(r -> new LinkStats.UtmCampaignClick(r.getCampaign(), r.getCount()))
             .toList();
 
+    List<LinkStats.CountryClick> countries =
+        clickRepository.findCountryClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
+            .toList();
+
     return new LinkStats(
         shortCode,
         REPORT_ZONE.getId(),
@@ -113,7 +118,8 @@ public class LinkStatsService {
         devices,
         os,
         browsers,
-        campaigns);
+        campaigns,
+        countries);
   }
 
   static String mapDayOfWeek(int mysqlDow) {

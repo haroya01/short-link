@@ -35,6 +35,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 	implementation 'nl.basjes.parse.useragent:yauaa:7.30.0'
+	implementation 'com.maxmind.geoip2:geoip2:4.2.1'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -72,5 +73,32 @@ spotless {
 		removeUnusedImports()
 		trimTrailingWhitespace()
 		endWithNewline()
+	}
+}
+
+tasks.register('downloadGeoLite2') {
+	description = 'Download MaxMind GeoLite2-Country mmdb into src/main/resources/geoip'
+	group = 'build setup'
+	def outputDir = file('src/main/resources/geoip')
+	def outputFile = new File(outputDir, 'GeoLite2-Country.mmdb')
+	outputs.file(outputFile)
+	doLast {
+		def licenseKey = System.getenv('MAXMIND_LICENSE_KEY')
+		if (!licenseKey) {
+			throw new GradleException('MAXMIND_LICENSE_KEY environment variable is required')
+		}
+		outputDir.mkdirs()
+		def tarball = new File(temporaryDir, 'geolite2.tar.gz')
+		def url = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${licenseKey}&suffix=tar.gz"
+		ant.get(src: url, dest: tarball, verbose: false)
+		def workDir = new File(temporaryDir, 'extract')
+		workDir.deleteDir()
+		workDir.mkdirs()
+		copy {
+			from tarTree(resources.gzip(tarball))
+			into workDir
+		}
+		def mmdb = fileTree(workDir).matching { include '**/GeoLite2-Country.mmdb' }.singleFile
+		mmdb.renameTo(outputFile)
 	}
 }
