@@ -19,3 +19,7 @@ spring:
       host: localhost
       port: 6379
       password: haroya0117!
+
+short-link:
+  safe-browsing:
+    enabled: false

@@ -19,9 +19,13 @@ public class LinkCreationService {
   private final LinkRepository repository;
   private final ShortCodeGenerator generator;
   private final MeterRegistry meterRegistry;
+  private final UrlSafetyChecker urlSafetyChecker;
 
   public LinkCreated create(
       String url, Long userId, String customCode, Instant requestedExpiresAt) {
+    if (!urlSafetyChecker.isSafe(url)) {
+      throw new MaliciousUrlException(url);
+    }
     boolean authenticated = userId != null;
     String code = authenticated ? customCode : null;
     Instant expiresAt = authenticated ? requestedExpiresAt : Instant.now().plus(ANONYMOUS_TTL);
