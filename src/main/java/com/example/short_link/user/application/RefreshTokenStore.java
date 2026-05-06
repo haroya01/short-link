@@ -1,6 +1,7 @@
 package com.example.short_link.user.application;
 
 import java.time.Duration;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
@@ -23,7 +24,18 @@ public class RefreshTokenStore {
     redis.delete(key(userId, jti));
   }
 
+  public void deleteAllForUser(Long userId) {
+    Set<String> keys = redis.keys(userPrefix(userId) + "*");
+    if (keys != null && !keys.isEmpty()) {
+      redis.delete(keys);
+    }
+  }
+
   private String key(Long userId, String jti) {
-    return "refresh:" + userId + ":" + jti;
+    return userPrefix(userId) + jti;
+  }
+
+  private String userPrefix(Long userId) {
+    return "refresh:" + userId + ":";
   }
 }

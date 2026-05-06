@@ -3,10 +3,12 @@ package com.example.short_link.user.application;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AuthService {
 
@@ -31,6 +33,10 @@ public class AuthService {
       throw new InvalidRefreshTokenException();
     }
     if (!refreshStore.exists(parsed.userId(), parsed.jti())) {
+      log.warn(
+          "refresh token reuse or theft suspected for userId={}, wiping all sessions",
+          parsed.userId());
+      refreshStore.deleteAllForUser(parsed.userId());
       throw new InvalidRefreshTokenException();
     }
     refreshStore.delete(parsed.userId(), parsed.jti());

@@ -15,3 +15,11 @@ spring:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD}
+
+short-link:
+  base-url: ${SHORT_LINK_BASE_URL}
+  jwt:
+    private-key: ${JWT_PRIVATE_KEY}
+    public-key: ${JWT_PUBLIC_KEY}
+  cookie:
+    secure: true
