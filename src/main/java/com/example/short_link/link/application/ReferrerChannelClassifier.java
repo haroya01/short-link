@@ -42,8 +42,12 @@ public class ReferrerChannelClassifier {
       return "other";
     }
     String lower = host.toLowerCase();
+    String exact = DOMAIN_TO_CHANNEL.get(lower);
+    if (exact != null) {
+      return exact;
+    }
     for (Map.Entry<String, String> entry : DOMAIN_TO_CHANNEL.entrySet()) {
-      if (lower.equals(entry.getKey()) || lower.endsWith("." + entry.getKey())) {
+      if (lower.endsWith("." + entry.getKey())) {
         return entry.getValue();
       }
     }

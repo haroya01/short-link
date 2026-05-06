@@ -95,12 +95,6 @@ public class ClickEventEntity {
     this.bot = bot;
   }
 
-  public ClickEventEntity(Long linkId, String referrer, String userAgent, String clientIp) {
-    this(
-        linkId, referrer, userAgent, clientIp, null, null, null, null, null, null, null, null,
-        false);
-  }
-
   @PrePersist
   void prePersist() {
     this.clickedAt = Instant.now();

@@ -16,29 +16,14 @@ public class UserAgentClassifier {
       return UserAgentInfo.unknown();
     }
     UserAgent agent = analyzer.parse(ua);
-    String rawDeviceClass = agent.getValue("DeviceClass");
-    String os = agent.getValue("OperatingSystemName");
-    String browser = agent.getValue("AgentName");
-    boolean bot = isBot(rawDeviceClass);
-    return new UserAgentInfo(mapDevice(rawDeviceClass), nullIfEmpty(os), nullIfEmpty(browser), bot);
-  }
-
-  private static boolean isBot(String deviceClass) {
-    if (deviceClass == null) {
-      return false;
-    }
-    return deviceClass.equalsIgnoreCase("Robot")
-        || deviceClass.equalsIgnoreCase("Robot Mobile")
-        || deviceClass.equalsIgnoreCase("Hacker")
-        || deviceClass.equalsIgnoreCase("Spider")
-        || deviceClass.equalsIgnoreCase("Cloud");
+    String device = mapDevice(agent.getValue("DeviceClass"));
+    String os = nullIfUnknown(agent.getValue("OperatingSystemName"));
+    String browser = nullIfUnknown(agent.getValue("AgentName"));
+    return new UserAgentInfo(device, os, browser, "bot".equals(device));
   }
 
   private static String mapDevice(String deviceClass) {
-    if (deviceClass == null) {
-      return "unknown";
-    }
-    return switch (deviceClass) {
+    return switch (deviceClass == null ? "" : deviceClass) {
       case "Phone" -> "mobile";
       case "Tablet" -> "tablet";
       case "Desktop" -> "desktop";
@@ -47,7 +32,7 @@ public class UserAgentClassifier {
     };
   }
 
-  private static String nullIfEmpty(String v) {
+  private static String nullIfUnknown(String v) {
     return (v == null || v.isBlank() || v.equals("Unknown")) ? null : v;
   }
 }

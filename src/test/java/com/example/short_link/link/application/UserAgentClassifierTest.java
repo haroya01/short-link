@@ -66,4 +66,11 @@ class UserAgentClassifierTest {
 
     assertThat(info.deviceClass()).isEqualTo("unknown");
   }
+
+  @Test
+  void mapsUnknownYauaaValuesToNull() {
+    UserAgentInfo info = classifier.classify("FooBarApp/1.0");
+
+    assertThat(info.osName()).isNull();
+  }
 }

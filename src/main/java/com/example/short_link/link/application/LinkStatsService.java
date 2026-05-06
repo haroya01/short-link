@@ -92,7 +92,7 @@ public class LinkStatsService {
         browsers, campaigns);
   }
 
-  private static String mapDayOfWeek(int mysqlDow) {
+  static String mapDayOfWeek(int mysqlDow) {
     return switch (mysqlDow) {
       case 1 -> DayOfWeek.SUNDAY.toString();
       case 2 -> DayOfWeek.MONDAY.toString();

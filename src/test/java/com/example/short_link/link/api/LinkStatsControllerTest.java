@@ -169,6 +169,7 @@ class LinkStatsControllerTest {
             .deviceClass("desktop")
             .bot(false)
             .build());
+    clickRepository.save(humanClick(link.getId(), "desktop"));
     String token = jwt.createAccessToken(owner.getId());
 
     mvc.perform(get("/api/v1/links/stats03/stats").header("Authorization", "Bearer " + token))
@@ -180,7 +181,9 @@ class LinkStatsControllerTest {
             jsonPath(
                     "$.referrerClicks[?(@.referrer == 'https://www.youtube.com/watch?v=xyz')].count")
                 .value(1))
-        .andExpect(jsonPath("$.channelClicks[?(@.channel == 'social')].count").value(3));
+        .andExpect(jsonPath("$.channelClicks[?(@.channel == 'social')].count").value(3))
+        .andExpect(jsonPath("$.channelClicks[?(@.channel == 'direct')].count").value(1))
+        .andExpect(jsonPath("$.channelClicks[0].channel").value("social"));
   }
 
   @Test

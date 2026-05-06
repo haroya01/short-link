@@ -59,4 +59,24 @@ class UtmExtractorTest {
     assertThat(utm.medium()).isNull();
     assertThat(utm.campaign()).isNull();
   }
+
+  @Test
+  void skipsEmptyPairs() {
+    UtmParams utm = UtmExtractor.extract("https://example.com?&utm_source=ig&&utm_medium=cpc&");
+    assertThat(utm.source()).isEqualTo("ig");
+    assertThat(utm.medium()).isEqualTo("cpc");
+  }
+
+  @Test
+  void skipsPairsWithoutEquals() {
+    UtmParams utm = UtmExtractor.extract("https://example.com?flag&utm_source=ig");
+    assertThat(utm.source()).isEqualTo("ig");
+  }
+
+  @Test
+  void skipsInvalidPercentEncoding() {
+    UtmParams utm = UtmExtractor.extract("https://example.com?utm_source=%ZZ&utm_medium=cpc");
+    assertThat(utm.source()).isNull();
+    assertThat(utm.medium()).isEqualTo("cpc");
+  }
 }
