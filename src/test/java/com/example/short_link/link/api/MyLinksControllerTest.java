@@ -1,0 +1,52 @@
+package com.example.short_link.link.api;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.UserRepository;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
+class MyLinksControllerTest {
+
+  @Autowired private MockMvc mvc;
+  @Autowired private LinkRepository linkRepository;
+  @Autowired private UserRepository userRepository;
+  @Autowired private JwtTokenService jwt;
+
+  @Test
+  void returnsOnlyOwnerLinks() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("me@example.com", "google", "g-me"));
+    UserEntity other = userRepository.save(new UserEntity("o@example.com", "google", "g-other"));
+    linkRepository.save(new LinkEntity("https://example.com/mine", "mine001", owner.getId(), null));
+    linkRepository.save(
+        new LinkEntity("https://example.com/other", "other01", other.getId(), null));
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.length()").value(1))
+        .andExpect(jsonPath("$[0].shortCode").value("mine001"))
+        .andExpect(jsonPath("$[0].originalUrl").value("https://example.com/mine"))
+        .andExpect(jsonPath("$[0].shortUrl").value("http://localhost:8080/mine001"));
+  }
+
+  @Test
+  void unauthorizedWithoutToken() throws Exception {
+    mvc.perform(get("/api/v1/links/me")).andExpect(status().isUnauthorized());
+  }
+}
