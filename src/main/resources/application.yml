@@ -38,3 +38,8 @@ short-link:
     refresh-ttl: 14d
   cookie:
     secure: ${COOKIE_SECURE:false}
+  safe-browsing:
+    enabled: ${SAFE_BROWSING_ENABLED:true}
+    api-key: ${SAFE_BROWSING_API_KEY:}
+    cache-ttl: 1h
+    timeout: 2s

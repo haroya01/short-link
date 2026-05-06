@@ -41,5 +41,8 @@ out/
 .env.*
 !.env.example
 
+### Local agent state ###
+.claude/
+
 ### GeoIP ###
 *.mmdb
