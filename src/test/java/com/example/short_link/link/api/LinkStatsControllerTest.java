@@ -227,6 +227,47 @@ class LinkStatsControllerTest {
   }
 
   @Test
+  void aggregatesByCountry() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cty"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "statcty", owner.getId(), null));
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.1")
+            .deviceClass("desktop")
+            .countryCode("KR")
+            .bot(false)
+            .build());
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.2")
+            .deviceClass("mobile")
+            .countryCode("KR")
+            .bot(false)
+            .build());
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.3")
+            .deviceClass("desktop")
+            .countryCode("US")
+            .bot(false)
+            .build());
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(get("/api/v1/links/statcty/stats").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.countryClicks[?(@.country == 'KR')].count").value(2))
+        .andExpect(jsonPath("$.countryClicks[?(@.country == 'US')].count").value(1))
+        .andExpect(jsonPath("$.countryClicks[0].country").value("KR"));
+  }
+
+  @Test
   void rejectsStatsForNotOwner() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-s4"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-s4a"));

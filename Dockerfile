@@ -1,10 +1,12 @@
 FROM gradle:8.10-jdk17 AS build
+ARG MAXMIND_LICENSE_KEY
 WORKDIR /workspace
 COPY build.gradle settings.gradle ./
 COPY gradle gradle
 COPY gradlew gradlew
 COPY src src
-RUN ./gradlew bootJar --no-daemon
+RUN MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" ./gradlew downloadGeoLite2 --no-daemon \
+    && ./gradlew bootJar --no-daemon
 
 FROM eclipse-temurin:17-jre AS runtime
 WORKDIR /app

@@ -14,6 +14,7 @@ public class ClickRecorder {
 
   private final ClickEventRepository repository;
   private final UserAgentClassifier userAgentClassifier;
+  private final GeoIpResolver geoIpResolver;
 
   @Transactional
   public void record(
@@ -21,6 +22,7 @@ public class ClickRecorder {
     try {
       UtmParams utm = UtmExtractor.extract(originalUrl);
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
+      String country = geoIpResolver.resolveCountry(clientIp);
       ClickEventEntity event =
           ClickEventEntity.builder()
               .linkId(linkId)
@@ -36,6 +38,7 @@ public class ClickRecorder {
               .osName(ua.osName())
               .browserName(ua.browserName())
               .bot(ua.bot())
+              .countryCode(country)
               .build();
       repository.save(event);
     } catch (RuntimeException e) {
