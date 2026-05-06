@@ -25,7 +25,9 @@ public class MyLinksService {
     }
     List<Long> ids = links.stream().map(LinkEntity::getId).toList();
     Map<Long, Long> counts = new HashMap<>();
-    clickRepository.countsByLinkIds(ids).forEach(row -> counts.put(row.getLinkId(), row.getCnt()));
+    clickRepository
+        .countsByLinkIds(ids)
+        .forEach(row -> counts.put(row.getLinkId(), row.getCount()));
     return links.stream()
         .map(
             link ->
