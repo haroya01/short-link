@@ -165,6 +165,21 @@ class LinkManagementControllerTest {
   }
 
   @Test
+  void rejectsUpdateWithEmptyUrl() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-uem"));
+    linkRepository.save(new LinkEntity("https://example.com", "upd0011", owner.getId(), null));
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(
+            patch("/api/v1/links/upd0011")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"originalUrl\":\"\"}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+  }
+
+  @Test
   void rejectsUpdateWithJavascriptScheme() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-u10"));
     linkRepository.save(new LinkEntity("https://example.com", "upd0010", owner.getId(), null));

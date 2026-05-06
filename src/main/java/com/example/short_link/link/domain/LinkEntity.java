@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -36,6 +37,10 @@ public class LinkEntity {
 
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
+
+  @Version
+  @Column(nullable = false)
+  private Long version;
 
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);

@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -43,6 +44,13 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(LinkNotOwnedException.class)
   public ProblemDetail handleLinkNotOwned(LinkNotOwnedException e, HttpServletRequest req) {
     return problem(HttpStatus.FORBIDDEN, e.getMessage(), "LINK_NOT_OWNED", req);
+  }
+
+  @ExceptionHandler(OptimisticLockingFailureException.class)
+  public ProblemDetail handleOptimisticLock(
+      OptimisticLockingFailureException e, HttpServletRequest req) {
+    return problem(
+        HttpStatus.CONFLICT, "concurrent modification, please retry", "OPTIMISTIC_LOCK", req);
   }
 
   @ExceptionHandler(InvalidRefreshTokenException.class)
