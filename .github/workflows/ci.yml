@@ -59,6 +59,11 @@ jobs:
 
       - run: ./gradlew spotlessCheck
 
+      - name: Download GeoLite2 database
+        env:
+          MAXMIND_LICENSE_KEY: ${{ secrets.MAXMIND_LICENSE_KEY }}
+        run: ./gradlew downloadGeoLite2
+
       - run: ./gradlew test
 
       - name: Upload test reports
