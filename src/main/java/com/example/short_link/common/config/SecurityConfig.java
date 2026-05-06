@@ -4,7 +4,6 @@ import com.example.short_link.common.api.RateLimitFilter;
 import com.example.short_link.user.api.JsonAuthenticationEntryPoint;
 import com.example.short_link.user.api.JwtAuthenticationFilter;
 import com.example.short_link.user.api.OAuth2LoginSuccessHandler;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -19,6 +18,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @EnableWebSecurity
@@ -32,10 +32,10 @@ public class SecurityConfig {
   @Bean
   public RateLimitFilter rateLimitFilter(
       StringRedisTemplate redis,
-      ObjectMapper objectMapper,
+      JsonMapper jsonMapper,
       @Value("${short-link.rate-limit.anonymous:100}") long anonymousLimit,
       @Value("${short-link.rate-limit.authenticated:1000}") long authenticatedLimit) {
-    return new RateLimitFilter(redis, objectMapper, anonymousLimit, authenticatedLimit);
+    return new RateLimitFilter(redis, jsonMapper, anonymousLimit, authenticatedLimit);
   }
 
   @Bean

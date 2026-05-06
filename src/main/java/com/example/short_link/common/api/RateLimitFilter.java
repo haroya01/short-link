@@ -1,6 +1,5 @@
 package com.example.short_link.common.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -20,6 +19,7 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.databind.json.JsonMapper;
 
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -33,17 +33,17 @@ public class RateLimitFilter extends OncePerRequestFilter {
           Long.class);
 
   private final StringRedisTemplate redis;
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
   private final long anonymousLimit;
   private final long authenticatedLimit;
 
   public RateLimitFilter(
       StringRedisTemplate redis,
-      ObjectMapper objectMapper,
+      JsonMapper jsonMapper,
       long anonymousLimit,
       long authenticatedLimit) {
     this.redis = redis;
-    this.objectMapper = objectMapper;
+    this.jsonMapper = jsonMapper;
     this.anonymousLimit = anonymousLimit;
     this.authenticatedLimit = authenticatedLimit;
   }
@@ -99,6 +99,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
     res.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
     res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
     res.setHeader("Retry-After", "60");
-    objectMapper.writeValue(res.getOutputStream(), body);
+    jsonMapper.writeValue(res.getOutputStream(), body);
   }
 }

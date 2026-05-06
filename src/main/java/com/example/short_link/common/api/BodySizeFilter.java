@@ -1,6 +1,5 @@
 package com.example.short_link.common.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -8,26 +7,22 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
+import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 1)
+@RequiredArgsConstructor
 public class BodySizeFilter extends OncePerRequestFilter {
 
   private static final long MAX_BODY_BYTES = 16L * 1024L;
 
-  private final ObjectMapper objectMapper;
-
-  public BodySizeFilter(ObjectMapper objectMapper) {
-    this.objectMapper = objectMapper;
-  }
+  private final JsonMapper jsonMapper;
 
   @Override
   protected void doFilterInternal(
@@ -55,6 +50,6 @@ public class BodySizeFilter extends OncePerRequestFilter {
 
     res.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
     res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-    objectMapper.writeValue(res.getOutputStream(), body);
+    jsonMapper.writeValue(res.getOutputStream(), body);
   }
 }

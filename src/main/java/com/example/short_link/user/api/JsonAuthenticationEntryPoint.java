@@ -1,6 +1,5 @@
 package com.example.short_link.user.api;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -14,12 +13,13 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 @Component
 @RequiredArgsConstructor
 public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
-  private final ObjectMapper objectMapper;
+  private final JsonMapper jsonMapper;
 
   @Override
   public void commence(HttpServletRequest req, HttpServletResponse res, AuthenticationException ex)
@@ -36,6 +36,6 @@ public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     res.setStatus(HttpStatus.UNAUTHORIZED.value());
     res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
-    objectMapper.writeValue(res.getOutputStream(), body);
+    jsonMapper.writeValue(res.getOutputStream(), body);
   }
 }
