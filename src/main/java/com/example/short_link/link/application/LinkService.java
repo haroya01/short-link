@@ -3,8 +3,10 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,5 +27,14 @@ public class LinkService {
       }
     }
     throw new ShortCodeGenerationException();
+  }
+
+  @Cacheable("link")
+  @Transactional(readOnly = true)
+  public String findOriginalUrl(String shortCode) {
+    return repository
+        .findByShortCode(shortCode)
+        .map(LinkEntity::getOriginalUrl)
+        .orElseThrow(() -> new LinkNotFoundException(shortCode));
   }
 }
