@@ -1,7 +1,9 @@
 package com.example.short_link.common.api;
 
+import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
+import com.example.short_link.user.application.InvalidRefreshTokenException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;
@@ -23,6 +25,17 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(LinkNotFoundException.class)
   public ProblemDetail handleLinkNotFound(LinkNotFoundException e, HttpServletRequest req) {
     return problem(HttpStatus.NOT_FOUND, e.getMessage(), "LINK_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(LinkExpiredException.class)
+  public ProblemDetail handleLinkExpired(LinkExpiredException e, HttpServletRequest req) {
+    return problem(HttpStatus.GONE, e.getMessage(), "LINK_EXPIRED", req);
+  }
+
+  @ExceptionHandler(InvalidRefreshTokenException.class)
+  public ProblemDetail handleInvalidRefresh(
+      InvalidRefreshTokenException e, HttpServletRequest req) {
+    return problem(HttpStatus.UNAUTHORIZED, e.getMessage(), "INVALID_REFRESH_TOKEN", req);
   }
 
   @ExceptionHandler(NoResourceFoundException.class)
