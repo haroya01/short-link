@@ -52,7 +52,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest req, HttpServletResponse res, FilterChain chain)
       throws ServletException, IOException {
-    if (req.getRequestURI().startsWith("/actuator/")) {
+    String uri = req.getRequestURI();
+    if (uri.startsWith("/actuator/")
+        || uri.startsWith("/swagger-ui")
+        || uri.startsWith("/v3/api-docs")) {
       chain.doFilter(req, res);
       return;
     }
