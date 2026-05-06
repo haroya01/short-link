@@ -1,0 +1,2 @@
+ALTER TABLE link
+    MODIFY COLUMN short_code VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL;
