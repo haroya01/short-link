@@ -23,10 +23,14 @@ public class LinkLookupService {
         repository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    return new CachedLink(link.getOriginalUrl(), link.getExpiresAt());
+    return new CachedLink(link.getId(), link.getOriginalUrl(), link.getExpiresAt());
   }
 
   public String findActiveOriginalUrl(String shortCode) {
+    return findActiveLink(shortCode).originalUrl();
+  }
+
+  public CachedLink findActiveLink(String shortCode) {
     CachedLink cached;
     try {
       cached = loadByShortCode(shortCode);
@@ -39,6 +43,6 @@ public class LinkLookupService {
       throw new LinkExpiredException(shortCode);
     }
     meterRegistry.counter("short_link.lookup", "result", "redirected").increment();
-    return cached.originalUrl();
+    return cached;
   }
 }
