@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -34,7 +35,11 @@ public class SecurityConfig {
             e -> e.authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/api/v1/links/me", "/api/v1/auth/logout")
+                auth.requestMatchers(HttpMethod.PATCH, "/api/v1/links/*")
+                    .authenticated()
+                    .requestMatchers(HttpMethod.DELETE, "/api/v1/links/*")
+                    .authenticated()
+                    .requestMatchers("/api/v1/links/me", "/api/v1/auth/logout")
                     .authenticated()
                     .anyRequest()
                     .permitAll())

@@ -24,7 +24,7 @@ class LinkCreationServiceCollisionTest {
 
     LinkCreationService service = new LinkCreationService(repository, generator);
 
-    assertThatThrownBy(() -> service.create("https://example.com", null))
+    assertThatThrownBy(() -> service.create("https://example.com", null, null, null))
         .isInstanceOf(ShortCodeGenerationException.class);
 
     verify(generator, times(5)).generate();
