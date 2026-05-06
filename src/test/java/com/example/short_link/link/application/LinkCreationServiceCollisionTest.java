@@ -12,7 +12,7 @@ import com.example.short_link.link.domain.LinkRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 
-class LinkServiceCollisionTest {
+class LinkCreationServiceCollisionTest {
 
   @Test
   void throwsAfterMaxAttemptsAllCollide() {
@@ -22,9 +22,9 @@ class LinkServiceCollisionTest {
     when(repository.save(any(LinkEntity.class)))
         .thenThrow(new DataIntegrityViolationException("unique"));
 
-    LinkService service = new LinkService(repository, generator);
+    LinkCreationService service = new LinkCreationService(repository, generator);
 
-    assertThatThrownBy(() -> service.create("https://example.com"))
+    assertThatThrownBy(() -> service.create("https://example.com", null))
         .isInstanceOf(ShortCodeGenerationException.class);
 
     verify(generator, times(5)).generate();

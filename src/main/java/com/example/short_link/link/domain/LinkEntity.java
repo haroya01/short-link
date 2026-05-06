@@ -28,16 +28,32 @@ public class LinkEntity {
   @Column(name = "short_code", nullable = false, length = 16, unique = true)
   private String shortCode;
 
+  @Column(name = "user_id")
+  private Long userId;
+
+  @Column(name = "expires_at")
+  private Instant expiresAt;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
   public LinkEntity(String originalUrl, String shortCode) {
+    this(originalUrl, shortCode, null, null);
+  }
+
+  public LinkEntity(String originalUrl, String shortCode, Long userId, Instant expiresAt) {
     this.originalUrl = originalUrl;
     this.shortCode = shortCode;
+    this.userId = userId;
+    this.expiresAt = expiresAt;
   }
 
   @PrePersist
   void prePersist() {
     this.createdAt = Instant.now();
+  }
+
+  public boolean isExpired(Instant now) {
+    return expiresAt != null && !now.isBefore(expiresAt);
   }
 }
