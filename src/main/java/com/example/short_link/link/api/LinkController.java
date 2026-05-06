@@ -24,7 +24,8 @@ public class LinkController {
   @PostMapping
   public ResponseEntity<CreateLinkResponse> create(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody CreateLinkRequest request) {
-    LinkCreated created = service.create(request.url(), userId);
+    LinkCreated created =
+        service.create(request.url(), userId, request.customCode(), request.expiresAt());
     String shortUrl = urlBuilder.build(created.shortCode());
     return ResponseEntity.created(URI.create(shortUrl))
         .body(new CreateLinkResponse(created.shortCode(), shortUrl));

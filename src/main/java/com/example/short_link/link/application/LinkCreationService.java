@@ -18,12 +18,25 @@ public class LinkCreationService {
   private final LinkRepository repository;
   private final ShortCodeGenerator generator;
 
-  public LinkCreated create(String url, Long userId) {
-    Instant expiresAt = userId == null ? Instant.now().plus(ANONYMOUS_TTL) : null;
-    for (int i = 0; i < MAX_ATTEMPTS; i++) {
-      String code = generator.generate();
+  public LinkCreated create(
+      String url, Long userId, String customCode, Instant requestedExpiresAt) {
+    boolean authenticated = userId != null;
+    String code = authenticated ? customCode : null;
+    Instant expiresAt = authenticated ? requestedExpiresAt : Instant.now().plus(ANONYMOUS_TTL);
+
+    if (code != null) {
       try {
         LinkEntity saved = repository.save(new LinkEntity(url, code, userId, expiresAt));
+        return new LinkCreated(saved.getShortCode());
+      } catch (DataIntegrityViolationException e) {
+        throw new DuplicateShortCodeException(code);
+      }
+    }
+
+    for (int i = 0; i < MAX_ATTEMPTS; i++) {
+      String generated = generator.generate();
+      try {
+        LinkEntity saved = repository.save(new LinkEntity(url, generated, userId, expiresAt));
         return new LinkCreated(saved.getShortCode());
       } catch (DataIntegrityViolationException ignored) {
       }
