@@ -19,6 +19,7 @@ class ClickRecorderTest {
 
   @Mock private ClickEventRepository repository;
   @Mock private UserAgentClassifier userAgentClassifier;
+  @Mock private GeoIpResolver geoIpResolver;
   @InjectMocks private ClickRecorder recorder;
 
   @Test
@@ -45,5 +46,18 @@ class ClickRecorderTest {
         "1.2.3.4");
 
     assertThat(captor.getValue().getReferrer()).isEqualTo("https://www.youtube.com/watch");
+  }
+
+  @Test
+  void persistsResolvedCountryCode() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolveCountry("8.8.8.8")).thenReturn("US");
+    org.mockito.ArgumentCaptor<ClickEventEntity> captor =
+        org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+    recorder.record(1L, "https://example.com", null, "ua", "8.8.8.8");
+
+    assertThat(captor.getValue().getCountryCode()).isEqualTo("US");
   }
 }
