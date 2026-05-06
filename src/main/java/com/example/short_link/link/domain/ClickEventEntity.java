@@ -65,6 +65,9 @@ public class ClickEventEntity {
   @Column(name = "is_bot", nullable = false)
   private boolean bot;
 
+  @Column(name = "country_code", length = 2)
+  private String countryCode;
+
   @Builder
   public ClickEventEntity(
       Long linkId,
@@ -79,7 +82,8 @@ public class ClickEventEntity {
       String deviceClass,
       String osName,
       String browserName,
-      boolean bot) {
+      boolean bot,
+      String countryCode) {
     this.linkId = linkId;
     this.referrer = referrer;
     this.userAgent = userAgent;
@@ -93,6 +97,7 @@ public class ClickEventEntity {
     this.osName = osName;
     this.browserName = browserName;
     this.bot = bot;
+    this.countryCode = countryCode;
   }
 
   @PrePersist

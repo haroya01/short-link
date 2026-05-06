@@ -17,7 +17,8 @@ public record LinkStats(
     List<DeviceClick> deviceClicks,
     List<OsClick> osClicks,
     List<BrowserClick> browserClicks,
-    List<UtmCampaignClick> utmCampaignClicks) {
+    List<UtmCampaignClick> utmCampaignClicks,
+    List<CountryClick> countryClicks) {
 
   public record DailyClick(LocalDate date, long count) {}
 
@@ -36,4 +37,6 @@ public record LinkStats(
   public record BrowserClick(String browser, long count) {}
 
   public record UtmCampaignClick(String campaign, long count) {}
+
+  public record CountryClick(String country, long count) {}
 }
