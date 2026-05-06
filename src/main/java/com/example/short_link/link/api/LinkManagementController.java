@@ -34,7 +34,8 @@ public class LinkManagementController {
         urlBuilder.build(updated.shortCode()),
         updated.originalUrl(),
         updated.createdAt(),
-        updated.expiresAt());
+        updated.expiresAt(),
+        updated.clickCount());
   }
 
   @DeleteMapping("/{shortCode}")

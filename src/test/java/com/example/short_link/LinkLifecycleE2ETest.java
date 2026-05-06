@@ -44,7 +44,7 @@ class LinkLifecycleE2ETest {
         .andExpect(status().isCreated());
 
     mvc.perform(get("/e2e0001"))
-        .andExpect(status().isMovedPermanently())
+        .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://old.com"));
 
     mvc.perform(
@@ -55,7 +55,7 @@ class LinkLifecycleE2ETest {
         .andExpect(status().isOk());
 
     mvc.perform(get("/e2e0001"))
-        .andExpect(status().isMovedPermanently())
+        .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://new.com"));
   }
 
@@ -71,7 +71,7 @@ class LinkLifecycleE2ETest {
                 .content("{\"url\":\"https://example.com\",\"customCode\":\"e2e0002\"}"))
         .andExpect(status().isCreated());
 
-    mvc.perform(get("/e2e0002")).andExpect(status().isMovedPermanently());
+    mvc.perform(get("/e2e0002")).andExpect(status().isFound());
 
     mvc.perform(delete("/api/v1/links/e2e0002").header("Authorization", "Bearer " + token))
         .andExpect(status().isNoContent());
@@ -91,7 +91,7 @@ class LinkLifecycleE2ETest {
                 .content("{\"url\":\"https://example.com\",\"customCode\":\"e2e0003\"}"))
         .andExpect(status().isCreated());
 
-    mvc.perform(get("/e2e0003")).andExpect(status().isMovedPermanently());
+    mvc.perform(get("/e2e0003")).andExpect(status().isFound());
 
     Instant past = Instant.now().minusSeconds(60);
     mvc.perform(
@@ -117,7 +117,7 @@ class LinkLifecycleE2ETest {
             .getContentAsString();
     String shortCode = JsonPath.read(body, "$.shortCode");
 
-    mvc.perform(get("/" + shortCode)).andExpect(status().isMovedPermanently());
+    mvc.perform(get("/" + shortCode)).andExpect(status().isFound());
 
     mvc.perform(
             patch("/api/v1/links/" + shortCode)
