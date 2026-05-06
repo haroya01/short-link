@@ -1,6 +1,10 @@
 spring:
   application:
     name: short-link
+  cache:
+    type: redis
+    redis:
+      time-to-live: 24h
 
 server:
   port: 8080
