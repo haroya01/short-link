@@ -1,0 +1,5 @@
+ALTER TABLE click_event
+    ADD COLUMN device_class VARCHAR(32),
+    ADD COLUMN os_name VARCHAR(64),
+    ADD COLUMN browser_name VARCHAR(64),
+    ADD COLUMN is_bot BOOLEAN NOT NULL DEFAULT FALSE;
