@@ -21,8 +21,7 @@ public class LinkService {
       try {
         LinkEntity saved = repository.save(new LinkEntity(url, code));
         return new LinkCreated(saved.getShortCode());
-      } catch (DataIntegrityViolationException e) {
-        // short_code collision — retry
+      } catch (DataIntegrityViolationException ignored) {
       }
     }
     throw new ShortCodeGenerationException();

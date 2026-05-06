@@ -22,4 +22,14 @@ class LinkRepositoryTest {
     assertThat(repository.existsByShortCode("abc1234")).isTrue();
     assertThat(repository.existsByShortCode("missing")).isFalse();
   }
+
+  @Test
+  void shortCodeIsCaseSensitive() {
+    repository.save(new LinkEntity("https://example.com/lower", "abc1234"));
+    repository.save(new LinkEntity("https://example.com/upper", "ABC1234"));
+
+    assertThat(repository.existsByShortCode("abc1234")).isTrue();
+    assertThat(repository.existsByShortCode("ABC1234")).isTrue();
+    assertThat(repository.existsByShortCode("Abc1234")).isFalse();
+  }
 }
