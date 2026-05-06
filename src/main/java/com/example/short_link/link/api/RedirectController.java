@@ -28,7 +28,7 @@ public class RedirectController {
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       HttpServletRequest req) {
     CachedLink link = lookup.findActiveLink(shortCode);
-    clickRecorder.record(link.linkId(), referrer, userAgent, clientIp(req));
+    clickRecorder.record(link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req));
     return ResponseEntity.status(HttpStatus.FOUND)
         .location(URI.create(link.originalUrl()))
         .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")

@@ -31,20 +31,58 @@ class LinkStatsControllerTest {
   @Autowired private UserRepository userRepository;
   @Autowired private JwtTokenService jwt;
 
+  private static ClickEventEntity humanClick(Long linkId, String device) {
+    return ClickEventEntity.builder()
+        .linkId(linkId)
+        .userAgent("ua")
+        .clientIp("1.2.3.4")
+        .deviceClass(device)
+        .bot(false)
+        .build();
+  }
+
   @Test
-  void returnsTotalClicksForOwner() throws Exception {
+  void returnsTotalAndHumanClicksForOwner() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-s1"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "stats01", owner.getId(), null));
     for (int i = 0; i < 3; i++) {
-      clickRepository.save(new ClickEventEntity(link.getId(), null, "Mozilla/5.0", "1.2.3.4"));
+      clickRepository.save(humanClick(link.getId(), "desktop"));
     }
     String token = jwt.createAccessToken(owner.getId());
 
     mvc.perform(get("/api/v1/links/stats01/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.shortCode").value("stats01"))
-        .andExpect(jsonPath("$.totalClicks").value(3));
+        .andExpect(jsonPath("$.totalClicks").value(3))
+        .andExpect(jsonPath("$.humanClicks").value(3))
+        .andExpect(jsonPath("$.botClicks").value(0));
+  }
+
+  @Test
+  void separatesBotAndHumanClicks() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-bot"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "statbot", owner.getId(), null));
+    clickRepository.save(humanClick(link.getId(), "desktop"));
+    clickRepository.save(humanClick(link.getId(), "mobile"));
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("Googlebot")
+            .clientIp("1.2.3.4")
+            .deviceClass("bot")
+            .bot(true)
+            .build());
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(get("/api/v1/links/statbot/stats").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalClicks").value(3))
+        .andExpect(jsonPath("$.humanClicks").value(2))
+        .andExpect(jsonPath("$.botClicks").value(1))
+        .andExpect(jsonPath("$.deviceClicks[?(@.device == 'desktop')].count").value(1))
+        .andExpect(jsonPath("$.deviceClicks[?(@.device == 'mobile')].count").value(1));
   }
 
   @Test
@@ -52,43 +90,140 @@ class LinkStatsControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-s2"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "stats02", owner.getId(), null));
-    clickRepository.save(
-        new ClickEventEntity(
-            link.getId(), null, "Mozilla/5.0 (iPhone; CPU iPhone OS) Mobile", "1.1.1.1"));
-    clickRepository.save(
-        new ClickEventEntity(link.getId(), null, "Mozilla/5.0 (iPad; CPU OS) Tablet", "1.1.1.2"));
-    clickRepository.save(
-        new ClickEventEntity(
-            link.getId(), null, "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", "1.1.1.3"));
+    clickRepository.save(humanClick(link.getId(), "mobile"));
+    clickRepository.save(humanClick(link.getId(), "tablet"));
+    clickRepository.save(humanClick(link.getId(), "desktop"));
     String token = jwt.createAccessToken(owner.getId());
 
     mvc.perform(get("/api/v1/links/stats02/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.deviceClicks").isArray())
         .andExpect(jsonPath("$.deviceClicks[?(@.device == 'mobile')].count").value(1))
         .andExpect(jsonPath("$.deviceClicks[?(@.device == 'tablet')].count").value(1))
         .andExpect(jsonPath("$.deviceClicks[?(@.device == 'desktop')].count").value(1));
   }
 
   @Test
-  void aggregatesByReferrer() throws Exception {
+  void aggregatesByOsAndBrowser() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-osb"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "statosb", owner.getId(), null));
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.2.3.4")
+            .deviceClass("mobile")
+            .osName("iOS")
+            .browserName("Safari")
+            .bot(false)
+            .build());
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.2.3.5")
+            .deviceClass("desktop")
+            .osName("Windows")
+            .browserName("Chrome")
+            .bot(false)
+            .build());
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(get("/api/v1/links/statosb/stats").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.osClicks[?(@.os == 'iOS')].count").value(1))
+        .andExpect(jsonPath("$.osClicks[?(@.os == 'Windows')].count").value(1))
+        .andExpect(jsonPath("$.browserClicks[?(@.browser == 'Safari')].count").value(1))
+        .andExpect(jsonPath("$.browserClicks[?(@.browser == 'Chrome')].count").value(1));
+  }
+
+  @Test
+  void aggregatesByReferrerAndChannel() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-s3"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "stats03", owner.getId(), null));
     clickRepository.save(
-        new ClickEventEntity(link.getId(), "https://instagram.com", "ua", "1.1.1.1"));
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .referrer("https://www.instagram.com/p/abc")
+            .userAgent("ua")
+            .clientIp("1.1.1.1")
+            .deviceClass("mobile")
+            .bot(false)
+            .build());
     clickRepository.save(
-        new ClickEventEntity(link.getId(), "https://instagram.com", "ua", "1.1.1.2"));
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .referrer("https://www.instagram.com/p/abc")
+            .userAgent("ua")
+            .clientIp("1.1.1.2")
+            .deviceClass("mobile")
+            .bot(false)
+            .build());
     clickRepository.save(
-        new ClickEventEntity(link.getId(), "https://youtube.com", "ua", "1.1.1.3"));
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .referrer("https://www.youtube.com/watch")
+            .userAgent("ua")
+            .clientIp("1.1.1.3")
+            .deviceClass("desktop")
+            .bot(false)
+            .build());
+    clickRepository.save(humanClick(link.getId(), "desktop"));
     String token = jwt.createAccessToken(owner.getId());
 
     mvc.perform(get("/api/v1/links/stats03/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(
-            jsonPath("$.referrerClicks[?(@.referrer == 'https://instagram.com')].count").value(2))
+            jsonPath("$.referrerClicks[?(@.referrer == 'https://www.instagram.com/p/abc')].count")
+                .value(2))
         .andExpect(
-            jsonPath("$.referrerClicks[?(@.referrer == 'https://youtube.com')].count").value(1));
+            jsonPath("$.referrerClicks[?(@.referrer == 'https://www.youtube.com/watch')].count")
+                .value(1))
+        .andExpect(jsonPath("$.channelClicks[?(@.channel == 'social')].count").value(3))
+        .andExpect(jsonPath("$.channelClicks[?(@.channel == 'direct')].count").value(1))
+        .andExpect(jsonPath("$.channelClicks[0].channel").value("social"))
+        .andExpect(jsonPath("$.timezone").value("Asia/Seoul"));
+  }
+
+  @Test
+  void aggregatesByUtmCampaign() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-utm"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "statutm", owner.getId(), null));
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.1")
+            .utmCampaign("spring_sale")
+            .deviceClass("desktop")
+            .bot(false)
+            .build());
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.2")
+            .utmCampaign("spring_sale")
+            .deviceClass("mobile")
+            .bot(false)
+            .build());
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.3")
+            .utmCampaign("launch")
+            .deviceClass("desktop")
+            .bot(false)
+            .build());
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(get("/api/v1/links/statutm/stats").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.utmCampaignClicks[?(@.campaign == 'spring_sale')].count").value(2))
+        .andExpect(jsonPath("$.utmCampaignClicks[?(@.campaign == 'launch')].count").value(1));
   }
 
   @Test
