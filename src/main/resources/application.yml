@@ -21,6 +21,9 @@ server:
 short-link:
   base-url: ${SHORT_LINK_BASE_URL:http://localhost:8080}
   jwt:
-    secret: ${JWT_SECRET:dev-only-change-me-must-be-256-bit-or-longer-secret-key}
+    private-key: ${JWT_PRIVATE_KEY:}
+    public-key: ${JWT_PUBLIC_KEY:}
     access-ttl: 15m
     refresh-ttl: 14d
+  cookie:
+    secure: ${COOKIE_SECURE:false}

@@ -49,4 +49,13 @@ class MyLinksControllerTest {
   void unauthorizedWithoutToken() throws Exception {
     mvc.perform(get("/api/v1/links/me")).andExpect(status().isUnauthorized());
   }
+
+  @Test
+  void rejectsRefreshTokenAsAccess() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("x@example.com", "google", "g-x"));
+    String refresh = jwt.createRefreshToken(user.getId()).token();
+
+    mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + refresh))
+        .andExpect(status().isUnauthorized());
+  }
 }

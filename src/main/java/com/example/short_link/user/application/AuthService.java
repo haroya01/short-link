@@ -24,25 +24,23 @@ public class AuthService {
   }
 
   public IssuedTokens refresh(String refreshToken) {
-    Long userId;
-    String jti;
+    ParsedRefresh parsed;
     try {
-      userId = jwt.parseUserId(refreshToken);
-      jti = jwt.parseJti(refreshToken);
+      parsed = jwt.parseRefreshToken(refreshToken);
     } catch (Exception e) {
       throw new InvalidRefreshTokenException();
     }
-    if (!refreshStore.exists(userId, jti)) {
+    if (!refreshStore.exists(parsed.userId(), parsed.jti())) {
       throw new InvalidRefreshTokenException();
     }
-    refreshStore.delete(userId, jti);
-    return issue(userId);
+    refreshStore.delete(parsed.userId(), parsed.jti());
+    return issue(parsed.userId());
   }
 
   public void logout(Long userId, String refreshToken) {
     try {
-      String jti = jwt.parseJti(refreshToken);
-      refreshStore.delete(userId, jti);
+      ParsedRefresh parsed = jwt.parseRefreshToken(refreshToken);
+      refreshStore.delete(parsed.userId(), parsed.jti());
     } catch (Exception ignored) {
     }
   }

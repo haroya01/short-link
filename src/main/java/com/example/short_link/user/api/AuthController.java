@@ -3,9 +3,7 @@ package com.example.short_link.user.api;
 import com.example.short_link.user.application.AuthService;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import com.example.short_link.user.application.IssuedTokens;
-import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
-import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -19,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
   private final AuthService authService;
+  private final RefreshCookieWriter refreshCookieWriter;
 
   @PostMapping("/refresh")
   public TokenResponse refresh(
@@ -28,7 +27,7 @@ public class AuthController {
       throw new InvalidRefreshTokenException();
     }
     IssuedTokens tokens = authService.refresh(refreshToken);
-    setRefreshCookie(res, tokens.refreshToken());
+    refreshCookieWriter.set(res, tokens.refreshToken());
     return new TokenResponse(tokens.accessToken());
   }
 
@@ -40,24 +39,6 @@ public class AuthController {
     if (userId != null && refreshToken != null) {
       authService.logout(userId, refreshToken);
     }
-    clearRefreshCookie(res);
-  }
-
-  private void setRefreshCookie(HttpServletResponse res, String token) {
-    Cookie cookie = new Cookie("refresh_token", token);
-    cookie.setHttpOnly(true);
-    cookie.setPath("/api/v1/auth");
-    cookie.setMaxAge((int) Duration.ofDays(14).toSeconds());
-    cookie.setSecure(false);
-    res.addCookie(cookie);
-  }
-
-  private void clearRefreshCookie(HttpServletResponse res) {
-    Cookie cookie = new Cookie("refresh_token", "");
-    cookie.setHttpOnly(true);
-    cookie.setPath("/api/v1/auth");
-    cookie.setMaxAge(0);
-    cookie.setSecure(false);
-    res.addCookie(cookie);
+    refreshCookieWriter.clear(res);
   }
 }
