@@ -1,7 +1,9 @@
 package com.example.short_link.common.api;
 
+import com.example.short_link.link.application.DuplicateShortCodeException;
 import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkNotFoundException;
+import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +12,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -30,6 +33,24 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(LinkExpiredException.class)
   public ProblemDetail handleLinkExpired(LinkExpiredException e, HttpServletRequest req) {
     return problem(HttpStatus.GONE, e.getMessage(), "LINK_EXPIRED", req);
+  }
+
+  @ExceptionHandler(DuplicateShortCodeException.class)
+  public ProblemDetail handleDuplicateShortCode(
+      DuplicateShortCodeException e, HttpServletRequest req) {
+    return problem(HttpStatus.CONFLICT, e.getMessage(), "DUPLICATE_SHORT_CODE", req);
+  }
+
+  @ExceptionHandler(LinkNotOwnedException.class)
+  public ProblemDetail handleLinkNotOwned(LinkNotOwnedException e, HttpServletRequest req) {
+    return problem(HttpStatus.FORBIDDEN, e.getMessage(), "LINK_NOT_OWNED", req);
+  }
+
+  @ExceptionHandler(OptimisticLockingFailureException.class)
+  public ProblemDetail handleOptimisticLock(
+      OptimisticLockingFailureException e, HttpServletRequest req) {
+    return problem(
+        HttpStatus.CONFLICT, "concurrent modification, please retry", "OPTIMISTIC_LOCK", req);
   }
 
   @ExceptionHandler(InvalidRefreshTokenException.class)

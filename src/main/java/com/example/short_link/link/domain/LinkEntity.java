@@ -7,6 +7,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -37,6 +38,10 @@ public class LinkEntity {
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
+  @Version
+  @Column(nullable = false)
+  private Long version;
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -55,5 +60,17 @@ public class LinkEntity {
 
   public boolean isExpired(Instant now) {
     return expiresAt != null && !now.isBefore(expiresAt);
+  }
+
+  public boolean isOwnedBy(Long userId) {
+    return this.userId != null && this.userId.equals(userId);
+  }
+
+  public void changeOriginalUrl(String originalUrl) {
+    this.originalUrl = originalUrl;
+  }
+
+  public void changeExpiresAt(Instant expiresAt) {
+    this.expiresAt = expiresAt;
   }
 }
