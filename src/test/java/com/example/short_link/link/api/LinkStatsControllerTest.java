@@ -163,7 +163,7 @@ class LinkStatsControllerTest {
     clickRepository.save(
         ClickEventEntity.builder()
             .linkId(link.getId())
-            .referrer("https://www.youtube.com/watch?v=xyz")
+            .referrer("https://www.youtube.com/watch")
             .userAgent("ua")
             .clientIp("1.1.1.3")
             .deviceClass("desktop")
@@ -178,12 +178,12 @@ class LinkStatsControllerTest {
             jsonPath("$.referrerClicks[?(@.referrer == 'https://www.instagram.com/p/abc')].count")
                 .value(2))
         .andExpect(
-            jsonPath(
-                    "$.referrerClicks[?(@.referrer == 'https://www.youtube.com/watch?v=xyz')].count")
+            jsonPath("$.referrerClicks[?(@.referrer == 'https://www.youtube.com/watch')].count")
                 .value(1))
         .andExpect(jsonPath("$.channelClicks[?(@.channel == 'social')].count").value(3))
         .andExpect(jsonPath("$.channelClicks[?(@.channel == 'direct')].count").value(1))
-        .andExpect(jsonPath("$.channelClicks[0].channel").value("social"));
+        .andExpect(jsonPath("$.channelClicks[0].channel").value("social"))
+        .andExpect(jsonPath("$.timezone").value("Asia/Seoul"));
   }
 
   @Test

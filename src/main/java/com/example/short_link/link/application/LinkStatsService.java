@@ -6,10 +6,13 @@ import com.example.short_link.link.domain.LinkRepository;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkStatsService {
 
   private static final Duration DAILY_WINDOW = Duration.ofDays(30);
+  private static final ZoneId REPORT_ZONE = ZoneId.of("Asia/Seoul");
+  private static final String REPORT_TZ = "+09:00";
+  private static final Pageable TOP_50 = PageRequest.ofSize(50);
 
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
@@ -39,28 +45,34 @@ public class LinkStatsService {
     long bot = clickRepository.countBotByLinkId(linkId);
 
     List<LinkStats.DailyClick> daily =
-        clickRepository.findDailyClicks(linkId, Instant.now().minus(DAILY_WINDOW)).stream()
-            .map(r -> new LinkStats.DailyClick(r.getDay().toLocalDate(), r.getCnt()))
+        clickRepository
+            .findDailyClicks(linkId, Instant.now().minus(DAILY_WINDOW), REPORT_TZ)
+            .stream()
+            .map(r -> new LinkStats.DailyClick(r.getDay(), r.getCount()))
             .toList();
 
     List<LinkStats.HourClick> hourly =
-        clickRepository.findHourlyClicks(linkId).stream()
-            .map(r -> new LinkStats.HourClick(r.getHour(), r.getCnt()))
+        clickRepository.findHourlyClicks(linkId, REPORT_TZ).stream()
+            .map(r -> new LinkStats.HourClick(r.getHour(), r.getCount()))
             .toList();
 
     List<LinkStats.DayOfWeekClick> dayOfWeek =
-        clickRepository.findDayOfWeekClicks(linkId).stream()
-            .map(r -> new LinkStats.DayOfWeekClick(mapDayOfWeek(r.getDow()), r.getCnt()))
+        clickRepository.findDayOfWeekClicks(linkId, REPORT_TZ).stream()
+            .map(r -> new LinkStats.DayOfWeekClick(mapDayOfWeek(r.getDow()), r.getCount()))
             .toList();
 
     List<LinkStats.ReferrerClick> referrers =
-        clickRepository.findReferrerClicks(linkId).stream()
-            .map(r -> new LinkStats.ReferrerClick(r.getReferrer(), r.getCnt()))
+        clickRepository.findReferrerClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.ReferrerClick(r.getReferrer(), r.getCount()))
             .toList();
 
     Map<String, Long> channelTotals = new HashMap<>();
     referrers.forEach(
         r -> channelTotals.merge(channelClassifier.classify(r.referrer()), r.count(), Long::sum));
+    long direct = clickRepository.countDirectByLinkId(linkId);
+    if (direct > 0) {
+      channelTotals.merge("direct", direct, Long::sum);
+    }
     List<LinkStats.ChannelClick> channels =
         channelTotals.entrySet().stream()
             .map(e -> new LinkStats.ChannelClick(e.getKey(), e.getValue()))
@@ -69,27 +81,39 @@ public class LinkStatsService {
 
     List<LinkStats.DeviceClick> devices =
         clickRepository.findDeviceClicks(linkId).stream()
-            .map(r -> new LinkStats.DeviceClick(orUnknown(r.getDevice()), r.getCnt()))
+            .map(r -> new LinkStats.DeviceClick(orUnknown(r.getDevice()), r.getCount()))
             .toList();
 
     List<LinkStats.OsClick> os =
-        clickRepository.findOsClicks(linkId).stream()
-            .map(r -> new LinkStats.OsClick(orUnknown(r.getOs()), r.getCnt()))
+        clickRepository.findOsClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.OsClick(orUnknown(r.getOs()), r.getCount()))
             .toList();
 
     List<LinkStats.BrowserClick> browsers =
-        clickRepository.findBrowserClicks(linkId).stream()
-            .map(r -> new LinkStats.BrowserClick(orUnknown(r.getBrowser()), r.getCnt()))
+        clickRepository.findBrowserClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.BrowserClick(orUnknown(r.getBrowser()), r.getCount()))
             .toList();
 
     List<LinkStats.UtmCampaignClick> campaigns =
-        clickRepository.findUtmCampaignClicks(linkId).stream()
-            .map(r -> new LinkStats.UtmCampaignClick(r.getCampaign(), r.getCnt()))
+        clickRepository.findUtmCampaignClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.UtmCampaignClick(r.getCampaign(), r.getCount()))
             .toList();
 
     return new LinkStats(
-        shortCode, total, human, bot, daily, hourly, dayOfWeek, referrers, channels, devices, os,
-        browsers, campaigns);
+        shortCode,
+        REPORT_ZONE.getId(),
+        total,
+        human,
+        bot,
+        daily,
+        hourly,
+        dayOfWeek,
+        referrers,
+        channels,
+        devices,
+        os,
+        browsers,
+        campaigns);
   }
 
   static String mapDayOfWeek(int mysqlDow) {

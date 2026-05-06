@@ -5,6 +5,7 @@ import java.util.List;
 
 public record LinkStats(
     String shortCode,
+    String timezone,
     long totalClicks,
     long humanClicks,
     long botClicks,
