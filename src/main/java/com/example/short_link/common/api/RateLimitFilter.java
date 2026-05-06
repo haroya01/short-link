@@ -9,7 +9,11 @@ import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
+import org.slf4j.MDC;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -20,6 +24,13 @@ import org.springframework.web.filter.OncePerRequestFilter;
 public class RateLimitFilter extends OncePerRequestFilter {
 
   private static final Duration WINDOW = Duration.ofMinutes(1);
+
+  private static final RedisScript<Long> INCR_AND_EXPIRE =
+      new DefaultRedisScript<>(
+          "local c = redis.call('INCR', KEYS[1]) "
+              + "if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end "
+              + "return c",
+          Long.class);
 
   private final StringRedisTemplate redis;
   private final ObjectMapper objectMapper;
@@ -41,6 +52,11 @@ public class RateLimitFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest req, HttpServletResponse res, FilterChain chain)
       throws ServletException, IOException {
+    if (req.getRequestURI().startsWith("/actuator/")) {
+      chain.doFilter(req, res);
+      return;
+    }
+
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     String identifier;
     long limit;
@@ -52,10 +68,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
       limit = anonymousLimit;
     }
     String key = "rate:" + identifier;
-    Long count = redis.opsForValue().increment(key);
-    if (count != null && count == 1L) {
-      redis.expire(key, WINDOW);
-    }
+    Long count = redis.execute(INCR_AND_EXPIRE, List.of(key), String.valueOf(WINDOW.getSeconds()));
     if (count != null && count > limit) {
       writeRateLimitResponse(req, res);
       return;
@@ -78,6 +91,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
     body.setInstance(URI.create(req.getRequestURI()));
     body.setProperty("code", "RATE_LIMITED");
     body.setProperty("timestamp", Instant.now().toString());
+    String requestId = MDC.get("requestId");
+    if (requestId != null) {
+      body.setProperty("requestId", requestId);
+    }
 
     res.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
     res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

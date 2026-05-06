@@ -1,14 +1,19 @@
 package com.example.short_link.user.application;
 
 import java.time.Duration;
+import java.util.HashSet;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class RefreshTokenStore {
+
+  private static final long SCAN_BATCH = 100;
 
   private final StringRedisTemplate redis;
 
@@ -25,9 +30,16 @@ public class RefreshTokenStore {
   }
 
   public void deleteAllForUser(Long userId) {
-    Set<String> keys = redis.keys(userPrefix(userId) + "*");
-    if (keys != null && !keys.isEmpty()) {
-      redis.delete(keys);
+    Set<String> toDelete = new HashSet<>();
+    ScanOptions opts =
+        ScanOptions.scanOptions().match(userPrefix(userId) + "*").count(SCAN_BATCH).build();
+    try (Cursor<String> cursor = redis.scan(opts)) {
+      while (cursor.hasNext()) {
+        toDelete.add(cursor.next());
+      }
+    }
+    if (!toDelete.isEmpty()) {
+      redis.delete(toDelete);
     }
   }
 

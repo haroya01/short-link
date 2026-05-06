@@ -16,6 +16,13 @@ spring:
       port: ${REDIS_PORT:6379}
       password: ${REDIS_PASSWORD}
 
+server:
+  forward-headers-strategy: native
+
+management:
+  server:
+    port: 8081
+
 short-link:
   base-url: ${SHORT_LINK_BASE_URL}
   jwt:
