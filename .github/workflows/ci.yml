@@ -61,6 +61,13 @@ jobs:
 
       - run: ./gradlew test
 
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: build/reports/tests/
+
       - name: Upload coverage to Codecov
         if: always()
         uses: codecov/codecov-action@v5
