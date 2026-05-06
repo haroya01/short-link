@@ -1,7 +1,9 @@
 package com.example.short_link.common.api;
 
+import com.example.short_link.link.application.DuplicateShortCodeException;
 import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkNotFoundException;
+import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,6 +32,17 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(LinkExpiredException.class)
   public ProblemDetail handleLinkExpired(LinkExpiredException e, HttpServletRequest req) {
     return problem(HttpStatus.GONE, e.getMessage(), "LINK_EXPIRED", req);
+  }
+
+  @ExceptionHandler(DuplicateShortCodeException.class)
+  public ProblemDetail handleDuplicateShortCode(
+      DuplicateShortCodeException e, HttpServletRequest req) {
+    return problem(HttpStatus.CONFLICT, e.getMessage(), "DUPLICATE_SHORT_CODE", req);
+  }
+
+  @ExceptionHandler(LinkNotOwnedException.class)
+  public ProblemDetail handleLinkNotOwned(LinkNotOwnedException e, HttpServletRequest req) {
+    return problem(HttpStatus.FORBIDDEN, e.getMessage(), "LINK_NOT_OWNED", req);
   }
 
   @ExceptionHandler(InvalidRefreshTokenException.class)

@@ -56,4 +56,16 @@ public class LinkEntity {
   public boolean isExpired(Instant now) {
     return expiresAt != null && !now.isBefore(expiresAt);
   }
+
+  public boolean isOwnedBy(Long userId) {
+    return this.userId != null && this.userId.equals(userId);
+  }
+
+  public void changeOriginalUrl(String originalUrl) {
+    this.originalUrl = originalUrl;
+  }
+
+  public void changeExpiresAt(Instant expiresAt) {
+    this.expiresAt = expiresAt;
+  }
 }
