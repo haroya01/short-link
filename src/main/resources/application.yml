@@ -9,5 +9,18 @@ spring:
 server:
   port: 8080
 
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: ${GOOGLE_CLIENT_ID:placeholder}
+            client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
+            scope: openid, profile, email
+
 short-link:
   base-url: ${SHORT_LINK_BASE_URL:http://localhost:8080}
+  jwt:
+    secret: ${JWT_SECRET:dev-only-change-me-must-be-256-bit-or-longer-secret-key}
+    access-ttl: 15m
+    refresh-ttl: 14d
