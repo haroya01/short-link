@@ -23,8 +23,10 @@ class LinkCreationServiceCollisionTest {
     when(repository.save(any(LinkEntity.class)))
         .thenThrow(new DataIntegrityViolationException("unique"));
 
+    UrlSafetyChecker safetyChecker = mock(UrlSafetyChecker.class);
+    when(safetyChecker.isSafe(any())).thenReturn(true);
     LinkCreationService service =
-        new LinkCreationService(repository, generator, new SimpleMeterRegistry());
+        new LinkCreationService(repository, generator, new SimpleMeterRegistry(), safetyChecker);
 
     assertThatThrownBy(() -> service.create("https://example.com", null, null, null))
         .isInstanceOf(ShortCodeGenerationException.class);

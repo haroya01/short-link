@@ -4,6 +4,7 @@ import com.example.short_link.link.application.DuplicateShortCodeException;
 import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkNotOwnedException;
+import com.example.short_link.link.application.MaliciousUrlException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -45,6 +46,11 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(LinkNotOwnedException.class)
   public ProblemDetail handleLinkNotOwned(LinkNotOwnedException e, HttpServletRequest req) {
     return problem(HttpStatus.FORBIDDEN, e.getMessage(), "LINK_NOT_OWNED", req);
+  }
+
+  @ExceptionHandler(MaliciousUrlException.class)
+  public ProblemDetail handleMaliciousUrl(MaliciousUrlException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, "url flagged as malicious", "MALICIOUS_URL", req);
   }
 
   @ExceptionHandler(OptimisticLockingFailureException.class)
