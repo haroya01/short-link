@@ -27,7 +27,8 @@ public class MyLinksController {
                     urlBuilder.build(my.shortCode()),
                     my.originalUrl(),
                     my.createdAt(),
-                    my.expiresAt()))
+                    my.expiresAt(),
+                    my.clickCount()))
         .toList();
   }
 }

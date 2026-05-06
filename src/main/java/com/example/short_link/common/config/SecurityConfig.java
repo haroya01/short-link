@@ -53,6 +53,8 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/links/*")
                     .authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/stats")
+                    .authenticated()
                     .requestMatchers("/api/v1/links/me", "/api/v1/auth/logout")
                     .authenticated()
                     .anyRequest()
