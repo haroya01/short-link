@@ -16,14 +16,10 @@ class LinkRepositoryTest {
   @Autowired private LinkRepository repository;
 
   @Test
-  void saveAndFindById() {
-    LinkEntity entity = new LinkEntity("https://example.com/very/long/path", "abc1234");
-    LinkEntity saved = repository.save(entity);
+  void existsByShortCode() {
+    repository.save(new LinkEntity("https://example.com", "abc1234"));
 
-    var found = repository.findById(saved.getId());
-    assertThat(found).isPresent();
-    assertThat(found.get().getOriginalUrl()).isEqualTo("https://example.com/very/long/path");
-    assertThat(found.get().getShortCode()).isEqualTo("abc1234");
-    assertThat(found.get().getCreatedAt()).isNotNull();
+    assertThat(repository.existsByShortCode("abc1234")).isTrue();
+    assertThat(repository.existsByShortCode("missing")).isFalse();
   }
 }

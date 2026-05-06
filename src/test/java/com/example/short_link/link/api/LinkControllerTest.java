@@ -60,4 +60,22 @@ class LinkControllerTest {
                 .content("{\"url\":\"" + longUrl + "\"}"))
         .andExpect(status().isBadRequest());
   }
+
+  @Test
+  void rejectsJavascriptScheme() throws Exception {
+    mvc.perform(
+            post("/api/v1/links")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"javascript:alert(1)\"}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void rejectsDataScheme() throws Exception {
+    mvc.perform(
+            post("/api/v1/links")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"url\":\"data:text/html,<script>alert(1)</script>\"}"))
+        .andExpect(status().isBadRequest());
+  }
 }

@@ -1,10 +1,11 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.application.LinkCreated;
 import com.example.short_link.link.application.LinkService;
-import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import jakarta.validation.Valid;
 import java.net.URI;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,21 +14,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/v1/links")
+@RequiredArgsConstructor
 public class LinkController {
 
   private final LinkService service;
-  private final String baseUrl;
-
-  public LinkController(LinkService service, @Value("${short-link.base-url}") String baseUrl) {
-    this.service = service;
-    this.baseUrl = baseUrl;
-  }
+  private final ShortLinkUrlBuilder urlBuilder;
 
   @PostMapping
   public ResponseEntity<CreateLinkResponse> create(@Valid @RequestBody CreateLinkRequest request) {
-    LinkEntity link = service.create(request.url());
-    String shortUrl = baseUrl + "/" + link.getShortCode();
+    LinkCreated created = service.create(request.url());
+    String shortUrl = urlBuilder.build(created.shortCode());
     return ResponseEntity.created(URI.create(shortUrl))
-        .body(new CreateLinkResponse(link.getShortCode(), shortUrl));
+        .body(new CreateLinkResponse(created.shortCode(), shortUrl));
   }
 }

@@ -2,10 +2,12 @@ package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 public class LinkService {
 
   private static final int MAX_ATTEMPTS = 5;
@@ -13,17 +15,14 @@ public class LinkService {
   private final LinkRepository repository;
   private final ShortCodeGenerator generator;
 
-  public LinkService(LinkRepository repository, ShortCodeGenerator generator) {
-    this.repository = repository;
-    this.generator = generator;
-  }
-
-  @Transactional
-  public LinkEntity create(String url) {
+  public LinkCreated create(String url) {
     for (int i = 0; i < MAX_ATTEMPTS; i++) {
       String code = generator.generate();
-      if (!repository.existsByShortCode(code)) {
-        return repository.save(new LinkEntity(url, code));
+      try {
+        LinkEntity saved = repository.save(new LinkEntity(url, code));
+        return new LinkCreated(saved.getShortCode());
+      } catch (DataIntegrityViolationException e) {
+        // short_code collision — retry
       }
     }
     throw new ShortCodeGenerationException();

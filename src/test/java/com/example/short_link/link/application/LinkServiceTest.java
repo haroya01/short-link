@@ -2,7 +2,6 @@ package com.example.short_link.link.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,19 +19,18 @@ class LinkServiceTest {
 
   @Test
   void createsAndPersistsLink() {
-    LinkEntity result = service.create("https://example.com/very/long/path");
+    LinkCreated created = service.create("https://example.com/very/long/path");
 
-    assertThat(result.getShortCode()).hasSize(7);
-    assertThat(result.getShortCode()).matches("[0-9A-Za-z]{7}");
-    assertThat(result.getOriginalUrl()).isEqualTo("https://example.com/very/long/path");
-    assertThat(repository.existsByShortCode(result.getShortCode())).isTrue();
+    assertThat(created.shortCode()).hasSize(7);
+    assertThat(created.shortCode()).matches("[0-9A-Za-z]{7}");
+    assertThat(repository.existsByShortCode(created.shortCode())).isTrue();
   }
 
   @Test
   void createsDistinctCodesForSameUrl() {
-    LinkEntity first = service.create("https://example.com");
-    LinkEntity second = service.create("https://example.com");
+    LinkCreated first = service.create("https://example.com");
+    LinkCreated second = service.create("https://example.com");
 
-    assertThat(first.getShortCode()).isNotEqualTo(second.getShortCode());
+    assertThat(first.shortCode()).isNotEqualTo(second.shortCode());
   }
 }
