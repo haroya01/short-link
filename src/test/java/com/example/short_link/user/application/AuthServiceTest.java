@@ -75,6 +75,26 @@ class AuthServiceTest {
   }
 
   @Test
+  void refreshReuseWipesAllSessionsForUser() {
+    UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-reuse"));
+    RefreshToken initial = jwt.createRefreshToken(user.getId());
+    RefreshToken otherSession = jwt.createRefreshToken(user.getId());
+    refreshStore.save(user.getId(), initial.jti(), jwt.refreshTtl());
+    refreshStore.save(user.getId(), otherSession.jti(), jwt.refreshTtl());
+
+    IssuedTokens rotated = authService.refresh(initial.token());
+    ParsedRefresh rotatedParsed = jwt.parseRefreshToken(rotated.refreshToken());
+    assertThat(refreshStore.exists(user.getId(), rotatedParsed.jti())).isTrue();
+    assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isTrue();
+
+    assertThatThrownBy(() -> authService.refresh(initial.token()))
+        .isInstanceOf(InvalidRefreshTokenException.class);
+
+    assertThat(refreshStore.exists(user.getId(), rotatedParsed.jti())).isFalse();
+    assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isFalse();
+  }
+
+  @Test
   void logoutDeletesRefresh() {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
     RefreshToken refresh = jwt.createRefreshToken(user.getId());

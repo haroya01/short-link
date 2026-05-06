@@ -2,6 +2,7 @@ package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -13,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkLookupService {
 
   private final LinkRepository repository;
+  private final MeterRegistry meterRegistry;
 
   @Cacheable("link")
   @Transactional(readOnly = true)
@@ -25,10 +27,18 @@ public class LinkLookupService {
   }
 
   public String findActiveOriginalUrl(String shortCode) {
-    CachedLink cached = loadByShortCode(shortCode);
+    CachedLink cached;
+    try {
+      cached = loadByShortCode(shortCode);
+    } catch (LinkNotFoundException e) {
+      meterRegistry.counter("short_link.lookup", "result", "not_found").increment();
+      throw e;
+    }
     if (cached.isExpired(Instant.now())) {
+      meterRegistry.counter("short_link.lookup", "result", "expired").increment();
       throw new LinkExpiredException(shortCode);
     }
+    meterRegistry.counter("short_link.lookup", "result", "redirected").increment();
     return cached.originalUrl();
   }
 }

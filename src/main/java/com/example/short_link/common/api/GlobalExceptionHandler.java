@@ -12,6 +12,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.MDC;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -109,6 +110,10 @@ public class GlobalExceptionHandler {
     p.setInstance(URI.create(req.getRequestURI()));
     p.setProperty("code", code);
     p.setProperty("timestamp", Instant.now().toString());
+    String requestId = MDC.get("requestId");
+    if (requestId != null) {
+      p.setProperty("requestId", requestId);
+    }
     return p;
   }
 }

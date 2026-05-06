@@ -3,11 +3,13 @@ spring:
     name: short-link
   cache:
     type: redis
-    redis:
-      time-to-live: 24h
 
 server:
   port: 8080
+  tomcat:
+    max-http-form-post-size: 16KB
+    max-swallow-size: 16KB
+  max-http-request-header-size: 8KB
 
   security:
     oauth2:
@@ -18,8 +20,17 @@ server:
             client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
             scope: openid, profile, email
 
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+
 short-link:
   base-url: ${SHORT_LINK_BASE_URL:http://localhost:8080}
+  rate-limit:
+    anonymous: 100
+    authenticated: 1000
   jwt:
     private-key: ${JWT_PRIVATE_KEY:}
     public-key: ${JWT_PUBLIC_KEY:}
