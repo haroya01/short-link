@@ -3,6 +3,7 @@ package com.example.short_link.common.config;
 import com.example.short_link.common.api.RateLimitFilter;
 import com.example.short_link.user.api.JsonAuthenticationEntryPoint;
 import com.example.short_link.user.api.JwtAuthenticationFilter;
+import com.example.short_link.user.api.OAuth2LoginFailureHandler;
 import com.example.short_link.user.api.OAuth2LoginSuccessHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
@@ -28,6 +29,7 @@ public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtFilter;
   private final OAuth2LoginSuccessHandler oauth2SuccessHandler;
+  private final OAuth2LoginFailureHandler oauth2FailureHandler;
   private final JsonAuthenticationEntryPoint authenticationEntryPoint;
 
   @Bean
@@ -81,7 +83,8 @@ public class SecurityConfig {
         .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
         .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
     if (clientRegistrations.getIfAvailable() != null) {
-      http.oauth2Login(o -> o.successHandler(oauth2SuccessHandler));
+      http.oauth2Login(
+          o -> o.successHandler(oauth2SuccessHandler).failureHandler(oauth2FailureHandler));
     }
     return http.build();
   }
