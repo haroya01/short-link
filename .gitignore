@@ -47,3 +47,12 @@ out/
 ### GeoIP ###
 *.mmdb
 !**/GeoLite2-City-Fallback.mmdb
+
+### Terraform ###
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
