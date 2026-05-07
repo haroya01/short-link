@@ -29,4 +29,16 @@ public final class ReferrerNormalizer {
       return null;
     }
   }
+
+  public static String hostOf(String referrer) {
+    if (referrer == null || referrer.isBlank()) {
+      return null;
+    }
+    try {
+      String host = new URI(referrer.trim()).getHost();
+      return host == null ? null : host.toLowerCase();
+    } catch (URISyntaxException e) {
+      return null;
+    }
+  }
 }
