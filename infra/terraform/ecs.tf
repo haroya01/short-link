@@ -18,9 +18,9 @@ locals {
     { name = "TZ", value = "UTC" },
     { name = "DB_URL", value = "jdbc:mysql://${aws_db_instance.this.address}:3306/${var.db_name}?useSSL=true&requireSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC" },
     { name = "DB_USERNAME", value = var.db_username },
-    { name = "REDIS_HOST", value = aws_elasticache_replication_group.this.primary_endpoint_address },
+    { name = "REDIS_HOST", value = "127.0.0.1" },
     { name = "REDIS_PORT", value = "6379" },
-    { name = "REDIS_SSL", value = "true" },
+    { name = "REDIS_SSL", value = "false" },
     { name = "SHORT_LINK_BASE_URL", value = "https://${local.api_fqdn}" },
     { name = "SHORT_LINK_FRONTEND_BASE_URL", value = var.frontend_base_url },
     { name = "COOKIE_SECURE", value = "true" },
@@ -30,7 +30,6 @@ locals {
 
   app_secrets_arns = {
     DB_PASSWORD                      = aws_ssm_parameter.app["db_password"].arn
-    REDIS_PASSWORD                   = aws_ssm_parameter.app["redis_auth_token"].arn
     JWT_PRIVATE_KEY                  = aws_ssm_parameter.app["jwt_private_key"].arn
     JWT_PUBLIC_KEY                   = aws_ssm_parameter.app["jwt_public_key"].arn
     GOOGLE_CLIENT_ID                 = aws_ssm_parameter.app["google_client_id"].arn
@@ -56,9 +55,41 @@ resource "aws_ecs_task_definition" "app" {
 
   container_definitions = jsonencode([
     {
+      name      = "redis"
+      image     = var.redis_sidecar_image
+      essential = true
+      memory    = 192
+
+      command = [
+        "redis-server",
+        "--save", "",
+        "--appendonly", "no",
+        "--maxmemory", "100mb",
+        "--maxmemory-policy", "allkeys-lru",
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.app.name
+          awslogs-region        = var.region
+          awslogs-stream-prefix = "redis"
+        }
+      }
+
+      healthCheck = {
+        command     = ["CMD", "redis-cli", "ping"]
+        interval    = 30
+        timeout     = 3
+        retries     = 3
+        startPeriod = 10
+      }
+    },
+    {
       name      = "app"
       image     = "${aws_ecr_repository.app.repository_url}:${var.image_tag}"
       essential = true
+      memory    = 768
 
       portMappings = [
         { containerPort = 8080, protocol = "tcp" },
@@ -71,6 +102,10 @@ resource "aws_ecs_task_definition" "app" {
           name      = k
           valueFrom = arn
         }
+      ]
+
+      dependsOn = [
+        { containerName = "redis", condition = "HEALTHY" },
       ]
 
       logConfiguration = {
