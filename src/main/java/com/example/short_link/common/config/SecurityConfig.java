@@ -66,8 +66,14 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/links/*/stats.csv")
                     .authenticated()
-                    .requestMatchers("/api/v1/links/me", "/api/v1/auth/logout", "/api/v1/users/me")
+                    .requestMatchers(
+                        "/api/v1/links/me",
+                        "/api/v1/auth/logout",
+                        "/api/v1/users/me",
+                        "/api/v1/users/me/preferences")
                     .authenticated()
+                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/dev-login")
+                    .permitAll()
                     .requestMatchers("/api/v1/admin/**")
                     .hasRole("ADMIN")
                     .anyRequest()

@@ -42,6 +42,9 @@ public class UserEntity {
   @Column(nullable = false, length = 16)
   private Role role = Role.USER;
 
+  @Column(nullable = false, length = 64)
+  private String timezone = "Asia/Seoul";
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
@@ -50,6 +53,7 @@ public class UserEntity {
     this.oauthProvider = oauthProvider;
     this.oauthId = oauthId;
     this.role = Role.USER;
+    this.timezone = "Asia/Seoul";
   }
 
   public boolean isAdmin() {
@@ -58,6 +62,10 @@ public class UserEntity {
 
   public void promoteToAdmin() {
     this.role = Role.ADMIN;
+  }
+
+  public void changeTimezone(String timezone) {
+    this.timezone = timezone;
   }
 
   @PrePersist
