@@ -246,7 +246,7 @@ public class LinkStatsService {
     return userRepository.findById(userId).map(u -> safeZone(u.getTimezone())).orElse(DEFAULT_ZONE);
   }
 
-  private static ZoneId safeZone(String tz) {
+  static ZoneId safeZone(String tz) {
     if (tz == null || tz.isBlank()) return DEFAULT_ZONE;
     try {
       return ZoneId.of(tz);
@@ -255,7 +255,7 @@ public class LinkStatsService {
     }
   }
 
-  private static String currentOffset(ZoneId zone) {
+  static String currentOffset(ZoneId zone) {
     ZoneOffset offset = zone.getRules().getOffset(Instant.now());
     return offset.getId().equals("Z") ? "+00:00" : offset.getId();
   }
