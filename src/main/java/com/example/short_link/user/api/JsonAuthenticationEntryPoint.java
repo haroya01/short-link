@@ -1,5 +1,6 @@
 package com.example.short_link.user.api;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -19,11 +20,15 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class JsonAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
+  public static final String METRIC_NAME = "auth.failure";
+
   private final JsonMapper jsonMapper;
+  private final MeterRegistry meterRegistry;
 
   @Override
   public void commence(HttpServletRequest req, HttpServletResponse res, AuthenticationException ex)
       throws IOException {
+    meterRegistry.counter(METRIC_NAME).increment();
     ProblemDetail body =
         ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, "authentication required");
     body.setInstance(URI.create(req.getRequestURI()));
