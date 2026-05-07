@@ -22,16 +22,11 @@ public class GeoIpConfig {
 
   @Bean
   public DatabaseReader geoIpDatabaseReader() throws IOException {
-    File file;
-    if (database.isFile()) {
-      file = database.getFile();
-    } else {
-      file = File.createTempFile("GeoLite2-City", ".mmdb");
-      file.deleteOnExit();
-      try (InputStream in = database.getInputStream();
-          FileOutputStream out = new FileOutputStream(file)) {
-        in.transferTo(out);
-      }
+    File file = File.createTempFile("GeoLite2-City", ".mmdb");
+    file.deleteOnExit();
+    try (InputStream in = database.getInputStream();
+        FileOutputStream out = new FileOutputStream(file)) {
+      in.transferTo(out);
     }
     this.reader = new DatabaseReader.Builder(file).fileMode(FileMode.MEMORY_MAPPED).build();
     return reader;
