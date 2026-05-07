@@ -151,6 +151,47 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
           + "GROUP BY c.language ORDER BY count DESC")
   List<LanguageClickRow> findLanguageClicks(@Param("linkId") Long linkId, Pageable pageable);
 
+  @Query(
+      value =
+          "SELECT SUM(CASE WHEN cnt = 1 THEN 1 ELSE 0 END) AS newCount, "
+              + "SUM(CASE WHEN cnt >= 2 THEN 1 ELSE 0 END) AS returningCount "
+              + "FROM (SELECT visitor_hash, COUNT(*) AS cnt FROM click_event "
+              + "WHERE link_id = :linkId AND visitor_hash IS NOT NULL AND is_bot = 0 "
+              + "GROUP BY visitor_hash) t",
+      nativeQuery = true)
+  ReturnRateRow findReturnRate(@Param("linkId") Long linkId);
+
+  @Query(
+      value =
+          "SELECT TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) AS day, COUNT(*) AS count "
+              + "FROM click_event c JOIN link l ON c.link_id = l.id "
+              + "WHERE l.id = :linkId AND c.is_bot = 0 "
+              + "AND TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) BETWEEN 0 AND :maxDay "
+              + "GROUP BY day ORDER BY day",
+      nativeQuery = true)
+  List<DayClickRow> findLifecycleClicks(@Param("linkId") Long linkId, @Param("maxDay") int maxDay);
+
+  @Query(
+      "SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.id < :cursorId "
+          + "ORDER BY c.id DESC")
+  List<ClickEventEntity> findEventsByLinkIdBefore(
+      @Param("linkId") Long linkId, @Param("cursorId") Long cursorId, Pageable pageable);
+
+  @Query("SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId ORDER BY c.id DESC")
+  List<ClickEventEntity> findEventsByLinkIdLatest(@Param("linkId") Long linkId, Pageable pageable);
+
+  interface ReturnRateRow {
+    Long getNewCount();
+
+    Long getReturningCount();
+  }
+
+  interface DayClickRow {
+    Integer getDay();
+
+    Long getCount();
+  }
+
   interface LinkClickCount {
     Long getLinkId();
 

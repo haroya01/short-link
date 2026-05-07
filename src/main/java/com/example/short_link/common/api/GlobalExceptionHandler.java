@@ -1,6 +1,8 @@
 package com.example.short_link.common.api;
 
 import com.example.short_link.link.application.DuplicateShortCodeException;
+import com.example.short_link.link.application.InvalidCursorException;
+import com.example.short_link.link.application.InvalidExportDimensionException;
 import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkNotOwnedException;
@@ -70,6 +72,17 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(UserNotFoundException.class)
   public ProblemDetail handleUserNotFound(UserNotFoundException e, HttpServletRequest req) {
     return problem(HttpStatus.NOT_FOUND, e.getMessage(), "USER_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(InvalidCursorException.class)
+  public ProblemDetail handleInvalidCursor(InvalidCursorException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_CURSOR", req);
+  }
+
+  @ExceptionHandler(InvalidExportDimensionException.class)
+  public ProblemDetail handleInvalidExportDimension(
+      InvalidExportDimensionException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_EXPORT_DIMENSION", req);
   }
 
   @ExceptionHandler(NoResourceFoundException.class)

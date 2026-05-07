@@ -25,10 +25,12 @@ public class LinkStatsService {
   private static final ZoneId REPORT_ZONE = ZoneId.of("Asia/Seoul");
   private static final String REPORT_TZ = "+09:00";
   private static final Pageable TOP_50 = PageRequest.ofSize(50);
+  private static final int LIFECYCLE_MAX_DAY = 30;
 
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
   private final ReferrerChannelClassifier channelClassifier;
+  private final LinkInsights insightsCalculator;
 
   @Transactional(readOnly = true)
   public LinkStats stats(Long userId, String shortCode) {
@@ -148,6 +150,12 @@ public class LinkStatsService {
             .map(r -> new LinkStats.LanguageClick(r.getLanguage(), r.getCount()))
             .toList();
 
+    LinkStats.ReturnRate returnRate = computeReturnRate(linkId);
+    LinkStats.Lifecycle lifecycle = computeLifecycle(linkId);
+    List<LinkStats.Insight> insights =
+        insightsCalculator.compute(
+            total, bot, heatmap, channels, countries, returnRate, lifecycle, daily);
+
     return new LinkStats(
         shortCode,
         REPORT_ZONE.getId(),
@@ -158,6 +166,8 @@ public class LinkStatsService {
         firstClickAt,
         timeToFirstClickMinutes,
         velocity,
+        returnRate,
+        lifecycle,
         daily,
         hourly,
         dayOfWeek,
@@ -173,7 +183,41 @@ public class LinkStatsService {
         countries,
         regions,
         cities,
-        languages);
+        languages,
+        insights);
+  }
+
+  private LinkStats.ReturnRate computeReturnRate(Long linkId) {
+    var row = clickRepository.findReturnRate(linkId);
+    long newCount = row == null || row.getNewCount() == null ? 0 : row.getNewCount();
+    long returningCount =
+        row == null || row.getReturningCount() == null ? 0 : row.getReturningCount();
+    long total = newCount + returningCount;
+    double ratio = total == 0 ? 0.0 : (double) returningCount / total;
+    return new LinkStats.ReturnRate(newCount, returningCount, ratio);
+  }
+
+  private LinkStats.Lifecycle computeLifecycle(Long linkId) {
+    List<LinkStats.DayClick> days =
+        clickRepository.findLifecycleClicks(linkId, LIFECYCLE_MAX_DAY).stream()
+            .map(r -> new LinkStats.DayClick(r.getDay(), r.getCount()))
+            .toList();
+    Integer halfLife = halfLife(days);
+    return new LinkStats.Lifecycle(days, halfLife);
+  }
+
+  static Integer halfLife(List<LinkStats.DayClick> days) {
+    if (days.isEmpty()) return null;
+    long total = 0;
+    for (LinkStats.DayClick dc : days) total += dc.count();
+    if (total == 0) return null;
+    long target = (long) Math.ceil(total / 2.0);
+    long cumulative = 0;
+    for (LinkStats.DayClick dc : days) {
+      cumulative += dc.count();
+      if (cumulative >= target) return dc.day();
+    }
+    return null;
   }
 
   static String mapDayOfWeek(int mysqlDow) {
