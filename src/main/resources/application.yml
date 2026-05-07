@@ -3,14 +3,6 @@ spring:
     name: short-link
   cache:
     type: redis
-
-server:
-  port: 8080
-  tomcat:
-    max-http-form-post-size: 16KB
-    max-swallow-size: 16KB
-  max-http-request-header-size: 8KB
-
   security:
     oauth2:
       client:
@@ -19,6 +11,13 @@ server:
             client-id: ${GOOGLE_CLIENT_ID:placeholder}
             client-secret: ${GOOGLE_CLIENT_SECRET:placeholder}
             scope: openid, profile, email
+
+server:
+  port: 8080
+  tomcat:
+    max-http-form-post-size: 16KB
+    max-swallow-size: 16KB
+  max-http-request-header-size: 8KB
 
 management:
   endpoints:
