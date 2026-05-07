@@ -3,6 +3,7 @@ package com.example.short_link.link.application;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public record LinkStats(
     String shortCode,
@@ -14,6 +15,8 @@ public record LinkStats(
     Instant firstClickAt,
     Long timeToFirstClickMinutes,
     Velocity velocity,
+    ReturnRate returnRate,
+    Lifecycle lifecycle,
     List<DailyClick> dailyClicks,
     List<HourClick> hourClicks,
     List<DayOfWeekClick> dayOfWeekClicks,
@@ -29,7 +32,8 @@ public record LinkStats(
     List<CountryClick> countryClicks,
     List<RegionClick> regionClicks,
     List<CityClick> cityClicks,
-    List<LanguageClick> languageClicks) {
+    List<LanguageClick> languageClicks,
+    List<Insight> insights) {
 
   public record DailyClick(LocalDate date, long count) {}
 
@@ -64,4 +68,12 @@ public record LinkStats(
   public record LanguageClick(String language, long count) {}
 
   public record Velocity(long currentHour, double baselinePerHour, double ratio) {}
+
+  public record ReturnRate(long newVisitors, long returningVisitors, double ratio) {}
+
+  public record Lifecycle(List<DayClick> dayClicks, Integer halfLifeDays) {}
+
+  public record DayClick(int day, long count) {}
+
+  public record Insight(String type, String severity, String message, Map<String, Object> data) {}
 }

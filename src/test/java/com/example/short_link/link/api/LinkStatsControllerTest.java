@@ -360,4 +360,39 @@ class LinkStatsControllerTest {
 
     mvc.perform(get("/api/v1/links/stats06/stats")).andExpect(status().isUnauthorized());
   }
+
+  @Test
+  void includesReturnRateAndLifecycleAndInsights() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-rli"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "statrli", owner.getId(), null));
+    for (int i = 0; i < 3; i++) {
+      clickRepository.save(
+          ClickEventEntity.builder()
+              .linkId(link.getId())
+              .userAgent("ua")
+              .clientIp("1.1.1." + i)
+              .deviceClass("desktop")
+              .visitorHash("returner".repeat(8).substring(0, 64))
+              .bot(false)
+              .build());
+    }
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("2.2.2.2")
+            .deviceClass("mobile")
+            .visitorHash("newcomer".repeat(8).substring(0, 64))
+            .bot(false)
+            .build());
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(get("/api/v1/links/statrli/stats").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.returnRate.newVisitors").value(1))
+        .andExpect(jsonPath("$.returnRate.returningVisitors").value(1))
+        .andExpect(jsonPath("$.lifecycle.dayClicks").isArray())
+        .andExpect(jsonPath("$.insights").isArray());
+  }
 }

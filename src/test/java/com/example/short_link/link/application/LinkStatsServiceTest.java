@@ -22,4 +22,31 @@ class LinkStatsServiceTest {
     assertThat(LinkStatsService.mapDayOfWeek(0)).isEqualTo("UNKNOWN");
     assertThat(LinkStatsService.mapDayOfWeek(8)).isEqualTo("UNKNOWN");
   }
+
+  @Test
+  void halfLifeNullWhenEmpty() {
+    assertThat(LinkStatsService.halfLife(java.util.List.of())).isNull();
+  }
+
+  @Test
+  void halfLifeIsDayWhereCumulativeReachesHalf() {
+    var days =
+        java.util.List.of(
+            new LinkStats.DayClick(0, 30L),
+            new LinkStats.DayClick(1, 20L),
+            new LinkStats.DayClick(2, 50L));
+    assertThat(LinkStatsService.halfLife(days)).isEqualTo(1);
+  }
+
+  @Test
+  void halfLifeFirstDayWhenItAlreadyReachesHalf() {
+    var days = java.util.List.of(new LinkStats.DayClick(0, 90L), new LinkStats.DayClick(7, 10L));
+    assertThat(LinkStatsService.halfLife(days)).isZero();
+  }
+
+  @Test
+  void halfLifeNullWhenAllZero() {
+    var days = java.util.List.of(new LinkStats.DayClick(0, 0L));
+    assertThat(LinkStatsService.halfLife(days)).isNull();
+  }
 }
