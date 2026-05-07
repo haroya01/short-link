@@ -72,4 +72,38 @@ class RecentErrorsBufferTest {
     assertThat(first.message()).isEqualTo("boom");
     assertThat(first.exception()).contains("bang").contains("RuntimeException");
   }
+
+  @Test
+  void minimumCapacityIs10() {
+    buffer = new RecentErrorsBuffer(1);
+    buffer.install();
+
+    for (int i = 0; i < 15; i++) log.error("e{}", i);
+
+    var snap = buffer.snapshot(20);
+    assertThat(snap).hasSize(10);
+  }
+
+  @Test
+  void truncatesVeryLongMessage() {
+    buffer = new RecentErrorsBuffer(20);
+    buffer.install();
+
+    String big = "X".repeat(8000);
+    log.error(big);
+
+    var snap = buffer.snapshot(5);
+    assertThat(snap.get(0).message()).hasSizeLessThanOrEqualTo(4000);
+  }
+
+  @Test
+  void limitClampsTwoCapacityWhenLargerRequested() {
+    buffer = new RecentErrorsBuffer(20);
+    buffer.install();
+
+    for (int i = 0; i < 5; i++) log.error("e{}", i);
+
+    var snap = buffer.snapshot(9999);
+    assertThat(snap).hasSizeLessThanOrEqualTo(20);
+  }
 }
