@@ -54,12 +54,17 @@ public class JwtTokenService {
   }
 
   public String createAccessToken(Long userId) {
+    return createAccessToken(userId, "USER");
+  }
+
+  public String createAccessToken(Long userId, String role) {
     Instant now = Instant.now();
     return Jwts.builder()
         .subject(String.valueOf(userId))
         .issuedAt(Date.from(now))
         .expiration(Date.from(now.plus(accessTtl)))
         .claim(CLAIM_TYPE, TYPE_ACCESS)
+        .claim("role", role)
         .signWith(privateKey, Jwts.SIG.RS256)
         .compact();
   }
@@ -85,6 +90,15 @@ public class JwtTokenService {
       throw new IllegalArgumentException("expected access token");
     }
     return Long.valueOf(claims.getSubject());
+  }
+
+  public ParsedAccess parseAccessTokenDetailed(String token) {
+    Claims claims = parseClaims(token);
+    if (!TYPE_ACCESS.equals(claims.get(CLAIM_TYPE))) {
+      throw new IllegalArgumentException("expected access token");
+    }
+    String role = claims.get("role", String.class);
+    return new ParsedAccess(Long.valueOf(claims.getSubject()), role == null ? "USER" : role);
   }
 
   public ParsedRefresh parseRefreshToken(String token) {

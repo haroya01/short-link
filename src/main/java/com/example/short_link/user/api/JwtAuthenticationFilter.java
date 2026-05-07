@@ -1,6 +1,7 @@
 package com.example.short_link.user.api;
 
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.ParsedAccess;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,6 +11,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -30,10 +32,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     if (header != null && header.startsWith(BEARER)) {
       String token = header.substring(BEARER.length());
       try {
-        Long userId = jwt.parseAccessToken(token);
-        var auth = new UsernamePasswordAuthenticationToken(userId, null, List.of());
+        ParsedAccess parsed = jwt.parseAccessTokenDetailed(token);
+        var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + parsed.role()));
+        var auth = new UsernamePasswordAuthenticationToken(parsed.userId(), null, authorities);
         SecurityContextHolder.getContext().setAuthentication(auth);
-        MDC.put("userId", String.valueOf(userId));
+        MDC.put("userId", String.valueOf(parsed.userId()));
       } catch (Exception ignored) {
       }
     }
