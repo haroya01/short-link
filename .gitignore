@@ -35,3 +35,15 @@ out/
 
 ### VS Code ###
 .vscode/
+
+### Secrets ###
+.env
+.env.*
+!.env.example
+
+### Local agent state ###
+.claude/
+
+### GeoIP ###
+*.mmdb
+!**/GeoLite2-City-Fallback.mmdb

@@ -1,7 +1,9 @@
 plugins {
 	id 'java'
+	id 'jacoco'
 	id 'org.springframework.boot' version '4.0.6'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'com.diffplug.spotless' version '6.25.0'
 }
 
 group = 'com.example'
@@ -19,10 +21,111 @@ repositories {
 
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter'
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+	implementation 'org.springframework.boot:spring-boot-starter-cache'
+	implementation 'org.springframework.boot:spring-boot-starter-flyway'
+	implementation 'org.springframework.boot:spring-boot-starter-security'
+	implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+	implementation 'nl.basjes.parse.useragent:yauaa:7.30.0'
+	implementation 'com.maxmind.geoip2:geoip2:4.2.1'
+	compileOnly 'org.projectlombok:lombok'
+	annotationProcessor 'org.projectlombok:lombok'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	runtimeOnly 'org.flywaydb:flyway-mysql'
+	runtimeOnly 'com.mysql:mysql-connector-j'
+	runtimeOnly 'net.logstash.logback:logstash-logback-encoder:8.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+	maxHeapSize = '2g'
+	finalizedBy jacocoTestReport
+}
+
+jacoco {
+	toolVersion = '0.8.12'
+}
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		html.required = true
+	}
+}
+
+spotless {
+	java {
+		target 'src/**/*.java'
+		googleJavaFormat('1.22.0')
+		removeUnusedImports()
+		trimTrailingWhitespace()
+		endWithNewline()
+	}
+}
+
+tasks.register('downloadGeoLite2') {
+	description = 'Download MaxMind GeoLite2-City mmdb into src/main/resources/geoip'
+	group = 'build setup'
+	def outputDir = file('src/main/resources/geoip')
+	def outputFile = new File(outputDir, 'GeoLite2-City.mmdb')
+	outputs.file(outputFile)
+	doLast {
+		def licenseKey = System.getenv('MAXMIND_LICENSE_KEY')
+		if (!licenseKey) {
+			throw new GradleException('MAXMIND_LICENSE_KEY environment variable is required')
+		}
+		outputDir.mkdirs()
+		def tarball = new File(temporaryDir, 'geolite2.tar.gz')
+		def url = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${licenseKey}&suffix=tar.gz"
+		def maxAttempts = 3
+		def lastError = null
+		for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+			try {
+				ant.get(src: url, dest: tarball, verbose: false, retries: 2, skipexisting: false)
+				lastError = null
+				break
+			} catch (Exception e) {
+				lastError = e
+				logger.warn("MaxMind download attempt {} of {} failed: {}", attempt, maxAttempts, e.message)
+				if (attempt < maxAttempts) {
+					Thread.sleep(2000L * attempt)
+				}
+			}
+		}
+		if (lastError != null) {
+			if (outputFile.exists() && outputFile.length() > 0) {
+				logger.warn("Falling back to existing {} after {} failed download attempts", outputFile, maxAttempts)
+				return
+			}
+			def fallback = new File(outputDir, 'GeoLite2-City-Fallback.mmdb')
+			if (fallback.exists() && fallback.length() > 0) {
+				logger.warn("MaxMind download failed; using committed fallback {}", fallback)
+				return
+			}
+			throw new GradleException("MaxMind download failed and no fallback mmdb present", lastError)
+		}
+		def workDir = new File(temporaryDir, 'extract')
+		workDir.deleteDir()
+		workDir.mkdirs()
+		copy {
+			from tarTree(resources.gzip(tarball))
+			into workDir
+		}
+		def mmdb = fileTree(workDir).matching { include '**/GeoLite2-City.mmdb' }.singleFile
+		mmdb.renameTo(outputFile)
+	}
 }

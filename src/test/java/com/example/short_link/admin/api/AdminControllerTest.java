@@ -1,0 +1,202 @@
+package com.example.short_link.admin.api;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import com.example.short_link.link.domain.ClickEventEntity;
+import com.example.short_link.link.domain.ClickEventRepository;
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.UserRepository;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
+
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
+class AdminControllerTest {
+
+  @Autowired private MockMvc mvc;
+  @Autowired private JwtTokenService jwt;
+  @Autowired private UserRepository userRepository;
+  @Autowired private LinkRepository linkRepository;
+  @Autowired private ClickEventRepository clickRepository;
+
+  @Test
+  void anonymousReceives401OnAdminEndpoint() throws Exception {
+    mvc.perform(get("/api/v1/admin/overview")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void plainUserReceives403OnAdminEndpoint() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("user@x.com", "google", "g-u"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+
+    mvc.perform(get("/api/v1/admin/overview").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void anonymousReceives401OnHealthMetrics() throws Exception {
+    mvc.perform(get("/api/v1/admin/health-metrics")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void anonymousReceives401OnRecentErrors() throws Exception {
+    mvc.perform(get("/api/v1/admin/recent-errors")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void plainUserReceives403OnHealthMetrics() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-uh"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    mvc.perform(get("/api/v1/admin/health-metrics").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void adminReceivesHealthMetrics() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("h@x.com", "google", "g-ah"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(get("/api/v1/admin/health-metrics").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.httpLatency").isMap())
+        .andExpect(jsonPath("$.httpStatusCounts").isMap())
+        .andExpect(jsonPath("$.rateLimitExceeded").isNumber())
+        .andExpect(jsonPath("$.safeBrowsingMalicious").isNumber())
+        .andExpect(jsonPath("$.authFailures").isNumber())
+        .andExpect(jsonPath("$.dbPool").isMap())
+        .andExpect(jsonPath("$.cache").isMap());
+  }
+
+  @Test
+  void adminReceivesRecentErrors() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("e@x.com", "google", "g-ae"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(get("/api/v1/admin/recent-errors").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray());
+  }
+
+  @Test
+  void adminReceivesCohort() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("c@x.com", "google", "g-cohort"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/cohort")
+                .header("Authorization", "Bearer " + token)
+                .param("weeks", "4"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.weeks").value(4))
+        .andExpect(jsonPath("$.rows").isArray());
+  }
+
+  @Test
+  void adminReceivesLifecycle() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("l@x.com", "google", "g-life"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/lifecycle")
+                .header("Authorization", "Bearer " + token)
+                .param("days", "14"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.maxDay").value(14))
+        .andExpect(jsonPath("$.days").isArray());
+  }
+
+  @Test
+  void adminReceivesActiveUsers() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("a@x.com", "google", "g-active"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/active-users")
+                .header("Authorization", "Bearer " + token)
+                .param("period", "week"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.period").value("week"))
+        .andExpect(jsonPath("$.buckets").isArray());
+  }
+
+  @Test
+  void rejectsInvalidActivePeriod() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("p@x.com", "google", "g-pinval"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/active-users")
+                .header("Authorization", "Bearer " + token)
+                .param("period", "weird"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_ACTIVE_PERIOD"));
+  }
+
+  @Test
+  void plainUserReceives403OnAnalyticsEndpoints() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-up"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+
+    mvc.perform(get("/api/v1/admin/cohort").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/admin/lifecycle").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/admin/active-users").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void adminReceivesOverviewWithKpis() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("admin@x.com", "google", "g-a"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "adov001", admin.getId(), null));
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.1")
+            .deviceClass("desktop")
+            .bot(false)
+            .build());
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(get("/api/v1/admin/overview").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totals.users").isNumber())
+        .andExpect(jsonPath("$.totals.links").isNumber())
+        .andExpect(jsonPath("$.totals.clicks").isNumber())
+        .andExpect(jsonPath("$.dailySignups").isArray())
+        .andExpect(jsonPath("$.dailyLinks").isArray())
+        .andExpect(jsonPath("$.dailyClicks").isArray())
+        .andExpect(jsonPath("$.topUsersByLinks").isArray())
+        .andExpect(jsonPath("$.topUsersByClicks").isArray())
+        .andExpect(jsonPath("$.topLinksByClicks").isArray());
+  }
+}
