@@ -4,6 +4,7 @@ import com.example.short_link.common.api.RateLimitFilter;
 import com.example.short_link.user.api.JsonAuthenticationEntryPoint;
 import com.example.short_link.user.api.JwtAuthenticationFilter;
 import com.example.short_link.user.api.OAuth2LoginSuccessHandler;
+import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -34,8 +35,10 @@ public class SecurityConfig {
       StringRedisTemplate redis,
       JsonMapper jsonMapper,
       @Value("${short-link.rate-limit.anonymous:100}") long anonymousLimit,
-      @Value("${short-link.rate-limit.authenticated:1000}") long authenticatedLimit) {
-    return new RateLimitFilter(redis, jsonMapper, anonymousLimit, authenticatedLimit);
+      @Value("${short-link.rate-limit.authenticated:1000}") long authenticatedLimit,
+      MeterRegistry meterRegistry) {
+    return new RateLimitFilter(
+        redis, jsonMapper, anonymousLimit, authenticatedLimit, meterRegistry);
   }
 
   @Bean

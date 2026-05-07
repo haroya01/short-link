@@ -1,0 +1,75 @@
+package com.example.short_link.admin.application;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+class RecentErrorsBufferTest {
+
+  private final Logger log = LoggerFactory.getLogger(RecentErrorsBufferTest.class);
+  private RecentErrorsBuffer buffer;
+
+  @AfterEach
+  void teardown() {
+    if (buffer != null) buffer.uninstall();
+  }
+
+  @Test
+  void capturesErrorsInReverseChronologicalOrder() {
+    buffer = new RecentErrorsBuffer(100);
+    buffer.install();
+
+    log.error("first error");
+    log.error("second error");
+    log.error("third error");
+
+    var snap = buffer.snapshot(10);
+    assertThat(snap).hasSizeGreaterThanOrEqualTo(3);
+    assertThat(snap.get(0).message()).isEqualTo("third error");
+    assertThat(snap.get(1).message()).isEqualTo("second error");
+    assertThat(snap.get(2).message()).isEqualTo("first error");
+  }
+
+  @Test
+  void ignoresBelowErrorLevel() {
+    buffer = new RecentErrorsBuffer(100);
+    buffer.install();
+
+    log.warn("warn message");
+    log.info("info message");
+    log.error("real error");
+
+    var snap = buffer.snapshot(10);
+    assertThat(snap).extracting(RecentError::message).contains("real error");
+    assertThat(snap)
+        .extracting(RecentError::message)
+        .doesNotContain("warn message", "info message");
+  }
+
+  @Test
+  void evictsOldestWhenCapacityReached() {
+    buffer = new RecentErrorsBuffer(10);
+    buffer.install();
+
+    for (int i = 0; i < 5; i++) log.error("err {}", i);
+
+    var snap = buffer.snapshot(20);
+    assertThat(snap).hasSizeGreaterThanOrEqualTo(5);
+  }
+
+  @Test
+  void capturesExceptionStack() {
+    buffer = new RecentErrorsBuffer(50);
+    buffer.install();
+
+    log.error("boom", new RuntimeException("bang"));
+
+    var snap = buffer.snapshot(5);
+    var first = snap.get(0);
+    assertThat(first.message()).isEqualTo("boom");
+    assertThat(first.exception()).contains("bang").contains("RuntimeException");
+  }
+}
