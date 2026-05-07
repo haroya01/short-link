@@ -74,4 +74,26 @@ class ReferrerNormalizerTest {
     String result = ReferrerNormalizer.normalize("https://example.com" + longPath);
     assertThat(result).hasSize(512);
   }
+
+  @Test
+  void hostOfExtractsLowercaseHost() {
+    assertThat(ReferrerNormalizer.hostOf("https://WWW.Example.COM/path?q=1"))
+        .isEqualTo("www.example.com");
+  }
+
+  @Test
+  void hostOfReturnsNullForNullOrBlank() {
+    assertThat(ReferrerNormalizer.hostOf(null)).isNull();
+    assertThat(ReferrerNormalizer.hostOf("   ")).isNull();
+  }
+
+  @Test
+  void hostOfReturnsNullForUriWithoutHost() {
+    assertThat(ReferrerNormalizer.hostOf("mailto:foo@bar.com")).isNull();
+  }
+
+  @Test
+  void hostOfReturnsNullForMalformedUri() {
+    assertThat(ReferrerNormalizer.hostOf("https://exa mple.com")).isNull();
+  }
 }

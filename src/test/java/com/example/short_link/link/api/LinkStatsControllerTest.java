@@ -268,6 +268,70 @@ class LinkStatsControllerTest {
   }
 
   @Test
+  void aggregatesAdvancedDimensions() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-adv"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "statadv", owner.getId(), null));
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.1")
+            .deviceClass("desktop")
+            .countryCode("KR")
+            .regionName("Seoul")
+            .cityName("Seoul")
+            .language("ko-KR")
+            .referrerHost("www.instagram.com")
+            .referrer("https://www.instagram.com/p/abc")
+            .visitorHash("a".repeat(64))
+            .bot(false)
+            .build());
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.2")
+            .deviceClass("mobile")
+            .countryCode("KR")
+            .regionName("Busan")
+            .cityName("Busan")
+            .language("en-US")
+            .referrerHost("www.instagram.com")
+            .referrer("https://www.instagram.com/p/xyz")
+            .visitorHash("b".repeat(64))
+            .bot(false)
+            .build());
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("Googlebot/2.1")
+            .clientIp("1.1.1.3")
+            .deviceClass("bot")
+            .botName("Googlebot")
+            .visitorHash("c".repeat(64))
+            .bot(true)
+            .build());
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(get("/api/v1/links/statadv/stats").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.uniqueClicks").value(2))
+        .andExpect(jsonPath("$.regionClicks[?(@.region == 'Seoul')].count").value(1))
+        .andExpect(jsonPath("$.regionClicks[?(@.region == 'Busan')].count").value(1))
+        .andExpect(jsonPath("$.cityClicks[?(@.city == 'Seoul')].count").value(1))
+        .andExpect(jsonPath("$.languageClicks[?(@.language == 'ko-KR')].count").value(1))
+        .andExpect(jsonPath("$.languageClicks[?(@.language == 'en-US')].count").value(1))
+        .andExpect(
+            jsonPath("$.referrerHostClicks[?(@.host == 'www.instagram.com')].count").value(2))
+        .andExpect(jsonPath("$.botClicks2[?(@.bot == 'Googlebot')].count").value(1))
+        .andExpect(jsonPath("$.heatmap").isArray())
+        .andExpect(jsonPath("$.firstClickAt").isString())
+        .andExpect(jsonPath("$.timeToFirstClickMinutes").isNumber())
+        .andExpect(jsonPath("$.velocity").isMap());
+  }
+
+  @Test
   void rejectsStatsForNotOwner() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-s4"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-s4a"));

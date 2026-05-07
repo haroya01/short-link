@@ -25,15 +25,17 @@ class ClickRecorderTest {
   @Test
   void swallowsRepositoryFailure() {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
     doThrow(new RuntimeException("db down")).when(repository).save(any());
 
     assertThatNoException()
-        .isThrownBy(() -> recorder.record(1L, "https://example.com", null, "ua", "1.2.3.4"));
+        .isThrownBy(() -> recorder.record(1L, "https://example.com", null, "ua", "1.2.3.4", null));
   }
 
   @Test
   void normalizesReferrerBeforeSaving() {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
     org.mockito.ArgumentCaptor<ClickEventEntity> captor =
         org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
     when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
@@ -43,21 +45,29 @@ class ClickRecorderTest {
         "https://example.com",
         "https://www.youtube.com/watch?v=xyz&token=secret",
         "ua",
-        "1.2.3.4");
+        "1.2.3.4",
+        null);
 
     assertThat(captor.getValue().getReferrer()).isEqualTo("https://www.youtube.com/watch");
+    assertThat(captor.getValue().getReferrerHost()).isEqualTo("www.youtube.com");
   }
 
   @Test
-  void persistsResolvedCountryCode() {
+  void persistsResolvedGeoLocation() {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
-    when(geoIpResolver.resolveCountry("8.8.8.8")).thenReturn("US");
+    when(geoIpResolver.resolve("8.8.8.8"))
+        .thenReturn(new GeoLocation("US", "California", "Mountain View"));
     org.mockito.ArgumentCaptor<ClickEventEntity> captor =
         org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
     when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
-    recorder.record(1L, "https://example.com", null, "ua", "8.8.8.8");
+    recorder.record(1L, "https://example.com", null, "ua", "8.8.8.8", "ko-KR,ko;q=0.9");
 
-    assertThat(captor.getValue().getCountryCode()).isEqualTo("US");
+    ClickEventEntity saved = captor.getValue();
+    assertThat(saved.getCountryCode()).isEqualTo("US");
+    assertThat(saved.getRegionName()).isEqualTo("California");
+    assertThat(saved.getCityName()).isEqualTo("Mountain View");
+    assertThat(saved.getLanguage()).isEqualTo("ko-KR");
+    assertThat(saved.getVisitorHash()).hasSize(64);
   }
 }
