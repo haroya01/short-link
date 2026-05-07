@@ -50,3 +50,5 @@ short-link:
     api-key: ${SAFE_BROWSING_API_KEY:}
     cache-ttl: 1h
     timeout: 2s
+  bot-heuristic:
+    rate-threshold: ${BOT_HEURISTIC_RATE_THRESHOLD:5}

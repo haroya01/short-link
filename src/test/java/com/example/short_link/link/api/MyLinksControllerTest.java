@@ -39,10 +39,64 @@ class MyLinksControllerTest {
 
     mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(1))
-        .andExpect(jsonPath("$[0].shortCode").value("mine001"))
-        .andExpect(jsonPath("$[0].originalUrl").value("https://example.com/mine"))
-        .andExpect(jsonPath("$[0].shortUrl").value("http://localhost:8080/mine001"));
+        .andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].shortCode").value("mine001"))
+        .andExpect(jsonPath("$.items[0].originalUrl").value("https://example.com/mine"))
+        .andExpect(jsonPath("$.items[0].shortUrl").value("http://localhost:8080/mine001"));
+  }
+
+  @Test
+  void paginatesResults() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("p@x.com", "google", "g-page"));
+    for (int i = 0; i < 25; i++) {
+      String code = String.format("page%03d", i);
+      linkRepository.save(new LinkEntity("https://example.com/p" + i, code, owner.getId(), null));
+    }
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(
+            get("/api/v1/links/me")
+                .header("Authorization", "Bearer " + token)
+                .param("page", "1")
+                .param("size", "10"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(25))
+        .andExpect(jsonPath("$.items.length()").value(10));
+
+    mvc.perform(
+            get("/api/v1/links/me")
+                .header("Authorization", "Bearer " + token)
+                .param("page", "3")
+                .param("size", "10"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(25))
+        .andExpect(jsonPath("$.items.length()").value(5));
+  }
+
+  @Test
+  void searchesByPartialMatchOnUrlOrCode() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("s@x.com", "google", "g-search"));
+    linkRepository.save(
+        new LinkEntity("https://example.com/marketing", "MKT0001", owner.getId(), null));
+    linkRepository.save(
+        new LinkEntity("https://example.com/other", "BLOG002", owner.getId(), null));
+    linkRepository.save(
+        new LinkEntity("https://other.org/marketing-page", "OTH0003", owner.getId(), null));
+    String token = jwt.createAccessToken(owner.getId());
+
+    mvc.perform(
+            get("/api/v1/links/me")
+                .header("Authorization", "Bearer " + token)
+                .param("q", "marketing"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(2));
+
+    mvc.perform(
+            get("/api/v1/links/me").header("Authorization", "Bearer " + token).param("q", "BLOG"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items[0].shortCode").value("BLOG002"));
   }
 
   @Test

@@ -49,4 +49,28 @@ class LinkStatsServiceTest {
     var days = java.util.List.of(new LinkStats.DayClick(0, 0L));
     assertThat(LinkStatsService.halfLife(days)).isNull();
   }
+
+  @Test
+  void safeZoneFallsBackToDefaultForNullBlankOrInvalid() {
+    assertThat(LinkStatsService.safeZone(null).getId()).isEqualTo("Asia/Seoul");
+    assertThat(LinkStatsService.safeZone("").getId()).isEqualTo("Asia/Seoul");
+    assertThat(LinkStatsService.safeZone("   ").getId()).isEqualTo("Asia/Seoul");
+    assertThat(LinkStatsService.safeZone("Mars/Olympus").getId()).isEqualTo("Asia/Seoul");
+  }
+
+  @Test
+  void safeZoneReturnsParsedZoneForValidId() {
+    assertThat(LinkStatsService.safeZone("America/New_York").getId()).isEqualTo("America/New_York");
+  }
+
+  @Test
+  void currentOffsetReturnsPositiveZeroForUtc() {
+    assertThat(LinkStatsService.currentOffset(java.time.ZoneId.of("UTC"))).isEqualTo("+00:00");
+  }
+
+  @Test
+  void currentOffsetReturnsOffsetIdForFixedZone() {
+    assertThat(LinkStatsService.currentOffset(java.time.ZoneId.of("Asia/Seoul")))
+        .isEqualTo("+09:00");
+  }
 }
