@@ -14,14 +14,18 @@ spring:
     redis:
       host: ${REDIS_HOST}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD}
+      password: ${REDIS_PASSWORD:}
+      ssl:
+        enabled: ${REDIS_SSL:false}
 
 server:
   forward-headers-strategy: native
 
 management:
-  server:
-    port: 8081
+  endpoints:
+    web:
+      exposure:
+        include: health
 
 short-link:
   base-url: ${SHORT_LINK_BASE_URL}
