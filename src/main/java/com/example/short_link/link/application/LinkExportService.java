@@ -48,15 +48,14 @@ public class LinkExportService {
         "bot_name");
 
     int written = 0;
-    java.time.Instant cursorAt = null;
     Long cursorId = null;
     PageRequest req = PageRequest.ofSize(EVENT_BATCH);
     while (written < EVENT_HARD_CAP) {
       List<ClickEventEntity> rows;
-      if (cursorAt == null) {
+      if (cursorId == null) {
         rows = clickRepository.findEventsByLinkIdLatest(link.getId(), req);
       } else {
-        rows = clickRepository.findEventsByLinkIdBefore(link.getId(), cursorAt, cursorId, req);
+        rows = clickRepository.findEventsByLinkIdBefore(link.getId(), cursorId, req);
       }
       if (rows.isEmpty()) break;
       for (ClickEventEntity c : rows) {
@@ -80,7 +79,6 @@ public class LinkExportService {
         written++;
       }
       ClickEventEntity last = rows.get(rows.size() - 1);
-      cursorAt = last.getClickedAt();
       cursorId = last.getId();
       if (rows.size() < EVENT_BATCH) break;
     }

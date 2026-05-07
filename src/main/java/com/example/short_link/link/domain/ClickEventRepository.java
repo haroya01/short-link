@@ -172,18 +172,12 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   List<DayClickRow> findLifecycleClicks(@Param("linkId") Long linkId, @Param("maxDay") int maxDay);
 
   @Query(
-      "SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId "
-          + "AND (c.clickedAt < :cursorAt OR (c.clickedAt = :cursorAt AND c.id < :cursorId)) "
-          + "ORDER BY c.clickedAt DESC, c.id DESC")
+      "SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.id < :cursorId "
+          + "ORDER BY c.id DESC")
   List<ClickEventEntity> findEventsByLinkIdBefore(
-      @Param("linkId") Long linkId,
-      @Param("cursorAt") Instant cursorAt,
-      @Param("cursorId") Long cursorId,
-      Pageable pageable);
+      @Param("linkId") Long linkId, @Param("cursorId") Long cursorId, Pageable pageable);
 
-  @Query(
-      "SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId "
-          + "ORDER BY c.clickedAt DESC, c.id DESC")
+  @Query("SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId ORDER BY c.id DESC")
   List<ClickEventEntity> findEventsByLinkIdLatest(@Param("linkId") Long linkId, Pageable pageable);
 
   interface ReturnRateRow {

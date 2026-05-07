@@ -7,7 +7,6 @@ import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -42,18 +41,12 @@ public class LinkEventsService {
     if (cursor == null || cursor.isBlank()) {
       rows = clickRepository.findEventsByLinkIdLatest(link.getId(), req);
     } else {
-      Cursor parsed = Cursor.decode(cursor);
-      rows =
-          clickRepository.findEventsByLinkIdBefore(
-              link.getId(), parsed.clickedAt(), parsed.id(), req);
+      long cursorId = Cursor.decode(cursor);
+      rows = clickRepository.findEventsByLinkIdBefore(link.getId(), cursorId, req);
     }
 
     List<LinkEventResponse> items = rows.stream().map(this::toResponse).toList();
-    String next =
-        rows.size() < pageSize
-            ? null
-            : Cursor.encode(
-                rows.get(rows.size() - 1).getClickedAt(), rows.get(rows.size() - 1).getId());
+    String next = rows.size() < pageSize ? null : Cursor.encode(rows.get(rows.size() - 1).getId());
     return new LinkEventsPage(items, next);
   }
 
@@ -83,22 +76,19 @@ public class LinkEventsService {
     return Math.min(limit, MAX_LIMIT);
   }
 
-  record Cursor(Instant clickedAt, Long id) {
-    static String encode(Instant at, Long id) {
-      String raw = at.toEpochMilli() + ":" + id;
+  static final class Cursor {
+    private Cursor() {}
+
+    static String encode(Long id) {
       return Base64.getUrlEncoder()
           .withoutPadding()
-          .encodeToString(raw.getBytes(StandardCharsets.UTF_8));
+          .encodeToString(id.toString().getBytes(StandardCharsets.UTF_8));
     }
 
-    static Cursor decode(String cursor) {
+    static long decode(String cursor) {
       try {
         String raw = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
-        int sep = raw.indexOf(':');
-        if (sep < 0) throw new InvalidCursorException();
-        long millis = Long.parseLong(raw.substring(0, sep));
-        long id = Long.parseLong(raw.substring(sep + 1));
-        return new Cursor(Instant.ofEpochMilli(millis), id);
+        return Long.parseLong(raw);
       } catch (IllegalArgumentException e) {
         throw new InvalidCursorException();
       }
