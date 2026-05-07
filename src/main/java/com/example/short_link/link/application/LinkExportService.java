@@ -14,13 +14,16 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LinkExportService {
 
-  private static final int EVENT_BATCH = 1000;
-  private static final int EVENT_HARD_CAP = 50_000;
-
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkStatsService statsService;
+
+  @org.springframework.beans.factory.annotation.Value("${short-link.export.event-batch:1000}")
+  private int eventBatch;
+
+  @org.springframework.beans.factory.annotation.Value("${short-link.export.event-cap:50000}")
+  private int eventHardCap;
 
   @Transactional(readOnly = true)
   public String exportEventsCsv(Long userId, String shortCode) {
@@ -49,8 +52,8 @@ public class LinkExportService {
 
     int written = 0;
     Long cursorId = null;
-    PageRequest req = PageRequest.ofSize(EVENT_BATCH);
-    while (written < EVENT_HARD_CAP) {
+    PageRequest req = PageRequest.ofSize(eventBatch);
+    while (written < eventHardCap) {
       List<ClickEventEntity> rows;
       if (cursorId == null) {
         rows = clickRepository.findEventsByLinkIdLatest(link.getId(), req);
@@ -59,7 +62,7 @@ public class LinkExportService {
       }
       if (rows.isEmpty()) break;
       for (ClickEventEntity c : rows) {
-        if (written >= EVENT_HARD_CAP) break;
+        if (written >= eventHardCap) break;
         String channel =
             c.getReferrer() == null ? "direct" : channelClassifier.classify(c.getReferrer());
         CsvWriter.appendRow(
@@ -80,7 +83,7 @@ public class LinkExportService {
       }
       ClickEventEntity last = rows.get(rows.size() - 1);
       cursorId = last.getId();
-      if (rows.size() < EVENT_BATCH) break;
+      if (rows.size() < eventBatch) break;
     }
     return sb.toString();
   }
