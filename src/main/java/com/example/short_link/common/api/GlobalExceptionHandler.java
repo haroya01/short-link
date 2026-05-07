@@ -1,5 +1,6 @@
 package com.example.short_link.common.api;
 
+import com.example.short_link.admin.application.InvalidActivePeriodException;
 import com.example.short_link.link.application.DuplicateShortCodeException;
 import com.example.short_link.link.application.InvalidCursorException;
 import com.example.short_link.link.application.InvalidExportDimensionException;
@@ -89,6 +90,12 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(InvalidTimezoneException.class)
   public ProblemDetail handleInvalidTimezone(InvalidTimezoneException e, HttpServletRequest req) {
     return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_TIMEZONE", req);
+  }
+
+  @ExceptionHandler(InvalidActivePeriodException.class)
+  public ProblemDetail handleInvalidActivePeriod(
+      InvalidActivePeriodException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_ACTIVE_PERIOD", req);
   }
 
   @ExceptionHandler(NoResourceFoundException.class)

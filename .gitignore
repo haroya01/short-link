@@ -46,3 +46,4 @@ out/
 
 ### GeoIP ###
 *.mmdb
+!**/GeoLite2-City-Fallback.mmdb
