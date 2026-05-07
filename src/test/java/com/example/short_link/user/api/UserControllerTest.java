@@ -44,6 +44,15 @@ class UserControllerTest {
   }
 
   @Test
+  void returns404WhenUserDoesNotExist() throws Exception {
+    String token = jwt.createAccessToken(999_999_999L, "USER");
+
+    mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + token))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
+  }
+
+  @Test
   void returnsAdminRole() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("admin@x.com", "google", "g-adm"));
     user.promoteToAdmin();
