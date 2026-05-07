@@ -18,15 +18,21 @@ public class ClickRecorder {
 
   @Transactional
   public void record(
-      Long linkId, String originalUrl, String referrer, String userAgent, String clientIp) {
+      Long linkId,
+      String originalUrl,
+      String referrer,
+      String userAgent,
+      String clientIp,
+      String acceptLanguage) {
     try {
       UtmParams utm = UtmExtractor.extract(originalUrl);
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
-      String country = geoIpResolver.resolveCountry(clientIp);
+      GeoLocation geo = geoIpResolver.resolve(clientIp);
       ClickEventEntity event =
           ClickEventEntity.builder()
               .linkId(linkId)
               .referrer(ReferrerNormalizer.normalize(referrer))
+              .referrerHost(ReferrerNormalizer.hostOf(referrer))
               .userAgent(userAgent)
               .clientIp(clientIp)
               .utmSource(utm.source())
@@ -38,7 +44,12 @@ public class ClickRecorder {
               .osName(ua.osName())
               .browserName(ua.browserName())
               .bot(ua.bot())
-              .countryCode(country)
+              .botName(ua.botName())
+              .countryCode(geo.countryCode())
+              .regionName(geo.regionName())
+              .cityName(geo.cityName())
+              .language(LanguageExtractor.extract(acceptLanguage))
+              .visitorHash(VisitorHasher.hash(linkId, clientIp, userAgent))
               .build();
       repository.save(event);
     } catch (RuntimeException e) {
