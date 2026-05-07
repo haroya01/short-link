@@ -9,6 +9,7 @@ import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.application.MaliciousUrlException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
+import com.example.short_link.user.application.InvalidTimezoneException;
 import com.example.short_link.user.application.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -83,6 +84,11 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleInvalidExportDimension(
       InvalidExportDimensionException e, HttpServletRequest req) {
     return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_EXPORT_DIMENSION", req);
+  }
+
+  @ExceptionHandler(InvalidTimezoneException.class)
+  public ProblemDetail handleInvalidTimezone(InvalidTimezoneException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_TIMEZONE", req);
   }
 
   @ExceptionHandler(NoResourceFoundException.class)

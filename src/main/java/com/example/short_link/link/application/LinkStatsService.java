@@ -3,10 +3,12 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.user.domain.UserRepository;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -22,13 +24,13 @@ public class LinkStatsService {
 
   private static final Duration DAILY_WINDOW = Duration.ofDays(30);
   private static final Duration BASELINE_WINDOW = Duration.ofHours(24);
-  private static final ZoneId REPORT_ZONE = ZoneId.of("Asia/Seoul");
-  private static final String REPORT_TZ = "+09:00";
+  private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
   private static final Pageable TOP_50 = PageRequest.ofSize(50);
   private static final int LIFECYCLE_MAX_DAY = 30;
 
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
+  private final UserRepository userRepository;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkInsights insightsCalculator;
 
@@ -42,6 +44,9 @@ public class LinkStatsService {
       throw new LinkNotOwnedException(shortCode);
     }
     Long linkId = link.getId();
+
+    ZoneId reportZone = ownerZone(userId);
+    String reportTz = currentOffset(reportZone);
 
     long total = clickRepository.countByLinkId(linkId);
     long human = clickRepository.countHumanByLinkId(linkId);
@@ -62,22 +67,22 @@ public class LinkStatsService {
     LinkStats.Velocity velocity = new LinkStats.Velocity(currentHour, baseline, ratio);
 
     List<LinkStats.DailyClick> daily =
-        clickRepository.findDailyClicks(linkId, now.minus(DAILY_WINDOW), REPORT_TZ).stream()
+        clickRepository.findDailyClicks(linkId, now.minus(DAILY_WINDOW), reportTz).stream()
             .map(r -> new LinkStats.DailyClick(r.getDay(), r.getCount()))
             .toList();
 
     List<LinkStats.HourClick> hourly =
-        clickRepository.findHourlyClicks(linkId, REPORT_TZ).stream()
+        clickRepository.findHourlyClicks(linkId, reportTz).stream()
             .map(r -> new LinkStats.HourClick(r.getHour(), r.getCount()))
             .toList();
 
     List<LinkStats.DayOfWeekClick> dayOfWeek =
-        clickRepository.findDayOfWeekClicks(linkId, REPORT_TZ).stream()
+        clickRepository.findDayOfWeekClicks(linkId, reportTz).stream()
             .map(r -> new LinkStats.DayOfWeekClick(mapDayOfWeek(r.getDow()), r.getCount()))
             .toList();
 
     List<LinkStats.HeatmapCell> heatmap =
-        clickRepository.findHeatmap(linkId, REPORT_TZ).stream()
+        clickRepository.findHeatmap(linkId, reportTz).stream()
             .map(
                 r -> new LinkStats.HeatmapCell(mapDayOfWeek(r.getDow()), r.getHour(), r.getCount()))
             .toList();
@@ -158,7 +163,7 @@ public class LinkStatsService {
 
     return new LinkStats(
         shortCode,
-        REPORT_ZONE.getId(),
+        reportZone.getId(),
         total,
         human,
         bot,
@@ -235,5 +240,23 @@ public class LinkStatsService {
 
   private static String orUnknown(String v) {
     return v == null ? "unknown" : v;
+  }
+
+  private ZoneId ownerZone(Long userId) {
+    return userRepository.findById(userId).map(u -> safeZone(u.getTimezone())).orElse(DEFAULT_ZONE);
+  }
+
+  private static ZoneId safeZone(String tz) {
+    if (tz == null || tz.isBlank()) return DEFAULT_ZONE;
+    try {
+      return ZoneId.of(tz);
+    } catch (java.time.DateTimeException e) {
+      return DEFAULT_ZONE;
+    }
+  }
+
+  private static String currentOffset(ZoneId zone) {
+    ZoneOffset offset = zone.getRules().getOffset(Instant.now());
+    return offset.getId().equals("Z") ? "+00:00" : offset.getId();
   }
 }

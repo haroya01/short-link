@@ -15,6 +15,7 @@ public class ClickRecorder {
   private final ClickEventRepository repository;
   private final UserAgentClassifier userAgentClassifier;
   private final GeoIpResolver geoIpResolver;
+  private final BotHeuristic botHeuristic;
 
   @Transactional
   public void record(
@@ -28,6 +29,12 @@ public class ClickRecorder {
       UtmParams utm = UtmExtractor.extract(originalUrl);
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
       GeoLocation geo = geoIpResolver.resolve(clientIp);
+      boolean uaBot = ua.bot();
+      String botName = ua.botName();
+      if (!uaBot && botHeuristic.isSuspectBurst(clientIp)) {
+        uaBot = true;
+        botName = BotHeuristic.SUSPECT_LABEL;
+      }
       ClickEventEntity event =
           ClickEventEntity.builder()
               .linkId(linkId)
@@ -43,8 +50,8 @@ public class ClickRecorder {
               .deviceClass(ua.deviceClass())
               .osName(ua.osName())
               .browserName(ua.browserName())
-              .bot(ua.bot())
-              .botName(ua.botName())
+              .bot(uaBot)
+              .botName(botName)
               .countryCode(geo.countryCode())
               .regionName(geo.regionName())
               .cityName(geo.cityName())
