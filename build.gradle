@@ -91,7 +91,33 @@ tasks.register('downloadGeoLite2') {
 		outputDir.mkdirs()
 		def tarball = new File(temporaryDir, 'geolite2.tar.gz')
 		def url = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${licenseKey}&suffix=tar.gz"
-		ant.get(src: url, dest: tarball, verbose: false)
+		def maxAttempts = 3
+		def lastError = null
+		for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+			try {
+				ant.get(src: url, dest: tarball, verbose: false, retries: 2, skipexisting: false)
+				lastError = null
+				break
+			} catch (Exception e) {
+				lastError = e
+				logger.warn("MaxMind download attempt {} of {} failed: {}", attempt, maxAttempts, e.message)
+				if (attempt < maxAttempts) {
+					Thread.sleep(2000L * attempt)
+				}
+			}
+		}
+		if (lastError != null) {
+			if (outputFile.exists() && outputFile.length() > 0) {
+				logger.warn("Falling back to existing {} after {} failed download attempts", outputFile, maxAttempts)
+				return
+			}
+			def fallback = new File(outputDir, 'GeoLite2-City-Fallback.mmdb')
+			if (fallback.exists() && fallback.length() > 0) {
+				logger.warn("MaxMind download failed; using committed fallback {}", fallback)
+				return
+			}
+			throw new GradleException("MaxMind download failed and no fallback mmdb present", lastError)
+		}
 		def workDir = new File(temporaryDir, 'extract')
 		workDir.deleteDir()
 		workDir.mkdirs()

@@ -94,6 +94,82 @@ class AdminControllerTest {
   }
 
   @Test
+  void adminReceivesCohort() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("c@x.com", "google", "g-cohort"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/cohort")
+                .header("Authorization", "Bearer " + token)
+                .param("weeks", "4"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.weeks").value(4))
+        .andExpect(jsonPath("$.rows").isArray());
+  }
+
+  @Test
+  void adminReceivesLifecycle() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("l@x.com", "google", "g-life"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/lifecycle")
+                .header("Authorization", "Bearer " + token)
+                .param("days", "14"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.maxDay").value(14))
+        .andExpect(jsonPath("$.days").isArray());
+  }
+
+  @Test
+  void adminReceivesActiveUsers() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("a@x.com", "google", "g-active"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/active-users")
+                .header("Authorization", "Bearer " + token)
+                .param("period", "week"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.period").value("week"))
+        .andExpect(jsonPath("$.buckets").isArray());
+  }
+
+  @Test
+  void rejectsInvalidActivePeriod() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("p@x.com", "google", "g-pinval"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/active-users")
+                .header("Authorization", "Bearer " + token)
+                .param("period", "weird"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_ACTIVE_PERIOD"));
+  }
+
+  @Test
+  void plainUserReceives403OnAnalyticsEndpoints() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-up"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+
+    mvc.perform(get("/api/v1/admin/cohort").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/admin/lifecycle").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/admin/active-users").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
   void adminReceivesOverviewWithKpis() throws Exception {
     UserEntity admin = userRepository.save(new UserEntity("admin@x.com", "google", "g-a"));
     admin.promoteToAdmin();
