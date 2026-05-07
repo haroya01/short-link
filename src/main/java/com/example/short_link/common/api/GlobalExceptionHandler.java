@@ -7,6 +7,7 @@ import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.application.MaliciousUrlException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
+import com.example.short_link.user.application.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;
@@ -64,6 +65,11 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleInvalidRefresh(
       InvalidRefreshTokenException e, HttpServletRequest req) {
     return problem(HttpStatus.UNAUTHORIZED, e.getMessage(), "INVALID_REFRESH_TOKEN", req);
+  }
+
+  @ExceptionHandler(UserNotFoundException.class)
+  public ProblemDetail handleUserNotFound(UserNotFoundException e, HttpServletRequest req) {
+    return problem(HttpStatus.NOT_FOUND, e.getMessage(), "USER_NOT_FOUND", req);
   }
 
   @ExceptionHandler(NoResourceFoundException.class)

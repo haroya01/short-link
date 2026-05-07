@@ -22,9 +22,10 @@ public class AuthService {
         userRepository
             .findByOauthProviderAndOauthId(oauthProvider, oauthId)
             .orElseGet(() -> userRepository.save(new UserEntity(email, oauthProvider, oauthId)));
-    return issue(user.getId());
+    return issue(user);
   }
 
+  @Transactional(readOnly = true)
   public IssuedTokens refresh(String refreshToken) {
     ParsedRefresh parsed;
     try {
@@ -40,7 +41,9 @@ public class AuthService {
       throw new InvalidRefreshTokenException();
     }
     refreshStore.delete(parsed.userId(), parsed.jti());
-    return issue(parsed.userId());
+    UserEntity user =
+        userRepository.findById(parsed.userId()).orElseThrow(InvalidRefreshTokenException::new);
+    return issue(user);
   }
 
   public void logout(Long userId, String refreshToken) {
@@ -51,10 +54,10 @@ public class AuthService {
     }
   }
 
-  private IssuedTokens issue(Long userId) {
-    String access = jwt.createAccessToken(userId);
-    RefreshToken refresh = jwt.createRefreshToken(userId);
-    refreshStore.save(userId, refresh.jti(), jwt.refreshTtl());
+  private IssuedTokens issue(UserEntity user) {
+    String access = jwt.createAccessToken(user.getId(), user.getRole().name());
+    RefreshToken refresh = jwt.createRefreshToken(user.getId());
+    refreshStore.save(user.getId(), refresh.jti(), jwt.refreshTtl());
     return new IssuedTokens(access, refresh.token());
   }
 }
