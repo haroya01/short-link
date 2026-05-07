@@ -1,5 +1,6 @@
 package com.example.short_link.common.api;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 public class RateLimitFilter extends OncePerRequestFilter {
 
+  static final String METRIC_NAME = "rate_limit.exceeded";
+
   private static final Duration WINDOW = Duration.ofMinutes(1);
 
   private static final RedisScript<Long> INCR_AND_EXPIRE =
@@ -36,16 +39,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
   private final JsonMapper jsonMapper;
   private final long anonymousLimit;
   private final long authenticatedLimit;
+  private final MeterRegistry meterRegistry;
 
   public RateLimitFilter(
       StringRedisTemplate redis,
       JsonMapper jsonMapper,
       long anonymousLimit,
-      long authenticatedLimit) {
+      long authenticatedLimit,
+      MeterRegistry meterRegistry) {
     this.redis = redis;
     this.jsonMapper = jsonMapper;
     this.anonymousLimit = anonymousLimit;
     this.authenticatedLimit = authenticatedLimit;
+    this.meterRegistry = meterRegistry;
   }
 
   @Override
@@ -73,6 +79,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
     String key = "rate:" + identifier;
     Long count = redis.execute(INCR_AND_EXPIRE, List.of(key), String.valueOf(WINDOW.getSeconds()));
     if (count != null && count > limit) {
+      meterRegistry
+          .counter(
+              METRIC_NAME,
+              "scope",
+              auth != null && auth.getPrincipal() instanceof Long ? "user" : "anonymous")
+          .increment();
       writeRateLimitResponse(req, res);
       return;
     }

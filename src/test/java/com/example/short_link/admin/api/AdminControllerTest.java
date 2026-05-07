@@ -46,6 +46,54 @@ class AdminControllerTest {
   }
 
   @Test
+  void anonymousReceives401OnHealthMetrics() throws Exception {
+    mvc.perform(get("/api/v1/admin/health-metrics")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void anonymousReceives401OnRecentErrors() throws Exception {
+    mvc.perform(get("/api/v1/admin/recent-errors")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void plainUserReceives403OnHealthMetrics() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-uh"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    mvc.perform(get("/api/v1/admin/health-metrics").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void adminReceivesHealthMetrics() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("h@x.com", "google", "g-ah"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(get("/api/v1/admin/health-metrics").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.httpLatency").isMap())
+        .andExpect(jsonPath("$.httpStatusCounts").isMap())
+        .andExpect(jsonPath("$.rateLimitExceeded").isNumber())
+        .andExpect(jsonPath("$.safeBrowsingMalicious").isNumber())
+        .andExpect(jsonPath("$.authFailures").isNumber())
+        .andExpect(jsonPath("$.dbPool").isMap())
+        .andExpect(jsonPath("$.cache").isMap());
+  }
+
+  @Test
+  void adminReceivesRecentErrors() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("e@x.com", "google", "g-ae"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(get("/api/v1/admin/recent-errors").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray());
+  }
+
+  @Test
   void adminReceivesOverviewWithKpis() throws Exception {
     UserEntity admin = userRepository.save(new UserEntity("admin@x.com", "google", "g-a"));
     admin.promoteToAdmin();
