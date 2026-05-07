@@ -111,6 +111,11 @@ tasks.register('downloadGeoLite2') {
 				logger.warn("Falling back to existing {} after {} failed download attempts", outputFile, maxAttempts)
 				return
 			}
+			def fallback = new File(outputDir, 'GeoLite2-City-Fallback.mmdb')
+			if (fallback.exists() && fallback.length() > 0) {
+				logger.warn("MaxMind download failed; using committed fallback {}", fallback)
+				return
+			}
 			throw new GradleException("MaxMind download failed and no fallback mmdb present", lastError)
 		}
 		def workDir = new File(temporaryDir, 'extract')
