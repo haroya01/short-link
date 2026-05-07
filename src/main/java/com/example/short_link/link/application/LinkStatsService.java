@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkStatsService {
 
   private static final Duration DAILY_WINDOW = Duration.ofDays(30);
+  private static final Duration BASELINE_WINDOW = Duration.ofHours(24);
   private static final ZoneId REPORT_ZONE = ZoneId.of("Asia/Seoul");
   private static final String REPORT_TZ = "+09:00";
   private static final Pageable TOP_50 = PageRequest.ofSize(50);
@@ -43,11 +44,23 @@ public class LinkStatsService {
     long total = clickRepository.countByLinkId(linkId);
     long human = clickRepository.countHumanByLinkId(linkId);
     long bot = clickRepository.countBotByLinkId(linkId);
+    long unique = clickRepository.countUniqueVisitorsByLinkId(linkId);
+
+    Instant firstClickAt = clickRepository.findFirstClickAt(linkId);
+    Long timeToFirstClickMinutes =
+        firstClickAt == null
+            ? null
+            : Math.max(0, Duration.between(link.getCreatedAt(), firstClickAt).toMinutes());
+
+    Instant now = Instant.now();
+    long currentHour = clickRepository.countSinceByLinkId(linkId, now.minus(Duration.ofHours(1)));
+    long last24h = clickRepository.countSinceByLinkId(linkId, now.minus(BASELINE_WINDOW));
+    double baseline = last24h / 24.0;
+    double ratio = baseline > 0 ? currentHour / baseline : 0.0;
+    LinkStats.Velocity velocity = new LinkStats.Velocity(currentHour, baseline, ratio);
 
     List<LinkStats.DailyClick> daily =
-        clickRepository
-            .findDailyClicks(linkId, Instant.now().minus(DAILY_WINDOW), REPORT_TZ)
-            .stream()
+        clickRepository.findDailyClicks(linkId, now.minus(DAILY_WINDOW), REPORT_TZ).stream()
             .map(r -> new LinkStats.DailyClick(r.getDay(), r.getCount()))
             .toList();
 
@@ -61,9 +74,20 @@ public class LinkStatsService {
             .map(r -> new LinkStats.DayOfWeekClick(mapDayOfWeek(r.getDow()), r.getCount()))
             .toList();
 
+    List<LinkStats.HeatmapCell> heatmap =
+        clickRepository.findHeatmap(linkId, REPORT_TZ).stream()
+            .map(
+                r -> new LinkStats.HeatmapCell(mapDayOfWeek(r.getDow()), r.getHour(), r.getCount()))
+            .toList();
+
     List<LinkStats.ReferrerClick> referrers =
         clickRepository.findReferrerClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.ReferrerClick(r.getReferrer(), r.getCount()))
+            .toList();
+
+    List<LinkStats.ReferrerHostClick> referrerHosts =
+        clickRepository.findReferrerHostClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.ReferrerHostClick(r.getHost(), r.getCount()))
             .toList();
 
     Map<String, Long> channelTotals = new HashMap<>();
@@ -94,6 +118,11 @@ public class LinkStatsService {
             .map(r -> new LinkStats.BrowserClick(orUnknown(r.getBrowser()), r.getCount()))
             .toList();
 
+    List<LinkStats.BotClick> botBreakdown =
+        clickRepository.findBotClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.BotClick(orUnknown(r.getBot()), r.getCount()))
+            .toList();
+
     List<LinkStats.UtmCampaignClick> campaigns =
         clickRepository.findUtmCampaignClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmCampaignClick(r.getCampaign(), r.getCount()))
@@ -104,22 +133,47 @@ public class LinkStatsService {
             .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
             .toList();
 
+    List<LinkStats.RegionClick> regions =
+        clickRepository.findRegionClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.RegionClick(r.getRegion(), r.getCount()))
+            .toList();
+
+    List<LinkStats.CityClick> cities =
+        clickRepository.findCityClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.CityClick(r.getCity(), r.getCount()))
+            .toList();
+
+    List<LinkStats.LanguageClick> languages =
+        clickRepository.findLanguageClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.LanguageClick(r.getLanguage(), r.getCount()))
+            .toList();
+
     return new LinkStats(
         shortCode,
         REPORT_ZONE.getId(),
         total,
         human,
         bot,
+        unique,
+        firstClickAt,
+        timeToFirstClickMinutes,
+        velocity,
         daily,
         hourly,
         dayOfWeek,
+        heatmap,
         referrers,
+        referrerHosts,
         channels,
         devices,
         os,
         browsers,
+        botBreakdown,
         campaigns,
-        countries);
+        countries,
+        regions,
+        cities,
+        languages);
   }
 
   static String mapDayOfWeek(int mysqlDow) {

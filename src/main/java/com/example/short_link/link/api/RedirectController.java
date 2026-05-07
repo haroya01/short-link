@@ -26,9 +26,11 @@ public class RedirectController {
       @PathVariable String shortCode,
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
+      @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
       HttpServletRequest req) {
     CachedLink link = lookup.findActiveLink(shortCode);
-    clickRecorder.record(link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req));
+    clickRecorder.record(
+        link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req), acceptLanguage);
     return ResponseEntity.status(HttpStatus.FOUND)
         .location(URI.create(link.originalUrl()))
         .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")

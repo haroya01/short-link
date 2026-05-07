@@ -19,7 +19,9 @@ public class UserAgentClassifier {
     String device = mapDevice(agent.getValue("DeviceClass"));
     String os = nullIfUnknown(agent.getValue("OperatingSystemName"));
     String browser = nullIfUnknown(agent.getValue("AgentName"));
-    return new UserAgentInfo(device, os, browser, "bot".equals(device));
+    boolean bot = "bot".equals(device);
+    String botName = bot ? browser : null;
+    return new UserAgentInfo(device, os, browser, bot, botName);
   }
 
   private static String mapDevice(String deviceClass) {

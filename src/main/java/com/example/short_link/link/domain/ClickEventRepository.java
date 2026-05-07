@@ -24,6 +24,21 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   long countDirectByLinkId(@Param("linkId") Long linkId);
 
   @Query(
+      "SELECT COUNT(DISTINCT c.visitorHash) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = false AND c.visitorHash IS NOT NULL")
+  long countUniqueVisitorsByLinkId(@Param("linkId") Long linkId);
+
+  @Query(
+      "SELECT MIN(c.clickedAt) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = false")
+  Instant findFirstClickAt(@Param("linkId") Long linkId);
+
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = false AND c.clickedAt >= :since")
+  long countSinceByLinkId(@Param("linkId") Long linkId, @Param("since") Instant since);
+
+  @Query(
       "SELECT c.linkId AS linkId, COUNT(c) AS count FROM ClickEventEntity c "
           + "WHERE c.linkId IN :ids GROUP BY c.linkId")
   List<LinkClickCount> countsByLinkIds(@Param("ids") List<Long> ids);
@@ -56,11 +71,27 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
       @Param("linkId") Long linkId, @Param("tz") String timezone);
 
   @Query(
+      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
+          + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
+          + "COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "GROUP BY dow, hour ORDER BY dow, hour")
+  List<HeatmapRow> findHeatmap(@Param("linkId") Long linkId, @Param("tz") String timezone);
+
+  @Query(
       "SELECT c.referrer AS referrer, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.referrer IS NOT NULL "
           + "GROUP BY c.referrer ORDER BY count DESC")
   List<ReferrerClickRow> findReferrerClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.referrerHost AS host, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.referrerHost IS NOT NULL "
+          + "GROUP BY c.referrerHost ORDER BY count DESC")
+  List<ReferrerHostClickRow> findReferrerHostClicks(
+      @Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.deviceClass AS device, COUNT(c) AS count "
@@ -81,6 +112,12 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   List<BrowserClickRow> findBrowserClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
+      "SELECT c.botName AS bot, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = true "
+          + "GROUP BY c.botName ORDER BY count DESC")
+  List<BotClickRow> findBotClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
       "SELECT c.utmCampaign AS campaign, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.utmCampaign IS NOT NULL "
@@ -92,6 +129,27 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY c.countryCode ORDER BY count DESC")
   List<CountryClickRow> findCountryClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.regionName AS region, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.regionName IS NOT NULL "
+          + "GROUP BY c.regionName ORDER BY count DESC")
+  List<RegionClickRow> findRegionClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.cityName AS city, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.cityName IS NOT NULL "
+          + "GROUP BY c.cityName ORDER BY count DESC")
+  List<CityClickRow> findCityClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.language AS language, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.language IS NOT NULL "
+          + "GROUP BY c.language ORDER BY count DESC")
+  List<LanguageClickRow> findLanguageClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   interface LinkClickCount {
     Long getLinkId();
@@ -117,8 +175,22 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
     Long getCount();
   }
 
+  interface HeatmapRow {
+    Integer getDow();
+
+    Integer getHour();
+
+    Long getCount();
+  }
+
   interface ReferrerClickRow {
     String getReferrer();
+
+    Long getCount();
+  }
+
+  interface ReferrerHostClickRow {
+    String getHost();
 
     Long getCount();
   }
@@ -141,6 +213,12 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
     Long getCount();
   }
 
+  interface BotClickRow {
+    String getBot();
+
+    Long getCount();
+  }
+
   interface UtmCampaignClickRow {
     String getCampaign();
 
@@ -149,6 +227,24 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
 
   interface CountryClickRow {
     String getCountry();
+
+    Long getCount();
+  }
+
+  interface RegionClickRow {
+    String getRegion();
+
+    Long getCount();
+  }
+
+  interface CityClickRow {
+    String getCity();
+
+    Long getCount();
+  }
+
+  interface LanguageClickRow {
+    String getLanguage();
 
     Long getCount();
   }

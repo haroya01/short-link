@@ -32,6 +32,9 @@ public class ClickEventEntity {
   @Column(columnDefinition = "TEXT")
   private String referrer;
 
+  @Column(name = "referrer_host", length = 255)
+  private String referrerHost;
+
   @Column(name = "user_agent", columnDefinition = "TEXT")
   private String userAgent;
 
@@ -65,13 +68,29 @@ public class ClickEventEntity {
   @Column(name = "is_bot", nullable = false)
   private boolean bot;
 
+  @Column(name = "bot_name", length = 64)
+  private String botName;
+
   @Column(name = "country_code", length = 2)
   private String countryCode;
+
+  @Column(name = "region_name", length = 128)
+  private String regionName;
+
+  @Column(name = "city_name", length = 128)
+  private String cityName;
+
+  @Column(length = 8)
+  private String language;
+
+  @Column(name = "visitor_hash", length = 64)
+  private String visitorHash;
 
   @Builder
   public ClickEventEntity(
       Long linkId,
       String referrer,
+      String referrerHost,
       String userAgent,
       String clientIp,
       String utmSource,
@@ -83,9 +102,15 @@ public class ClickEventEntity {
       String osName,
       String browserName,
       boolean bot,
-      String countryCode) {
+      String botName,
+      String countryCode,
+      String regionName,
+      String cityName,
+      String language,
+      String visitorHash) {
     this.linkId = linkId;
     this.referrer = referrer;
+    this.referrerHost = referrerHost;
     this.userAgent = userAgent;
     this.clientIp = clientIp;
     this.utmSource = utmSource;
@@ -97,7 +122,12 @@ public class ClickEventEntity {
     this.osName = osName;
     this.browserName = browserName;
     this.bot = bot;
+    this.botName = botName;
     this.countryCode = countryCode;
+    this.regionName = regionName;
+    this.cityName = cityName;
+    this.language = language;
+    this.visitorHash = visitorHash;
   }
 
   @PrePersist

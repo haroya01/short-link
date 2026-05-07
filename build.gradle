@@ -51,6 +51,7 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
+	maxHeapSize = '2g'
 	finalizedBy jacocoTestReport
 }
 
@@ -77,10 +78,10 @@ spotless {
 }
 
 tasks.register('downloadGeoLite2') {
-	description = 'Download MaxMind GeoLite2-Country mmdb into src/main/resources/geoip'
+	description = 'Download MaxMind GeoLite2-City mmdb into src/main/resources/geoip'
 	group = 'build setup'
 	def outputDir = file('src/main/resources/geoip')
-	def outputFile = new File(outputDir, 'GeoLite2-Country.mmdb')
+	def outputFile = new File(outputDir, 'GeoLite2-City.mmdb')
 	outputs.file(outputFile)
 	doLast {
 		def licenseKey = System.getenv('MAXMIND_LICENSE_KEY')
@@ -89,7 +90,7 @@ tasks.register('downloadGeoLite2') {
 		}
 		outputDir.mkdirs()
 		def tarball = new File(temporaryDir, 'geolite2.tar.gz')
-		def url = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${licenseKey}&suffix=tar.gz"
+		def url = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${licenseKey}&suffix=tar.gz"
 		ant.get(src: url, dest: tarball, verbose: false)
 		def workDir = new File(temporaryDir, 'extract')
 		workDir.deleteDir()
@@ -98,7 +99,7 @@ tasks.register('downloadGeoLite2') {
 			from tarTree(resources.gzip(tarball))
 			into workDir
 		}
-		def mmdb = fileTree(workDir).matching { include '**/GeoLite2-Country.mmdb' }.singleFile
+		def mmdb = fileTree(workDir).matching { include '**/GeoLite2-City.mmdb' }.singleFile
 		mmdb.renameTo(outputFile)
 	}
 }
