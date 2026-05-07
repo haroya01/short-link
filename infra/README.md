@@ -113,11 +113,15 @@ rm jwt-private.pem jwt-public.pem
 
 ### 3-5. GitHub repo 설정
 
-Settings → Secrets and variables → Actions:
+Settings → Secrets and variables → Actions → **Secrets**:
 
 - `AWS_DEPLOY_ROLE_ARN` = bootstrap 출력 값
 - `MAXMIND_LICENSE_KEY` (이미 있을 가능성 높음)
 - `SUB_TOKEN` (resources 서브모듈 접근용, 이미 있을 가능성)
+
+Settings → Secrets and variables → Actions → **Variables**:
+
+- `DEPLOY_ENABLED` = `true` (이 변수가 \`true\`가 아니면 deploy job은 skip)
 
 Settings → Environments → `prod` 생성 (보호 규칙은 자유).
 

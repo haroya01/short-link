@@ -28,6 +28,7 @@ permissions:
 
 jobs:
   deploy:
+    if: ${{ vars.DEPLOY_ENABLED == 'true' }}
     runs-on: ubuntu-latest
     environment: prod
     steps:
