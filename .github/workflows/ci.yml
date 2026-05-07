@@ -59,7 +59,21 @@ jobs:
 
       - run: ./gradlew spotlessCheck
 
+      - name: Compute GeoLite2 cache key
+        id: geolite-key
+        run: echo "value=geolite2-$(date -u +%Y-%U)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache GeoLite2 database
+        id: geolite-cache
+        uses: actions/cache@v4
+        with:
+          path: src/main/resources/geoip/GeoLite2-City.mmdb
+          key: ${{ steps.geolite-key.outputs.value }}
+          restore-keys: |
+            geolite2-
+
       - name: Download GeoLite2 database
+        if: steps.geolite-cache.outputs.cache-hit != 'true'
         env:
           MAXMIND_LICENSE_KEY: ${{ secrets.MAXMIND_LICENSE_KEY }}
         run: ./gradlew downloadGeoLite2
