@@ -2,6 +2,8 @@ package com.example.short_link.user.domain;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -18,6 +20,11 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserEntity {
 
+  public enum Role {
+    USER,
+    ADMIN
+  }
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -31,6 +38,10 @@ public class UserEntity {
   @Column(name = "oauth_id", nullable = false)
   private String oauthId;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  private Role role = Role.USER;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
@@ -38,6 +49,15 @@ public class UserEntity {
     this.email = email;
     this.oauthProvider = oauthProvider;
     this.oauthId = oauthId;
+    this.role = Role.USER;
+  }
+
+  public boolean isAdmin() {
+    return role == Role.ADMIN;
+  }
+
+  public void promoteToAdmin() {
+    this.role = Role.ADMIN;
   }
 
   @PrePersist
