@@ -5,7 +5,10 @@ import com.example.short_link.user.application.IssuedTokens;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
@@ -18,6 +21,9 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
   private final AuthService authService;
   private final RefreshCookieWriter refreshCookieWriter;
+
+  @Value("${short-link.frontend-base-url}")
+  private String frontendBaseUrl;
 
   @Override
   public void onAuthenticationSuccess(
@@ -32,7 +38,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     IssuedTokens tokens = authService.loginWithOAuth(email, provider, oauthId);
 
     refreshCookieWriter.set(res, tokens.refreshToken());
-    res.setContentType("application/json");
-    res.getWriter().write("{\"accessToken\":\"" + tokens.accessToken() + "\"}");
+
+    String target =
+        frontendBaseUrl
+            + "/auth/callback#access_token="
+            + URLEncoder.encode(tokens.accessToken(), StandardCharsets.UTF_8);
+    res.sendRedirect(target);
   }
 }
