@@ -20,6 +20,7 @@ class ClickRecorderTest {
   @Mock private ClickEventRepository repository;
   @Mock private UserAgentClassifier userAgentClassifier;
   @Mock private GeoIpResolver geoIpResolver;
+  @Mock private BotHeuristic botHeuristic;
   @InjectMocks private ClickRecorder recorder;
 
   @Test

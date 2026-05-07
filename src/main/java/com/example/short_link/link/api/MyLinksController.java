@@ -1,5 +1,7 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.application.MyLinksQuery;
+import com.example.short_link.link.application.MyLinksResult;
 import com.example.short_link.link.application.MyLinksService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import java.util.List;
@@ -7,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -18,17 +21,25 @@ public class MyLinksController {
   private final ShortLinkUrlBuilder urlBuilder;
 
   @GetMapping("/me")
-  public List<MyLinkResponse> myLinks(@AuthenticationPrincipal Long userId) {
-    return service.myLinks(userId).stream()
-        .map(
-            my ->
-                new MyLinkResponse(
-                    my.shortCode(),
-                    urlBuilder.build(my.shortCode()),
-                    my.originalUrl(),
-                    my.createdAt(),
-                    my.expiresAt(),
-                    my.clickCount()))
-        .toList();
+  public MyLinksPage myLinks(
+      @AuthenticationPrincipal Long userId,
+      @RequestParam(required = false) Integer page,
+      @RequestParam(required = false) Integer size,
+      @RequestParam(required = false) String q) {
+    MyLinksQuery query = MyLinksQuery.of(page, size, q);
+    MyLinksResult result = service.myLinks(userId, query);
+    List<MyLinkResponse> items =
+        result.items().stream()
+            .map(
+                my ->
+                    new MyLinkResponse(
+                        my.shortCode(),
+                        urlBuilder.build(my.shortCode()),
+                        my.originalUrl(),
+                        my.createdAt(),
+                        my.expiresAt(),
+                        my.clickCount()))
+            .toList();
+    return new MyLinksPage(items, result.total());
   }
 }
