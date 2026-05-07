@@ -38,6 +38,7 @@ short-link:
     refresh-ttl: 14d
   cookie:
     secure: ${COOKIE_SECURE:false}
+  bootstrap-admin-email: ${SHORT_LINK_BOOTSTRAP_ADMIN_EMAIL:}
   safe-browsing:
     enabled: ${SAFE_BROWSING_ENABLED:true}
     api-key: ${SAFE_BROWSING_API_KEY:}
