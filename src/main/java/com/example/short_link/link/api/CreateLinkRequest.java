@@ -14,4 +14,9 @@ public record CreateLinkRequest(
         String url,
     @Pattern(regexp = "^[0-9A-Za-z]{3,16}$", message = "custom code must be 3-16 base62 characters")
         String customCode,
-    Instant expiresAt) {}
+    Instant expiresAt) {
+
+  public static CreateLinkRequest of(String url, String customCode, Instant expiresAt) {
+    return new CreateLinkRequest(url, customCode, expiresAt);
+  }
+}
