@@ -25,6 +25,8 @@ class LinkCreationServiceCollisionTest {
 
     UrlSafetyChecker safetyChecker = mock(UrlSafetyChecker.class);
     when(safetyChecker.isSafe(any())).thenReturn(true);
+    var blockedDomain = mock(com.example.short_link.admin.application.BlockedDomainService.class);
+    when(blockedDomain.isBlocked(any())).thenReturn(false);
     LinkCreationService service =
         new LinkCreationService(
             repository,
@@ -33,6 +35,7 @@ class LinkCreationServiceCollisionTest {
             safetyChecker,
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
+            blockedDomain,
             200L);
 
     assertThatThrownBy(() -> service.create("https://example.com", null, null, null))
