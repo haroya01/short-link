@@ -57,6 +57,9 @@ public class LinkEntity {
   @Column(name = "og_fetch_status", nullable = false, length = 20)
   private String ogFetchStatus = "PENDING";
 
+  @Column(name = "og_fetch_attempts", nullable = false)
+  private int ogFetchAttempts = 0;
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -100,10 +103,12 @@ public class LinkEntity {
     this.ogImage = image;
     this.ogFetchedAt = fetchedAt;
     this.ogFetchStatus = "OK";
+    this.ogFetchAttempts++;
   }
 
-  public void markOgFetchFailed(Instant fetchedAt) {
+  public void markOgFetchFailed(Instant fetchedAt, boolean willRetry) {
     this.ogFetchedAt = fetchedAt;
-    this.ogFetchStatus = "ERROR";
+    this.ogFetchStatus = willRetry ? "RETRYABLE" : "ERROR";
+    this.ogFetchAttempts++;
   }
 }
