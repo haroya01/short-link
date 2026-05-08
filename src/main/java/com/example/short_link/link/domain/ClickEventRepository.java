@@ -210,6 +210,18 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   List<LanguageClickRow> findLanguageClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
+      "SELECT c.asn AS asn, c.asnOrg AS organization, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId "
+          + "AND c.asnOrg IS NOT NULL "
+          + "GROUP BY c.asn, c.asnOrg ORDER BY count DESC")
+  List<AsnClickRow> findAsnClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.botName LIKE 'datacenter:%'")
+  long countDatacenterClicks(@Param("linkId") Long linkId);
+
+  @Query(
       value =
           "SELECT SUM(CASE WHEN cnt = 1 THEN 1 ELSE 0 END) AS newCount, "
               + "SUM(CASE WHEN cnt >= 2 THEN 1 ELSE 0 END) AS returningCount "
@@ -374,6 +386,14 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
 
   interface LanguageClickRow {
     String getLanguage();
+
+    Long getCount();
+  }
+
+  interface AsnClickRow {
+    Integer getAsn();
+
+    String getOrganization();
 
     Long getCount();
   }

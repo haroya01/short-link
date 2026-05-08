@@ -79,6 +79,33 @@ spotless {
 	}
 }
 
+tasks.register('downloadGeoLite2Asn') {
+	description = 'Download MaxMind GeoLite2-ASN mmdb into src/main/resources/geoip'
+	group = 'build setup'
+	def outputDir = file('src/main/resources/geoip')
+	def outputFile = new File(outputDir, 'GeoLite2-ASN.mmdb')
+	outputs.file(outputFile)
+	doLast {
+		def licenseKey = System.getenv('MAXMIND_LICENSE_KEY')
+		if (!licenseKey) {
+			throw new GradleException('MAXMIND_LICENSE_KEY environment variable is required')
+		}
+		outputDir.mkdirs()
+		def tarball = new File(temporaryDir, 'geolite2-asn.tar.gz')
+		def url = "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${licenseKey}&suffix=tar.gz"
+		ant.get(src: url, dest: tarball, verbose: false, retries: 2, skipexisting: false)
+		def workDir = new File(temporaryDir, 'extract-asn')
+		workDir.deleteDir()
+		workDir.mkdirs()
+		copy {
+			from tarTree(resources.gzip(tarball))
+			into workDir
+		}
+		def mmdb = fileTree(workDir).matching { include '**/GeoLite2-ASN.mmdb' }.singleFile
+		mmdb.renameTo(outputFile)
+	}
+}
+
 tasks.register('downloadGeoLite2') {
 	description = 'Download MaxMind GeoLite2-City mmdb into src/main/resources/geoip'
 	group = 'build setup'

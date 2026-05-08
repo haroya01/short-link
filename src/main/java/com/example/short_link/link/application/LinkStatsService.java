@@ -199,6 +199,12 @@ public class LinkStatsService {
             .map(r -> new LinkStats.LanguageClick(r.getLanguage(), r.getCount()))
             .toList();
 
+    List<LinkStats.AsnClick> asns =
+        clickRepository.findAsnClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.AsnClick(r.getAsn(), r.getOrganization(), r.getCount()))
+            .toList();
+    long datacenterClicks = clickRepository.countDatacenterClicks(linkId);
+
     LinkStats.ReturnRate returnRate = computeReturnRate(linkId);
     LinkStats.Lifecycle lifecycle = computeLifecycle(linkId);
     List<LinkStats.Insight> insights =
@@ -241,6 +247,8 @@ public class LinkStatsService {
         regions,
         cities,
         languages,
+        asns,
+        datacenterClicks,
         insights);
   }
 
