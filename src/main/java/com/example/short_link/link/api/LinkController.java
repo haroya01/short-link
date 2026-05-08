@@ -28,6 +28,6 @@ public class LinkController {
         service.create(request.url(), userId, request.customCode(), request.expiresAt());
     String shortUrl = urlBuilder.build(created.shortCode());
     return ResponseEntity.created(URI.create(shortUrl))
-        .body(new CreateLinkResponse(created.shortCode(), shortUrl));
+        .body(new CreateLinkResponse(created.shortCode(), shortUrl, created.claimToken()));
   }
 }

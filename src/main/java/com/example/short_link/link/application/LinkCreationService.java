@@ -86,12 +86,14 @@ public class LinkCreationService {
 
     if (code != null) {
       try {
-        LinkEntity saved = repository.save(new LinkEntity(url, code, userId, expiresAt));
+        LinkEntity entity = new LinkEntity(url, code, userId, expiresAt);
+        attachClaimTokenIfAnonymous(entity, authenticated);
+        LinkEntity saved = repository.save(entity);
         recordCreated(true, true, "ok");
         events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), url));
         auditLogService.record(
             AuditAction.LINK_CREATED, "link", saved.getShortCode(), userId, Map.of("custom", true));
-        return new LinkCreated(saved.getShortCode());
+        return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
       } catch (DataIntegrityViolationException e) {
         throw new DuplicateShortCodeException(code);
       }
@@ -103,7 +105,9 @@ public class LinkCreationService {
         continue;
       }
       try {
-        LinkEntity saved = repository.save(new LinkEntity(url, generated, userId, expiresAt));
+        LinkEntity entity = new LinkEntity(url, generated, userId, expiresAt);
+        attachClaimTokenIfAnonymous(entity, authenticated);
+        LinkEntity saved = repository.save(entity);
         recordCreated(authenticated, false, "ok");
         events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), url));
         auditLogService.record(
@@ -112,11 +116,22 @@ public class LinkCreationService {
             saved.getShortCode(),
             userId,
             Map.of("custom", false));
-        return new LinkCreated(saved.getShortCode());
+        return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
       } catch (DataIntegrityViolationException ignored) {
       }
     }
     throw new ShortCodeGenerationException();
+  }
+
+  private static final java.security.SecureRandom CLAIM_RANDOM = new java.security.SecureRandom();
+
+  private static void attachClaimTokenIfAnonymous(LinkEntity entity, boolean authenticated) {
+    if (authenticated) return;
+    byte[] bytes = new byte[16];
+    CLAIM_RANDOM.nextBytes(bytes);
+    StringBuilder hex = new StringBuilder(32);
+    for (byte b : bytes) hex.append(String.format("%02x", b));
+    entity.setClaimToken(hex.toString());
   }
 
   private void recordCreated(boolean authenticated, boolean custom, String result) {
