@@ -20,7 +20,7 @@ class SseClickStreamRegistryTest {
     assertThat(registry.register(99L, otherLink)).isTrue();
 
     registry.onClickRecorded(
-        new ClickRecordedEvent(7L, Instant.now(), "KR", "mobile", "kakao.com", false));
+        new ClickRecordedEvent(7L, Instant.now(), "KR", "mobile", "kakao.com", false, null));
 
     assertThat(watching.sent).isEqualTo(1);
     assertThat(otherLink.sent).isZero();
@@ -35,7 +35,7 @@ class SseClickStreamRegistryTest {
     registry.register(42L, alive);
 
     registry.onClickRecorded(
-        new ClickRecordedEvent(42L, Instant.now(), "KR", "desktop", null, false));
+        new ClickRecordedEvent(42L, Instant.now(), "KR", "desktop", null, false, null));
 
     assertThat(alive.sent).isEqualTo(1);
     assertThat(registry.activeStreams(42L)).isEqualTo(1);

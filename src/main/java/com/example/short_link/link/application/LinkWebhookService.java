@@ -66,6 +66,24 @@ public class LinkWebhookService {
   }
 
   @Transactional
+  public WebhookSummary updateConfig(
+      Long userId, String shortCode, Long webhookId, ConfigPatch patch) {
+    LinkWebhookEntity hook = ownedHook(userId, shortCode, webhookId);
+    Integer sampleRate = patch.sampleRate();
+    if (sampleRate != null && (sampleRate < 1 || sampleRate > 100)) {
+      throw new IllegalArgumentException("sampleRate must be between 1 and 100");
+    }
+    hook.updateConfig(
+        patch.includeBots(),
+        patch.sampleRate(),
+        patch.batchEnabled(),
+        patch.dailyQuota(),
+        patch.referrerHostFilter(),
+        patch.utmSourceFilter());
+    return toSummary(hook);
+  }
+
+  @Transactional
   public void delete(Long userId, String shortCode, Long webhookId) {
     LinkWebhookEntity hook = ownedHook(userId, shortCode, webhookId);
     repository.delete(hook);
@@ -97,7 +115,15 @@ public class LinkWebhookService {
         h.getCreatedAt(),
         h.getLastCalledAt(),
         h.getLastStatusCode(),
-        h.getLastError());
+        h.getLastError(),
+        h.isIncludeBots(),
+        h.getSampleRate(),
+        h.isBatchEnabled(),
+        h.getDailyQuota(),
+        h.getConsecutiveFailures(),
+        h.getAutoDisabledReason(),
+        h.getReferrerHostFilter(),
+        h.getUtmSourceFilter());
   }
 
   private String generateSecret() {
@@ -123,7 +149,23 @@ public class LinkWebhookService {
       Instant createdAt,
       Instant lastCalledAt,
       Integer lastStatusCode,
-      String lastError) {}
+      String lastError,
+      boolean includeBots,
+      int sampleRate,
+      boolean batchEnabled,
+      Integer dailyQuota,
+      int consecutiveFailures,
+      String autoDisabledReason,
+      String referrerHostFilter,
+      String utmSourceFilter) {}
 
   public record IssuedWebhook(Long id, String url, String secret, String name, Instant createdAt) {}
+
+  public record ConfigPatch(
+      Boolean includeBots,
+      Integer sampleRate,
+      Boolean batchEnabled,
+      Integer dailyQuota,
+      String referrerHostFilter,
+      String utmSourceFilter) {}
 }
