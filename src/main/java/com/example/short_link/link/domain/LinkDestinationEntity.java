@@ -17,6 +17,12 @@ import lombok.NoArgsConstructor;
  * enabled variants by weight; otherwise it falls back to {@code link.original_url}. The original
  * URL is implicitly the "control" — owners can promote any variant by either bumping its weight or
  * replacing the original.
+ *
+ * <p>{@code countryCode} (ISO-3166 alpha-2, uppercase) gates the variant on the resolved client
+ * country: a non-null value means "only pick this variant for visitors from that country". When at
+ * least one country-matched variant exists for a request, the picker prefers them; otherwise it
+ * falls back to country-agnostic (null) variants. If all variants are country-tagged and none
+ * match, the redirect falls back to the original URL.
  */
 @Entity
 @Table(name = "link_destination")
@@ -43,15 +49,20 @@ public class LinkDestinationEntity {
   @Column(nullable = false)
   private boolean enabled = true;
 
+  @Column(name = "country_code", length = 2)
+  private String countryCode;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
-  public LinkDestinationEntity(Long linkId, String url, int weight, String label) {
+  public LinkDestinationEntity(
+      Long linkId, String url, int weight, String label, String countryCode) {
     this.linkId = linkId;
     this.url = url;
     this.weight = Math.max(1, weight);
     this.label = label;
     this.enabled = true;
+    this.countryCode = normalizeCountry(countryCode);
   }
 
   @PrePersist
@@ -59,10 +70,24 @@ public class LinkDestinationEntity {
     this.createdAt = Instant.now();
   }
 
-  public void update(String url, Integer weight, String label, Boolean enabled) {
+  public void update(
+      String url, Integer weight, String label, Boolean enabled, String countryCode) {
     if (url != null) this.url = url;
     if (weight != null) this.weight = Math.max(1, weight);
     if (label != null) this.label = label;
     if (enabled != null) this.enabled = enabled;
+    if (countryCode != null) {
+      this.countryCode = normalizeCountry(countryCode);
+    }
+  }
+
+  private static String normalizeCountry(String input) {
+    if (input == null) return null;
+    String trimmed = input.trim();
+    if (trimmed.isEmpty()) return null;
+    if (trimmed.length() != 2) {
+      throw new IllegalArgumentException("countryCode must be ISO-3166 alpha-2 (2 chars)");
+    }
+    return trimmed.toUpperCase();
   }
 }

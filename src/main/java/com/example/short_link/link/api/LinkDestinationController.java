@@ -5,6 +5,7 @@ import com.example.short_link.link.application.LinkDestinationService.Destinatio
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -39,7 +40,13 @@ public class LinkDestinationController {
       @PathVariable String shortCode,
       @RequestBody AddRequest request) {
     DestinationSummary added =
-        service.add(userId, shortCode, request.url(), request.weight(), request.label());
+        service.add(
+            userId,
+            shortCode,
+            request.url(),
+            request.weight(),
+            request.label(),
+            request.countryCode());
     return ResponseEntity.status(HttpStatus.CREATED).body(added);
   }
 
@@ -50,7 +57,14 @@ public class LinkDestinationController {
       @PathVariable Long id,
       @RequestBody UpdateRequest request) {
     return service.update(
-        userId, shortCode, id, request.url(), request.weight(), request.label(), request.enabled());
+        userId,
+        shortCode,
+        id,
+        request.url(),
+        request.weight(),
+        request.label(),
+        request.enabled(),
+        request.countryCode());
   }
 
   @DeleteMapping("/{shortCode}/destinations/{id}")
@@ -63,11 +77,17 @@ public class LinkDestinationController {
   public record AddRequest(
       @NotBlank @Size(max = 2048) String url,
       @Min(1) @Max(100) Integer weight,
-      @Size(max = 40) String label) {}
+      @Size(max = 40) String label,
+      @Pattern(regexp = "^[A-Za-z]{2}$", message = "countryCode must be ISO-3166 alpha-2")
+          String countryCode) {}
 
   public record UpdateRequest(
       @Size(max = 2048) String url,
       @Min(1) @Max(100) Integer weight,
       @Size(max = 40) String label,
-      Boolean enabled) {}
+      Boolean enabled,
+      @Pattern(
+              regexp = "^([A-Za-z]{2})?$",
+              message = "countryCode must be ISO-3166 alpha-2 or empty")
+          String countryCode) {}
 }
