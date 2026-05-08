@@ -47,7 +47,12 @@ public class LinkManagementService {
         userId,
         Map.of("urlChanged", urlChanged, "expiresAtChanged", expiresAt != null));
     return new MyLink(
-        link.getShortCode(), link.getOriginalUrl(), link.getCreatedAt(), link.getExpiresAt(), 0L);
+        link.getShortCode(),
+        link.getOriginalUrl(),
+        link.getCreatedAt(),
+        link.getExpiresAt(),
+        0L,
+        java.util.List.of());
   }
 
   @Transactional
