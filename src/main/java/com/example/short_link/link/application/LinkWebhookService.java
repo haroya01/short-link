@@ -1,0 +1,129 @@
+package com.example.short_link.link.application;
+
+import com.example.short_link.common.net.PublicHttpUrlGuard;
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.LinkWebhookEntity;
+import com.example.short_link.link.domain.LinkWebhookRepository;
+import io.micrometer.core.instrument.MeterRegistry;
+import java.security.SecureRandom;
+import java.time.Instant;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/**
+ * Per-link webhook registration. Each link can hold up to {@link #MAX_PER_LINK} active hooks; when
+ * the click pipeline records a hit, {@link LinkWebhookDispatcher} fires a signed POST to every
+ * enabled URL. Owner-scoped: every operation verifies ownership of the link before touching the
+ * row.
+ */
+@Service
+@RequiredArgsConstructor
+public class LinkWebhookService {
+
+  public static final int MAX_PER_LINK = 5;
+  private static final String SECRET_ALPHABET =
+      "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+  private static final int SECRET_LENGTH = 48;
+
+  private final LinkRepository linkRepository;
+  private final LinkWebhookRepository repository;
+  private final MeterRegistry meterRegistry;
+  private final SecureRandom random = new SecureRandom();
+
+  @Transactional(readOnly = true)
+  public List<WebhookSummary> list(Long userId, String shortCode) {
+    LinkEntity link = ownedLink(userId, shortCode);
+    return repository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
+        .map(this::toSummary)
+        .toList();
+  }
+
+  @Transactional
+  public IssuedWebhook register(Long userId, String shortCode, String url, String name) {
+    LinkEntity link = ownedLink(userId, shortCode);
+    if (!PublicHttpUrlGuard.isPublic(url)) {
+      throw new InvalidWebhookUrlException();
+    }
+    if (repository.countByLinkId(link.getId()) >= MAX_PER_LINK) {
+      throw new TooManyWebhooksException(MAX_PER_LINK);
+    }
+    String secret = generateSecret();
+    LinkWebhookEntity saved =
+        repository.save(new LinkWebhookEntity(link.getId(), url, secret, sanitizeName(name)));
+    meterRegistry.counter("link.webhook.registered").increment();
+    return new IssuedWebhook(saved.getId(), url, secret, sanitizeName(name), saved.getCreatedAt());
+  }
+
+  @Transactional
+  public WebhookSummary toggle(Long userId, String shortCode, Long webhookId, boolean enabled) {
+    LinkWebhookEntity hook = ownedHook(userId, shortCode, webhookId);
+    if (enabled) hook.enable();
+    else hook.disable();
+    return toSummary(hook);
+  }
+
+  @Transactional
+  public void delete(Long userId, String shortCode, Long webhookId) {
+    LinkWebhookEntity hook = ownedHook(userId, shortCode, webhookId);
+    repository.delete(hook);
+  }
+
+  private LinkEntity ownedLink(Long userId, String shortCode) {
+    LinkEntity link =
+        linkRepository
+            .findByShortCode(shortCode)
+            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+    if (!link.isOwnedBy(userId)) throw new LinkNotOwnedException(shortCode);
+    return link;
+  }
+
+  private LinkWebhookEntity ownedHook(Long userId, String shortCode, Long webhookId) {
+    LinkEntity link = ownedLink(userId, shortCode);
+    LinkWebhookEntity hook =
+        repository.findById(webhookId).orElseThrow(WebhookNotFoundException::new);
+    if (!hook.getLinkId().equals(link.getId())) throw new WebhookNotFoundException();
+    return hook;
+  }
+
+  private WebhookSummary toSummary(LinkWebhookEntity h) {
+    return new WebhookSummary(
+        h.getId(),
+        h.getUrl(),
+        h.getName(),
+        h.isEnabled(),
+        h.getCreatedAt(),
+        h.getLastCalledAt(),
+        h.getLastStatusCode(),
+        h.getLastError());
+  }
+
+  private String generateSecret() {
+    StringBuilder sb = new StringBuilder(SECRET_LENGTH);
+    for (int i = 0; i < SECRET_LENGTH; i++) {
+      sb.append(SECRET_ALPHABET.charAt(random.nextInt(SECRET_ALPHABET.length())));
+    }
+    return sb.toString();
+  }
+
+  private static String sanitizeName(String name) {
+    if (name == null) return null;
+    String trimmed = name.trim();
+    if (trimmed.isEmpty()) return null;
+    return trimmed.length() > 100 ? trimmed.substring(0, 100) : trimmed;
+  }
+
+  public record WebhookSummary(
+      Long id,
+      String url,
+      String name,
+      boolean enabled,
+      Instant createdAt,
+      Instant lastCalledAt,
+      Integer lastStatusCode,
+      String lastError) {}
+
+  public record IssuedWebhook(Long id, String url, String secret, String name, Instant createdAt) {}
+}
