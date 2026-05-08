@@ -1,6 +1,7 @@
 package com.example.short_link.link.api;
 
 import java.time.Instant;
+import java.util.List;
 
 public record MyLinkResponse(
     String shortCode,
@@ -8,4 +9,5 @@ public record MyLinkResponse(
     String originalUrl,
     Instant createdAt,
     Instant expiresAt,
-    long clickCount) {}
+    long clickCount,
+    List<String> tags) {}

@@ -25,8 +25,9 @@ public class MyLinksController {
       @AuthenticationPrincipal Long userId,
       @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer size,
-      @RequestParam(required = false) String q) {
-    MyLinksQuery query = MyLinksQuery.of(page, size, q);
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) String tag) {
+    MyLinksQuery query = MyLinksQuery.of(page, size, q, tag);
     MyLinksResult result = service.myLinks(userId, query);
     List<MyLinkResponse> items =
         result.items().stream()
@@ -38,7 +39,8 @@ public class MyLinksController {
                         my.originalUrl(),
                         my.createdAt(),
                         my.expiresAt(),
-                        my.clickCount()))
+                        my.clickCount(),
+                        my.tags()))
             .toList();
     return new MyLinksPage(items, result.total());
   }
