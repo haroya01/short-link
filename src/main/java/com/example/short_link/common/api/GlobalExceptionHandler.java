@@ -7,7 +7,9 @@ import com.example.short_link.link.application.InvalidExportDimensionException;
 import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkNotOwnedException;
+import com.example.short_link.link.application.LinkQuotaExceededException;
 import com.example.short_link.link.application.MaliciousUrlException;
+import com.example.short_link.link.application.ReservedShortCodeException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import com.example.short_link.user.application.InvalidTimezoneException;
@@ -56,6 +58,19 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(MaliciousUrlException.class)
   public ProblemDetail handleMaliciousUrl(MaliciousUrlException e, HttpServletRequest req) {
     return problem(HttpStatus.BAD_REQUEST, "url flagged as malicious", "MALICIOUS_URL", req);
+  }
+
+  @ExceptionHandler(ReservedShortCodeException.class)
+  public ProblemDetail handleReservedShortCode(
+      ReservedShortCodeException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "RESERVED_SHORT_CODE", req);
+  }
+
+  @ExceptionHandler(LinkQuotaExceededException.class)
+  public ProblemDetail handleLinkQuota(LinkQuotaExceededException e, HttpServletRequest req) {
+    ProblemDetail body = problem(HttpStatus.CONFLICT, e.getMessage(), "LINK_QUOTA_EXCEEDED", req);
+    body.setProperty("limit", e.getLimit());
+    return body;
   }
 
   @ExceptionHandler(OptimisticLockingFailureException.class)

@@ -37,7 +37,26 @@ class RedirectControllerTest {
     mvc.perform(get("/abc1234"))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://example.com/destination"))
-        .andExpect(header().string("Cache-Control", "private, max-age=90"));
+        .andExpect(header().string("Cache-Control", "private, max-age=90"))
+        .andExpect(header().string("X-Robots-Tag", "noindex, nofollow"));
+  }
+
+  @Test
+  void redirectsForCustomCodeShorterThanSeven() throws Exception {
+    repository.save(new LinkEntity("https://example.com/short", "myx"));
+
+    mvc.perform(get("/myx"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "https://example.com/short"));
+  }
+
+  @Test
+  void redirectsForCustomCodeLongerThanSeven() throws Exception {
+    repository.save(new LinkEntity("https://example.com/long", "campaign2026"));
+
+    mvc.perform(get("/campaign2026"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "https://example.com/long"));
   }
 
   @Test
