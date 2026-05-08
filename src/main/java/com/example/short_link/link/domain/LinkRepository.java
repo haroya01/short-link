@@ -48,6 +48,12 @@ public interface LinkRepository extends JpaRepository<LinkEntity, Long> {
 
   List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(java.util.Collection<String> claimTokens);
 
+  @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
+  @Query(
+      "UPDATE LinkEntity l SET l.viewCount = l.viewCount + 1 "
+          + "WHERE l.id = :linkId AND (l.maxViews IS NULL OR l.viewCount < l.maxViews)")
+  int incrementViewCountIfBelowLimit(@Param("linkId") Long linkId);
+
   @org.springframework.data.jpa.repository.Modifying(
       clearAutomatically = true,
       flushAutomatically = true)
