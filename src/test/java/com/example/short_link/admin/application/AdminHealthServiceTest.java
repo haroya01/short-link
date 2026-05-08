@@ -77,5 +77,39 @@ class AdminHealthServiceTest {
     assertThat(m.authFailures()).isZero();
     assertThat(m.cache().hitRatio()).isZero();
     assertThat(m.httpStatusCounts().count2xx()).isZero();
+    assertThat(m.redirect().total()).isZero();
+  }
+
+  @Test
+  void redirectMetricsAggregateOutcomes() {
+    MeterRegistry registry = new SimpleMeterRegistry();
+    Timer.builder("redirect.latency")
+        .tag("outcome", "redirect")
+        .register(registry)
+        .record(2, TimeUnit.MILLISECONDS);
+    Timer.builder("redirect.latency")
+        .tag("outcome", "redirect")
+        .register(registry)
+        .record(3, TimeUnit.MILLISECONDS);
+    Timer.builder("redirect.latency")
+        .tag("outcome", "preview")
+        .register(registry)
+        .record(7, TimeUnit.MILLISECONDS);
+    Timer.builder("redirect.latency")
+        .tag("outcome", "not_found")
+        .register(registry)
+        .record(1, TimeUnit.MILLISECONDS);
+    Timer.builder("redirect.latency")
+        .tag("outcome", "expired")
+        .register(registry)
+        .record(1, TimeUnit.MILLISECONDS);
+    AdminHealthService service = new AdminHealthService(registry);
+
+    AdminHealthMetrics.RedirectPerf perf = service.redirect();
+    assertThat(perf.total()).isEqualTo(5);
+    assertThat(perf.redirects()).isEqualTo(2);
+    assertThat(perf.previews()).isEqualTo(1);
+    assertThat(perf.notFound()).isEqualTo(1);
+    assertThat(perf.expired()).isEqualTo(1);
   }
 }
