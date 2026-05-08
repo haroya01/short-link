@@ -147,6 +147,9 @@ public class LinkEntity {
   public void claim(Long newOwnerId) {
     this.userId = newOwnerId;
     this.claimToken = null;
+    // Anonymous links carry a short TTL so they don't accumulate forever; when the creator signs
+    // in we promote them to permanent — they're now under an account that can manage them.
+    this.expiresAt = null;
   }
 
   public boolean hasPassword() {
