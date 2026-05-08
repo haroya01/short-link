@@ -111,6 +111,8 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/links/me")
                     .authenticated()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/detail")
+                    .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout")
                     .authenticated()
                     .requestMatchers("/api/v1/users/me/**")
