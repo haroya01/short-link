@@ -33,11 +33,6 @@ output "rds_endpoint" {
   value       = aws_db_instance.this.address
 }
 
-output "redis_endpoint" {
-  description = "ElastiCache primary endpoint host."
-  value       = aws_elasticache_replication_group.this.primary_endpoint_address
-}
-
 output "ssm_parameter_prefix" {
   description = "Prefix under which app secrets live in SSM Parameter Store."
   value       = "/${local.name_prefix}"
