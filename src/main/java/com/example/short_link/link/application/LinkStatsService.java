@@ -43,9 +43,23 @@ public class LinkStatsService {
     if (!link.isOwnedBy(userId)) {
       throw new LinkNotOwnedException(shortCode);
     }
-    Long linkId = link.getId();
+    return computeStats(link, ownerZone(userId));
+  }
 
-    ZoneId reportZone = ownerZone(userId);
+  @Transactional(readOnly = true)
+  public LinkStats publicStats(String shortCode) {
+    LinkEntity link =
+        linkRepository
+            .findByShortCode(shortCode)
+            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+    if (!link.isStatsPublic()) {
+      throw new LinkNotFoundException(shortCode);
+    }
+    return computeStats(link, ownerZone(link.getUserId()));
+  }
+
+  private LinkStats computeStats(LinkEntity link, ZoneId reportZone) {
+    Long linkId = link.getId();
     String reportTz = currentOffset(reportZone);
 
     long total = clickRepository.countByLinkId(linkId);
@@ -162,7 +176,7 @@ public class LinkStatsService {
             total, bot, heatmap, channels, countries, returnRate, lifecycle, daily);
 
     return new LinkStats(
-        shortCode,
+        link.getShortCode(),
         reportZone.getId(),
         total,
         human,
@@ -243,6 +257,7 @@ public class LinkStatsService {
   }
 
   private ZoneId ownerZone(Long userId) {
+    if (userId == null) return DEFAULT_ZONE;
     return userRepository.findById(userId).map(u -> safeZone(u.getTimezone())).orElse(DEFAULT_ZONE);
   }
 
