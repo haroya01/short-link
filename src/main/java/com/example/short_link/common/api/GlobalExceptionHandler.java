@@ -9,6 +9,7 @@ import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.application.LinkQuotaExceededException;
+import com.example.short_link.link.application.LinkViewLimitExceededException;
 import com.example.short_link.link.application.MaliciousUrlException;
 import com.example.short_link.link.application.ReservedShortCodeException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
@@ -72,6 +73,11 @@ public class GlobalExceptionHandler {
     ProblemDetail body = problem(HttpStatus.CONFLICT, e.getMessage(), "LINK_QUOTA_EXCEEDED", req);
     body.setProperty("limit", e.getLimit());
     return body;
+  }
+
+  @ExceptionHandler(LinkViewLimitExceededException.class)
+  public ProblemDetail handleViewLimit(LinkViewLimitExceededException e, HttpServletRequest req) {
+    return problem(HttpStatus.GONE, e.getMessage(), "LINK_VIEW_LIMIT_EXCEEDED", req);
   }
 
   @ExceptionHandler(BulkImportTooLargeException.class)
