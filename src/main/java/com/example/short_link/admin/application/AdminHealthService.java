@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 public class AdminHealthService {
 
   private static final String HTTP_TIMER = "http.server.requests";
+  private static final String REDIRECT_TIMER = "redirect.latency";
   private static final String HIKARI_PREFIX = "hikaricp.connections";
   private static final String CACHE_GETS = "cache.gets";
 
@@ -29,7 +30,56 @@ public class AdminHealthService {
         counterValue("safe_browsing.check", Tag.of("result", "malicious")),
         counterValue("auth.failure"),
         dbPool(),
-        cache());
+        cache(),
+        redirect());
+  }
+
+  AdminHealthMetrics.RedirectPerf redirect() {
+    double p50 = 0;
+    double p95 = 0;
+    double p99 = 0;
+    long total = 0;
+    long redirects = 0;
+    long previews = 0;
+    long notFound = 0;
+    long expired = 0;
+    long viewLimit = 0;
+    long passwordRequired = 0;
+    long errors = 0;
+    for (Timer t : meterRegistry.find(REDIRECT_TIMER).timers()) {
+      HistogramSnapshot snap = t.takeSnapshot();
+      total += snap.count();
+      for (ValueAtPercentile v : snap.percentileValues()) {
+        double ms = v.value(java.util.concurrent.TimeUnit.MILLISECONDS);
+        if (closeTo(v.percentile(), 0.5)) p50 = Math.max(p50, ms);
+        else if (closeTo(v.percentile(), 0.95)) p95 = Math.max(p95, ms);
+        else if (closeTo(v.percentile(), 0.99)) p99 = Math.max(p99, ms);
+      }
+      String outcome = t.getId().getTag("outcome");
+      long n = t.count();
+      if (outcome == null) continue;
+      switch (outcome) {
+        case "redirect" -> redirects += n;
+        case "preview" -> previews += n;
+        case "not_found" -> notFound += n;
+        case "expired" -> expired += n;
+        case "view_limit" -> viewLimit += n;
+        case "password_required" -> passwordRequired += n;
+        default -> errors += n;
+      }
+    }
+    return new AdminHealthMetrics.RedirectPerf(
+        p50,
+        p95,
+        p99,
+        total,
+        redirects,
+        previews,
+        notFound,
+        expired,
+        viewLimit,
+        passwordRequired,
+        errors);
   }
 
   AdminHealthMetrics.HttpLatency latency() {
