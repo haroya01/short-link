@@ -1,6 +1,6 @@
 package com.example.short_link.link.application;
 
-import com.maxmind.geoip2.DatabaseReader;
+import com.example.short_link.common.geoip.GeoIpDatabaseHolder;
 import com.maxmind.geoip2.model.CityResponse;
 import java.net.InetAddress;
 import java.util.Optional;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class GeoIpResolver {
 
-  private final DatabaseReader reader;
+  private final GeoIpDatabaseHolder holder;
 
   public GeoLocation resolve(String ip) {
     if (ip == null || ip.isBlank()) {
@@ -21,7 +21,7 @@ public class GeoIpResolver {
     }
     try {
       InetAddress address = InetAddress.getByName(ip);
-      Optional<CityResponse> city = reader.tryCity(address);
+      Optional<CityResponse> city = holder.get().tryCity(address);
       return city.map(this::toLocation).orElse(GeoLocation.empty());
     } catch (Exception e) {
       log.debug("geoip lookup failed for {}: {}", ip, e.toString());
