@@ -169,6 +169,14 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   List<UtmContentClickRow> findUtmContentClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
+      "SELECT c.sourceChannel AS source, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.sourceChannel IS NOT NULL "
+          + "GROUP BY c.sourceChannel ORDER BY count DESC")
+  List<SourceChannelClickRow> findSourceChannelClicks(
+      @Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
       "SELECT c.countryCode AS country, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY c.countryCode ORDER BY count DESC")
@@ -324,6 +332,12 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
 
   interface UtmContentClickRow {
     String getContent();
+
+    Long getCount();
+  }
+
+  interface SourceChannelClickRow {
+    String getSource();
 
     Long getCount();
   }
