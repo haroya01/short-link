@@ -1,6 +1,7 @@
 package com.example.short_link.common.config;
 
 import com.example.short_link.common.api.RateLimitFilter;
+import com.example.short_link.user.api.ApiKeyAuthenticationFilter;
 import com.example.short_link.user.api.JsonAuthenticationEntryPoint;
 import com.example.short_link.user.api.JwtAuthenticationFilter;
 import com.example.short_link.user.api.OAuth2LoginFailureHandler;
@@ -33,6 +34,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class SecurityConfig {
 
   private final JwtAuthenticationFilter jwtFilter;
+  private final ApiKeyAuthenticationFilter apiKeyFilter;
   private final OAuth2LoginSuccessHandler oauth2SuccessHandler;
   private final OAuth2LoginFailureHandler oauth2FailureHandler;
   private final JsonAuthenticationEntryPoint authenticationEntryPoint;
@@ -118,7 +120,8 @@ public class SecurityConfig {
                     .anyRequest()
                     .permitAll())
         .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-        .addFilterAfter(rateLimitFilter, JwtAuthenticationFilter.class);
+        .addFilterAfter(apiKeyFilter, JwtAuthenticationFilter.class)
+        .addFilterAfter(rateLimitFilter, ApiKeyAuthenticationFilter.class);
     if (clientRegistrations.getIfAvailable() != null) {
       http.oauth2Login(
           o -> o.successHandler(oauth2SuccessHandler).failureHandler(oauth2FailureHandler));
