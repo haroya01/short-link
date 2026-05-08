@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Bootstraps Let's Encrypt certificates for kurl.md (apex + www).
+# Bootstraps Let's Encrypt certificates for kurl.me (apex + www).
 #
 # nginx refuses to start without the cert files referenced in its config, and
 # certbot can't issue without nginx serving the http-01 challenge — chicken
