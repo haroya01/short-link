@@ -48,6 +48,18 @@ short-link:
   og-fetch:
     max-attempts: ${OG_FETCH_MAX_ATTEMPTS:3}
     retry-cron: ${OG_FETCH_RETRY_CRON:0 30 4 * * *}
+    stale-after-days: ${OG_REFRESH_STALE_DAYS:30}
+    refresh-cron: ${OG_REFRESH_CRON:0 0 5 * * SUN}
+    refresh-enabled: ${OG_REFRESH_ENABLED:true}
+  audit-log:
+    retention-days: ${AUDIT_LOG_RETENTION_DAYS:180}
+    cleanup-cron: ${AUDIT_LOG_CLEANUP_CRON:0 45 4 * * *}
+    cleanup-enabled: ${AUDIT_LOG_CLEANUP_ENABLED:true}
+  geoip:
+    license-key: ${MAXMIND_LICENSE_KEY:}
+    download-url: ${GEOIP_DOWNLOAD_URL:}
+    refresh-cron: ${GEOIP_REFRESH_CRON:0 15 5 * * WED}
+    refresh-enabled: ${GEOIP_REFRESH_ENABLED:true}
   jwt:
     private-key: ${JWT_PRIVATE_KEY:}
     public-key: ${JWT_PUBLIC_KEY:}
