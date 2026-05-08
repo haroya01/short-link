@@ -37,6 +37,8 @@ short-link:
   rate-limit:
     anonymous: 100
     authenticated: 1000
+  link-quota:
+    authenticated: ${LINK_QUOTA_AUTHENTICATED:200}
   jwt:
     private-key: ${JWT_PRIVATE_KEY:}
     public-key: ${JWT_PUBLIC_KEY:}
