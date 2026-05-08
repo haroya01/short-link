@@ -14,6 +14,9 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class ClickRecorder {
 
+  /** Bot name prefix used when the row is a social/messenger preview crawler hit. */
+  public static final String PREVIEW_BOT_NAME_PREFIX = "preview:";
+
   private final ClickEventRepository repository;
   private final UserAgentClassifier userAgentClassifier;
   private final GeoIpResolver geoIpResolver;
@@ -28,13 +31,52 @@ public class ClickRecorder {
       String userAgent,
       String clientIp,
       String acceptLanguage) {
+    record(linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, null);
+  }
+
+  /**
+   * Same as {@link #record} but forces the row to bot=true with a given name. Used for OG/preview
+   * crawlers that yauaa doesn't classify as bots — we still want them in click_event so the stats
+   * UI can show "social preview" volume separate from real clicks.
+   */
+  @Transactional
+  public void recordPreview(
+      Long linkId,
+      String originalUrl,
+      String referrer,
+      String userAgent,
+      String clientIp,
+      String acceptLanguage,
+      String crawlerLabel) {
+    record(
+        linkId,
+        originalUrl,
+        referrer,
+        userAgent,
+        clientIp,
+        acceptLanguage,
+        PREVIEW_BOT_NAME_PREFIX + crawlerLabel);
+  }
+
+  @Transactional
+  public void record(
+      Long linkId,
+      String originalUrl,
+      String referrer,
+      String userAgent,
+      String clientIp,
+      String acceptLanguage,
+      String forcedBotName) {
     try {
       UtmParams utm = UtmExtractor.extract(originalUrl);
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
       GeoLocation geo = geoIpResolver.resolve(clientIp);
       boolean uaBot = ua.bot();
       String botName = ua.botName();
-      if (!uaBot && botHeuristic.isSuspectBurst(clientIp)) {
+      if (forcedBotName != null) {
+        uaBot = true;
+        botName = forcedBotName;
+      } else if (!uaBot && botHeuristic.isSuspectBurst(clientIp)) {
         uaBot = true;
         botName = BotHeuristic.SUSPECT_LABEL;
       }
