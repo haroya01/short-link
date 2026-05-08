@@ -1,11 +1,14 @@
 package com.example.short_link.user.application;
 
+import com.example.short_link.common.audit.AuditAction;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,6 +29,7 @@ public class UserDeletionService {
   private final ClickEventRepository clickEventRepository;
   private final RefreshTokenStore refreshTokenStore;
   private final MeterRegistry meterRegistry;
+  private final AuditLogService auditLogService;
 
   @Transactional
   public void deleteAccount(Long userId) {
@@ -49,5 +53,11 @@ public class UserDeletionService {
     meterRegistry
         .counter("user.deleted", "links_removed", String.valueOf(deletedLinks))
         .increment();
+    auditLogService.record(
+        AuditAction.USER_DELETED,
+        "user",
+        String.valueOf(userId),
+        userId,
+        Map.of("linksRemoved", deletedLinks));
   }
 }

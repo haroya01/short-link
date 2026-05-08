@@ -1,10 +1,13 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.common.audit.AuditAction;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -22,6 +25,7 @@ public class LinkCreationService {
   private final MeterRegistry meterRegistry;
   private final UrlSafetyChecker urlSafetyChecker;
   private final ApplicationEventPublisher events;
+  private final AuditLogService auditLogService;
   private final long quotaPerUser;
 
   public LinkCreationService(
@@ -30,12 +34,14 @@ public class LinkCreationService {
       MeterRegistry meterRegistry,
       UrlSafetyChecker urlSafetyChecker,
       ApplicationEventPublisher events,
+      AuditLogService auditLogService,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
     this.generator = generator;
     this.meterRegistry = meterRegistry;
     this.urlSafetyChecker = urlSafetyChecker;
     this.events = events;
+    this.auditLogService = auditLogService;
     this.quotaPerUser = quotaPerUser;
   }
 
@@ -75,6 +81,8 @@ public class LinkCreationService {
         LinkEntity saved = repository.save(new LinkEntity(url, code, userId, expiresAt));
         recordCreated(true, true, "ok");
         events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), url));
+        auditLogService.record(
+            AuditAction.LINK_CREATED, "link", saved.getShortCode(), userId, Map.of("custom", true));
         return new LinkCreated(saved.getShortCode());
       } catch (DataIntegrityViolationException e) {
         throw new DuplicateShortCodeException(code);
@@ -90,6 +98,12 @@ public class LinkCreationService {
         LinkEntity saved = repository.save(new LinkEntity(url, generated, userId, expiresAt));
         recordCreated(authenticated, false, "ok");
         events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), url));
+        auditLogService.record(
+            AuditAction.LINK_CREATED,
+            "link",
+            saved.getShortCode(),
+            userId,
+            Map.of("custom", false));
         return new LinkCreated(saved.getShortCode());
       } catch (DataIntegrityViolationException ignored) {
       }

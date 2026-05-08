@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Async;
@@ -15,9 +16,9 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Listens for {@link LinkOgFetchRequested} events and fetches OG metadata in the background. Runs
- * after commit so the link row is visible. Cache eviction at the end forces redirect/preview paths
- * to see the freshly written OG fields.
+ * Fetches OG metadata for new/updated links in the background. Failures are flagged RETRYABLE so a
+ * scheduled job can pick them up later, until {@code max-attempts} is reached and the link is
+ * stamped ERROR for good.
  */
 @Slf4j
 @Component
@@ -28,6 +29,9 @@ public class LinkOgFetchListener {
   private final LinkRepository repository;
   private final MeterRegistry meterRegistry;
   private final CacheManager cacheManager;
+
+  @Value("${short-link.og-fetch.max-attempts:3}")
+  private int maxAttempts;
 
   @Async
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -48,9 +52,12 @@ public class LinkOgFetchListener {
       repository.save(entity);
       meterRegistry.counter("short_link.og_fetch", "result", "ok").increment();
     } else {
-      entity.markOgFetchFailed(now);
+      boolean willRetry = entity.getOgFetchAttempts() + 1 < maxAttempts;
+      entity.markOgFetchFailed(now, willRetry);
       repository.save(entity);
-      meterRegistry.counter("short_link.og_fetch", "result", "empty").increment();
+      meterRegistry
+          .counter("short_link.og_fetch", "result", willRetry ? "retryable" : "error")
+          .increment();
     }
     Cache cache = cacheManager.getCache("link");
     if (cache != null) {

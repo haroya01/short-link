@@ -32,6 +32,16 @@ public interface LinkRepository extends JpaRepository<LinkEntity, Long> {
 
   long countByExpiresAtBefore(Instant when);
 
+  List<LinkEntity> findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(Instant when);
+
+  @Query(
+      "SELECT l FROM LinkEntity l "
+          + "WHERE l.ogFetchStatus IN ('PENDING','RETRYABLE') "
+          + "AND l.ogFetchAttempts < :maxAttempts "
+          + "AND (l.ogFetchedAt IS NULL OR l.ogFetchedAt < :before)")
+  List<LinkEntity> findOgRetryCandidates(
+      @Param("maxAttempts") int maxAttempts, @Param("before") Instant before, Pageable pageable);
+
   long countByUserId(Long userId);
 
   Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);

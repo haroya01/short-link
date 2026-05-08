@@ -39,6 +39,13 @@ short-link:
     authenticated: 1000
   link-quota:
     authenticated: ${LINK_QUOTA_AUTHENTICATED:200}
+  cleanup:
+    enabled: ${CLEANUP_ENABLED:true}
+    cron: ${CLEANUP_CRON:0 0 4 * * *}
+    expired-grace-days: ${CLEANUP_GRACE_DAYS:30}
+  og-fetch:
+    max-attempts: ${OG_FETCH_MAX_ATTEMPTS:3}
+    retry-cron: ${OG_FETCH_RETRY_CRON:0 30 4 * * *}
   jwt:
     private-key: ${JWT_PRIVATE_KEY:}
     public-key: ${JWT_PUBLIC_KEY:}

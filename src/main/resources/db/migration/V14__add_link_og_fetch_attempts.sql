@@ -1,0 +1,2 @@
+ALTER TABLE link
+  ADD COLUMN og_fetch_attempts INT NOT NULL DEFAULT 0;
