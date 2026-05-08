@@ -6,6 +6,8 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +60,22 @@ class AnonymousClaimServiceTest {
         service.claim(user.getId(), List.of("00000000000000000000000000000000"));
     assertThat(result.claimed()).isZero();
     assertThat(result.skipped()).isEqualTo(1);
+  }
+
+  @Test
+  void claimClearsExpiry() {
+    UserEntity user = userRepository.save(new UserEntity("c5@example.com", "google", "g-c5"));
+    Instant ttl = Instant.now().plus(Duration.ofHours(24));
+    LinkCreated created = creationService.create("https://example.com/claim5", null, null, ttl);
+
+    LinkEntity beforeClaim = linkRepository.findByShortCode(created.shortCode()).orElseThrow();
+    assertThat(beforeClaim.getExpiresAt()).isNotNull();
+
+    service.claim(user.getId(), List.of(created.claimToken()));
+
+    LinkEntity afterClaim = linkRepository.findByShortCode(created.shortCode()).orElseThrow();
+    assertThat(afterClaim.getUserId()).isEqualTo(user.getId());
+    assertThat(afterClaim.getExpiresAt()).isNull();
   }
 
   @Test
