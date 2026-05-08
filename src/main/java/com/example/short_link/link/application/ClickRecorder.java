@@ -41,7 +41,7 @@ public class ClickRecorder {
               .referrer(ReferrerNormalizer.normalize(referrer))
               .referrerHost(ReferrerNormalizer.hostOf(referrer))
               .userAgent(userAgent)
-              .clientIp(clientIp)
+              .clientIp(IpMasker.mask(clientIp))
               .utmSource(utm.source())
               .utmMedium(utm.medium())
               .utmCampaign(utm.campaign())
