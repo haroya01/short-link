@@ -35,6 +35,7 @@ class LinkCreationServiceQuotaTest {
             safety,
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
+            mockBlockedDomainService(),
             200L);
 
     assertThatThrownBy(() -> svc.create("https://example.com/x", 42L, null, null))
@@ -61,6 +62,7 @@ class LinkCreationServiceQuotaTest {
             safety,
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
+            mockBlockedDomainService(),
             200L);
 
     LinkCreated created = svc.create("https://example.com", null, null, null);
@@ -87,6 +89,7 @@ class LinkCreationServiceQuotaTest {
             safety,
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
+            mockBlockedDomainService(),
             200L);
 
     LinkCreated created = svc.create("https://example.com/x", 99L, null, null);
@@ -110,6 +113,7 @@ class LinkCreationServiceQuotaTest {
             safety,
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
+            mockBlockedDomainService(),
             200L);
 
     assertThatThrownBy(() -> svc.create("https://example.com", 1L, "login", null))
@@ -145,10 +149,18 @@ class LinkCreationServiceQuotaTest {
             safety,
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
+            mockBlockedDomainService(),
             200L);
 
     LinkCreated created = svc.create("https://example.com/x", 99L, null, null);
     assertThat(created.shortCode()).isEqualTo("newcode");
+  }
+
+  private static com.example.short_link.admin.application.BlockedDomainService
+      mockBlockedDomainService() {
+    var m = mock(com.example.short_link.admin.application.BlockedDomainService.class);
+    when(m.isBlocked(any())).thenReturn(false);
+    return m;
   }
 
   private static LinkEntity withId(LinkEntity entity, Long id) {

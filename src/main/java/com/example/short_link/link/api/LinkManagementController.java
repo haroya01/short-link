@@ -43,4 +43,13 @@ public class LinkManagementController {
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
     service.delete(userId, shortCode);
   }
+
+  @DeleteMapping
+  public BulkDeleteResponse bulkDelete(
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody BulkDeleteRequest request) {
+    int removed = service.bulkDelete(userId, request.shortCodes());
+    return new BulkDeleteResponse(removed, request.shortCodes().size() - removed);
+  }
+
+  public record BulkDeleteResponse(int deleted, int skipped) {}
 }

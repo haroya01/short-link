@@ -5,8 +5,12 @@ import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -19,6 +23,7 @@ public class LinkManagementService {
   private final LinkRepository repository;
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
+  private final CacheManager cacheManager;
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
@@ -51,6 +56,27 @@ public class LinkManagementService {
     LinkEntity link = findOwned(userId, shortCode);
     repository.delete(link);
     auditLogService.record(AuditAction.LINK_DELETED, "link", shortCode, userId);
+  }
+
+  @Transactional
+  public int bulkDelete(Long userId, Collection<String> shortCodes) {
+    if (shortCodes == null || shortCodes.isEmpty()) return 0;
+    List<LinkEntity> owned =
+        shortCodes.stream()
+            .distinct()
+            .map(repository::findByShortCode)
+            .flatMap(java.util.Optional::stream)
+            .filter(l -> l.isOwnedBy(userId))
+            .toList();
+    if (owned.isEmpty()) return 0;
+    repository.deleteAll(owned);
+    Cache cache = cacheManager.getCache("link");
+    for (LinkEntity link : owned) {
+      if (cache != null) cache.evict(link.getShortCode());
+      auditLogService.record(
+          AuditAction.LINK_DELETED, "link", link.getShortCode(), userId, Map.of("bulk", true));
+    }
+    return owned.size();
   }
 
   private LinkEntity findOwned(Long userId, String shortCode) {
