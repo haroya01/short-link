@@ -42,6 +42,21 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   Instant findFirstClickAt(@Param("linkId") Long linkId);
 
   @Query(
+      "SELECT MAX(c.clickedAt) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = false")
+  Instant findLastClickAt(@Param("linkId") Long linkId);
+
+  /**
+   * OG preview hits are persisted with bot=true and a "preview:..." prefixed bot_name (set by
+   * {@code ClickRecorder.recordPreview}) so the stats UI can split social/messenger previews out of
+   * real bot traffic regardless of yauaa coverage.
+   */
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = true AND c.botName LIKE 'preview:%'")
+  long countPreviewByLinkId(@Param("linkId") Long linkId);
+
+  @Query(
       "SELECT COUNT(c) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = false AND c.clickedAt >= :since")
   long countSinceByLinkId(@Param("linkId") Long linkId, @Param("since") Instant since);
@@ -131,6 +146,27 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
           + "AND c.utmCampaign IS NOT NULL "
           + "GROUP BY c.utmCampaign ORDER BY count DESC")
   List<UtmCampaignClickRow> findUtmCampaignClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.utmSource AS source, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.utmSource IS NOT NULL "
+          + "GROUP BY c.utmSource ORDER BY count DESC")
+  List<UtmSourceClickRow> findUtmSourceClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.utmMedium AS medium, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.utmMedium IS NOT NULL "
+          + "GROUP BY c.utmMedium ORDER BY count DESC")
+  List<UtmMediumClickRow> findUtmMediumClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.utmContent AS content, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.utmContent IS NOT NULL "
+          + "GROUP BY c.utmContent ORDER BY count DESC")
+  List<UtmContentClickRow> findUtmContentClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.countryCode AS country, COUNT(c) AS count "
@@ -270,6 +306,24 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
 
   interface UtmCampaignClickRow {
     String getCampaign();
+
+    Long getCount();
+  }
+
+  interface UtmSourceClickRow {
+    String getSource();
+
+    Long getCount();
+  }
+
+  interface UtmMediumClickRow {
+    String getMedium();
+
+    Long getCount();
+  }
+
+  interface UtmContentClickRow {
+    String getContent();
 
     Long getCount();
   }

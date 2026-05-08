@@ -48,8 +48,19 @@ public class RedirectController {
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
       HttpServletRequest req) {
     CachedLink link = lookup.findActiveLink(shortCode);
-    if (crawlerDetector.isCrawler(userAgent)) {
+    String crawlerLabel = crawlerDetector.crawlerName(userAgent);
+    if (crawlerLabel != null) {
       meterRegistry.counter("short_link.preview").increment();
+      // Persist the preview hit with bot=true + bot_name="preview:slackbot" etc. so per-link stats
+      // can split social/messenger previews out of real clicks regardless of yauaa coverage.
+      clickRecorder.recordPreview(
+          link.linkId(),
+          link.originalUrl(),
+          referrer,
+          userAgent,
+          clientIp(req),
+          acceptLanguage,
+          crawlerLabel);
       LinkEntity entity = linkRepository.findByShortCode(shortCode).orElse(null);
       if (entity == null) {
         return ResponseEntity.status(HttpStatus.FOUND)
