@@ -28,8 +28,10 @@ management:
     distribution:
       percentiles-histogram:
         http.server.requests: true
+        redirect.latency: true
       percentiles:
         http.server.requests: 0.5, 0.95, 0.99
+        redirect.latency: 0.5, 0.95, 0.99
 
 short-link:
   base-url: ${SHORT_LINK_BASE_URL:http://localhost:8080}
