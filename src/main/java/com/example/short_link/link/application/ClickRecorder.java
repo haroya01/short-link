@@ -161,7 +161,8 @@ public class ClickRecorder {
               geo.countryCode(),
               ua.deviceClass(),
               ReferrerNormalizer.hostOf(referrer),
-              uaBot));
+              uaBot,
+              utm.source()));
     } catch (RuntimeException e) {
       log.warn("failed to record click for linkId={}", linkId, e);
     }

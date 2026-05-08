@@ -1,8 +1,11 @@
 package com.example.short_link.link.api;
 
 import com.example.short_link.link.application.LinkWebhookService;
+import com.example.short_link.link.application.LinkWebhookService.ConfigPatch;
 import com.example.short_link.link.application.LinkWebhookService.IssuedWebhook;
 import com.example.short_link.link.application.LinkWebhookService.WebhookSummary;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -15,6 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -50,6 +54,25 @@ public class LinkWebhookController {
     return service.toggle(userId, shortCode, id, request.enabled());
   }
 
+  @PutMapping("/{shortCode}/webhooks/{id}/config")
+  public WebhookSummary updateConfig(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable String shortCode,
+      @PathVariable Long id,
+      @RequestBody ConfigRequest request) {
+    return service.updateConfig(
+        userId,
+        shortCode,
+        id,
+        new ConfigPatch(
+            request.includeBots(),
+            request.sampleRate(),
+            request.batchEnabled(),
+            request.dailyQuota(),
+            request.referrerHostFilter(),
+            request.utmSourceFilter()));
+  }
+
   @DeleteMapping("/{shortCode}/webhooks/{id}")
   public ResponseEntity<Void> delete(
       @AuthenticationPrincipal Long userId, @PathVariable String shortCode, @PathVariable Long id) {
@@ -61,4 +84,12 @@ public class LinkWebhookController {
       @NotBlank @Size(max = 2048) String url, @Size(max = 100) String name) {}
 
   public record ToggleRequest(boolean enabled) {}
+
+  public record ConfigRequest(
+      Boolean includeBots,
+      @Min(1) @Max(100) Integer sampleRate,
+      Boolean batchEnabled,
+      Integer dailyQuota,
+      @Size(max = 255) String referrerHostFilter,
+      @Size(max = 100) String utmSourceFilter) {}
 }
