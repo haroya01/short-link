@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,7 @@ public class LinkCreationService {
   private final ShortCodeGenerator generator;
   private final MeterRegistry meterRegistry;
   private final UrlSafetyChecker urlSafetyChecker;
+  private final ApplicationEventPublisher events;
 
   public LinkCreated create(
       String url, Long userId, String customCode, Instant requestedExpiresAt) {
@@ -34,6 +36,7 @@ public class LinkCreationService {
       try {
         LinkEntity saved = repository.save(new LinkEntity(url, code, userId, expiresAt));
         recordCreated(true, true);
+        events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), url));
         return new LinkCreated(saved.getShortCode());
       } catch (DataIntegrityViolationException e) {
         throw new DuplicateShortCodeException(code);
@@ -45,6 +48,7 @@ public class LinkCreationService {
       try {
         LinkEntity saved = repository.save(new LinkEntity(url, generated, userId, expiresAt));
         recordCreated(authenticated, false);
+        events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), url));
         return new LinkCreated(saved.getShortCode());
       } catch (DataIntegrityViolationException ignored) {
       }
