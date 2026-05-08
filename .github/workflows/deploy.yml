@@ -59,8 +59,6 @@ jobs:
           push: true
           platforms: linux/arm64
           provenance: false
-          build-args: |
-            MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
           tags: |
             ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:${{ github.sha }}
             ${{ steps.ecr-login.outputs.registry }}/${{ env.ECR_REPOSITORY }}:latest
