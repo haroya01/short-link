@@ -31,7 +31,19 @@ public class ClickRecorder {
       String userAgent,
       String clientIp,
       String acceptLanguage) {
-    record(linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, null);
+    record(linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, null, null);
+  }
+
+  @Transactional
+  public void record(
+      Long linkId,
+      String originalUrl,
+      String referrer,
+      String userAgent,
+      String clientIp,
+      String acceptLanguage,
+      String sourceChannel) {
+    record(linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, sourceChannel, null);
   }
 
   /**
@@ -47,6 +59,7 @@ public class ClickRecorder {
       String userAgent,
       String clientIp,
       String acceptLanguage,
+      String sourceChannel,
       String crawlerLabel) {
     record(
         linkId,
@@ -55,6 +68,7 @@ public class ClickRecorder {
         userAgent,
         clientIp,
         acceptLanguage,
+        sourceChannel,
         PREVIEW_BOT_NAME_PREFIX + crawlerLabel);
   }
 
@@ -66,6 +80,7 @@ public class ClickRecorder {
       String userAgent,
       String clientIp,
       String acceptLanguage,
+      String sourceChannel,
       String forcedBotName) {
     try {
       UtmParams utm = UtmExtractor.extract(originalUrl);
@@ -102,6 +117,7 @@ public class ClickRecorder {
               .cityName(geo.cityName())
               .language(LanguageExtractor.extract(acceptLanguage))
               .visitorHash(VisitorHasher.hash(linkId, clientIp, userAgent))
+              .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))
               .build();
       ClickEventEntity saved = repository.save(event);
       events.publishEvent(
