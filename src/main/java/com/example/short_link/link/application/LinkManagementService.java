@@ -1,8 +1,11 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.common.audit.AuditAction;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import java.time.Instant;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
@@ -15,6 +18,7 @@ public class LinkManagementService {
 
   private final LinkRepository repository;
   private final ApplicationEventPublisher events;
+  private final AuditLogService auditLogService;
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
@@ -31,6 +35,12 @@ public class LinkManagementService {
     if (urlChanged) {
       events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));
     }
+    auditLogService.record(
+        AuditAction.LINK_UPDATED,
+        "link",
+        link.getShortCode(),
+        userId,
+        Map.of("urlChanged", urlChanged, "expiresAtChanged", expiresAt != null));
     return new MyLink(
         link.getShortCode(), link.getOriginalUrl(), link.getCreatedAt(), link.getExpiresAt(), 0L);
   }
@@ -40,6 +50,7 @@ public class LinkManagementService {
   public void delete(Long userId, String shortCode) {
     LinkEntity link = findOwned(userId, shortCode);
     repository.delete(link);
+    auditLogService.record(AuditAction.LINK_DELETED, "link", shortCode, userId);
   }
 
   private LinkEntity findOwned(Long userId, String shortCode) {

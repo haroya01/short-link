@@ -34,6 +34,7 @@ class LinkCreationServiceQuotaTest {
             new SimpleMeterRegistry(),
             safety,
             event -> {},
+            mock(com.example.short_link.common.audit.AuditLogService.class),
             200L);
 
     assertThatThrownBy(() -> svc.create("https://example.com/x", 42L, null, null))
@@ -53,7 +54,14 @@ class LinkCreationServiceQuotaTest {
     when(safety.isSafe(any())).thenReturn(true);
 
     LinkCreationService svc =
-        new LinkCreationService(repo, gen, new SimpleMeterRegistry(), safety, event -> {}, 200L);
+        new LinkCreationService(
+            repo,
+            gen,
+            new SimpleMeterRegistry(),
+            safety,
+            event -> {},
+            mock(com.example.short_link.common.audit.AuditLogService.class),
+            200L);
 
     LinkCreated created = svc.create("https://example.com", null, null, null);
 
@@ -78,6 +86,7 @@ class LinkCreationServiceQuotaTest {
             new SimpleMeterRegistry(),
             safety,
             event -> {},
+            mock(com.example.short_link.common.audit.AuditLogService.class),
             200L);
 
     LinkCreated created = svc.create("https://example.com/x", 99L, null, null);
@@ -100,6 +109,7 @@ class LinkCreationServiceQuotaTest {
             new SimpleMeterRegistry(),
             safety,
             event -> {},
+            mock(com.example.short_link.common.audit.AuditLogService.class),
             200L);
 
     assertThatThrownBy(() -> svc.create("https://example.com", 1L, "login", null))
@@ -128,7 +138,14 @@ class LinkCreationServiceQuotaTest {
     when(safety.isSafe(any())).thenReturn(true);
 
     LinkCreationService svc =
-        new LinkCreationService(repo, gen, new SimpleMeterRegistry(), safety, event -> {}, 200L);
+        new LinkCreationService(
+            repo,
+            gen,
+            new SimpleMeterRegistry(),
+            safety,
+            event -> {},
+            mock(com.example.short_link.common.audit.AuditLogService.class),
+            200L);
 
     LinkCreated created = svc.create("https://example.com/x", 99L, null, null);
     assertThat(created.shortCode()).isEqualTo("newcode");
