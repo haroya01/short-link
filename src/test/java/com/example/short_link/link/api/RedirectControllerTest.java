@@ -103,7 +103,11 @@ class RedirectControllerTest {
         .andExpect(content().string(org.hamcrest.Matchers.containsString("Article title")))
         .andExpect(content().string(org.hamcrest.Matchers.containsString("og:image")));
 
-    assertThat(clickRepository.countByLinkId(link.getId())).isZero();
+    // Preview hits now persist as bot click_event rows so per-link stats can split \"social
+    // preview\" out of generic bot traffic. They must NOT count toward human clicks.
+    assertThat(clickRepository.countByLinkId(link.getId())).isEqualTo(1);
+    assertThat(clickRepository.countHumanByLinkId(link.getId())).isZero();
+    assertThat(clickRepository.countBotByLinkId(link.getId())).isEqualTo(1);
   }
 
   @Test

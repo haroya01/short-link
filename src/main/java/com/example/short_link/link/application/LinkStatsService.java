@@ -68,6 +68,8 @@ public class LinkStatsService {
     long unique = clickRepository.countUniqueVisitorsByLinkId(linkId);
 
     Instant firstClickAt = clickRepository.findFirstClickAt(linkId);
+    Instant lastClickAt = clickRepository.findLastClickAt(linkId);
+    long previewClicks = clickRepository.countPreviewByLinkId(linkId);
     Long timeToFirstClickMinutes =
         firstClickAt == null
             ? null
@@ -89,6 +91,11 @@ public class LinkStatsService {
         clickRepository.findHourlyClicks(linkId, reportTz).stream()
             .map(r -> new LinkStats.HourClick(r.getHour(), r.getCount()))
             .toList();
+    Integer peakHour =
+        hourly.stream()
+            .max((a, b) -> Long.compare(a.count(), b.count()))
+            .map(LinkStats.HourClick::hour)
+            .orElse(null);
 
     List<LinkStats.DayOfWeekClick> dayOfWeek =
         clickRepository.findDayOfWeekClicks(linkId, reportTz).stream()
@@ -149,6 +156,21 @@ public class LinkStatsService {
             .map(r -> new LinkStats.UtmCampaignClick(r.getCampaign(), r.getCount()))
             .toList();
 
+    List<LinkStats.UtmSourceClick> utmSources =
+        clickRepository.findUtmSourceClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.UtmSourceClick(r.getSource(), r.getCount()))
+            .toList();
+
+    List<LinkStats.UtmMediumClick> utmMediums =
+        clickRepository.findUtmMediumClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.UtmMediumClick(r.getMedium(), r.getCount()))
+            .toList();
+
+    List<LinkStats.UtmContentClick> utmContents =
+        clickRepository.findUtmContentClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.UtmContentClick(r.getContent(), r.getCount()))
+            .toList();
+
     List<LinkStats.CountryClick> countries =
         clickRepository.findCountryClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
@@ -182,8 +204,11 @@ public class LinkStatsService {
         human,
         bot,
         unique,
+        previewClicks,
         firstClickAt,
+        lastClickAt,
         timeToFirstClickMinutes,
+        peakHour,
         velocity,
         returnRate,
         lifecycle,
@@ -199,6 +224,9 @@ public class LinkStatsService {
         browsers,
         botBreakdown,
         campaigns,
+        utmSources,
+        utmMediums,
+        utmContents,
         countries,
         regions,
         cities,

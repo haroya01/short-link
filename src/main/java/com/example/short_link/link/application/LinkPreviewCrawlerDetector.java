@@ -42,11 +42,20 @@ public class LinkPreviewCrawlerDetector {
           "googlebot");
 
   public boolean isCrawler(String userAgent) {
-    if (userAgent == null || userAgent.isBlank()) return false;
+    return crawlerName(userAgent) != null;
+  }
+
+  /**
+   * Returns the matched crawler token (lowercase) so callers can attach it as a bot name when
+   * persisting the preview hit — yauaa would otherwise drop it as "unknown" since most messenger
+   * crawlers aren't in its analyzer data.
+   */
+  public String crawlerName(String userAgent) {
+    if (userAgent == null || userAgent.isBlank()) return null;
     String lower = userAgent.toLowerCase(Locale.ROOT);
     for (String token : CRAWLER_TOKENS) {
-      if (lower.contains(token)) return true;
+      if (lower.contains(token)) return token;
     }
-    return false;
+    return null;
   }
 }

@@ -12,8 +12,11 @@ public record LinkStats(
     long humanClicks,
     long botClicks,
     long uniqueClicks,
+    long previewClicks,
     Instant firstClickAt,
+    Instant lastClickAt,
     Long timeToFirstClickMinutes,
+    Integer peakHour,
     Velocity velocity,
     ReturnRate returnRate,
     Lifecycle lifecycle,
@@ -29,6 +32,9 @@ public record LinkStats(
     List<BrowserClick> browserClicks,
     List<BotClick> botClicks2,
     List<UtmCampaignClick> utmCampaignClicks,
+    List<UtmSourceClick> utmSourceClicks,
+    List<UtmMediumClick> utmMediumClicks,
+    List<UtmContentClick> utmContentClicks,
     List<CountryClick> countryClicks,
     List<RegionClick> regionClicks,
     List<CityClick> cityClicks,
@@ -58,6 +64,12 @@ public record LinkStats(
   public record BotClick(String bot, long count) {}
 
   public record UtmCampaignClick(String campaign, long count) {}
+
+  public record UtmSourceClick(String source, long count) {}
+
+  public record UtmMediumClick(String medium, long count) {}
+
+  public record UtmContentClick(String content, long count) {}
 
   public record CountryClick(String country, long count) {}
 
