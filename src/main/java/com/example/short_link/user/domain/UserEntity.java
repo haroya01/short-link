@@ -48,6 +48,9 @@ public class UserEntity {
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
+
   public UserEntity(String email, String oauthProvider, String oauthId) {
     this.email = email;
     this.oauthProvider = oauthProvider;
@@ -66,6 +69,18 @@ public class UserEntity {
 
   public void changeTimezone(String timezone) {
     this.timezone = timezone;
+  }
+
+  public boolean isDeleted() {
+    return deletedAt != null;
+  }
+
+  public void softDelete() {
+    this.deletedAt = Instant.now();
+  }
+
+  public void restore() {
+    this.deletedAt = null;
   }
 
   @PrePersist

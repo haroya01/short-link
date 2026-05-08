@@ -34,6 +34,7 @@ public class UserController {
   public MeResponse me(@AuthenticationPrincipal Long userId) {
     return userRepository
         .findById(userId)
+        .filter(u -> !u.isDeleted())
         .map(
             u ->
                 new MeResponse(

@@ -22,6 +22,10 @@ public class AuthService {
         userRepository
             .findByOauthProviderAndOauthId(oauthProvider, oauthId)
             .orElseGet(() -> userRepository.save(new UserEntity(email, oauthProvider, oauthId)));
+    if (user.isDeleted()) {
+      log.info("restoring soft-deleted user {} on OAuth login", user.getId());
+      user.restore();
+    }
     return issue(user);
   }
 
@@ -43,6 +47,9 @@ public class AuthService {
     refreshStore.delete(parsed.userId(), parsed.jti());
     UserEntity user =
         userRepository.findById(parsed.userId()).orElseThrow(InvalidRefreshTokenException::new);
+    if (user.isDeleted()) {
+      throw new InvalidRefreshTokenException();
+    }
     return issue(user);
   }
 
