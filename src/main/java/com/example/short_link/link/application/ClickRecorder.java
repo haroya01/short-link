@@ -2,8 +2,10 @@ package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +18,7 @@ public class ClickRecorder {
   private final UserAgentClassifier userAgentClassifier;
   private final GeoIpResolver geoIpResolver;
   private final BotHeuristic botHeuristic;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public void record(
@@ -58,7 +61,15 @@ public class ClickRecorder {
               .language(LanguageExtractor.extract(acceptLanguage))
               .visitorHash(VisitorHasher.hash(linkId, clientIp, userAgent))
               .build();
-      repository.save(event);
+      ClickEventEntity saved = repository.save(event);
+      events.publishEvent(
+          new ClickRecordedEvent(
+              linkId,
+              saved.getClickedAt() != null ? saved.getClickedAt() : Instant.now(),
+              geo.countryCode(),
+              ua.deviceClass(),
+              ReferrerNormalizer.hostOf(referrer),
+              uaBot));
     } catch (RuntimeException e) {
       log.warn("failed to record click for linkId={}", linkId, e);
     }
