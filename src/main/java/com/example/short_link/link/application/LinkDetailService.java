@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkDetailService {
 
   private final LinkRepository repository;
+  private final LinkTagService linkTagService;
 
   @Transactional(readOnly = true)
   public LinkDetailResponse detail(Long userId, String shortCode) {
@@ -35,6 +36,7 @@ public class LinkDetailService {
         link.hasPassword(),
         link.getMaxViews(),
         link.getViewCount(),
-        link.isStatsPublic());
+        link.isStatsPublic(),
+        linkTagService.tagNamesFor(userId, shortCode));
   }
 }

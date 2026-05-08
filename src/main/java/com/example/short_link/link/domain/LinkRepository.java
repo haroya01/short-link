@@ -26,6 +26,28 @@ public interface LinkRepository extends JpaRepository<LinkEntity, Long> {
   Page<LinkEntity> searchByUserId(
       @Param("userId") Long userId, @Param("q") String q, Pageable pageable);
 
+  @Query(
+      "SELECT l FROM LinkEntity l "
+          + "WHERE l.userId = :userId AND l.id IN "
+          + "(SELECT lt.linkId FROM LinkTagEntity lt JOIN TagEntity t ON t.id = lt.tagId "
+          + "WHERE t.userId = :userId AND t.name = :tagName)")
+  Page<LinkEntity> findByUserIdAndTagName(
+      @Param("userId") Long userId, @Param("tagName") String tagName, Pageable pageable);
+
+  @Query(
+      "SELECT l FROM LinkEntity l "
+          + "WHERE l.userId = :userId "
+          + "AND (LOWER(l.originalUrl) LIKE LOWER(CONCAT('%', :q, '%')) "
+          + "OR LOWER(l.shortCode) LIKE LOWER(CONCAT('%', :q, '%'))) "
+          + "AND l.id IN "
+          + "(SELECT lt.linkId FROM LinkTagEntity lt JOIN TagEntity t ON t.id = lt.tagId "
+          + "WHERE t.userId = :userId AND t.name = :tagName)")
+  Page<LinkEntity> searchByUserIdAndTagName(
+      @Param("userId") Long userId,
+      @Param("q") String q,
+      @Param("tagName") String tagName,
+      Pageable pageable);
+
   long countByCreatedAtAfter(Instant since);
 
   long countByUserIdIsNull();

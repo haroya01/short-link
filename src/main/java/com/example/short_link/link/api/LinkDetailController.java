@@ -2,6 +2,7 @@ package com.example.short_link.link.api;
 
 import com.example.short_link.link.application.LinkDetailService;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,5 +36,6 @@ public class LinkDetailController {
       boolean passwordProtected,
       Integer maxViews,
       int viewCount,
-      boolean statsPublic) {}
+      boolean statsPublic,
+      List<String> tags) {}
 }
