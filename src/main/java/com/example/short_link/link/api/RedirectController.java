@@ -43,6 +43,7 @@ public class RedirectController {
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
       @PathVariable String shortCode,
+      @RequestParam(value = "src", required = false) String src,
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
@@ -60,6 +61,7 @@ public class RedirectController {
           userAgent,
           clientIp(req),
           acceptLanguage,
+          src,
           crawlerLabel);
       LinkEntity entity = linkRepository.findByShortCode(shortCode).orElse(null);
       if (entity == null) {
@@ -85,7 +87,7 @@ public class RedirectController {
       enforceViewLimit(entity);
     }
     clickRecorder.record(
-        link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req), acceptLanguage);
+        link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req), acceptLanguage, src);
     return ResponseEntity.status(HttpStatus.FOUND)
         .location(URI.create(link.originalUrl()))
         .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
@@ -99,6 +101,7 @@ public class RedirectController {
   public ResponseEntity<?> unlock(
       @PathVariable String shortCode,
       @RequestParam("password") String password,
+      @RequestParam(value = "src", required = false) String src,
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
@@ -113,7 +116,7 @@ public class RedirectController {
     }
     enforceViewLimit(entity);
     clickRecorder.record(
-        link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req), acceptLanguage);
+        link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req), acceptLanguage, src);
     return ResponseEntity.status(HttpStatus.FOUND)
         .location(URI.create(link.originalUrl()))
         .header(HttpHeaders.CACHE_CONTROL, "no-store")
