@@ -87,6 +87,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*/visibility")
                     .authenticated()
+                    .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*/og")
+                    .authenticated()
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*")
                     .authenticated()
                     .requestMatchers(HttpMethod.DELETE, "/api/v1/links/*")
