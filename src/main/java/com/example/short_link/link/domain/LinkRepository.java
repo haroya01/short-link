@@ -46,6 +46,8 @@ public interface LinkRepository extends JpaRepository<LinkEntity, Long> {
 
   Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);
 
+  List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(java.util.Collection<String> claimTokens);
+
   @org.springframework.data.jpa.repository.Modifying(
       clearAutomatically = true,
       flushAutomatically = true)

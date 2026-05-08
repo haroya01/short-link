@@ -63,6 +63,9 @@ public class LinkEntity {
   @Column(name = "stats_public", nullable = false)
   private boolean statsPublic = false;
 
+  @Column(name = "claim_token", length = 32)
+  private String claimToken;
+
   @Column(name = "og_title_override", length = 300)
   private String ogTitleOverride;
 
@@ -126,6 +129,15 @@ public class LinkEntity {
 
   public void changeStatsVisibility(boolean isPublic) {
     this.statsPublic = isPublic;
+  }
+
+  public void setClaimToken(String token) {
+    this.claimToken = token;
+  }
+
+  public void claim(Long newOwnerId) {
+    this.userId = newOwnerId;
+    this.claimToken = null;
   }
 
   public void changeOgOverride(String title, String description, String image) {
