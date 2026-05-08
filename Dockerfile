@@ -5,8 +5,11 @@ COPY build.gradle settings.gradle ./
 COPY gradle gradle
 COPY gradlew gradlew
 COPY src src
-RUN MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" ./gradlew downloadGeoLite2 --no-daemon \
-    && ./gradlew bootJar --no-daemon
+RUN if [ -n "${MAXMIND_LICENSE_KEY:-}" ]; then \
+      MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" ./gradlew downloadGeoLite2 --no-daemon; \
+      MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" ./gradlew downloadGeoLite2Asn --no-daemon || echo "ASN download failed, continuing without it"; \
+    fi \
+    && ./gradlew bootJar -x test -x spotlessCheck --no-daemon
 
 FROM eclipse-temurin:17-jre AS runtime
 WORKDIR /app
