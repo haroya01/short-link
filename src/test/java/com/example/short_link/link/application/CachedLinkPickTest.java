@@ -29,8 +29,8 @@ class CachedLinkPickTest {
             null,
             null,
             List.of(
-                new CachedLink.Variant(10L, "https://A", 50, false),
-                new CachedLink.Variant(11L, "https://B", 50, false)));
+                new CachedLink.Variant(10L, "https://A", 50, false, null),
+                new CachedLink.Variant(11L, "https://B", 50, false, null)));
     var picked = link.pick();
     assertThat(picked.url()).isEqualTo("https://control");
   }
@@ -46,8 +46,8 @@ class CachedLinkPickTest {
             null,
             null,
             List.of(
-                new CachedLink.Variant(10L, "https://A", 1, true),
-                new CachedLink.Variant(11L, "https://B", 9, true)));
+                new CachedLink.Variant(10L, "https://A", 1, true, null),
+                new CachedLink.Variant(11L, "https://B", 9, true, null)));
     Map<String, Integer> counts = new HashMap<>();
     int N = 20_000;
     for (int i = 0; i < N; i++) {
@@ -72,7 +72,61 @@ class CachedLinkPickTest {
             null,
             null,
             null,
-            List.of(new CachedLink.Variant(10L, "https://A", 0, true)));
+            List.of(new CachedLink.Variant(10L, "https://A", 0, true, null)));
     assertThat(link.pick().url()).isEqualTo("https://control");
+  }
+
+  @Test
+  void countryMatchTakesPrecedenceOverAgnostic() {
+    CachedLink link =
+        new CachedLink(
+            1L,
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            List.of(
+                new CachedLink.Variant(10L, "https://kr", 50, true, "KR"),
+                new CachedLink.Variant(11L, "https://any", 50, true, null)));
+    // Korean visitor must always hit the KR variant.
+    for (int i = 0; i < 200; i++) {
+      assertThat(link.pick("KR").url()).isEqualTo("https://kr");
+    }
+    // Non-matching visitor falls through to agnostic.
+    for (int i = 0; i < 200; i++) {
+      assertThat(link.pick("US").url()).isEqualTo("https://any");
+    }
+  }
+
+  @Test
+  void allCountryTaggedAndNoneMatchFallsBackToOriginal() {
+    CachedLink link =
+        new CachedLink(
+            1L,
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            List.of(
+                new CachedLink.Variant(10L, "https://kr", 50, true, "KR"),
+                new CachedLink.Variant(11L, "https://jp", 50, true, "JP")));
+    assertThat(link.pick("US").url()).isEqualTo("https://control");
+    assertThat(link.pick(null).url()).isEqualTo("https://control");
+  }
+
+  @Test
+  void countryCodeMatchIsCaseInsensitive() {
+    CachedLink link =
+        new CachedLink(
+            1L,
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            List.of(new CachedLink.Variant(10L, "https://kr", 50, true, "KR")));
+    assertThat(link.pick("kr").url()).isEqualTo("https://kr");
   }
 }
