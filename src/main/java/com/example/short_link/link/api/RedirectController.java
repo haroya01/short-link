@@ -34,7 +34,7 @@ public class RedirectController {
   private final ShortLinkUrlBuilder urlBuilder;
   private final MeterRegistry meterRegistry;
 
-  @GetMapping("/{shortCode:[0-9A-Za-z]{7}}")
+  @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
       @PathVariable String shortCode,
       @RequestHeader(value = "Referer", required = false) String referrer,
@@ -48,6 +48,7 @@ public class RedirectController {
       if (entity == null) {
         return ResponseEntity.status(HttpStatus.FOUND)
             .location(URI.create(link.originalUrl()))
+            .header("X-Robots-Tag", "noindex, nofollow")
             .build();
       }
       String html = previewRenderer.render(entity, urlBuilder.build(shortCode));
@@ -56,6 +57,7 @@ public class RedirectController {
           .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))
           .contentLength(body.length)
           .header(HttpHeaders.CACHE_CONTROL, "public, max-age=300")
+          .header("X-Robots-Tag", "noindex, nofollow")
           .body(body);
     }
     clickRecorder.record(
@@ -63,6 +65,7 @@ public class RedirectController {
     return ResponseEntity.status(HttpStatus.FOUND)
         .location(URI.create(link.originalUrl()))
         .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
+        .header("X-Robots-Tag", "noindex, nofollow")
         .build();
   }
 
