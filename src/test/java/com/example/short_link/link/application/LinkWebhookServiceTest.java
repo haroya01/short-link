@@ -97,4 +97,107 @@ class LinkWebhookServiceTest {
     var enabled = service.toggle(user.getId(), "wh66666", issued.id(), true);
     assertThat(enabled.enabled()).isTrue();
   }
+
+  @Test
+  void newWebhookHasCostFriendlyDefaults() {
+    UserEntity user = userRepository.save(new UserEntity("wh7@local.test", "google", "g-wh7"));
+    linkRepository.save(new LinkEntity("https://example.com/wh7", "wh77777", user.getId(), null));
+    var issued = service.register(user.getId(), "wh77777", "https://example.com/hook", null);
+    var summary = service.list(user.getId(), "wh77777").get(0);
+
+    assertThat(summary.id()).isEqualTo(issued.id());
+    assertThat(summary.includeBots()).isFalse();
+    assertThat(summary.sampleRate()).isEqualTo(100);
+    assertThat(summary.batchEnabled()).isFalse();
+    assertThat(summary.dailyQuota()).isNull();
+    assertThat(summary.consecutiveFailures()).isZero();
+    assertThat(summary.autoDisabledReason()).isNull();
+    assertThat(summary.referrerHostFilter()).isNull();
+    assertThat(summary.utmSourceFilter()).isNull();
+  }
+
+  @Test
+  void updateConfigPersistsAllFields() {
+    UserEntity user = userRepository.save(new UserEntity("wh8@local.test", "google", "g-wh8"));
+    linkRepository.save(new LinkEntity("https://example.com/wh8", "wh88888", user.getId(), null));
+    var issued = service.register(user.getId(), "wh88888", "https://example.com/hook", null);
+
+    var updated =
+        service.updateConfig(
+            user.getId(),
+            "wh88888",
+            issued.id(),
+            new LinkWebhookService.ConfigPatch(true, 25, true, 1000, "twitter.com", "instagram"));
+
+    assertThat(updated.includeBots()).isTrue();
+    assertThat(updated.sampleRate()).isEqualTo(25);
+    assertThat(updated.batchEnabled()).isTrue();
+    assertThat(updated.dailyQuota()).isEqualTo(1000);
+    assertThat(updated.referrerHostFilter()).isEqualTo("twitter.com");
+    assertThat(updated.utmSourceFilter()).isEqualTo("instagram");
+  }
+
+  @Test
+  void updateConfigClampsSampleRate() {
+    UserEntity user = userRepository.save(new UserEntity("wh9@local.test", "google", "g-wh9"));
+    linkRepository.save(new LinkEntity("https://example.com/wh9", "wh99999", user.getId(), null));
+    var issued = service.register(user.getId(), "wh99999", "https://example.com/hook", null);
+
+    assertThatThrownBy(
+            () ->
+                service.updateConfig(
+                    user.getId(),
+                    "wh99999",
+                    issued.id(),
+                    new LinkWebhookService.ConfigPatch(null, 0, null, null, null, null)))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    assertThatThrownBy(
+            () ->
+                service.updateConfig(
+                    user.getId(),
+                    "wh99999",
+                    issued.id(),
+                    new LinkWebhookService.ConfigPatch(null, 101, null, null, null, null)))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void blankFiltersAreNormalizedToNull() {
+    UserEntity user = userRepository.save(new UserEntity("wh10@local.test", "google", "g-wh10"));
+    linkRepository.save(new LinkEntity("https://example.com/wh10", "wh10000", user.getId(), null));
+    var issued = service.register(user.getId(), "wh10000", "https://example.com/hook", null);
+
+    service.updateConfig(
+        user.getId(),
+        "wh10000",
+        issued.id(),
+        new LinkWebhookService.ConfigPatch(null, null, null, null, "abc", "def"));
+    var withFilters = service.list(user.getId(), "wh10000").get(0);
+    assertThat(withFilters.referrerHostFilter()).isEqualTo("abc");
+    assertThat(withFilters.utmSourceFilter()).isEqualTo("def");
+
+    service.updateConfig(
+        user.getId(),
+        "wh10000",
+        issued.id(),
+        new LinkWebhookService.ConfigPatch(null, null, null, null, "  ", "  "));
+    var cleared = service.list(user.getId(), "wh10000").get(0);
+    assertThat(cleared.referrerHostFilter()).isNull();
+    assertThat(cleared.utmSourceFilter()).isNull();
+  }
+
+  @Test
+  void zeroDailyQuotaIsTreatedAsNoCap() {
+    UserEntity user = userRepository.save(new UserEntity("wh11@local.test", "google", "g-wh11"));
+    linkRepository.save(new LinkEntity("https://example.com/wh11", "wh11111h", user.getId(), null));
+    var issued = service.register(user.getId(), "wh11111h", "https://example.com/hook", null);
+
+    service.updateConfig(
+        user.getId(),
+        "wh11111h",
+        issued.id(),
+        new LinkWebhookService.ConfigPatch(null, null, null, 0, null, null));
+    assertThat(service.list(user.getId(), "wh11111h").get(0).dailyQuota()).isNull();
+  }
 }
