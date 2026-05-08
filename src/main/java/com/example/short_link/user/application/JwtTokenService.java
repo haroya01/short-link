@@ -26,6 +26,8 @@ public class JwtTokenService {
   private static final String CLAIM_TYPE = "type";
   private static final String TYPE_ACCESS = "access";
   private static final String TYPE_REFRESH = "refresh";
+  private static final String TYPE_TWOFA_CHALLENGE = "twofa_challenge";
+  private static final Duration CHALLENGE_TTL = Duration.ofMinutes(5);
 
   private final PrivateKey privateKey;
   private final PublicKey publicKey;
@@ -107,6 +109,31 @@ public class JwtTokenService {
       throw new IllegalArgumentException("expected refresh token");
     }
     return new ParsedRefresh(Long.valueOf(claims.getSubject()), claims.getId());
+  }
+
+  /**
+   * Short-lived token issued after primary auth succeeds for a 2FA-enabled user. The frontend holds
+   * it while the user enters their TOTP code; on success it's exchanged for a real access token.
+   * Cannot be used as an access token (different {@code type} claim) so it won't pass {@link
+   * #parseAccessToken}.
+   */
+  public String createTwoFactorChallengeToken(Long userId) {
+    Instant now = Instant.now();
+    return Jwts.builder()
+        .subject(String.valueOf(userId))
+        .issuedAt(Date.from(now))
+        .expiration(Date.from(now.plus(CHALLENGE_TTL)))
+        .claim(CLAIM_TYPE, TYPE_TWOFA_CHALLENGE)
+        .signWith(privateKey, Jwts.SIG.RS256)
+        .compact();
+  }
+
+  public Long parseTwoFactorChallengeToken(String token) {
+    Claims claims = parseClaims(token);
+    if (!TYPE_TWOFA_CHALLENGE.equals(claims.get(CLAIM_TYPE))) {
+      throw new IllegalArgumentException("expected 2FA challenge token");
+    }
+    return Long.valueOf(claims.getSubject());
   }
 
   private Claims parseClaims(String token) {

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.application.AuthService;
+import com.example.short_link.user.application.AuthService.LoginResult;
 import com.example.short_link.user.application.IssuedTokens;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -43,7 +44,8 @@ class OAuth2LoginSuccessHandlerTest {
     OAuth2AuthenticationToken auth =
         new OAuth2AuthenticationToken(principal, java.util.Set.of(), "google");
     when(authService.loginWithOAuth("u@x.com", "google", "g-1"))
-        .thenReturn(new IssuedTokens("access-jwt-value", "refresh-jwt-value"));
+        .thenReturn(
+            new LoginResult.Tokens(new IssuedTokens("access-jwt-value", "refresh-jwt-value")));
 
     handler.onAuthenticationSuccess(req, res, auth);
 
@@ -63,7 +65,7 @@ class OAuth2LoginSuccessHandlerTest {
     OAuth2AuthenticationToken auth =
         new OAuth2AuthenticationToken(principal, java.util.Set.of(), "google");
     when(authService.loginWithOAuth(any(), any(), any()))
-        .thenReturn(new IssuedTokens("access", "refresh"));
+        .thenReturn(new LoginResult.Tokens(new IssuedTokens("access", "refresh")));
 
     handler.onAuthenticationSuccess(req, res, auth);
 

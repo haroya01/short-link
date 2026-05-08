@@ -1,5 +1,7 @@
 package com.example.short_link.user.application;
 
+import com.example.short_link.user.application.twofactor.InvalidTotpCodeException;
+import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,9 +17,21 @@ public class AuthService {
   private final UserRepository userRepository;
   private final JwtTokenService jwt;
   private final RefreshTokenStore refreshStore;
+  private final TwoFactorService twoFactor;
+
+  /**
+   * Result of an OAuth login. If the user has 2FA enabled this returns only a short-lived challenge
+   * token — the caller redirects the user to the 2FA prompt where they exchange the challenge +
+   * TOTP code for a full pair via {@link #completeTwoFactor}.
+   */
+  public sealed interface LoginResult {
+    record Tokens(IssuedTokens issued) implements LoginResult {}
+
+    record TwoFactorRequired(String challengeToken) implements LoginResult {}
+  }
 
   @Transactional
-  public IssuedTokens loginWithOAuth(String email, String oauthProvider, String oauthId) {
+  public LoginResult loginWithOAuth(String email, String oauthProvider, String oauthId) {
     UserEntity user =
         userRepository
             .findByOauthProviderAndOauthId(oauthProvider, oauthId)
@@ -26,6 +40,25 @@ public class AuthService {
       log.info("restoring soft-deleted user {} on OAuth login", user.getId());
       user.restore();
     }
+    if (twoFactor.isEnabled(user.getId())) {
+      return new LoginResult.TwoFactorRequired(jwt.createTwoFactorChallengeToken(user.getId()));
+    }
+    return new LoginResult.Tokens(issue(user));
+  }
+
+  @Transactional
+  public IssuedTokens completeTwoFactor(String challengeToken, String code, boolean recovery) {
+    Long userId;
+    try {
+      userId = jwt.parseTwoFactorChallengeToken(challengeToken);
+    } catch (Exception e) {
+      throw new InvalidRefreshTokenException();
+    }
+    boolean ok = recovery ? twoFactor.verifyRecovery(userId, code) : twoFactor.verify(userId, code);
+    if (!ok) throw new InvalidTotpCodeException();
+    UserEntity user =
+        userRepository.findById(userId).orElseThrow(InvalidRefreshTokenException::new);
+    if (user.isDeleted()) throw new InvalidRefreshTokenException();
     return issue(user);
   }
 

@@ -4,10 +4,12 @@ import com.example.short_link.user.application.AuthService;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import com.example.short_link.user.application.IssuedTokens;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -41,4 +43,16 @@ public class AuthController {
     }
     refreshCookieWriter.clear(res);
   }
+
+  @PostMapping("/2fa/verify")
+  public TokenResponse verifyTwoFactor(
+      @RequestBody TwoFactorVerifyRequest request, HttpServletResponse res) {
+    IssuedTokens tokens =
+        authService.completeTwoFactor(request.challenge(), request.code(), request.recovery());
+    refreshCookieWriter.set(res, tokens.refreshToken());
+    return new TokenResponse(tokens.accessToken());
+  }
+
+  public record TwoFactorVerifyRequest(
+      @NotBlank String challenge, @NotBlank String code, boolean recovery) {}
 }
