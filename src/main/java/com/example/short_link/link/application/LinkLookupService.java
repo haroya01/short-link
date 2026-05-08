@@ -42,7 +42,8 @@ public class LinkLookupService {
   }
 
   private static CachedLink.Variant toVariant(LinkDestinationEntity d) {
-    return new CachedLink.Variant(d.getId(), d.getUrl(), d.getWeight(), d.isEnabled());
+    return new CachedLink.Variant(
+        d.getId(), d.getUrl(), d.getWeight(), d.isEnabled(), d.getCountryCode());
   }
 
   public String findActiveOriginalUrl(String shortCode) {
