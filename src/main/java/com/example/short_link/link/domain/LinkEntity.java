@@ -60,6 +60,9 @@ public class LinkEntity {
   @Column(name = "og_fetch_attempts", nullable = false)
   private int ogFetchAttempts = 0;
 
+  @Column(name = "stats_public", nullable = false)
+  private boolean statsPublic = false;
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -110,5 +113,9 @@ public class LinkEntity {
     this.ogFetchedAt = fetchedAt;
     this.ogFetchStatus = willRetry ? "RETRYABLE" : "ERROR";
     this.ogFetchAttempts++;
+  }
+
+  public void changeStatsVisibility(boolean isPublic) {
+    this.statsPublic = isPublic;
   }
 }
