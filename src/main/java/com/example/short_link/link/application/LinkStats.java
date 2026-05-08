@@ -41,6 +41,8 @@ public record LinkStats(
     List<RegionClick> regionClicks,
     List<CityClick> cityClicks,
     List<LanguageClick> languageClicks,
+    List<AsnClick> asnClicks,
+    long datacenterClicks,
     List<Insight> insights) {
 
   public record DailyClick(LocalDate date, long count) {}
@@ -85,6 +87,8 @@ public record LinkStats(
   public record CityClick(String city, long count) {}
 
   public record LanguageClick(String language, long count) {}
+
+  public record AsnClick(Integer asn, String organization, long count) {}
 
   public record Velocity(long currentHour, double baselinePerHour, double ratio) {}
 

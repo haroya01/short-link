@@ -98,6 +98,13 @@ public class ClickEventEntity {
   @Column(name = "destination_id")
   private Long destinationId;
 
+  /** Autonomous System Number for the visitor's IP — null when ASN db is unavailable. */
+  @Column(name = "asn")
+  private Integer asn;
+
+  @Column(name = "asn_org", length = 200)
+  private String asnOrg;
+
   @Builder
   public ClickEventEntity(
       Long linkId,
@@ -121,7 +128,9 @@ public class ClickEventEntity {
       String language,
       String visitorHash,
       String sourceChannel,
-      Long destinationId) {
+      Long destinationId,
+      Integer asn,
+      String asnOrg) {
     this.linkId = linkId;
     this.referrer = referrer;
     this.referrerHost = referrerHost;
@@ -144,6 +153,8 @@ public class ClickEventEntity {
     this.visitorHash = visitorHash;
     this.sourceChannel = sourceChannel;
     this.destinationId = destinationId;
+    this.asn = asn;
+    this.asnOrg = asnOrg;
   }
 
   @PrePersist

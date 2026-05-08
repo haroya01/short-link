@@ -1,5 +1,6 @@
 package com.example.short_link.common.config;
 
+import com.example.short_link.common.geoip.AsnDatabaseHolder;
 import com.example.short_link.common.geoip.GeoIpDatabaseHolder;
 import com.maxmind.db.Reader.FileMode;
 import com.maxmind.geoip2.DatabaseReader;
@@ -27,7 +28,11 @@ public class GeoIpConfig {
   @Value("classpath:geoip/GeoLite2-City-Fallback.mmdb")
   private Resource fallbackDatabase;
 
+  @Value("classpath:geoip/GeoLite2-ASN.mmdb")
+  private Resource asnDatabase;
+
   private final GeoIpDatabaseHolder holder;
+  private final AsnDatabaseHolder asnHolder;
 
   @EventListener(ApplicationReadyEvent.class)
   public void seedFromBundled() throws IOException {
@@ -42,5 +47,20 @@ public class GeoIpConfig {
         new DatabaseReader.Builder(temp).fileMode(FileMode.MEMORY_MAPPED).build();
     holder.set(reader);
     log.info("GeoLite2 database seeded from {}", source.getDescription());
+
+    if (asnDatabase.exists()) {
+      File asnTemp = Files.createTempFile("GeoLite2-ASN", ".mmdb").toFile();
+      asnTemp.deleteOnExit();
+      try (InputStream in = asnDatabase.getInputStream();
+          FileOutputStream out = new FileOutputStream(asnTemp)) {
+        in.transferTo(out);
+      }
+      DatabaseReader asnReader =
+          new DatabaseReader.Builder(asnTemp).fileMode(FileMode.MEMORY_MAPPED).build();
+      asnHolder.set(asnReader);
+      log.info("GeoLite2-ASN database seeded from {}", asnDatabase.getDescription());
+    } else {
+      log.info("GeoLite2-ASN not bundled — ASN resolution disabled (clicks will have null asn).");
+    }
   }
 }
