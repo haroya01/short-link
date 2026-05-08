@@ -23,3 +23,5 @@ spring:
 short-link:
   safe-browsing:
     enabled: false
+  pow:
+    enforce: false

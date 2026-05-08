@@ -81,7 +81,9 @@ public class SecurityConfig {
         .exceptionHandling(e -> e.authenticationEntryPoint(authenticationEntryPoint))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
+                auth.requestMatchers(HttpMethod.GET, "/api/v1/pow/challenge")
+                    .permitAll()
+                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                     .hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/**")
                     .permitAll()
