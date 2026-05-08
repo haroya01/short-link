@@ -7,8 +7,8 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Root path on the apex (e.g., {@code https://kurl.md/}) bounces visitors to the frontend so the
- * apex stays clean for short URLs (kurl.md/abc) without serving a blank 404. The redirect target is
+ * Root path on the apex (e.g., {@code https://kurl.me/}) bounces visitors to the frontend so the
+ * apex stays clean for short URLs (kurl.me/abc) without serving a blank 404. The redirect target is
  * the same value the OAuth flow uses, so there's only one source of truth for "where the SPA
  * lives".
  */
