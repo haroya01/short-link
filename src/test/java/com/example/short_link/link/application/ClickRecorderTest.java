@@ -54,6 +54,20 @@ class ClickRecorderTest {
   }
 
   @Test
+  void storesMaskedIpNotRaw() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    org.mockito.ArgumentCaptor<ClickEventEntity> captor =
+        org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+    recorder.record(1L, "https://example.com", null, "ua", "203.0.113.42", null);
+
+    assertThat(captor.getValue().getClientIp()).isEqualTo("203.0.113.*");
+    assertThat(captor.getValue().getClientIp()).doesNotContain("42");
+  }
+
+  @Test
   void persistsResolvedGeoLocation() {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
     when(geoIpResolver.resolve("8.8.8.8"))
