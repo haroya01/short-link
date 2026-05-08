@@ -20,6 +20,7 @@ public class ClickRecorder {
   private final ClickEventRepository repository;
   private final UserAgentClassifier userAgentClassifier;
   private final GeoIpResolver geoIpResolver;
+  private final AsnResolver asnResolver;
   private final BotHeuristic botHeuristic;
   private final ApplicationEventPublisher events;
 
@@ -119,6 +120,7 @@ public class ClickRecorder {
       UtmParams utm = UtmExtractor.extract(originalUrl);
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
       GeoLocation geo = geoIpResolver.resolve(clientIp);
+      AsnResolver.AsnInfo asnInfo = asnResolver.resolve(clientIp);
       boolean uaBot = ua.bot();
       String botName = ua.botName();
       if (forcedBotName != null) {
@@ -127,6 +129,12 @@ public class ClickRecorder {
       } else if (!uaBot && botHeuristic.isSuspectBurst(clientIp)) {
         uaBot = true;
         botName = BotHeuristic.SUSPECT_LABEL;
+      } else if (!uaBot && asnInfo.datacenter()) {
+        // Datacenter ASN with non-bot UA → almost always a scraper/headless. Mark it so stats
+        // don't conflate cloud egress with real eyeball traffic.
+        uaBot = true;
+        botName =
+            "datacenter:" + (asnInfo.organization() == null ? "unknown" : asnInfo.organization());
       }
       ClickEventEntity event =
           ClickEventEntity.builder()
@@ -152,6 +160,8 @@ public class ClickRecorder {
               .visitorHash(VisitorHasher.hash(linkId, clientIp, userAgent))
               .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))
               .destinationId(destinationId)
+              .asn(asnInfo.asn())
+              .asnOrg(asnInfo.organization())
               .build();
       ClickEventEntity saved = repository.save(event);
       events.publishEvent(
