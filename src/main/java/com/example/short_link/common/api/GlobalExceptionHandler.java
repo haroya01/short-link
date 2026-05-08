@@ -1,6 +1,7 @@
 package com.example.short_link.common.api;
 
 import com.example.short_link.admin.application.InvalidActivePeriodException;
+import com.example.short_link.link.application.BulkImportTooLargeException;
 import com.example.short_link.link.application.DuplicateShortCodeException;
 import com.example.short_link.link.application.InvalidCursorException;
 import com.example.short_link.link.application.InvalidExportDimensionException;
@@ -70,6 +71,15 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleLinkQuota(LinkQuotaExceededException e, HttpServletRequest req) {
     ProblemDetail body = problem(HttpStatus.CONFLICT, e.getMessage(), "LINK_QUOTA_EXCEEDED", req);
     body.setProperty("limit", e.getLimit());
+    return body;
+  }
+
+  @ExceptionHandler(BulkImportTooLargeException.class)
+  public ProblemDetail handleBulkTooLarge(BulkImportTooLargeException e, HttpServletRequest req) {
+    ProblemDetail body =
+        problem(HttpStatus.PAYLOAD_TOO_LARGE, e.getMessage(), "BULK_IMPORT_TOO_LARGE", req);
+    body.setProperty("limit", e.getLimit());
+    body.setProperty("rows", e.getRows());
     return body;
   }
 
