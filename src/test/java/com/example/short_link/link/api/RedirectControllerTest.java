@@ -2,6 +2,7 @@ package com.example.short_link.link.api;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -67,6 +68,34 @@ class RedirectControllerTest {
     mvc.perform(get("/too-short"))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+  }
+
+  @Test
+  void returnsOgPreviewHtmlForKakaoTalkCrawler() throws Exception {
+    LinkEntity link = repository.save(new LinkEntity("https://example.com/article", "kakopvw"));
+    link.applyOgMetadata(
+        "Article title", "Article description", "https://example.com/img.png", Instant.now());
+    repository.save(link);
+
+    mvc.perform(get("/kakopvw").header("User-Agent", "kakaotalk-scrap/1.0"))
+        .andExpect(status().isOk())
+        .andExpect(header().string("Content-Type", "text/html;charset=utf-8"))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("og:title")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("Article title")))
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("og:image")));
+
+    assertThat(clickRepository.countByLinkId(link.getId())).isZero();
+  }
+
+  @Test
+  void returnsOgPreviewHtmlForSlackbot() throws Exception {
+    repository.save(new LinkEntity("https://example.com/x", "slkpvw1"));
+
+    mvc.perform(
+            get("/slkpvw1")
+                .header("User-Agent", "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(org.hamcrest.Matchers.containsString("twitter:card")));
   }
 
   @Test

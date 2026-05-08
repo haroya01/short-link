@@ -23,7 +23,13 @@ public class LinkLookupService {
         repository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    return new CachedLink(link.getId(), link.getOriginalUrl(), link.getExpiresAt());
+    return new CachedLink(
+        link.getId(),
+        link.getOriginalUrl(),
+        link.getExpiresAt(),
+        link.getOgTitle(),
+        link.getOgDescription(),
+        link.getOgImage());
   }
 
   public String findActiveOriginalUrl(String shortCode) {

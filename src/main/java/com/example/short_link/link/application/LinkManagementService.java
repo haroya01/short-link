@@ -5,6 +5,7 @@ import com.example.short_link.link.domain.LinkRepository;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,16 +14,22 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkManagementService {
 
   private final LinkRepository repository;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
   public MyLink update(Long userId, String shortCode, String originalUrl, Instant expiresAt) {
     LinkEntity link = findOwned(userId, shortCode);
-    if (originalUrl != null) {
+    boolean urlChanged = false;
+    if (originalUrl != null && !originalUrl.equals(link.getOriginalUrl())) {
       link.changeOriginalUrl(originalUrl);
+      urlChanged = true;
     }
     if (expiresAt != null) {
       link.changeExpiresAt(expiresAt);
+    }
+    if (urlChanged) {
+      events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));
     }
     return new MyLink(
         link.getShortCode(), link.getOriginalUrl(), link.getCreatedAt(), link.getExpiresAt(), 0L);
