@@ -63,6 +63,15 @@ public class LinkEntity {
   @Column(name = "stats_public", nullable = false)
   private boolean statsPublic = false;
 
+  @Column(name = "og_title_override", length = 300)
+  private String ogTitleOverride;
+
+  @Column(name = "og_description_override", length = 800)
+  private String ogDescriptionOverride;
+
+  @Column(name = "og_image_override", length = 1024)
+  private String ogImageOverride;
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -117,5 +126,31 @@ public class LinkEntity {
 
   public void changeStatsVisibility(boolean isPublic) {
     this.statsPublic = isPublic;
+  }
+
+  public void changeOgOverride(String title, String description, String image) {
+    this.ogTitleOverride = blankToNull(title);
+    this.ogDescriptionOverride = blankToNull(description);
+    this.ogImageOverride = blankToNull(image);
+  }
+
+  public String getEffectiveOgTitle() {
+    return notBlank(ogTitleOverride) ? ogTitleOverride : ogTitle;
+  }
+
+  public String getEffectiveOgDescription() {
+    return notBlank(ogDescriptionOverride) ? ogDescriptionOverride : ogDescription;
+  }
+
+  public String getEffectiveOgImage() {
+    return notBlank(ogImageOverride) ? ogImageOverride : ogImage;
+  }
+
+  private static boolean notBlank(String s) {
+    return s != null && !s.isBlank();
+  }
+
+  private static String blankToNull(String s) {
+    return s == null || s.isBlank() ? null : s.trim();
   }
 }
