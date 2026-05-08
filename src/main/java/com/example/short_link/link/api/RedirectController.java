@@ -2,6 +2,7 @@ package com.example.short_link.link.api;
 
 import com.example.short_link.link.application.CachedLink;
 import com.example.short_link.link.application.ClickRecorder;
+import com.example.short_link.link.application.GeoIpResolver;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkPreviewCrawlerDetector;
@@ -39,6 +40,7 @@ public class RedirectController {
   private final ShortLinkUrlBuilder urlBuilder;
   private final MeterRegistry meterRegistry;
   private final LinkProtectionService protectionService;
+  private final GeoIpResolver geoIpResolver;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -86,7 +88,8 @@ public class RedirectController {
     if (entity != null) {
       enforceViewLimit(entity);
     }
-    com.example.short_link.link.application.CachedLink.Picked picked = link.pick();
+    String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
+    com.example.short_link.link.application.CachedLink.Picked picked = link.pick(clientCountry);
     clickRecorder.record(
         link.linkId(),
         picked.url(),
@@ -123,7 +126,8 @@ public class RedirectController {
       return htmlResponse(HttpStatus.UNAUTHORIZED, passwordPrompt(shortCode, true));
     }
     enforceViewLimit(entity);
-    com.example.short_link.link.application.CachedLink.Picked picked = link.pick();
+    String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
+    com.example.short_link.link.application.CachedLink.Picked picked = link.pick(clientCountry);
     clickRecorder.record(
         link.linkId(),
         picked.url(),

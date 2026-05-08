@@ -40,7 +40,7 @@ public class LinkDestinationService {
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
   public DestinationSummary add(
-      Long userId, String shortCode, String url, Integer weight, String label) {
+      Long userId, String shortCode, String url, Integer weight, String label, String countryCode) {
     LinkEntity link = ownedLink(userId, shortCode);
     if (!isValidUrl(url)) throw new IllegalArgumentException("destination url must be http(s)");
     if (repository.countByLinkId(link.getId()) >= MAX_PER_LINK) {
@@ -50,7 +50,8 @@ public class LinkDestinationService {
     int w = clampWeight(weight);
     LinkDestinationEntity saved =
         repository.save(
-            new LinkDestinationEntity(link.getId(), url.trim(), w, sanitizeLabel(label)));
+            new LinkDestinationEntity(
+                link.getId(), url.trim(), w, sanitizeLabel(label), countryCode));
     meterRegistry.counter("link.destination.added").increment();
     return toSummary(saved);
   }
@@ -64,13 +65,15 @@ public class LinkDestinationService {
       String url,
       Integer weight,
       String label,
-      Boolean enabled) {
+      Boolean enabled,
+      String countryCode) {
     LinkDestinationEntity dest = ownedDestination(userId, shortCode, destinationId);
     if (url != null && !isValidUrl(url)) {
       throw new IllegalArgumentException("destination url must be http(s)");
     }
     Integer clampedWeight = weight == null ? null : clampWeight(weight);
-    dest.update(url == null ? null : url.trim(), clampedWeight, sanitizeLabel(label), enabled);
+    dest.update(
+        url == null ? null : url.trim(), clampedWeight, sanitizeLabel(label), enabled, countryCode);
     return toSummary(dest);
   }
 
@@ -125,9 +128,21 @@ public class LinkDestinationService {
 
   private DestinationSummary toSummary(LinkDestinationEntity d) {
     return new DestinationSummary(
-        d.getId(), d.getUrl(), d.getWeight(), d.getLabel(), d.isEnabled(), d.getCreatedAt());
+        d.getId(),
+        d.getUrl(),
+        d.getWeight(),
+        d.getLabel(),
+        d.isEnabled(),
+        d.getCountryCode(),
+        d.getCreatedAt());
   }
 
   public record DestinationSummary(
-      Long id, String url, int weight, String label, boolean enabled, Instant createdAt) {}
+      Long id,
+      String url,
+      int weight,
+      String label,
+      boolean enabled,
+      String countryCode,
+      Instant createdAt) {}
 }
