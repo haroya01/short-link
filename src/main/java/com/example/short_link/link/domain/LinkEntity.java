@@ -42,6 +42,21 @@ public class LinkEntity {
   @Column(nullable = false)
   private Long version;
 
+  @Column(name = "og_title", length = 300)
+  private String ogTitle;
+
+  @Column(name = "og_description", length = 800)
+  private String ogDescription;
+
+  @Column(name = "og_image", length = 1024)
+  private String ogImage;
+
+  @Column(name = "og_fetched_at")
+  private Instant ogFetchedAt;
+
+  @Column(name = "og_fetch_status", nullable = false, length = 20)
+  private String ogFetchStatus = "PENDING";
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -68,9 +83,27 @@ public class LinkEntity {
 
   public void changeOriginalUrl(String originalUrl) {
     this.originalUrl = originalUrl;
+    this.ogTitle = null;
+    this.ogDescription = null;
+    this.ogImage = null;
+    this.ogFetchedAt = null;
+    this.ogFetchStatus = "PENDING";
   }
 
   public void changeExpiresAt(Instant expiresAt) {
     this.expiresAt = expiresAt;
+  }
+
+  public void applyOgMetadata(String title, String description, String image, Instant fetchedAt) {
+    this.ogTitle = title;
+    this.ogDescription = description;
+    this.ogImage = image;
+    this.ogFetchedAt = fetchedAt;
+    this.ogFetchStatus = "OK";
+  }
+
+  public void markOgFetchFailed(Instant fetchedAt) {
+    this.ogFetchedAt = fetchedAt;
+    this.ogFetchStatus = "ERROR";
   }
 }

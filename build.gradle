@@ -36,6 +36,7 @@ dependencies {
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 	implementation 'nl.basjes.parse.useragent:yauaa:7.30.0'
 	implementation 'com.maxmind.geoip2:geoip2:4.2.1'
+	implementation 'org.jsoup:jsoup:1.18.1'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
