@@ -31,7 +31,7 @@ public class ClickRecorder {
       String userAgent,
       String clientIp,
       String acceptLanguage) {
-    record(linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, null, null);
+    record(linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, null, null, null);
   }
 
   @Transactional
@@ -43,7 +43,38 @@ public class ClickRecorder {
       String clientIp,
       String acceptLanguage,
       String sourceChannel) {
-    record(linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, sourceChannel, null);
+    record(
+        linkId,
+        originalUrl,
+        referrer,
+        userAgent,
+        clientIp,
+        acceptLanguage,
+        sourceChannel,
+        null,
+        null);
+  }
+
+  @Transactional
+  public void record(
+      Long linkId,
+      String originalUrl,
+      String referrer,
+      String userAgent,
+      String clientIp,
+      String acceptLanguage,
+      String sourceChannel,
+      Long destinationId) {
+    record(
+        linkId,
+        originalUrl,
+        referrer,
+        userAgent,
+        clientIp,
+        acceptLanguage,
+        sourceChannel,
+        null,
+        destinationId);
   }
 
   /**
@@ -69,7 +100,8 @@ public class ClickRecorder {
         clientIp,
         acceptLanguage,
         sourceChannel,
-        PREVIEW_BOT_NAME_PREFIX + crawlerLabel);
+        PREVIEW_BOT_NAME_PREFIX + crawlerLabel,
+        null);
   }
 
   @Transactional
@@ -81,7 +113,8 @@ public class ClickRecorder {
       String clientIp,
       String acceptLanguage,
       String sourceChannel,
-      String forcedBotName) {
+      String forcedBotName,
+      Long destinationId) {
     try {
       UtmParams utm = UtmExtractor.extract(originalUrl);
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
@@ -118,6 +151,7 @@ public class ClickRecorder {
               .language(LanguageExtractor.extract(acceptLanguage))
               .visitorHash(VisitorHasher.hash(linkId, clientIp, userAgent))
               .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))
+              .destinationId(destinationId)
               .build();
       ClickEventEntity saved = repository.save(event);
       events.publishEvent(
