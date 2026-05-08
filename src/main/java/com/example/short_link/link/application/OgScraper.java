@@ -51,12 +51,7 @@ public class OgScraper {
         return OgMetadata.empty();
       }
       Document doc = response.parse();
-      String title = pickFirst(metaContent(doc, "og:title"), title(doc));
-      String description =
-          pickFirst(metaContent(doc, "og:description"), metaName(doc, "description"));
-      String image = absoluteUrl(metaContent(doc, "og:image"), response.url().toString());
-      return new OgMetadata(
-          truncate(title, 300), truncate(description, 800), truncate(image, 1024));
+      return parseDocument(doc, response.url().toString());
     } catch (IOException e) {
       log.debug("OG fetch failed for {}: {}", url, e.getMessage());
       return OgMetadata.empty();
@@ -64,6 +59,23 @@ public class OgScraper {
       log.warn("OG fetch unexpected error for {}", url, e);
       return OgMetadata.empty();
     }
+  }
+
+  /**
+   * Extracts OG metadata from a parsed HTML document. Visible for testing so the parsing logic can
+   * be exercised without a real HTTP fetch.
+   */
+  static OgMetadata parseDocument(Document doc, String baseUrl) {
+    String title = pickFirst(metaContent(doc, "og:title"), title(doc));
+    String description =
+        pickFirst(metaContent(doc, "og:description"), metaName(doc, "description"));
+    String image = absoluteUrl(metaContent(doc, "og:image"), baseUrl);
+    return new OgMetadata(truncate(title, 300), truncate(description, 800), truncate(image, 1024));
+  }
+
+  static OgMetadata parseHtml(String html, String baseUrl) {
+    Document doc = org.jsoup.Jsoup.parse(html, baseUrl);
+    return parseDocument(doc, baseUrl);
   }
 
   static boolean isPublicHttpUrl(String url) {
