@@ -87,6 +87,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/links/*/public-stats")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/stream")
+                    .permitAll()
                     .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*/protection")
                     .authenticated()
                     .requestMatchers(HttpMethod.POST, "/api/v1/users/me/claim-anonymous")
