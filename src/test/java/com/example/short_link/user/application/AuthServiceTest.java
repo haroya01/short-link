@@ -23,7 +23,10 @@ class AuthServiceTest {
 
   @Test
   void loginWithOAuthCreatesNewUser() {
-    IssuedTokens tokens = authService.loginWithOAuth("new@example.com", "google", "g-new");
+    IssuedTokens tokens =
+        ((AuthService.LoginResult.Tokens)
+                authService.loginWithOAuth("new@example.com", "google", "g-new"))
+            .issued();
 
     assertThat(tokens.accessToken()).isNotBlank();
     assertThat(tokens.refreshToken()).isNotBlank();
@@ -38,7 +41,10 @@ class AuthServiceTest {
     UserEntity existing =
         userRepository.save(new UserEntity("existing@example.com", "google", "g-ex"));
 
-    IssuedTokens tokens = authService.loginWithOAuth("existing@example.com", "google", "g-ex");
+    IssuedTokens tokens =
+        ((AuthService.LoginResult.Tokens)
+                authService.loginWithOAuth("existing@example.com", "google", "g-ex"))
+            .issued();
 
     Long userId = jwt.parseAccessToken(tokens.accessToken());
     assertThat(userId).isEqualTo(existing.getId());
