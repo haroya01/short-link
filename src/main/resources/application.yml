@@ -37,6 +37,8 @@ short-link:
   pow:
     difficulty: ${POW_DIFFICULTY:3}
     enforce: ${POW_ENFORCE:true}
+  twofa-aes-key: ${TWOFA_AES_KEY:}
+  twofa-issuer: ${TWOFA_ISSUER:kurl.md}
   base-url: ${SHORT_LINK_BASE_URL:http://localhost:8080}
   frontend-base-url: ${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}
   rate-limit:

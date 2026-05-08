@@ -1,0 +1,107 @@
+name: kurl-md
+
+# Single-host production stack for the kurl.md backend.
+# Frontend is deployed separately on Vercel (app.kurl.md) and calls this host
+# directly via NEXT_PUBLIC_API_BASE=https://kurl.md.
+
+services:
+  mysql:
+    image: mysql:8.0.33
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-short_link}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      TZ: ${TZ:-Asia/Seoul}
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=${TZ:-Asia/Seoul}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD}", "--save", "60", "1000"]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [internal]
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
+    restart: unless-stopped
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-short_link}?useUnicode=true&characterEncoding=utf8&serverTimezone=${TZ:-Asia/Seoul}
+      DB_USERNAME: ${MYSQL_USER}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      SHORT_LINK_BASE_URL: https://${BACKEND_HOST}
+      SHORT_LINK_FRONTEND_BASE_URL: https://${FRONTEND_HOST}
+      CORS_ALLOWED_ORIGINS: https://${FRONTEND_HOST}
+      JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
+      JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      TWOFA_AES_KEY: ${TWOFA_AES_KEY}
+      POW_ENFORCE: ${POW_ENFORCE:-true}
+      POW_DIFFICULTY: ${POW_DIFFICULTY:-3}
+      LINK_QUOTA_AUTHENTICATED: ${LINK_QUOTA_AUTHENTICATED:-200}
+      MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
+    networks: [internal]
+
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - certbot_etc:/etc/letsencrypt:ro
+      - certbot_www:/var/www/certbot:ro
+    depends_on:
+      - app
+    networks: [internal]
+
+  certbot:
+    image: certbot/certbot:latest
+    restart: unless-stopped
+    volumes:
+      - certbot_etc:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    # Renew every 12h; certbot only actually requests when ~30 days from expiry.
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done'"
+
+networks:
+  internal:
+
+volumes:
+  mysql_data:
+  redis_data:
+  certbot_etc:
+  certbot_www:
