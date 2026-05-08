@@ -35,4 +35,11 @@ public interface LinkRepository extends JpaRepository<LinkEntity, Long> {
   long countByUserId(Long userId);
 
   Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);
+
+  @org.springframework.data.jpa.repository.Modifying(
+      clearAutomatically = true,
+      flushAutomatically = true)
+  @org.springframework.data.jpa.repository.Query(
+      "DELETE FROM LinkEntity l WHERE l.userId = :userId")
+  int deleteByUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
 }
