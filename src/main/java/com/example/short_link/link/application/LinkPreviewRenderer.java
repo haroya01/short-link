@@ -13,10 +13,10 @@ import org.springframework.stereotype.Component;
 public class LinkPreviewRenderer {
 
   public String render(LinkEntity link, String shortUrl) {
-    String title = nonBlankOr(link.getOgTitle(), link.getOriginalUrl());
+    String title = nonBlankOr(link.getEffectiveOgTitle(), link.getOriginalUrl());
     String description =
-        nonBlankOr(link.getOgDescription(), "Shortened with kurl. Click to continue.");
-    String image = link.getOgImage();
+        nonBlankOr(link.getEffectiveOgDescription(), "Shortened with kurl. Click to continue.");
+    String image = link.getEffectiveOgImage();
     String original = link.getOriginalUrl();
 
     StringBuilder sb = new StringBuilder(2048);
