@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.admin.application.BlockedDomainService;
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.LinkEntity;
@@ -26,6 +27,7 @@ public class LinkCreationService {
   private final UrlSafetyChecker urlSafetyChecker;
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
+  private final BlockedDomainService blockedDomainService;
   private final long quotaPerUser;
 
   public LinkCreationService(
@@ -35,6 +37,7 @@ public class LinkCreationService {
       UrlSafetyChecker urlSafetyChecker,
       ApplicationEventPublisher events,
       AuditLogService auditLogService,
+      BlockedDomainService blockedDomainService,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
     this.generator = generator;
@@ -42,11 +45,16 @@ public class LinkCreationService {
     this.urlSafetyChecker = urlSafetyChecker;
     this.events = events;
     this.auditLogService = auditLogService;
+    this.blockedDomainService = blockedDomainService;
     this.quotaPerUser = quotaPerUser;
   }
 
   public LinkCreated create(
       String url, Long userId, String customCode, Instant requestedExpiresAt) {
+    if (blockedDomainService.isBlocked(url)) {
+      meterRegistry.counter("short_link.created", "result", "blocked_domain").increment();
+      throw new MaliciousUrlException(url);
+    }
     if (!urlSafetyChecker.isSafe(url)) {
       throw new MaliciousUrlException(url);
     }
