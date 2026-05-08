@@ -1,4 +1,4 @@
-# kurl.md production deploy
+# kurl.me production deploy
 
 Single-host Docker deploy for the backend (Spring Boot + MySQL + Redis + nginx + Let's Encrypt). Frontend is hosted separately on Vercel.
 
@@ -6,8 +6,8 @@ Single-host Docker deploy for the backend (Spring Boot + MySQL + Redis + nginx +
 
 ```
                         ┌──────────────────────────┐
-  kurl.md            ─→ │  EC2 (this machine)      │
-  www.kurl.md           │  ┌─────────┐  ┌────────┐ │
+  kurl.me            ─→ │  EC2 (this machine)      │
+  www.kurl.me           │  ┌─────────┐  ┌────────┐ │
                         │  │  nginx  │→ │  app   │ │
                         │  │ (TLS)   │  │  :8080 │ │
                         │  └─────────┘  └────────┘ │
@@ -15,8 +15,8 @@ Single-host Docker deploy for the backend (Spring Boot + MySQL + Redis + nginx +
                         │  mysql        redis      │
                         └──────────────────────────┘
 
-  app.kurl.md        ─→ Vercel (Next.js)
-                        env: NEXT_PUBLIC_API_BASE=https://kurl.md
+  app.kurl.me        ─→ Vercel (Next.js)
+                        env: NEXT_PUBLIC_API_BASE=https://kurl.me
 ```
 
 ## Prereqs
@@ -24,9 +24,9 @@ Single-host Docker deploy for the backend (Spring Boot + MySQL + Redis + nginx +
 - Linux host (Ubuntu 22.04+) with Docker + docker-compose plugin
 - Inbound 80/443 open in security group
 - DNS:
-  - `kurl.md` A record → host's elastic IP
-  - `www.kurl.md` A record → host's elastic IP
-  - `app.kurl.md` CNAME → Vercel's hostname (after Vercel setup)
+  - `kurl.me` A record → host's elastic IP
+  - `www.kurl.me` A record → host's elastic IP
+  - `app.kurl.me` CNAME → Vercel's hostname (after Vercel setup)
 - A MaxMind license key is optional — without it the bundled GeoLite2-City fallback is used (no ASN data)
 
 ## Backend deploy (one-time)
@@ -62,17 +62,17 @@ docker compose up -d --build
 
 1. In Vercel: import the `short-link-frontend` repo
 2. Add environment variables:
-   - `NEXT_PUBLIC_API_BASE=https://kurl.md`
-3. Add custom domain `app.kurl.md` (Vercel will tell you the exact CNAME target)
+   - `NEXT_PUBLIC_API_BASE=https://kurl.me`
+3. Add custom domain `app.kurl.me` (Vercel will tell you the exact CNAME target)
 4. Deploy
 
-The frontend will call the backend at `https://kurl.md/...` directly. The browser handles the cross-subdomain cookie and CORS — backend already allows `https://app.kurl.md` via `CORS_ALLOWED_ORIGINS`.
+The frontend will call the backend at `https://kurl.me/...` directly. The browser handles the cross-subdomain cookie and CORS — backend already allows `https://app.kurl.me` via `CORS_ALLOWED_ORIGINS`.
 
 ## OAuth
 
 Update the Google OAuth client (Cloud Console → Credentials):
-- Authorized JavaScript origins: `https://app.kurl.md`
-- Authorized redirect URIs: `https://kurl.md/login/oauth2/code/google`
+- Authorized JavaScript origins: `https://app.kurl.me`
+- Authorized redirect URIs: `https://kurl.me/login/oauth2/code/google`
 
 ## Operational
 
