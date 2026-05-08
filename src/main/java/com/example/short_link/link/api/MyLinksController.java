@@ -26,8 +26,13 @@ public class MyLinksController {
       @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer size,
       @RequestParam(required = false) String q,
-      @RequestParam(required = false) String tag) {
-    MyLinksQuery query = MyLinksQuery.of(page, size, q, tag);
+      @RequestParam(required = false) String tag,
+      @RequestParam(required = false) String domain,
+      @RequestParam(required = false) String expiry,
+      @RequestParam(required = false) String createdAfter,
+      @RequestParam(required = false) String createdBefore) {
+    MyLinksQuery query =
+        MyLinksQuery.of(page, size, q, tag, domain, expiry, createdAfter, createdBefore);
     MyLinksResult result = service.myLinks(userId, query);
     List<MyLinkResponse> items =
         result.items().stream()

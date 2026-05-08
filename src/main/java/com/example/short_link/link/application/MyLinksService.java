@@ -3,6 +3,7 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -10,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,7 +28,8 @@ public class MyLinksService {
   @Transactional(readOnly = true)
   public MyLinksResult myLinks(Long userId, MyLinksQuery query) {
     PageRequest pageRequest = PageRequest.of(query.zeroBasedPage(), query.size(), DEFAULT_SORT);
-    Page<LinkEntity> page = pageFor(userId, query, pageRequest);
+    Specification<LinkEntity> spec = buildSpec(userId, query);
+    Page<LinkEntity> page = linkRepository.findAll(spec, pageRequest);
     List<LinkEntity> links = page.getContent();
     if (links.isEmpty()) {
       return new MyLinksResult(List.of(), page.getTotalElements());
@@ -52,18 +55,19 @@ public class MyLinksService {
     return new MyLinksResult(items, page.getTotalElements());
   }
 
-  private Page<LinkEntity> pageFor(Long userId, MyLinksQuery query, PageRequest pageRequest) {
-    boolean hasQuery = query.q() != null;
-    boolean hasTag = query.tag() != null;
-    if (hasQuery && hasTag) {
-      return linkRepository.searchByUserIdAndTagName(userId, query.q(), query.tag(), pageRequest);
-    }
-    if (hasTag) {
-      return linkRepository.findByUserIdAndTagName(userId, query.tag(), pageRequest);
-    }
-    if (hasQuery) {
-      return linkRepository.searchByUserId(userId, query.q(), pageRequest);
-    }
-    return linkRepository.findAllByUserId(userId, pageRequest);
+  private Specification<LinkEntity> buildSpec(Long userId, MyLinksQuery query) {
+    Instant now = Instant.now();
+    Specification<LinkEntity> spec = LinkFilters.ownedBy(userId);
+    spec = and(spec, LinkFilters.matchesQuery(query.q()));
+    spec = and(spec, LinkFilters.hasTagName(userId, query.tag()));
+    spec = and(spec, LinkFilters.domainContains(query.domain()));
+    spec = and(spec, LinkFilters.expiry(query.expiry(), now));
+    spec = and(spec, LinkFilters.createdAfter(query.createdAfter()));
+    spec = and(spec, LinkFilters.createdBefore(query.createdBefore()));
+    return spec;
+  }
+
+  private static <T> Specification<T> and(Specification<T> base, Specification<T> piece) {
+    return piece == null ? base : base.and(piece);
   }
 }
