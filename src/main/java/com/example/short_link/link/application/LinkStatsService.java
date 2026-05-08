@@ -33,6 +33,7 @@ public class LinkStatsService {
   private final UserRepository userRepository;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkInsights insightsCalculator;
+  private final com.example.short_link.link.domain.LinkDestinationRepository destinationRepository;
 
   @Transactional(readOnly = true)
   public LinkStats stats(Long userId, String shortCode) {
@@ -176,6 +177,8 @@ public class LinkStatsService {
             .map(r -> new LinkStats.SourceChannelClick(r.getSource(), r.getCount()))
             .toList();
 
+    List<LinkStats.DestinationClick> destinations = computeDestinationClicks(link);
+
     List<LinkStats.CountryClick> countries =
         clickRepository.findCountryClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
@@ -233,11 +236,48 @@ public class LinkStatsService {
         utmMediums,
         utmContents,
         sourceChannels,
+        destinations,
         countries,
         regions,
         cities,
         languages,
         insights);
+  }
+
+  /**
+   * Joins click_event.destination_id with link_destination rows so the UI gets URL/label/weight
+   * alongside counts. NULL destination_id (clicks served before A/B was set up, or fallback)
+   * appears as a synthetic "default" row pointing at the original URL.
+   */
+  private List<LinkStats.DestinationClick> computeDestinationClicks(LinkEntity link) {
+    var rows = clickRepository.findDestinationClicks(link.getId());
+    if (rows.isEmpty()) return List.of();
+    var byId =
+        new java.util.HashMap<Long, com.example.short_link.link.domain.LinkDestinationEntity>();
+    destinationRepository
+        .findAllByLinkIdOrderByIdAsc(link.getId())
+        .forEach(d -> byId.put(d.getId(), d));
+    if (byId.isEmpty() && rows.size() == 1 && rows.get(0).getDestinationId() == null) {
+      // No A/B set up — single row with NULL destination_id is just regular click volume.
+      return List.of();
+    }
+    return rows.stream()
+        .map(
+            r -> {
+              Long id = r.getDestinationId();
+              if (id == null) {
+                return new LinkStats.DestinationClick(
+                    null, link.getOriginalUrl(), "default", 0, true, r.getCount());
+              }
+              var d = byId.get(id);
+              if (d == null) {
+                return new LinkStats.DestinationClick(
+                    id, "(deleted)", null, 0, false, r.getCount());
+              }
+              return new LinkStats.DestinationClick(
+                  d.getId(), d.getUrl(), d.getLabel(), d.getWeight(), d.isEnabled(), r.getCount());
+            })
+        .toList();
   }
 
   private LinkStats.ReturnRate computeReturnRate(Long linkId) {

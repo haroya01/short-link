@@ -1,9 +1,12 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.domain.LinkDestinationEntity;
+import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -14,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkLookupService {
 
   private final LinkRepository repository;
+  private final LinkDestinationRepository destinationRepository;
   private final MeterRegistry meterRegistry;
 
   @Cacheable("link")
@@ -23,13 +27,22 @@ public class LinkLookupService {
         repository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
+    List<CachedLink.Variant> variants =
+        destinationRepository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
+            .map(LinkLookupService::toVariant)
+            .toList();
     return new CachedLink(
         link.getId(),
         link.getOriginalUrl(),
         link.getExpiresAt(),
         link.getOgTitle(),
         link.getOgDescription(),
-        link.getOgImage());
+        link.getOgImage(),
+        variants);
+  }
+
+  private static CachedLink.Variant toVariant(LinkDestinationEntity d) {
+    return new CachedLink.Variant(d.getId(), d.getUrl(), d.getWeight(), d.isEnabled());
   }
 
   public String findActiveOriginalUrl(String shortCode) {
