@@ -31,4 +31,8 @@ public interface LinkRepository extends JpaRepository<LinkEntity, Long> {
   long countByUserIdIsNull();
 
   long countByExpiresAtBefore(Instant when);
+
+  long countByUserId(Long userId);
+
+  Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);
 }
