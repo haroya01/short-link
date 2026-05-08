@@ -3,6 +3,7 @@ package com.example.short_link.link.api;
 import com.example.short_link.link.application.CachedLink;
 import com.example.short_link.link.application.ClickRecorder;
 import com.example.short_link.link.application.GeoIpResolver;
+import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkPreviewCrawlerDetector;
@@ -13,6 +14,7 @@ import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -49,6 +51,34 @@ public class RedirectController {
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
+      HttpServletRequest req) {
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String outcome = "error";
+    try {
+      ResponseEntity<?> response =
+          handleRedirect(shortCode, src, referrer, userAgent, acceptLanguage, req);
+      outcome = classifyOutcome(response);
+      return response;
+    } catch (LinkNotFoundException e) {
+      outcome = "not_found";
+      throw e;
+    } catch (LinkExpiredException e) {
+      outcome = "expired";
+      throw e;
+    } catch (LinkViewLimitExceededException e) {
+      outcome = "view_limit";
+      throw e;
+    } finally {
+      sample.stop(meterRegistry.timer("redirect.latency", "outcome", outcome));
+    }
+  }
+
+  private ResponseEntity<?> handleRedirect(
+      String shortCode,
+      String src,
+      String referrer,
+      String userAgent,
+      String acceptLanguage,
       HttpServletRequest req) {
     CachedLink link = lookup.findActiveLink(shortCode);
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
@@ -142,6 +172,13 @@ public class RedirectController {
         .header(HttpHeaders.CACHE_CONTROL, "no-store")
         .header("X-Robots-Tag", "noindex, nofollow")
         .build();
+  }
+
+  private static String classifyOutcome(ResponseEntity<?> response) {
+    if (response.getStatusCode().is3xxRedirection()) return "redirect";
+    if (response.getStatusCode() == HttpStatus.OK) return "preview";
+    if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) return "password_required";
+    return "other";
   }
 
   private void enforceViewLimit(LinkEntity entity) {
