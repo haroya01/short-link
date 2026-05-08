@@ -86,10 +86,18 @@ public class RedirectController {
     if (entity != null) {
       enforceViewLimit(entity);
     }
+    com.example.short_link.link.application.CachedLink.Picked picked = link.pick();
     clickRecorder.record(
-        link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req), acceptLanguage, src);
+        link.linkId(),
+        picked.url(),
+        referrer,
+        userAgent,
+        clientIp(req),
+        acceptLanguage,
+        src,
+        picked.destinationId());
     return ResponseEntity.status(HttpStatus.FOUND)
-        .location(URI.create(link.originalUrl()))
+        .location(URI.create(picked.url()))
         .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
         .header("X-Robots-Tag", "noindex, nofollow")
         .build();
@@ -115,10 +123,18 @@ public class RedirectController {
       return htmlResponse(HttpStatus.UNAUTHORIZED, passwordPrompt(shortCode, true));
     }
     enforceViewLimit(entity);
+    com.example.short_link.link.application.CachedLink.Picked picked = link.pick();
     clickRecorder.record(
-        link.linkId(), link.originalUrl(), referrer, userAgent, clientIp(req), acceptLanguage, src);
+        link.linkId(),
+        picked.url(),
+        referrer,
+        userAgent,
+        clientIp(req),
+        acceptLanguage,
+        src,
+        picked.destinationId());
     return ResponseEntity.status(HttpStatus.FOUND)
-        .location(URI.create(link.originalUrl()))
+        .location(URI.create(picked.url()))
         .header(HttpHeaders.CACHE_CONTROL, "no-store")
         .header("X-Robots-Tag", "noindex, nofollow")
         .build();

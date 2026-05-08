@@ -94,6 +94,10 @@ public class ClickEventEntity {
   @Column(name = "source_channel", length = 40)
   private String sourceChannel;
 
+  /** Which A/B variant ({@link LinkDestinationEntity}) served this click — null if no variants. */
+  @Column(name = "destination_id")
+  private Long destinationId;
+
   @Builder
   public ClickEventEntity(
       Long linkId,
@@ -116,7 +120,8 @@ public class ClickEventEntity {
       String cityName,
       String language,
       String visitorHash,
-      String sourceChannel) {
+      String sourceChannel,
+      Long destinationId) {
     this.linkId = linkId;
     this.referrer = referrer;
     this.referrerHost = referrerHost;
@@ -138,6 +143,7 @@ public class ClickEventEntity {
     this.language = language;
     this.visitorHash = visitorHash;
     this.sourceChannel = sourceChannel;
+    this.destinationId = destinationId;
   }
 
   @PrePersist
