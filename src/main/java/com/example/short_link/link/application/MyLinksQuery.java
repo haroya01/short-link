@@ -1,21 +1,72 @@
 package com.example.short_link.link.application;
 
-public record MyLinksQuery(int page, int size, String q, String tag) {
+import com.example.short_link.link.application.LinkFilters.ExpiryFilter;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
+
+public record MyLinksQuery(
+    int page,
+    int size,
+    String q,
+    String tag,
+    String domain,
+    ExpiryFilter expiry,
+    Instant createdAfter,
+    Instant createdBefore) {
 
   public static final int DEFAULT_SIZE = 20;
   public static final int MAX_SIZE = 100;
 
-  public static MyLinksQuery of(Integer page, Integer size, String q, String tag) {
+  public static MyLinksQuery of(
+      Integer page,
+      Integer size,
+      String q,
+      String tag,
+      String domain,
+      String expiry,
+      String createdAfter,
+      String createdBefore) {
     int p = page == null || page < 1 ? 1 : page;
     int s = size == null || size < 1 ? DEFAULT_SIZE : Math.min(size, MAX_SIZE);
-    String trimmedQ = q == null ? null : q.trim();
-    String query = trimmedQ == null || trimmedQ.isEmpty() ? null : trimmedQ;
-    String trimmedTag = tag == null ? null : tag.trim();
-    String tagFilter = trimmedTag == null || trimmedTag.isEmpty() ? null : trimmedTag;
-    return new MyLinksQuery(p, s, query, tagFilter);
+    return new MyLinksQuery(
+        p,
+        s,
+        normalize(q),
+        normalize(tag),
+        normalize(domain),
+        parseExpiry(expiry),
+        parseInstant(createdAfter),
+        parseInstant(createdBefore));
   }
 
   public int zeroBasedPage() {
     return page - 1;
+  }
+
+  private static String normalize(String s) {
+    if (s == null) return null;
+    String trimmed = s.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
+  private static ExpiryFilter parseExpiry(String value) {
+    String normalized = normalize(value);
+    if (normalized == null) return null;
+    try {
+      return ExpiryFilter.valueOf(normalized.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      throw new IllegalArgumentException(
+          "expiry must be one of: NEVER / ACTIVE / EXPIRED / HAS_EXPIRY");
+    }
+  }
+
+  private static Instant parseInstant(String value) {
+    String normalized = normalize(value);
+    if (normalized == null) return null;
+    try {
+      return Instant.parse(normalized);
+    } catch (DateTimeParseException e) {
+      throw new IllegalArgumentException("date must be ISO-8601 instant");
+    }
   }
 }
