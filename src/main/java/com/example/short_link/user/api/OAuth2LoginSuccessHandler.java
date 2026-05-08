@@ -1,7 +1,7 @@
 package com.example.short_link.user.api;
 
 import com.example.short_link.user.application.AuthService;
-import com.example.short_link.user.application.IssuedTokens;
+import com.example.short_link.user.application.AuthService.LoginResult;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -35,14 +35,23 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     String provider =
         ((OAuth2AuthenticationToken) authentication).getAuthorizedClientRegistrationId();
 
-    IssuedTokens tokens = authService.loginWithOAuth(email, provider, oauthId);
+    LoginResult result = authService.loginWithOAuth(email, provider, oauthId);
 
-    refreshCookieWriter.set(res, tokens.refreshToken());
+    if (result instanceof LoginResult.TwoFactorRequired challenge) {
+      String target =
+          frontendBaseUrl
+              + "/auth/2fa#challenge="
+              + URLEncoder.encode(challenge.challengeToken(), StandardCharsets.UTF_8);
+      res.sendRedirect(target);
+      return;
+    }
 
+    LoginResult.Tokens tokens = (LoginResult.Tokens) result;
+    refreshCookieWriter.set(res, tokens.issued().refreshToken());
     String target =
         frontendBaseUrl
             + "/auth/callback#access_token="
-            + URLEncoder.encode(tokens.accessToken(), StandardCharsets.UTF_8);
+            + URLEncoder.encode(tokens.issued().accessToken(), StandardCharsets.UTF_8);
     res.sendRedirect(target);
   }
 }
