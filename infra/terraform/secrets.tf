@@ -3,20 +3,9 @@ resource "random_password" "db" {
   special = false
 }
 
-resource "random_password" "redis_auth" {
-  length  = 32
-  special = false
-}
-
-resource "random_password" "jwt_seed" {
-  length  = 48
-  special = false
-}
-
 locals {
   app_secret_params = {
     db_password           = { value = random_password.db.result, autogen = true }
-    redis_auth_token      = { value = random_password.redis_auth.result, autogen = true }
     jwt_private_key       = { value = "REPLACE_PEM", autogen = false }
     jwt_public_key        = { value = "REPLACE_PEM", autogen = false }
     google_client_id      = { value = "REPLACE", autogen = false }

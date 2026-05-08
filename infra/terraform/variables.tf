@@ -65,15 +65,21 @@ variable "create_route53_zone" {
 }
 
 variable "fargate_cpu" {
-  description = "Fargate task vCPU (units of 1024). 512 = 0.5 vCPU."
+  description = "Fargate task vCPU (units of 1024). 256 = 0.25 vCPU."
   type        = number
-  default     = 512
+  default     = 256
 }
 
 variable "fargate_memory" {
   description = "Fargate task memory in MiB."
   type        = number
   default     = 1024
+}
+
+variable "redis_sidecar_image" {
+  description = "Redis image used as a sidecar container in the same task as the app."
+  type        = string
+  default     = "public.ecr.aws/docker/library/redis:7-alpine"
 }
 
 variable "desired_count" {
@@ -110,12 +116,6 @@ variable "db_name" {
   description = "Initial database name created on the instance."
   type        = string
   default     = "short_link"
-}
-
-variable "redis_node_type" {
-  description = "ElastiCache node type."
-  type        = string
-  default     = "cache.t4g.micro"
 }
 
 variable "log_retention_days" {
