@@ -3,6 +3,7 @@ package com.example.short_link.common.api;
 import com.example.short_link.admin.application.InvalidActivePeriodException;
 import com.example.short_link.link.application.BulkImportTooLargeException;
 import com.example.short_link.link.application.DuplicateShortCodeException;
+import com.example.short_link.link.application.DuplicateTagNameException;
 import com.example.short_link.link.application.InvalidCursorException;
 import com.example.short_link.link.application.InvalidExportDimensionException;
 import com.example.short_link.link.application.LinkExpiredException;
@@ -13,6 +14,7 @@ import com.example.short_link.link.application.LinkViewLimitExceededException;
 import com.example.short_link.link.application.MaliciousUrlException;
 import com.example.short_link.link.application.ReservedShortCodeException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
+import com.example.short_link.link.application.TagNotFoundException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import com.example.short_link.user.application.InvalidTimezoneException;
 import com.example.short_link.user.application.UserNotFoundException;
@@ -78,6 +80,21 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(LinkViewLimitExceededException.class)
   public ProblemDetail handleViewLimit(LinkViewLimitExceededException e, HttpServletRequest req) {
     return problem(HttpStatus.GONE, e.getMessage(), "LINK_VIEW_LIMIT_EXCEEDED", req);
+  }
+
+  @ExceptionHandler(TagNotFoundException.class)
+  public ProblemDetail handleTagNotFound(TagNotFoundException e, HttpServletRequest req) {
+    return problem(HttpStatus.NOT_FOUND, e.getMessage(), "TAG_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(DuplicateTagNameException.class)
+  public ProblemDetail handleDuplicateTag(DuplicateTagNameException e, HttpServletRequest req) {
+    return problem(HttpStatus.CONFLICT, e.getMessage(), "DUPLICATE_TAG_NAME", req);
+  }
+
+  @ExceptionHandler(IllegalArgumentException.class)
+  public ProblemDetail handleIllegalArgument(IllegalArgumentException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_ARGUMENT", req);
   }
 
   @ExceptionHandler(BulkImportTooLargeException.class)
