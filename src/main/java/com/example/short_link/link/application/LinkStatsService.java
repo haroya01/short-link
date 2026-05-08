@@ -171,6 +171,11 @@ public class LinkStatsService {
             .map(r -> new LinkStats.UtmContentClick(r.getContent(), r.getCount()))
             .toList();
 
+    List<LinkStats.SourceChannelClick> sourceChannels =
+        clickRepository.findSourceChannelClicks(linkId, TOP_50).stream()
+            .map(r -> new LinkStats.SourceChannelClick(r.getSource(), r.getCount()))
+            .toList();
+
     List<LinkStats.CountryClick> countries =
         clickRepository.findCountryClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
@@ -227,6 +232,7 @@ public class LinkStatsService {
         utmSources,
         utmMediums,
         utmContents,
+        sourceChannels,
         countries,
         regions,
         cities,

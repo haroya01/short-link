@@ -86,6 +86,14 @@ public class ClickEventEntity {
   @Column(name = "visitor_hash", length = 64)
   private String visitorHash;
 
+  /**
+   * Channel hint passed by the short URL itself (e.g., {@code /abc?src=qr}). Lets owners attribute
+   * traffic from places where the referrer header is missing — KakaoTalk, QR codes, offline
+   * posters, etc.
+   */
+  @Column(name = "source_channel", length = 40)
+  private String sourceChannel;
+
   @Builder
   public ClickEventEntity(
       Long linkId,
@@ -107,7 +115,8 @@ public class ClickEventEntity {
       String regionName,
       String cityName,
       String language,
-      String visitorHash) {
+      String visitorHash,
+      String sourceChannel) {
     this.linkId = linkId;
     this.referrer = referrer;
     this.referrerHost = referrerHost;
@@ -128,6 +137,7 @@ public class ClickEventEntity {
     this.cityName = cityName;
     this.language = language;
     this.visitorHash = visitorHash;
+    this.sourceChannel = sourceChannel;
   }
 
   @PrePersist

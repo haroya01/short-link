@@ -35,6 +35,7 @@ public record LinkStats(
     List<UtmSourceClick> utmSourceClicks,
     List<UtmMediumClick> utmMediumClicks,
     List<UtmContentClick> utmContentClicks,
+    List<SourceChannelClick> sourceChannelClicks,
     List<CountryClick> countryClicks,
     List<RegionClick> regionClicks,
     List<CityClick> cityClicks,
@@ -70,6 +71,8 @@ public record LinkStats(
   public record UtmMediumClick(String medium, long count) {}
 
   public record UtmContentClick(String content, long count) {}
+
+  public record SourceChannelClick(String source, long count) {}
 
   public record CountryClick(String country, long count) {}
 
