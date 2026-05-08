@@ -1,0 +1,4 @@
+ALTER TABLE link
+  ADD COLUMN password_hash VARCHAR(60) NULL,
+  ADD COLUMN max_views INT NULL,
+  ADD COLUMN view_count INT NOT NULL DEFAULT 0;

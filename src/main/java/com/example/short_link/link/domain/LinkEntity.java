@@ -66,6 +66,15 @@ public class LinkEntity {
   @Column(name = "claim_token", length = 32)
   private String claimToken;
 
+  @Column(name = "password_hash", length = 60)
+  private String passwordHash;
+
+  @Column(name = "max_views")
+  private Integer maxViews;
+
+  @Column(name = "view_count", nullable = false)
+  private int viewCount = 0;
+
   @Column(name = "og_title_override", length = 300)
   private String ogTitleOverride;
 
@@ -138,6 +147,26 @@ public class LinkEntity {
   public void claim(Long newOwnerId) {
     this.userId = newOwnerId;
     this.claimToken = null;
+  }
+
+  public boolean hasPassword() {
+    return passwordHash != null && !passwordHash.isEmpty();
+  }
+
+  public void setPasswordHash(String hash) {
+    this.passwordHash = (hash == null || hash.isBlank()) ? null : hash;
+  }
+
+  public void setMaxViews(Integer max) {
+    this.maxViews = max;
+  }
+
+  public void incrementViewCount() {
+    this.viewCount++;
+  }
+
+  public boolean isViewLimitReached() {
+    return maxViews != null && viewCount >= maxViews;
   }
 
   public void changeOgOverride(String title, String description, String image) {
