@@ -6,6 +6,7 @@ import com.example.short_link.link.application.DuplicateShortCodeException;
 import com.example.short_link.link.application.DuplicateTagNameException;
 import com.example.short_link.link.application.InvalidCursorException;
 import com.example.short_link.link.application.InvalidExportDimensionException;
+import com.example.short_link.link.application.InvalidWebhookUrlException;
 import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkNotOwnedException;
@@ -15,6 +16,8 @@ import com.example.short_link.link.application.MaliciousUrlException;
 import com.example.short_link.link.application.ReservedShortCodeException;
 import com.example.short_link.link.application.ShortCodeGenerationException;
 import com.example.short_link.link.application.TagNotFoundException;
+import com.example.short_link.link.application.TooManyWebhooksException;
+import com.example.short_link.link.application.WebhookNotFoundException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import com.example.short_link.user.application.InvalidTimezoneException;
 import com.example.short_link.user.application.UserNotFoundException;
@@ -95,6 +98,24 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleIllegalArgument(IllegalArgumentException e, HttpServletRequest req) {
     return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_ARGUMENT", req);
+  }
+
+  @ExceptionHandler(InvalidWebhookUrlException.class)
+  public ProblemDetail handleInvalidWebhookUrl(
+      InvalidWebhookUrlException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_WEBHOOK_URL", req);
+  }
+
+  @ExceptionHandler(TooManyWebhooksException.class)
+  public ProblemDetail handleTooManyWebhooks(TooManyWebhooksException e, HttpServletRequest req) {
+    ProblemDetail body = problem(HttpStatus.CONFLICT, e.getMessage(), "TOO_MANY_WEBHOOKS", req);
+    body.setProperty("limit", e.getLimit());
+    return body;
+  }
+
+  @ExceptionHandler(WebhookNotFoundException.class)
+  public ProblemDetail handleWebhookNotFound(WebhookNotFoundException e, HttpServletRequest req) {
+    return problem(HttpStatus.NOT_FOUND, e.getMessage(), "WEBHOOK_NOT_FOUND", req);
   }
 
   @ExceptionHandler(BulkImportTooLargeException.class)
