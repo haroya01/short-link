@@ -41,11 +41,11 @@ services:
     networks: [internal]
 
   app:
-    build:
-      context: ..
-      dockerfile: Dockerfile
-      args:
-        MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
+    # Image is built and pushed by .github/workflows/deploy.yml on every main push.
+    # `docker compose pull` here just fetches the latest tag — no Gradle build on this
+    # tiny EC2, which keeps RAM headroom comfortable.
+    image: ghcr.io/haroya01/short-link:${APP_IMAGE_TAG:-latest}
+    pull_policy: always
     restart: unless-stopped
     depends_on:
       mysql:
