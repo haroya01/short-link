@@ -63,13 +63,21 @@ jobs:
           host: ${{ vars.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: GHCR_TOKEN
+          script_stop: true
           script: |
             set -e
             cd ~/short-link
             git pull --ff-only
             cd deploy
+            # GHCR package is private; auth before pull, then drop the token from the EC2's
+            # docker config so the credential isn't sitting on disk after we're done.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u haroya01 --password-stdin
             docker compose pull app
+            docker logout ghcr.io
             docker compose up -d --no-build
             # Cleanup stale images so disk doesn't fill up over time.
             docker image prune -f
             docker compose ps
+        env:
+          GHCR_TOKEN: ${{ secrets.GHCR_RO_TOKEN }}
