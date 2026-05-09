@@ -74,8 +74,9 @@ jobs:
             # docker config so the credential isn't sitting on disk after we're done.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u haroya01 --password-stdin
             docker compose pull app
+            docker compose up -d --no-build --pull never
+            # Now safe to drop the credential — no more pulls until next deploy.
             docker logout ghcr.io
-            docker compose up -d --no-build
             # Cleanup stale images so disk doesn't fill up over time.
             docker image prune -f
             docker compose ps
