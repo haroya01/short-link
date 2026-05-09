@@ -87,6 +87,13 @@ public class LinkEntity {
   @Column(name = "profile_order")
   private Integer profileOrder;
 
+  /**
+   * Comma-separated ISO-3166 alpha-2 country codes blocked from this link. A clicker resolved to
+   * any listed country gets a "blocked" page instead of the redirect. Null/blank = no blocklist.
+   */
+  @Column(name = "blocked_countries", length = 255)
+  private String blockedCountries;
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -149,6 +156,28 @@ public class LinkEntity {
 
   public boolean isOnProfile() {
     return profileOrder != null;
+  }
+
+  public void setBlockedCountries(String csv) {
+    if (csv == null || csv.isBlank()) {
+      this.blockedCountries = null;
+      return;
+    }
+    java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
+    for (String raw : csv.split(",")) {
+      String code = raw.trim().toUpperCase();
+      if (code.length() == 2) seen.add(code);
+    }
+    this.blockedCountries = seen.isEmpty() ? null : String.join(",", seen);
+  }
+
+  public boolean isCountryBlocked(String countryCode) {
+    if (blockedCountries == null || countryCode == null) return false;
+    String upper = countryCode.toUpperCase();
+    for (String code : blockedCountries.split(",")) {
+      if (upper.equals(code.trim())) return true;
+    }
+    return false;
   }
 
   public void setClaimToken(String token) {

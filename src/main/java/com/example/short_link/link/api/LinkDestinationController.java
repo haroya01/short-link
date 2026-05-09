@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/links")
 @RequiredArgsConstructor
 public class LinkDestinationController {
+
+  private static final String DEVICE_PATTERN = "^(mobile|tablet|desktop)?$";
+  private static final String OS_PATTERN = "^(ios|android|windows|macos|linux)?$";
 
   private final LinkDestinationService service;
 
@@ -46,7 +50,9 @@ public class LinkDestinationController {
             request.url(),
             request.weight(),
             request.label(),
-            request.countryCode());
+            request.countryCode(),
+            request.deviceClass(),
+            request.os());
     return ResponseEntity.status(HttpStatus.CREATED).body(added);
   }
 
@@ -64,7 +70,9 @@ public class LinkDestinationController {
         request.weight(),
         request.label(),
         request.enabled(),
-        request.countryCode());
+        request.countryCode(),
+        request.deviceClass(),
+        request.os());
   }
 
   @DeleteMapping("/{shortCode}/destinations/{id}")
@@ -74,12 +82,25 @@ public class LinkDestinationController {
     return ResponseEntity.noContent().build();
   }
 
+  @PutMapping("/{shortCode}/blocked-countries")
+  public BlockedCountriesResponse setBlocked(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable String shortCode,
+      @RequestBody BlockedCountriesRequest request) {
+    var link = service.setBlockedCountries(userId, shortCode, request.codes());
+    return new BlockedCountriesResponse(link.getBlockedCountries());
+  }
+
   public record AddRequest(
       @NotBlank @Size(max = 2048) String url,
       @Min(1) @Max(100) Integer weight,
       @Size(max = 40) String label,
       @Pattern(regexp = "^[A-Za-z]{2}$", message = "countryCode must be ISO-3166 alpha-2")
-          String countryCode) {}
+          String countryCode,
+      @Pattern(regexp = DEVICE_PATTERN, message = "deviceClass must be mobile/tablet/desktop")
+          String deviceClass,
+      @Pattern(regexp = OS_PATTERN, message = "os must be ios/android/windows/macos/linux")
+          String os) {}
 
   public record UpdateRequest(
       @Size(max = 2048) String url,
@@ -89,5 +110,11 @@ public class LinkDestinationController {
       @Pattern(
               regexp = "^([A-Za-z]{2})?$",
               message = "countryCode must be ISO-3166 alpha-2 or empty")
-          String countryCode) {}
+          String countryCode,
+      @Pattern(regexp = DEVICE_PATTERN) String deviceClass,
+      @Pattern(regexp = OS_PATTERN) String os) {}
+
+  public record BlockedCountriesRequest(@Size(max = 255) String codes) {}
+
+  public record BlockedCountriesResponse(String codes) {}
 }

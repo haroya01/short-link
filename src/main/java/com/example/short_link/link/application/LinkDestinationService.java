@@ -41,7 +41,14 @@ public class LinkDestinationService {
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
   public DestinationSummary add(
-      Long userId, String shortCode, String url, Integer weight, String label, String countryCode) {
+      Long userId,
+      String shortCode,
+      String url,
+      Integer weight,
+      String label,
+      String countryCode,
+      String deviceClass,
+      String os) {
     LinkEntity link = ownedLink(userId, shortCode);
     if (!isValidUrl(url)) throw new IllegalArgumentException("destination url must be http(s)");
     if (repository.countByLinkId(link.getId()) >= MAX_PER_LINK) {
@@ -52,7 +59,7 @@ public class LinkDestinationService {
     LinkDestinationEntity saved =
         repository.save(
             new LinkDestinationEntity(
-                link.getId(), url.trim(), w, sanitizeLabel(label), countryCode));
+                link.getId(), url.trim(), w, sanitizeLabel(label), countryCode, deviceClass, os));
     meterRegistry.counter("link.destination.added").increment();
     return toSummary(saved);
   }
@@ -67,15 +74,31 @@ public class LinkDestinationService {
       Integer weight,
       String label,
       Boolean enabled,
-      String countryCode) {
+      String countryCode,
+      String deviceClass,
+      String os) {
     LinkDestinationEntity dest = ownedDestination(userId, shortCode, destinationId);
     if (url != null && !isValidUrl(url)) {
       throw new IllegalArgumentException("destination url must be http(s)");
     }
     Integer clampedWeight = weight == null ? null : clampWeight(weight);
     dest.update(
-        url == null ? null : url.trim(), clampedWeight, sanitizeLabel(label), enabled, countryCode);
+        url == null ? null : url.trim(),
+        clampedWeight,
+        sanitizeLabel(label),
+        enabled,
+        countryCode,
+        deviceClass,
+        os);
     return toSummary(dest);
+  }
+
+  @Transactional
+  @CacheEvict(value = "link", key = "#shortCode")
+  public LinkEntity setBlockedCountries(Long userId, String shortCode, String csv) {
+    LinkEntity link = ownedLink(userId, shortCode);
+    link.setBlockedCountries(csv);
+    return link;
   }
 
   @Transactional
@@ -135,6 +158,8 @@ public class LinkDestinationService {
         d.getLabel(),
         d.isEnabled(),
         d.getCountryCode(),
+        d.getDeviceClass(),
+        d.getOs(),
         d.getCreatedAt());
   }
 
@@ -145,5 +170,7 @@ public class LinkDestinationService {
       String label,
       boolean enabled,
       String countryCode,
+      String deviceClass,
+      String os,
       Instant createdAt) {}
 }
