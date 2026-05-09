@@ -13,6 +13,8 @@ public interface UserRepository extends JpaRepository<UserEntity, Long> {
 
   Optional<UserEntity> findByStripeCustomerId(String stripeCustomerId);
 
+  Optional<UserEntity> findByUsername(String username);
+
   long countByCreatedAtAfter(Instant since);
 
   List<UserEntity> findTop200ByDeletedAtBefore(Instant cutoff);
