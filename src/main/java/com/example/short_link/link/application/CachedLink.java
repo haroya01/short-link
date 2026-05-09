@@ -6,6 +6,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public record CachedLink(
     Long linkId,
+    Long userId,
     String originalUrl,
     Instant expiresAt,
     String ogTitle,
@@ -20,7 +21,18 @@ public record CachedLink(
       String ogTitle,
       String ogDescription,
       String ogImage) {
-    this(linkId, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, List.of());
+    this(linkId, null, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, List.of());
+  }
+
+  public CachedLink(
+      Long linkId,
+      String originalUrl,
+      Instant expiresAt,
+      String ogTitle,
+      String ogDescription,
+      String ogImage,
+      List<Variant> variants) {
+    this(linkId, null, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, variants);
   }
 
   public boolean isExpired(Instant now) {
