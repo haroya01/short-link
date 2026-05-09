@@ -38,6 +38,7 @@ public class SseClickStreamController {
   private final LinkRepository linkRepository;
   private final SseClickStreamRegistry registry;
   private final MeterRegistry meterRegistry;
+  private final com.example.short_link.link.application.LinkAccessGuard accessGuard;
 
   @GetMapping("/{shortCode}/stream")
   public SseEmitter stream(
@@ -54,7 +55,7 @@ public class SseClickStreamController {
         linkRepository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!link.isOwnedBy(userId)) {
+    if (!accessGuard.canView(userId, link)) {
       throw new LinkNotOwnedException(shortCode);
     }
 

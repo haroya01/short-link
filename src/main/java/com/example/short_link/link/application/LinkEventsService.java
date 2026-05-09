@@ -24,6 +24,7 @@ public class LinkEventsService {
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
   private final ReferrerChannelClassifier channelClassifier;
+  private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)
   public LinkEventsPage events(Long userId, String shortCode, String cursor, Integer limit) {
@@ -31,9 +32,7 @@ public class LinkEventsService {
         linkRepository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!link.isOwnedBy(userId)) {
-      throw new LinkNotOwnedException(shortCode);
-    }
+    accessGuard.requireView(userId, link);
     int pageSize = clampLimit(limit);
     PageRequest req = PageRequest.ofSize(pageSize);
 

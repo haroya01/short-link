@@ -18,6 +18,7 @@ public class LinkExportService {
   private final ClickEventRepository clickRepository;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkStatsService statsService;
+  private final LinkAccessGuard accessGuard;
 
   @org.springframework.beans.factory.annotation.Value("${short-link.export.event-batch:1000}")
   private int eventBatch;
@@ -31,9 +32,7 @@ public class LinkExportService {
         linkRepository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!link.isOwnedBy(userId)) {
-      throw new LinkNotOwnedException(shortCode);
-    }
+    accessGuard.requireView(userId, link);
     StringBuilder sb = new StringBuilder(64 * 1024);
     CsvWriter.appendRow(
         sb,
