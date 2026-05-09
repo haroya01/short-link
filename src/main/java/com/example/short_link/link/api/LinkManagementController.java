@@ -36,7 +36,8 @@ public class LinkManagementController {
         updated.createdAt(),
         updated.expiresAt(),
         updated.clickCount(),
-        updated.tags());
+        updated.tags(),
+        updated.clicksLast7d());
   }
 
   @DeleteMapping("/{shortCode}")
