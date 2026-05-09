@@ -34,6 +34,7 @@ public class LinkStatsService {
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkInsights insightsCalculator;
   private final com.example.short_link.link.domain.LinkDestinationRepository destinationRepository;
+  private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)
   public LinkStats stats(Long userId, String shortCode) {
@@ -41,10 +42,10 @@ public class LinkStatsService {
         linkRepository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!link.isOwnedBy(userId)) {
-      throw new LinkNotOwnedException(shortCode);
-    }
-    return computeStats(link, ownerZone(userId));
+    accessGuard.requireView(userId, link);
+    // Always render in the link owner's timezone so admins see the same buckets the owner does.
+    Long zoneOwnerId = link.isOwnedBy(userId) ? userId : link.getUserId();
+    return computeStats(link, ownerZone(zoneOwnerId));
   }
 
   @Transactional(readOnly = true)

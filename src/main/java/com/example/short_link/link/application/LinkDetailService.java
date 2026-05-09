@@ -13,6 +13,7 @@ public class LinkDetailService {
 
   private final LinkRepository repository;
   private final LinkTagService linkTagService;
+  private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)
   public LinkDetailResponse detail(Long userId, String shortCode) {
@@ -20,9 +21,7 @@ public class LinkDetailService {
         repository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!link.isOwnedBy(userId)) {
-      throw new LinkNotOwnedException(shortCode);
-    }
+    accessGuard.requireView(userId, link);
     return new LinkDetailResponse(
         link.getShortCode(),
         link.getOriginalUrl(),
