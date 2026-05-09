@@ -1,10 +1,18 @@
 FROM gradle:8.10-jdk17 AS build
-ARG MAXMIND_LICENSE_KEY
 WORKDIR /workspace
-COPY build.gradle settings.gradle ./
+
+# Copy build descriptors first so the slow Gradle dependency layer can cache by itself —
+# changes to src/ or the MaxMind ARG below don't bust this layer.
+COPY build.gradle settings.gradle gradlew ./
 COPY gradle gradle
-COPY gradlew gradlew
+RUN ./gradlew --version --no-daemon
+
+# Source comes after deps so editing code doesn't redownload deps.
 COPY src src
+
+# ARG is declared right before the RUN that uses it: changing the key value only invalidates
+# this final layer, leaving deps + src caches intact for fast incremental rebuilds.
+ARG MAXMIND_LICENSE_KEY
 RUN if [ -n "${MAXMIND_LICENSE_KEY:-}" ]; then \
       MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" ./gradlew downloadGeoLite2 --no-daemon; \
       MAXMIND_LICENSE_KEY="${MAXMIND_LICENSE_KEY}" ./gradlew downloadGeoLite2Asn --no-daemon || echo "ASN download failed, continuing without it"; \
