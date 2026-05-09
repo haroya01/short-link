@@ -2,6 +2,7 @@ package com.example.short_link.link.api;
 
 import com.example.short_link.link.application.CachedLink;
 import com.example.short_link.link.application.ClickRecorder;
+import com.example.short_link.link.application.CustomDomainService;
 import com.example.short_link.link.application.GeoIpResolver;
 import com.example.short_link.link.application.LinkExpiredException;
 import com.example.short_link.link.application.LinkLookupService;
@@ -43,6 +44,7 @@ public class RedirectController {
   private final MeterRegistry meterRegistry;
   private final LinkProtectionService protectionService;
   private final GeoIpResolver geoIpResolver;
+  private final CustomDomainService customDomainService;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -81,6 +83,13 @@ public class RedirectController {
       String acceptLanguage,
       HttpServletRequest req) {
     CachedLink link = lookup.findActiveLink(shortCode);
+    // If the request came in on a custom domain (e.g. go.brand.com), make sure the link belongs
+    // to that domain's owner — otherwise we'd be exposing every kurl.me short code on every
+    // customer's domain. Default Host (kurl.me, www.kurl.me) skips the check.
+    Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
+    if (customOwner != null && !customOwner.equals(link.userId())) {
+      throw new LinkNotFoundException(shortCode);
+    }
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
     if (crawlerLabel != null) {
       meterRegistry.counter("short_link.preview").increment();

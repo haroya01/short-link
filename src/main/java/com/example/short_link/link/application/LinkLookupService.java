@@ -33,6 +33,7 @@ public class LinkLookupService {
             .toList();
     return new CachedLink(
         link.getId(),
+        link.getUserId(),
         link.getOriginalUrl(),
         link.getExpiresAt(),
         link.getOgTitle(),
