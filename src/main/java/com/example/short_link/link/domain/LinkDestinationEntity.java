@@ -52,17 +52,45 @@ public class LinkDestinationEntity {
   @Column(name = "country_code", length = 2)
   private String countryCode;
 
+  /**
+   * Optional broad device bucket — {@code mobile}, {@code tablet}, {@code desktop}. Layered on top
+   * of {@link #countryCode}: a variant tagged both {@code KR} and {@code mobile} only matches a
+   * Korean visitor on a phone. Null = "no device constraint".
+   */
+  @Column(name = "device_class", length = 16)
+  private String deviceClass;
+
+  /**
+   * Optional fine-grained OS — {@code ios}, {@code android}, {@code windows}, {@code macos}, {@code
+   * linux}. Same layering rule as {@link #deviceClass}; null = "any OS".
+   */
+  @Column(length = 16)
+  private String os;
+
   @Column(name = "created_at", nullable = false, updatable = false)
   private Instant createdAt;
 
   public LinkDestinationEntity(
       Long linkId, String url, int weight, String label, String countryCode) {
+    this(linkId, url, weight, label, countryCode, null, null);
+  }
+
+  public LinkDestinationEntity(
+      Long linkId,
+      String url,
+      int weight,
+      String label,
+      String countryCode,
+      String deviceClass,
+      String os) {
     this.linkId = linkId;
     this.url = url;
     this.weight = Math.max(1, weight);
     this.label = label;
     this.enabled = true;
     this.countryCode = normalizeCountry(countryCode);
+    this.deviceClass = normalizeDeviceClass(deviceClass);
+    this.os = normalizeOs(os);
   }
 
   @PrePersist
@@ -72,13 +100,24 @@ public class LinkDestinationEntity {
 
   public void update(
       String url, Integer weight, String label, Boolean enabled, String countryCode) {
+    update(url, weight, label, enabled, countryCode, null, null);
+  }
+
+  public void update(
+      String url,
+      Integer weight,
+      String label,
+      Boolean enabled,
+      String countryCode,
+      String deviceClass,
+      String os) {
     if (url != null) this.url = url;
     if (weight != null) this.weight = Math.max(1, weight);
     if (label != null) this.label = label;
     if (enabled != null) this.enabled = enabled;
-    if (countryCode != null) {
-      this.countryCode = normalizeCountry(countryCode);
-    }
+    if (countryCode != null) this.countryCode = normalizeCountry(countryCode);
+    if (deviceClass != null) this.deviceClass = normalizeDeviceClass(deviceClass);
+    if (os != null) this.os = normalizeOs(os);
   }
 
   private static String normalizeCountry(String input) {
@@ -89,5 +128,27 @@ public class LinkDestinationEntity {
       throw new IllegalArgumentException("countryCode must be ISO-3166 alpha-2 (2 chars)");
     }
     return trimmed.toUpperCase();
+  }
+
+  private static String normalizeDeviceClass(String input) {
+    if (input == null) return null;
+    String v = input.trim().toLowerCase();
+    if (v.isEmpty()) return null;
+    return switch (v) {
+      case "mobile", "tablet", "desktop" -> v;
+      default ->
+          throw new IllegalArgumentException("deviceClass must be mobile, tablet, or desktop");
+    };
+  }
+
+  private static String normalizeOs(String input) {
+    if (input == null) return null;
+    String v = input.trim().toLowerCase();
+    if (v.isEmpty()) return null;
+    return switch (v) {
+      case "ios", "android", "windows", "macos", "linux" -> v;
+      default ->
+          throw new IllegalArgumentException("os must be ios, android, windows, macos, or linux");
+    };
   }
 }
