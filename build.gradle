@@ -38,6 +38,7 @@ dependencies {
 	implementation 'com.maxmind.geoip2:geoip2:4.2.1'
 	implementation 'org.apache.commons:commons-compress:1.27.1'
 	implementation 'org.jsoup:jsoup:1.18.1'
+	implementation 'com.stripe:stripe-java:28.4.0'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
