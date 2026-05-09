@@ -90,6 +90,8 @@ public class SecurityConfig {
                     .hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/**")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/*/og.png")
+                    .permitAll()
                     .requestMatchers("/api/v1/links/*/profile")
                     .authenticated()
                     .requestMatchers(HttpMethod.GET, "/api/v1/links/*/public-stats")

@@ -12,11 +12,17 @@ import org.springframework.stereotype.Component;
 @Component
 public class LinkPreviewRenderer {
 
-  public String render(LinkEntity link, String shortUrl) {
+  public String render(LinkEntity link, String shortUrl, long clickCount) {
     String title = nonBlankOr(link.getEffectiveOgTitle(), link.getOriginalUrl());
     String description =
         nonBlankOr(link.getEffectiveOgDescription(), "Shortened with kurl. Click to continue.");
-    String image = link.getEffectiveOgImage();
+    // Fall back to a kurl-generated card when the destination doesn't have its own OG image. This
+    // keeps real content links (YouTube, blog posts) showing their real preview while turning
+    // plain redirects into a self-marketing surface that announces the click count.
+    String destinationImage = link.getEffectiveOgImage();
+    boolean useGenerated = destinationImage == null || destinationImage.isBlank();
+    String image =
+        useGenerated ? shortUrl + "/og.png?c=" + Math.max(0L, clickCount) : destinationImage;
     String original = link.getOriginalUrl();
 
     StringBuilder sb = new StringBuilder(2048);
@@ -34,6 +40,10 @@ public class LinkPreviewRenderer {
     sb.append("<meta property=\"og:url\" content=\"").append(escape(shortUrl)).append("\">\n");
     if (image != null && !image.isBlank()) {
       sb.append("<meta property=\"og:image\" content=\"").append(escape(image)).append("\">\n");
+      if (useGenerated) {
+        sb.append("<meta property=\"og:image:width\" content=\"1200\">\n");
+        sb.append("<meta property=\"og:image:height\" content=\"630\">\n");
+      }
     }
 
     sb.append("<meta name=\"twitter:card\" content=\"")
