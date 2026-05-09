@@ -12,6 +12,8 @@ import com.example.short_link.link.application.LinkPreviewRenderer;
 import com.example.short_link.link.application.LinkProtectionService;
 import com.example.short_link.link.application.LinkViewLimitExceededException;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.UserAgentClassifier;
+import com.example.short_link.link.application.UserAgentInfo;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
@@ -47,6 +49,7 @@ public class RedirectController {
   private final LinkProtectionService protectionService;
   private final GeoIpResolver geoIpResolver;
   private final CustomDomainService customDomainService;
+  private final UserAgentClassifier userAgentClassifier;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -131,7 +134,14 @@ public class RedirectController {
       enforceViewLimit(entity);
     }
     String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
-    CachedLink.Picked picked = link.pick(clientCountry);
+    if (link.isBlockedFor(clientCountry)) {
+      meterRegistry
+          .counter("redirect.blocked", "country", clientCountry == null ? "unknown" : clientCountry)
+          .increment();
+      return htmlResponse(HttpStatus.FORBIDDEN, blockedPage());
+    }
+    UserAgentInfo ua = userAgentClassifier.classify(userAgent);
+    CachedLink.Picked picked = link.pick(clientCountry, normalizeOs(ua.osName()), ua.deviceClass());
     clickRecorder.record(
         link.linkId(),
         picked.url(),
@@ -169,7 +179,11 @@ public class RedirectController {
     }
     enforceViewLimit(entity);
     String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
-    CachedLink.Picked picked = link.pick(clientCountry);
+    if (link.isBlockedFor(clientCountry)) {
+      return htmlResponse(HttpStatus.FORBIDDEN, blockedPage());
+    }
+    UserAgentInfo ua = userAgentClassifier.classify(userAgent);
+    CachedLink.Picked picked = link.pick(clientCountry, normalizeOs(ua.osName()), ua.deviceClass());
     clickRecorder.record(
         link.linkId(),
         picked.url(),
@@ -184,6 +198,27 @@ public class RedirectController {
         .header(HttpHeaders.CACHE_CONTROL, "no-store")
         .header("X-Robots-Tag", "noindex, nofollow")
         .build();
+  }
+
+  private static String normalizeOs(String osName) {
+    if (osName == null) return null;
+    String lower = osName.toLowerCase();
+    if (lower.contains("android")) return "android";
+    if (lower.contains("ios")) return "ios";
+    if (lower.contains("mac")) return "macos";
+    if (lower.contains("windows")) return "windows";
+    if (lower.contains("linux")) return "linux";
+    return null;
+  }
+
+  private static String blockedPage() {
+    return "<!doctype html><html><head><meta charset=\"utf-8\">"
+        + "<title>Not available</title></head>"
+        + "<body style=\"font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f8fafc;color:#475569\">"
+        + "<div style=\"text-align:center;max-width:360px;padding:40px\">"
+        + "<h1 style=\"font-size:18px;margin:0 0 8px;color:#0f172a\">This link isn't available in your region.</h1>"
+        + "<p style=\"font-size:13px;margin:0\">If you think this is a mistake, contact the link owner.</p>"
+        + "</div></body></html>";
   }
 
   private static String classifyOutcome(ResponseEntity<?> response) {

@@ -1,6 +1,7 @@
 package com.example.short_link.link.application;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -12,6 +13,7 @@ public record CachedLink(
     String ogTitle,
     String ogDescription,
     String ogImage,
+    String blockedCountries,
     List<Variant> variants) {
 
   public CachedLink(
@@ -21,7 +23,7 @@ public record CachedLink(
       String ogTitle,
       String ogDescription,
       String ogImage) {
-    this(linkId, null, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, List.of());
+    this(linkId, null, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, null, List.of());
   }
 
   public CachedLink(
@@ -32,48 +34,94 @@ public record CachedLink(
       String ogDescription,
       String ogImage,
       List<Variant> variants) {
-    this(linkId, null, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, variants);
+    this(linkId, null, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, null, variants);
+  }
+
+  public CachedLink(
+      Long linkId,
+      Long userId,
+      String originalUrl,
+      Instant expiresAt,
+      String ogTitle,
+      String ogDescription,
+      String ogImage,
+      List<Variant> variants) {
+    this(linkId, userId, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, null, variants);
   }
 
   public boolean isExpired(Instant now) {
     return expiresAt != null && !now.isBefore(expiresAt);
   }
 
-  /**
-   * Picks the destination URL for a country-agnostic redirect (treats every visitor the same).
-   * Prefer {@link #pick(String)} when the caller has resolved the visitor's country — it lets
-   * geo-tagged variants take effect.
-   */
+  public boolean isBlockedFor(String clientCountry) {
+    if (blockedCountries == null || clientCountry == null) return false;
+    String upper = clientCountry.toUpperCase();
+    for (String code : blockedCountries.split(",")) {
+      if (upper.equals(code.trim())) return true;
+    }
+    return false;
+  }
+
   public Picked pick() {
-    return pick(null);
+    return pick(null, null, null);
+  }
+
+  public Picked pick(String clientCountry) {
+    return pick(clientCountry, null, null);
   }
 
   /**
-   * Country-aware weighted pick. The order of preference:
-   *
-   * <ol>
-   *   <li>If any enabled variant is tagged with {@code clientCountry}, pick by weight from those.
-   *   <li>Otherwise, pick by weight from country-agnostic variants (countryCode == null).
-   *   <li>If every enabled variant is country-tagged and none match, fall through to the original
-   *       URL — owners get a deterministic "untargeted visitors hit the control" guarantee.
-   * </ol>
+   * Picks one destination using a layered match. Each variant's non-null predicates (country, OS,
+   * device class) must match the visitor's signals. Among matching variants, the most-specific set
+   * (most non-null predicates satisfied) wins; ties resolve by weighted random pick. If nothing
+   * matches at all, fall through to the link's control URL.
    */
-  public Picked pick(String clientCountry) {
+  public Picked pick(String clientCountry, String os, String deviceClass) {
     List<Variant> enabled = variants.stream().filter(Variant::enabled).toList();
     if (enabled.isEmpty()) return new Picked(originalUrl, null);
 
-    if (clientCountry != null && !clientCountry.isBlank()) {
-      String normalized = clientCountry.trim().toUpperCase();
-      List<Variant> matched =
-          enabled.stream().filter(v -> normalized.equals(v.countryCode())).toList();
-      if (!matched.isEmpty()) return weightedPick(matched);
+    String country = clientCountry == null ? null : clientCountry.trim().toUpperCase();
+    String osLower = os == null ? null : os.trim().toLowerCase();
+    String dcLower = deviceClass == null ? null : deviceClass.trim().toLowerCase();
+
+    int bestSpecificity = -1;
+    List<Variant> winners = new ArrayList<>();
+    for (Variant v : enabled) {
+      Integer specificity = matchSpecificity(v, country, osLower, dcLower);
+      if (specificity == null) continue;
+      if (specificity > bestSpecificity) {
+        bestSpecificity = specificity;
+        winners.clear();
+        winners.add(v);
+      } else if (specificity == bestSpecificity) {
+        winners.add(v);
+      }
     }
+    if (winners.isEmpty()) return new Picked(originalUrl, null);
+    return weightedPick(winners);
+  }
 
-    List<Variant> agnostic = enabled.stream().filter(v -> v.countryCode() == null).toList();
-    if (!agnostic.isEmpty()) return weightedPick(agnostic);
-
-    // Every variant is country-tagged but none matches → fall back to control.
-    return new Picked(originalUrl, null);
+  /**
+   * Returns the number of predicates a variant matches against the visitor signals, or {@code null}
+   * if any non-null predicate fails. A variant with no predicates set always matches with
+   * specificity 0 (fully generic).
+   */
+  private static Integer matchSpecificity(
+      Variant v, String country, String os, String deviceClass) {
+    int score = 0;
+    if (v.countryCode() != null) {
+      if (!v.countryCode().equals(country)) return null;
+      score++;
+    }
+    if (v.os() != null) {
+      if (!v.os().equals(os)) return null;
+      score++;
+    }
+    if (v.deviceClass() != null) {
+      if (!v.deviceClass().equals(deviceClass)) return null;
+      score++;
+    }
+    return score;
   }
 
   private Picked weightedPick(List<Variant> pool) {
@@ -88,7 +136,19 @@ public record CachedLink(
     return new Picked(originalUrl, null);
   }
 
-  public record Variant(Long id, String url, int weight, boolean enabled, String countryCode) {}
+  public record Variant(
+      Long id,
+      String url,
+      int weight,
+      boolean enabled,
+      String countryCode,
+      String deviceClass,
+      String os) {
+
+    public Variant(Long id, String url, int weight, boolean enabled, String countryCode) {
+      this(id, url, weight, enabled, countryCode, null, null);
+    }
+  }
 
   public record Picked(String url, Long destinationId) {}
 }
