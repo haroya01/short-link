@@ -140,6 +140,8 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers("/api/v1/links/*/destinations")
                     .authenticated()
+                    .requestMatchers("/api/v1/links/*/blocked-countries")
+                    .authenticated()
                     .requestMatchers("/api/v1/custom-domains/**")
                     .authenticated()
                     .requestMatchers("/api/v1/custom-domains")

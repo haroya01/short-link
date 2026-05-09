@@ -39,12 +39,19 @@ public class LinkLookupService {
         link.getOgTitle(),
         link.getOgDescription(),
         link.getOgImage(),
+        link.getBlockedCountries(),
         variants);
   }
 
   private static CachedLink.Variant toVariant(LinkDestinationEntity d) {
     return new CachedLink.Variant(
-        d.getId(), d.getUrl(), d.getWeight(), d.isEnabled(), d.getCountryCode());
+        d.getId(),
+        d.getUrl(),
+        d.getWeight(),
+        d.isEnabled(),
+        d.getCountryCode(),
+        d.getDeviceClass(),
+        d.getOs());
   }
 
   public String findActiveOriginalUrl(String shortCode) {
