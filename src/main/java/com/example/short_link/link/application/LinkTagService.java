@@ -30,6 +30,7 @@ public class LinkTagService {
   private final LinkRepository linkRepository;
   private final TagRepository tagRepository;
   private final LinkTagRepository linkTagRepository;
+  private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)
   public List<String> tagNamesFor(Long userId, String shortCode) {
@@ -37,7 +38,7 @@ public class LinkTagService {
         linkRepository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!link.isOwnedBy(userId)) throw new LinkNotOwnedException(shortCode);
+    accessGuard.requireView(userId, link);
     List<Long> tagIds =
         linkTagRepository.findAllByLinkId(link.getId()).stream()
             .map(LinkTagEntity::getTagId)
