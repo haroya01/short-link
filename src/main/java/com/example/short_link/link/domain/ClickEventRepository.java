@@ -250,6 +250,61 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   @Query("SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId ORDER BY c.id DESC")
   List<ClickEventEntity> findEventsByLinkIdLatest(@Param("linkId") Long linkId, Pageable pageable);
 
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c "
+          + "WHERE c.linkId IN (SELECT l.id FROM LinkEntity l WHERE l.userId = :userId) "
+          + "AND c.bot = false "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :to")
+  long countHumanByUserIdAndRange(
+      @Param("userId") Long userId, @Param("from") Instant from, @Param("to") Instant to);
+
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c "
+          + "WHERE c.linkId IN (SELECT l.id FROM LinkEntity l WHERE l.userId = :userId) "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :to")
+  long countByUserIdAndRange(
+      @Param("userId") Long userId, @Param("from") Instant from, @Param("to") Instant to);
+
+  @Query(
+      "SELECT c.linkId AS linkId, COUNT(c) AS count FROM ClickEventEntity c "
+          + "WHERE c.linkId IN (SELECT l.id FROM LinkEntity l WHERE l.userId = :userId) "
+          + "AND c.bot = false "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :to "
+          + "GROUP BY c.linkId ORDER BY count DESC")
+  List<LinkClickCount> findTopLinksByUserIdAndRange(
+      @Param("userId") Long userId,
+      @Param("from") Instant from,
+      @Param("to") Instant to,
+      Pageable pageable);
+
+  @Query(
+      "SELECT c.utmSource AS source, COUNT(c) AS count FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.utmSource IS NOT NULL "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :to "
+          + "GROUP BY c.utmSource ORDER BY count DESC")
+  List<UtmSourceClickRow> findTopUtmSourcesByLinkIdAndRange(
+      @Param("linkId") Long linkId,
+      @Param("from") Instant from,
+      @Param("to") Instant to,
+      Pageable pageable);
+
+  @Query(
+      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
+          + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
+          + "COUNT(c) AS count "
+          + "FROM ClickEventEntity c "
+          + "WHERE c.linkId IN (SELECT l.id FROM LinkEntity l WHERE l.userId = :userId) "
+          + "AND c.bot = false "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :to "
+          + "GROUP BY dow, hour ORDER BY count DESC")
+  List<HeatmapRow> findHeatmapByUserIdAndRange(
+      @Param("userId") Long userId,
+      @Param("from") Instant from,
+      @Param("to") Instant to,
+      @Param("tz") String tz,
+      Pageable pageable);
+
   interface ReturnRateRow {
     Long getNewCount();
 
