@@ -8,6 +8,7 @@ import com.example.short_link.user.application.UserPreferencesService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import jakarta.validation.Valid;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -63,8 +64,7 @@ public class UserController {
   @GetMapping("/me/export")
   public ResponseEntity<UserDataExport> exportData(@AuthenticationPrincipal Long userId) {
     UserDataExport data = exportService.export(userId);
-    String filename =
-        "kurl-export-" + userId + "-" + java.time.Instant.now().getEpochSecond() + ".json";
+    String filename = "kurl-export-" + userId + "-" + Instant.now().getEpochSecond() + ".json";
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_JSON)
         .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
