@@ -60,6 +60,18 @@ public class UserEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
+  @Column(name = "stripe_customer_id", length = 64)
+  private String stripeCustomerId;
+
+  @Column(name = "stripe_subscription_id", length = 64)
+  private String stripeSubscriptionId;
+
+  @Column(name = "subscription_status", length = 32)
+  private String subscriptionStatus;
+
+  @Column(name = "subscription_current_period_end")
+  private Instant subscriptionCurrentPeriodEnd;
+
   public UserEntity(String email, String oauthProvider, String oauthId) {
     this.email = email;
     this.oauthProvider = oauthProvider;
@@ -82,6 +94,28 @@ public class UserEntity {
   }
 
   public void downgradeToFree() {
+    this.tier = Tier.FREE;
+  }
+
+  public void linkStripeCustomer(String customerId) {
+    this.stripeCustomerId = customerId;
+  }
+
+  public void applySubscription(String subscriptionId, String status, Instant currentPeriodEnd) {
+    this.stripeSubscriptionId = subscriptionId;
+    this.subscriptionStatus = status;
+    this.subscriptionCurrentPeriodEnd = currentPeriodEnd;
+    if ("active".equals(status) || "trialing".equals(status)) {
+      this.tier = Tier.PRO;
+    } else {
+      this.tier = Tier.FREE;
+    }
+  }
+
+  public void clearSubscription() {
+    this.stripeSubscriptionId = null;
+    this.subscriptionStatus = null;
+    this.subscriptionCurrentPeriodEnd = null;
     this.tier = Tier.FREE;
   }
 
