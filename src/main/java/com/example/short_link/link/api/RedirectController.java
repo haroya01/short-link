@@ -12,6 +12,7 @@ import com.example.short_link.link.application.LinkPreviewRenderer;
 import com.example.short_link.link.application.LinkProtectionService;
 import com.example.short_link.link.application.LinkViewLimitExceededException;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -40,6 +41,7 @@ public class RedirectController {
   private final LinkPreviewCrawlerDetector crawlerDetector;
   private final LinkPreviewRenderer previewRenderer;
   private final LinkRepository linkRepository;
+  private final ClickEventRepository clickEventRepository;
   private final ShortLinkUrlBuilder urlBuilder;
   private final MeterRegistry meterRegistry;
   private final LinkProtectionService protectionService;
@@ -111,7 +113,8 @@ public class RedirectController {
             .header("X-Robots-Tag", "noindex, nofollow")
             .build();
       }
-      String html = previewRenderer.render(entity, urlBuilder.build(shortCode));
+      long clicks = clickEventRepository.countHumanByLinkId(link.linkId());
+      String html = previewRenderer.render(entity, urlBuilder.build(shortCode), clicks);
       byte[] body = html.getBytes(StandardCharsets.UTF_8);
       return ResponseEntity.ok()
           .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))
