@@ -16,7 +16,7 @@ class LinkPreviewRendererTest {
     LinkEntity link = link("https://example.com/article");
     link.applyOgMetadata("Title", "Some description", "https://example.com/img.png", Instant.now());
 
-    String html = renderer.render(link, "https://kurl.me/abcdefg");
+    String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
 
     assertThat(html).contains("<meta property=\"og:title\" content=\"Title\">");
     assertThat(html).contains("<meta property=\"og:description\" content=\"Some description\">");
@@ -30,11 +30,25 @@ class LinkPreviewRendererTest {
   void fallsBackToOriginalUrlAndDefaultDescription() {
     LinkEntity link = link("https://example.com/article");
 
-    String html = renderer.render(link, "https://kurl.me/abcdefg");
+    String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
 
     assertThat(html).contains("https://example.com/article");
     assertThat(html).contains("Shortened with kurl");
-    assertThat(html).contains("twitter:card\" content=\"summary\"");
+    // No destination og:image → we substitute the kurl-generated card so the share preview
+    // still gets a large image, with the click count baked in.
+    assertThat(html).contains("twitter:card\" content=\"summary_large_image\"");
+    assertThat(html).contains("https://kurl.me/abcdefg/og.png?c=0");
+  }
+
+  @Test
+  void usesDestinationImageWhenPresent() {
+    LinkEntity link = link("https://example.com/article");
+    link.applyOgMetadata(null, null, "https://example.com/hero.jpg", Instant.now());
+
+    String html = renderer.render(link, "https://kurl.me/abcdefg", 42L);
+
+    assertThat(html).contains("https://example.com/hero.jpg");
+    assertThat(html).doesNotContain("/og.png");
   }
 
   @Test
@@ -42,7 +56,7 @@ class LinkPreviewRendererTest {
     LinkEntity link = link("https://example.com/?a=1&b=2");
     link.applyOgMetadata("<script>alert(1)</script>", null, null, Instant.now());
 
-    String html = renderer.render(link, "https://kurl.me/abcdefg");
+    String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
 
     assertThat(html).doesNotContain("<script>alert(1)</script>");
     assertThat(html).contains("&lt;script&gt;");
@@ -52,7 +66,7 @@ class LinkPreviewRendererTest {
   @Test
   void includesMetaRefreshFallback() {
     LinkEntity link = link("https://example.com/x");
-    String html = renderer.render(link, "https://kurl.me/abcdefg");
+    String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
     assertThat(html)
         .contains("<meta http-equiv=\"refresh\" content=\"0;url=https://example.com/x\">");
   }
