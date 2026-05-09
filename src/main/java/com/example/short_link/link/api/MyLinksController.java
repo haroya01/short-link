@@ -45,7 +45,8 @@ public class MyLinksController {
                         my.createdAt(),
                         my.expiresAt(),
                         my.clickCount(),
-                        my.tags()))
+                        my.tags(),
+                        my.clicksLast7d()))
             .toList();
     return new MyLinksPage(items, result.total());
   }

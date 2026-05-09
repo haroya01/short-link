@@ -290,6 +290,14 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
       Pageable pageable);
 
   @Query(
+      "SELECT c.linkId AS linkId, FUNCTION('DATE', c.clickedAt) AS day, COUNT(c) AS count "
+          + "FROM ClickEventEntity c "
+          + "WHERE c.linkId IN :ids AND c.bot = false AND c.clickedAt >= :from "
+          + "GROUP BY c.linkId, FUNCTION('DATE', c.clickedAt)")
+  List<DailyClicksByLinkRow> findDailyClicksByLinkIdsSince(
+      @Param("ids") List<Long> ids, @Param("from") Instant from);
+
+  @Query(
       "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
           + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
           + "COUNT(c) AS count "
@@ -324,6 +332,14 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   }
 
   interface DailyClickRow {
+    LocalDate getDay();
+
+    Long getCount();
+  }
+
+  interface DailyClicksByLinkRow {
+    Long getLinkId();
+
     LocalDate getDay();
 
     Long getCount();
