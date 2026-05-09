@@ -84,6 +84,9 @@ public class LinkEntity {
   @Column(name = "og_image_override", length = 1024)
   private String ogImageOverride;
 
+  @Column(name = "profile_order")
+  private Integer profileOrder;
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -138,6 +141,14 @@ public class LinkEntity {
 
   public void changeStatsVisibility(boolean isPublic) {
     this.statsPublic = isPublic;
+  }
+
+  public void setProfileOrder(Integer order) {
+    this.profileOrder = order;
+  }
+
+  public boolean isOnProfile() {
+    return profileOrder != null;
   }
 
   public void setClaimToken(String token) {

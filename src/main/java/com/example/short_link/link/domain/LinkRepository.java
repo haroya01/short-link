@@ -43,6 +43,8 @@ public interface LinkRepository
 
   long countByUserId(Long userId);
 
+  List<LinkEntity> findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(Long userId);
+
   Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);
 
   List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(java.util.Collection<String> claimTokens);
