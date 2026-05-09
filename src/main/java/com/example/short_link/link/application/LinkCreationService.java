@@ -14,6 +14,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class LinkCreationService {
@@ -49,6 +50,7 @@ public class LinkCreationService {
     this.quotaPerUser = quotaPerUser;
   }
 
+  @Transactional
   public LinkCreated create(
       String url, Long userId, String customCode, Instant requestedExpiresAt) {
     if (blockedDomainService.isBlocked(url)) {
