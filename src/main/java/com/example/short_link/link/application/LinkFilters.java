@@ -1,6 +1,8 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkTagEntity;
+import com.example.short_link.link.domain.TagEntity;
 import jakarta.persistence.criteria.Subquery;
 import java.time.Instant;
 import org.springframework.data.jpa.domain.Specification;
@@ -82,8 +84,8 @@ public final class LinkFilters {
     if (tagName == null || tagName.isBlank()) return null;
     return (root, query, cb) -> {
       Subquery<Long> sub = query.subquery(Long.class);
-      var lt = sub.from(com.example.short_link.link.domain.LinkTagEntity.class);
-      var tagJoin = sub.from(com.example.short_link.link.domain.TagEntity.class);
+      var lt = sub.from(LinkTagEntity.class);
+      var tagJoin = sub.from(TagEntity.class);
       sub.select(lt.get("linkId"))
           .where(
               cb.equal(lt.get("tagId"), tagJoin.get("id")),

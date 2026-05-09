@@ -1,5 +1,6 @@
 package com.example.short_link.link.api.sse;
 
+import com.example.short_link.link.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.domain.LinkEntity;
@@ -38,7 +39,7 @@ public class SseClickStreamController {
   private final LinkRepository linkRepository;
   private final SseClickStreamRegistry registry;
   private final MeterRegistry meterRegistry;
-  private final com.example.short_link.link.application.LinkAccessGuard accessGuard;
+  private final LinkAccessGuard accessGuard;
 
   @GetMapping("/{shortCode}/stream")
   public SseEmitter stream(
