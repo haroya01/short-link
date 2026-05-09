@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,8 +22,17 @@ class ClickRecorderTest {
   @Mock private ClickEventRepository repository;
   @Mock private UserAgentClassifier userAgentClassifier;
   @Mock private GeoIpResolver geoIpResolver;
+  @Mock private AsnResolver asnResolver;
   @Mock private BotHeuristic botHeuristic;
+  @Mock private org.springframework.context.ApplicationEventPublisher events;
   @InjectMocks private ClickRecorder recorder;
+
+  @BeforeEach
+  void stubDefaults() {
+    // ASN lookup happens on every record() but tests don't care about its result; stub it lenient
+    // so individual tests don't have to and Mockito's strict mode doesn't complain.
+    lenient().when(asnResolver.resolve(any())).thenReturn(AsnResolver.AsnInfo.empty());
+  }
 
   @Test
   void swallowsRepositoryFailure() {
