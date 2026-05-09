@@ -60,6 +60,12 @@ public class UserEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
+  @Column(unique = true, length = 32)
+  private String username;
+
+  @Column(length = 280)
+  private String bio;
+
   @Column(name = "stripe_customer_id", length = 64)
   private String stripeCustomerId;
 
@@ -125,6 +131,14 @@ public class UserEntity {
 
   public void changeTimezone(String timezone) {
     this.timezone = timezone;
+  }
+
+  public void claimUsername(String username) {
+    this.username = username;
+  }
+
+  public void updateBio(String bio) {
+    this.bio = bio;
   }
 
   public boolean isDeleted() {
