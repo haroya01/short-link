@@ -36,12 +36,16 @@ class UserDeletionServiceTest {
             ClickEventEntity.builder().linkId(link.getId()).bot(false).build());
     refreshTokenStore.save(user.getId(), "jti-1", java.time.Duration.ofMinutes(5));
 
+    // deleteAccount is a soft delete — it just flags the row and revokes refresh tokens.
+    // hardDelete is what the scheduled cleanup eventually runs to actually purge data.
     deletionService.deleteAccount(user.getId());
+    assertThat(userRepository.findById(user.getId())).isPresent();
+    assertThat(refreshTokenStore.exists(user.getId(), "jti-1")).isFalse();
 
+    deletionService.hardDelete(user.getId());
     assertThat(userRepository.findById(user.getId())).isEmpty();
     assertThat(linkRepository.findByShortCode("del0001")).isEmpty();
     assertThat(clickEventRepository.findById(click.getId())).isEmpty();
-    assertThat(refreshTokenStore.exists(user.getId(), "jti-1")).isFalse();
   }
 
   @Test
@@ -51,7 +55,7 @@ class UserDeletionServiceTest {
         linkRepository.save(new LinkEntity("https://example.com/y", "del0002", user.getId(), null));
     LinkEntity anonymous = linkRepository.save(new LinkEntity("https://example.com/z", "anon0001"));
 
-    deletionService.deleteAccount(user.getId());
+    deletionService.hardDelete(user.getId());
 
     assertThat(linkRepository.findByShortCode("del0002")).isEmpty();
     assertThat(linkRepository.findByShortCode("anon0001")).isPresent();
