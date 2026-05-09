@@ -86,6 +86,7 @@ short-link:
     timeout: 2s
   bot-heuristic:
     rate-threshold: ${BOT_HEURISTIC_RATE_THRESHOLD:5}
+  public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:https://kurl.me/u/}
   stripe:
     api-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
