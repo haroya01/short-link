@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -110,7 +111,7 @@ public class LinkDestinationService {
     if (url == null) return false;
     String trimmed = url.trim();
     if (trimmed.isEmpty()) return false;
-    String lower = trimmed.toLowerCase(java.util.Locale.ROOT);
+    String lower = trimmed.toLowerCase(Locale.ROOT);
     return lower.startsWith("http://") || lower.startsWith("https://");
   }
 

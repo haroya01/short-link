@@ -119,7 +119,7 @@ public class RedirectController {
       enforceViewLimit(entity);
     }
     String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
-    com.example.short_link.link.application.CachedLink.Picked picked = link.pick(clientCountry);
+    CachedLink.Picked picked = link.pick(clientCountry);
     clickRecorder.record(
         link.linkId(),
         picked.url(),
@@ -157,7 +157,7 @@ public class RedirectController {
     }
     enforceViewLimit(entity);
     String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
-    com.example.short_link.link.application.CachedLink.Picked picked = link.pick(clientCountry);
+    CachedLink.Picked picked = link.pick(clientCountry);
     clickRecorder.record(
         link.linkId(),
         picked.url(),

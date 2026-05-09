@@ -6,6 +6,7 @@ import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
@@ -125,7 +126,7 @@ public class LinkCreationService {
     throw new ShortCodeGenerationException();
   }
 
-  private static final java.security.SecureRandom CLAIM_RANDOM = new java.security.SecureRandom();
+  private static final SecureRandom CLAIM_RANDOM = new SecureRandom();
 
   private static void attachClaimTokenIfAnonymous(LinkEntity entity, boolean authenticated) {
     if (authenticated) return;

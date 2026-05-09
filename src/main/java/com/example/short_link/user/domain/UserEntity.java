@@ -25,6 +25,11 @@ public class UserEntity {
     ADMIN
   }
 
+  public enum Tier {
+    FREE,
+    PRO
+  }
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -42,6 +47,10 @@ public class UserEntity {
   @Column(nullable = false, length = 16)
   private Role role = Role.USER;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  private Tier tier = Tier.FREE;
+
   @Column(nullable = false, length = 64)
   private String timezone = "Asia/Seoul";
 
@@ -56,11 +65,24 @@ public class UserEntity {
     this.oauthProvider = oauthProvider;
     this.oauthId = oauthId;
     this.role = Role.USER;
+    this.tier = Tier.FREE;
     this.timezone = "Asia/Seoul";
   }
 
   public boolean isAdmin() {
     return role == Role.ADMIN;
+  }
+
+  public boolean isPro() {
+    return tier == Tier.PRO;
+  }
+
+  public void upgradeToPro() {
+    this.tier = Tier.PRO;
+  }
+
+  public void downgradeToFree() {
+    this.tier = Tier.FREE;
   }
 
   public void promoteToAdmin() {
