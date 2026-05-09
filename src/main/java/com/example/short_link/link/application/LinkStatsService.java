@@ -1,9 +1,12 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.ClickEventRepository;
+import com.example.short_link.link.domain.LinkDestinationEntity;
+import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserRepository;
+import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.Duration;
 import java.time.Instant;
@@ -33,7 +36,7 @@ public class LinkStatsService {
   private final UserRepository userRepository;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkInsights insightsCalculator;
-  private final com.example.short_link.link.domain.LinkDestinationRepository destinationRepository;
+  private final LinkDestinationRepository destinationRepository;
   private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)
@@ -261,8 +264,7 @@ public class LinkStatsService {
   private List<LinkStats.DestinationClick> computeDestinationClicks(LinkEntity link) {
     var rows = clickRepository.findDestinationClicks(link.getId());
     if (rows.isEmpty()) return List.of();
-    var byId =
-        new java.util.HashMap<Long, com.example.short_link.link.domain.LinkDestinationEntity>();
+    var byId = new HashMap<Long, LinkDestinationEntity>();
     destinationRepository
         .findAllByLinkIdOrderByIdAsc(link.getId())
         .forEach(d -> byId.put(d.getId(), d));
@@ -348,7 +350,7 @@ public class LinkStatsService {
     if (tz == null || tz.isBlank()) return DEFAULT_ZONE;
     try {
       return ZoneId.of(tz);
-    } catch (java.time.DateTimeException e) {
+    } catch (DateTimeException e) {
       return DEFAULT_ZONE;
     }
   }

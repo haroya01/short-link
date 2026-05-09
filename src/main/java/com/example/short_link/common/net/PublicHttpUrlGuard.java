@@ -3,6 +3,7 @@ package com.example.short_link.common.net;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.UnknownHostException;
+import java.util.Locale;
 
 /**
  * Shared SSRF / private-IP guard. Used anywhere we make outbound HTTP from user-supplied URLs — OG
@@ -23,7 +24,7 @@ public final class PublicHttpUrlGuard {
     }
     String scheme = uri.getScheme();
     if (scheme == null) return false;
-    String s = scheme.toLowerCase(java.util.Locale.ROOT);
+    String s = scheme.toLowerCase(Locale.ROOT);
     if (!s.equals("http") && !s.equals("https")) return false;
     String host = uri.getHost();
     if (host == null || host.isBlank()) return false;

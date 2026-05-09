@@ -1,6 +1,9 @@
 package com.example.short_link.user.application.twofactor;
 
+import java.io.ByteArrayOutputStream;
+import java.net.URLEncoder;
 import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -81,7 +84,7 @@ public final class TotpCodec {
   }
 
   private static String encode(String s) {
-    return java.net.URLEncoder.encode(s, java.nio.charset.StandardCharsets.UTF_8);
+    return URLEncoder.encode(s, StandardCharsets.UTF_8);
   }
 
   private static String base32Encode(byte[] data) {
@@ -101,7 +104,7 @@ public final class TotpCodec {
 
   private static byte[] base32Decode(String s) {
     String clean = s.replace("=", "").replace(" ", "").toUpperCase();
-    java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+    ByteArrayOutputStream out = new ByteArrayOutputStream();
     int buffer = 0, bits = 0;
     for (char c : clean.toCharArray()) {
       int value;

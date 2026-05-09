@@ -6,6 +6,7 @@ import com.example.short_link.link.domain.LinkTagEntity;
 import com.example.short_link.link.domain.LinkTagRepository;
 import com.example.short_link.link.domain.TagEntity;
 import com.example.short_link.link.domain.TagRepository;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -60,8 +61,7 @@ public class LinkTagService {
     }
     Map<Long, List<String>> out = new HashMap<>();
     for (LinkTagEntity j : joins) {
-      out.computeIfAbsent(j.getLinkId(), k -> new java.util.ArrayList<>())
-          .add(tagNames.get(j.getTagId()));
+      out.computeIfAbsent(j.getLinkId(), k -> new ArrayList<>()).add(tagNames.get(j.getTagId()));
     }
     out.values().forEach(java.util.Collections::sort);
     return out;
@@ -102,7 +102,7 @@ public class LinkTagService {
   private List<String> normalize(List<String> raw) {
     if (raw == null) return List.of();
     Set<String> seen = new HashSet<>();
-    List<String> out = new java.util.ArrayList<>();
+    List<String> out = new ArrayList<>();
     for (String n : raw) {
       if (n == null) continue;
       String trimmed = n.trim();
