@@ -3,7 +3,12 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +45,7 @@ public class MyLinksService {
         .countsByLinkIds(ids)
         .forEach(row -> counts.put(row.getLinkId(), row.getCount()));
     Map<Long, List<String>> tagsByLinkId = linkTagService.tagNamesByLinkIds(ids);
+    Map<Long, List<Long>> sparkByLinkId = sparklineByLinkIds(ids);
     List<MyLink> items =
         links.stream()
             .map(
@@ -50,9 +56,40 @@ public class MyLinksService {
                         link.getCreatedAt(),
                         link.getExpiresAt(),
                         counts.getOrDefault(link.getId(), 0L),
-                        tagsByLinkId.getOrDefault(link.getId(), List.of())))
+                        tagsByLinkId.getOrDefault(link.getId(), List.of()),
+                        sparkByLinkId.getOrDefault(link.getId(), zeroes())))
             .toList();
     return new MyLinksResult(items, page.getTotalElements());
+  }
+
+  /**
+   * Per-link daily click counts for the last 7 days, ordered oldest → newest. Buckets are UTC dates
+   * — the sparkline only needs to convey trend shape, so a fixed offset is fine and avoids paying
+   * the user-timezone resolution cost on every list-links call.
+   */
+  private Map<Long, List<Long>> sparklineByLinkIds(List<Long> ids) {
+    Instant from = Instant.now().minus(Duration.ofDays(7));
+    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+    Map<Long, long[]> byLink = new HashMap<>();
+    for (var row : clickRepository.findDailyClicksByLinkIdsSince(ids, from)) {
+      long offset = ChronoUnit.DAYS.between(row.getDay(), today);
+      if (offset < 0 || offset >= 7) continue;
+      long[] bucket = byLink.computeIfAbsent(row.getLinkId(), k -> new long[7]);
+      bucket[6 - (int) offset] = row.getCount();
+    }
+    Map<Long, List<Long>> out = new HashMap<>();
+    byLink.forEach((linkId, arr) -> out.put(linkId, toList(arr)));
+    return out;
+  }
+
+  private static List<Long> toList(long[] arr) {
+    List<Long> list = new ArrayList<>(arr.length);
+    for (long v : arr) list.add(v);
+    return list;
+  }
+
+  private static List<Long> zeroes() {
+    return List.of(0L, 0L, 0L, 0L, 0L, 0L, 0L);
   }
 
   private Specification<LinkEntity> buildSpec(Long userId, MyLinksQuery query) {

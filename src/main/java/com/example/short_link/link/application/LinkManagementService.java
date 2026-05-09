@@ -52,7 +52,8 @@ public class LinkManagementService {
         link.getCreatedAt(),
         link.getExpiresAt(),
         0L,
-        java.util.List.of());
+        java.util.List.of(),
+        java.util.List.of(0L, 0L, 0L, 0L, 0L, 0L, 0L));
   }
 
   @Transactional

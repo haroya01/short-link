@@ -10,4 +10,5 @@ public record MyLinkResponse(
     Instant createdAt,
     Instant expiresAt,
     long clickCount,
-    List<String> tags) {}
+    List<String> tags,
+    List<Long> clicksLast7d) {}
