@@ -4,6 +4,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkTagEntity;
 import com.example.short_link.link.domain.TagEntity;
 import jakarta.persistence.criteria.Subquery;
+import java.time.Duration;
 import java.time.Instant;
 import org.springframework.data.jpa.domain.Specification;
 
@@ -24,8 +25,17 @@ public final class LinkFilters {
     NEVER,
     ACTIVE,
     EXPIRED,
-    HAS_EXPIRY
+    HAS_EXPIRY,
+    /**
+     * Links whose expiresAt falls in [now, now + EXPIRING_SOON_WINDOW). Drives the "이거 곧 만료" 배너.
+     */
+    EXPIRING_SOON
   }
+
+  /**
+   * How far ahead "expiring soon" looks. Tuned so the dashboard banner gives ~3 days of warning.
+   */
+  public static final Duration EXPIRING_SOON_WINDOW = Duration.ofDays(3);
 
   private LinkFilters() {}
 
@@ -62,6 +72,12 @@ public final class LinkFilters {
               cb.or(
                   cb.isNull(root.get("expiresAt")),
                   cb.greaterThanOrEqualTo(root.get("expiresAt"), now));
+      case EXPIRING_SOON ->
+          (root, q, cb) ->
+              cb.and(
+                  cb.isNotNull(root.get("expiresAt")),
+                  cb.greaterThanOrEqualTo(root.get("expiresAt"), now),
+                  cb.lessThan(root.get("expiresAt"), now.plus(EXPIRING_SOON_WINDOW)));
       case ALL -> null;
     };
   }

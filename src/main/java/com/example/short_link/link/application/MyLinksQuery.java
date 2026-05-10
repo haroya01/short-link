@@ -56,7 +56,7 @@ public record MyLinksQuery(
       return ExpiryFilter.valueOf(normalized.toUpperCase());
     } catch (IllegalArgumentException e) {
       throw new IllegalArgumentException(
-          "expiry must be one of: NEVER / ACTIVE / EXPIRED / HAS_EXPIRY");
+          "expiry must be one of: NEVER / ACTIVE / EXPIRED / HAS_EXPIRY / EXPIRING_SOON");
     }
   }
 
