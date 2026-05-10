@@ -87,6 +87,10 @@ public class LinkEntity {
   @Column(name = "profile_order")
   private Integer profileOrder;
 
+  /** Marks the one "hero" featured link rendered as a big card on the public profile. */
+  @Column(name = "profile_highlighted", nullable = false)
+  private boolean profileHighlighted = false;
+
   /**
    * Comma-separated ISO-3166 alpha-2 country codes blocked from this link. A clicker resolved to
    * any listed country gets a "blocked" page instead of the redirect. Null/blank = no blocklist.
@@ -167,6 +171,10 @@ public class LinkEntity {
 
   public boolean isOnProfile() {
     return profileOrder != null;
+  }
+
+  public void setProfileHighlighted(boolean highlighted) {
+    this.profileHighlighted = highlighted;
   }
 
   public void updateNote(String note) {
