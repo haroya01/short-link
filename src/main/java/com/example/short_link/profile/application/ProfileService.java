@@ -141,7 +141,9 @@ public class ProfileService {
                         l.getShortCode(),
                         publicLinkUrl(l.getShortCode()),
                         l.getOriginalUrl(),
-                        l.getOgTitle(),
+                        // Prefer the user-set override so labels typed in the profile editor
+                        // ("📝 블로그") win over the scraped OG title.
+                        l.getEffectiveOgTitle(),
                         counts.getOrDefault(l.getId(), 0L)))
             .toList();
     return new PublicProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), out);
