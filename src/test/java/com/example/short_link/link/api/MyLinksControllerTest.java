@@ -39,7 +39,8 @@ class MyLinksControllerTest {
 
     mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.hasMore").value(false))
+        .andExpect(jsonPath("$.nextCursor").doesNotExist())
         .andExpect(jsonPath("$.items.length()").value(1))
         .andExpect(jsonPath("$.items[0].shortCode").value("mine001"))
         .andExpect(jsonPath("$.items[0].originalUrl").value("https://example.com/mine"))
@@ -55,23 +56,45 @@ class MyLinksControllerTest {
     }
     String token = jwt.createAccessToken(owner.getId());
 
-    mvc.perform(
-            get("/api/v1/links/me")
-                .header("Authorization", "Bearer " + token)
-                .param("page", "1")
-                .param("size", "10"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.total").value(25))
-        .andExpect(jsonPath("$.items.length()").value(10));
+    String firstResponse =
+        mvc.perform(
+                get("/api/v1/links/me")
+                    .header("Authorization", "Bearer " + token)
+                    .param("size", "10"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(10))
+            .andExpect(jsonPath("$.hasMore").value(true))
+            .andExpect(jsonPath("$.nextCursor").exists())
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String firstCursor =
+        com.jayway.jsonpath.JsonPath.read(firstResponse, "$.nextCursor").toString();
+
+    String secondResponse =
+        mvc.perform(
+                get("/api/v1/links/me")
+                    .header("Authorization", "Bearer " + token)
+                    .param("size", "10")
+                    .param("after", firstCursor))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(10))
+            .andExpect(jsonPath("$.hasMore").value(true))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String secondCursor =
+        com.jayway.jsonpath.JsonPath.read(secondResponse, "$.nextCursor").toString();
 
     mvc.perform(
             get("/api/v1/links/me")
                 .header("Authorization", "Bearer " + token)
-                .param("page", "3")
-                .param("size", "10"))
+                .param("size", "10")
+                .param("after", secondCursor))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.total").value(25))
-        .andExpect(jsonPath("$.items.length()").value(5));
+        .andExpect(jsonPath("$.items.length()").value(5))
+        .andExpect(jsonPath("$.hasMore").value(false))
+        .andExpect(jsonPath("$.nextCursor").doesNotExist());
   }
 
   @Test
@@ -90,12 +113,12 @@ class MyLinksControllerTest {
                 .header("Authorization", "Bearer " + token)
                 .param("q", "marketing"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.total").value(2));
+        .andExpect(jsonPath("$.items.length()").value(2));
 
     mvc.perform(
             get("/api/v1/links/me").header("Authorization", "Bearer " + token).param("q", "BLOG"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.total").value(1))
+        .andExpect(jsonPath("$.items.length()").value(1))
         .andExpect(jsonPath("$.items[0].shortCode").value("BLOG002"));
   }
 
