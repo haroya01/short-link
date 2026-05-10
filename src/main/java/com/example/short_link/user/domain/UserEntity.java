@@ -80,6 +80,14 @@ public class UserEntity {
   @Column(name = "avatar_key", length = 256)
   private String avatarKey;
 
+  /** Public CDN/S3 URL of the profile banner / hero image, or null if not uploaded. */
+  @Column(name = "banner_url", length = 512)
+  private String bannerUrl;
+
+  /** S3 object key under {@code banners/{userId}/...} — see {@link #avatarKey} note. */
+  @Column(name = "banner_key", length = 256)
+  private String bannerKey;
+
   @Column(name = "stripe_customer_id", length = 64)
   private String stripeCustomerId;
 
@@ -158,6 +166,11 @@ public class UserEntity {
   public void updateAvatar(String url, String key) {
     this.avatarUrl = url;
     this.avatarKey = key;
+  }
+
+  public void updateBanner(String url, String key) {
+    this.bannerUrl = url;
+    this.bannerKey = key;
   }
 
   public void updateProfileTheme(String theme) {
