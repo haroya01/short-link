@@ -94,6 +94,17 @@ public class LinkEntity {
   @Column(name = "blocked_countries", length = 255)
   private String blockedCountries;
 
+  /** Owner-only memo (campaign context, why the link was made). Never shown to visitors. */
+  @Column(length = 280)
+  private String note;
+
+  /**
+   * Optional message rendered on the expired / view-limit page in place of the generic copy. Lets a
+   * brand owner say "Sale ended — see the next drop at example.com" instead of a flat "expired".
+   */
+  @Column(name = "expired_message", length = 500)
+  private String expiredMessage;
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -156,6 +167,26 @@ public class LinkEntity {
 
   public boolean isOnProfile() {
     return profileOrder != null;
+  }
+
+  public void updateNote(String note) {
+    if (note == null) {
+      this.note = null;
+      return;
+    }
+    String trimmed = note.trim();
+    this.note =
+        trimmed.isEmpty() ? null : trimmed.length() > 280 ? trimmed.substring(0, 280) : trimmed;
+  }
+
+  public void updateExpiredMessage(String message) {
+    if (message == null) {
+      this.expiredMessage = null;
+      return;
+    }
+    String trimmed = message.trim();
+    this.expiredMessage =
+        trimmed.isEmpty() ? null : trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
   }
 
   public void setBlockedCountries(String csv) {
