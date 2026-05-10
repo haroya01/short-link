@@ -70,9 +70,9 @@ public class AdminAnalyticsService {
   public AdminActiveUsers activeUsers(String period) {
     String p = period == null ? "day" : period.toLowerCase();
     return switch (p) {
-      case "day" -> dailyActive();
-      case "week" -> weeklyActive();
-      case "month" -> monthlyActive();
+      case "day", "dau" -> dailyActive();
+      case "week", "wau" -> weeklyActive();
+      case "month", "mau" -> monthlyActive();
       default -> throw new InvalidActivePeriodException(period);
     };
   }
