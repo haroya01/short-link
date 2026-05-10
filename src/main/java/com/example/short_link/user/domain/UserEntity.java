@@ -66,6 +66,9 @@ public class UserEntity {
   @Column(length = 280)
   private String bio;
 
+  @Column(name = "profile_theme", length = 16)
+  private String profileTheme;
+
   @Column(name = "stripe_customer_id", length = 64)
   private String stripeCustomerId;
 
@@ -139,6 +142,18 @@ public class UserEntity {
 
   public void updateBio(String bio) {
     this.bio = bio;
+  }
+
+  public void updateProfileTheme(String theme) {
+    if (theme == null || theme.isBlank()) {
+      this.profileTheme = null;
+      return;
+    }
+    String v = theme.trim().toLowerCase();
+    switch (v) {
+      case "light", "dark", "accent" -> this.profileTheme = v;
+      default -> throw new IllegalArgumentException("theme must be light/dark/accent");
+    }
   }
 
   public boolean isDeleted() {

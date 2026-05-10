@@ -37,5 +37,7 @@ public class LinkDetailController {
       Integer maxViews,
       int viewCount,
       boolean statsPublic,
-      List<String> tags) {}
+      List<String> tags,
+      String note,
+      String expiredMessage) {}
 }

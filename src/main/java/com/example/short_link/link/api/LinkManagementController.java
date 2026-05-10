@@ -28,7 +28,14 @@ public class LinkManagementController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @Valid @RequestBody UpdateLinkRequest request) {
-    MyLink updated = service.update(userId, shortCode, request.originalUrl(), request.expiresAt());
+    MyLink updated =
+        service.update(
+            userId,
+            shortCode,
+            request.originalUrl(),
+            request.expiresAt(),
+            request.note(),
+            request.expiredMessage());
     return new MyLinkResponse(
         updated.shortCode(),
         urlBuilder.build(updated.shortCode()),

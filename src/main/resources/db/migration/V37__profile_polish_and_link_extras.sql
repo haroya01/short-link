@@ -1,0 +1,6 @@
+ALTER TABLE users
+  ADD COLUMN profile_theme VARCHAR(16) NULL;
+
+ALTER TABLE link
+  ADD COLUMN note VARCHAR(280) NULL,
+  ADD COLUMN expired_message VARCHAR(500) NULL;
