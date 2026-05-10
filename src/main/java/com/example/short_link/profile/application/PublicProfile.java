@@ -2,7 +2,8 @@ package com.example.short_link.profile.application;
 
 import java.util.List;
 
-public record PublicProfile(String username, String bio, String theme, List<ProfileEntry> entries) {
+public record PublicProfile(
+    String username, String bio, String theme, String avatarUrl, List<ProfileEntry> entries) {
 
   /**
    * Single shape for the rendered public profile feed. The {@code kind} discriminator drives
