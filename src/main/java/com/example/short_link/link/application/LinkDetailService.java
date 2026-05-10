@@ -36,6 +36,8 @@ public class LinkDetailService {
         link.getMaxViews(),
         link.getViewCount(),
         link.isStatsPublic(),
-        linkTagService.tagNamesFor(userId, shortCode));
+        linkTagService.tagNamesFor(userId, shortCode),
+        link.getNote(),
+        link.getExpiredMessage());
   }
 }

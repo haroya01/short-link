@@ -87,7 +87,16 @@ public class RedirectController {
       String userAgent,
       String acceptLanguage,
       HttpServletRequest req) {
-    CachedLink link = lookup.findActiveLink(shortCode);
+    CachedLink link;
+    try {
+      link = lookup.findActiveLink(shortCode);
+    } catch (LinkExpiredException e) {
+      LinkEntity expired = linkRepository.findByShortCode(shortCode).orElse(null);
+      if (expired != null && expired.getExpiredMessage() != null) {
+        return htmlResponse(HttpStatus.GONE, expiredPage(expired.getExpiredMessage()));
+      }
+      throw e;
+    }
     // If the request came in on a custom domain (e.g. go.brand.com), make sure the link belongs
     // to that domain's owner — otherwise we'd be exposing every kurl.me short code on every
     // customer's domain. Default Host (kurl.me, www.kurl.me) skips the check.
@@ -131,7 +140,14 @@ public class RedirectController {
       return htmlResponse(HttpStatus.OK, passwordPrompt(shortCode, false));
     }
     if (entity != null) {
-      enforceViewLimit(entity);
+      try {
+        enforceViewLimit(entity);
+      } catch (LinkViewLimitExceededException e) {
+        if (entity.getExpiredMessage() != null) {
+          return htmlResponse(HttpStatus.GONE, expiredPage(entity.getExpiredMessage()));
+        }
+        throw e;
+      }
     }
     String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
     if (link.isBlockedFor(clientCountry)) {
@@ -209,6 +225,28 @@ public class RedirectController {
     if (lower.contains("windows")) return "windows";
     if (lower.contains("linux")) return "linux";
     return null;
+  }
+
+  private static String expiredPage(String message) {
+    StringBuilder out = new StringBuilder(message.length() + 16);
+    for (int i = 0; i < message.length(); i++) {
+      char c = message.charAt(i);
+      switch (c) {
+        case '&' -> out.append("&amp;");
+        case '<' -> out.append("&lt;");
+        case '>' -> out.append("&gt;");
+        case '"' -> out.append("&quot;");
+        case '\'' -> out.append("&#39;");
+        default -> out.append(c);
+      }
+    }
+    return "<!doctype html><html><head><meta charset=\"utf-8\">"
+        + "<title>Link no longer available</title></head>"
+        + "<body style=\"font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#f8fafc;color:#475569\">"
+        + "<div style=\"text-align:center;max-width:480px;padding:40px;line-height:1.6\">"
+        + "<p style=\"font-size:14px;margin:0;color:#0f172a;white-space:pre-wrap\">"
+        + out
+        + "</p></div></body></html>";
   }
 
   private static String blockedPage() {

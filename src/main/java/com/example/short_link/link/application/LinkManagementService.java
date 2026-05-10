@@ -27,7 +27,13 @@ public class LinkManagementService {
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
-  public MyLink update(Long userId, String shortCode, String originalUrl, Instant expiresAt) {
+  public MyLink update(
+      Long userId,
+      String shortCode,
+      String originalUrl,
+      Instant expiresAt,
+      String note,
+      String expiredMessage) {
     LinkEntity link = findOwned(userId, shortCode);
     boolean urlChanged = false;
     if (originalUrl != null && !originalUrl.equals(link.getOriginalUrl())) {
@@ -37,6 +43,8 @@ public class LinkManagementService {
     if (expiresAt != null) {
       link.changeExpiresAt(expiresAt);
     }
+    if (note != null) link.updateNote(note);
+    if (expiredMessage != null) link.updateExpiredMessage(expiredMessage);
     if (urlChanged) {
       events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));
     }
