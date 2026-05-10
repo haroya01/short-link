@@ -1,0 +1,1 @@
+ALTER TABLE profile_block MODIFY COLUMN content VARCHAR(2048) NULL;
