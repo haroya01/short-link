@@ -317,7 +317,12 @@ public class ProfileService {
       }
     }
     return new PublicProfile(
-        user.getUsername(), user.getBio(), user.getProfileTheme(), user.getAvatarUrl(), out);
+        user.getUsername(),
+        user.getBio(),
+        user.getProfileTheme(),
+        user.getAvatarUrl(),
+        user.getBannerUrl(),
+        out);
   }
 
   /**
@@ -336,7 +341,12 @@ public class ProfileService {
     String publicUrl =
         user.getUsername() == null ? null : publicProfileBaseUrl + user.getUsername();
     return new MyProfile(
-        user.getUsername(), user.getBio(), user.getProfileTheme(), publicUrl, user.getAvatarUrl());
+        user.getUsername(),
+        user.getBio(),
+        user.getProfileTheme(),
+        publicUrl,
+        user.getAvatarUrl(),
+        user.getBannerUrl());
   }
 
   private int nextProfileOrder(Long userId) {
