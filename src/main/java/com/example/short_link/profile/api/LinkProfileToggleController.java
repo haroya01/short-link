@@ -25,7 +25,20 @@ public class LinkProfileToggleController {
     return new ToggleResponse(request.show());
   }
 
+  @PutMapping("/highlight")
+  public HighlightResponse setHighlight(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable String shortCode,
+      @RequestBody HighlightRequest request) {
+    service.setLinkHighlight(userId, shortCode, request.highlighted());
+    return new HighlightResponse(request.highlighted());
+  }
+
   public record ToggleRequest(boolean show) {}
 
   public record ToggleResponse(boolean show) {}
+
+  public record HighlightRequest(boolean highlighted) {}
+
+  public record HighlightResponse(boolean highlighted) {}
 }

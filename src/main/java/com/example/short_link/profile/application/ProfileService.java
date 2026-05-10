@@ -97,6 +97,28 @@ public class ProfileService {
     }
   }
 
+  /**
+   * Mark exactly one of the user's featured links as the "hero". Setting it on a new link
+   * automatically clears any previous highlight — there's only ever one big card.
+   */
+  @Transactional
+  @CacheEvict(value = "public-profile", allEntries = true)
+  public void setLinkHighlight(Long userId, String shortCode, boolean highlighted) {
+    LinkEntity link =
+        linkRepository
+            .findByShortCode(shortCode)
+            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+    if (!link.isOwnedBy(userId)) throw new LinkNotFoundException(shortCode);
+    if (highlighted) {
+      for (LinkEntity other : linkRepository.findAllByUserIdAndProfileHighlightedIsTrue(userId)) {
+        if (!other.getId().equals(link.getId())) other.setProfileHighlighted(false);
+      }
+      link.setProfileHighlighted(true);
+    } else {
+      link.setProfileHighlighted(false);
+    }
+  }
+
   @Transactional
   @CacheEvict(value = "public-profile", allEntries = true)
   public void toggleLinkOnProfile(Long userId, String shortCode, boolean show) {
@@ -144,7 +166,9 @@ public class ProfileService {
                         // Prefer the user-set override so labels typed in the profile editor
                         // ("📝 블로그") win over the scraped OG title.
                         l.getEffectiveOgTitle(),
-                        counts.getOrDefault(l.getId(), 0L)))
+                        l.getEffectiveOgImage(),
+                        counts.getOrDefault(l.getId(), 0L),
+                        l.isProfileHighlighted()))
             .toList();
     return new PublicProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), out);
   }

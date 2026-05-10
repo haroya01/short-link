@@ -45,6 +45,8 @@ public interface LinkRepository
 
   List<LinkEntity> findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(Long userId);
 
+  List<LinkEntity> findAllByUserIdAndProfileHighlightedIsTrue(Long userId);
+
   Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);
 
   List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(java.util.Collection<String> claimTokens);
