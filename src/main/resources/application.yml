@@ -92,7 +92,9 @@ short-link:
     timeout: 2s
   bot-heuristic:
     rate-threshold: ${BOT_HEURISTIC_RATE_THRESHOLD:5}
-  public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:https://kurl.me/u/}
+  # Derived from the frontend base by default — public profile pages live on the SPA host
+  # (app.kurl.me), not the redirect host (kurl.me).
+  public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}
   stripe:
     api-key: ${STRIPE_SECRET_KEY:}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:}

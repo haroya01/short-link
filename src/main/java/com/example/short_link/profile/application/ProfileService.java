@@ -43,8 +43,9 @@ public class ProfileService {
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final MeterRegistry meterRegistry;
+  private final com.example.short_link.link.application.ShortLinkUrlBuilder urlBuilder;
 
-  @Value("${short-link.public-profile-base-url:https://kurl.me/u/}")
+  @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
   private String publicProfileBaseUrl;
 
   @Transactional(readOnly = true)
@@ -296,7 +297,7 @@ public class ProfileService {
         out.add(
             PublicProfile.ProfileEntry.link(
                 l.getShortCode(),
-                publicLinkUrl(l.getShortCode()),
+                urlBuilder.build(l.getShortCode()),
                 l.getOriginalUrl(),
                 // Prefer the user-set override so labels typed in the profile editor
                 // ("📝 블로그") win over the scraped OG title.
@@ -350,14 +351,5 @@ public class ProfileService {
     if (!USERNAME.matcher(username).matches()) {
       throw new InvalidUsernameException("invalid format");
     }
-  }
-
-  private String publicLinkUrl(String shortCode) {
-    // The actual short URL host is the redirect base, not the profile base. We surface it as part
-    // of the profile so the front can render copy/QR buttons without a second round-trip — the
-    // URL builder isn't injectable here without a circular dep, so we strip /u/ and reuse host.
-    String base = publicProfileBaseUrl.replaceAll("/u/?$", "/");
-    if (!base.endsWith("/")) base = base + "/";
-    return base + shortCode;
   }
 }
