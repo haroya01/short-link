@@ -46,7 +46,8 @@ public class UserController {
                     u.getTimezone(),
                     u.getCreatedAt(),
                     u.getTier().name(),
-                    u.getSubscriptionCurrentPeriodEnd()))
+                    u.getSubscriptionCurrentPeriodEnd(),
+                    u.getUsername()))
         .orElseThrow(UserNotFoundException::new);
   }
 
@@ -62,7 +63,8 @@ public class UserController {
         user.getTimezone(),
         user.getCreatedAt(),
         user.getTier().name(),
-        user.getSubscriptionCurrentPeriodEnd());
+        user.getSubscriptionCurrentPeriodEnd(),
+        user.getUsername());
   }
 
   @GetMapping("/me/export")
