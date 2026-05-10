@@ -5,10 +5,14 @@ import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.profile.domain.UsernameHistoryEntity;
+import com.example.short_link.profile.domain.UsernameHistoryRepository;
 import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,9 +30,13 @@ public class ProfileService {
 
   private static final Pattern USERNAME = Pattern.compile("^[a-z0-9][a-z0-9_]{2,15}$");
 
+  /** Squat-protect old usernames for this long after a rename. */
+  private static final Duration USERNAME_GRACE = Duration.ofDays(30);
+
   private final UserRepository userRepository;
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
+  private final UsernameHistoryRepository usernameHistoryRepository;
   private final MeterRegistry meterRegistry;
 
   @Value("${short-link.public-profile-base-url:https://kurl.me/u/}")
@@ -58,6 +66,21 @@ public class ProfileService {
                 other -> {
                   throw new UsernameTakenException(normalized);
                 });
+        // Squat protection: another user can't reclaim a handle that's still in someone else's
+        // grace window. Owner reclaiming their own previous handle is allowed (caller is same).
+        usernameHistoryRepository
+            .findFirstByOldUsernameAndExpiresAtAfter(normalized, Instant.now())
+            .filter(history -> !history.getUserId().equals(userId))
+            .ifPresent(
+                history -> {
+                  throw new UsernameTakenException(normalized);
+                });
+        // If the user already had a handle, park it in history so old SNS bio links survive 30d.
+        String previous = user.getUsername();
+        if (previous != null && !previous.isBlank()) {
+          usernameHistoryRepository.save(
+              new UsernameHistoryEntity(userId, previous, Instant.now().plus(USERNAME_GRACE)));
+        }
         user.claimUsername(normalized);
       }
     }
@@ -145,6 +168,7 @@ public class ProfileService {
         userRepository
             .findByUsername(normalized)
             .filter(u -> !u.isDeleted())
+            .or(() -> resolveByHistory(normalized))
             .orElseThrow(() -> new ProfileNotFoundException(normalized));
     List<LinkEntity> links =
         linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(user.getId());
@@ -171,6 +195,18 @@ public class ProfileService {
                         l.isProfileHighlighted()))
             .toList();
     return new PublicProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), out);
+  }
+
+  /**
+   * Used as a fallback when {@link #findByUsername} doesn't match a current user — resolves an old
+   * (renamed-from) handle to the user that gave it up, as long as the grace period hasn't expired.
+   * Frontend then sees {@code profile.username != requested} and can 308-redirect.
+   */
+  private java.util.Optional<UserEntity> resolveByHistory(String oldUsername) {
+    return usernameHistoryRepository
+        .findFirstByOldUsernameAndExpiresAtAfter(oldUsername, Instant.now())
+        .flatMap(history -> userRepository.findById(history.getUserId()))
+        .filter(u -> !u.isDeleted());
   }
 
   private MyProfile toMyProfile(UserEntity user) {
