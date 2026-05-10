@@ -18,6 +18,9 @@ import com.example.short_link.link.application.ShortCodeGenerationException;
 import com.example.short_link.link.application.TagNotFoundException;
 import com.example.short_link.link.application.TooManyWebhooksException;
 import com.example.short_link.link.application.WebhookNotFoundException;
+import com.example.short_link.profile.application.InvalidUsernameException;
+import com.example.short_link.profile.application.ProfileNotFoundException;
+import com.example.short_link.profile.application.UsernameTakenException;
 import com.example.short_link.user.application.InvalidRefreshTokenException;
 import com.example.short_link.user.application.InvalidTimezoneException;
 import com.example.short_link.user.application.UserNotFoundException;
@@ -202,6 +205,21 @@ public class GlobalExceptionHandler {
         "short code generation exhausted",
         "SHORT_CODE_EXHAUSTED",
         req);
+  }
+
+  @ExceptionHandler(InvalidUsernameException.class)
+  public ProblemDetail handleInvalidUsername(InvalidUsernameException e, HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_USERNAME", req);
+  }
+
+  @ExceptionHandler(UsernameTakenException.class)
+  public ProblemDetail handleUsernameTaken(UsernameTakenException e, HttpServletRequest req) {
+    return problem(HttpStatus.CONFLICT, e.getMessage(), "USERNAME_TAKEN", req);
+  }
+
+  @ExceptionHandler(ProfileNotFoundException.class)
+  public ProblemDetail handleProfileNotFound(ProfileNotFoundException e, HttpServletRequest req) {
+    return problem(HttpStatus.NOT_FOUND, e.getMessage(), "PROFILE_NOT_FOUND", req);
   }
 
   @ExceptionHandler(Exception.class)
