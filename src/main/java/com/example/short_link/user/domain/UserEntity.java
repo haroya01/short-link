@@ -69,6 +69,17 @@ public class UserEntity {
   @Column(name = "profile_theme", length = 16)
   private String profileTheme;
 
+  /** Public CDN/S3 URL of the avatar image, or null if user hasn't uploaded one. */
+  @Column(name = "avatar_url", length = 512)
+  private String avatarUrl;
+
+  /**
+   * S3 object key (e.g. avatars/{userId}/{uuid}.jpg). Kept so we can DELETE the old object on
+   * re-upload — the URL alone isn't enough to derive the key when CDN domains differ from raw S3.
+   */
+  @Column(name = "avatar_key", length = 256)
+  private String avatarKey;
+
   @Column(name = "stripe_customer_id", length = 64)
   private String stripeCustomerId;
 
@@ -142,6 +153,11 @@ public class UserEntity {
 
   public void updateBio(String bio) {
     this.bio = bio;
+  }
+
+  public void updateAvatar(String url, String key) {
+    this.avatarUrl = url;
+    this.avatarKey = key;
   }
 
   public void updateProfileTheme(String theme) {

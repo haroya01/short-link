@@ -34,6 +34,12 @@ management:
         redirect.latency: 0.5, 0.95, 0.99
 
 short-link:
+  avatar:
+    bucket: ${AVATAR_S3_BUCKET:}
+    region: ${AVATAR_S3_REGION:ap-northeast-2}
+    public-base-url: ${AVATAR_S3_PUBLIC_BASE_URL:}
+    presign-ttl-seconds: ${AVATAR_PRESIGN_TTL:300}
+    max-bytes: ${AVATAR_MAX_BYTES:5242880}
   pow:
     difficulty: ${POW_DIFFICULTY:3}
     enforce: ${POW_ENFORCE:true}
