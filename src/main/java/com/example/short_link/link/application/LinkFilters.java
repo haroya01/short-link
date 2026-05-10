@@ -93,6 +93,21 @@ public final class LinkFilters {
   }
 
   /**
+   * Cursor predicate for descending (createdAt, id) pagination: row qualifies iff its createdAt is
+   * strictly older than the cursor, OR equal createdAt with strictly smaller id. The id tie-break
+   * is what stops same-millisecond rows from being skipped or duplicated across pages.
+   */
+  public static Specification<LinkEntity> cursorAfter(MyLinksCursor cursor) {
+    if (cursor == null) return null;
+    return (root, q, cb) ->
+        cb.or(
+            cb.lessThan(root.get("createdAt"), cursor.createdAt()),
+            cb.and(
+                cb.equal(root.get("createdAt"), cursor.createdAt()),
+                cb.lessThan(root.get("id"), cursor.id())));
+  }
+
+  /**
    * "has a tag with this exact name owned by the same user" — implemented as an IN-subquery against
    * the {@code link_tag} / {@code tag} join so we don't double-count rows from a join fetch.
    */
