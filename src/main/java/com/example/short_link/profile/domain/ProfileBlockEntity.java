@@ -32,8 +32,11 @@ public class ProfileBlockEntity {
   @Column(name = "block_type", nullable = false, length = 16)
   private ProfileBlockType type;
 
-  /** Free text for TEXT blocks (section headers like "📌 SNS"). Null for DIVIDER. */
-  @Column(name = "content", length = 120)
+  /**
+   * Type-specific payload. TEXT: section header text ("📌 SNS"). IMAGE: absolute http(s) image URL
+   * (validated in service). DIVIDER: null.
+   */
+  @Column(name = "content", length = 2048)
   private String content;
 
   @Column(name = "profile_order", nullable = false)

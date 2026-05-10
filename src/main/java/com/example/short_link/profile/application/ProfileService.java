@@ -143,19 +143,9 @@ public class ProfileService {
   @Transactional
   @CacheEvict(value = "public-profile", allEntries = true)
   public ProfileBlockEntity createBlock(Long userId, ProfileBlockType type, String content) {
-    String trimmed = content == null ? null : content.trim();
-    if (type == ProfileBlockType.TEXT) {
-      if (trimmed == null || trimmed.isEmpty()) {
-        throw new InvalidUsernameException("text block content required");
-      }
-      if (trimmed.length() > 120) {
-        throw new InvalidUsernameException("text block too long");
-      }
-    } else {
-      trimmed = null;
-    }
+    String validated = validateBlockContent(type, content);
     int next = nextProfileOrder(userId);
-    ProfileBlockEntity block = new ProfileBlockEntity(userId, type, trimmed, next);
+    ProfileBlockEntity block = new ProfileBlockEntity(userId, type, validated, next);
     return profileBlockRepository.save(block);
   }
 
@@ -167,14 +157,48 @@ public class ProfileService {
             .findById(blockId)
             .filter(b -> b.isOwnedBy(userId))
             .orElseThrow(() -> new ProfileNotFoundException("block " + blockId));
-    if (block.getType() != ProfileBlockType.TEXT) {
-      throw new InvalidUsernameException("only TEXT blocks have content");
+    if (block.getType() == ProfileBlockType.DIVIDER) {
+      throw new InvalidUsernameException("divider has no content");
     }
-    String trimmed = content == null ? "" : content.trim();
-    if (trimmed.isEmpty()) throw new InvalidUsernameException("text block content required");
-    if (trimmed.length() > 120) throw new InvalidUsernameException("text block too long");
-    block.updateContent(trimmed);
+    block.updateContent(validateBlockContent(block.getType(), content));
     return block;
+  }
+
+  /**
+   * Validate + normalize a block's content per type. Returns the trimmed value to persist (null for
+   * types that don't carry content). Throws {@link InvalidUsernameException} on bad input — this is
+   * also what the controller turns into a 400.
+   */
+  private static String validateBlockContent(ProfileBlockType type, String raw) {
+    String trimmed = raw == null ? "" : raw.trim();
+    return switch (type) {
+      case DIVIDER -> null;
+      case TEXT -> {
+        if (trimmed.isEmpty()) throw new InvalidUsernameException("text block content required");
+        if (trimmed.length() > 120) throw new InvalidUsernameException("text block too long");
+        yield trimmed;
+      }
+      case IMAGE -> {
+        if (trimmed.isEmpty()) throw new InvalidUsernameException("image url required");
+        if (trimmed.length() > 2048) throw new InvalidUsernameException("image url too long");
+        // Reject anything that isn't an http(s) absolute URL — keeps `<img src>` from being abused
+        // for javascript: / data: URIs in the rendered profile feed.
+        try {
+          java.net.URI uri = java.net.URI.create(trimmed);
+          String scheme = uri.getScheme();
+          if (scheme == null
+              || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+            throw new InvalidUsernameException("image url must be http(s)");
+          }
+          if (uri.getHost() == null || uri.getHost().isBlank()) {
+            throw new InvalidUsernameException("image url missing host");
+          }
+        } catch (IllegalArgumentException ex) {
+          throw new InvalidUsernameException("image url malformed");
+        }
+        yield trimmed;
+      }
+    };
   }
 
   @Transactional
@@ -283,9 +307,11 @@ public class ProfileService {
         li++;
       } else {
         out.add(
-            b.getType() == ProfileBlockType.TEXT
-                ? PublicProfile.ProfileEntry.text(b.getId(), b.getContent())
-                : PublicProfile.ProfileEntry.divider(b.getId()));
+            switch (b.getType()) {
+              case TEXT -> PublicProfile.ProfileEntry.text(b.getId(), b.getContent());
+              case IMAGE -> PublicProfile.ProfileEntry.image(b.getId(), b.getContent());
+              case DIVIDER -> PublicProfile.ProfileEntry.divider(b.getId());
+            });
         bi++;
       }
     }
