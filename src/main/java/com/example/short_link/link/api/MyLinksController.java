@@ -23,8 +23,8 @@ public class MyLinksController {
   @GetMapping("/me")
   public MyLinksPage myLinks(
       @AuthenticationPrincipal Long userId,
-      @RequestParam(required = false) Integer page,
       @RequestParam(required = false) Integer size,
+      @RequestParam(required = false) String after,
       @RequestParam(required = false) String q,
       @RequestParam(required = false) String tag,
       @RequestParam(required = false) String domain,
@@ -32,7 +32,7 @@ public class MyLinksController {
       @RequestParam(required = false) String createdAfter,
       @RequestParam(required = false) String createdBefore) {
     MyLinksQuery query =
-        MyLinksQuery.of(page, size, q, tag, domain, expiry, createdAfter, createdBefore);
+        MyLinksQuery.of(size, after, q, tag, domain, expiry, createdAfter, createdBefore);
     MyLinksResult result = service.myLinks(userId, query);
     List<MyLinkResponse> items =
         result.items().stream()
@@ -48,6 +48,6 @@ public class MyLinksController {
                         my.tags(),
                         my.clicksLast7d()))
             .toList();
-    return new MyLinksPage(items, result.total());
+    return new MyLinksPage(items, result.nextCursor(), result.hasMore());
   }
 }

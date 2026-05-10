@@ -155,8 +155,10 @@ class LinkLifecycleE2ETest {
             .getResponse()
             .getContentAsString();
 
-    int total = JsonPath.read(body, "$.total");
-    org.assertj.core.api.Assertions.assertThat(total).isEqualTo(1);
+    java.util.List<?> items = JsonPath.read(body, "$.items");
+    org.assertj.core.api.Assertions.assertThat(items).hasSize(1);
+    boolean hasMore = JsonPath.read(body, "$.hasMore");
+    org.assertj.core.api.Assertions.assertThat(hasMore).isFalse();
     String shortCode = JsonPath.read(body, "$.items[0].shortCode");
     org.assertj.core.api.Assertions.assertThat(shortCode).isEqualTo("e2e0005");
   }

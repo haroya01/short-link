@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -24,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class MyLinksService {
 
-  private static final Sort DEFAULT_SORT = Sort.by(Sort.Direction.DESC, "createdAt");
+  // (createdAt DESC, id DESC) — the id tie-break stops same-millisecond rows from sliding between
+  // pages when the cursor predicate kicks in. Backed by idx_link_user_created (V42).
+  private static final Sort DEFAULT_SORT =
+      Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
 
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
@@ -32,12 +34,16 @@ public class MyLinksService {
 
   @Transactional(readOnly = true)
   public MyLinksResult myLinks(Long userId, MyLinksQuery query) {
-    PageRequest pageRequest = PageRequest.of(query.zeroBasedPage(), query.size(), DEFAULT_SORT);
+    // Fetch one extra row to detect hasMore without a count() — cursor pagination's whole point is
+    // avoiding the OFFSET / COUNT(*) cost on big tables.
+    int limit = query.size() + 1;
+    PageRequest pageRequest = PageRequest.of(0, limit, DEFAULT_SORT);
     Specification<LinkEntity> spec = buildSpec(userId, query);
-    Page<LinkEntity> page = linkRepository.findAll(spec, pageRequest);
-    List<LinkEntity> links = page.getContent();
+    List<LinkEntity> raw = linkRepository.findAll(spec, pageRequest).getContent();
+    boolean hasMore = raw.size() > query.size();
+    List<LinkEntity> links = hasMore ? raw.subList(0, query.size()) : raw;
     if (links.isEmpty()) {
-      return new MyLinksResult(List.of(), page.getTotalElements());
+      return new MyLinksResult(List.of(), null, false);
     }
     List<Long> ids = links.stream().map(LinkEntity::getId).toList();
     Map<Long, Long> counts = new HashMap<>();
@@ -59,7 +65,12 @@ public class MyLinksService {
                         tagsByLinkId.getOrDefault(link.getId(), List.of()),
                         sparkByLinkId.getOrDefault(link.getId(), zeroes())))
             .toList();
-    return new MyLinksResult(items, page.getTotalElements());
+    String nextCursor = null;
+    if (hasMore) {
+      LinkEntity last = links.get(links.size() - 1);
+      nextCursor = new MyLinksCursor(last.getCreatedAt(), last.getId()).encode();
+    }
+    return new MyLinksResult(items, nextCursor, hasMore);
   }
 
   /**
@@ -101,6 +112,7 @@ public class MyLinksService {
     spec = and(spec, LinkFilters.expiry(query.expiry(), now));
     spec = and(spec, LinkFilters.createdAfter(query.createdAfter()));
     spec = and(spec, LinkFilters.createdBefore(query.createdBefore()));
+    spec = and(spec, LinkFilters.cursorAfter(query.after()));
     return spec;
   }
 

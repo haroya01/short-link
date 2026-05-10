@@ -39,7 +39,7 @@ class MyLinksFilterTest {
 
     MyLinksResult result =
         service.myLinks(
-            user.getId(), MyLinksQuery.of(null, 50, null, null, "example.com", null, null, null));
+            user.getId(), MyLinksQuery.of(50, null, null, null, "example.com", null, null, null));
 
     assertThat(result.items()).extracting(MyLink::shortCode).containsOnly("fc00001", "fc00002");
   }
@@ -77,19 +77,19 @@ class MyLinksFilterTest {
     MyLinksResult inWindow =
         service.myLinks(
             user.getId(),
-            MyLinksQuery.of(null, 50, null, null, null, null, null, futureCutoff.toString()));
+            MyLinksQuery.of(50, null, null, null, null, null, null, futureCutoff.toString()));
     assertThat(inWindow.items()).extracting(MyLink::shortCode).contains("fc00020");
 
     MyLinksResult excluded =
         service.myLinks(
             user.getId(),
-            MyLinksQuery.of(null, 50, null, null, null, null, futureCutoff.toString(), null));
+            MyLinksQuery.of(50, null, null, null, null, null, futureCutoff.toString(), null));
     assertThat(excluded.items()).extracting(MyLink::shortCode).doesNotContain("fc00020");
 
     MyLinksResult afterPast =
         service.myLinks(
             user.getId(),
-            MyLinksQuery.of(null, 50, null, null, null, null, pastCutoff.toString(), null));
+            MyLinksQuery.of(50, null, null, null, null, null, pastCutoff.toString(), null));
     assertThat(afterPast.items()).extracting(MyLink::shortCode).contains("fc00020");
   }
 
@@ -107,7 +107,7 @@ class MyLinksFilterTest {
     MyLinksResult result =
         service.myLinks(
             user.getId(),
-            MyLinksQuery.of(null, 50, null, "work", "news.example.com", null, null, null));
+            MyLinksQuery.of(50, null, null, "work", "news.example.com", null, null, null));
 
     assertThat(result.items()).extracting(MyLink::shortCode).containsOnly("fc00030");
   }
@@ -121,15 +121,56 @@ class MyLinksFilterTest {
 
     MyLinksResult result =
         service.myLinks(
-            owner.getId(), MyLinksQuery.of(null, 50, null, null, null, null, null, null));
+            owner.getId(), MyLinksQuery.of(50, null, null, null, null, null, null, null));
 
     assertThat(result.items()).extracting(MyLink::shortCode).containsExactly("fc00040");
   }
 
   private List<MyLink> filterExpiry(Long userId, String value) {
     return service
-        .myLinks(userId, MyLinksQuery.of(null, 50, null, null, null, value, null, null))
+        .myLinks(userId, MyLinksQuery.of(50, null, null, null, null, value, null, null))
         .items();
+  }
+
+  @Test
+  void cursorPaginatesWithoutSlideOnEqualCreatedAt() {
+    // Hammer in 5 links sharing identical createdAt (best we can do with second-precision
+    // TIMESTAMP)
+    // and confirm the (createdAt, id) cursor doesn't drop or duplicate any.
+    UserEntity user = userRepository.save(new UserEntity("f6@local.test", "google", "g-f6"));
+    for (int i = 0; i < 5; i++) save(user, "https://example.com/p" + i, "cur" + i, null);
+
+    MyLinksResult page1 =
+        service.myLinks(user.getId(), MyLinksQuery.of(2, null, null, null, null, null, null, null));
+    assertThat(page1.items()).hasSize(2);
+    assertThat(page1.hasMore()).isTrue();
+    assertThat(page1.nextCursor()).isNotBlank();
+
+    MyLinksResult page2 =
+        service.myLinks(
+            user.getId(),
+            MyLinksQuery.of(2, page1.nextCursor(), null, null, null, null, null, null));
+    assertThat(page2.items()).hasSize(2);
+    assertThat(page2.hasMore()).isTrue();
+
+    MyLinksResult page3 =
+        service.myLinks(
+            user.getId(),
+            MyLinksQuery.of(2, page2.nextCursor(), null, null, null, null, null, null));
+    assertThat(page3.items()).hasSize(1);
+    assertThat(page3.hasMore()).isFalse();
+    assertThat(page3.nextCursor()).isNull();
+
+    // Union of page contents should equal full set with no duplicates.
+    java.util.Set<String> all = new java.util.HashSet<>();
+    for (var p : List.of(page1, page2, page3)) {
+      for (MyLink it : p.items()) {
+        assertThat(all.add(it.shortCode()))
+            .as("duplicate %s across pages", it.shortCode())
+            .isTrue();
+      }
+    }
+    assertThat(all).hasSize(5);
   }
 
   private LinkEntity save(UserEntity user, String url, String shortCode, Instant expiresAt) {
