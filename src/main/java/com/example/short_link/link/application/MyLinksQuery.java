@@ -5,8 +5,8 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 
 public record MyLinksQuery(
-    int page,
     int size,
+    MyLinksCursor after,
     String q,
     String tag,
     String domain,
@@ -18,29 +18,24 @@ public record MyLinksQuery(
   public static final int MAX_SIZE = 100;
 
   public static MyLinksQuery of(
-      Integer page,
       Integer size,
+      String after,
       String q,
       String tag,
       String domain,
       String expiry,
       String createdAfter,
       String createdBefore) {
-    int p = page == null || page < 1 ? 1 : page;
     int s = size == null || size < 1 ? DEFAULT_SIZE : Math.min(size, MAX_SIZE);
     return new MyLinksQuery(
-        p,
         s,
+        MyLinksCursor.decode(after),
         normalize(q),
         normalize(tag),
         normalize(domain),
         parseExpiry(expiry),
         parseInstant(createdAfter),
         parseInstant(createdBefore));
-  }
-
-  public int zeroBasedPage() {
-    return page - 1;
   }
 
   private static String normalize(String s) {
