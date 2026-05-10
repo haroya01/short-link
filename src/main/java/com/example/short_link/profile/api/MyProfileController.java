@@ -34,7 +34,7 @@ public class MyProfileController {
   @PutMapping("/order")
   public MyProfile reorder(
       @AuthenticationPrincipal Long userId, @RequestBody ReorderRequest request) {
-    service.reorderFeatured(userId, request.shortCodes());
+    service.reorderProfile(userId, request.items());
     return service.myProfile(userId);
   }
 
@@ -43,5 +43,5 @@ public class MyProfileController {
       @Size(max = 280) String bio,
       @Pattern(regexp = "^(light|dark|accent)?$") String theme) {}
 
-  public record ReorderRequest(List<String> shortCodes) {}
+  public record ReorderRequest(List<ProfileService.ReorderItem> items) {}
 }
