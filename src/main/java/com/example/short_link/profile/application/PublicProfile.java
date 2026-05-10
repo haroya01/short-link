@@ -49,5 +49,9 @@ public record PublicProfile(String username, String bio, String theme, List<Prof
     public static ProfileEntry divider(Long id) {
       return new ProfileEntry("DIVIDER", id, null, null, null, null, null, null, null, null);
     }
+
+    public static ProfileEntry image(Long id, String url) {
+      return new ProfileEntry("IMAGE", id, null, null, null, null, null, null, null, url);
+    }
   }
 }
