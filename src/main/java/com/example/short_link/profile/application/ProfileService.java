@@ -315,7 +315,8 @@ public class ProfileService {
         bi++;
       }
     }
-    return new PublicProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), out);
+    return new PublicProfile(
+        user.getUsername(), user.getBio(), user.getProfileTheme(), user.getAvatarUrl(), out);
   }
 
   /**
@@ -333,7 +334,8 @@ public class ProfileService {
   private MyProfile toMyProfile(UserEntity user) {
     String publicUrl =
         user.getUsername() == null ? null : publicProfileBaseUrl + user.getUsername();
-    return new MyProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), publicUrl);
+    return new MyProfile(
+        user.getUsername(), user.getBio(), user.getProfileTheme(), publicUrl, user.getAvatarUrl());
   }
 
   private int nextProfileOrder(Long userId) {
