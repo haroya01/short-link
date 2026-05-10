@@ -41,7 +41,7 @@ public class MyProfileController {
   public record UpdateRequest(
       @Size(max = 32) String username,
       @Size(max = 280) String bio,
-      @Pattern(regexp = "^(light|dark|accent)?$") String theme) {}
+      @Pattern(regexp = "^(light|dark|accent|sunset|ocean|forest|mono|neon)?$") String theme) {}
 
   public record ReorderRequest(List<ProfileService.ReorderItem> items) {}
 }
