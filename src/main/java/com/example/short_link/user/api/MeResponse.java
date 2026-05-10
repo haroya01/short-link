@@ -10,4 +10,5 @@ public record MeResponse(
     String timezone,
     Instant createdAt,
     String tier,
-    Instant subscriptionCurrentPeriodEnd) {}
+    Instant subscriptionCurrentPeriodEnd,
+    String username) {}
