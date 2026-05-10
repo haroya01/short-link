@@ -180,8 +180,11 @@ public class UserEntity {
     }
     String v = theme.trim().toLowerCase();
     switch (v) {
-      case "light", "dark", "accent" -> this.profileTheme = v;
-      default -> throw new IllegalArgumentException("theme must be light/dark/accent");
+      case "light", "dark", "accent", "sunset", "ocean", "forest", "mono", "neon" ->
+          this.profileTheme = v;
+      default ->
+          throw new IllegalArgumentException(
+              "theme must be one of: light/dark/accent/sunset/ocean/forest/mono/neon");
     }
   }
 
