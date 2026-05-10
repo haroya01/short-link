@@ -5,6 +5,9 @@ import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.profile.domain.ProfileBlockEntity;
+import com.example.short_link.profile.domain.ProfileBlockRepository;
+import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.UsernameHistoryRepository;
 import com.example.short_link.user.application.UserNotFoundException;
@@ -13,6 +16,7 @@ import com.example.short_link.user.domain.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +41,7 @@ public class ProfileService {
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
   private final UsernameHistoryRepository usernameHistoryRepository;
+  private final ProfileBlockRepository profileBlockRepository;
   private final MeterRegistry meterRegistry;
 
   @Value("${short-link.public-profile-base-url:https://kurl.me/u/}")
@@ -99,24 +104,97 @@ public class ProfileService {
   }
 
   /**
-   * Reorders the user's featured links to the exact sequence given. Codes not in the user's
-   * collection are silently skipped — defensive against the front sending stale data after a
-   * delete. Codes not present here keep their existing profileOrder (off the profile).
+   * Reorders the profile feed (links + text/divider blocks) to the exact sequence given. Items the
+   * user doesn't own are silently skipped — defensive against the front sending stale tokens after
+   * a delete. Items not in {@code itemsInOrder} keep their existing profile_order (so a featured
+   * link not mentioned stays where it is, off the profile).
    */
   @Transactional
   @CacheEvict(value = "public-profile", allEntries = true)
-  public void reorderFeatured(Long userId, java.util.List<String> shortCodesInOrder) {
-    java.util.Map<String, com.example.short_link.link.domain.LinkEntity> owned =
-        new java.util.HashMap<>();
+  public void reorderProfile(Long userId, java.util.List<ReorderItem> itemsInOrder) {
+    Map<String, LinkEntity> ownedLinks = new HashMap<>();
     for (var link :
         linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(userId)) {
-      owned.put(link.getShortCode(), link);
+      ownedLinks.put(link.getShortCode(), link);
+    }
+    Map<Long, ProfileBlockEntity> ownedBlocks = new HashMap<>();
+    for (var block : profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(userId)) {
+      ownedBlocks.put(block.getId(), block);
     }
     int order = 1;
-    for (String code : shortCodesInOrder) {
-      var link = owned.get(code);
-      if (link == null) continue;
-      link.setProfileOrder(order++);
+    for (ReorderItem item : itemsInOrder) {
+      if (item == null || item.kind() == null || item.id() == null) continue;
+      switch (item.kind().toUpperCase()) {
+        case "LINK" -> {
+          LinkEntity link = ownedLinks.get(item.id());
+          if (link != null) link.setProfileOrder(order++);
+        }
+        case "BLOCK" -> {
+          ProfileBlockEntity block = parseBlockId(item.id()).map(ownedBlocks::get).orElse(null);
+          if (block != null) block.setProfileOrder(order++);
+        }
+        default -> {
+          /* unknown kind — skip */
+        }
+      }
+    }
+  }
+
+  @Transactional
+  @CacheEvict(value = "public-profile", allEntries = true)
+  public ProfileBlockEntity createBlock(Long userId, ProfileBlockType type, String content) {
+    String trimmed = content == null ? null : content.trim();
+    if (type == ProfileBlockType.TEXT) {
+      if (trimmed == null || trimmed.isEmpty()) {
+        throw new InvalidUsernameException("text block content required");
+      }
+      if (trimmed.length() > 120) {
+        throw new InvalidUsernameException("text block too long");
+      }
+    } else {
+      trimmed = null;
+    }
+    int next = nextProfileOrder(userId);
+    ProfileBlockEntity block = new ProfileBlockEntity(userId, type, trimmed, next);
+    return profileBlockRepository.save(block);
+  }
+
+  @Transactional
+  @CacheEvict(value = "public-profile", allEntries = true)
+  public ProfileBlockEntity updateBlock(Long userId, Long blockId, String content) {
+    ProfileBlockEntity block =
+        profileBlockRepository
+            .findById(blockId)
+            .filter(b -> b.isOwnedBy(userId))
+            .orElseThrow(() -> new ProfileNotFoundException("block " + blockId));
+    if (block.getType() != ProfileBlockType.TEXT) {
+      throw new InvalidUsernameException("only TEXT blocks have content");
+    }
+    String trimmed = content == null ? "" : content.trim();
+    if (trimmed.isEmpty()) throw new InvalidUsernameException("text block content required");
+    if (trimmed.length() > 120) throw new InvalidUsernameException("text block too long");
+    block.updateContent(trimmed);
+    return block;
+  }
+
+  @Transactional
+  @CacheEvict(value = "public-profile", allEntries = true)
+  public void deleteBlock(Long userId, Long blockId) {
+    ProfileBlockEntity block =
+        profileBlockRepository
+            .findById(blockId)
+            .filter(b -> b.isOwnedBy(userId))
+            .orElseThrow(() -> new ProfileNotFoundException("block " + blockId));
+    profileBlockRepository.delete(block);
+  }
+
+  public record ReorderItem(String kind, String id) {}
+
+  private static java.util.Optional<Long> parseBlockId(String raw) {
+    try {
+      return java.util.Optional.of(Long.parseLong(raw));
+    } catch (NumberFormatException ex) {
+      return java.util.Optional.empty();
     }
   }
 
@@ -172,6 +250,8 @@ public class ProfileService {
             .orElseThrow(() -> new ProfileNotFoundException(normalized));
     List<LinkEntity> links =
         linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(user.getId());
+    List<ProfileBlockEntity> blocks =
+        profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(user.getId());
     Map<Long, Long> counts = new HashMap<>();
     if (!links.isEmpty()) {
       List<Long> ids = links.stream().map(LinkEntity::getId).toList();
@@ -179,21 +259,36 @@ public class ProfileService {
         counts.put(row.getLinkId(), row.getCount());
       }
     }
-    List<PublicProfile.ProfileLink> out =
-        links.stream()
-            .map(
-                l ->
-                    new PublicProfile.ProfileLink(
-                        l.getShortCode(),
-                        publicLinkUrl(l.getShortCode()),
-                        l.getOriginalUrl(),
-                        // Prefer the user-set override so labels typed in the profile editor
-                        // ("📝 블로그") win over the scraped OG title.
-                        l.getEffectiveOgTitle(),
-                        l.getEffectiveOgImage(),
-                        counts.getOrDefault(l.getId(), 0L),
-                        l.isProfileHighlighted()))
-            .toList();
+    // Links and blocks share the same profile_order space (assigned together by reorderProfile).
+    // Merge by order so headers / dividers slot in between links exactly where the editor put them.
+    List<PublicProfile.ProfileEntry> out = new ArrayList<>(links.size() + blocks.size());
+    int li = 0;
+    int bi = 0;
+    while (li < links.size() || bi < blocks.size()) {
+      LinkEntity l = li < links.size() ? links.get(li) : null;
+      ProfileBlockEntity b = bi < blocks.size() ? blocks.get(bi) : null;
+      boolean takeLink = l != null && (b == null || l.getProfileOrder() <= b.getProfileOrder());
+      if (takeLink) {
+        out.add(
+            PublicProfile.ProfileEntry.link(
+                l.getShortCode(),
+                publicLinkUrl(l.getShortCode()),
+                l.getOriginalUrl(),
+                // Prefer the user-set override so labels typed in the profile editor
+                // ("📝 블로그") win over the scraped OG title.
+                l.getEffectiveOgTitle(),
+                l.getEffectiveOgImage(),
+                counts.getOrDefault(l.getId(), 0L),
+                l.isProfileHighlighted()));
+        li++;
+      } else {
+        out.add(
+            b.getType() == ProfileBlockType.TEXT
+                ? PublicProfile.ProfileEntry.text(b.getId(), b.getContent())
+                : PublicProfile.ProfileEntry.divider(b.getId()));
+        bi++;
+      }
+    }
     return new PublicProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), out);
   }
 
@@ -215,11 +310,11 @@ public class ProfileService {
     return new MyProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), publicUrl);
   }
 
-  private Integer nextProfileOrder(Long userId) {
-    return linkRepository
-            .findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(userId)
-            .size()
-        + 1;
+  private int nextProfileOrder(Long userId) {
+    int links =
+        linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(userId).size();
+    int blocks = (int) profileBlockRepository.countByUserId(userId);
+    return links + blocks + 1;
   }
 
   private static void validateUsername(String username) {
