@@ -1,0 +1,3 @@
+ALTER TABLE users
+  ADD COLUMN banner_url VARCHAR(512) NULL,
+  ADD COLUMN banner_key VARCHAR(256) NULL;
