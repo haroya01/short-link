@@ -14,6 +14,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
+import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
@@ -80,6 +82,27 @@ public class AvatarService {
     require(props.isConfigured(), AvatarUnavailableException::new);
     if (key == null || key.isBlank() || !key.startsWith("avatars/" + userId + "/")) {
       throw new InvalidAvatarException("key not owned by user");
+    }
+    // S3 presigned PUT can't enforce content-length-range, so a bypassed-frontend client could
+    // post a 10MP / 50MB image. HEAD the freshly-uploaded object and reject + delete if it
+    // exceeds the configured cap. Authoritative — frontend size check is just UX.
+    HeadObjectResponse head;
+    try {
+      head =
+          s3Client.headObject(HeadObjectRequest.builder().bucket(props.bucket()).key(key).build());
+    } catch (Exception e) {
+      throw new InvalidAvatarException("upload not found");
+    }
+    Long contentLength = head.contentLength();
+    if (contentLength != null && contentLength > props.maxBytes()) {
+      try {
+        s3Client.deleteObject(
+            DeleteObjectRequest.builder().bucket(props.bucket()).key(key).build());
+      } catch (Exception e) {
+        log.warn("failed to delete oversized avatar key={}", key, e);
+      }
+      throw new InvalidAvatarException(
+          "avatar exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
     }
     UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
     String previousKey = user.getAvatarKey();
