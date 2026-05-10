@@ -2,7 +2,9 @@ package com.example.short_link.profile.api;
 
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.ProfileService;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,8 +28,20 @@ public class MyProfileController {
   @PutMapping
   public MyProfile update(
       @AuthenticationPrincipal Long userId, @RequestBody UpdateRequest request) {
-    return service.updateProfile(userId, request.username(), request.bio());
+    return service.updateProfile(userId, request.username(), request.bio(), request.theme());
   }
 
-  public record UpdateRequest(@Size(max = 32) String username, @Size(max = 280) String bio) {}
+  @PutMapping("/order")
+  public MyProfile reorder(
+      @AuthenticationPrincipal Long userId, @RequestBody ReorderRequest request) {
+    service.reorderFeatured(userId, request.shortCodes());
+    return service.myProfile(userId);
+  }
+
+  public record UpdateRequest(
+      @Size(max = 32) String username,
+      @Size(max = 280) String bio,
+      @Pattern(regexp = "^(light|dark|accent)?$") String theme) {}
+
+  public record ReorderRequest(List<String> shortCodes) {}
 }

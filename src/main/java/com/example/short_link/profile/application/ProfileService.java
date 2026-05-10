@@ -42,7 +42,7 @@ public class ProfileService {
 
   @Transactional
   @CacheEvict(value = "public-profile", allEntries = true)
-  public MyProfile updateProfile(Long userId, String username, String bio) {
+  public MyProfile updateProfile(Long userId, String username, String bio, String theme) {
     UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
     if (username != null) {
       String normalized = username.trim().toLowerCase();
@@ -68,8 +68,33 @@ public class ProfileService {
       }
       user.updateBio(trimmed.isEmpty() ? null : trimmed);
     }
+    if (theme != null) {
+      user.updateProfileTheme(theme);
+    }
     meterRegistry.counter("profile.updated").increment();
     return toMyProfile(user);
+  }
+
+  /**
+   * Reorders the user's featured links to the exact sequence given. Codes not in the user's
+   * collection are silently skipped — defensive against the front sending stale data after a
+   * delete. Codes not present here keep their existing profileOrder (off the profile).
+   */
+  @Transactional
+  @CacheEvict(value = "public-profile", allEntries = true)
+  public void reorderFeatured(Long userId, java.util.List<String> shortCodesInOrder) {
+    java.util.Map<String, com.example.short_link.link.domain.LinkEntity> owned =
+        new java.util.HashMap<>();
+    for (var link :
+        linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(userId)) {
+      owned.put(link.getShortCode(), link);
+    }
+    int order = 1;
+    for (String code : shortCodesInOrder) {
+      var link = owned.get(code);
+      if (link == null) continue;
+      link.setProfileOrder(order++);
+    }
   }
 
   @Transactional
@@ -119,13 +144,13 @@ public class ProfileService {
                         l.getOgTitle(),
                         counts.getOrDefault(l.getId(), 0L)))
             .toList();
-    return new PublicProfile(user.getUsername(), user.getBio(), out);
+    return new PublicProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), out);
   }
 
   private MyProfile toMyProfile(UserEntity user) {
     String publicUrl =
         user.getUsername() == null ? null : publicProfileBaseUrl + user.getUsername();
-    return new MyProfile(user.getUsername(), user.getBio(), publicUrl);
+    return new MyProfile(user.getUsername(), user.getBio(), user.getProfileTheme(), publicUrl);
   }
 
   private Integer nextProfileOrder(Long userId) {
