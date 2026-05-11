@@ -90,5 +90,13 @@ public record PublicProfile(
     public static ProfileEntry booking(Long id, String config) {
       return new ProfileEntry("BOOKING", id, null, null, null, null, null, null, null, config);
     }
+
+    /**
+     * Content is the EVENT JSON ({@code {title, startsAt, endsAt?, location?, description?,
+     * url?}}). ICS / Google Calendar URL building happens on the frontend.
+     */
+    public static ProfileEntry event(Long id, String config) {
+      return new ProfileEntry("EVENT", id, null, null, null, null, null, null, null, config);
+    }
   }
 }
