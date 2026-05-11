@@ -204,11 +204,14 @@ public class UserEntity {
               "neon",
               "aurora",
               "wave",
-              "ember" ->
+              "ember",
+              "suit",
+              "paper",
+              "slate" ->
           this.profileTheme = v;
       default ->
           throw new IllegalArgumentException(
-              "theme must be one of: light/dark/accent/sunset/ocean/forest/mono/neon/aurora/wave/ember");
+              "theme must be one of: light/dark/accent/sunset/ocean/forest/mono/neon/aurora/wave/ember/suit/paper/slate");
     }
   }
 
