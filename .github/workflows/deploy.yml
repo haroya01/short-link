@@ -25,13 +25,13 @@ permissions:
 
 jobs:
   build-and-deploy:
-    runs-on: ubuntu-latest
+    # Native ARM runner — EC2 is t4g.small (Graviton). Building ARM under amd64+QEMU was
+    # taking 14-26 min and stalling out (Java annotation processing deadlock under emulation).
+    # On a native ARM runner the same build finishes in ~3 min. Costs ~$0.005/min on private
+    # repos; deploy fires once or twice a day, so well under $1/month.
+    runs-on: ubuntu-24.04-arm
     steps:
       - uses: actions/checkout@v4
-
-      - uses: docker/setup-qemu-action@v3
-        with:
-          platforms: arm64
 
       - uses: docker/setup-buildx-action@v3
 
