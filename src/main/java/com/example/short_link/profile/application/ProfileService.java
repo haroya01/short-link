@@ -56,7 +56,8 @@ public class ProfileService {
 
   @Transactional
   @CacheEvict(value = "public-profile", allEntries = true)
-  public MyProfile updateProfile(Long userId, String username, String bio, String theme) {
+  public MyProfile updateProfile(
+      Long userId, String username, String bio, String theme, String shareChannels) {
     UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
     if (username != null) {
       String normalized = username.trim().toLowerCase();
@@ -99,6 +100,10 @@ public class ProfileService {
     }
     if (theme != null) {
       user.updateProfileTheme(theme);
+    }
+    if (shareChannels != null) {
+      String normalized = ShareChannels.normalize(shareChannels);
+      user.updateShareChannels(normalized == null || normalized.isEmpty() ? null : normalized);
     }
     meterRegistry.counter("profile.updated").increment();
     return toMyProfile(user);
@@ -322,6 +327,7 @@ public class ProfileService {
         user.getProfileTheme(),
         user.getAvatarUrl(),
         user.getBannerUrl(),
+        ShareChannels.toList(user.getShareChannels()),
         out);
   }
 
@@ -346,7 +352,8 @@ public class ProfileService {
         user.getProfileTheme(),
         publicUrl,
         user.getAvatarUrl(),
-        user.getBannerUrl());
+        user.getBannerUrl(),
+        ShareChannels.toList(user.getShareChannels()));
   }
 
   private int nextProfileOrder(Long userId) {

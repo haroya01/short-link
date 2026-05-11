@@ -8,6 +8,7 @@ public record PublicProfile(
     String theme,
     String avatarUrl,
     String bannerUrl,
+    List<String> shareChannels,
     List<ProfileEntry> entries) {
 
   /**
