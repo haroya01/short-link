@@ -5,6 +5,8 @@ import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.profile.contact.ContactCard;
+import com.example.short_link.profile.contact.Gallery;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
@@ -222,6 +224,14 @@ public class ProfileService {
         // the controller turns into 400 like the other block types.
         yield EmailFormConfig.normalize(trimmed);
       }
+      case CONTACT_CARD -> {
+        if (trimmed.length() > 2048) throw new InvalidUsernameException("contact card too long");
+        yield ContactCard.normalize(trimmed);
+      }
+      case GALLERY -> {
+        if (trimmed.length() > 2048) throw new InvalidUsernameException("gallery too long");
+        yield Gallery.normalize(trimmed);
+      }
     };
   }
 
@@ -336,6 +346,9 @@ public class ProfileService {
               case IMAGE -> PublicProfile.ProfileEntry.image(b.getId(), b.getContent());
               case EMBED -> PublicProfile.ProfileEntry.embed(b.getId(), b.getContent());
               case EMAIL_FORM -> PublicProfile.ProfileEntry.emailForm(b.getId(), b.getContent());
+              case CONTACT_CARD ->
+                  PublicProfile.ProfileEntry.contactCard(b.getId(), b.getContent());
+              case GALLERY -> PublicProfile.ProfileEntry.gallery(b.getId(), b.getContent());
               case DIVIDER -> PublicProfile.ProfileEntry.divider(b.getId());
             });
         bi++;
