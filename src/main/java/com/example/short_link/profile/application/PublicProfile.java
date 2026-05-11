@@ -65,5 +65,10 @@ public record PublicProfile(
     public static ProfileEntry embed(Long id, String url) {
       return new ProfileEntry("EMBED", id, null, null, null, null, null, null, null, url);
     }
+
+    /** Content is the EMAIL_FORM JSON config (title / placeholder / successMessage). */
+    public static ProfileEntry emailForm(Long id, String config) {
+      return new ProfileEntry("EMAIL_FORM", id, null, null, null, null, null, null, null, config);
+    }
   }
 }

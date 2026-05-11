@@ -10,6 +10,7 @@ import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.UsernameHistoryRepository;
+import com.example.short_link.profile.email.EmailFormConfig;
 import com.example.short_link.profile.oembed.EmbedProvider;
 import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
@@ -214,6 +215,13 @@ public class ProfileService {
         }
         yield trimmed;
       }
+      case EMAIL_FORM -> {
+        if (trimmed.length() > 2048)
+          throw new InvalidUsernameException("email form config too long");
+        // Normalize trims + caps each field; throws InvalidUsernameException on bad shape, which
+        // the controller turns into 400 like the other block types.
+        yield EmailFormConfig.normalize(trimmed);
+      }
     };
   }
 
@@ -327,6 +335,7 @@ public class ProfileService {
               case TEXT -> PublicProfile.ProfileEntry.text(b.getId(), b.getContent());
               case IMAGE -> PublicProfile.ProfileEntry.image(b.getId(), b.getContent());
               case EMBED -> PublicProfile.ProfileEntry.embed(b.getId(), b.getContent());
+              case EMAIL_FORM -> PublicProfile.ProfileEntry.emailForm(b.getId(), b.getContent());
               case DIVIDER -> PublicProfile.ProfileEntry.divider(b.getId());
             });
         bi++;
