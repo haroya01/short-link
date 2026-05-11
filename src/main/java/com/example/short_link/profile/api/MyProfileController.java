@@ -28,7 +28,8 @@ public class MyProfileController {
   @PutMapping
   public MyProfile update(
       @AuthenticationPrincipal Long userId, @RequestBody UpdateRequest request) {
-    return service.updateProfile(userId, request.username(), request.bio(), request.theme());
+    return service.updateProfile(
+        userId, request.username(), request.bio(), request.theme(), request.shareChannels());
   }
 
   @PutMapping("/order")
@@ -41,8 +42,8 @@ public class MyProfileController {
   public record UpdateRequest(
       @Size(max = 32) String username,
       @Size(max = 280) String bio,
-      @Pattern(regexp = "^(light|dark|accent|sunset|ocean|forest|mono|neon|aurora)?$")
-          String theme) {}
+      @Pattern(regexp = "^(light|dark|accent|sunset|ocean|forest|mono|neon|aurora)?$") String theme,
+      @Size(max = 64) String shareChannels) {}
 
   public record ReorderRequest(List<ProfileService.ReorderItem> items) {}
 }
