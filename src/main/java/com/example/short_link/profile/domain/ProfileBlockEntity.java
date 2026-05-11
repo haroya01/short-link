@@ -33,10 +33,11 @@ public class ProfileBlockEntity {
   private ProfileBlockType type;
 
   /**
-   * Type-specific payload. TEXT: section header text ("📌 SNS"). IMAGE: absolute http(s) image URL
-   * (validated in service). DIVIDER: null.
+   * Type-specific payload. TEXT: section header text. IMAGE/EMBED: URL. EMAIL_FORM / CONTACT_CARD /
+   * GALLERY / PRODUCT_CARD: JSON config. DIVIDER: null. Stored as TEXT to fit PRODUCT_CARD's
+   * multi-item JSON (up to 8 items with image URLs + descriptions).
    */
-  @Column(name = "content", length = 2048)
+  @Column(name = "content", columnDefinition = "TEXT")
   private String content;
 
   @Column(name = "profile_order", nullable = false)
