@@ -85,5 +85,10 @@ public record PublicProfile(
     public static ProfileEntry productCard(Long id, String config) {
       return new ProfileEntry("PRODUCT_CARD", id, null, null, null, null, null, null, null, config);
     }
+
+    /** Content is the BOOKING JSON ({@code {url, title?, description?, ctaLabel?}}). */
+    public static ProfileEntry booking(Long id, String config) {
+      return new ProfileEntry("BOOKING", id, null, null, null, null, null, null, null, config);
+    }
   }
 }
