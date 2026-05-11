@@ -61,5 +61,9 @@ public record PublicProfile(
     public static ProfileEntry image(Long id, String url) {
       return new ProfileEntry("IMAGE", id, null, null, null, null, null, null, null, url);
     }
+
+    public static ProfileEntry embed(Long id, String url) {
+      return new ProfileEntry("EMBED", id, null, null, null, null, null, null, null, url);
+    }
   }
 }
