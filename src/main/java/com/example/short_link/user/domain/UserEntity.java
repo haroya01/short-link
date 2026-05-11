@@ -88,6 +88,15 @@ public class UserEntity {
   @Column(name = "banner_key", length = 256)
   private String bannerKey;
 
+  /**
+   * Comma-separated list of social share channels enabled on the public profile (e.g. {@code
+   * "x,line"}). Up to 2 entries; null/empty means no explicit channels (the public profile shows
+   * just Copy + Native share). Validated against {@link
+   * com.example.short_link.profile.application.ShareChannels#ALLOWED}.
+   */
+  @Column(name = "share_channels", length = 64)
+  private String shareChannels;
+
   @Column(name = "stripe_customer_id", length = 64)
   private String stripeCustomerId;
 
@@ -171,6 +180,11 @@ public class UserEntity {
   public void updateBanner(String url, String key) {
     this.bannerUrl = url;
     this.bannerKey = key;
+  }
+
+  /** Pass null or empty string to clear. Validation lives in ShareChannels.normalize. */
+  public void updateShareChannels(String csv) {
+    this.shareChannels = csv;
   }
 
   public void updateProfileTheme(String theme) {
