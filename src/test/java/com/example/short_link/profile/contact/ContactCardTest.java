@@ -84,4 +84,40 @@ class ContactCardTest {
     String out = ContactCard.normalize("{\"name\":\"x\",\"email\":\"a@b.com\"}");
     assertThat(out).contains("\"logoUrl\":null");
   }
+
+  @Test
+  void acceptsKnownPalettes() {
+    for (String p :
+        new String[] {
+          "amethyst",
+          "rose-gold",
+          "emerald",
+          "sapphire",
+          "sunset",
+          "midnight",
+          "champagne",
+          "aurora"
+        }) {
+      String out = ContactCard.normalize("{\"name\":\"x\",\"palette\":\"" + p + "\"}");
+      assertThat(out).contains("\"palette\":\"" + p + "\"");
+    }
+  }
+
+  @Test
+  void rejectsUnknownPalette() {
+    assertThatThrownBy(
+            () -> ContactCard.normalize("{\"name\":\"x\",\"palette\":\"rainbow-vomit\"}"))
+        .isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(
+            () -> ContactCard.normalize("{\"name\":\"x\",\"palette\":\"javascript:alert(1)\"}"))
+        .isInstanceOf(InvalidUsernameException.class);
+  }
+
+  @Test
+  void paletteNullBackwardCompatible() {
+    // Existing CONTACT_CARD JSON without palette → round-trip with palette null. Frontend
+    // interprets null as "use default."
+    String out = ContactCard.normalize("{\"name\":\"x\"}");
+    assertThat(out).contains("\"palette\":null");
+  }
 }
