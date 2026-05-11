@@ -9,5 +9,6 @@ public enum ProfileBlockType {
   CONTACT_CARD,
   GALLERY,
   PRODUCT_CARD,
-  BOOKING
+  BOOKING,
+  EVENT
 }

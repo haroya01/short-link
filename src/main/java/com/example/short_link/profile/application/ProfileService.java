@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.profile.contact.Booking;
 import com.example.short_link.profile.contact.ContactCard;
+import com.example.short_link.profile.contact.Event;
 import com.example.short_link.profile.contact.Gallery;
 import com.example.short_link.profile.contact.ProductCardCarousel;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
@@ -244,6 +245,10 @@ public class ProfileService {
         if (trimmed.length() > 2048) throw new InvalidUsernameException("booking too long");
         yield Booking.normalize(trimmed);
       }
+      case EVENT -> {
+        if (trimmed.length() > 2048) throw new InvalidUsernameException("event too long");
+        yield Event.normalize(trimmed);
+      }
     };
   }
 
@@ -364,6 +369,7 @@ public class ProfileService {
               case PRODUCT_CARD ->
                   PublicProfile.ProfileEntry.productCard(b.getId(), b.getContent());
               case BOOKING -> PublicProfile.ProfileEntry.booking(b.getId(), b.getContent());
+              case EVENT -> PublicProfile.ProfileEntry.event(b.getId(), b.getContent());
               case DIVIDER -> PublicProfile.ProfileEntry.divider(b.getId());
             });
         bi++;
