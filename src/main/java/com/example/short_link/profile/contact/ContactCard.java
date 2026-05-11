@@ -4,6 +4,7 @@ import com.example.short_link.profile.application.InvalidUsernameException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
@@ -15,6 +16,11 @@ import java.util.regex.Pattern;
  * <p>{@code logoUrl} is an http(s) URL pointing to an image uploaded via the profile-images S3
  * pipeline; renders as a small brand mark on both the front and back of the holographic card.
  * Stored in the same JSON content column — no schema change needed.
+ *
+ * <p>{@code palette} is a whitelisted holographic foil preset id (e.g. {@code amethyst}, {@code
+ * rose-gold}). The frontend maps each id to a set of 6 HSL color stops driving the card's
+ * iridescent gradient. We validate the id against a closed set so a typo or hostile value can't
+ * produce a broken render or feed arbitrary CSS into the page.
  */
 public record ContactCard(
     String name,
@@ -24,7 +30,8 @@ public record ContactCard(
     String phone,
     String address,
     String website,
-    String logoUrl) {
+    String logoUrl,
+    String palette) {
 
   private static final int NAME_MAX = 60;
   private static final int TITLE_MAX = 80;
@@ -34,6 +41,22 @@ public record ContactCard(
   private static final int ADDRESS_MAX = 200;
   private static final int WEBSITE_MAX = 256;
   private static final int LOGO_URL_MAX = 512;
+
+  /**
+   * Allowed palette ids. Keep in sync with the frontend palette map; adding a new palette is a
+   * coordinated change across both repos. Null / blank means "use the default palette" so existing
+   * CONTACT_CARD blocks (which predate this field) keep rendering with the original amethyst look.
+   */
+  private static final Set<String> ALLOWED_PALETTES =
+      Set.of(
+          "amethyst",
+          "rose-gold",
+          "emerald",
+          "sapphire",
+          "sunset",
+          "midnight",
+          "champagne",
+          "aurora");
 
   private static final Pattern EMAIL_PATTERN =
       Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -62,6 +85,11 @@ public record ContactCard(
     if (website != null) validateHttpUrl(website, "website");
     String logoUrl = trimTo(parsed.logoUrl, LOGO_URL_MAX);
     if (logoUrl != null) validateHttpUrl(logoUrl, "logoUrl");
+    String palette = trimTo(parsed.palette, 32);
+    if (palette != null && !ALLOWED_PALETTES.contains(palette)) {
+      throw new InvalidUsernameException(
+          "contact card: palette must be one of " + ALLOWED_PALETTES);
+    }
     ContactCard out =
         new ContactCard(
             name,
@@ -71,7 +99,8 @@ public record ContactCard(
             trimTo(parsed.phone, PHONE_MAX),
             trimTo(parsed.address, ADDRESS_MAX),
             website,
-            logoUrl);
+            logoUrl,
+            palette);
     try {
       return MAPPER.writeValueAsString(out);
     } catch (JsonProcessingException ex) {
