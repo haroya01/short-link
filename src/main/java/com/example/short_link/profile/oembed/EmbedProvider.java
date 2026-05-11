@@ -21,7 +21,11 @@ public enum EmbedProvider {
       "vimeo",
       "https://vimeo.com/api/oembed.json",
       Set.of("vimeo.com", "www.vimeo.com", "player.vimeo.com")),
-  SPOTIFY("spotify", "https://open.spotify.com/oembed", Set.of("open.spotify.com"));
+  SPOTIFY("spotify", "https://open.spotify.com/oembed", Set.of("open.spotify.com")),
+  SOUNDCLOUD(
+      "soundcloud",
+      "https://soundcloud.com/oembed",
+      Set.of("soundcloud.com", "www.soundcloud.com", "m.soundcloud.com", "on.soundcloud.com"));
 
   private static final List<EmbedProvider> ALL = List.of(values());
 
