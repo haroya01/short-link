@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.profile.contact.ContactCard;
 import com.example.short_link.profile.contact.Gallery;
+import com.example.short_link.profile.contact.ProductCardCarousel;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
@@ -232,6 +233,12 @@ public class ProfileService {
         if (trimmed.length() > 2048) throw new InvalidUsernameException("gallery too long");
         yield Gallery.normalize(trimmed);
       }
+      case PRODUCT_CARD -> {
+        // PRODUCT_CARD JSON is multi-item with image URLs + descriptions; bigger budget than the
+        // single-payload blocks above. Cap matches the rendered carousel's MAX_ITEMS budget.
+        if (trimmed.length() > 16384) throw new InvalidUsernameException("product card too long");
+        yield ProductCardCarousel.normalize(trimmed);
+      }
     };
   }
 
@@ -349,6 +356,8 @@ public class ProfileService {
               case CONTACT_CARD ->
                   PublicProfile.ProfileEntry.contactCard(b.getId(), b.getContent());
               case GALLERY -> PublicProfile.ProfileEntry.gallery(b.getId(), b.getContent());
+              case PRODUCT_CARD ->
+                  PublicProfile.ProfileEntry.productCard(b.getId(), b.getContent());
               case DIVIDER -> PublicProfile.ProfileEntry.divider(b.getId());
             });
         bi++;

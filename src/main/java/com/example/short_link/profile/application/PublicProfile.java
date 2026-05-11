@@ -80,5 +80,10 @@ public record PublicProfile(
     public static ProfileEntry gallery(Long id, String config) {
       return new ProfileEntry("GALLERY", id, null, null, null, null, null, null, null, config);
     }
+
+    /** Content is the PRODUCT_CARD JSON ({@code {title?, items: [...]}}). */
+    public static ProfileEntry productCard(Long id, String config) {
+      return new ProfileEntry("PRODUCT_CARD", id, null, null, null, null, null, null, null, config);
+    }
   }
 }
