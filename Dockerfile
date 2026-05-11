@@ -1,4 +1,8 @@
-FROM gradle:8.10-jdk17 AS build
+# Build stage runs on the GitHub runner's native arch ($BUILDPLATFORM = linux/amd64) — no QEMU
+# emulation, so Gradle / annotation processing / Spotless finish in ~3 min instead of stalling
+# 20-30 min under arm64 emulation. The resulting JAR is arch-neutral and gets copied into the
+# arm64 runtime stage below, which only has to run COPY + apt-get (tiny under emulation).
+FROM --platform=$BUILDPLATFORM gradle:8.10-jdk17 AS build
 WORKDIR /workspace
 
 # Copy build descriptors first so the slow Gradle dependency layer can cache by itself —
