@@ -1,5 +1,6 @@
 package com.example.short_link.profile.application;
 
+import com.example.short_link.profile.application.Socials.Social;
 import java.util.List;
 
 public record PublicProfile(
@@ -8,7 +9,7 @@ public record PublicProfile(
     String theme,
     String avatarUrl,
     String bannerUrl,
-    List<String> shareChannels,
+    List<Social> socials,
     List<ProfileEntry> entries) {
 
   /**
