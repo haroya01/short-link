@@ -10,6 +10,7 @@ import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.UsernameHistoryRepository;
+import com.example.short_link.profile.oembed.EmbedProvider;
 import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
@@ -204,6 +205,15 @@ public class ProfileService {
         }
         yield trimmed;
       }
+      case EMBED -> {
+        if (trimmed.isEmpty()) throw new InvalidUsernameException("embed url required");
+        if (trimmed.length() > 2048) throw new InvalidUsernameException("embed url too long");
+        // Provider whitelist is the SSRF guard — we'll only ever fetch oembed from these hosts.
+        if (EmbedProvider.resolve(trimmed).isEmpty()) {
+          throw new InvalidUsernameException("embed url: unsupported provider");
+        }
+        yield trimmed;
+      }
     };
   }
 
@@ -316,6 +326,7 @@ public class ProfileService {
             switch (b.getType()) {
               case TEXT -> PublicProfile.ProfileEntry.text(b.getId(), b.getContent());
               case IMAGE -> PublicProfile.ProfileEntry.image(b.getId(), b.getContent());
+              case EMBED -> PublicProfile.ProfileEntry.embed(b.getId(), b.getContent());
               case DIVIDER -> PublicProfile.ProfileEntry.divider(b.getId());
             });
         bi++;
