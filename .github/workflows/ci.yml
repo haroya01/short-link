@@ -24,7 +24,7 @@ jobs:
           distribution: zulu
           java-version: 17
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
 
       - name: Start backing services
         run: docker compose -f resources/docker-compose.yml up -d
