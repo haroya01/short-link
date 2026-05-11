@@ -7,5 +7,6 @@ public enum ProfileBlockType {
   EMBED,
   EMAIL_FORM,
   CONTACT_CARD,
-  GALLERY
+  GALLERY,
+  PRODUCT_CARD
 }
