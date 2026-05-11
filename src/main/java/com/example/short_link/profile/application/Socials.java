@@ -20,7 +20,8 @@ import java.util.Set;
  */
 public final class Socials {
 
-  public static final List<String> ALLOWED = List.of("x", "line", "threads", "facebook", "kakao");
+  public static final List<String> ALLOWED =
+      List.of("x", "line", "threads", "facebook", "kakao", "instagram", "linkedin");
 
   private static final Set<String> ALLOWED_SET = Set.copyOf(ALLOWED);
 
