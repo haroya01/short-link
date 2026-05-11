@@ -58,4 +58,30 @@ class ContactCardTest {
     assertThatThrownBy(() -> ContactCard.normalize(""))
         .isInstanceOf(InvalidUsernameException.class);
   }
+
+  @Test
+  void acceptsValidLogoUrl() {
+    String out =
+        ContactCard.normalize(
+            "{\"name\":\"x\",\"logoUrl\":\"https://cdn.test/profile-images/1/logo.png\"}");
+    assertThat(out).contains("\"logoUrl\":\"https://cdn.test/profile-images/1/logo.png\"");
+  }
+
+  @Test
+  void logoUrlMustBeHttp() {
+    assertThatThrownBy(
+            () -> ContactCard.normalize("{\"name\":\"x\",\"logoUrl\":\"javascript:alert(1)\"}"))
+        .isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(
+            () -> ContactCard.normalize("{\"name\":\"x\",\"logoUrl\":\"ftp://example.com/logo\"}"))
+        .isInstanceOf(InvalidUsernameException.class);
+  }
+
+  @Test
+  void backwardCompatibleWhenLogoUrlMissing() {
+    // Existing CONTACT_CARD JSON in DB doesn't have logoUrl. Re-normalize should succeed and
+    // round-trip with logoUrl as null — no migration required.
+    String out = ContactCard.normalize("{\"name\":\"x\",\"email\":\"a@b.com\"}");
+    assertThat(out).contains("\"logoUrl\":null");
+  }
 }

@@ -11,6 +11,10 @@ import java.util.regex.Pattern;
  * profile_block.content}. Only {@code name} is required; the rest fall through to "not shown" on
  * the rendered card. vCard serialization for the .vcf download happens on the front end, where the
  * browser can offer a save dialog without a round-trip.
+ *
+ * <p>{@code logoUrl} is an http(s) URL pointing to an image uploaded via the profile-images S3
+ * pipeline; renders as a small brand mark on both the front and back of the holographic card.
+ * Stored in the same JSON content column — no schema change needed.
  */
 public record ContactCard(
     String name,
@@ -19,7 +23,8 @@ public record ContactCard(
     String email,
     String phone,
     String address,
-    String website) {
+    String website,
+    String logoUrl) {
 
   private static final int NAME_MAX = 60;
   private static final int TITLE_MAX = 80;
@@ -28,6 +33,7 @@ public record ContactCard(
   private static final int PHONE_MAX = 30;
   private static final int ADDRESS_MAX = 200;
   private static final int WEBSITE_MAX = 256;
+  private static final int LOGO_URL_MAX = 512;
 
   private static final Pattern EMAIL_PATTERN =
       Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
@@ -53,7 +59,9 @@ public record ContactCard(
       throw new InvalidUsernameException("contact card: email malformed");
     }
     String website = trimTo(parsed.website, WEBSITE_MAX);
-    if (website != null) validateHttpUrl(website);
+    if (website != null) validateHttpUrl(website, "website");
+    String logoUrl = trimTo(parsed.logoUrl, LOGO_URL_MAX);
+    if (logoUrl != null) validateHttpUrl(logoUrl, "logoUrl");
     ContactCard out =
         new ContactCard(
             name,
@@ -62,7 +70,8 @@ public record ContactCard(
             email,
             trimTo(parsed.phone, PHONE_MAX),
             trimTo(parsed.address, ADDRESS_MAX),
-            website);
+            website,
+            logoUrl);
     try {
       return MAPPER.writeValueAsString(out);
     } catch (JsonProcessingException ex) {
@@ -77,19 +86,19 @@ public record ContactCard(
     return t.length() <= max ? t : t.substring(0, max);
   }
 
-  private static void validateHttpUrl(String url) {
+  private static void validateHttpUrl(String url, String field) {
     try {
       URI uri = URI.create(url);
       String scheme = uri.getScheme();
       if (scheme == null
           || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
-        throw new InvalidUsernameException("contact card: website must be http(s)");
+        throw new InvalidUsernameException("contact card: " + field + " must be http(s)");
       }
       if (uri.getHost() == null || uri.getHost().isBlank()) {
-        throw new InvalidUsernameException("contact card: website missing host");
+        throw new InvalidUsernameException("contact card: " + field + " missing host");
       }
     } catch (IllegalArgumentException ex) {
-      throw new InvalidUsernameException("contact card: website malformed");
+      throw new InvalidUsernameException("contact card: " + field + " malformed");
     }
   }
 }
