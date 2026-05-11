@@ -70,5 +70,15 @@ public record PublicProfile(
     public static ProfileEntry emailForm(Long id, String config) {
       return new ProfileEntry("EMAIL_FORM", id, null, null, null, null, null, null, null, config);
     }
+
+    /** Content is the CONTACT_CARD JSON (name + optional title/company/email/phone/etc.). */
+    public static ProfileEntry contactCard(Long id, String config) {
+      return new ProfileEntry("CONTACT_CARD", id, null, null, null, null, null, null, null, config);
+    }
+
+    /** Content is the GALLERY JSON ({@code {"images":["url",...]}}). */
+    public static ProfileEntry gallery(Long id, String config) {
+      return new ProfileEntry("GALLERY", id, null, null, null, null, null, null, null, config);
+    }
   }
 }
