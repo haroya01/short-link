@@ -89,13 +89,13 @@ public class UserEntity {
   private String bannerKey;
 
   /**
-   * Comma-separated list of social share channels enabled on the public profile (e.g. {@code
-   * "x,line"}). Up to 2 entries; null/empty means no explicit channels (the public profile shows
-   * just Copy + Native share). Validated against {@link
-   * com.example.short_link.profile.application.ShareChannels#ALLOWED}.
+   * JSON-encoded list of the user's social links shown at the bottom of the public profile, e.g.
+   * {@code [{"channel":"x","url":"https://x.com/haroya"},{"channel":"line","url":"..."}]}. Up to 2
+   * entries; null/empty means no socials (the visitor sees only Copy + Native share). Parse /
+   * validate via {@link com.example.short_link.profile.application.Socials}.
    */
-  @Column(name = "share_channels", length = 64)
-  private String shareChannels;
+  @Column(name = "socials", length = 1024)
+  private String socials;
 
   @Column(name = "stripe_customer_id", length = 64)
   private String stripeCustomerId;
@@ -182,9 +182,9 @@ public class UserEntity {
     this.bannerKey = key;
   }
 
-  /** Pass null or empty string to clear. Validation lives in ShareChannels.normalize. */
-  public void updateShareChannels(String csv) {
-    this.shareChannels = csv;
+  /** Pass null or empty string to clear. Validation lives in Socials.normalize. */
+  public void updateSocials(String json) {
+    this.socials = json;
   }
 
   public void updateProfileTheme(String theme) {
