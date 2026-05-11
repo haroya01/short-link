@@ -27,6 +27,16 @@ class EmbedProviderTest {
   }
 
   @Test
+  void resolvesSoundCloud() {
+    assertThat(EmbedProvider.resolve("https://soundcloud.com/artist/track"))
+        .contains(EmbedProvider.SOUNDCLOUD);
+    assertThat(EmbedProvider.resolve("https://m.soundcloud.com/artist/track"))
+        .contains(EmbedProvider.SOUNDCLOUD);
+    assertThat(EmbedProvider.resolve("https://on.soundcloud.com/abc"))
+        .contains(EmbedProvider.SOUNDCLOUD);
+  }
+
+  @Test
   void rejectsUnknownHost() {
     assertThat(EmbedProvider.resolve("https://example.com/x")).isEmpty();
     assertThat(EmbedProvider.resolve("https://evil.com/x")).isEmpty();
