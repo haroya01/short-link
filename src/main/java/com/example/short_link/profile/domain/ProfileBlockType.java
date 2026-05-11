@@ -4,5 +4,6 @@ public enum ProfileBlockType {
   TEXT,
   DIVIDER,
   IMAGE,
-  EMBED
+  EMBED,
+  EMAIL_FORM
 }
