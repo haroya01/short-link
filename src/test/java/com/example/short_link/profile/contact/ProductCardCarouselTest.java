@@ -182,4 +182,39 @@ class ProductCardCarouselTest {
         ProductCardCarousel.normalize("{\"items\":[{\"name\":\"x\",\"futureField\":\"hello\"}]}");
     assertThat(out).contains("\"name\":\"x\"");
   }
+
+  @Test
+  void originalPriceRoundTripsForStrikethroughDisplay() {
+    String out =
+        ProductCardCarousel.normalize(
+            "{\"items\":[{\"name\":\"x\",\"price\":\"36,000원\",\"originalPrice\":\"45,000원\"}]}");
+    assertThat(out).contains("\"price\":\"36,000원\"");
+    assertThat(out).contains("\"originalPrice\":\"45,000원\"");
+  }
+
+  @Test
+  void originalPriceTrimmedAndBlankBecomesNull() {
+    String out =
+        ProductCardCarousel.normalize("{\"items\":[{\"name\":\"x\",\"originalPrice\":\"   \"}]}");
+    assertThat(out).contains("\"originalPrice\":null");
+  }
+
+  @Test
+  void whitelistedBadgesPassThrough() {
+    for (String badge : new String[] {"NEW", "BEST", "LIMITED", "SOLD_OUT"}) {
+      String out =
+          ProductCardCarousel.normalize(
+              "{\"items\":[{\"name\":\"x\",\"badge\":\"" + badge + "\"}]}");
+      assertThat(out).contains("\"badge\":\"" + badge + "\"");
+    }
+  }
+
+  @Test
+  void unknownBadgeDropsToNullNotReject() {
+    // Forward compat — a future badge id added by the frontend shouldn't 400 every write. We drop
+    // it to null so old clients render no badge instead of an unknown chip.
+    String out =
+        ProductCardCarousel.normalize("{\"items\":[{\"name\":\"x\",\"badge\":\"futureBadge\"}]}");
+    assertThat(out).contains("\"badge\":null");
+  }
 }
