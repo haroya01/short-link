@@ -188,14 +188,11 @@ public class ProfileService {
     return switch (type) {
       case DIVIDER -> null;
       case TEXT -> {
-        // TEXT used to be a single-line header (120 char cap). It now supports markdown — short
-        // section blurbs, multi-paragraph announcements, etc. Cap at 2000 chars so a TEXT block
-        // can hold a Twitter-thread-sized paragraph without becoming a long-form essay surface.
-        // No HTML sanitization on write — rendering is client-side via react-markdown which
-        // strips raw HTML by default, so this row stores the markdown source verbatim.
-        if (trimmed.isEmpty()) throw new InvalidUsernameException("text block content required");
-        if (trimmed.length() > 2000) throw new InvalidUsernameException("text block too long");
-        yield trimmed;
+        // TEXT used to be a single-line header (120 char cap), then plain markdown (2000 cap), and
+        // now a JSON payload {body, layout, accent, icon} for Toss-style highlight boxes / quote
+        // rails. Legacy plain-string content is still accepted on read; on write we always emit
+        // JSON via {@link TextBlockBody#normalize} so storage converges.
+        yield com.example.short_link.profile.contact.TextBlockBody.normalize(raw);
       }
       case IMAGE -> {
         if (trimmed.isEmpty()) throw new InvalidUsernameException("image url required");
