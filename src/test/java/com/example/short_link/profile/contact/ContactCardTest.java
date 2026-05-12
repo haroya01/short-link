@@ -120,4 +120,40 @@ class ContactCardTest {
     String out = ContactCard.normalize("{\"name\":\"x\"}");
     assertThat(out).contains("\"palette\":null");
   }
+
+  @Test
+  void ignoresUnknownFields() {
+    // Forward compat — a frontend rolled out ahead of a backend that doesn't yet know about a
+    // field shouldn't 400 every write. This guard was missing when the frontend started sending
+    // logoFocalX/logoFocalY (PR #133) and the backend Jackson default FAIL_ON_UNKNOWN_PROPERTIES
+    // bounced every contact-card PATCH with a 400. Adding this test catches the same class of
+    // bug for future fields without remembering to add a forward-compat case each time.
+    String out =
+        ContactCard.normalize("{\"name\":\"x\",\"futureField\":\"hello\",\"anotherFuture\":42}");
+    assertThat(out).contains("\"name\":\"x\"");
+  }
+
+  @Test
+  void logoFocalPointRoundTripsAndClamps() {
+    String out =
+        ContactCard.normalize(
+            "{\"name\":\"x\",\"logoUrl\":\"https://cdn.test/l.png\","
+                + "\"logoFocalX\":40,\"logoFocalY\":30}");
+    assertThat(out).contains("\"logoFocalX\":40");
+    assertThat(out).contains("\"logoFocalY\":30");
+
+    String clamped =
+        ContactCard.normalize("{\"name\":\"x\",\"logoFocalX\":-50,\"logoFocalY\":150}");
+    assertThat(clamped).contains("\"logoFocalX\":0");
+    assertThat(clamped).contains("\"logoFocalY\":100");
+  }
+
+  @Test
+  void logoFocalPointDefaultsTo50WhenMissing() {
+    // Records that predate focal-point support normalize to 50/50 (visual center) — same crop
+    // behavior the public card had before the field existed.
+    String out = ContactCard.normalize("{\"name\":\"x\"}");
+    assertThat(out).contains("\"logoFocalX\":50");
+    assertThat(out).contains("\"logoFocalY\":50");
+  }
 }
