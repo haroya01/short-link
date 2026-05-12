@@ -1,6 +1,7 @@
 package com.example.short_link.profile.contact;
 
 import com.example.short_link.profile.application.InvalidUsernameException;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
@@ -22,6 +23,7 @@ import java.util.regex.Pattern;
  * iridescent gradient. We validate the id against a closed set so a typo or hostile value can't
  * produce a broken render or feed arbitrary CSS into the page.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record ContactCard(
     String name,
     String title,
@@ -31,6 +33,8 @@ public record ContactCard(
     String address,
     String website,
     String logoUrl,
+    Integer logoFocalX,
+    Integer logoFocalY,
     String palette) {
 
   private static final int NAME_MAX = 60;
@@ -41,6 +45,17 @@ public record ContactCard(
   private static final int ADDRESS_MAX = 200;
   private static final int WEBSITE_MAX = 256;
   private static final int LOGO_URL_MAX = 512;
+
+  /**
+   * Logo focal point — percentage 0..100 on each axis, matching the CSS {@code object-position}
+   * value the frontend applies when cropping the rectangular uploaded logo into the card's square
+   * logo slot. Default 50/50 = visual center, which is what existing records (predating focal
+   * points) end up with on the next normalize pass.
+   */
+  private static final int FOCAL_DEFAULT = 50;
+
+  private static final int FOCAL_MIN = 0;
+  private static final int FOCAL_MAX = 100;
 
   /**
    * Allowed palette ids. Keep in sync with the frontend palette map; adding a new palette is a
@@ -100,12 +115,22 @@ public record ContactCard(
             trimTo(parsed.address, ADDRESS_MAX),
             website,
             logoUrl,
+            clampFocal(parsed.logoFocalX),
+            clampFocal(parsed.logoFocalY),
             palette);
     try {
       return MAPPER.writeValueAsString(out);
     } catch (JsonProcessingException ex) {
       throw new InvalidUsernameException("contact card: serialization failed");
     }
+  }
+
+  private static Integer clampFocal(Integer raw) {
+    if (raw == null) return FOCAL_DEFAULT;
+    int v = raw;
+    if (v < FOCAL_MIN) return FOCAL_MIN;
+    if (v > FOCAL_MAX) return FOCAL_MAX;
+    return v;
   }
 
   private static String trimTo(String s, int max) {
