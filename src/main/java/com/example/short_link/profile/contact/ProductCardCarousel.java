@@ -45,6 +45,15 @@ public final class ProductCardCarousel {
   private static final int CTA_LABEL_MAX = 30;
   private static final int CTA_URL_MAX = 512;
 
+  /**
+   * Whitelisted badge ids. Frontend translates each id to a locale-specific label and renders a
+   * fixed chip color so the visual language stays consistent (NEW → blue, BEST → amber, LIMITED →
+   * red, SOLD_OUT → grayscale overlay). An unknown value is dropped to null rather than rejected so
+   * a frontend ahead of a backend deploy doesn't 400 every write.
+   */
+  private static final java.util.Set<String> BADGE_IDS =
+      java.util.Set.of("NEW", "BEST", "LIMITED", "SOLD_OUT");
+
   private static final int FOCAL_DEFAULT = 50;
   private static final int FOCAL_MIN = 0;
   private static final int FOCAL_MAX = 100;
@@ -67,6 +76,8 @@ public final class ProductCardCarousel {
       List<ImageEntry> images,
       String image,
       String price,
+      String originalPrice,
+      String badge,
       String description,
       String ctaLabel,
       String ctaUrl) {}
@@ -84,6 +95,8 @@ public final class ProductCardCarousel {
       String name,
       List<ImageEntry> images,
       String price,
+      String originalPrice,
+      String badge,
       String description,
       String ctaLabel,
       String ctaUrl) {}
@@ -122,6 +135,8 @@ public final class ProductCardCarousel {
               name,
               images,
               trimTo(item.price, PRICE_MAX),
+              trimTo(item.originalPrice, PRICE_MAX),
+              normalizeBadge(item.badge),
               trimTo(item.description, DESC_MAX),
               trimTo(item.ctaLabel, CTA_LABEL_MAX),
               ctaUrl));
@@ -163,6 +178,17 @@ public final class ProductCardCarousel {
       }
     }
     return out;
+  }
+
+  /**
+   * Coerces an incoming badge string to a whitelisted id or null. Unknown values silently drop to
+   * null — see {@link #BADGE_IDS} for why we don't reject them.
+   */
+  private static String normalizeBadge(String raw) {
+    if (raw == null) return null;
+    String t = raw.trim();
+    if (t.isEmpty()) return null;
+    return BADGE_IDS.contains(t) ? t : null;
   }
 
   private static Integer clampFocal(Integer raw) {
