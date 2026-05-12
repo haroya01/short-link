@@ -98,5 +98,14 @@ public record PublicProfile(
     public static ProfileEntry event(Long id, String config) {
       return new ProfileEntry("EVENT", id, null, null, null, null, null, null, null, config);
     }
+
+    /**
+     * Content is the PLACE JSON ({@code {name, address, lat, lng, placeId?, phone?, coverUrl?,
+     * category?, hoursText?}}). Static Map / directions URL building happens on the frontend with
+     * the public Google Maps API key (HTTP-referrer-restricted).
+     */
+    public static ProfileEntry place(Long id, String config) {
+      return new ProfileEntry("PLACE", id, null, null, null, null, null, null, null, config);
+    }
   }
 }
