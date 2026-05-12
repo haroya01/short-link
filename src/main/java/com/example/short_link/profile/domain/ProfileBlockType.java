@@ -10,5 +10,6 @@ public enum ProfileBlockType {
   GALLERY,
   PRODUCT_CARD,
   BOOKING,
-  EVENT
+  EVENT,
+  PLACE
 }
