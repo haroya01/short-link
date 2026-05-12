@@ -187,8 +187,13 @@ public class ProfileService {
     return switch (type) {
       case DIVIDER -> null;
       case TEXT -> {
+        // TEXT used to be a single-line header (120 char cap). It now supports markdown — short
+        // section blurbs, multi-paragraph announcements, etc. Cap at 2000 chars so a TEXT block
+        // can hold a Twitter-thread-sized paragraph without becoming a long-form essay surface.
+        // No HTML sanitization on write — rendering is client-side via react-markdown which
+        // strips raw HTML by default, so this row stores the markdown source verbatim.
         if (trimmed.isEmpty()) throw new InvalidUsernameException("text block content required");
-        if (trimmed.length() > 120) throw new InvalidUsernameException("text block too long");
+        if (trimmed.length() > 2000) throw new InvalidUsernameException("text block too long");
         yield trimmed;
       }
       case IMAGE -> {
