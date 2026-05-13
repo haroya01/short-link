@@ -26,6 +26,7 @@ public final class ReservedShortCodes {
           "account",
           "me",
           "profile",
+          "demo",
           // api / ops
           "api",
           "v1",
