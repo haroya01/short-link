@@ -11,10 +11,10 @@ name = "kurl-router"
 main = "src/index.ts"
 compatibility_date = "2025-12-01"
 
-# Production routes — Cloudflare Dashboard 에서 추가하거나 아래 주석을 풀어 IaC 로 관리.
-# [[routes]]
-# pattern = "kurl.me/*"
-# zone_name = "kurl.me"
+# Production routes — IaC 로 관리. kurl.me/* 모든 요청이 Worker 로.
+[[routes]]
+pattern = "kurl.me/*"
+zone_name = "kurl.me"
 
 # 환경변수는 secret 으로 관리 — 평문 노출 방지.
 # 배포 후 `npx wrangler secret put BACKEND_ORIGIN` / `... FRONTEND_ORIGIN` 으로 설정.

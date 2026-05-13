@@ -12,6 +12,15 @@ describe("routeFor", () => {
       expect(routeFor("/actuator/health")).toBe("backend");
     });
 
+    it("OAuth2 authorization endpoint → backend", () => {
+      expect(routeFor("/oauth2/authorization/google")).toBe("backend");
+    });
+
+    it("OAuth2 callback → backend (registered redirect URI)", () => {
+      expect(routeFor("/login/oauth2/code/google")).toBe("backend");
+      expect(routeFor("/login/oauth2/code/kakao")).toBe("backend");
+    });
+
     it("short code (7 chars) → backend", () => {
       expect(routeFor("/abc1234")).toBe("backend");
       expect(routeFor("/AbCd123")).toBe("backend");
@@ -74,6 +83,12 @@ describe("routeFor", () => {
     it("'login' would match short-code regex but goes to frontend", () => {
       // 5 chars alnum → matches /^[0-9A-Za-z]{3,16}$/ but reserved frontend path wins.
       expect(routeFor("/login")).toBe("frontend");
+    });
+
+    it("'/login/oauth2/code/...' goes to backend even though /login is a frontend prefix", () => {
+      // OAuth callback MUST hit backend. Backend prefix /login/oauth2 is matched before the
+      // generic frontend /login pattern.
+      expect(routeFor("/login/oauth2/code/google")).toBe("backend");
     });
 
     it("'u' alone is too short for short code so falls to frontend default", () => {
