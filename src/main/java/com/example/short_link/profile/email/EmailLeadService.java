@@ -85,6 +85,14 @@ public class EmailLeadService {
   }
 
   @Transactional(readOnly = true)
+  public List<EmailLeadEntity> listActive(Long userId, int page, int size) {
+    int safeSize = Math.min(Math.max(size, 1), PAGE_SIZE_MAX);
+    int safePage = Math.max(page, 0);
+    return repository.findAllByUserIdAndOptedOutFalseOrderBySubmittedAtDesc(
+        userId, PageRequest.of(safePage, safeSize));
+  }
+
+  @Transactional(readOnly = true)
   public long count(Long userId) {
     return repository.countByUserId(userId);
   }
@@ -97,6 +105,17 @@ public class EmailLeadService {
             .filter(l -> l.isOwnedBy(userId))
             .orElseThrow(() -> new ProfileNotFoundException("lead " + leadId));
     repository.delete(lead);
+  }
+
+  @Transactional
+  public EmailLeadEntity setOptedOut(Long userId, Long leadId, boolean optedOut) {
+    EmailLeadEntity lead =
+        repository
+            .findById(leadId)
+            .filter(l -> l.isOwnedBy(userId))
+            .orElseThrow(() -> new ProfileNotFoundException("lead " + leadId));
+    lead.setOptedOut(optedOut);
+    return repository.save(lead);
   }
 
   private static String normalizeEmail(String raw) {
