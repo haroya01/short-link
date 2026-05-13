@@ -1,0 +1,24 @@
+# Cloudflare Worker — kurl.me 도메인 라우터.
+# 배포: `cd cloudflare-worker && npm install && npx wrangler login && npx wrangler deploy`
+#
+# 사전 작업 (Cloudflare/Vercel 콘솔):
+#   1. backend 가 https://kurl.me 외 다른 hostname 으로도 도달 가능해야 함 (예: origin.kurl.me)
+#   2. Vercel 프로젝트에 kurl.me 도메인 추가 (TLS 발급)
+#   3. 이 Worker 배포 후 Cloudflare Dashboard → Workers → Triggers → Routes 에 `kurl.me/*` 추가
+#   4. BACKEND_ORIGIN / FRONTEND_ORIGIN env 를 Cloudflare Dashboard 또는 `wrangler secret put` 으로 설정
+
+name = "kurl-router"
+main = "src/index.ts"
+compatibility_date = "2025-12-01"
+
+# Production routes — Cloudflare Dashboard 에서 추가하거나 아래 주석을 풀어 IaC 로 관리.
+# [[routes]]
+# pattern = "kurl.me/*"
+# zone_name = "kurl.me"
+
+# 환경변수는 secret 으로 관리 — 평문 노출 방지.
+# 배포 후 `npx wrangler secret put BACKEND_ORIGIN` / `... FRONTEND_ORIGIN` 으로 설정.
+#
+# 로컬 dev 시 .dev.vars 에 다음과 같이 작성:
+#   BACKEND_ORIGIN="https://origin.kurl.me"
+#   FRONTEND_ORIGIN="https://app.kurl.me"
