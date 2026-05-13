@@ -67,6 +67,7 @@ describe("routeFor", () => {
       expect(routeFor("/about")).toBe("frontend");
       expect(routeFor("/profile/leads")).toBe("frontend");
       expect(routeFor("/demo")).toBe("frontend");
+      expect(routeFor("/showcase")).toBe("frontend");
     });
 
     it("public assets → frontend", () => {
