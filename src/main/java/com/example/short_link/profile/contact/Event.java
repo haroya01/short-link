@@ -1,6 +1,7 @@
 package com.example.short_link.profile.contact;
 
 import com.example.short_link.profile.application.InvalidUsernameException;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
@@ -18,6 +19,7 @@ import java.time.format.DateTimeParseException;
  * the rendered card can display "9 AM KST" without re-resolving timezones every render. The
  * frontend can convert to the visitor's local time at display time if it wants.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record Event(
     String title, String startsAt, String endsAt, String location, String description, String url) {
 
