@@ -40,6 +40,9 @@ public class EmailLeadEntity {
   @Column(name = "submitted_at", nullable = false, updatable = false)
   private Instant submittedAt;
 
+  @Column(name = "opted_out", nullable = false)
+  private boolean optedOut;
+
   public EmailLeadEntity(Long userId, Long blockId, String email, String ipHash) {
     this.userId = userId;
     this.blockId = blockId;
@@ -54,5 +57,9 @@ public class EmailLeadEntity {
 
   public boolean isOwnedBy(Long userId) {
     return this.userId.equals(userId);
+  }
+
+  public void setOptedOut(boolean optedOut) {
+    this.optedOut = optedOut;
   }
 }
