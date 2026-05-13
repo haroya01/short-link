@@ -210,6 +210,29 @@ class ProductCardCarouselTest {
   }
 
   @Test
+  void layoutDefaultsToCarouselWhenMissing() {
+    String out = ProductCardCarousel.normalize("{\"items\":[{\"name\":\"x\"}]}");
+    assertThat(out).contains("\"layout\":\"carousel\"");
+  }
+
+  @Test
+  void layoutAcceptsBothWhitelistedValues() {
+    for (String layout : new String[] {"carousel", "grid"}) {
+      String out =
+          ProductCardCarousel.normalize(
+              "{\"layout\":\"" + layout + "\",\"items\":[{\"name\":\"x\"}]}");
+      assertThat(out).contains("\"layout\":\"" + layout + "\"");
+    }
+  }
+
+  @Test
+  void unknownLayoutFallsBackToCarousel() {
+    String out =
+        ProductCardCarousel.normalize("{\"layout\":\"futureLayout\",\"items\":[{\"name\":\"x\"}]}");
+    assertThat(out).contains("\"layout\":\"carousel\"");
+  }
+
+  @Test
   void unknownBadgeDropsToNullNotReject() {
     // Forward compat — a future badge id added by the frontend shouldn't 400 every write. We drop
     // it to null so old clients render no badge instead of an unknown chip.
