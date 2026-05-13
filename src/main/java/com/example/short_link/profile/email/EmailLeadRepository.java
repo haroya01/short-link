@@ -9,6 +9,9 @@ public interface EmailLeadRepository extends JpaRepository<EmailLeadEntity, Long
 
   List<EmailLeadEntity> findAllByUserIdOrderBySubmittedAtDesc(Long userId, Pageable pageable);
 
+  List<EmailLeadEntity> findAllByUserIdAndOptedOutFalseOrderBySubmittedAtDesc(
+      Long userId, Pageable pageable);
+
   long countByUserId(Long userId);
 
   boolean existsByBlockIdAndEmail(Long blockId, String email);
