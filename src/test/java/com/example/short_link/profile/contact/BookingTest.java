@@ -66,6 +66,20 @@ class BookingTest {
   }
 
   @Test
+  void ignoresUnknownFields() {
+    // Forward compat — a frontend rolling out a new field (e.g. providerHint, calendarEmbed) before
+    // the backend deploy shouldn't 400 every BOOKING save. Same hotfix pattern as ContactCard
+    // logoFocalX/Y (PR #256): record without @JsonIgnoreProperties bounces every PATCH on default
+    // FAIL_ON_UNKNOWN_PROPERTIES.
+    String out =
+        Booking.normalize(
+            "{\"url\":\"https://calendly.com/me\",\"title\":\"hi\","
+                + "\"futureField\":\"hello\",\"providerHint\":42}");
+    assertThat(out).contains("\"title\":\"hi\"");
+    assertThat(out).contains("calendly.com/me");
+  }
+
+  @Test
   void resolveDetectsProviderId() {
     assertThat(Booking.Provider.resolve("https://calendly.com/me"))
         .isPresent()

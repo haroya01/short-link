@@ -1,6 +1,7 @@
 package com.example.short_link.profile.contact;
 
 import com.example.short_link.profile.application.InvalidUsernameException;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
@@ -18,6 +19,7 @@ import java.util.Set;
  * <p>JSON shape: {@code {url, title?, description?, ctaLabel?}}. The provider id is derived from
  * the URL host at render time so we don't have to trust client-supplied "provider" fields.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record Booking(String url, String title, String description, String ctaLabel) {
 
   private static final int URL_MAX = 512;

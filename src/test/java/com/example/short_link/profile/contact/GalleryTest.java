@@ -58,4 +58,15 @@ class GalleryTest {
     assertThat(out).contains("1.jpg");
     assertThat(out).contains("2.png");
   }
+
+  @Test
+  void ignoresUnknownFields() {
+    // Forward compat — same class of bug as ContactCard logoFocalX/Y hotfix (PR #256). A frontend
+    // sending v2 fields (captions[], aspectRatio) before backend deploy shouldn't 400 the save.
+    String out =
+        Gallery.normalize(
+            "{\"images\":[\"https://a.example/1.jpg\"],"
+                + "\"captions\":[\"hello\"],\"aspectRatio\":\"16:9\"}");
+    assertThat(out).contains("1.jpg");
+  }
 }

@@ -64,4 +64,16 @@ class EmailFormConfigTest {
     String out = EmailFormConfig.normalize("{\"title\":\"ok\",\"placeholder\":\"   \"}");
     assertThat(out).contains("\"placeholder\":null");
   }
+
+  @Test
+  void ignoresUnknownFields() {
+    // Forward compat — same hotfix pattern as ContactCard logoFocalX/Y (PR #256). A frontend
+    // shipping a new field (consentCheckbox, marketingOptInLabel) before the backend deploy
+    // shouldn't bounce every EMAIL_FORM PATCH with a 400 from Jackson's default
+    // FAIL_ON_UNKNOWN_PROPERTIES.
+    String out =
+        EmailFormConfig.normalize(
+            "{\"title\":\"Subscribe\",\"consentCheckbox\":true,\"marketingOptInLabel\":\"yes\"}");
+    assertThat(out).contains("\"title\":\"Subscribe\"");
+  }
 }

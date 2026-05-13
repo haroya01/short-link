@@ -112,4 +112,16 @@ class EventTest {
     String out = Event.normalize("{\"title\":\"x\",\"startsAt\":\"2026-06-15T14:00:00-08:00\"}");
     assertThat(out).contains("-08:00");
   }
+
+  @Test
+  void ignoresUnknownFields() {
+    // Forward compat — same class of bug as ContactCard logoFocalX/Y hotfix (PR #256). A frontend
+    // shipping recurrence / reminders / capacity ahead of the backend shouldn't 400 every EVENT
+    // save just because the record doesn't yet know the field.
+    String out =
+        Event.normalize(
+            "{\"title\":\"x\",\"startsAt\":\"2026-06-15T14:00:00+09:00\","
+                + "\"recurrence\":\"FREQ=WEEKLY\",\"capacity\":20}");
+    assertThat(out).contains("\"title\":\"x\"");
+  }
 }
