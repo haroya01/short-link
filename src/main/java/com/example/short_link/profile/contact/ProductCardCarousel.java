@@ -54,6 +54,14 @@ public final class ProductCardCarousel {
   private static final java.util.Set<String> BADGE_IDS =
       java.util.Set.of("NEW", "BEST", "LIMITED", "SOLD_OUT");
 
+  /**
+   * Whitelisted layout ids. Controls how the block renders on the public profile — {@code carousel}
+   * (default, horizontal swipe) or {@code grid} (2-column vertical, denser browsing). Sellers with
+   * 5-8 items often benefit from {@code grid} because all items are visible without swiping.
+   * Unknown values silently fall back to carousel so old clients work.
+   */
+  private static final java.util.Set<String> LAYOUT_IDS = java.util.Set.of("carousel", "grid");
+
   private static final int FOCAL_DEFAULT = 50;
   private static final int FOCAL_MIN = 0;
   private static final int FOCAL_MAX = 100;
@@ -62,7 +70,8 @@ public final class ProductCardCarousel {
 
   private ProductCardCarousel() {}
 
-  public record Payload(String title, List<Item> items) {}
+  @JsonIgnoreProperties(ignoreUnknown = true)
+  public record Payload(String title, String layout, List<Item> items) {}
 
   /**
    * Legacy {@code image} field accepted on input but dropped on output — Jackson's {@link
@@ -101,7 +110,7 @@ public final class ProductCardCarousel {
       String ctaLabel,
       String ctaUrl) {}
 
-  private record PayloadOut(String title, List<ItemOut> items) {}
+  private record PayloadOut(String title, String layout, List<ItemOut> items) {}
 
   public static String normalize(String raw) {
     if (raw == null || raw.isBlank()) {
@@ -120,6 +129,7 @@ public final class ProductCardCarousel {
       throw new InvalidUsernameException("product card: max " + MAX_ITEMS + " items");
     }
     String title = trimTo(parsed.title, TITLE_MAX);
+    String layout = normalizeLayout(parsed.layout);
     List<ItemOut> out = new ArrayList<>(parsed.items.size());
     for (Item item : parsed.items) {
       if (item == null) continue;
@@ -145,7 +155,7 @@ public final class ProductCardCarousel {
       throw new InvalidUsernameException("product card: at least 1 item required");
     }
     try {
-      return MAPPER.writeValueAsString(new PayloadOut(title, out));
+      return MAPPER.writeValueAsString(new PayloadOut(title, layout, out));
     } catch (JsonProcessingException ex) {
       throw new InvalidUsernameException("product card: serialization failed");
     }
@@ -189,6 +199,18 @@ public final class ProductCardCarousel {
     String t = raw.trim();
     if (t.isEmpty()) return null;
     return BADGE_IDS.contains(t) ? t : null;
+  }
+
+  /**
+   * Coerces an incoming layout string to {@code "carousel"} (default) or {@code "grid"}. Null,
+   * blank, or unknown values fall back to {@code "carousel"} — keeps records that predate this
+   * field rendering exactly the same.
+   */
+  private static String normalizeLayout(String raw) {
+    if (raw == null) return "carousel";
+    String t = raw.trim();
+    if (t.isEmpty()) return "carousel";
+    return LAYOUT_IDS.contains(t) ? t : "carousel";
   }
 
   private static Integer clampFocal(Integer raw) {
