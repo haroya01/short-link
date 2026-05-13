@@ -19,7 +19,7 @@ fi
 # shellcheck disable=SC1091
 . .env
 
-DOMAINS=("${BACKEND_HOST}" "www.${BACKEND_HOST}")
+DOMAINS=("${BACKEND_HOST}" "www.${BACKEND_HOST}" "origin.${BACKEND_HOST}")
 EMAIL="${LETSENCRYPT_EMAIL:?Set LETSENCRYPT_EMAIL in .env}"
 STAGING="${LETSENCRYPT_STAGING:-0}"
 LIVE_PATH="/etc/letsencrypt/live/${BACKEND_HOST}"
