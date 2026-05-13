@@ -13,6 +13,7 @@ class ReservedShortCodesTest {
     assertThat(ReservedShortCodes.isReserved("admin")).isTrue();
     assertThat(ReservedShortCodes.isReserved("stats")).isTrue();
     assertThat(ReservedShortCodes.isReserved("auth")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("demo")).isTrue();
   }
 
   @Test
