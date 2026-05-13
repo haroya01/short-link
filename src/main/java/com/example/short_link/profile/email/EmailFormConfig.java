@@ -1,6 +1,7 @@
 package com.example.short_link.profile.email;
 
 import com.example.short_link.profile.application.InvalidUsernameException;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -9,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * the visible copy (title / placeholder / success message) without us inventing per-field columns.
  * Lengths are capped to keep the rendered form sane on mobile.
  */
+@JsonIgnoreProperties(ignoreUnknown = true)
 public record EmailFormConfig(String title, String placeholder, String successMessage) {
 
   private static final int TITLE_MAX = 60;
