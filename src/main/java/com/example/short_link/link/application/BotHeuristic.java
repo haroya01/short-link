@@ -14,7 +14,7 @@ public class BotHeuristic {
 
   private static final String KEY_PREFIX = "bot:click:ip:";
   private static final Duration WINDOW = Duration.ofSeconds(1);
-  static final String SUSPECT_LABEL = "rate-flood";
+  public static final String SUSPECT_LABEL = "rate-flood";
 
   private final StringRedisTemplate redis;
 
