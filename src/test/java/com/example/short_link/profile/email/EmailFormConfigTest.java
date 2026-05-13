@@ -66,6 +66,34 @@ class EmailFormConfigTest {
   }
 
   @Test
+  void subtitleRoundTrips() {
+    String out =
+        EmailFormConfig.normalize("{\"title\":\"신상품 알림\",\"subtitle\":\"신상품 출시 시 가장 먼저 알려드려요.\"}");
+    assertThat(out).contains("\"subtitle\":\"신상품 출시 시 가장 먼저 알려드려요.\"");
+  }
+
+  @Test
+  void subtitleDefaultsToNullWhenMissing() {
+    // Legacy records without subtitle re-normalize with subtitle=null — frontend renderer skips
+    // the slot entirely so visual is identical to pre-migration.
+    String out = EmailFormConfig.normalize("{\"title\":\"Subscribe\"}");
+    assertThat(out).contains("\"subtitle\":null");
+  }
+
+  @Test
+  void subtitleTrimmedAndBlankBecomesNull() {
+    String out = EmailFormConfig.normalize("{\"title\":\"ok\",\"subtitle\":\"   \"}");
+    assertThat(out).contains("\"subtitle\":null");
+  }
+
+  @Test
+  void capsSubtitleTo200() {
+    String longStr = "x".repeat(500);
+    String out = EmailFormConfig.normalize("{\"title\":\"ok\",\"subtitle\":\"" + longStr + "\"}");
+    assertThat(out).contains("\"subtitle\":\"" + "x".repeat(200) + "\"");
+  }
+
+  @Test
   void ignoresUnknownFields() {
     // Forward compat — same hotfix pattern as ContactCard logoFocalX/Y (PR #256). A frontend
     // shipping a new field (consentCheckbox, marketingOptInLabel) before the backend deploy
