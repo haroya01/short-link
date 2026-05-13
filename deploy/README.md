@@ -24,8 +24,9 @@ Single-host Docker deploy for the backend (Spring Boot + MySQL + Redis + nginx +
 - Linux host (Ubuntu 22.04+) with Docker + docker-compose plugin
 - Inbound 80/443 open in security group
 - DNS:
-  - `kurl.me` A record → host's elastic IP
-  - `www.kurl.me` A record → host's elastic IP
+  - `kurl.me` A record → host's elastic IP (Cloudflare Proxied)
+  - `www.kurl.me` A record → host's elastic IP (Cloudflare Proxied)
+  - `origin.kurl.me` A record → host's elastic IP (Cloudflare Proxied) — Worker가 직접 호출하는 backend hostname
   - `app.kurl.me` CNAME → Vercel's hostname (after Vercel setup)
 - A MaxMind license key is optional — without it the bundled GeoLite2-City fallback is used (no ASN data)
 
@@ -90,6 +91,13 @@ docker compose exec mysql mysqldump -uroot -p${MYSQL_ROOT_PASSWORD} short_link \
 
 # Force-renew TLS (rare)
 docker compose run --rm --entrypoint "certbot" certbot renew --force-renewal
+docker compose exec nginx nginx -s reload
+
+# 기존 cert 에 hostname 추가 (예: origin.kurl.me) — init-letsencrypt.sh 를 다시 돌리지 않고
+# certonly 의 --expand 로 SAN 만 늘림.
+docker compose run --rm --entrypoint "certbot" certbot certonly --webroot \
+  -w /var/www/certbot --expand \
+  -d kurl.me -d www.kurl.me -d origin.kurl.me
 docker compose exec nginx nginx -s reload
 ```
 
