@@ -10,7 +10,10 @@
 
 export type Target = "backend" | "frontend";
 
-const BACKEND_PATH = /^\/(api|actuator)(\/|$)/;
+// Backend paths. /oauth2/* and /login/oauth2/* are Spring Security's OAuth2 client flow —
+// /login/oauth2/code/{provider} is the redirect URI registered with Google/Kakao, so it MUST
+// reach the backend or the login round-trip fails with a 404 on Vercel.
+const BACKEND_PATH = /^\/(api|actuator|oauth2|login\/oauth2)(\/|$)/;
 
 // Reserved frontend prefixes. Order doesn't matter — any match wins. Keep this list in sync
 // with the Next.js app/[locale] routes so a new top-level page (e.g. /pricing) doesn't get
