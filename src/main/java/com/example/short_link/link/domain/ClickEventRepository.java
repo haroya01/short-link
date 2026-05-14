@@ -31,6 +31,19 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
           + "WHERE c.linkId = :linkId AND c.bot = false AND c.referrer IS NULL")
   long countDirectByLinkId(@Param("linkId") Long linkId);
 
+  /**
+   * Clicks attributed to "this link was clicked from the owner's public profile page". Every LINK
+   * block on /u/&lt;handle&gt; appends {@code ?src=profile-<handle>} when sending visitors to the
+   * short URL, so we count any {@code sourceChannel} starting with the {@code profile-} prefix. The
+   * owner-facing stats page surfaces this as a top-level KPI so they can split "from my profile"
+   * from external sharing without scrolling to the channel breakdown.
+   */
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.sourceChannel LIKE 'profile-%'")
+  long countProfileChannelByLinkId(@Param("linkId") Long linkId);
+
   @Query(
       "SELECT COUNT(DISTINCT c.visitorHash) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = false AND c.visitorHash IS NOT NULL")
