@@ -13,6 +13,7 @@ public record LinkStats(
     long botClicks,
     long uniqueClicks,
     long previewClicks,
+    long profileClicks,
     Instant firstClickAt,
     Instant lastClickAt,
     Long timeToFirstClickMinutes,
