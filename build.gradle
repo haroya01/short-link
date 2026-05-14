@@ -44,8 +44,6 @@ dependencies {
 	implementation platform('software.amazon.awssdk:bom:2.28.16')
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:auth'
-	implementation 'io.sentry:sentry-spring-boot-starter-jakarta:8.7.0'
-	implementation 'io.sentry:sentry-logback:8.7.0'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
