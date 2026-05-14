@@ -97,6 +97,14 @@ public class UserEntity {
   @Column(name = "socials", length = 1024)
   private String socials;
 
+  /**
+   * When true, anonymous visitors can fetch aggregated visit stats for this profile via {@code GET
+   * /api/v1/public/profiles/{username}/stats} and the public stats page renders. Default false —
+   * opt-in only, owners flip it from the profile edit screen.
+   */
+  @Column(name = "is_stats_public", nullable = false)
+  private boolean statsPublic = false;
+
   @Column(name = "stripe_customer_id", length = 64)
   private String stripeCustomerId;
 
@@ -170,6 +178,10 @@ public class UserEntity {
 
   public void updateBio(String bio) {
     this.bio = bio;
+  }
+
+  public void updateStatsPublic(boolean statsPublic) {
+    this.statsPublic = statsPublic;
   }
 
   public void updateAvatar(String url, String key) {
