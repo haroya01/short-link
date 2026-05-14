@@ -58,6 +58,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy to EC2
+        id: deploy
         uses: appleboy/ssh-action@v1
         with:
           host: ${{ vars.EC2_HOST }}
@@ -79,6 +80,46 @@ jobs:
             docker logout ghcr.io
             # Cleanup stale images so disk doesn't fill up over time.
             docker image prune -f
+            # Wait for the app container to report healthy before the workflow declares
+            # success. Without this the Discord notify below would fire green even on a
+            # crash-looping container — the v1/v2 Sentry-starter outage was invisible to
+            # CI for that exact reason.
+            for i in $(seq 1 30); do
+              if docker compose ps app --format '{{.Status}}' | grep -q healthy; then
+                echo "app healthy after ${i} attempts"
+                break
+              fi
+              if [ "$i" = "30" ]; then
+                echo "app failed to become healthy"
+                docker compose logs app --tail 50
+                exit 1
+              fi
+              sleep 4
+            done
             docker compose ps
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_RO_TOKEN }}
+
+      - name: Notify Discord — deploy success
+        if: success()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+        run: |
+          MSG=$(jq -nc \
+            --arg sha "${GITHUB_SHA:0:7}" \
+            --arg msg "$(git log -1 --pretty=%s)" \
+            --arg run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{ content: "✅ **BE deploy success** · \($sha) — \($msg)\n<\($run)>" }')
+          curl -fsS -X POST -H "Content-Type: application/json" -d "$MSG" "$WEBHOOK"
+
+      - name: Notify Discord — deploy failure
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+        run: |
+          MSG=$(jq -nc \
+            --arg sha "${GITHUB_SHA:0:7}" \
+            --arg msg "$(git log -1 --pretty=%s)" \
+            --arg run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+            '{ content: "🚨 **BE deploy FAILED** · \($sha) — \($msg)\n<\($run)>" }')
+          curl -fsS -X POST -H "Content-Type: application/json" -d "$MSG" "$WEBHOOK" || true
