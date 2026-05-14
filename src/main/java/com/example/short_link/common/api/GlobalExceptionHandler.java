@@ -1,6 +1,7 @@
 package com.example.short_link.common.api;
 
 import com.example.short_link.admin.application.InvalidActivePeriodException;
+import com.example.short_link.common.pow.PowRequiredException;
 import com.example.short_link.link.application.BulkImportTooLargeException;
 import com.example.short_link.link.application.DuplicateShortCodeException;
 import com.example.short_link.link.application.DuplicateTagNameException;
@@ -141,6 +142,19 @@ public class GlobalExceptionHandler {
   public ProblemDetail handleInvalidRefresh(
       InvalidRefreshTokenException e, HttpServletRequest req) {
     return problem(HttpStatus.UNAUTHORIZED, e.getMessage(), "INVALID_REFRESH_TOKEN", req);
+  }
+
+  /**
+   * PoW gate fires when an anonymous request reaches the link-create endpoint without the
+   * proof-of-work headers. The exception already carries {@code @ResponseStatus(UNAUTHORIZED)} but
+   * the catch-all {@code Exception} handler below wins ordering and overrides it to 500 — declaring
+   * an explicit handler restores the intended 401 and gives the frontend a stable error code
+   * ({@code POW_REQUIRED}) so it can clear an expired token and re-shorten on the anonymous path
+   * with a fresh PoW token.
+   */
+  @ExceptionHandler(PowRequiredException.class)
+  public ProblemDetail handlePowRequired(PowRequiredException e, HttpServletRequest req) {
+    return problem(HttpStatus.UNAUTHORIZED, e.getMessage(), "POW_REQUIRED", req);
   }
 
   @ExceptionHandler(UserNotFoundException.class)
