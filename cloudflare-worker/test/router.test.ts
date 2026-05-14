@@ -70,6 +70,11 @@ describe("routeFor", () => {
       expect(routeFor("/showcase")).toBe("frontend");
     });
 
+    it("/monitoring → frontend (Sentry tunnel route to bypass ad-blockers)", () => {
+      expect(routeFor("/monitoring")).toBe("frontend");
+      expect(routeFor("/monitoring/envelope")).toBe("frontend");
+    });
+
     it("public assets → frontend", () => {
       expect(routeFor("/favicon.ico")).toBe("frontend");
       expect(routeFor("/icon.svg")).toBe("frontend");
