@@ -8,14 +8,14 @@ import java.util.regex.Pattern;
  * non-alphanumeric (plus {@code . - _}) is rejected so we don't store junk or potential XSS
  * payloads — a URL like {@code /abc?src=<script>} just gets a null channel.
  */
-final class SourceChannelNormalizer {
+public final class SourceChannelNormalizer {
 
-  static final int MAX_LENGTH = 40;
+  public static final int MAX_LENGTH = 40;
   private static final Pattern ALLOWED = Pattern.compile("^[A-Za-z0-9._-]{1,40}$");
 
   private SourceChannelNormalizer() {}
 
-  static String normalize(String raw) {
+  public static String normalize(String raw) {
     if (raw == null) return null;
     String trimmed = raw.trim();
     if (trimmed.isEmpty()) return null;
