@@ -27,6 +27,16 @@ management:
       exposure:
         include: health
 
+sentry:
+  dsn: ${SENTRY_DSN:}
+  environment: ${SENTRY_ENVIRONMENT:prod}
+  release: ${SENTRY_RELEASE:}
+  traces-sample-rate: 0.1
+  send-default-pii: false
+  logging:
+    minimum-event-level: error
+    minimum-breadcrumb-level: info
+
 short-link:
   base-url: ${SHORT_LINK_BASE_URL}
   jwt:
