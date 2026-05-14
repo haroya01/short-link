@@ -75,6 +75,7 @@ public class LinkStatsService {
     Instant firstClickAt = clickRepository.findFirstClickAt(linkId);
     Instant lastClickAt = clickRepository.findLastClickAt(linkId);
     long previewClicks = clickRepository.countPreviewByLinkId(linkId);
+    long profileClicks = clickRepository.countProfileChannelByLinkId(linkId);
     Long timeToFirstClickMinutes =
         firstClickAt == null
             ? null
@@ -223,6 +224,7 @@ public class LinkStatsService {
         bot,
         unique,
         previewClicks,
+        profileClicks,
         firstClickAt,
         lastClickAt,
         timeToFirstClickMinutes,
