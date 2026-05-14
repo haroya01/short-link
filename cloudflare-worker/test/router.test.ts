@@ -75,6 +75,11 @@ describe("routeFor", () => {
       expect(routeFor("/monitoring/envelope")).toBe("frontend");
     });
 
+    it("/learn → frontend (SEO FAQ page)", () => {
+      expect(routeFor("/learn")).toBe("frontend");
+      expect(routeFor("/ko/learn")).toBe("frontend");
+    });
+
     it("public assets → frontend", () => {
       expect(routeFor("/favicon.ico")).toBe("frontend");
       expect(routeFor("/icon.svg")).toBe("frontend");
