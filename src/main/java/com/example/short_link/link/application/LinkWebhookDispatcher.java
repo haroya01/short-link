@@ -21,14 +21,16 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -85,12 +87,27 @@ public class LinkWebhookDispatcher {
     this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
   }
 
-  @Async
-  @EventListener
-  @Transactional
+  /**
+   * Fires only after the click row is committed. A plain {@link
+   * org.springframework.context.event.EventListener} would invoke us mid-transaction; if the click
+   * insert later rolled back we'd have already POSTed a phantom event. Async runs on the dedicated
+   * {@code webhookExecutor} so a slow receiver can't starve OG-fetch and vice versa.
+   *
+   * <p>{@code REQUIRES_NEW} is mandatory here — {@code TransactionalEventListener} fires after the
+   * outer click-recording transaction has already committed, so we need our own tx for the
+   * downstream {@code recordSuccess/recordFailure} dirty-check writes to land.
+   */
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onClickRecorded(ClickRecordedEvent event) {
     List<LinkWebhookEntity> hooks = repository.findAllByLinkIdAndEnabledTrue(event.linkId());
-    if (hooks.isEmpty()) return;
+    if (hooks.isEmpty()) {
+      log.debug("webhook: no enabled hooks for linkId={}", event.linkId());
+      return;
+    }
+    log.debug(
+        "webhook: dispatching click for linkId={} to {} hook(s)", event.linkId(), hooks.size());
     Map<String, Object> payload = clickPayload(event);
     for (LinkWebhookEntity hook : hooks) {
       if (!shouldDeliver(hook, event)) continue;
@@ -195,8 +212,16 @@ public class LinkWebhookDispatcher {
 
   void deliver(LinkWebhookEntity hook, String body, String eventType) {
     if (!PublicHttpUrlGuard.isPublic(hook.getUrl())) {
-      hook.recordFailure(null, "url no longer points to a public host");
+      // Most common cause here is DNS lookup failure on the receiver host (intermittent network /
+      // misconfigured CNAME), not the user changing the URL. Surface that so 5 of these don't
+      // silently auto-disable a hook the user hasn't touched.
+      hook.recordFailure(
+          null, "url is not reachable as a public host (DNS or scheme check failed)");
       meterRegistry.counter("webhook.delivery", "result", "blocked").increment();
+      log.warn(
+          "webhook delivery blocked by public-url guard: hookId={} url={}",
+          hook.getId(),
+          hook.getUrl());
       return;
     }
     String signature;
@@ -205,6 +230,7 @@ public class LinkWebhookDispatcher {
     } catch (Exception e) {
       hook.recordFailure(null, "signature failed: " + e.getMessage());
       meterRegistry.counter("webhook.delivery", "result", "sign_error").increment();
+      log.warn("webhook signing failed: hookId={}", hook.getId(), e);
       return;
     }
     HttpRequest request =
@@ -223,14 +249,25 @@ public class LinkWebhookDispatcher {
       if (status / 100 == 2) {
         hook.recordSuccess(status);
         meterRegistry.counter("webhook.delivery", "result", "ok").increment();
+        log.debug(
+            "webhook delivered: hookId={} status={} event={}", hook.getId(), status, eventType);
       } else {
-        hook.recordFailure(status, "non-2xx response");
+        hook.recordFailure(status, "non-2xx response (" + status + ")");
         meterRegistry.counter("webhook.delivery", "result", "non_2xx").increment();
+        log.warn(
+            "webhook delivery returned non-2xx: hookId={} url={} status={}",
+            hook.getId(),
+            hook.getUrl(),
+            status);
       }
     } catch (Exception e) {
       hook.recordFailure(null, e.getClass().getSimpleName() + ": " + e.getMessage());
       meterRegistry.counter("webhook.delivery", "result", "exception").increment();
-      log.warn("webhook delivery failed for hook {} url {}", hook.getId(), hook.getUrl(), e);
+      log.warn(
+          "webhook delivery failed: hookId={} url={} reason={}",
+          hook.getId(),
+          hook.getUrl(),
+          e.toString());
     }
   }
 
