@@ -27,7 +27,48 @@ public class AdminSystemMetricsService {
   }
 
   public SystemMetrics snapshot() {
-    return new SystemMetrics(jvm(), hikari(), caches());
+    return new SystemMetrics(jvm(), hikari(), caches(), outboundHttp());
+  }
+
+  /**
+   * Per-{@code client} outbound HTTP timer aggregates ({@code webhook}, {@code og_fetch}). Mean and
+   * max are sourced directly from the timer; we don't request percentile because the default Spring
+   * autoconfig doesn't enable histogram publication on these timers (would inflate registry size
+   * with no operator-side benefit at 100k req/day). The dashboard reads mean / max with a "look at
+   * request_metrics for per-call drill-down" hint instead.
+   */
+  private Map<String, OutboundHttpStat> outboundHttp() {
+    Map<String, Map<String, Long>> resultCountsByClient = new LinkedHashMap<>();
+    Map<String, Long> totalCountByClient = new LinkedHashMap<>();
+    Map<String, Double> totalMsByClient = new LinkedHashMap<>();
+    Map<String, Double> maxMsByClient = new LinkedHashMap<>();
+    Search outboundSearch = registry.find("outbound.http");
+    for (Timer t : outboundSearch.timers()) {
+      String client = t.getId().getTag("client");
+      String result = t.getId().getTag("result");
+      if (client == null) continue;
+      long c = t.count();
+      totalCountByClient.merge(client, c, Long::sum);
+      totalMsByClient.merge(client, t.totalTime(TimeUnit.MILLISECONDS), Double::sum);
+      maxMsByClient.merge(client, t.max(TimeUnit.MILLISECONDS), Double::max);
+      if (result != null) {
+        resultCountsByClient
+            .computeIfAbsent(client, k -> new LinkedHashMap<>())
+            .merge(result, c, Long::sum);
+      }
+    }
+    Map<String, OutboundHttpStat> out = new LinkedHashMap<>();
+    for (String client : totalCountByClient.keySet()) {
+      long count = totalCountByClient.get(client);
+      double total = totalMsByClient.getOrDefault(client, 0.0);
+      double max = maxMsByClient.getOrDefault(client, 0.0);
+      double mean = count == 0 ? 0.0 : total / count;
+      out.put(
+          client,
+          new OutboundHttpStat(
+              count, mean, max, resultCountsByClient.getOrDefault(client, Map.of())));
+    }
+    return out;
   }
 
   private JvmStats jvm() {
@@ -106,7 +147,14 @@ public class AdminSystemMetricsService {
     return new GcStat(count, meanMs, maxMs);
   }
 
-  public record SystemMetrics(JvmStats jvm, HikariStats hikari, Map<String, CacheStat> caches) {}
+  public record SystemMetrics(
+      JvmStats jvm,
+      HikariStats hikari,
+      Map<String, CacheStat> caches,
+      Map<String, OutboundHttpStat> outboundHttp) {}
+
+  public record OutboundHttpStat(
+      long count, double meanMillis, double maxMillis, Map<String, Long> resultCounts) {}
 
   public record JvmStats(
       long heapUsedBytes,
