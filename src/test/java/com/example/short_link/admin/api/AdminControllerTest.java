@@ -4,7 +4,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.admin.application.LinkMetricsRecorder;
+import com.example.short_link.common.observability.RequestMetric;
+import com.example.short_link.common.observability.RequestMetricEntity;
+import com.example.short_link.common.observability.RequestMetricRepository;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
@@ -12,6 +14,7 @@ import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,7 +34,7 @@ class AdminControllerTest {
   @Autowired private UserRepository userRepository;
   @Autowired private LinkRepository linkRepository;
   @Autowired private ClickEventRepository clickRepository;
-  @Autowired private LinkMetricsRecorder linkMetricsRecorder;
+  @Autowired private RequestMetricRepository requestMetricRepository;
 
   @Test
   void anonymousReceives401OnAdminEndpoint() throws Exception {
@@ -97,7 +100,8 @@ class AdminControllerTest {
     userRepository.save(admin);
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "lmcode", admin.getId(), null));
-    // seed both DB and the in-memory ring so the response carries a real row
+    // Seed the click event for the lifetime totals + the two request_metrics rows the windowed
+    // outcome breakdown reads from.
     clickRepository.save(
         ClickEventEntity.builder()
             .linkId(link.getId())
@@ -106,8 +110,30 @@ class AdminControllerTest {
             .deviceClass("desktop")
             .bot(false)
             .build());
-    linkMetricsRecorder.record("lmcode", 15, "redirect");
-    linkMetricsRecorder.record("lmcode", 200, "not_found");
+    requestMetricRepository.save(
+        new RequestMetricEntity(
+            new RequestMetric(
+                Instant.now(),
+                "/r/{shortCode}",
+                "GET",
+                302,
+                "redirect",
+                15,
+                "lmcode",
+                null,
+                null)));
+    requestMetricRepository.save(
+        new RequestMetricEntity(
+            new RequestMetric(
+                Instant.now(),
+                "/r/{shortCode}",
+                "GET",
+                404,
+                "not_found",
+                200,
+                "lmcode",
+                null,
+                null)));
     String token = jwt.createAccessToken(admin.getId(), "ADMIN");
 
     mvc.perform(

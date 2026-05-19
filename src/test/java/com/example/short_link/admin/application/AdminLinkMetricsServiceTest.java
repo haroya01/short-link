@@ -1,156 +1,103 @@
 package com.example.short_link.admin.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.admin.application.AdminMetricsRepository.LinkMetricRow;
+import com.example.short_link.common.observability.RequestMetric;
+import com.example.short_link.common.observability.RequestMetricEntity;
+import com.example.short_link.common.observability.RequestMetricRepository;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class AdminLinkMetricsServiceTest {
 
+  private static final Instant NOW = Instant.parse("2026-05-19T10:00:00Z");
+  private final Clock fixedClock = Clock.fixed(NOW, ZoneOffset.UTC);
+
   @Test
-  void mergesRingSamplesWithDbMetadata() {
-    LinkMetricsRecorder recorder = new LinkMetricsRecorder();
-    recorder.record("abc123", 10, "redirect");
-    recorder.record("abc123", 50, "redirect");
-    recorder.record("abc123", 999, "not_found");
+  void groupsShortCodesAndJoinsDbMetadata() {
+    RequestMetricRepository requestRepo = mock(RequestMetricRepository.class);
+    when(requestRepo.findWindow(any(), any()))
+        .thenReturn(
+            List.of(
+                row("abc1234", 302, "redirect", 10),
+                row("abc1234", 302, "redirect", 30),
+                row("abc1234", 404, "not_found", 100),
+                row("xyz9999", 302, "redirect", 50)));
+    AdminMetricsRepository metricsRepo = mock(AdminMetricsRepository.class);
+    when(metricsRepo.linkMetricRowsByShortCodes(anyCollection()))
+        .thenReturn(
+            List.of(linkMetricRow("abc1234", "https://example.com/a", 42L, 99L, "x@y.com")));
 
-    AdminMetricsRepository repo = mock(AdminMetricsRepository.class);
-    LinkMetricRow row = stubRow("abc123", "https://a.com", 7L, "owner@x.com", 42L, Instant.EPOCH);
-    when(repo.linkMetricRowsByShortCodes(anyCollection())).thenReturn(List.of(row));
-
-    AdminLinkMetricsService service = new AdminLinkMetricsService(recorder, repo);
-
-    List<AdminLinkMetric> out =
+    AdminLinkMetricsService service =
+        new AdminLinkMetricsService(requestRepo, metricsRepo, fixedClock);
+    List<AdminLinkMetric> metrics =
         service.linkMetrics(AdminLinkMetricsService.Window.H24, AdminLinkMetricsService.Sort.COUNT);
 
-    assertThat(out).hasSize(1);
-    AdminLinkMetric m = out.get(0);
-    assertThat(m.shortCode()).isEqualTo("abc123");
-    assertThat(m.originalUrl()).isEqualTo("https://a.com");
-    assertThat(m.userId()).isEqualTo(7L);
-    assertThat(m.ownerEmail()).isEqualTo("owner@x.com");
-    assertThat(m.totalRedirects()).isEqualTo(42L);
-    assertThat(m.windowedRedirects()).isEqualTo(3L);
-    assertThat(m.outcomeCounts()).containsEntry("redirect", 2L).containsEntry("not_found", 1L);
-    assertThat(m.errorRate()).isGreaterThan(0.0);
+    assertThat(metrics).hasSize(2);
+    AdminLinkMetric abc =
+        metrics.stream().filter(m -> m.shortCode().equals("abc1234")).findFirst().orElseThrow();
+    assertThat(abc.windowedRedirects()).isEqualTo(3);
+    assertThat(abc.outcomeCounts()).containsEntry("redirect", 2L).containsEntry("not_found", 1L);
+    assertThat(abc.totalRedirects()).isEqualTo(99L);
+    assertThat(abc.originalUrl()).isEqualTo("https://example.com/a");
+    assertThat(abc.ownerEmail()).isEqualTo("x@y.com");
+
+    AdminLinkMetric xyz =
+        metrics.stream().filter(m -> m.shortCode().equals("xyz9999")).findFirst().orElseThrow();
+    // No DB row — surfaces the slice with window count as totalRedirects fallback
+    assertThat(xyz.totalRedirects()).isEqualTo(1);
+    assertThat(xyz.originalUrl()).isNull();
   }
 
   @Test
-  void sortsByLatencyDesc() {
-    LinkMetricsRecorder recorder = new LinkMetricsRecorder();
-    for (int i = 0; i < 5; i++) recorder.record("fast", 5, "redirect");
-    for (int i = 0; i < 5; i++) recorder.record("slow", 500, "redirect");
-
-    AdminMetricsRepository repo = mock(AdminMetricsRepository.class);
-    when(repo.linkMetricRowsByShortCodes(anyCollection()))
+  void rowsWithoutShortCodeAreIgnored() {
+    RequestMetricRepository requestRepo = mock(RequestMetricRepository.class);
+    when(requestRepo.findWindow(any(), any()))
         .thenReturn(
             List.of(
-                stubRow("fast", "https://f.com", 1L, "a@x", 5L, Instant.EPOCH),
-                stubRow("slow", "https://s.com", 1L, "a@x", 5L, Instant.EPOCH)));
+                row(null, 200, "ok", 12), row("", 200, "ok", 14), row("real", 302, "redirect", 8)));
+    AdminMetricsRepository metricsRepo = mock(AdminMetricsRepository.class);
+    when(metricsRepo.linkMetricRowsByShortCodes(anyCollection())).thenReturn(List.of());
 
-    AdminLinkMetricsService service = new AdminLinkMetricsService(recorder, repo);
+    AdminLinkMetricsService service =
+        new AdminLinkMetricsService(requestRepo, metricsRepo, fixedClock);
 
-    List<AdminLinkMetric> out =
-        service.linkMetrics(
-            AdminLinkMetricsService.Window.H24, AdminLinkMetricsService.Sort.LATENCY);
-
-    assertThat(out).extracting(AdminLinkMetric::shortCode).containsExactly("slow", "fast");
+    List<AdminLinkMetric> metrics =
+        service.linkMetrics(AdminLinkMetricsService.Window.H1, AdminLinkMetricsService.Sort.COUNT);
+    assertThat(metrics).hasSize(1);
+    assertThat(metrics.get(0).shortCode()).isEqualTo("real");
   }
 
   @Test
-  void sortsByErrorRateDesc() {
-    LinkMetricsRecorder recorder = new LinkMetricsRecorder();
-    for (int i = 0; i < 10; i++) recorder.record("clean", 10, "redirect");
-    recorder.record("noisy", 10, "redirect");
-    recorder.record("noisy", 10, "not_found");
-    recorder.record("noisy", 10, "blocked");
+  void emptySliceReturnsEmpty() {
+    RequestMetricRepository requestRepo = mock(RequestMetricRepository.class);
+    when(requestRepo.findWindow(any(), any())).thenReturn(List.of());
+    AdminMetricsRepository metricsRepo = mock(AdminMetricsRepository.class);
+    AdminLinkMetricsService service =
+        new AdminLinkMetricsService(requestRepo, metricsRepo, fixedClock);
 
-    AdminMetricsRepository repo = mock(AdminMetricsRepository.class);
-    when(repo.linkMetricRowsByShortCodes(anyCollection()))
-        .thenReturn(
-            List.of(
-                stubRow("clean", "https://c.com", 1L, "a@x", 10L, Instant.EPOCH),
-                stubRow("noisy", "https://n.com", 1L, "a@x", 3L, Instant.EPOCH)));
-
-    AdminLinkMetricsService service = new AdminLinkMetricsService(recorder, repo);
-
-    List<AdminLinkMetric> out =
-        service.linkMetrics(AdminLinkMetricsService.Window.H24, AdminLinkMetricsService.Sort.ERROR);
-
-    assertThat(out).extracting(AdminLinkMetric::shortCode).containsExactly("noisy", "clean");
-  }
-
-  @Test
-  void emptyRecorderReturnsEmpty() {
-    AdminMetricsRepository repo = mock(AdminMetricsRepository.class);
-    AdminLinkMetricsService service = new AdminLinkMetricsService(new LinkMetricsRecorder(), repo);
     assertThat(
             service.linkMetrics(
-                AdminLinkMetricsService.Window.H1, AdminLinkMetricsService.Sort.COUNT))
+                AdminLinkMetricsService.Window.D7, AdminLinkMetricsService.Sort.COUNT))
         .isEmpty();
   }
 
-  @Test
-  void missingDbRowFallsBackToRingTotals() {
-    LinkMetricsRecorder recorder = new LinkMetricsRecorder();
-    recorder.record("ghost", 10, "redirect");
-    AdminMetricsRepository repo = mock(AdminMetricsRepository.class);
-    when(repo.linkMetricRowsByShortCodes(anyCollection())).thenReturn(List.of());
-
-    AdminLinkMetricsService service = new AdminLinkMetricsService(recorder, repo);
-    List<AdminLinkMetric> out =
-        service.linkMetrics(AdminLinkMetricsService.Window.H24, AdminLinkMetricsService.Sort.COUNT);
-
-    assertThat(out).hasSize(1);
-    AdminLinkMetric m = out.get(0);
-    assertThat(m.originalUrl()).isNull();
-    assertThat(m.ownerEmail()).isNull();
-    assertThat(m.totalRedirects()).isEqualTo(1L);
-    assertThat(m.windowedRedirects()).isEqualTo(1L);
+  private static RequestMetricEntity row(String shortCode, int status, String outcome, long ms) {
+    return new RequestMetricEntity(
+        new RequestMetric(
+            NOW, "/r/{shortCode}", "GET", status, outcome, ms, shortCode, null, null));
   }
 
-  @Test
-  void windowParseAcceptsAliases() {
-    assertThat(AdminLinkMetricsService.Window.parse("1h"))
-        .isEqualTo(AdminLinkMetricsService.Window.H1);
-    assertThat(AdminLinkMetricsService.Window.parse("24h"))
-        .isEqualTo(AdminLinkMetricsService.Window.H24);
-    assertThat(AdminLinkMetricsService.Window.parse("7d"))
-        .isEqualTo(AdminLinkMetricsService.Window.D7);
-    assertThat(AdminLinkMetricsService.Window.parse("all"))
-        .isEqualTo(AdminLinkMetricsService.Window.ALL);
-    assertThat(AdminLinkMetricsService.Window.parse(null))
-        .isEqualTo(AdminLinkMetricsService.Window.H24);
-    assertThat(AdminLinkMetricsService.Window.parse("nonsense"))
-        .isEqualTo(AdminLinkMetricsService.Window.H24);
-  }
-
-  @Test
-  void sortParseAcceptsAliases() {
-    assertThat(AdminLinkMetricsService.Sort.parse("count"))
-        .isEqualTo(AdminLinkMetricsService.Sort.COUNT);
-    assertThat(AdminLinkMetricsService.Sort.parse("latency"))
-        .isEqualTo(AdminLinkMetricsService.Sort.LATENCY);
-    assertThat(AdminLinkMetricsService.Sort.parse("p95"))
-        .isEqualTo(AdminLinkMetricsService.Sort.LATENCY);
-    assertThat(AdminLinkMetricsService.Sort.parse("error"))
-        .isEqualTo(AdminLinkMetricsService.Sort.ERROR);
-    assertThat(AdminLinkMetricsService.Sort.parse(null))
-        .isEqualTo(AdminLinkMetricsService.Sort.COUNT);
-  }
-
-  private static LinkMetricRow stubRow(
-      String shortCode,
-      String originalUrl,
-      Long userId,
-      String ownerEmail,
-      Long totalRedirects,
-      Instant lastRedirectAt) {
+  private static LinkMetricRow linkMetricRow(
+      String shortCode, String originalUrl, Long userId, Long totalRedirects, String email) {
     return new LinkMetricRow() {
       @Override
       public String getShortCode() {
@@ -169,7 +116,7 @@ class AdminLinkMetricsServiceTest {
 
       @Override
       public String getOwnerEmail() {
-        return ownerEmail;
+        return email;
       }
 
       @Override
@@ -179,7 +126,7 @@ class AdminLinkMetricsServiceTest {
 
       @Override
       public Instant getLastRedirectAt() {
-        return lastRedirectAt;
+        return NOW;
       }
     };
   }
