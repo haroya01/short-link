@@ -25,3 +25,23 @@ short-link:
     enabled: false
   pow:
     enforce: false
+
+query-audit:
+  enabled: true
+  fail-on-detection: false
+  wrap-data-source:
+    enabled: true
+  n-plus-one:
+    threshold: 3
+  offset-pagination:
+    threshold: 1000
+  or-clause:
+    threshold: 5
+  slow-query:
+    warning-ms: 500
+    error-ms: 3000
+  report:
+    format: console
+    show-info: false
+    output-dir: build/reports/query-audit
+  auto-open-report: false
