@@ -8,6 +8,8 @@ import com.example.short_link.admin.application.AdminHealthService;
 import com.example.short_link.admin.application.AdminLifecycle;
 import com.example.short_link.admin.application.AdminOverview;
 import com.example.short_link.admin.application.AdminOverviewService;
+import com.example.short_link.admin.application.AdminRouteMetric;
+import com.example.short_link.admin.application.AdminRouteMetricsService;
 import com.example.short_link.admin.application.RecentError;
 import com.example.short_link.admin.application.RecentErrorsService;
 import java.util.List;
@@ -26,6 +28,7 @@ public class AdminController {
   private final AdminHealthService healthService;
   private final RecentErrorsService recentErrorsService;
   private final AdminAnalyticsService analyticsService;
+  private final AdminRouteMetricsService routeMetricsService;
 
   @GetMapping("/overview")
   public AdminOverview overview() {
@@ -35,6 +38,11 @@ public class AdminController {
   @GetMapping("/health-metrics")
   public AdminHealthMetrics healthMetrics() {
     return healthService.metrics();
+  }
+
+  @GetMapping("/route-metrics")
+  public List<AdminRouteMetric> routeMetrics() {
+    return routeMetricsService.routeMetrics();
   }
 
   @GetMapping("/recent-errors")
