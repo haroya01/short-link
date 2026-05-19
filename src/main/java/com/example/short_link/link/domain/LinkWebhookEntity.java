@@ -105,6 +105,23 @@ public class LinkWebhookEntity {
     this.enabled = false;
   }
 
+  public void changeFormat(WebhookFormat format) {
+    this.format = format == null ? WebhookFormat.GENERIC : format;
+  }
+
+  /**
+   * Clears the failure trail so a hook that auto-disabled on a stale reason (e.g. the payload-shape
+   * mismatch fixed by re-detecting {@link WebhookFormat}) can fire again. Distinct from {@link
+   * #enable()} because we also want {@code lastError} blanked — leaving the old error string
+   * dangling on a freshly-revived hook is misleading in the dashboard.
+   */
+  public void resetFailureState() {
+    this.enabled = true;
+    this.consecutiveFailures = 0;
+    this.autoDisabledReason = null;
+    this.lastError = null;
+  }
+
   public void enable() {
     this.enabled = true;
     this.consecutiveFailures = 0;
