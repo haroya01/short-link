@@ -3,6 +3,13 @@ spring:
     name: short-link
   cache:
     type: redis
+  jpa:
+    properties:
+      hibernate:
+        # Emit a WARN log for any SQL query that takes longer than the threshold (ms). 500ms is a
+        # conservative starting point — tune via env var once we have baseline data. WARN level
+        # routes into the admin "recent errors" pane so slow queries surface alongside errors.
+        session.events.log.LOG_QUERIES_SLOWER_THAN_MS: ${SLOW_QUERY_THRESHOLD_MS:500}
   security:
     oauth2:
       client:
