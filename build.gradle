@@ -77,6 +77,14 @@ jacocoTestReport {
 		xml.required = true
 		html.required = true
 	}
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: [
+				'com/example/short_link/ShortLinkApplication.class',
+				'com/example/short_link/common/config/**',
+			])
+		}))
+	}
 }
 
 spotless {
