@@ -238,7 +238,15 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(Exception.class)
   public ProblemDetail handleUnknown(Exception e, HttpServletRequest req) {
-    log.error("unexpected error", e);
+    // Method/URI are already in MDC via MdcFilter, but inlining them in the message keeps the
+    // admin "recent errors" list scannable without expanding each row, and survives in plain-text
+    // logs where MDC isn't part of the visible pattern.
+    log.error(
+        "unexpected error: {} {} ex={}",
+        req.getMethod(),
+        req.getRequestURI(),
+        e.getClass().getSimpleName(),
+        e);
     return problem(
         HttpStatus.INTERNAL_SERVER_ERROR, "internal server error", "INTERNAL_ERROR", req);
   }
