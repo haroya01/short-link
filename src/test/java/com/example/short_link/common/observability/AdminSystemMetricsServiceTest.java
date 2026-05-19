@@ -102,4 +102,33 @@ class AdminSystemMetricsServiceTest {
   void outboundHttpIsEmptyWhenNoTimersRegistered() {
     assertThat(service.snapshot().outboundHttp()).isEmpty();
   }
+
+  @Test
+  void scheduledTasksAggregatePerTask() {
+    registry
+        .timer("scheduled.task", "task", "OgRefreshJob.run", "result", "ok")
+        .record(120, java.util.concurrent.TimeUnit.MILLISECONDS);
+    registry
+        .timer("scheduled.task", "task", "OgRefreshJob.run", "result", "ok")
+        .record(80, java.util.concurrent.TimeUnit.MILLISECONDS);
+    registry
+        .timer("scheduled.task", "task", "OgRefreshJob.run", "result", "error")
+        .record(450, java.util.concurrent.TimeUnit.MILLISECONDS);
+    registry
+        .timer("scheduled.task", "task", "RequestMetricsRecorder.flush", "result", "ok")
+        .record(15, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+    var tasks = service.snapshot().scheduledTasks();
+
+    assertThat(tasks).containsOnlyKeys("OgRefreshJob.run", "RequestMetricsRecorder.flush");
+    var og = tasks.get("OgRefreshJob.run");
+    assertThat(og.count()).isEqualTo(3L);
+    assertThat(og.resultCounts()).containsEntry("ok", 2L).containsEntry("error", 1L);
+    assertThat(og.maxMillis()).isCloseTo(450.0, within(1.0));
+  }
+
+  @Test
+  void scheduledTasksEmptyWhenNoneRegistered() {
+    assertThat(service.snapshot().scheduledTasks()).isEmpty();
+  }
 }

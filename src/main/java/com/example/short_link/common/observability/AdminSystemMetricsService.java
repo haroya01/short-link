@@ -27,7 +27,45 @@ public class AdminSystemMetricsService {
   }
 
   public SystemMetrics snapshot() {
-    return new SystemMetrics(jvm(), hikari(), caches(), outboundHttp());
+    return new SystemMetrics(jvm(), hikari(), caches(), outboundHttp(), scheduledTasks());
+  }
+
+  /**
+   * Per-{@code task} scheduled job timer aggregates. Same mean/max-only shape as {@link
+   * #outboundHttp()} for the same reason (no histogram autoconfig). Result counts split ok vs error
+   * so a dashboard can flag a job that's quietly throwing every fire without anyone noticing.
+   */
+  private Map<String, ScheduledTaskStat> scheduledTasks() {
+    Map<String, Map<String, Long>> resultCountsByTask = new LinkedHashMap<>();
+    Map<String, Long> totalCountByTask = new LinkedHashMap<>();
+    Map<String, Double> totalMsByTask = new LinkedHashMap<>();
+    Map<String, Double> maxMsByTask = new LinkedHashMap<>();
+    Search taskSearch = registry.find("scheduled.task");
+    for (Timer t : taskSearch.timers()) {
+      String task = t.getId().getTag("task");
+      String result = t.getId().getTag("result");
+      if (task == null) continue;
+      long c = t.count();
+      totalCountByTask.merge(task, c, Long::sum);
+      totalMsByTask.merge(task, t.totalTime(TimeUnit.MILLISECONDS), Double::sum);
+      maxMsByTask.merge(task, t.max(TimeUnit.MILLISECONDS), Double::max);
+      if (result != null) {
+        resultCountsByTask
+            .computeIfAbsent(task, k -> new LinkedHashMap<>())
+            .merge(result, c, Long::sum);
+      }
+    }
+    Map<String, ScheduledTaskStat> out = new LinkedHashMap<>();
+    for (String task : totalCountByTask.keySet()) {
+      long count = totalCountByTask.get(task);
+      double total = totalMsByTask.getOrDefault(task, 0.0);
+      double max = maxMsByTask.getOrDefault(task, 0.0);
+      double mean = count == 0 ? 0.0 : total / count;
+      out.put(
+          task,
+          new ScheduledTaskStat(count, mean, max, resultCountsByTask.getOrDefault(task, Map.of())));
+    }
+    return out;
   }
 
   /**
@@ -151,9 +189,13 @@ public class AdminSystemMetricsService {
       JvmStats jvm,
       HikariStats hikari,
       Map<String, CacheStat> caches,
-      Map<String, OutboundHttpStat> outboundHttp) {}
+      Map<String, OutboundHttpStat> outboundHttp,
+      Map<String, ScheduledTaskStat> scheduledTasks) {}
 
   public record OutboundHttpStat(
+      long count, double meanMillis, double maxMillis, Map<String, Long> resultCounts) {}
+
+  public record ScheduledTaskStat(
       long count, double meanMillis, double maxMillis, Map<String, Long> resultCounts) {}
 
   public record JvmStats(
