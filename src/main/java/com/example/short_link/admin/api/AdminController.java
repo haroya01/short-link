@@ -14,6 +14,7 @@ import com.example.short_link.admin.application.AdminRouteMetric;
 import com.example.short_link.admin.application.AdminRouteMetricsService;
 import com.example.short_link.admin.application.RecentError;
 import com.example.short_link.admin.application.RecentErrorsService;
+import com.example.short_link.common.observability.AdminFunnelService;
 import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.common.observability.AdminSystemMetricsService;
 import com.example.short_link.link.application.LinkWebhookService;
@@ -40,6 +41,7 @@ public class AdminController {
   private final LinkWebhookService webhookService;
   private final AdminRequestMetricsService requestMetricsService;
   private final AdminSystemMetricsService systemMetricsService;
+  private final AdminFunnelService funnelService;
 
   @GetMapping("/overview")
   public AdminOverview overview() {
@@ -131,6 +133,17 @@ public class AdminController {
   @GetMapping("/metrics/system")
   public AdminSystemMetricsService.SystemMetrics systemMetrics() {
     return systemMetricsService.snapshot();
+  }
+
+  /**
+   * signup → first link → first click → first webhook user-count funnel for the requested signup
+   * window. Conversion ratios surface where the pipeline narrows — onboarding (signup→link),
+   * distribution (link→click), or retention (click→webhook).
+   */
+  @GetMapping("/funnel")
+  public AdminFunnelService.Funnel funnel(
+      @RequestParam(name = "window", required = false) String window) {
+    return funnelService.snapshot(AdminFunnelService.Window.parse(window));
   }
 
   /**
