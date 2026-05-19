@@ -14,7 +14,9 @@ import com.example.short_link.admin.application.AdminRouteMetric;
 import com.example.short_link.admin.application.AdminRouteMetricsService;
 import com.example.short_link.admin.application.RecentError;
 import com.example.short_link.admin.application.RecentErrorsService;
+import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.link.application.LinkWebhookService;
+import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -35,6 +37,7 @@ public class AdminController {
   private final AdminRouteMetricsService routeMetricsService;
   private final AdminLinkMetricsService linkMetricsService;
   private final LinkWebhookService webhookService;
+  private final AdminRequestMetricsService requestMetricsService;
 
   @GetMapping("/overview")
   public AdminOverview overview() {
@@ -93,5 +96,47 @@ public class AdminController {
   @PostMapping("/webhooks/redetect-formats")
   public LinkWebhookService.ReDetectResult redetectWebhookFormats() {
     return webhookService.reDetectFormats();
+  }
+
+  /**
+   * Per-route count / p50 / p95 / p99 / error rate over the requested window, sourced from the
+   * {@code request_metrics} table. Replaces {@link #routeMetrics(String)} once the in-process ring
+   * buffer is retired in the follow-up PR.
+   */
+  @GetMapping("/metrics/routes")
+  public List<AdminRequestMetricsService.RouteAggregate> requestRouteMetrics(
+      @RequestParam(name = "window", required = false) String window) {
+    return requestMetricsService.routes(AdminRequestMetricsService.Window.parse(window));
+  }
+
+  /**
+   * Outcome distribution for a single {@code shortCode} over the requested window — answers "what
+   * proportion of clicks on this code ended up as redirect / not_found / expired / blocked".
+   */
+  @GetMapping("/metrics/outcomes")
+  public AdminRequestMetricsService.OutcomeDistribution requestOutcomeDistribution(
+      @RequestParam(name = "shortCode") String shortCode,
+      @RequestParam(name = "window", required = false) String window) {
+    return requestMetricsService.outcomes(
+        shortCode, AdminRequestMetricsService.Window.parse(window));
+  }
+
+  /**
+   * Raw rows for incident drill-down. Filters compose: any combination of route / outcome /
+   * shortCode / userId narrows the scan; from/to bound the time window (default last 1h). {@code
+   * limit} is capped server-side; for deeper history pull a wider window.
+   */
+  @GetMapping("/metrics/requests")
+  public List<AdminRequestMetricsService.RawRow> requestRawRows(
+      @RequestParam(required = false) Instant from,
+      @RequestParam(required = false) Instant to,
+      @RequestParam(required = false) String route,
+      @RequestParam(required = false) String outcome,
+      @RequestParam(required = false) String shortCode,
+      @RequestParam(required = false) Long userId,
+      @RequestParam(required = false) Integer limit) {
+    return requestMetricsService.raw(
+        new AdminRequestMetricsService.RawQuery(
+            from, to, route, outcome, shortCode, userId, limit));
   }
 }
