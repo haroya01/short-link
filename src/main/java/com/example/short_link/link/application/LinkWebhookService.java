@@ -51,10 +51,15 @@ public class LinkWebhookService {
       throw new TooManyWebhooksException(MAX_PER_LINK);
     }
     String secret = generateSecret();
+    WebhookFormat format = WebhookFormat.detect(url);
     LinkWebhookEntity saved =
-        repository.save(new LinkWebhookEntity(link.getId(), url, secret, sanitizeName(name)));
-    meterRegistry.counter("link.webhook.registered").increment();
-    return new IssuedWebhook(saved.getId(), url, secret, sanitizeName(name), saved.getCreatedAt());
+        repository.save(
+            new LinkWebhookEntity(link.getId(), url, secret, sanitizeName(name), format));
+    meterRegistry
+        .counter("link.webhook.registered", "format", format.name().toLowerCase())
+        .increment();
+    return new IssuedWebhook(
+        saved.getId(), url, secret, sanitizeName(name), saved.getCreatedAt(), format);
   }
 
   @Transactional
@@ -123,7 +128,8 @@ public class LinkWebhookService {
         h.getConsecutiveFailures(),
         h.getAutoDisabledReason(),
         h.getReferrerHostFilter(),
-        h.getUtmSourceFilter());
+        h.getUtmSourceFilter(),
+        h.getFormat());
   }
 
   private String generateSecret() {
@@ -157,9 +163,11 @@ public class LinkWebhookService {
       int consecutiveFailures,
       String autoDisabledReason,
       String referrerHostFilter,
-      String utmSourceFilter) {}
+      String utmSourceFilter,
+      WebhookFormat format) {}
 
-  public record IssuedWebhook(Long id, String url, String secret, String name, Instant createdAt) {}
+  public record IssuedWebhook(
+      Long id, String url, String secret, String name, Instant createdAt, WebhookFormat format) {}
 
   public record ConfigPatch(
       Boolean includeBots,
