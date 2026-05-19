@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.admin.application.LinkMetricsRecorder;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
@@ -30,6 +31,7 @@ class AdminControllerTest {
   @Autowired private UserRepository userRepository;
   @Autowired private LinkRepository linkRepository;
   @Autowired private ClickEventRepository clickRepository;
+  @Autowired private LinkMetricsRecorder linkMetricsRecorder;
 
   @Test
   void anonymousReceives401OnAdminEndpoint() throws Exception {
@@ -73,6 +75,56 @@ class AdminControllerTest {
     mvc.perform(get("/api/v1/admin/route-metrics").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$").isArray());
+  }
+
+  @Test
+  void anonymousReceives401OnLinkMetrics() throws Exception {
+    mvc.perform(get("/api/v1/admin/link-metrics")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void plainUserReceives403OnLinkMetrics() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-ulm"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    mvc.perform(get("/api/v1/admin/link-metrics").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void adminReceivesLinkMetrics() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("lm@x.com", "google", "g-alm"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "lmcode", admin.getId(), null));
+    // seed both DB and the in-memory ring so the response carries a real row
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.getId())
+            .userAgent("ua")
+            .clientIp("1.1.1.1")
+            .deviceClass("desktop")
+            .bot(false)
+            .build());
+    linkMetricsRecorder.record("lmcode", 15, "redirect");
+    linkMetricsRecorder.record("lmcode", 200, "not_found");
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/link-metrics")
+                .header("Authorization", "Bearer " + token)
+                .param("window", "24h")
+                .param("sort", "count"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray())
+        // The recorder is a singleton across tests in the shared application context, so other
+        // suites may have seeded codes too — look up our row by shortCode rather than asserting
+        // on the first element.
+        .andExpect(
+            jsonPath("$[?(@.shortCode == 'lmcode')].originalUrl").value("https://example.com"))
+        .andExpect(jsonPath("$[?(@.shortCode == 'lmcode')].windowedRedirects").value(2))
+        .andExpect(jsonPath("$[?(@.shortCode == 'lmcode')].outcomeCounts.redirect").value(1))
+        .andExpect(jsonPath("$[?(@.shortCode == 'lmcode')].outcomeCounts.not_found").value(1));
   }
 
   @Test
