@@ -1,6 +1,6 @@
 package com.example.short_link.link.api;
 
-import com.example.short_link.admin.application.LinkMetricsRecorder;
+import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.application.CachedLink;
 import com.example.short_link.link.application.ClickRecorder;
 import com.example.short_link.link.application.CustomDomainService;
@@ -51,7 +51,6 @@ public class RedirectController {
   private final GeoIpResolver geoIpResolver;
   private final CustomDomainService customDomainService;
   private final UserAgentClassifier userAgentClassifier;
-  private final LinkMetricsRecorder linkMetricsRecorder;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -80,8 +79,10 @@ public class RedirectController {
       throw e;
     } finally {
       sample.stop(meterRegistry.timer("redirect.latency", "outcome", outcome));
-      long latencyMs = (System.nanoTime() - startedAtNanos) / 1_000_000L;
-      linkMetricsRecorder.record(shortCode, latencyMs, outcome);
+      // Surface the domain outcome to the RequestMetricsFilter — expired / view_limit aren't
+      // derivable from the HTTP status alone, so the filter would otherwise stamp the row with
+      // the coarse status-based label and the link-metrics outcome breakdown would lose detail.
+      req.setAttribute(OutcomeResolver.ATTRIBUTE, outcome);
     }
   }
 
@@ -238,8 +239,7 @@ public class RedirectController {
       outcome = "expired";
       throw e;
     } finally {
-      long latencyMs = (System.nanoTime() - startedAtNanos) / 1_000_000L;
-      linkMetricsRecorder.record(shortCode, latencyMs, outcome);
+      req.setAttribute(OutcomeResolver.ATTRIBUTE, outcome);
     }
   }
 
