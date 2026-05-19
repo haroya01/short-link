@@ -15,6 +15,7 @@ import com.example.short_link.admin.application.AdminRouteMetricsService;
 import com.example.short_link.admin.application.RecentError;
 import com.example.short_link.admin.application.RecentErrorsService;
 import com.example.short_link.common.observability.AdminRequestMetricsService;
+import com.example.short_link.common.observability.AdminSystemMetricsService;
 import com.example.short_link.link.application.LinkWebhookService;
 import java.time.Instant;
 import java.util.List;
@@ -38,6 +39,7 @@ public class AdminController {
   private final AdminLinkMetricsService linkMetricsService;
   private final LinkWebhookService webhookService;
   private final AdminRequestMetricsService requestMetricsService;
+  private final AdminSystemMetricsService systemMetricsService;
 
   @GetMapping("/overview")
   public AdminOverview overview() {
@@ -119,6 +121,16 @@ public class AdminController {
       @RequestParam(name = "window", required = false) String window) {
     return requestMetricsService.outcomes(
         shortCode, AdminRequestMetricsService.Window.parse(window));
+  }
+
+  /**
+   * Single-snapshot view of what Micrometer / Actuator already collects — JVM (heap / threads /
+   * GC), HikariCP pool, and per-cache hit/miss. Zero hot-path cost: gauges are read on demand when
+   * the admin opens this endpoint, not measured from request traffic.
+   */
+  @GetMapping("/metrics/system")
+  public AdminSystemMetricsService.SystemMetrics systemMetrics() {
+    return systemMetricsService.snapshot();
   }
 
   /**

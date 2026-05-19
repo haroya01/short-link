@@ -1,0 +1,70 @@
+package com.example.short_link.common.observability;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.within;
+
+import io.micrometer.core.instrument.Tag;
+import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import org.junit.jupiter.api.Test;
+
+class AdminSystemMetricsServiceTest {
+
+  private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+  private final AdminSystemMetricsService service = new AdminSystemMetricsService(registry);
+
+  @Test
+  void snapshotReadsRegisteredGauges() {
+    registry.gauge("jvm.memory.used", Tags.of(Tag.of("area", "heap")), 256_000_000L);
+    registry.gauge("jvm.memory.max", Tags.of(Tag.of("area", "heap")), 1_024_000_000L);
+    registry.gauge("jvm.memory.used", Tags.of(Tag.of("area", "nonheap")), 64_000_000L);
+    registry.gauge("jvm.threads.live", 24);
+    registry.gauge("jvm.threads.daemon", 12);
+    registry.gauge("hikaricp.connections.active", 3);
+    registry.gauge("hikaricp.connections.idle", 7);
+    registry.gauge("hikaricp.connections.pending", 0);
+    registry.gauge("hikaricp.connections", 10);
+
+    AdminSystemMetricsService.SystemMetrics snap = service.snapshot();
+
+    assertThat(snap.jvm().heapUsedBytes()).isEqualTo(256_000_000L);
+    assertThat(snap.jvm().heapMaxBytes()).isEqualTo(1_024_000_000L);
+    assertThat(snap.jvm().nonHeapUsedBytes()).isEqualTo(64_000_000L);
+    assertThat(snap.jvm().threadsLive()).isEqualTo(24);
+    assertThat(snap.jvm().threadsDaemon()).isEqualTo(12);
+    assertThat(snap.hikari().active()).isEqualTo(3);
+    assertThat(snap.hikari().idle()).isEqualTo(7);
+    assertThat(snap.hikari().total()).isEqualTo(10);
+  }
+
+  @Test
+  void missingGaugesReturnZeroWithoutThrowing() {
+    AdminSystemMetricsService.SystemMetrics snap = service.snapshot();
+    assertThat(snap.jvm().heapUsedBytes()).isZero();
+    assertThat(snap.hikari().active()).isZero();
+    assertThat(snap.caches()).isEmpty();
+  }
+
+  @Test
+  void cachesAggregateHitsAndMissesPerCacheName() {
+    // Simulates what Micrometer's CacheMeterBinder emits — two counters per cache, keyed on
+    // result=hit|miss.
+    registry.counter("cache.gets", "cache", "link", "result", "hit").increment(80);
+    registry.counter("cache.gets", "cache", "link", "result", "miss").increment(20);
+    registry.counter("cache.gets", "cache", "public-profile", "result", "hit").increment(45);
+    registry.counter("cache.gets", "cache", "public-profile", "result", "miss").increment(15);
+
+    var caches = service.snapshot().caches();
+
+    assertThat(caches).containsOnlyKeys("link", "public-profile");
+    assertThat(caches.get("link").hits()).isEqualTo(80L);
+    assertThat(caches.get("link").misses()).isEqualTo(20L);
+    assertThat(caches.get("link").hitRatio()).isCloseTo(0.8, within(0.0001));
+    assertThat(caches.get("public-profile").hitRatio()).isCloseTo(0.75, within(0.0001));
+  }
+
+  @Test
+  void cacheHitRatioIsZeroWhenNoSamples() {
+    assertThat(new AdminSystemMetricsService.CacheStat(0, 0).hitRatio()).isZero();
+  }
+}
