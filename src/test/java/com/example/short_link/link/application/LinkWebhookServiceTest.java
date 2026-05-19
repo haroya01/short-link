@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.LinkWebhookEntity;
+import com.example.short_link.link.domain.LinkWebhookRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -20,6 +22,7 @@ class LinkWebhookServiceTest {
 
   @Autowired private LinkWebhookService service;
   @Autowired private LinkRepository linkRepository;
+  @Autowired private LinkWebhookRepository webhookRepository;
   @Autowired private UserRepository userRepository;
 
   @Test
@@ -219,6 +222,100 @@ class LinkWebhookServiceTest {
 
     var issued = service.register(user.getId(), "wh14000", "https://example.com/hook", null);
     assertThat(issued.format()).isEqualTo(WebhookFormat.GENERIC);
+  }
+
+  @Test
+  void reDetectFormatsReactivatesAutoDisabledDiscordRow() {
+    UserEntity user = userRepository.save(new UserEntity("rd1@local.test", "google", "g-rd1"));
+    LinkEntity link =
+        linkRepository.save(
+            new LinkEntity("https://example.com/rd1", "rd11111", user.getId(), null));
+
+    // Simulates a row that registered before WebhookFormat.detect existed: Discord URL persisted
+    // with GENERIC format, then auto-disabled after 5 payload-shape failures. Saving the entity
+    // directly skips PublicHttpUrlGuard's live DNS check (the test environment can't resolve
+    // discord.com reliably).
+    LinkWebhookEntity hook =
+        webhookRepository.save(
+            new LinkWebhookEntity(
+                link.getId(),
+                "https://discord.com/api/webhooks/1/abc",
+                "secret-rd1",
+                "discord",
+                WebhookFormat.GENERIC));
+    for (int i = 0; i < LinkWebhookEntity.AUTO_DISABLE_FAILURE_THRESHOLD; i++) {
+      hook.recordFailure(400, "Cannot send an empty message");
+    }
+    webhookRepository.saveAndFlush(hook);
+    assertThat(hook.isEnabled()).isFalse();
+    assertThat(hook.getAutoDisabledReason()).isNotNull();
+
+    LinkWebhookService.ReDetectResult result = service.reDetectFormats();
+    assertThat(result.formatChanged()).isGreaterThanOrEqualTo(1);
+    assertThat(result.reactivated()).isGreaterThanOrEqualTo(1);
+
+    LinkWebhookEntity after = webhookRepository.findById(hook.getId()).orElseThrow();
+    assertThat(after.getFormat()).isEqualTo(WebhookFormat.DISCORD);
+    assertThat(after.isEnabled()).isTrue();
+    assertThat(after.getConsecutiveFailures()).isZero();
+    assertThat(after.getAutoDisabledReason()).isNull();
+    assertThat(after.getLastError()).isNull();
+  }
+
+  @Test
+  void reDetectFormatsLeavesGenericAutoDisabledAlone() {
+    UserEntity user = userRepository.save(new UserEntity("rd2@local.test", "google", "g-rd2"));
+    LinkEntity link =
+        linkRepository.save(
+            new LinkEntity("https://example.com/rd2", "rd22222", user.getId(), null));
+
+    // Generic receiver that auto-disabled for a real reason (e.g. the receiver is down). Re-detect
+    // must not silently reactivate it — the failure cause is not the payload shape we just fixed.
+    LinkWebhookEntity hook =
+        webhookRepository.save(
+            new LinkWebhookEntity(
+                link.getId(),
+                "https://hook.example.com/in",
+                "secret-rd2",
+                null,
+                WebhookFormat.GENERIC));
+    for (int i = 0; i < LinkWebhookEntity.AUTO_DISABLE_FAILURE_THRESHOLD; i++) {
+      hook.recordFailure(500, "receiver unreachable");
+    }
+    webhookRepository.saveAndFlush(hook);
+    assertThat(hook.isEnabled()).isFalse();
+
+    LinkWebhookService.ReDetectResult result = service.reDetectFormats();
+    LinkWebhookEntity after = webhookRepository.findById(hook.getId()).orElseThrow();
+    assertThat(after.getFormat()).isEqualTo(WebhookFormat.GENERIC);
+    assertThat(after.isEnabled()).isFalse();
+    assertThat(result.reactivated()).isZero();
+  }
+
+  @Test
+  void reDetectFormatsFlipsFormatWithoutReactivatingHealthyRow() {
+    UserEntity user = userRepository.save(new UserEntity("rd3@local.test", "google", "g-rd3"));
+    LinkEntity link =
+        linkRepository.save(
+            new LinkEntity("https://example.com/rd3", "rd33333", user.getId(), null));
+
+    // Healthy row (enabled=true) but stored as GENERIC against a canary.discord.com URL — V53's
+    // narrow LIKE missed the subdomain. Re-detect should flip the format but must not touch
+    // enabled / counters.
+    LinkWebhookEntity hook =
+        webhookRepository.save(
+            new LinkWebhookEntity(
+                link.getId(),
+                "https://canary.discord.com/api/webhooks/2/xyz",
+                "secret-rd3",
+                "canary",
+                WebhookFormat.GENERIC));
+
+    LinkWebhookService.ReDetectResult result = service.reDetectFormats();
+    LinkWebhookEntity after = webhookRepository.findById(hook.getId()).orElseThrow();
+    assertThat(after.getFormat()).isEqualTo(WebhookFormat.DISCORD);
+    assertThat(after.isEnabled()).isTrue();
+    assertThat(result.formatChanged()).isGreaterThanOrEqualTo(1);
   }
 
   @Test
