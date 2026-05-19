@@ -145,15 +145,7 @@ public class LinkWebhookDispatcher {
       }
       if (drained.isEmpty()) continue;
       Map<String, Object> body =
-          Map.of(
-              "type",
-              "click.batch",
-              "linkId",
-              hook.getLinkId(),
-              "count",
-              drained.size(),
-              "events",
-              drained);
+          WebhookPayloadAdapter.buildBatch(hook.getFormat(), hook.getLinkId(), drained);
       deliver(hook, jsonMapper.writeValueAsString(body), "batch");
     }
   }
@@ -207,7 +199,8 @@ public class LinkWebhookDispatcher {
   }
 
   private void deliverSingle(LinkWebhookEntity hook, Map<String, Object> payload) {
-    deliver(hook, jsonMapper.writeValueAsString(payload), "click");
+    Map<String, Object> adapted = WebhookPayloadAdapter.buildClick(hook.getFormat(), payload);
+    deliver(hook, jsonMapper.writeValueAsString(adapted), "click");
   }
 
   void deliver(LinkWebhookEntity hook, String body, String eventType) {
@@ -224,24 +217,32 @@ public class LinkWebhookDispatcher {
           hook.getUrl());
       return;
     }
-    String signature;
-    try {
-      signature = sign(body, hook.getSecret());
-    } catch (Exception e) {
-      hook.recordFailure(null, "signature failed: " + e.getMessage());
-      meterRegistry.counter("webhook.delivery", "result", "sign_error").increment();
-      log.warn("webhook signing failed: hookId={}", hook.getId(), e);
-      return;
+    // Discord/Slack don't accept a kurl HMAC header — they own the message contract and will not
+    // call back to verify anything. Skip the signature for those receivers and only stamp it on
+    // generic endpoints that opted into the kurl signing scheme on their side.
+    boolean signed = hook.getFormat() == WebhookFormat.GENERIC;
+    String signature = null;
+    if (signed) {
+      try {
+        signature = sign(body, hook.getSecret());
+      } catch (Exception e) {
+        hook.recordFailure(null, "signature failed: " + e.getMessage());
+        meterRegistry.counter("webhook.delivery", "result", "sign_error").increment();
+        log.warn("webhook signing failed: hookId={}", hook.getId(), e);
+        return;
+      }
     }
-    HttpRequest request =
+    HttpRequest.Builder builder =
         HttpRequest.newBuilder(URI.create(hook.getUrl()))
             .timeout(TIMEOUT)
             .header("Content-Type", "application/json")
             .header("User-Agent", USER_AGENT)
             .header(EVENT_HEADER, eventType)
-            .header(SIGNATURE_HEADER, "sha256=" + signature)
-            .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8))
-            .build();
+            .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
+    if (signed) {
+      builder.header(SIGNATURE_HEADER, "sha256=" + signature);
+    }
+    HttpRequest request = builder.build();
     try {
       HttpResponse<Void> response =
           httpClient.send(request, HttpResponse.BodyHandlers.discarding());

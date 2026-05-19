@@ -188,6 +188,40 @@ class LinkWebhookServiceTest {
   }
 
   @Test
+  void detectsAndPersistsDiscordFormatOnRegister() {
+    UserEntity user = userRepository.save(new UserEntity("wh12@local.test", "google", "g-wh12"));
+    linkRepository.save(new LinkEntity("https://example.com/wh12", "wh12000", user.getId(), null));
+
+    var issued =
+        service.register(
+            user.getId(), "wh12000", "https://discord.com/api/webhooks/123/abc-secret", null);
+    assertThat(issued.format()).isEqualTo(WebhookFormat.DISCORD);
+
+    var summary = service.list(user.getId(), "wh12000").get(0);
+    assertThat(summary.format()).isEqualTo(WebhookFormat.DISCORD);
+  }
+
+  @Test
+  void detectsSlackFormatOnRegister() {
+    UserEntity user = userRepository.save(new UserEntity("wh13@local.test", "google", "g-wh13"));
+    linkRepository.save(new LinkEntity("https://example.com/wh13", "wh13000", user.getId(), null));
+
+    var issued =
+        service.register(
+            user.getId(), "wh13000", "https://hooks.slack.com/services/T0/B0/secret", null);
+    assertThat(issued.format()).isEqualTo(WebhookFormat.SLACK);
+  }
+
+  @Test
+  void defaultsToGenericFormatForOwnEndpoint() {
+    UserEntity user = userRepository.save(new UserEntity("wh14@local.test", "google", "g-wh14"));
+    linkRepository.save(new LinkEntity("https://example.com/wh14", "wh14000", user.getId(), null));
+
+    var issued = service.register(user.getId(), "wh14000", "https://example.com/hook", null);
+    assertThat(issued.format()).isEqualTo(WebhookFormat.GENERIC);
+  }
+
+  @Test
   void zeroDailyQuotaIsTreatedAsNoCap() {
     UserEntity user = userRepository.save(new UserEntity("wh11@local.test", "google", "g-wh11"));
     linkRepository.save(new LinkEntity("https://example.com/wh11", "wh11111h", user.getId(), null));
