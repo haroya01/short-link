@@ -1,9 +1,10 @@
 package com.example.short_link.admin.application;
 
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
-import io.micrometer.core.instrument.distribution.HistogramSnapshot;
-import io.micrometer.core.instrument.distribution.ValueAtPercentile;
+import com.example.short_link.common.observability.RequestMetricEntity;
+import com.example.short_link.common.observability.RequestMetricRepository;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -12,117 +13,98 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Aggregates {@code http.server.requests} timers by {@code (uri, method)} pair. The actuator
- * histogram registers a separate timer per (uri, method, status, outcome) tuple, so several timers
- * may belong to the same route — counts are summed and percentiles are taken as the worst (max)
- * observed across status partitions so a single slow 500 doesn't get washed out by fast 2xx
- * samples. Error rate is the fraction of {@code status >= 500} samples.
+ * Route-level performance view. Reads raw rows out of {@code request_metrics} (the buffered
+ * async-written log of every finished HTTP request) and aggregates per-{@code (method, uri)}.
+ * {@link #routeMetrics()} returns lifetime stats (the full {@code request_metrics} table); {@link
+ * #routeMetricsWindow(Window)} restricts to a recent slice.
  *
- * <p>The aggregate {@link #routeMetrics()} reports everything since process start. {@link
- * #routeMetricsWindow(Window)} returns the same shape sliced to a recent time window backed by
- * {@link RouteMetricsRingBuffer}'s per-minute snapshots.
+ * <p>Replaces the in-process {@code RouteMetricsRingBuffer} that used to drive these endpoints —
+ * the ring sampled Micrometer's {@code http.server.requests} timer once a minute, which gave us
+ * per-minute deltas but no raw events to drill into. The new source carries every request, so
+ * percentile and error-rate computations operate over the actual sample set rather than the timer's
+ * bucketed approximation.
  */
 @Service
-@RequiredArgsConstructor
 public class AdminRouteMetricsService {
 
-  private static final String HTTP_TIMER = "http.server.requests";
+  /** Hard cap for lifetime aggregates — beyond this we'd be sorting hundreds of MB in heap. */
+  private static final Duration LIFETIME_CAP = Duration.ofDays(7);
 
-  private final MeterRegistry meterRegistry;
-  private final RouteMetricsRingBuffer ring;
+  private final RequestMetricRepository repository;
+  private final Clock clock;
+
+  @Autowired
+  public AdminRouteMetricsService(RequestMetricRepository repository) {
+    this(repository, Clock.systemUTC());
+  }
+
+  AdminRouteMetricsService(RequestMetricRepository repository, Clock clock) {
+    this.repository = repository;
+    this.clock = clock;
+  }
 
   public List<AdminRouteMetric> routeMetrics() {
-    Map<String, Accumulator> byRoute = new HashMap<>();
-    for (Timer t : meterRegistry.find(HTTP_TIMER).timers()) {
-      String uri = t.getId().getTag("uri");
-      String method = t.getId().getTag("method");
-      String status = t.getId().getTag("status");
-      if (uri == null || method == null) continue;
-      String key = method + " " + uri;
-      Accumulator acc = byRoute.computeIfAbsent(key, k -> new Accumulator(uri, method));
-      HistogramSnapshot snap = t.takeSnapshot();
-      long sampleCount = snap.count();
-      acc.count += sampleCount;
-      if (status != null && !status.isEmpty()) {
-        char first = status.charAt(0);
-        if (first == '5') acc.error5xx += sampleCount;
-        acc.statusDistribution.merge(status, sampleCount, Long::sum);
-      }
-      for (ValueAtPercentile v : snap.percentileValues()) {
-        double ms = v.value(TimeUnit.MILLISECONDS);
-        if (closeTo(v.percentile(), 0.5)) acc.p50 = Math.max(acc.p50, ms);
-        else if (closeTo(v.percentile(), 0.95)) acc.p95 = Math.max(acc.p95, ms);
-        else if (closeTo(v.percentile(), 0.99)) acc.p99 = Math.max(acc.p99, ms);
-      }
-    }
+    return aggregate(LIFETIME_CAP);
+  }
 
+  public List<AdminRouteMetric> routeMetricsWindow(Window window) {
+    return aggregate(window.duration());
+  }
+
+  private List<AdminRouteMetric> aggregate(Duration window) {
+    Instant now = clock.instant();
+    Instant from = now.minus(window);
+    List<RequestMetricEntity> rows = repository.findWindow(from, now);
+    Map<String, List<RequestMetricEntity>> byRoute = new HashMap<>();
+    for (RequestMetricEntity row : rows) {
+      byRoute
+          .computeIfAbsent(row.getMethod() + " " + row.getRoute(), k -> new ArrayList<>())
+          .add(row);
+    }
     List<AdminRouteMetric> out = new ArrayList<>(byRoute.size());
-    for (Accumulator a : byRoute.values()) {
-      double errorRate = a.count == 0 ? 0.0 : (double) a.error5xx / (double) a.count;
+    for (Map.Entry<String, List<RequestMetricEntity>> entry : byRoute.entrySet()) {
+      List<RequestMetricEntity> group = entry.getValue();
+      long count = group.size();
+      long error5xx = 0;
+      long[] latencies = new long[group.size()];
+      Map<String, Long> statusDist = new TreeMap<>();
+      for (int i = 0; i < group.size(); i++) {
+        RequestMetricEntity row = group.get(i);
+        latencies[i] = row.getLatencyMs();
+        if (row.getStatus() >= 500) error5xx++;
+        statusDist.merge(String.valueOf(row.getStatus()), 1L, Long::sum);
+      }
+      java.util.Arrays.sort(latencies);
+      RequestMetricEntity first = group.get(0);
+      double errorRate = count == 0 ? 0.0 : (double) error5xx / (double) count;
       out.add(
           new AdminRouteMetric(
-              a.uri,
-              a.method,
-              a.count,
-              a.p50,
-              a.p95,
-              a.p99,
+              first.getRoute(),
+              first.getMethod(),
+              count,
+              percentile(latencies, 0.5),
+              percentile(latencies, 0.95),
+              percentile(latencies, 0.99),
               errorRate,
-              a.error5xx,
-              sortStatusDistribution(a.statusDistribution)));
+              error5xx,
+              sortStatusDistribution(statusDist)));
     }
     out.sort(Comparator.comparingLong(AdminRouteMetric::count).reversed());
     return out;
   }
 
-  /**
-   * Time-windowed slice. Counts are summed across the buckets in the window; p95/p99 are the worst
-   * minute observed within it. Status distribution is also per-status sum within the window — that
-   * lets the UI show "in the last hour this route was 80% 200 / 18% 404 / 2% 500".
-   */
-  public List<AdminRouteMetric> routeMetricsWindow(Window window) {
-    Map<RouteMetricsRingBuffer.RouteKey, List<RouteMetricsRingBuffer.TupleSlice>> slice =
-        ring.sliceWindow(window.minutes());
-    List<AdminRouteMetric> out = new ArrayList<>(slice.size());
-    for (var entry : slice.entrySet()) {
-      RouteMetricsRingBuffer.RouteKey route = entry.getKey();
-      long count = 0;
-      long error5xx = 0;
-      double p95 = 0;
-      double p99 = 0;
-      Map<String, Long> dist = new TreeMap<>();
-      for (RouteMetricsRingBuffer.TupleSlice s : entry.getValue()) {
-        long tupleCount = 0;
-        for (RouteMetricsRingBuffer.MinuteBucket b : s.buckets()) {
-          tupleCount += b.count();
-          p95 = Math.max(p95, b.p95Millis());
-          p99 = Math.max(p99, b.p99Millis());
-        }
-        count += tupleCount;
-        if (!s.status().isEmpty() && s.status().charAt(0) == '5') error5xx += tupleCount;
-        dist.merge(s.status(), tupleCount, Long::sum);
-      }
-      if (count == 0) continue;
-      double errorRate = (double) error5xx / (double) count;
-      out.add(
-          new AdminRouteMetric(
-              route.uri(),
-              route.method(),
-              count,
-              0.0, // p50 is not retained per-minute (worst-case p95/p99 is what matters here)
-              p95,
-              p99,
-              errorRate,
-              error5xx,
-              sortStatusDistribution(dist)));
-    }
-    out.sort(Comparator.comparingLong(AdminRouteMetric::count).reversed());
-    return out;
+  private static double percentile(long[] sorted, double p) {
+    if (sorted.length == 0) return 0.0;
+    if (sorted.length == 1) return sorted[0];
+    double rank = (sorted.length - 1) * p;
+    int lo = (int) Math.floor(rank);
+    int hi = (int) Math.ceil(rank);
+    if (lo == hi) return sorted[lo];
+    return sorted[lo] + (rank - lo) * (sorted[hi] - sorted[lo]);
   }
 
   private static Map<String, Long> sortStatusDistribution(Map<String, Long> src) {
@@ -133,39 +115,19 @@ public class AdminRouteMetricsService {
     return sorted;
   }
 
-  private static boolean closeTo(double a, double b) {
-    return Math.abs(a - b) < 1e-6;
-  }
-
-  private static final class Accumulator {
-    final String uri;
-    final String method;
-    long count;
-    long error5xx;
-    double p50;
-    double p95;
-    double p99;
-    final Map<String, Long> statusDistribution = new HashMap<>();
-
-    Accumulator(String uri, String method) {
-      this.uri = uri;
-      this.method = method;
-    }
-  }
-
   public enum Window {
-    H1(60),
-    H24(60 * 24),
-    D7(60 * 24 * 7);
+    H1(Duration.ofHours(1)),
+    H24(Duration.ofHours(24)),
+    D7(Duration.ofDays(7));
 
-    private final int minutes;
+    private final Duration duration;
 
-    Window(int minutes) {
-      this.minutes = minutes;
+    Window(Duration duration) {
+      this.duration = duration;
     }
 
-    public int minutes() {
-      return minutes;
+    public Duration duration() {
+      return duration;
     }
 
     public static Window parse(String raw) {
