@@ -4,6 +4,7 @@ import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.LinkWebhookRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -243,6 +244,12 @@ public class LinkWebhookDispatcher {
       builder.header(SIGNATURE_HEADER, "sha256=" + signature);
     }
     HttpRequest request = builder.build();
+    // Timer captures wall-clock latency of the actual HTTP call (including DNS, TLS, server
+    // processing, body discard). Tagged with result so the dashboard can split p95 of healthy
+    // deliveries from p95 of degraded ones — receivers that 5xx slowly are otherwise invisible
+    // in the existing counter view.
+    Timer.Sample sample = Timer.start(meterRegistry);
+    String resultTag = "exception";
     try {
       HttpResponse<Void> response =
           httpClient.send(request, HttpResponse.BodyHandlers.discarding());
@@ -250,11 +257,13 @@ public class LinkWebhookDispatcher {
       if (status / 100 == 2) {
         hook.recordSuccess(status);
         meterRegistry.counter("webhook.delivery", "result", "ok").increment();
+        resultTag = "ok";
         log.debug(
             "webhook delivered: hookId={} status={} event={}", hook.getId(), status, eventType);
       } else {
         hook.recordFailure(status, "non-2xx response (" + status + ")");
         meterRegistry.counter("webhook.delivery", "result", "non_2xx").increment();
+        resultTag = "non_2xx";
         log.warn(
             "webhook delivery returned non-2xx: hookId={} url={} status={}",
             hook.getId(),
@@ -269,6 +278,8 @@ public class LinkWebhookDispatcher {
           hook.getId(),
           hook.getUrl(),
           e.toString());
+    } finally {
+      sample.stop(meterRegistry.timer("outbound.http", "client", "webhook", "result", resultTag));
     }
   }
 
