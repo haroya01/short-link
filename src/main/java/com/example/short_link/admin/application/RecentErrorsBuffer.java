@@ -14,15 +14,25 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Deque;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+/**
+ * Logback appender shim that mirrors ERROR/WARN events into an in-memory ring buffer so the admin
+ * UI can show them. Captures the rich context the operator needs to triage without shell access:
+ * exception class + cause chain, truncated stack trace, MDC fields populated by {@code MdcFilter}
+ * (requestId/userId/method/uri/clientIp) and any {@code task} key set by the scheduled-task wrapper
+ * so a recurring failure points back to the specific job that produced it.
+ */
 @Component
 public class RecentErrorsBuffer {
 
   private static final int MAX_MESSAGE_LEN = 4_000;
+  private static final int MAX_STACK_LEN = 8_000;
+  private static final int MAX_CAUSE_DEPTH = 6;
 
   private final Deque<RecentError> buffer = new ConcurrentLinkedDeque<>();
   private final int capacity;
@@ -61,33 +71,76 @@ public class RecentErrorsBuffer {
   }
 
   void capture(ILoggingEvent event) {
-    if (event.getLevel().toInt() < Level.ERROR.toInt()) return;
-    String exception = null;
+    // WARN included so non-fatal anomalies (rate-limit spikes, webhook retries) are reviewable
+    // alongside hard errors — the UI filter lets operators narrow to ERROR-only when triaging.
+    if (event.getLevel().toInt() < Level.WARN.toInt()) return;
+
     IThrowableProxy throwable = event.getThrowableProxy();
-    if (throwable != null) {
-      exception = ThrowableProxyUtil.asString(throwable);
-      if (exception != null && exception.length() > MAX_MESSAGE_LEN) {
-        exception = exception.substring(0, MAX_MESSAGE_LEN);
-      }
-    }
-    String message = event.getFormattedMessage();
-    if (message != null && message.length() > MAX_MESSAGE_LEN) {
-      message = message.substring(0, MAX_MESSAGE_LEN);
-    }
-    String requestId =
-        event.getMDCPropertyMap() == null ? null : event.getMDCPropertyMap().get("requestId");
+    String exceptionClass = throwable == null ? null : throwable.getClassName();
+    String exceptionMessage = throwable == null ? null : throwable.getMessage();
+    List<String> causeChain = buildCauseChain(throwable);
+    String stackTrace =
+        throwable == null ? null : truncate(ThrowableProxyUtil.asString(throwable), MAX_STACK_LEN);
+
+    String message = truncate(event.getFormattedMessage(), MAX_MESSAGE_LEN);
+
+    Map<String, String> mdc = event.getMDCPropertyMap();
+    String requestId = mdcGet(mdc, "requestId");
+    String requestUri = mdcGet(mdc, "uri");
+    String requestMethod = mdcGet(mdc, "method");
+    String userId = mdcGet(mdc, "userId");
+    String clientIp = mdcGet(mdc, "clientIp");
+    String taskName = mdcGet(mdc, "task");
+
     RecentError record =
         new RecentError(
             Instant.ofEpochMilli(event.getTimeStamp()),
             event.getLevel().toString(),
             event.getLoggerName(),
+            event.getThreadName(),
             message,
+            exceptionClass,
+            exceptionMessage,
+            causeChain,
+            stackTrace,
             requestId,
-            exception);
+            requestUri,
+            requestMethod,
+            userId,
+            clientIp,
+            taskName);
     buffer.addLast(record);
     while (buffer.size() > capacity) {
       buffer.pollFirst();
     }
+  }
+
+  private static String mdcGet(Map<String, String> mdc, String key) {
+    if (mdc == null) return null;
+    String value = mdc.get(key);
+    return value == null || value.isBlank() ? null : value;
+  }
+
+  private static String truncate(String value, int max) {
+    if (value == null) return null;
+    return value.length() <= max ? value : value.substring(0, max);
+  }
+
+  private static List<String> buildCauseChain(IThrowableProxy throwable) {
+    if (throwable == null) return List.of();
+    List<String> chain = new ArrayList<>();
+    IThrowableProxy current = throwable.getCause();
+    int depth = 0;
+    while (current != null && depth < MAX_CAUSE_DEPTH) {
+      String label =
+          current.getMessage() == null
+              ? current.getClassName()
+              : current.getClassName() + ": " + current.getMessage();
+      chain.add(truncate(label, 500));
+      current = current.getCause();
+      depth++;
+    }
+    return chain;
   }
 
   static class CapturingAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {

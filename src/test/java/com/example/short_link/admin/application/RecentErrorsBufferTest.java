@@ -34,19 +34,20 @@ class RecentErrorsBufferTest {
   }
 
   @Test
-  void ignoresBelowErrorLevel() {
+  void ignoresBelowWarnLevel() {
     buffer = new RecentErrorsBuffer(100);
     buffer.install();
 
-    log.warn("warn message");
     log.info("info message");
+    log.debug("debug message");
+    log.warn("warn message");
     log.error("real error");
 
     var snap = buffer.snapshot(10);
-    assertThat(snap).extracting(RecentError::message).contains("real error");
     assertThat(snap)
         .extracting(RecentError::message)
-        .doesNotContain("warn message", "info message");
+        .contains("real error", "warn message")
+        .doesNotContain("info message", "debug message");
   }
 
   @Test
@@ -70,7 +71,50 @@ class RecentErrorsBufferTest {
     var snap = buffer.snapshot(5);
     var first = snap.get(0);
     assertThat(first.message()).isEqualTo("boom");
-    assertThat(first.exception()).contains("bang").contains("RuntimeException");
+    assertThat(first.exceptionClass()).isEqualTo("java.lang.RuntimeException");
+    assertThat(first.exceptionMessage()).isEqualTo("bang");
+    assertThat(first.stackTrace()).contains("bang").contains("RuntimeException");
+    assertThat(first.thread()).isNotBlank();
+  }
+
+  @Test
+  void capturesCauseChain() {
+    buffer = new RecentErrorsBuffer(50);
+    buffer.install();
+
+    RuntimeException root = new RuntimeException("root cause");
+    IllegalStateException middle = new IllegalStateException("middle wrap", root);
+    log.error("outer fail", new RuntimeException("outer", middle));
+
+    var snap = buffer.snapshot(5);
+    var first = snap.get(0);
+    assertThat(first.causeChain()).hasSize(2);
+    assertThat(first.causeChain().get(0)).contains("IllegalStateException").contains("middle wrap");
+    assertThat(first.causeChain().get(1)).contains("RuntimeException").contains("root cause");
+  }
+
+  @Test
+  void capturesWarnLevelToo() {
+    buffer = new RecentErrorsBuffer(50);
+    buffer.install();
+
+    log.warn("slow query");
+    log.error("hard error");
+
+    var snap = buffer.snapshot(10);
+    assertThat(snap).extracting(RecentError::message).containsExactly("hard error", "slow query");
+    assertThat(snap.get(1).level()).isEqualTo("WARN");
+  }
+
+  @Test
+  void capturesThreadName() {
+    buffer = new RecentErrorsBuffer(20);
+    buffer.install();
+
+    log.error("from main thread");
+
+    var snap = buffer.snapshot(5);
+    assertThat(snap.get(0).thread()).isEqualTo(Thread.currentThread().getName());
   }
 
   @Test
