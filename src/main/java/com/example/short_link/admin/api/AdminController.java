@@ -41,8 +41,12 @@ public class AdminController {
   }
 
   @GetMapping("/route-metrics")
-  public List<AdminRouteMetric> routeMetrics() {
-    return routeMetricsService.routeMetrics();
+  public List<AdminRouteMetric> routeMetrics(
+      @RequestParam(name = "window", required = false) String window) {
+    if (window == null || window.isBlank() || "all".equalsIgnoreCase(window)) {
+      return routeMetricsService.routeMetrics();
+    }
+    return routeMetricsService.routeMetricsWindow(AdminRouteMetricsService.Window.parse(window));
   }
 
   @GetMapping("/recent-errors")
