@@ -67,4 +67,39 @@ class AdminSystemMetricsServiceTest {
   void cacheHitRatioIsZeroWhenNoSamples() {
     assertThat(new AdminSystemMetricsService.CacheStat(0, 0).hitRatio()).isZero();
   }
+
+  @Test
+  void outboundHttpAggregatesPerClient() {
+    // Simulates what LinkWebhookDispatcher / OgScraper emit — one timer per (client, result)
+    // tuple, sample is the wall-clock latency.
+    registry
+        .timer("outbound.http", "client", "webhook", "result", "ok")
+        .record(50, java.util.concurrent.TimeUnit.MILLISECONDS);
+    registry
+        .timer("outbound.http", "client", "webhook", "result", "ok")
+        .record(150, java.util.concurrent.TimeUnit.MILLISECONDS);
+    registry
+        .timer("outbound.http", "client", "webhook", "result", "non_2xx")
+        .record(200, java.util.concurrent.TimeUnit.MILLISECONDS);
+    registry
+        .timer("outbound.http", "client", "og_fetch", "result", "ok")
+        .record(800, java.util.concurrent.TimeUnit.MILLISECONDS);
+
+    var outbound = service.snapshot().outboundHttp();
+
+    assertThat(outbound).containsOnlyKeys("webhook", "og_fetch");
+    var wh = outbound.get("webhook");
+    assertThat(wh.count()).isEqualTo(3L);
+    assertThat(wh.meanMillis()).isCloseTo((50.0 + 150.0 + 200.0) / 3.0, within(0.5));
+    assertThat(wh.resultCounts()).containsEntry("ok", 2L).containsEntry("non_2xx", 1L);
+
+    var og = outbound.get("og_fetch");
+    assertThat(og.count()).isEqualTo(1L);
+    assertThat(og.maxMillis()).isCloseTo(800.0, within(1.0));
+  }
+
+  @Test
+  void outboundHttpIsEmptyWhenNoTimersRegistered() {
+    assertThat(service.snapshot().outboundHttp()).isEmpty();
+  }
 }
