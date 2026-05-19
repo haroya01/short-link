@@ -1,55 +1,84 @@
 package com.example.short_link.admin.application;
 
 import com.example.short_link.admin.application.AdminMetricsRepository.LinkMetricRow;
+import com.example.short_link.common.observability.RequestMetricEntity;
+import com.example.short_link.common.observability.RequestMetricRepository;
+import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Per-{@code shortCode} performance view. Latency / outcome / error rate come from {@link
- * LinkMetricsRecorder}'s in-memory ring (bounded LRU — top-N hot links only). Lifetime totals,
- * original URL, owner email and last-clicked-at come from the DB so the table can still show codes
+ * Per-{@code shortCode} performance view. Window-restricted latency / outcome / error rate are
+ * computed off {@code request_metrics} rows where {@code short_code} is set (every redirect path
+ * stamps it); lifetime totals, original URL, owner email and last-clicked-at come from the existing
+ * DB query against {@code ClickEventEntity} / {@code LinkEntity} so the table can still show codes
  * that haven't seen recent traffic.
  *
- * <p>This is intentionally NOT a Micrometer Timer per short code — that would explode tag
- * cardinality on the registry and break the {@code http.server.requests} histogram budget. The ring
- * lives in process memory with a hard cap so an unbounded short-code namespace can't OOM the pod.
+ * <p>Replaces the in-process {@code LinkMetricsRecorder} that previously held an LRU ring of 500
+ * hot codes — under the new source every redirect lands as a persisted row, so the table covers the
+ * whole tail (and a follow-up partition prune handles old rows).
  */
 @Service
-@RequiredArgsConstructor
 public class AdminLinkMetricsService {
 
-  private final LinkMetricsRecorder recorder;
+  private final RequestMetricRepository requestMetricRepository;
   private final AdminMetricsRepository metricsRepository;
+  private final Clock clock;
+
+  @Autowired
+  public AdminLinkMetricsService(
+      RequestMetricRepository requestMetricRepository, AdminMetricsRepository metricsRepository) {
+    this(requestMetricRepository, metricsRepository, Clock.systemUTC());
+  }
+
+  AdminLinkMetricsService(
+      RequestMetricRepository requestMetricRepository,
+      AdminMetricsRepository metricsRepository,
+      Clock clock) {
+    this.requestMetricRepository = requestMetricRepository;
+    this.metricsRepository = metricsRepository;
+    this.clock = clock;
+  }
 
   public List<AdminLinkMetric> linkMetrics(Window window, Sort sort) {
-    Map<String, List<LinkMetricsRecorder.Sample>> slice = recorder.sliceWindow(window.minutes());
-    if (slice.isEmpty()) return List.of();
-    List<LinkMetricRow> rows = metricsRepository.linkMetricRowsByShortCodes(slice.keySet());
+    Instant now = clock.instant();
+    Instant from = now.minus(window.duration());
+    Map<String, List<RequestMetricEntity>> byShortCode = new HashMap<>();
+    for (RequestMetricEntity row : requestMetricRepository.findWindow(from, now)) {
+      String code = row.getShortCode();
+      if (code == null || code.isBlank()) continue;
+      byShortCode.computeIfAbsent(code, k -> new ArrayList<>()).add(row);
+    }
+    if (byShortCode.isEmpty()) return List.of();
+
+    List<LinkMetricRow> rows = metricsRepository.linkMetricRowsByShortCodes(byShortCode.keySet());
     Map<String, LinkMetricRow> rowByCode = new HashMap<>(rows.size());
     for (LinkMetricRow row : rows) {
       rowByCode.put(row.getShortCode(), row);
     }
 
-    List<AdminLinkMetric> out = new ArrayList<>(slice.size());
-    for (Map.Entry<String, List<LinkMetricsRecorder.Sample>> entry : slice.entrySet()) {
+    List<AdminLinkMetric> out = new ArrayList<>(byShortCode.size());
+    for (Map.Entry<String, List<RequestMetricEntity>> entry : byShortCode.entrySet()) {
       String shortCode = entry.getKey();
-      LinkMetricsRecorder.Aggregate agg = LinkMetricsRecorder.aggregate(entry.getValue());
+      List<RequestMetricEntity> group = entry.getValue();
+      Aggregate agg = aggregate(group);
       LinkMetricRow row = rowByCode.get(shortCode);
-      // DB miss is possible — link could have been deleted between the recorder tick and the read.
-      // Surface the ring snapshot anyway so the operator at least sees the burst that happened.
+      // DB miss is possible — link could have been deleted between the request hit and the read.
+      // Surface the slice anyway so the operator at least sees the burst that happened.
       String originalUrl = row == null ? null : row.getOriginalUrl();
       Long userId = row == null ? null : row.getUserId();
       String ownerEmail = row == null ? null : row.getOwnerEmail();
       long totalRedirects = row == null ? agg.count() : nullToZero(row.getTotalRedirects());
       Instant lastRedirectAt = row == null ? agg.lastAt() : row.getLastRedirectAt();
-      // when the DB row is missing entirely, lastRedirectAt falls back to the ring's newest sample
       if (lastRedirectAt == null) lastRedirectAt = agg.lastAt();
       out.add(
           new AdminLinkMetric(
@@ -70,24 +99,73 @@ public class AdminLinkMetricsService {
     return out;
   }
 
+  private static Aggregate aggregate(List<RequestMetricEntity> rows) {
+    long count = rows.size();
+    long errors = 0;
+    long[] latencies = new long[rows.size()];
+    Instant lastAt = null;
+    Map<String, Long> outcomes = new LinkedHashMap<>();
+    for (int i = 0; i < rows.size(); i++) {
+      RequestMetricEntity row = rows.get(i);
+      latencies[i] = row.getLatencyMs();
+      if (row.getStatus() >= 500) errors++;
+      outcomes.merge(row.getOutcome(), 1L, Long::sum);
+      if (lastAt == null || row.getOccurredAt().isAfter(lastAt)) {
+        lastAt = row.getOccurredAt();
+      }
+    }
+    java.util.Arrays.sort(latencies);
+    return new Aggregate(
+        count,
+        roundToMillis(percentile(latencies, 0.5)),
+        roundToMillis(percentile(latencies, 0.95)),
+        roundToMillis(percentile(latencies, 0.99)),
+        count == 0 ? 0.0 : (double) errors / (double) count,
+        outcomes,
+        lastAt);
+  }
+
+  private static long roundToMillis(double v) {
+    return Math.round(v);
+  }
+
+  private static double percentile(long[] sorted, double p) {
+    if (sorted.length == 0) return 0.0;
+    if (sorted.length == 1) return sorted[0];
+    double rank = (sorted.length - 1) * p;
+    int lo = (int) Math.floor(rank);
+    int hi = (int) Math.ceil(rank);
+    if (lo == hi) return sorted[lo];
+    return sorted[lo] + (rank - lo) * (sorted[hi] - sorted[lo]);
+  }
+
   private static long nullToZero(Long v) {
     return v == null ? 0L : v;
   }
 
+  private record Aggregate(
+      long count,
+      long p50Millis,
+      long p95Millis,
+      long p99Millis,
+      double errorRate,
+      Map<String, Long> outcomeCounts,
+      Instant lastAt) {}
+
   public enum Window {
-    H1(60),
-    H24(60 * 24),
-    D7(60 * 24 * 7),
-    ALL(60 * 24 * 7);
+    H1(Duration.ofHours(1)),
+    H24(Duration.ofHours(24)),
+    D7(Duration.ofDays(7)),
+    ALL(Duration.ofDays(7));
 
-    private final int minutes;
+    private final Duration duration;
 
-    Window(int minutes) {
-      this.minutes = minutes;
+    Window(Duration duration) {
+      this.duration = duration;
     }
 
-    public int minutes() {
-      return minutes;
+    public Duration duration() {
+      return duration;
     }
 
     public static Window parse(String raw) {
