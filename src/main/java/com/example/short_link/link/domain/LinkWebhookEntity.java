@@ -1,7 +1,10 @@
 package com.example.short_link.link.domain;
 
+import com.example.short_link.link.application.WebhookFormat;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -75,12 +78,22 @@ public class LinkWebhookEntity {
   @Column(name = "utm_source_filter", length = 100)
   private String utmSourceFilter;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "format", nullable = false, length = 16)
+  private WebhookFormat format = WebhookFormat.GENERIC;
+
   public LinkWebhookEntity(Long linkId, String url, String secret, String name) {
+    this(linkId, url, secret, name, WebhookFormat.GENERIC);
+  }
+
+  public LinkWebhookEntity(
+      Long linkId, String url, String secret, String name, WebhookFormat format) {
     this.linkId = linkId;
     this.url = url;
     this.secret = secret;
     this.name = name;
     this.enabled = true;
+    this.format = format == null ? WebhookFormat.GENERIC : format;
   }
 
   @PrePersist
