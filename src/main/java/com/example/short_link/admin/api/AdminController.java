@@ -6,6 +6,8 @@ import com.example.short_link.admin.application.AdminCohort;
 import com.example.short_link.admin.application.AdminHealthMetrics;
 import com.example.short_link.admin.application.AdminHealthService;
 import com.example.short_link.admin.application.AdminLifecycle;
+import com.example.short_link.admin.application.AdminLinkMetric;
+import com.example.short_link.admin.application.AdminLinkMetricsService;
 import com.example.short_link.admin.application.AdminOverview;
 import com.example.short_link.admin.application.AdminOverviewService;
 import com.example.short_link.admin.application.AdminRouteMetric;
@@ -29,6 +31,7 @@ public class AdminController {
   private final RecentErrorsService recentErrorsService;
   private final AdminAnalyticsService analyticsService;
   private final AdminRouteMetricsService routeMetricsService;
+  private final AdminLinkMetricsService linkMetricsService;
 
   @GetMapping("/overview")
   public AdminOverview overview() {
@@ -47,6 +50,14 @@ public class AdminController {
       return routeMetricsService.routeMetrics();
     }
     return routeMetricsService.routeMetricsWindow(AdminRouteMetricsService.Window.parse(window));
+  }
+
+  @GetMapping("/link-metrics")
+  public List<AdminLinkMetric> linkMetrics(
+      @RequestParam(name = "window", required = false) String window,
+      @RequestParam(name = "sort", required = false) String sort) {
+    return linkMetricsService.linkMetrics(
+        AdminLinkMetricsService.Window.parse(window), AdminLinkMetricsService.Sort.parse(sort));
   }
 
   @GetMapping("/recent-errors")

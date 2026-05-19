@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -48,6 +49,7 @@ public class RouteMetricsRingBuffer {
   /** Per-tuple ring of minute snapshots, ordered oldest-first; trimmed to CAPACITY_MINUTES. */
   private final Map<TupleKey, ArrayList<MinuteBucket>> rings = new HashMap<>();
 
+  @Autowired
   public RouteMetricsRingBuffer(MeterRegistry meterRegistry) {
     this(meterRegistry, Clock.systemUTC());
   }

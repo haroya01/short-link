@@ -1,5 +1,6 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.admin.application.LinkMetricsRecorder;
 import com.example.short_link.link.application.CachedLink;
 import com.example.short_link.link.application.ClickRecorder;
 import com.example.short_link.link.application.CustomDomainService;
@@ -50,6 +51,7 @@ public class RedirectController {
   private final GeoIpResolver geoIpResolver;
   private final CustomDomainService customDomainService;
   private final UserAgentClassifier userAgentClassifier;
+  private final LinkMetricsRecorder linkMetricsRecorder;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -60,6 +62,7 @@ public class RedirectController {
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
       HttpServletRequest req) {
     Timer.Sample sample = Timer.start(meterRegistry);
+    long startedAtNanos = System.nanoTime();
     String outcome = "error";
     try {
       ResponseEntity<?> response =
@@ -77,6 +80,8 @@ public class RedirectController {
       throw e;
     } finally {
       sample.stop(meterRegistry.timer("redirect.latency", "outcome", outcome));
+      long latencyMs = (System.nanoTime() - startedAtNanos) / 1_000_000L;
+      linkMetricsRecorder.record(shortCode, latencyMs, outcome);
     }
   }
 
@@ -185,35 +190,57 @@ public class RedirectController {
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
       HttpServletRequest req) {
-    CachedLink link = lookup.findActiveLink(shortCode);
-    LinkEntity entity =
-        linkRepository
-            .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (entity.hasPassword() && !protectionService.checkPassword(entity, password)) {
-      return htmlResponse(HttpStatus.UNAUTHORIZED, passwordPrompt(shortCode, true));
+    long startedAtNanos = System.nanoTime();
+    String outcome = "error";
+    try {
+      CachedLink link = lookup.findActiveLink(shortCode);
+      LinkEntity entity =
+          linkRepository
+              .findByShortCode(shortCode)
+              .orElseThrow(() -> new LinkNotFoundException(shortCode));
+      if (entity.hasPassword() && !protectionService.checkPassword(entity, password)) {
+        outcome = "password_required";
+        return htmlResponse(HttpStatus.UNAUTHORIZED, passwordPrompt(shortCode, true));
+      }
+      try {
+        enforceViewLimit(entity);
+      } catch (LinkViewLimitExceededException e) {
+        outcome = "view_limit";
+        throw e;
+      }
+      String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
+      if (link.isBlockedFor(clientCountry)) {
+        outcome = "blocked";
+        return htmlResponse(HttpStatus.FORBIDDEN, blockedPage());
+      }
+      UserAgentInfo ua = userAgentClassifier.classify(userAgent);
+      CachedLink.Picked picked =
+          link.pick(clientCountry, normalizeOs(ua.osName()), ua.deviceClass());
+      clickRecorder.record(
+          link.linkId(),
+          picked.url(),
+          referrer,
+          userAgent,
+          clientIp(req),
+          acceptLanguage,
+          src,
+          picked.destinationId());
+      outcome = "redirect";
+      return ResponseEntity.status(HttpStatus.FOUND)
+          .location(URI.create(picked.url()))
+          .header(HttpHeaders.CACHE_CONTROL, "no-store")
+          .header("X-Robots-Tag", "noindex, nofollow")
+          .build();
+    } catch (LinkNotFoundException e) {
+      outcome = "not_found";
+      throw e;
+    } catch (LinkExpiredException e) {
+      outcome = "expired";
+      throw e;
+    } finally {
+      long latencyMs = (System.nanoTime() - startedAtNanos) / 1_000_000L;
+      linkMetricsRecorder.record(shortCode, latencyMs, outcome);
     }
-    enforceViewLimit(entity);
-    String clientCountry = geoIpResolver.resolve(clientIp(req)).countryCode();
-    if (link.isBlockedFor(clientCountry)) {
-      return htmlResponse(HttpStatus.FORBIDDEN, blockedPage());
-    }
-    UserAgentInfo ua = userAgentClassifier.classify(userAgent);
-    CachedLink.Picked picked = link.pick(clientCountry, normalizeOs(ua.osName()), ua.deviceClass());
-    clickRecorder.record(
-        link.linkId(),
-        picked.url(),
-        referrer,
-        userAgent,
-        clientIp(req),
-        acceptLanguage,
-        src,
-        picked.destinationId());
-    return ResponseEntity.status(HttpStatus.FOUND)
-        .location(URI.create(picked.url()))
-        .header(HttpHeaders.CACHE_CONTROL, "no-store")
-        .header("X-Robots-Tag", "noindex, nofollow")
-        .build();
   }
 
   private static String normalizeOs(String osName) {
@@ -263,6 +290,8 @@ public class RedirectController {
     if (response.getStatusCode().is3xxRedirection()) return "redirect";
     if (response.getStatusCode() == HttpStatus.OK) return "preview";
     if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) return "password_required";
+    if (response.getStatusCode() == HttpStatus.FORBIDDEN) return "blocked";
+    if (response.getStatusCode() == HttpStatus.GONE) return "expired";
     return "other";
   }
 
