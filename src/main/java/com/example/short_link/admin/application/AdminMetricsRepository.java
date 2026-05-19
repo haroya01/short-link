@@ -3,6 +3,7 @@ package com.example.short_link.admin.application;
 import com.example.short_link.link.domain.ClickEventEntity;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -88,5 +89,29 @@ public interface AdminMetricsRepository extends JpaRepository<ClickEventEntity, 
     Long getCount();
 
     String getOwnerEmail();
+  }
+
+  @Query(
+      "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "
+          + "l.userId AS userId, u.email AS ownerEmail, "
+          + "(SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id) AS totalRedirects, "
+          + "(SELECT MAX(c.clickedAt) FROM ClickEventEntity c WHERE c.linkId = l.id) AS lastRedirectAt "
+          + "FROM LinkEntity l LEFT JOIN UserEntity u ON u.id = l.userId "
+          + "WHERE l.shortCode IN :shortCodes")
+  List<LinkMetricRow> linkMetricRowsByShortCodes(
+      @Param("shortCodes") Collection<String> shortCodes);
+
+  interface LinkMetricRow {
+    String getShortCode();
+
+    String getOriginalUrl();
+
+    Long getUserId();
+
+    String getOwnerEmail();
+
+    Long getTotalRedirects();
+
+    Instant getLastRedirectAt();
   }
 }
