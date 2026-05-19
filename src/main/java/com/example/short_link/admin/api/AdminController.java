@@ -14,9 +14,11 @@ import com.example.short_link.admin.application.AdminRouteMetric;
 import com.example.short_link.admin.application.AdminRouteMetricsService;
 import com.example.short_link.admin.application.RecentError;
 import com.example.short_link.admin.application.RecentErrorsService;
+import com.example.short_link.link.application.LinkWebhookService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -32,6 +34,7 @@ public class AdminController {
   private final AdminAnalyticsService analyticsService;
   private final AdminRouteMetricsService routeMetricsService;
   private final AdminLinkMetricsService linkMetricsService;
+  private final LinkWebhookService webhookService;
 
   @GetMapping("/overview")
   public AdminOverview overview() {
@@ -79,5 +82,16 @@ public class AdminController {
   public AdminActiveUsers activeUsers(
       @RequestParam(required = false, defaultValue = "day") String period) {
     return analyticsService.activeUsers(period);
+  }
+
+  /**
+   * Re-detects {@code WebhookFormat} for every persisted hook and reactivates rows that were
+   * auto-disabled by a payload-shape mismatch we just fixed (e.g. a new receiver format added in
+   * code, or a URL pattern V53/V54 didn't anticipate). Returns the per-bucket count so the caller
+   * can confirm what actually changed before the next click trigger fires.
+   */
+  @PostMapping("/webhooks/redetect-formats")
+  public LinkWebhookService.ReDetectResult redetectWebhookFormats() {
+    return webhookService.reDetectFormats();
   }
 }

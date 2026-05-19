@@ -94,6 +94,48 @@ public class LinkWebhookService {
     repository.delete(hook);
   }
 
+  /**
+   * Admin operation — re-runs {@link WebhookFormat#detect} on every persisted hook and reactivates
+   * the ones that (a) were auto-disabled and (b) flipped to a non-GENERIC format. Mirrors what
+   * {@code V54} did at migration time and gives ops a way to recover from the same situation
+   * without another migration (e.g. a new receiver format added in code).
+   *
+   * <p>Rows that stay on {@code GENERIC} are not reactivated — their failures were not a
+   * payload-shape mismatch we just fixed, so flipping them on would just re-trigger the
+   * auto-disable.
+   */
+  @Transactional
+  public ReDetectResult reDetectFormats() {
+    int scanned = 0;
+    int formatChanged = 0;
+    int reactivated = 0;
+    for (LinkWebhookEntity hook : repository.findAll()) {
+      scanned++;
+      WebhookFormat detected = WebhookFormat.detect(hook.getUrl());
+      boolean autoDisabled = !hook.isEnabled() && hook.getAutoDisabledReason() != null;
+      if (detected != hook.getFormat()) {
+        hook.changeFormat(detected);
+        formatChanged++;
+        if (autoDisabled && detected != WebhookFormat.GENERIC) {
+          hook.resetFailureState();
+          reactivated++;
+        }
+      }
+    }
+    meterRegistry.counter("link.webhook.redetect", "result", "scanned").increment(scanned);
+    if (formatChanged > 0) {
+      meterRegistry
+          .counter("link.webhook.redetect", "result", "format_changed")
+          .increment(formatChanged);
+    }
+    if (reactivated > 0) {
+      meterRegistry
+          .counter("link.webhook.redetect", "result", "reactivated")
+          .increment(reactivated);
+    }
+    return new ReDetectResult(scanned, formatChanged, reactivated);
+  }
+
   private LinkEntity ownedLink(Long userId, String shortCode) {
     LinkEntity link =
         linkRepository
@@ -168,6 +210,8 @@ public class LinkWebhookService {
 
   public record IssuedWebhook(
       Long id, String url, String secret, String name, Instant createdAt, WebhookFormat format) {}
+
+  public record ReDetectResult(int scanned, int formatChanged, int reactivated) {}
 
   public record ConfigPatch(
       Boolean includeBots,
