@@ -51,6 +51,31 @@ class AdminControllerTest {
   }
 
   @Test
+  void anonymousReceives401OnRouteMetrics() throws Exception {
+    mvc.perform(get("/api/v1/admin/route-metrics")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void plainUserReceives403OnRouteMetrics() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-urm"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    mvc.perform(get("/api/v1/admin/route-metrics").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void adminReceivesRouteMetrics() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("rm@x.com", "google", "g-arm"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(get("/api/v1/admin/route-metrics").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$").isArray());
+  }
+
+  @Test
   void anonymousReceives401OnRecentErrors() throws Exception {
     mvc.perform(get("/api/v1/admin/recent-errors")).andExpect(status().isUnauthorized());
   }
