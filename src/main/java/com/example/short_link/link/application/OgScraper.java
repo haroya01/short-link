@@ -1,5 +1,7 @@
 package com.example.short_link.link.application;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
@@ -11,6 +13,7 @@ import org.jsoup.Connection;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
@@ -27,10 +30,26 @@ public class OgScraper {
   private static final int MAX_REDIRECTS = 3;
   private static final String USER_AGENT = "kurl-link-preview/1.0 (+https://kurl.me/bot)";
 
+  private final MeterRegistry meterRegistry;
+
+  @Autowired
+  public OgScraper(MeterRegistry meterRegistry) {
+    this.meterRegistry = meterRegistry;
+  }
+
+  /** No-arg constructor for tests that don't care about meter registration. */
+  OgScraper() {
+    this(null);
+  }
+
   public OgMetadata fetch(String url) {
     if (!isPublicHttpUrl(url)) {
+      // Guard rejection still costs a DNS lookup, but no outbound HTTP — don't pollute the
+      // outbound.http timer with these.
       return OgMetadata.empty();
     }
+    Timer.Sample sample = meterRegistry == null ? null : Timer.start(meterRegistry);
+    String result = "exception";
     try {
       Connection conn =
           Jsoup.connect(url)
@@ -44,13 +63,16 @@ public class OgScraper {
               .header("Accept-Language", "en;q=0.9,ko;q=0.8,ja;q=0.7");
       Connection.Response response = conn.execute();
       if (response.statusCode() >= 400) {
+        result = "non_2xx";
         return OgMetadata.empty();
       }
       String contentType = response.contentType();
       if (contentType == null || !contentType.toLowerCase().startsWith("text/html")) {
+        result = "non_html";
         return OgMetadata.empty();
       }
       Document doc = response.parse();
+      result = "ok";
       return parseDocument(doc, response.url().toString());
     } catch (IOException e) {
       log.debug("OG fetch failed for {}: {}", url, e.getMessage());
@@ -58,6 +80,10 @@ public class OgScraper {
     } catch (RuntimeException e) {
       log.warn("OG fetch unexpected error for {}", url, e);
       return OgMetadata.empty();
+    } finally {
+      if (sample != null) {
+        sample.stop(meterRegistry.timer("outbound.http", "client", "og_fetch", "result", result));
+      }
     }
   }
 
