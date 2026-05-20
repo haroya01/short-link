@@ -15,7 +15,9 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,12 +34,14 @@ class CustomDomainServiceTest {
   @Mock private CustomDomainRepository repository;
 
   private SimpleMeterRegistry meterRegistry;
+  private StubTxtResolver txtResolver;
   private CustomDomainService service;
 
   @BeforeEach
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
-    service = new CustomDomainService(repository, meterRegistry);
+    txtResolver = new StubTxtResolver();
+    service = new CustomDomainService(repository, meterRegistry, txtResolver);
   }
 
   private CustomDomainEntity domain(long id, long userId, String name, boolean verified) {
@@ -131,9 +135,8 @@ class CustomDomainServiceTest {
 
   @Test
   void verifyFailureMarksAndCounts() {
-    CustomDomainEntity d = domain(1L, 7L, "invalid-host-for-test.example.invalid", false);
+    CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
     when(repository.findById(1L)).thenReturn(Optional.of(d));
-    // checkTxtRecord catches NamingException → returns false → marks failure path.
     assertThatThrownBy(() -> service.verify(7L, 1L))
         .isInstanceOf(CustomDomainNotVerifiedException.class);
     assertThat(meterRegistry.counter("custom_domain.verify", "result", "failed").count())
@@ -142,8 +145,20 @@ class CustomDomainServiceTest {
   }
 
   @Test
+  void verifySuccessMarksAndCounts() {
+    CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
+    when(repository.findById(1L)).thenReturn(Optional.of(d));
+    txtResolver.put("_kurl-verify.go.example.com", "kurl-verify=abc");
+    DomainSummary out = service.verify(7L, 1L);
+    assertThat(out.verified()).isTrue();
+    assertThat(d.isVerified()).isTrue();
+    assertThat(meterRegistry.counter("custom_domain.verify", "result", "ok").count())
+        .isEqualTo(1.0);
+  }
+
+  @Test
   void autoVerifyOneFailureUpdatesCheckTimestamp() {
-    CustomDomainEntity d = domain(1L, 7L, "invalid-host-for-test.example.invalid", false);
+    CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
     when(repository.findById(1L)).thenReturn(Optional.of(d));
     boolean out = service.autoVerifyOne(d);
     assertThat(out).isFalse();
@@ -152,8 +167,20 @@ class CustomDomainServiceTest {
   }
 
   @Test
+  void autoVerifyOneSuccessMarksVerified() {
+    CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
+    when(repository.findById(1L)).thenReturn(Optional.of(d));
+    txtResolver.put("_kurl-verify.go.example.com", "kurl-verify=abc");
+    boolean out = service.autoVerifyOne(d);
+    assertThat(out).isTrue();
+    assertThat(d.isVerified()).isTrue();
+    assertThat(meterRegistry.counter("custom_domain.verify", "result", "auto_ok").count())
+        .isEqualTo(1.0);
+  }
+
+  @Test
   void autoVerifyOneGoneEntityReturnsFalse() {
-    CustomDomainEntity d = domain(1L, 7L, "invalid-host-for-test.example.invalid", false);
+    CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
     when(repository.findById(1L)).thenReturn(Optional.empty());
     boolean out = service.autoVerifyOne(d);
     assertThat(out).isFalse();
@@ -212,6 +239,19 @@ class CustomDomainServiceTest {
       f.set(target, value);
     } catch (Exception ex) {
       throw new RuntimeException(ex);
+    }
+  }
+
+  private static final class StubTxtResolver implements TxtResolver {
+    private final Map<String, List<String>> records = new HashMap<>();
+
+    void put(String host, String value) {
+      records.computeIfAbsent(host, k -> new ArrayList<>()).add(value);
+    }
+
+    @Override
+    public List<String> lookup(String host) {
+      return records.getOrDefault(host, List.of());
     }
   }
 }

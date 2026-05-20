@@ -8,11 +8,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
-import javax.naming.NamingException;
-import javax.naming.directory.Attributes;
-import javax.naming.directory.InitialDirContext;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,14 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
  * Manages user-owned custom domains for short-link routing.
  *
  * <p>The verification flow: register a domain, receive a token, place a TXT record at {@code
- * _kurl-verify.<domain>} with that exact value, then call verify. We resolve the TXT directly via
- * JNDI DNS so verification doesn't depend on any third-party API.
+ * _kurl-verify.<domain>} with that exact value, then call verify. TXT lookups go through {@link
+ * TxtResolver} so verification doesn't depend on any third-party API and is injectable for tests.
  *
  * <p>TLS handling is the user's responsibility — they typically front their domain with Cloudflare
  * (free) and CNAME to {@code kurl.me}, which terminates TLS at the CDN edge before we see the
  * request.
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CustomDomainService {
@@ -47,6 +42,7 @@ public class CustomDomainService {
 
   private final CustomDomainRepository repository;
   private final MeterRegistry meterRegistry;
+  private final TxtResolver txtResolver;
 
   @Transactional(readOnly = true)
   public List<DomainSummary> list(Long userId) {
@@ -127,25 +123,10 @@ public class CustomDomainService {
   }
 
   private boolean checkTxtRecord(String domain, String expectedToken) {
-    try {
-      InitialDirContext ctx =
-          new InitialDirContext(
-              new java.util.Hashtable<>(
-                  java.util.Map.of(
-                      "java.naming.factory.initial", "com.sun.jndi.dns.DnsContextFactory",
-                      "java.naming.provider.url", "dns://1.1.1.1 dns://8.8.8.8")));
-      Attributes attrs = ctx.getAttributes(TXT_PREFIX + domain, new String[] {"TXT"});
-      var txt = attrs.get("TXT");
-      if (txt == null) return false;
-      for (int i = 0; i < txt.size(); i++) {
-        String value = ((String) txt.get(i)).replace("\"", "").trim();
-        if (value.equals(expectedToken)) return true;
-      }
-      return false;
-    } catch (NamingException e) {
-      log.debug("TXT lookup failed for {}: {}", domain, e.getMessage());
-      return false;
+    for (String value : txtResolver.lookup(TXT_PREFIX + domain)) {
+      if (value.equals(expectedToken)) return true;
     }
+    return false;
   }
 
   private CustomDomainEntity ownedDomain(Long userId, Long id) {
