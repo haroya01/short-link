@@ -34,6 +34,7 @@ public class AuditLogCleanupJob {
   private boolean enabled;
 
   @Scheduled(cron = "${short-link.audit-log.cleanup-cron:0 45 4 * * *}", zone = "Asia/Seoul")
+  @Transactional
   public void runDaily() {
     if (!enabled) return;
     if (!lock.tryAcquire(LOCK_KEY, Duration.ofMinutes(5))) {
@@ -48,8 +49,7 @@ public class AuditLogCleanupJob {
     }
   }
 
-  @Transactional
-  public int sweep() {
+  int sweep() {
     Instant cutoff = Instant.now().minus(Duration.ofDays(retentionDays));
     int removed = repository.deleteByOccurredAtBefore(cutoff);
     meterRegistry.counter("cleanup.audit_log").increment(removed);
