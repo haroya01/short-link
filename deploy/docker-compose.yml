@@ -18,6 +18,9 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --default-time-zone=${TZ:-Asia/Seoul}
+    ports:
+      # Loopback-only — EC2 외부에선 안 보임. SSH tunnel 통해서만 접근 (DataGrip 등 GUI 도구).
+      - "127.0.0.1:3306:3306"
     volumes:
       - mysql_data:/var/lib/mysql
     healthcheck:
