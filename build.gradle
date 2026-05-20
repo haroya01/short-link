@@ -86,6 +86,7 @@ jacocoTestReport {
 			fileTree(dir: it, exclude: [
 				'com/example/short_link/ShortLinkApplication.class',
 				'com/example/short_link/common/config/**',
+				'db/migration/**',
 			])
 		}))
 	}

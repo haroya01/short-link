@@ -4,6 +4,12 @@ spring:
     username: short_link
     password: haroya0117!
     driver-class-name: com.mysql.cj.jdbc.Driver
+    # @MockitoBean 가 많을수록 Spring 컨텍스트가 분기되어 컨텍스트당 HikariCP 풀이 새로 생긴다.
+    # 기본 10 커넥션 × 컨텍스트 N개 → MySQL max_connections 초과. 컨텍스트당 2 커넥션으로 캡해
+    # full test 실행이 'Too many connections' 으로 깨지는 것을 방지.
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 0
   jpa:
     hibernate:
       ddl-auto: validate
