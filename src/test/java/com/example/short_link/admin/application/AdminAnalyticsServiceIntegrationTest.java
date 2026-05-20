@@ -8,6 +8,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -120,29 +121,34 @@ class AdminAnalyticsServiceIntegrationTest {
         .isInstanceOf(InvalidActivePeriodException.class);
   }
 
-  // Without @class type ids in the cached payload (NON_FINAL typing skipping record types),
-  // the deserialize step throws on read — errorHandler swallows it as a miss and the entry
-  // is never readable. Directly fetching the cache entry catches the regression: a successful
-  // round-trip requires both write AND read to work, not just write + DB fallback.
+  // Direct put → get round-trip on the admin-overview cache. Avoids going through @Cacheable
+  // so the test does not depend on the surrounding @Transactional rolling back the cache
+  // entry. With NON_FINAL typing skipping record types, the deserialize step fails on read
+  // (errorHandler swallows it → wrapper is null), which is the production regression we hit.
   @Test
-  void cohortPayloadDeserializesFromCache() {
-    UserEntity u = userRepository.save(new UserEntity("rt@x.com", "google", "g-rt"));
-    LinkEntity l =
-        linkRepository.save(new LinkEntity("https://example.com", "rtt00001", u.getId(), null));
-    clickRepository.save(humanClick(l.getId()));
-
-    AdminCohort first = service.cohort(4);
+  void recordRoundTripsThroughAdminOverviewCache() {
+    AdminCohort sample =
+        new AdminCohort(
+            4,
+            List.of(
+                new AdminCohort.Row(
+                    "2026-W20",
+                    3L,
+                    List.of(new AdminCohort.Cell(0, 3L, 1.0), new AdminCohort.Cell(1, 2L, 0.66)))));
 
     Cache cache = cacheManager.getCache("admin-overview");
     assertThat(cache).isNotNull();
-    Cache.ValueWrapper wrapper = cache.get("cohort:4");
+    cache.put("cohort:roundtrip-test", sample);
+
+    Cache.ValueWrapper wrapper = cache.get("cohort:roundtrip-test");
     assertThat(wrapper)
-        .as("cached entry must deserialize without errorHandler fallback")
+        .as("cached record must deserialize without errorHandler fallback")
         .isNotNull();
     assertThat(wrapper.get()).isInstanceOf(AdminCohort.class);
-    AdminCohort cached = (AdminCohort) wrapper.get();
-    assertThat(cached.weeks()).isEqualTo(first.weeks());
-    assertThat(cached.rows()).hasSameSizeAs(first.rows());
+    AdminCohort restored = (AdminCohort) wrapper.get();
+    assertThat(restored.weeks()).isEqualTo(sample.weeks());
+    assertThat(restored.rows()).hasSameSizeAs(sample.rows());
+    assertThat(restored.rows().get(0).cells()).hasSize(2);
   }
 
   private void seedActiveUser(String code) {
