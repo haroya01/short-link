@@ -3,6 +3,8 @@ package com.example.short_link.common.api;
 import com.example.short_link.admin.application.InvalidActivePeriodException;
 import com.example.short_link.common.pow.PowRequiredException;
 import com.example.short_link.link.application.BulkImportTooLargeException;
+import com.example.short_link.link.application.CustomDomainNotFoundException;
+import com.example.short_link.link.application.CustomDomainNotVerifiedException;
 import com.example.short_link.link.application.DuplicateShortCodeException;
 import com.example.short_link.link.application.DuplicateTagNameException;
 import com.example.short_link.link.application.InvalidCursorException;
@@ -234,6 +236,19 @@ public class GlobalExceptionHandler {
   @ExceptionHandler(ProfileNotFoundException.class)
   public ProblemDetail handleProfileNotFound(ProfileNotFoundException e, HttpServletRequest req) {
     return problem(HttpStatus.NOT_FOUND, e.getMessage(), "PROFILE_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(CustomDomainNotFoundException.class)
+  public ProblemDetail handleCustomDomainNotFound(
+      CustomDomainNotFoundException e, HttpServletRequest req) {
+    return problem(HttpStatus.NOT_FOUND, e.getMessage(), "CUSTOM_DOMAIN_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(CustomDomainNotVerifiedException.class)
+  public ProblemDetail handleCustomDomainNotVerified(
+      CustomDomainNotVerifiedException e, HttpServletRequest req) {
+    return problem(
+        HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage(), "CUSTOM_DOMAIN_NOT_VERIFIED", req);
   }
 
   @ExceptionHandler(Exception.class)

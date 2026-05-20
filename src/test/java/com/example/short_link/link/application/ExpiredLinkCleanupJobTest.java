@@ -13,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -59,5 +60,24 @@ class ExpiredLinkCleanupJobTest {
     ReflectionTestUtils.setField(job, "graceDays", 30L);
     int deleted = job.sweep();
     assertThat(deleted).isZero();
+  }
+
+  // Reproduces the @Scheduled context (no ambient transaction). If runDaily() doesn't open its
+  // own transaction, the self-invocation of sweep() bypasses the @Transactional proxy and the
+  // batch loop's queries run outside of any managed transaction.
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void runDailyOpensOwnTransactionForSweep() {
+    ReflectionTestUtils.setField(job, "graceDays", 30L);
+    Instant longAgo = Instant.now().minus(Duration.ofDays(90));
+    LinkEntity old =
+        linkRepository.save(new LinkEntity("https://example.com/probe", "prob0001", null, longAgo));
+    Long oldId = old.getId();
+    try {
+      job.runDaily();
+      assertThat(linkRepository.findById(oldId)).isEmpty();
+    } finally {
+      linkRepository.findById(oldId).ifPresent(linkRepository::delete);
+    }
   }
 }
