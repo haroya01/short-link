@@ -12,6 +12,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -117,6 +118,31 @@ class AdminAnalyticsServiceIntegrationTest {
   void activeUsersRejectsUnknownPeriod() {
     org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.activeUsers("annual"))
         .isInstanceOf(InvalidActivePeriodException.class);
+  }
+
+  // Without @class type ids in the cached payload (NON_FINAL typing skipping record types),
+  // the deserialize step throws on read — errorHandler swallows it as a miss and the entry
+  // is never readable. Directly fetching the cache entry catches the regression: a successful
+  // round-trip requires both write AND read to work, not just write + DB fallback.
+  @Test
+  void cohortPayloadDeserializesFromCache() {
+    UserEntity u = userRepository.save(new UserEntity("rt@x.com", "google", "g-rt"));
+    LinkEntity l =
+        linkRepository.save(new LinkEntity("https://example.com", "rtt00001", u.getId(), null));
+    clickRepository.save(humanClick(l.getId()));
+
+    AdminCohort first = service.cohort(4);
+
+    Cache cache = cacheManager.getCache("admin-overview");
+    assertThat(cache).isNotNull();
+    Cache.ValueWrapper wrapper = cache.get("cohort:4");
+    assertThat(wrapper)
+        .as("cached entry must deserialize without errorHandler fallback")
+        .isNotNull();
+    assertThat(wrapper.get()).isInstanceOf(AdminCohort.class);
+    AdminCohort cached = (AdminCohort) wrapper.get();
+    assertThat(cached.weeks()).isEqualTo(first.weeks());
+    assertThat(cached.rows()).hasSameSizeAs(first.rows());
   }
 
   private void seedActiveUser(String code) {
