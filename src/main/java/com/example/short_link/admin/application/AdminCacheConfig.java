@@ -26,12 +26,13 @@ public class AdminCacheConfig {
             .allowIfSubType("com.example.short_link.admin.application.")
             .allowIfSubType("java.util.")
             .allowIfSubType("java.time.")
+            .allowIfSubType("java.lang.")
             .build();
     ObjectMapper mapper =
         new ObjectMapper()
             .registerModule(new JavaTimeModule())
             .activateDefaultTyping(
-                ptv, ObjectMapper.DefaultTyping.NON_FINAL, JsonTypeInfo.As.PROPERTY);
+                ptv, ObjectMapper.DefaultTyping.EVERYTHING, JsonTypeInfo.As.PROPERTY);
     RedisCacheConfiguration cfg =
         RedisCacheConfiguration.defaultCacheConfig()
             .entryTtl(Duration.ofMinutes(5))
