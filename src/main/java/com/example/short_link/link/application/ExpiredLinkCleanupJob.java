@@ -41,6 +41,7 @@ public class ExpiredLinkCleanupJob {
   private boolean enabled;
 
   @Scheduled(cron = "${short-link.cleanup.cron:0 0 4 * * *}", zone = "Asia/Seoul")
+  @Transactional
   public void runDaily() {
     if (!enabled) return;
     if (!lock.tryAcquire(LOCK_KEY, Duration.ofMinutes(15))) {
@@ -55,8 +56,7 @@ public class ExpiredLinkCleanupJob {
     }
   }
 
-  @Transactional
-  public int sweep() {
+  int sweep() {
     Instant cutoff = Instant.now().minus(Duration.ofDays(graceDays));
     int totalLinks = 0;
     int totalClicks = 0;
