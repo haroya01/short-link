@@ -1,6 +1,7 @@
 package com.example.short_link.admin.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
@@ -115,7 +116,7 @@ class AdminAnalyticsServiceIntegrationTest {
 
   @Test
   void activeUsersRejectsUnknownPeriod() {
-    org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.activeUsers("annual"))
+    assertThatThrownBy(() -> service.activeUsers("annual"))
         .isInstanceOf(InvalidActivePeriodException.class);
   }
 
