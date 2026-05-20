@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -70,5 +71,31 @@ class AuditLogCleanupJobTest {
     job.sweep();
 
     assertThat(repository.findById(id)).isPresent();
+  }
+
+  // Reproduces the production scheduler context: @Scheduled invokes runDaily() with no ambient
+  // transaction. Without @Transactional on the entry point, sweep()'s self-invocation bypasses
+  // the proxy and flush blows up with "No EntityManager with actual transaction available".
+  @Test
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
+  void runDailyOpensOwnTransactionForSweep() {
+    ReflectionTestUtils.setField(job, "retentionDays", 90L);
+    Long oldId =
+        repository
+            .save(
+                AuditLogEntity.builder()
+                    .actorUserId(7L)
+                    .action("RUN_DAILY_PROBE")
+                    .targetType("probe")
+                    .targetId("p1")
+                    .occurredAt(Instant.now().minus(Duration.ofDays(200)))
+                    .build())
+            .getId();
+    try {
+      job.runDaily();
+      assertThat(repository.findById(oldId)).isEmpty();
+    } finally {
+      repository.findById(oldId).ifPresent(repository::delete);
+    }
   }
 }
