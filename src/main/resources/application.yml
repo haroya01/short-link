@@ -79,6 +79,9 @@ short-link:
     grace-days: ${USER_DELETION_GRACE_DAYS:30}
     cleanup-cron: ${USER_DELETION_CLEANUP_CRON:0 30 5 * * *}
     cleanup-enabled: ${USER_DELETION_CLEANUP_ENABLED:true}
+  campaign:
+    lifecycle-cron: ${CAMPAIGN_LIFECYCLE_CRON:0 * * * * *}
+    lifecycle-enabled: ${CAMPAIGN_LIFECYCLE_ENABLED:true}
   geoip:
     license-key: ${MAXMIND_LICENSE_KEY:}
     download-url: ${GEOIP_DOWNLOAD_URL:}
