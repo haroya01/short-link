@@ -17,13 +17,21 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+// application-test.yml 의 1,000,000 큰 한도 (빌드 중 anonymous 누적 회피용) 와 별개로,
+// 이 테스트만 운영 한도 (anonymous=100, authenticated=1000) 를 고정해 임계 동작을 검증한다.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
+@TestPropertySource(
+    properties = {
+      "short-link.rate-limit.anonymous=100",
+      "short-link.rate-limit.authenticated=1000"
+    })
 class RateLimitFilterTest {
 
   @Autowired private MockMvc mvc;
