@@ -61,4 +61,20 @@ public class CampaignController {
     CampaignEntity c = service.archive(id, userId);
     return CampaignDetailResponse.from(c, service.batchCount(c.getId()));
   }
+
+  /** 운영자 수동 종료 — endsAt 전이라도 강제 종료, postEndAction 즉시 적용. */
+  @PostMapping("/{id}/end")
+  public CampaignDetailResponse endNow(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    CampaignEntity c = service.endNow(id, userId);
+    return CampaignDetailResponse.from(c, service.batchCount(c.getId()));
+  }
+
+  /** ENDED 후 정책 (postEndAction / postEndDestinationUrl) 을 변경했을 때 batch link 에 다시 박는 명시적 액션. */
+  @PostMapping("/{id}/reapply-policy")
+  public CampaignDetailResponse reapplyPolicy(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    CampaignEntity c = service.reapplyPolicy(id, userId);
+    return CampaignDetailResponse.from(c, service.batchCount(c.getId()));
+  }
 }
