@@ -2,6 +2,7 @@ package com.example.short_link.campaign.application;
 
 import com.example.short_link.campaign.api.CampaignBatchBulkRequest;
 import com.example.short_link.campaign.api.CampaignBatchCreateRequest;
+import com.example.short_link.campaign.api.CampaignBatchUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignBatchRepository;
 import com.example.short_link.campaign.domain.CampaignEntity;
@@ -72,6 +73,36 @@ public class CampaignBatchService {
       throw new CampaignBatchNotFoundException();
     }
     return pairWithLink(batch);
+  }
+
+  /**
+   * Metadata 만 수정 — 대표 link 와의 결합 (linkId / campaignId) 는 immutable. ENDED / ARCHIVED 캠페인은 거부. Null
+   * 필드는 기존 값 유지.
+   */
+  @Transactional
+  public BatchWithLink update(
+      Long campaignId, Long batchId, Long ownerId, CampaignBatchUpdateRequest request) {
+    CampaignEntity campaign = campaignService.detail(campaignId, ownerId);
+    rejectIfTerminal(campaign);
+    BatchWithLink current = detail(campaignId, batchId, ownerId);
+    CampaignBatchEntity batch = current.batch();
+    batch.editMetadata(
+        request.name() != null && !request.name().isBlank() ? request.name() : batch.getName(),
+        request.distributorName() != null
+            ? blankToNull(request.distributorName())
+            : batch.getDistributorName(),
+        request.areaLabel() != null ? blankToNull(request.areaLabel()) : batch.getAreaLabel(),
+        request.quantity() != null ? request.quantity() : batch.getQuantity(),
+        request.memo() != null ? blankToNull(request.memo()) : batch.getMemo());
+    return new BatchWithLink(batch, current.link());
+  }
+
+  /** Batch 삭제 = 대표 link 도 삭제 (인쇄된 QR 죽음). status 무관 허용 — 끝난 캠페인의 자산 정리에도 쓰임. 호출자(UI)가 경고 표시 책임. */
+  @Transactional
+  public void delete(Long campaignId, Long batchId, Long ownerId) {
+    BatchWithLink current = detail(campaignId, batchId, ownerId);
+    batchRepository.delete(current.batch());
+    linkRepository.delete(current.link());
   }
 
   private BatchWithLink pairWithLink(CampaignBatchEntity batch) {
