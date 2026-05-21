@@ -109,6 +109,14 @@ public class LinkEntity {
   @Column(name = "expired_message", length = 500)
   private String expiredMessage;
 
+  /**
+   * Optional redirect target applied after the link expires. When non-null, the expired page is
+   * skipped and a 302 to this URL is served. Campaign domain pushes the campaign's
+   * post-end-destination here on ENDED transition; single-link users may set it directly.
+   */
+  @Column(name = "expired_redirect_url", length = 2048)
+  private String expiredRedirectUrl;
+
   public LinkEntity(String originalUrl, String shortCode) {
     this(originalUrl, shortCode, null, null);
   }
@@ -144,6 +152,22 @@ public class LinkEntity {
 
   public void changeExpiresAt(Instant expiresAt) {
     this.expiresAt = expiresAt;
+  }
+
+  public void changeExpiredRedirectUrl(String url) {
+    this.expiredRedirectUrl = (url == null || url.isBlank()) ? null : url.trim();
+  }
+
+  /**
+   * Apply a campaign's post-end policy in a single move. Called by the campaign domain when
+   * transitioning to ENDED so the redirect hot path can keep reading only this entity.
+   */
+  public void applyCampaignExpiration(Instant expiresAt, String expiredRedirectUrl) {
+    this.expiresAt = expiresAt;
+    this.expiredRedirectUrl =
+        (expiredRedirectUrl == null || expiredRedirectUrl.isBlank())
+            ? null
+            : expiredRedirectUrl.trim();
   }
 
   public void applyOgMetadata(String title, String description, String image, Instant fetchedAt) {
