@@ -108,6 +108,7 @@ public class ClickEventEntity {
   @Builder
   public ClickEventEntity(
       Long linkId,
+      Instant clickedAt,
       String referrer,
       String referrerHost,
       String userAgent,
@@ -132,6 +133,7 @@ public class ClickEventEntity {
       Integer asn,
       String asnOrg) {
     this.linkId = linkId;
+    this.clickedAt = clickedAt;
     this.referrer = referrer;
     this.referrerHost = referrerHost;
     this.userAgent = userAgent;
@@ -159,6 +161,8 @@ public class ClickEventEntity {
 
   @PrePersist
   void prePersist() {
-    this.clickedAt = Instant.now();
+    if (this.clickedAt == null) {
+      this.clickedAt = Instant.now();
+    }
   }
 }
