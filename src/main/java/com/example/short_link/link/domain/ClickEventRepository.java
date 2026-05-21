@@ -80,6 +80,26 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
   List<LinkClickCount> countsByLinkIds(@Param("ids") List<Long> ids);
 
   @Query(
+      "SELECT c.linkId AS linkId, COUNT(c) AS count FROM ClickEventEntity c "
+          + "WHERE c.linkId IN :ids AND c.bot = false AND c.clickedAt >= :since "
+          + "GROUP BY c.linkId")
+  List<LinkClickCount> countsByLinkIdsSince(
+      @Param("ids") List<Long> ids, @Param("since") Instant since);
+
+  @Query(
+      "SELECT c.linkId AS linkId, COUNT(c) AS count FROM ClickEventEntity c "
+          + "WHERE c.linkId IN :ids AND c.bot = false AND c.clickedAt < :before "
+          + "GROUP BY c.linkId")
+  List<LinkClickCount> countsByLinkIdsBefore(
+      @Param("ids") List<Long> ids, @Param("before") Instant before);
+
+  @Query(
+      "SELECT MAX(c.clickedAt) FROM ClickEventEntity c "
+          + "WHERE c.linkId IN :ids AND c.bot = false AND c.clickedAt < :before")
+  Instant findLastClickBeforeByLinkIds(
+      @Param("ids") List<Long> ids, @Param("before") Instant before);
+
+  @Query(
       "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS day, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
