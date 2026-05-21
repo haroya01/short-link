@@ -2,6 +2,7 @@ package com.example.short_link.common.audit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import io.queryaudit.junit5.QueryAudit;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@QueryAudit
 class AuditLogServiceTest {
 
   @Autowired private AuditLogService auditLogService;

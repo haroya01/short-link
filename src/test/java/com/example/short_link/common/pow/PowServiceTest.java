@@ -3,6 +3,7 @@ package com.example.short_link.common.pow;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import io.queryaudit.junit5.QueryAudit;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 @SpringBootTest
 @ActiveProfiles("test")
+@QueryAudit
 class PowServiceTest {
 
   @Autowired private StringRedisTemplate redis;

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import io.queryaudit.junit5.QueryAudit;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@QueryAudit
 class OgRefreshJobTest {
 
   @Autowired private LinkRepository linkRepository;

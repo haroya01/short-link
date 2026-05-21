@@ -8,6 +8,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import io.queryaudit.junit5.QueryAudit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 @TestPropertySource(
     properties = {"short-link.export.event-batch=2", "short-link.export.event-cap=3"})
 @Transactional
+@QueryAudit
 class LinkExportServiceTest {
 
   @Autowired private LinkExportService service;

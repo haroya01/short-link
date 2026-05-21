@@ -3,6 +3,7 @@ package com.example.short_link.admin.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.admin.domain.BlockedDomainRepository;
+import io.queryaudit.junit5.QueryAudit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
+@QueryAudit
 class BlockedDomainServiceTest {
 
   @Autowired private BlockedDomainService service;
