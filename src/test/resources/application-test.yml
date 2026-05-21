@@ -31,6 +31,9 @@ short-link:
     enabled: false
   pow:
     enforce: false
+  rate-limit:
+    anonymous: 1000000
+    authenticated: 1000000
 
 query-audit:
   enabled: true
