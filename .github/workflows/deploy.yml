@@ -96,6 +96,13 @@ jobs:
               fi
               sleep 4
             done
+            # nginx caches the app container's IP at worker boot. When `compose up -d`
+            # recreates the app container its IP can shift inside the compose network,
+            # and nginx will keep proxying the stale IP — every /api, /oauth2 call
+            # returns 502 until reload. Reload is graceful and re-resolves upstream
+            # without dropping in-flight requests. Caught after the 12-day stale-IP
+            # outage where nginx had been up far longer than the app it was fronting.
+            docker compose exec -T nginx nginx -s reload
             docker compose ps
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_RO_TOKEN }}
