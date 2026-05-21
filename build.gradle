@@ -43,8 +43,8 @@ dependencies {
 	implementation 'com.google.zxing:core:3.5.3'
 	implementation 'com.google.zxing:javase:3.5.3'
 	implementation 'com.stripe:stripe-java:28.4.0'
-	implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.2.0'
-	implementation 'io.github.resilience4j:resilience4j-micrometer:2.2.0'
+	implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.4.0'
+	implementation 'io.github.resilience4j:resilience4j-micrometer:2.4.0'
 	implementation platform('software.amazon.awssdk:bom:2.28.16')
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:auth'
