@@ -166,6 +166,8 @@ public class SecurityConfig {
                     .authenticated()
                     .requestMatchers("/api/v1/admin/**")
                     .hasRole("ADMIN")
+                    .requestMatchers("/api/v1/campaigns/**")
+                    .authenticated()
                     .anyRequest()
                     .permitAll())
         .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
