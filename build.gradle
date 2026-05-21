@@ -40,6 +40,8 @@ dependencies {
 	implementation 'com.maxmind.geoip2:geoip2:4.2.1'
 	implementation 'org.apache.commons:commons-compress:1.27.1'
 	implementation 'org.jsoup:jsoup:1.18.1'
+	implementation 'com.google.zxing:core:3.5.3'
+	implementation 'com.google.zxing:javase:3.5.3'
 	implementation 'com.stripe:stripe-java:28.4.0'
 	implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.2.0'
 	implementation 'io.github.resilience4j:resilience4j-micrometer:2.2.0'

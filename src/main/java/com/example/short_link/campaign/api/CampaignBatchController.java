@@ -1,15 +1,21 @@
 package com.example.short_link.campaign.api;
 
 import com.example.short_link.campaign.application.BatchWithLink;
+import com.example.short_link.campaign.application.CampaignBatchExportService;
 import com.example.short_link.campaign.application.CampaignBatchService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import jakarta.validation.Valid;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +28,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class CampaignBatchController {
 
   private final CampaignBatchService service;
+  private final CampaignBatchExportService exportService;
   private final ShortLinkUrlBuilder urlBuilder;
 
   @PostMapping
@@ -65,5 +72,60 @@ public class CampaignBatchController {
       @PathVariable Long batchId) {
     BatchWithLink result = service.detail(campaignId, batchId, userId);
     return CampaignBatchResponse.from(result.batch(), result.link(), urlBuilder);
+  }
+
+  @PatchMapping("/{batchId}")
+  public CampaignBatchResponse update(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long campaignId,
+      @PathVariable Long batchId,
+      @Valid @RequestBody CampaignBatchUpdateRequest request) {
+    BatchWithLink result = service.update(campaignId, batchId, userId, request);
+    return CampaignBatchResponse.from(result.batch(), result.link(), urlBuilder);
+  }
+
+  @DeleteMapping("/{batchId}")
+  public ResponseEntity<Void> delete(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long campaignId,
+      @PathVariable Long batchId) {
+    service.delete(campaignId, batchId, userId);
+    return ResponseEntity.noContent().build();
+  }
+
+  @GetMapping("/{batchId}/qr")
+  public ResponseEntity<byte[]> qrPng(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long campaignId,
+      @PathVariable Long batchId) {
+    byte[] png = exportService.exportSinglePng(campaignId, batchId, userId);
+    return ResponseEntity.ok()
+        .contentType(MediaType.IMAGE_PNG)
+        .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"batch-" + batchId + ".png\"")
+        .body(png);
+  }
+
+  @GetMapping("/qr-zip")
+  public ResponseEntity<byte[]> qrZip(
+      @AuthenticationPrincipal Long userId, @PathVariable Long campaignId) {
+    byte[] zip = exportService.exportQrZip(campaignId, userId);
+    return ResponseEntity.ok()
+        .contentType(MediaType.APPLICATION_OCTET_STREAM)
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"campaign-" + campaignId + "-qrs.zip\"")
+        .body(zip);
+  }
+
+  @GetMapping("/csv")
+  public ResponseEntity<byte[]> csv(
+      @AuthenticationPrincipal Long userId, @PathVariable Long campaignId) {
+    byte[] csv = exportService.exportCsv(campaignId, userId).getBytes(StandardCharsets.UTF_8);
+    return ResponseEntity.ok()
+        .contentType(new MediaType("text", "csv", StandardCharsets.UTF_8))
+        .header(
+            HttpHeaders.CONTENT_DISPOSITION,
+            "attachment; filename=\"campaign-" + campaignId + "-batches.csv\"")
+        .body(csv);
   }
 }
