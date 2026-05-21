@@ -32,10 +32,22 @@ short-link:
   pow:
     enforce: false
 
-# query-audit 비활성화 (Spring Boot 4.0.6 multi-context 회귀, 0.3.2 fix 대기).
-# 의존성 자체가 build.gradle 에서 빠진 상태라 이 블록은 인식되지 않지만
-# 재도입 시 복원용으로 자리만 유지.
-# query-audit:
-#   enabled: true
-#   fail-on-detection: false
-#   ...
+query-audit:
+  enabled: true
+  fail-on-detection: false
+  wrap-data-source:
+    enabled: true
+  n-plus-one:
+    threshold: 3
+  offset-pagination:
+    threshold: 1000
+  or-clause:
+    threshold: 5
+  slow-query:
+    warning-ms: 500
+    error-ms: 3000
+  report:
+    format: console
+    show-info: false
+    output-dir: build/reports/query-audit
+  auto-open-report: false
