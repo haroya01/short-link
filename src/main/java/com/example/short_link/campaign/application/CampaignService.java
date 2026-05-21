@@ -2,11 +2,14 @@ package com.example.short_link.campaign.application;
 
 import com.example.short_link.campaign.api.CampaignCreateRequest;
 import com.example.short_link.campaign.api.CampaignUpdateRequest;
+import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignBatchRepository;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignRepository;
 import com.example.short_link.campaign.domain.CampaignStatus;
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkRepository;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +22,7 @@ public class CampaignService {
 
   private final CampaignRepository repository;
   private final CampaignBatchRepository batchRepository;
+  private final LinkRepository linkRepository;
 
   @Transactional
   public CampaignEntity create(Long ownerId, CampaignCreateRequest request) {
@@ -100,10 +104,7 @@ public class CampaignService {
     return batchRepository.countByCampaignId(campaignId);
   }
 
-  /**
-   * 스케줄러 진입점 — DRAFT 중 startsAt 이 도래한 것을 ACTIVE 로 전환. ACTIVE → ENDED 전환과 postEndAction 적용은 M6 에서
-   * 별도로 다룬다.
-   */
+  /** 스케줄러 진입점 — DRAFT 중 startsAt 이 도래한 것을 ACTIVE 로 전환. */
   @Transactional
   public int activateReady(Instant now) {
     List<CampaignEntity> ready =
@@ -117,6 +118,69 @@ public class CampaignService {
       }
     }
     return count;
+  }
+
+  /** 스케줄러 진입점 — ACTIVE 중 endsAt 이 도달한 것을 ENDED 로 전환 + postEndAction 일괄 적용. */
+  @Transactional
+  public int endDue(Instant now) {
+    List<CampaignEntity> due =
+        repository.findByStatusAndEndsAtLessThanEqual(CampaignStatus.ACTIVE, now);
+    for (CampaignEntity c : due) {
+      endInternal(c, now);
+    }
+    return due.size();
+  }
+
+  /** 수동 종료 — 운영자가 endsAt 전에 또는 후에 명시적으로 종료. ARCHIVED 거부, ENDED 멱등 (정책 재적용 효과). */
+  @Transactional
+  public CampaignEntity endNow(Long id, Long ownerId) {
+    CampaignEntity c = detail(id, ownerId);
+    if (c.getStatus() == CampaignStatus.ARCHIVED) {
+      throw new CampaignArchivedException();
+    }
+    Instant now = Instant.now();
+    if (c.getStatus() == CampaignStatus.ENDED) {
+      applyPolicyToBatchLinks(c, c.getEndedAt() != null ? c.getEndedAt() : now);
+      return c;
+    }
+    return endInternal(c, now);
+  }
+
+  /** 종료 정책 재적용 — ENDED 후 정책 변경 (postEndAction / postEndDestinationUrl) 시 명시적 액션으로 다시 박는다. */
+  @Transactional
+  public CampaignEntity reapplyPolicy(Long id, Long ownerId) {
+    CampaignEntity c = detail(id, ownerId);
+    if (c.getStatus() != CampaignStatus.ENDED) {
+      throw new ReapplyOnNonEndedException();
+    }
+    applyPolicyToBatchLinks(c, c.getEndedAt() != null ? c.getEndedAt() : Instant.now());
+    return c;
+  }
+
+  private CampaignEntity endInternal(CampaignEntity c, Instant now) {
+    c.markEnded(now);
+    applyPolicyToBatchLinks(c, now);
+    return c;
+  }
+
+  private void applyPolicyToBatchLinks(CampaignEntity c, Instant at) {
+    List<CampaignBatchEntity> batches =
+        batchRepository.findByCampaignIdOrderByCreatedAtAsc(c.getId());
+    for (CampaignBatchEntity batch : batches) {
+      LinkEntity link = linkRepository.findById(batch.getLinkId()).orElse(null);
+      if (link == null) continue;
+      switch (c.getPostEndAction()) {
+        case KEEP:
+          // no-op — 인쇄된 QR 이 그대로 원래 destination 으로 동작
+          break;
+        case EXPIRE:
+          link.applyCampaignExpiration(at, null);
+          break;
+        case REDIRECT:
+          link.applyCampaignExpiration(at, c.getPostEndDestinationUrl());
+          break;
+      }
+    }
   }
 
   private static boolean isBlank(String s) {

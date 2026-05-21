@@ -36,12 +36,20 @@ public class CampaignLifecycleJob {
       return;
     }
     try {
-      int activated = service.activateReady(Instant.now());
+      Instant now = Instant.now();
+      int activated = service.activateReady(now);
       if (activated > 0) {
         log.info("campaign lifecycle: activated {} campaigns", activated);
         meterRegistry
             .counter("short_link.campaign.lifecycle", "transition", "draft_to_active")
             .increment(activated);
+      }
+      int ended = service.endDue(now);
+      if (ended > 0) {
+        log.info("campaign lifecycle: ended {} campaigns (postEndAction applied)", ended);
+        meterRegistry
+            .counter("short_link.campaign.lifecycle", "transition", "active_to_ended")
+            .increment(ended);
       }
     } finally {
       lock.release(LOCK_KEY);
