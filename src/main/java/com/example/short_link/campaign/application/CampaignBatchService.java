@@ -115,7 +115,9 @@ public class CampaignBatchService {
 
   private BatchWithLink persistRow(
       CampaignEntity campaign, Long ownerId, CampaignBatchCreateRequest row, String destination) {
-    LinkCreated created = linkCreationService.create(destination, ownerId, null, null);
+    // dedup=false — 같은 destination 의 여러 batch 가 각자 다른 short code 를 갖도록 (batch:link
+    // UNIQUE 제약). 인쇄물 발주 시 batch 별 추적이 가능해야 함.
+    LinkCreated created = linkCreationService.create(destination, ownerId, null, null, false);
     LinkEntity link =
         linkRepository
             .findByShortCode(created.shortCode())

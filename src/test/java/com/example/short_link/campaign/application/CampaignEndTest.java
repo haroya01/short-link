@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.campaign.api.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.api.CampaignCreateRequest;
-import com.example.short_link.campaign.api.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
@@ -109,21 +108,26 @@ class CampaignEndTest {
   @Test
   void endDueScannerCatchesActiveCampaignsPastEndsAt() {
     Long owner = newOwner("due");
-    CampaignEntity campaign = newCampaign(owner, CampaignPostEndAction.EXPIRE, null);
-    // 강제로 endsAt 을 과거로 옮긴다 (캠페인은 already ACTIVE).
+    // startsAt 을 과거 깊이 박아 endsAt 도 과거 (이미 끝났어야 할 캠페인 상태) 를 만든다.
+    // create 의 validation 은 endsAt > startsAt 만 확인하므로 통과.
+    Instant longPast = Instant.now().minusSeconds(60 * 60 * 24 * 14);
+    CampaignEntity campaign =
+        campaignService.create(
+            owner,
+            new com.example.short_link.campaign.api.CampaignCreateRequest(
+                "C",
+                longPast,
+                longPast.plusSeconds(60 * 60),
+                "https://example.com/x",
+                CampaignPostEndAction.EXPIRE,
+                null));
     assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.ACTIVE);
-    campaignService.updatePolicy(
-        campaign.getId(),
-        owner,
-        new CampaignUpdateRequest(null, Instant.now().minusSeconds(1), null, null, null));
     BatchWithLink bwl =
         batchService.create(
             campaign.getId(),
             owner,
             new CampaignBatchCreateRequest("east", null, null, 100, null, null));
 
-    // updatePolicy 호출이 endsAt 을 past 로 바꿔 validation 통과 후 batch 생성
-    // (terminal 검사는 status 기반이므로 ACTIVE 면 허용). 이제 스케줄러가 잡아야 한다.
     int ended = campaignService.endDue(Instant.now());
 
     assertThat(ended).isEqualTo(1);
