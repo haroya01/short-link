@@ -48,12 +48,21 @@ public class CampaignBatchExportService {
   }
 
   public byte[] exportQrZip(Long campaignId, Long ownerId) {
+    return exportQrZip(campaignId, ownerId, QrOptions.defaults());
+  }
+
+  public byte[] exportQrZip(Long campaignId, Long ownerId, QrOptions options) {
     List<BatchWithLink> batches = batchService.list(campaignId, ownerId);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (ZipOutputStream zip = new ZipOutputStream(out)) {
       for (BatchWithLink bwl : batches) {
         String shortUrl = urlBuilder.build(bwl.link().getShortCode());
-        byte[] png = qrEncoder.encode(shortUrl);
+        byte[] png =
+            qrEncoder.encode(
+                shortUrl,
+                options.sizePx(),
+                options.ec(),
+                options.includeLabel() ? bwl.batch().getName() : null);
         zip.putNextEntry(new ZipEntry(qrFileName(bwl)));
         zip.write(png);
         zip.closeEntry();
@@ -65,8 +74,16 @@ public class CampaignBatchExportService {
   }
 
   public byte[] exportSinglePng(Long campaignId, Long batchId, Long ownerId) {
+    return exportSinglePng(campaignId, batchId, ownerId, QrOptions.defaults());
+  }
+
+  public byte[] exportSinglePng(Long campaignId, Long batchId, Long ownerId, QrOptions options) {
     BatchWithLink bwl = batchService.detail(campaignId, batchId, ownerId);
-    return qrEncoder.encode(urlBuilder.build(bwl.link().getShortCode()));
+    return qrEncoder.encode(
+        urlBuilder.build(bwl.link().getShortCode()),
+        options.sizePx(),
+        options.ec(),
+        options.includeLabel() ? bwl.batch().getName() : null);
   }
 
   private static String qrFileName(BatchWithLink bwl) {
