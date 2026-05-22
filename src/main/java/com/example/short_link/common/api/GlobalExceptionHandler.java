@@ -251,6 +251,81 @@ public class GlobalExceptionHandler {
         HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage(), "CUSTOM_DOMAIN_NOT_VERIFIED", req);
   }
 
+  @ExceptionHandler(com.example.short_link.campaign.application.CampaignNotFoundException.class)
+  public ProblemDetail handleCampaignNotFound(
+      com.example.short_link.campaign.application.CampaignNotFoundException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.NOT_FOUND, e.getMessage(), "CAMPAIGN_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(com.example.short_link.campaign.application.CampaignNotOwnedException.class)
+  public ProblemDetail handleCampaignNotOwned(
+      com.example.short_link.campaign.application.CampaignNotOwnedException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.NOT_FOUND, e.getMessage(), "CAMPAIGN_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(
+      com.example.short_link.campaign.application.InvalidCampaignPeriodException.class)
+  public ProblemDetail handleInvalidCampaignPeriod(
+      com.example.short_link.campaign.application.InvalidCampaignPeriodException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_CAMPAIGN_PERIOD", req);
+  }
+
+  @ExceptionHandler(
+      com.example.short_link.campaign.application.MissingPostEndDestinationException.class)
+  public ProblemDetail handleMissingPostEndDestination(
+      com.example.short_link.campaign.application.MissingPostEndDestinationException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "MISSING_POST_END_DESTINATION", req);
+  }
+
+  @ExceptionHandler(com.example.short_link.campaign.application.CampaignArchivedException.class)
+  public ProblemDetail handleCampaignArchived(
+      com.example.short_link.campaign.application.CampaignArchivedException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "CAMPAIGN_ARCHIVED", req);
+  }
+
+  @ExceptionHandler(
+      com.example.short_link.campaign.application.CampaignTerminalStateException.class)
+  public ProblemDetail handleCampaignTerminalState(
+      com.example.short_link.campaign.application.CampaignTerminalStateException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "CAMPAIGN_TERMINAL_STATE", req);
+  }
+
+  @ExceptionHandler(com.example.short_link.campaign.application.ReapplyOnNonEndedException.class)
+  public ProblemDetail handleReapplyOnNonEnded(
+      com.example.short_link.campaign.application.ReapplyOnNonEndedException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "REAPPLY_ON_NON_ENDED", req);
+  }
+
+  @ExceptionHandler(
+      com.example.short_link.campaign.application.CampaignBatchNotFoundException.class)
+  public ProblemDetail handleCampaignBatchNotFound(
+      com.example.short_link.campaign.application.CampaignBatchNotFoundException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.NOT_FOUND, e.getMessage(), "CAMPAIGN_BATCH_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(com.example.short_link.campaign.application.InvalidBatchRowException.class)
+  public ProblemDetail handleInvalidBatchRow(
+      com.example.short_link.campaign.application.InvalidBatchRowException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_BATCH_ROW", req);
+  }
+
+  @ExceptionHandler(
+      com.example.short_link.campaign.application.MissingDestinationUrlException.class)
+  public ProblemDetail handleMissingDestinationUrl(
+      com.example.short_link.campaign.application.MissingDestinationUrlException e,
+      HttpServletRequest req) {
+    return problem(HttpStatus.BAD_REQUEST, e.getMessage(), "MISSING_DESTINATION_URL", req);
+  }
+
   @ExceptionHandler(Exception.class)
   public ProblemDetail handleUnknown(Exception e, HttpServletRequest req) {
     // Method/URI are already in MDC via MdcFilter, but inlining them in the message keeps the

@@ -32,7 +32,9 @@ class CampaignControllerTest {
   @Autowired private MockMvc mvc;
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
-  @Autowired private ObjectMapper json;
+  // Spring Boot 4 에서 ObjectMapper 가 더 이상 auto-configured bean 이 아님 (Jackson 3 마이그레이션).
+  // 테스트 페이로드는 단순 Map ↔ JSON 이므로 모듈 없이 직접 인스턴스화.
+  private final ObjectMapper json = new ObjectMapper();
 
   private String bearer(String suffix) {
     UserEntity user =

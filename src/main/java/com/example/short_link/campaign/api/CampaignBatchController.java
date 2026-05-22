@@ -3,6 +3,8 @@ package com.example.short_link.campaign.api;
 import com.example.short_link.campaign.application.BatchWithLink;
 import com.example.short_link.campaign.application.CampaignBatchExportService;
 import com.example.short_link.campaign.application.CampaignBatchService;
+import com.example.short_link.campaign.application.QrOptions;
+import com.example.short_link.campaign.application.QrPngEncoder;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -97,8 +100,12 @@ public class CampaignBatchController {
   public ResponseEntity<byte[]> qrPng(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long campaignId,
-      @PathVariable Long batchId) {
-    byte[] png = exportService.exportSinglePng(campaignId, batchId, userId);
+      @PathVariable Long batchId,
+      @RequestParam(value = "size", defaultValue = "512") int size,
+      @RequestParam(value = "ec", defaultValue = "M") String ec,
+      @RequestParam(value = "label", defaultValue = "false") boolean label) {
+    QrOptions options = new QrOptions(size, parseEc(ec), label);
+    byte[] png = exportService.exportSinglePng(campaignId, batchId, userId, options);
     return ResponseEntity.ok()
         .contentType(MediaType.IMAGE_PNG)
         .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"batch-" + batchId + ".png\"")
@@ -107,14 +114,27 @@ public class CampaignBatchController {
 
   @GetMapping("/qr-zip")
   public ResponseEntity<byte[]> qrZip(
-      @AuthenticationPrincipal Long userId, @PathVariable Long campaignId) {
-    byte[] zip = exportService.exportQrZip(campaignId, userId);
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long campaignId,
+      @RequestParam(value = "size", defaultValue = "512") int size,
+      @RequestParam(value = "ec", defaultValue = "M") String ec,
+      @RequestParam(value = "label", defaultValue = "false") boolean label) {
+    QrOptions options = new QrOptions(size, parseEc(ec), label);
+    byte[] zip = exportService.exportQrZip(campaignId, userId, options);
     return ResponseEntity.ok()
         .contentType(MediaType.APPLICATION_OCTET_STREAM)
         .header(
             HttpHeaders.CONTENT_DISPOSITION,
             "attachment; filename=\"campaign-" + campaignId + "-qrs.zip\"")
         .body(zip);
+  }
+
+  private static QrPngEncoder.Ec parseEc(String raw) {
+    try {
+      return QrPngEncoder.Ec.valueOf(raw.toUpperCase());
+    } catch (IllegalArgumentException e) {
+      return QrPngEncoder.Ec.M;
+    }
   }
 
   @GetMapping("/csv")
