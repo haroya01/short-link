@@ -2,7 +2,10 @@ package com.example.short_link.campaign.application;
 
 import com.example.short_link.campaign.api.CampaignStatsResponse;
 import com.example.short_link.campaign.api.CampaignStatsResponse.BatchStats;
+import com.example.short_link.campaign.api.CampaignStatsResponse.DayBucket;
 import com.example.short_link.campaign.api.CampaignStatsResponse.GroupStats;
+import com.example.short_link.campaign.api.CampaignStatsResponse.HeatmapCell;
+import com.example.short_link.campaign.api.CampaignStatsResponse.HourBucket;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
@@ -19,6 +22,11 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CampaignStatsService {
 
+  // 시간대/일별/heatmap aggregation 의 viewer 기준 timezone. 캠페인 도메인에 timezone 필드가
+  // 따로 없어서 한국 서비스 default 로 고정. 후속 PR 에서 campaign 또는 user 의 timezone 필드 추가
+  // 시 여기에 주입하면 됨.
+  private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
+
   private final CampaignService campaignService;
   private final CampaignBatchService batchService;
   private final ClickEventRepository clickEventRepository;
@@ -29,7 +37,8 @@ public class CampaignStatsService {
     List<BatchWithLink> batches = batchService.list(campaignId, ownerId);
 
     if (batches.isEmpty()) {
-      return new CampaignStatsResponse(0L, 0L, null, List.of(), List.of(), List.of());
+      return new CampaignStatsResponse(
+          0L, 0L, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
     List<Long> linkIds = batches.stream().map(b -> b.link().getId()).toList();
@@ -60,6 +69,25 @@ public class CampaignStatsService {
     List<GroupStats> byDistributor = groupBy(byBatch, BatchStats::distributor);
     List<GroupStats> byArea = groupBy(byBatch, BatchStats::area);
 
+    List<HourBucket> byHour =
+        clickEventRepository
+            .findHourlyClicksByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
+            .stream()
+            .map(r -> new HourBucket(r.getHour(), r.getCount()))
+            .toList();
+    List<DayBucket> byDay =
+        clickEventRepository
+            .findDailyClicksByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
+            .stream()
+            .map(r -> new DayBucket(r.getDay(), r.getCount()))
+            .toList();
+    List<HeatmapCell> heatmap =
+        clickEventRepository
+            .findHeatmapByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
+            .stream()
+            .map(r -> new HeatmapCell(r.getDow(), r.getHour(), r.getCount()))
+            .toList();
+
     return new CampaignStatsResponse(
         totalClicks,
         testScans,
@@ -68,7 +96,26 @@ public class CampaignStatsService {
             : null,
         byBatch,
         byDistributor,
-        byArea);
+        byArea,
+        byHour,
+        byDay,
+        heatmap);
+  }
+
+  /**
+   * 두 캠페인의 stats 를 side-by-side 로 반환. UI 에서 1차 → 2차 비교 또는 같은 사장의 두 캠페인 효율 비교에 사용. 각 캠페인은 owner 검증을
+   * 위해 detail() 을 통과시킨다.
+   */
+  @Transactional(readOnly = true)
+  public CampaignStatsCompareResponse compare(List<Long> campaignIds, Long ownerId) {
+    List<CampaignStatsCompareResponse.CampaignWithStats> result =
+        new ArrayList<>(campaignIds.size());
+    for (Long id : campaignIds) {
+      CampaignEntity c = campaignService.detail(id, ownerId);
+      CampaignStatsResponse stats = statsFor(id, ownerId);
+      result.add(new CampaignStatsCompareResponse.CampaignWithStats(id, c.getName(), stats));
+    }
+    return new CampaignStatsCompareResponse(result);
   }
 
   private static Map<Long, Long> toMap(List<LinkClickCount> rows) {
