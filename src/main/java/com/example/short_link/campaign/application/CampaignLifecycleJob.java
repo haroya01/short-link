@@ -1,5 +1,7 @@
 package com.example.short_link.campaign.application;
 
+import com.example.short_link.campaign.application.write.ActivateReadyCampaignsUseCase;
+import com.example.short_link.campaign.application.write.EndDueCampaignsUseCase;
 import com.example.short_link.common.lock.RedisDistributedLock;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
@@ -20,7 +22,8 @@ public class CampaignLifecycleJob {
 
   private static final String LOCK_KEY = "kurl:campaign:lifecycle";
 
-  private final CampaignService service;
+  private final ActivateReadyCampaignsUseCase activateUseCase;
+  private final EndDueCampaignsUseCase endDueUseCase;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
   private final CampaignProperties campaign;
@@ -34,14 +37,14 @@ public class CampaignLifecycleJob {
     }
     try {
       Instant now = Instant.now();
-      int activated = service.activateReady(now);
+      int activated = activateUseCase.execute(now);
       if (activated > 0) {
         log.info("campaign lifecycle: activated {} campaigns", activated);
         meterRegistry
             .counter("short_link.campaign.lifecycle", "transition", "draft_to_active")
             .increment(activated);
       }
-      int ended = service.endDue(now);
+      int ended = endDueUseCase.execute(now);
       if (ended > 0) {
         log.info("campaign lifecycle: ended {} campaigns (postEndAction applied)", ended);
         meterRegistry
