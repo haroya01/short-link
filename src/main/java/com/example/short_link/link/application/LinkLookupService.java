@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
@@ -7,6 +8,7 @@ import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ public class LinkLookupService {
 
   private final LinkRepository repository;
   private final LinkDestinationRepository destinationRepository;
+  private final ClickEventRepository clickEventRepository;
   private final MeterRegistry meterRegistry;
 
   @Cacheable("link")
@@ -56,6 +59,18 @@ public class LinkLookupService {
 
   public String findActiveOriginalUrl(String shortCode) {
     return findActiveLink(shortCode).originalUrl();
+  }
+
+  /** SSE / OG card 등 entity 가 직접 필요한 controller 용. 못 찾으면 empty. */
+  @Transactional(readOnly = true)
+  public Optional<LinkEntity> findEntity(String shortCode) {
+    return repository.findByShortCode(shortCode);
+  }
+
+  /** OG card 의 click count 배지용. bot 제외 휴먼 클릭만. */
+  @Transactional(readOnly = true)
+  public long countHumanClicks(Long linkId) {
+    return clickEventRepository.countHumanByLinkId(linkId);
   }
 
   public CachedLink findActiveLink(String shortCode) {
