@@ -1,8 +1,6 @@
 package com.example.short_link.profile.application;
 
 import com.example.short_link.link.application.LinkNotFoundException;
-import com.example.short_link.link.domain.ClickEventRepository;
-import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.profile.contact.Booking;
@@ -24,15 +22,12 @@ import com.example.short_link.user.domain.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,20 +42,12 @@ public class ProfileService {
 
   private final UserRepository userRepository;
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final MeterRegistry meterRegistry;
-  private final com.example.short_link.link.application.ShortLinkUrlBuilder urlBuilder;
 
   @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
   private String publicProfileBaseUrl;
-
-  @Transactional(readOnly = true)
-  public MyProfile myProfile(Long userId) {
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
-    return toMyProfile(user);
-  }
 
   @Transactional
   @CacheEvict(value = "public-profile", allEntries = true)
@@ -114,7 +101,7 @@ public class ProfileService {
       user.updateSocials(normalized);
     }
     meterRegistry.counter("profile.updated").increment();
-    return toMyProfile(user);
+    return MyProfileMapper.from(user, publicProfileBaseUrl);
   }
 
   /**
@@ -226,8 +213,6 @@ public class ProfileService {
       case EMAIL_FORM -> {
         if (trimmed.length() > 2048)
           throw new InvalidUsernameException("email form config too long");
-        // Normalize trims + caps each field; throws InvalidUsernameException on bad shape, which
-        // the controller turns into 400 like the other block types.
         yield EmailFormConfig.normalize(trimmed);
       }
       case CONTACT_CARD -> {
@@ -239,8 +224,6 @@ public class ProfileService {
         yield Gallery.normalize(trimmed);
       }
       case PRODUCT_CARD -> {
-        // PRODUCT_CARD JSON is multi-item with image URLs + descriptions; bigger budget than the
-        // single-payload blocks above. Cap matches the rendered carousel's MAX_ITEMS budget.
         if (trimmed.length() > 16384) throw new InvalidUsernameException("product card too long");
         yield ProductCardCarousel.normalize(trimmed);
       }
@@ -318,104 +301,6 @@ public class ProfileService {
     } else {
       link.setProfileOrder(null);
     }
-  }
-
-  @Cacheable(value = "public-profile", key = "#username")
-  @Transactional(readOnly = true)
-  public PublicProfile findByUsername(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase();
-    UserEntity user =
-        userRepository
-            .findByUsername(normalized)
-            .filter(u -> !u.isDeleted())
-            .or(() -> resolveByHistory(normalized))
-            .orElseThrow(() -> new ProfileNotFoundException(normalized));
-    List<LinkEntity> links =
-        linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(user.getId());
-    List<ProfileBlockEntity> blocks =
-        profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(user.getId());
-    Map<Long, Long> counts = new HashMap<>();
-    if (!links.isEmpty()) {
-      List<Long> ids = links.stream().map(LinkEntity::getId).toList();
-      for (LinkClickCount row : clickRepository.countsByLinkIds(ids)) {
-        counts.put(row.getLinkId(), row.getCount());
-      }
-    }
-    // Links and blocks share the same profile_order space (assigned together by reorderProfile).
-    // Merge by order so headers / dividers slot in between links exactly where the editor put them.
-    List<PublicProfile.ProfileEntry> out = new ArrayList<>(links.size() + blocks.size());
-    int li = 0;
-    int bi = 0;
-    while (li < links.size() || bi < blocks.size()) {
-      LinkEntity l = li < links.size() ? links.get(li) : null;
-      ProfileBlockEntity b = bi < blocks.size() ? blocks.get(bi) : null;
-      boolean takeLink = l != null && (b == null || l.getProfileOrder() <= b.getProfileOrder());
-      if (takeLink) {
-        out.add(
-            PublicProfile.ProfileEntry.link(
-                l.getShortCode(),
-                urlBuilder.build(l.getShortCode()),
-                l.getOriginalUrl(),
-                // Prefer the user-set override so labels typed in the profile editor
-                // ("📝 블로그") win over the scraped OG title.
-                l.getEffectiveOgTitle(),
-                l.getEffectiveOgImage(),
-                counts.getOrDefault(l.getId(), 0L),
-                l.isProfileHighlighted()));
-        li++;
-      } else {
-        out.add(
-            switch (b.getType()) {
-              case TEXT -> PublicProfile.ProfileEntry.text(b.getId(), b.getContent());
-              case IMAGE -> PublicProfile.ProfileEntry.image(b.getId(), b.getContent());
-              case EMBED -> PublicProfile.ProfileEntry.embed(b.getId(), b.getContent());
-              case EMAIL_FORM -> PublicProfile.ProfileEntry.emailForm(b.getId(), b.getContent());
-              case CONTACT_CARD ->
-                  PublicProfile.ProfileEntry.contactCard(b.getId(), b.getContent());
-              case GALLERY -> PublicProfile.ProfileEntry.gallery(b.getId(), b.getContent());
-              case PRODUCT_CARD ->
-                  PublicProfile.ProfileEntry.productCard(b.getId(), b.getContent());
-              case BOOKING -> PublicProfile.ProfileEntry.booking(b.getId(), b.getContent());
-              case EVENT -> PublicProfile.ProfileEntry.event(b.getId(), b.getContent());
-              case PLACE -> PublicProfile.ProfileEntry.place(b.getId(), b.getContent());
-              case DIVIDER -> PublicProfile.ProfileEntry.divider(b.getId());
-            });
-        bi++;
-      }
-    }
-    return new PublicProfile(
-        user.getUsername(),
-        user.getBio(),
-        user.getProfileTheme(),
-        user.getAvatarUrl(),
-        user.getBannerUrl(),
-        Socials.toList(user.getSocials()),
-        out);
-  }
-
-  /**
-   * Used as a fallback when {@link #findByUsername} doesn't match a current user — resolves an old
-   * (renamed-from) handle to the user that gave it up, as long as the grace period hasn't expired.
-   * Frontend then sees {@code profile.username != requested} and can 308-redirect.
-   */
-  private java.util.Optional<UserEntity> resolveByHistory(String oldUsername) {
-    return usernameHistoryRepository
-        .findFirstByOldUsernameAndExpiresAtAfter(oldUsername, Instant.now())
-        .flatMap(history -> userRepository.findById(history.getUserId()))
-        .filter(u -> !u.isDeleted());
-  }
-
-  private MyProfile toMyProfile(UserEntity user) {
-    String publicUrl =
-        user.getUsername() == null ? null : publicProfileBaseUrl + user.getUsername();
-    return new MyProfile(
-        user.getUsername(),
-        user.getBio(),
-        user.getProfileTheme(),
-        publicUrl,
-        user.getAvatarUrl(),
-        user.getBannerUrl(),
-        Socials.toList(user.getSocials()));
   }
 
   private int nextProfileOrder(Long userId) {

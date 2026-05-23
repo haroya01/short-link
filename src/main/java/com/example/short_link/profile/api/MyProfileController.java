@@ -2,6 +2,7 @@ package com.example.short_link.profile.api;
 
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.ProfileService;
+import com.example.short_link.profile.application.read.ProfileQueryService;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -19,10 +20,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class MyProfileController {
 
   private final ProfileService service;
+  private final ProfileQueryService queryService;
 
   @GetMapping
   public MyProfile get(@AuthenticationPrincipal Long userId) {
-    return service.myProfile(userId);
+    return queryService.myProfile(userId);
   }
 
   @PutMapping
@@ -36,7 +38,7 @@ public class MyProfileController {
   public MyProfile reorder(
       @AuthenticationPrincipal Long userId, @RequestBody ReorderRequest request) {
     service.reorderProfile(userId, request.items());
-    return service.myProfile(userId);
+    return queryService.myProfile(userId);
   }
 
   public record UpdateRequest(
