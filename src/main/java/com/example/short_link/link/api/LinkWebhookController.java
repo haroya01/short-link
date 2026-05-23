@@ -1,9 +1,16 @@
 package com.example.short_link.link.api;
 
-import com.example.short_link.link.application.LinkWebhookService;
-import com.example.short_link.link.application.LinkWebhookService.ConfigPatch;
-import com.example.short_link.link.application.LinkWebhookService.IssuedWebhook;
-import com.example.short_link.link.application.LinkWebhookService.WebhookSummary;
+import com.example.short_link.link.application.IssuedWebhook;
+import com.example.short_link.link.application.WebhookSummary;
+import com.example.short_link.link.application.read.LinkWebhookQueryService;
+import com.example.short_link.link.application.write.DeleteLinkWebhookCommand;
+import com.example.short_link.link.application.write.DeleteLinkWebhookUseCase;
+import com.example.short_link.link.application.write.RegisterLinkWebhookCommand;
+import com.example.short_link.link.application.write.RegisterLinkWebhookUseCase;
+import com.example.short_link.link.application.write.ToggleLinkWebhookCommand;
+import com.example.short_link.link.application.write.ToggleLinkWebhookUseCase;
+import com.example.short_link.link.application.write.UpdateLinkWebhookConfigCommand;
+import com.example.short_link.link.application.write.UpdateLinkWebhookConfigUseCase;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -28,12 +35,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class LinkWebhookController {
 
-  private final LinkWebhookService service;
+  private final LinkWebhookQueryService queryService;
+  private final RegisterLinkWebhookUseCase registerUseCase;
+  private final ToggleLinkWebhookUseCase toggleUseCase;
+  private final UpdateLinkWebhookConfigUseCase updateConfigUseCase;
+  private final DeleteLinkWebhookUseCase deleteUseCase;
 
   @GetMapping("/{shortCode}/webhooks")
   public List<WebhookSummary> list(
       @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
-    return service.list(userId, shortCode);
+    return queryService.list(userId, shortCode);
   }
 
   @PostMapping("/{shortCode}/webhooks")
@@ -41,7 +52,9 @@ public class LinkWebhookController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @RequestBody RegisterRequest request) {
-    IssuedWebhook issued = service.register(userId, shortCode, request.url(), request.name());
+    IssuedWebhook issued =
+        registerUseCase.execute(
+            new RegisterLinkWebhookCommand(userId, shortCode, request.url(), request.name()));
     return ResponseEntity.status(HttpStatus.CREATED).body(issued);
   }
 
@@ -51,7 +64,8 @@ public class LinkWebhookController {
       @PathVariable String shortCode,
       @PathVariable Long id,
       @RequestBody ToggleRequest request) {
-    return service.toggle(userId, shortCode, id, request.enabled());
+    return toggleUseCase.execute(
+        new ToggleLinkWebhookCommand(userId, shortCode, id, request.enabled()));
   }
 
   @PutMapping("/{shortCode}/webhooks/{id}/config")
@@ -60,11 +74,11 @@ public class LinkWebhookController {
       @PathVariable String shortCode,
       @PathVariable Long id,
       @RequestBody ConfigRequest request) {
-    return service.updateConfig(
-        userId,
-        shortCode,
-        id,
-        new ConfigPatch(
+    return updateConfigUseCase.execute(
+        new UpdateLinkWebhookConfigCommand(
+            userId,
+            shortCode,
+            id,
             request.includeBots(),
             request.sampleRate(),
             request.batchEnabled(),
@@ -76,7 +90,7 @@ public class LinkWebhookController {
   @DeleteMapping("/{shortCode}/webhooks/{id}")
   public ResponseEntity<Void> delete(
       @AuthenticationPrincipal Long userId, @PathVariable String shortCode, @PathVariable Long id) {
-    service.delete(userId, shortCode, id);
+    deleteUseCase.execute(new DeleteLinkWebhookCommand(userId, shortCode, id));
     return ResponseEntity.noContent().build();
   }
 
