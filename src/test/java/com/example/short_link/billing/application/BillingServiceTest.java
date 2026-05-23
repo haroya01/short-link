@@ -30,17 +30,20 @@ class BillingServiceTest {
     return new BillingService(
         userRepository,
         meterRegistry,
-        "sk_test_x",
-        "whsec_x",
-        "price_pro",
-        "https://app/success",
-        "https://app/cancel",
-        "https://app/portal");
+        new StripeProperties(
+            "sk_test_x",
+            "whsec_x",
+            "price_pro",
+            "https://app/success",
+            "https://app/cancel",
+            "https://app/portal"));
   }
 
   private BillingService unconfigured() {
     return new BillingService(
-        userRepository, meterRegistry, "", "", "", "https://app", "https://app", "https://app");
+        userRepository,
+        meterRegistry,
+        new StripeProperties("", "", "", "https://app", "https://app", "https://app"));
   }
 
   @Test
@@ -51,12 +54,8 @@ class BillingServiceTest {
         new BillingService(
             userRepository,
             meterRegistry,
-            "sk_test_x",
-            "whsec_x",
-            "",
-            "https://app",
-            "https://app",
-            "https://app");
+            new StripeProperties(
+                "sk_test_x", "whsec_x", "", "https://app", "https://app", "https://app"));
     assertThat(missingPrice.isConfigured()).isFalse();
   }
 
@@ -111,12 +110,8 @@ class BillingServiceTest {
         new BillingService(
             userRepository,
             meterRegistry,
-            "sk_test_x",
-            "",
-            "price_pro",
-            "https://app",
-            "https://app",
-            "https://app");
+            new StripeProperties(
+                "sk_test_x", "", "price_pro", "https://app", "https://app", "https://app"));
     assertThatThrownBy(() -> noSecret.handleWebhook("{}", "sig"))
         .isInstanceOf(IllegalStateException.class)
         .hasMessageContaining("webhook secret not configured");

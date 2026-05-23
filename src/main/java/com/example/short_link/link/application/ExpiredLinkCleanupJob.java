@@ -10,7 +10,6 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -33,17 +32,12 @@ public class ExpiredLinkCleanupJob {
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
   private final CacheManager cacheManager;
-
-  @Value("${short-link.cleanup.expired-grace-days:30}")
-  private long graceDays;
-
-  @Value("${short-link.cleanup.enabled:true}")
-  private boolean enabled;
+  private final CleanupProperties cleanup;
 
   @Scheduled(cron = "${short-link.cleanup.cron:0 0 4 * * *}", zone = "Asia/Seoul")
   @Transactional
   public void runDaily() {
-    if (!enabled) return;
+    if (!cleanup.enabled()) return;
     if (!lock.tryAcquire(LOCK_KEY, Duration.ofMinutes(15))) {
       log.debug("expired link cleanup skipped — lock held by another instance");
       return;
@@ -57,7 +51,7 @@ public class ExpiredLinkCleanupJob {
   }
 
   int sweep() {
-    Instant cutoff = Instant.now().minus(Duration.ofDays(graceDays));
+    Instant cutoff = Instant.now().minus(Duration.ofDays(cleanup.expiredGraceDays()));
     int totalLinks = 0;
     int totalClicks = 0;
     while (true) {

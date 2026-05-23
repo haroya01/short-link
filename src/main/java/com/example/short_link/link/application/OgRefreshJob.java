@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -32,22 +31,17 @@ public class OgRefreshJob {
   private final LinkOgFetchListener listener;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
-
-  @Value("${short-link.og-fetch.stale-after-days:30}")
-  private long staleAfterDays;
-
-  @Value("${short-link.og-fetch.refresh-enabled:true}")
-  private boolean enabled;
+  private final OgFetchProperties ogFetch;
 
   @Scheduled(cron = "${short-link.og-fetch.refresh-cron:0 0 5 * * SUN}", zone = "Asia/Seoul")
   public void runWeekly() {
-    if (!enabled) return;
+    if (!ogFetch.refreshEnabled()) return;
     if (!lock.tryAcquire(LOCK_KEY, Duration.ofMinutes(30))) {
       log.debug("og refresh skipped — lock held");
       return;
     }
     try {
-      Instant before = Instant.now().minus(Duration.ofDays(staleAfterDays));
+      Instant before = Instant.now().minus(Duration.ofDays(ogFetch.staleAfterDays()));
       List<LinkEntity> candidates =
           linkRepository.findStaleOgCandidates(before, PageRequest.of(0, BATCH_SIZE));
       log.info("og refresh: {} stale candidates", candidates.size());

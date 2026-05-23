@@ -6,7 +6,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Async;
@@ -29,9 +28,7 @@ public class LinkOgFetchListener {
   private final LinkRepository repository;
   private final MeterRegistry meterRegistry;
   private final CacheManager cacheManager;
-
-  @Value("${short-link.og-fetch.max-attempts:3}")
-  private int maxAttempts;
+  private final OgFetchProperties ogFetch;
 
   @Async
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -52,7 +49,7 @@ public class LinkOgFetchListener {
       repository.save(entity);
       meterRegistry.counter("short_link.og_fetch", "result", "ok").increment();
     } else {
-      boolean willRetry = entity.getOgFetchAttempts() + 1 < maxAttempts;
+      boolean willRetry = entity.getOgFetchAttempts() + 1 < ogFetch.maxAttempts();
       entity.markOgFetchFailed(now, willRetry);
       repository.save(entity);
       meterRegistry

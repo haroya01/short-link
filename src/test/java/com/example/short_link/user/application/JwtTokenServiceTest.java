@@ -13,7 +13,8 @@ class JwtTokenServiceTest {
 
   @BeforeEach
   void setUp() throws Exception {
-    service = new JwtTokenService("", "", Duration.ofMinutes(15), Duration.ofDays(14));
+    service =
+        new JwtTokenService(new JwtProperties("", "", Duration.ofMinutes(15), Duration.ofDays(14)));
   }
 
   @Test

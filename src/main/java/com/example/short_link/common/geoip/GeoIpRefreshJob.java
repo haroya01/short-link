@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveInputStream;
 import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -41,20 +40,12 @@ public class GeoIpRefreshJob {
   private final GeoIpDatabaseHolder holder;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
-
-  @Value("${short-link.geoip.refresh-enabled:true}")
-  private boolean enabled;
-
-  @Value("${short-link.geoip.license-key:}")
-  private String licenseKey;
-
-  @Value("${short-link.geoip.download-url:}")
-  private String overrideUrl;
+  private final GeoipProperties geoip;
 
   @Scheduled(cron = "${short-link.geoip.refresh-cron:0 15 5 * * WED}", zone = "Asia/Seoul")
   public void refreshWeekly() {
-    if (!enabled) return;
-    if (licenseKey.isBlank() && overrideUrl.isBlank()) {
+    if (!geoip.refreshEnabled()) return;
+    if (geoip.licenseKey().isBlank() && geoip.downloadUrl().isBlank()) {
       log.debug("geoip refresh skipped — no license key or override URL configured");
       return;
     }
@@ -79,7 +70,9 @@ public class GeoIpRefreshJob {
 
   private Path downloadAndExtract() throws IOException, InterruptedException {
     String url =
-        overrideUrl.isBlank() ? String.format(DOWNLOAD_URL_TEMPLATE, licenseKey) : overrideUrl;
+        geoip.downloadUrl().isBlank()
+            ? String.format(DOWNLOAD_URL_TEMPLATE, geoip.licenseKey())
+            : geoip.downloadUrl();
     Path tmpArchive = Files.createTempFile("geolite2-", ".tar.gz");
     tmpArchive.toFile().deleteOnExit();
     HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();

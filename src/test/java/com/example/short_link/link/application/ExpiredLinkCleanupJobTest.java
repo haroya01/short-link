@@ -12,7 +12,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,7 +26,6 @@ class ExpiredLinkCleanupJobTest {
 
   @Test
   void deletesLinksPastGracePeriod() {
-    ReflectionTestUtils.setField(job, "graceDays", 30L);
     Instant longAgo = Instant.now().minus(Duration.ofDays(60));
 
     LinkEntity expiredLink = new LinkEntity("https://example.com/old", "expired1", null, longAgo);
@@ -57,7 +55,6 @@ class ExpiredLinkCleanupJobTest {
 
   @Test
   void doesNothingWhenNothingToCleanup() {
-    ReflectionTestUtils.setField(job, "graceDays", 30L);
     int deleted = job.sweep();
     assertThat(deleted).isZero();
   }
@@ -68,7 +65,6 @@ class ExpiredLinkCleanupJobTest {
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void runDailyOpensOwnTransactionForSweep() {
-    ReflectionTestUtils.setField(job, "graceDays", 30L);
     Instant longAgo = Instant.now().minus(Duration.ofDays(90));
     LinkEntity old =
         linkRepository.save(new LinkEntity("https://example.com/probe", "prob0001", null, longAgo));
