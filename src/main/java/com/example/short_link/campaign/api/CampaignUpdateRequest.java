@@ -11,4 +11,5 @@ public record CampaignUpdateRequest(
     Instant endsAt,
     @URL @Size(max = 2048) String defaultDestinationUrl,
     CampaignPostEndAction postEndAction,
-    @URL @Size(max = 2048) String postEndDestinationUrl) {}
+    @URL @Size(max = 2048) String postEndDestinationUrl,
+    @Size(max = 500) String postEndMessage) {}

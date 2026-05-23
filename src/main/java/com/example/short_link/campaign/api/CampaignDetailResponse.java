@@ -15,6 +15,7 @@ public record CampaignDetailResponse(
     String defaultDestinationUrl,
     CampaignPostEndAction postEndAction,
     String postEndDestinationUrl,
+    String postEndMessage,
     long batchCount,
     Instant createdAt,
     Instant updatedAt) {
@@ -30,6 +31,7 @@ public record CampaignDetailResponse(
         c.getDefaultDestinationUrl(),
         c.getPostEndAction(),
         c.getPostEndDestinationUrl(),
+        c.getPostEndMessage(),
         batchCount,
         c.getCreatedAt(),
         c.getUpdatedAt());

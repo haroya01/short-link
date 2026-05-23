@@ -38,7 +38,7 @@ class CampaignBatchServiceTest {
     return campaignService.create(
         ownerId,
         new CampaignCreateRequest(
-            "C", null, Instant.now().plusSeconds(3600), defaultDestination, null, null));
+            "C", null, Instant.now().plusSeconds(3600), defaultDestination, null, null, null));
   }
 
   @Test

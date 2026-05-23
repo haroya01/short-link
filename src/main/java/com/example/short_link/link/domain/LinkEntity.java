@@ -161,13 +161,24 @@ public class LinkEntity {
   /**
    * Apply a campaign's post-end policy in a single move. Called by the campaign domain when
    * transitioning to ENDED so the redirect hot path can keep reading only this entity.
+   *
+   * <p>{@code expiredMessage} 는 EXPIRE 분기에서만 의미가 있다 — REDIRECT 일 때는 만료 페이지가 뜨지 않으므로 null 로 전달된다. 인자
+   * 자체는 무차별 적용 (null 이면 기존 메시지 클리어, 비어있지 않으면 덮어쓴다) — 호출자가 KEEP/EXPIRE/REDIRECT 분기 의도를 가지고 전달.
    */
-  public void applyCampaignExpiration(Instant expiresAt, String expiredRedirectUrl) {
+  public void applyCampaignExpiration(
+      Instant expiresAt, String expiredRedirectUrl, String expiredMessage) {
     this.expiresAt = expiresAt;
     this.expiredRedirectUrl =
         (expiredRedirectUrl == null || expiredRedirectUrl.isBlank())
             ? null
             : expiredRedirectUrl.trim();
+    if (expiredMessage == null) {
+      this.expiredMessage = null;
+    } else {
+      String trimmed = expiredMessage.trim();
+      this.expiredMessage =
+          trimmed.isEmpty() ? null : trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
+    }
   }
 
   public void applyOgMetadata(String title, String description, String image, Instant fetchedAt) {

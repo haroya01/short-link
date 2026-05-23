@@ -25,7 +25,14 @@ class CampaignRepositoryTest {
     CampaignEntity older =
         repository.save(
             new CampaignEntity(
-                7L, "Old", base, base.plusSeconds(3600), null, CampaignPostEndAction.KEEP, null));
+                7L,
+                "Old",
+                base,
+                base.plusSeconds(3600),
+                null,
+                CampaignPostEndAction.KEEP,
+                null,
+                null));
     CampaignEntity newer =
         repository.save(
             new CampaignEntity(
@@ -35,7 +42,8 @@ class CampaignRepositoryTest {
                 base.plusSeconds(7200),
                 null,
                 CampaignPostEndAction.REDIRECT,
-                "https://post.example.com"));
+                "https://post.example.com",
+                null));
 
     List<CampaignEntity> mine = repository.findByOwnerIdOrderByCreatedAtDesc(7L);
 
@@ -49,10 +57,10 @@ class CampaignRepositoryTest {
     Instant now = Instant.parse("2026-05-22T01:00:00Z");
     repository.save(
         new CampaignEntity(
-            1L, "ready", now.minusSeconds(60), now.plusSeconds(3600), null, null, null));
+            1L, "ready", now.minusSeconds(60), now.plusSeconds(3600), null, null, null, null));
     repository.save(
         new CampaignEntity(
-            1L, "future", now.plusSeconds(60), now.plusSeconds(3600), null, null, null));
+            1L, "future", now.plusSeconds(60), now.plusSeconds(3600), null, null, null, null));
 
     List<CampaignEntity> due =
         repository.findByStatusAndStartsAtLessThanEqual(CampaignStatus.DRAFT, now);
@@ -66,13 +74,27 @@ class CampaignRepositoryTest {
     CampaignEntity expired =
         repository.save(
             new CampaignEntity(
-                1L, "expired", now.minusSeconds(7200), now.minusSeconds(60), null, null, null));
+                1L,
+                "expired",
+                now.minusSeconds(7200),
+                now.minusSeconds(60),
+                null,
+                null,
+                null,
+                null));
     expired.activateIfStarted(now);
     repository.save(expired);
     CampaignEntity ongoing =
         repository.save(
             new CampaignEntity(
-                1L, "ongoing", now.minusSeconds(7200), now.plusSeconds(3600), null, null, null));
+                1L,
+                "ongoing",
+                now.minusSeconds(7200),
+                now.plusSeconds(3600),
+                null,
+                null,
+                null,
+                null));
     ongoing.activateIfStarted(now);
     repository.save(ongoing);
 

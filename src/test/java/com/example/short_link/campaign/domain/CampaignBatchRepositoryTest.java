@@ -29,7 +29,7 @@ class CampaignBatchRepositoryTest {
     Instant now = Instant.parse("2026-05-22T01:00:00Z");
     return campaignRepository.save(
         new CampaignEntity(
-            42L, "C", now, now.plusSeconds(3600), null, CampaignPostEndAction.KEEP, null));
+            42L, "C", now, now.plusSeconds(3600), null, CampaignPostEndAction.KEEP, null, null));
   }
 
   private LinkEntity newLink(String code) {
