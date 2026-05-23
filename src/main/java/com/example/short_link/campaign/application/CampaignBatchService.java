@@ -25,10 +25,11 @@ public class CampaignBatchService {
   private final LinkRepository linkRepository;
   private final LinkCreationService linkCreationService;
   private final CampaignService campaignService;
+  private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
 
   @Transactional
   public BatchWithLink create(Long campaignId, Long ownerId, CampaignBatchCreateRequest request) {
-    CampaignEntity campaign = campaignService.detail(campaignId, ownerId);
+    CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     rejectIfTerminal(campaign);
     String destination = resolveDestination(request.destinationUrl(), campaign);
     validateRow(request, destination, 0);
@@ -38,7 +39,7 @@ public class CampaignBatchService {
   @Transactional
   public List<BatchWithLink> createBulk(
       Long campaignId, Long ownerId, CampaignBatchBulkRequest request) {
-    CampaignEntity campaign = campaignService.detail(campaignId, ownerId);
+    CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     rejectIfTerminal(campaign);
 
     List<String> destinations = new ArrayList<>(request.batches().size());
@@ -58,7 +59,7 @@ public class CampaignBatchService {
 
   @Transactional(readOnly = true)
   public List<BatchWithLink> list(Long campaignId, Long ownerId) {
-    campaignService.detail(campaignId, ownerId);
+    campaignQuery.detail(campaignId, ownerId);
     List<CampaignBatchEntity> batches =
         batchRepository.findByCampaignIdOrderByCreatedAtAsc(campaignId);
     return batches.stream().map(this::pairWithLink).toList();
@@ -66,7 +67,7 @@ public class CampaignBatchService {
 
   @Transactional(readOnly = true)
   public BatchWithLink detail(Long campaignId, Long batchId, Long ownerId) {
-    campaignService.detail(campaignId, ownerId);
+    campaignQuery.detail(campaignId, ownerId);
     CampaignBatchEntity batch =
         batchRepository.findById(batchId).orElseThrow(CampaignBatchNotFoundException::new);
     if (!batch.getCampaignId().equals(campaignId)) {
@@ -82,7 +83,7 @@ public class CampaignBatchService {
   @Transactional
   public BatchWithLink update(
       Long campaignId, Long batchId, Long ownerId, CampaignBatchUpdateRequest request) {
-    CampaignEntity campaign = campaignService.detail(campaignId, ownerId);
+    CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     rejectIfTerminal(campaign);
     BatchWithLink current = detail(campaignId, batchId, ownerId);
     CampaignBatchEntity batch = current.batch();
