@@ -27,7 +27,6 @@ public class CampaignStatsService {
   // 시 여기에 주입하면 됨.
   private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
 
-  private final CampaignService campaignService;
   private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
   private final CampaignBatchService batchService;
   private final ClickEventRepository clickEventRepository;

@@ -25,7 +25,13 @@ import org.springframework.transaction.annotation.Transactional;
 class CampaignBatchServiceTest {
 
   @Autowired private CampaignBatchService batchService;
-  @Autowired private CampaignService campaignService;
+
+  @Autowired
+  private com.example.short_link.campaign.application.write.CreateCampaignUseCase createCampaign;
+
+  @Autowired
+  private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveCampaign;
+
   @Autowired private UserRepository userRepository;
 
   private Long newOwner(String suffix) {
@@ -35,7 +41,7 @@ class CampaignBatchServiceTest {
   }
 
   private CampaignEntity newCampaign(Long ownerId, String defaultDestination) {
-    return campaignService.create(
+    return createCampaign.execute(
         ownerId,
         new CampaignCreateRequest(
             "C", null, Instant.now().plusSeconds(3600), defaultDestination, null, null, null));
@@ -90,7 +96,7 @@ class CampaignBatchServiceTest {
   void rejectsBatchCreateOnArchivedCampaign() {
     Long owner = newOwner("arch");
     CampaignEntity campaign = newCampaign(owner, "https://example.com/x");
-    campaignService.archive(campaign.getId(), owner);
+    archiveCampaign.execute(campaign.getId(), owner);
 
     assertThatThrownBy(
             () ->
