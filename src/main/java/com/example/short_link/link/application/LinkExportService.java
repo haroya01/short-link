@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.application.read.LinkStatsQueryService;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
@@ -17,7 +18,7 @@ public class LinkExportService {
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
   private final ReferrerChannelClassifier channelClassifier;
-  private final LinkStatsService statsService;
+  private final LinkStatsQueryService statsService;
   private final LinkAccessGuard accessGuard;
 
   @org.springframework.beans.factory.annotation.Value("${short-link.export.event-batch:1000}")

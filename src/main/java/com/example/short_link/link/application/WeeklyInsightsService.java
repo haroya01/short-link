@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.application.read.LinkStatsQueryService;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.ClickEventRepository.HeatmapRow;
 import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
@@ -80,7 +81,7 @@ public class WeeklyInsightsService {
 
   private WeeklyInsights.Peak resolvePeak(Long userId, Instant from, Instant to) {
     ZoneId zone = ownerZone(userId);
-    String tz = LinkStatsService.currentOffset(zone);
+    String tz = LinkStatsQueryService.currentOffset(zone);
     List<HeatmapRow> rows =
         clickRepository.findHeatmapByUserIdAndRange(userId, from, to, tz, PageRequest.ofSize(1));
     if (rows.isEmpty()) return null;
@@ -91,7 +92,7 @@ public class WeeklyInsightsService {
   private ZoneId ownerZone(Long userId) {
     return userRepository
         .findById(userId)
-        .map(u -> LinkStatsService.safeZone(u.getTimezone()))
+        .map(u -> LinkStatsQueryService.safeZone(u.getTimezone()))
         .orElse(DEFAULT_ZONE);
   }
 }
