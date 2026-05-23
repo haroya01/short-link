@@ -1,8 +1,11 @@
 package com.example.short_link.link.api;
 
-import com.example.short_link.link.application.LinkDestinationService;
-import com.example.short_link.link.application.LinkDestinationService.DestinationSummary;
+import com.example.short_link.link.application.DestinationSummary;
 import com.example.short_link.link.application.read.LinkDestinationQueryService;
+import com.example.short_link.link.application.write.AddDestinationUseCase;
+import com.example.short_link.link.application.write.DeleteDestinationUseCase;
+import com.example.short_link.link.application.write.SetBlockedCountriesUseCase;
+import com.example.short_link.link.application.write.UpdateDestinationUseCase;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -31,8 +34,11 @@ public class LinkDestinationController {
   private static final String DEVICE_PATTERN = "^(mobile|tablet|desktop)?$";
   private static final String OS_PATTERN = "^(ios|android|windows|macos|linux)?$";
 
-  private final LinkDestinationService service;
   private final LinkDestinationQueryService query;
+  private final AddDestinationUseCase addUseCase;
+  private final UpdateDestinationUseCase updateUseCase;
+  private final DeleteDestinationUseCase deleteUseCase;
+  private final SetBlockedCountriesUseCase setBlockedUseCase;
 
   @GetMapping("/{shortCode}/destinations")
   public List<DestinationSummary> list(
@@ -46,7 +52,7 @@ public class LinkDestinationController {
       @PathVariable String shortCode,
       @RequestBody AddRequest request) {
     DestinationSummary added =
-        service.add(
+        addUseCase.execute(
             userId,
             shortCode,
             request.url(),
@@ -64,7 +70,7 @@ public class LinkDestinationController {
       @PathVariable String shortCode,
       @PathVariable Long id,
       @RequestBody UpdateRequest request) {
-    return service.update(
+    return updateUseCase.execute(
         userId,
         shortCode,
         id,
@@ -80,7 +86,7 @@ public class LinkDestinationController {
   @DeleteMapping("/{shortCode}/destinations/{id}")
   public ResponseEntity<Void> delete(
       @AuthenticationPrincipal Long userId, @PathVariable String shortCode, @PathVariable Long id) {
-    service.delete(userId, shortCode, id);
+    deleteUseCase.execute(userId, shortCode, id);
     return ResponseEntity.noContent().build();
   }
 
@@ -89,7 +95,7 @@ public class LinkDestinationController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @RequestBody BlockedCountriesRequest request) {
-    var link = service.setBlockedCountries(userId, shortCode, request.codes());
+    var link = setBlockedUseCase.execute(userId, shortCode, request.codes());
     return new BlockedCountriesResponse(link.getBlockedCountries());
   }
 
