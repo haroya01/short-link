@@ -48,6 +48,24 @@ public class AdminController {
     return service.overview();
   }
 
+  @GetMapping("/top-users-by-links")
+  public AdminOverviewService.TopUsersPage topUsersByLinks(
+      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+    return service.topUsersByLinks(page, size);
+  }
+
+  @GetMapping("/top-users-by-clicks")
+  public AdminOverviewService.TopUsersPage topUsersByClicks(
+      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+    return service.topUsersByClicks(page, size);
+  }
+
+  @GetMapping("/top-links-by-clicks")
+  public AdminOverviewService.TopLinksPage topLinksByClicks(
+      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+    return service.topLinksByClicks(page, size);
+  }
+
   @GetMapping("/health-metrics")
   public AdminHealthMetrics healthMetrics() {
     return healthService.metrics();

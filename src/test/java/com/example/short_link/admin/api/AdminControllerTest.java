@@ -299,7 +299,61 @@ class AdminControllerTest {
         .andExpect(jsonPath("$.dailyLinks").isArray())
         .andExpect(jsonPath("$.dailyClicks").isArray())
         .andExpect(jsonPath("$.topUsersByLinks").isArray())
+        .andExpect(jsonPath("$.topUsersByLinksTotal").isNumber())
         .andExpect(jsonPath("$.topUsersByClicks").isArray())
-        .andExpect(jsonPath("$.topLinksByClicks").isArray());
+        .andExpect(jsonPath("$.topUsersByClicksTotal").isNumber())
+        .andExpect(jsonPath("$.topLinksByClicks").isArray())
+        .andExpect(jsonPath("$.topLinksByClicksTotal").isNumber());
+  }
+
+  @Test
+  void anonymousReceives401OnTopPages() throws Exception {
+    mvc.perform(get("/api/v1/admin/top-users-by-links")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/v1/admin/top-users-by-clicks")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/v1/admin/top-links-by-clicks")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void plainUserReceives403OnTopPages() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-utp"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    mvc.perform(get("/api/v1/admin/top-users-by-links").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/admin/top-users-by-clicks").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/admin/top-links-by-clicks").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void adminReceivesTopPagesShape() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("tp@x.com", "google", "g-atp"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    // Controller test asserts shape + caps; ordering / totalElements correctness is covered at
+    // the repository slice level (AdminMetricsRepositoryTopPageTest) since the shared test DB
+    // carries pre-existing seed data that makes deterministic ordering assertions brittle here.
+    mvc.perform(
+            get("/api/v1/admin/top-users-by-links?page=0&size=10")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items").isArray())
+        .andExpect(jsonPath("$.total").isNumber());
+
+    mvc.perform(
+            get("/api/v1/admin/top-users-by-clicks?page=0&size=10")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items").isArray())
+        .andExpect(jsonPath("$.total").isNumber());
+
+    mvc.perform(
+            get("/api/v1/admin/top-links-by-clicks?page=0&size=10000")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items").isArray())
+        .andExpect(jsonPath("$.total").isNumber());
   }
 }
