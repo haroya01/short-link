@@ -1,10 +1,9 @@
 package com.example.short_link.user.domain;
 
+import com.example.short_link.common.jpa.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -20,7 +19,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "user_two_factor")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserTwoFactorEntity {
+public class UserTwoFactorEntity extends BaseTimeEntity {
 
   @Id
   @Column(name = "user_id")
@@ -38,28 +37,10 @@ public class UserTwoFactorEntity {
   @Column(name = "last_used_at")
   private Instant lastUsedAt;
 
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
-  @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt;
-
   public UserTwoFactorEntity(Long userId, String encryptedSecret) {
     this.userId = userId;
     this.secret = encryptedSecret;
     this.enabled = false;
-  }
-
-  @PrePersist
-  void prePersist() {
-    Instant now = Instant.now();
-    this.createdAt = now;
-    this.updatedAt = now;
-  }
-
-  @PreUpdate
-  void preUpdate() {
-    this.updatedAt = Instant.now();
   }
 
   public void rotateSecret(String encryptedSecret) {

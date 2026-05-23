@@ -1,5 +1,6 @@
 package com.example.short_link.link.domain;
 
+import com.example.short_link.common.jpa.BaseCreatedEntity;
 import com.example.short_link.link.application.WebhookFormat;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -8,7 +9,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -19,7 +19,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "link_webhook")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LinkWebhookEntity {
+public class LinkWebhookEntity extends BaseCreatedEntity {
 
   public static final int AUTO_DISABLE_FAILURE_THRESHOLD = 5;
 
@@ -41,9 +41,6 @@ public class LinkWebhookEntity {
 
   @Column(nullable = false)
   private boolean enabled = true;
-
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
 
   @Column(name = "last_called_at")
   private Instant lastCalledAt;
@@ -94,11 +91,6 @@ public class LinkWebhookEntity {
     this.name = name;
     this.enabled = true;
     this.format = format == null ? WebhookFormat.GENERIC : format;
-  }
-
-  @PrePersist
-  void prePersist() {
-    this.createdAt = Instant.now();
   }
 
   public void disable() {

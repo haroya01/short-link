@@ -3,7 +3,6 @@ package com.example.short_link.link.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.lang.reflect.Method;
 import org.junit.jupiter.api.Test;
 
 class LinkDestinationEntityTest {
@@ -93,14 +92,5 @@ class LinkDestinationEntityTest {
     assertThat(d.getCountryCode()).isEqualTo("JP");
     assertThat(d.getDeviceClass()).isEqualTo("desktop");
     assertThat(d.getOs()).isEqualTo("windows");
-  }
-
-  @Test
-  void prePersistStampsCreatedAt() throws Exception {
-    LinkDestinationEntity d = new LinkDestinationEntity(7L, "https://x", 1, null, null);
-    Method m = LinkDestinationEntity.class.getDeclaredMethod("prePersist");
-    m.setAccessible(true);
-    m.invoke(d);
-    assertThat(d.getCreatedAt()).isNotNull();
   }
 }

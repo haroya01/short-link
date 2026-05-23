@@ -1,11 +1,11 @@
 package com.example.short_link.link.domain;
 
+import com.example.short_link.common.jpa.BaseCreatedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -23,7 +23,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "custom_domain")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class CustomDomainEntity {
+public class CustomDomainEntity extends BaseCreatedEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,18 +47,10 @@ public class CustomDomainEntity {
   @Column(name = "last_checked_at")
   private Instant lastCheckedAt;
 
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
   public CustomDomainEntity(Long userId, String domain, String verificationToken) {
     this.userId = userId;
     this.domain = domain.toLowerCase();
     this.verificationToken = verificationToken;
-  }
-
-  @PrePersist
-  void prePersist() {
-    this.createdAt = Instant.now();
   }
 
   public void markVerified() {
