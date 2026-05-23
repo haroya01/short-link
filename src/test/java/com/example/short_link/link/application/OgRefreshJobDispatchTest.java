@@ -12,7 +12,6 @@ import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.lang.reflect.Field;
 import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,24 +27,28 @@ class OgRefreshJobDispatchTest {
   private OgRefreshJob job;
 
   @BeforeEach
-  void setUp() throws Exception {
+  void setUp() {
     linkRepository = Mockito.mock(LinkRepository.class);
     listener = Mockito.mock(LinkOgFetchListener.class);
     lock = Mockito.mock(RedisDistributedLock.class);
-    job = new OgRefreshJob(linkRepository, listener, lock, new SimpleMeterRegistry());
-    setField("staleAfterDays", 30L);
-    setField("enabled", true);
-  }
-
-  private void setField(String name, Object value) throws Exception {
-    Field f = OgRefreshJob.class.getDeclaredField(name);
-    f.setAccessible(true);
-    f.set(job, value);
+    job =
+        new OgRefreshJob(
+            linkRepository,
+            listener,
+            lock,
+            new SimpleMeterRegistry(),
+            new OgFetchProperties(3, 30, true));
   }
 
   @Test
-  void disabledSkipsAll() throws Exception {
-    setField("enabled", false);
+  void disabledSkipsAll() {
+    job =
+        new OgRefreshJob(
+            linkRepository,
+            listener,
+            lock,
+            new SimpleMeterRegistry(),
+            new OgFetchProperties(3, 30, false));
     job.runWeekly();
     verify(lock, never()).tryAcquire(anyString(), any(Duration.class));
   }

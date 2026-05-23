@@ -13,7 +13,8 @@ import org.junit.jupiter.api.Test;
 class JwtTokenServiceExtendedTest {
 
   private JwtTokenService freshService() throws Exception {
-    return new JwtTokenService("", "", Duration.ofMinutes(5), Duration.ofDays(7));
+    return new JwtTokenService(
+        new JwtProperties("", "", Duration.ofMinutes(5), Duration.ofDays(7)));
   }
 
   @Test
@@ -57,7 +58,8 @@ class JwtTokenServiceExtendedTest {
 
   @Test
   void refreshTtlAccessor() throws Exception {
-    JwtTokenService svc = new JwtTokenService("", "", Duration.ofMinutes(1), Duration.ofDays(30));
+    JwtTokenService svc =
+        new JwtTokenService(new JwtProperties("", "", Duration.ofMinutes(1), Duration.ofDays(30)));
     assertThat(svc.refreshTtl()).isEqualTo(Duration.ofDays(30));
   }
 
@@ -74,7 +76,9 @@ class JwtTokenServiceExtendedTest {
             + Base64.getMimeEncoder(64, "\n".getBytes())
                 .encodeToString(pair.getPublic().getEncoded())
             + "\n-----END PUBLIC KEY-----";
-    JwtTokenService svc = new JwtTokenService(priv, pub, Duration.ofMinutes(5), Duration.ofDays(7));
+    JwtTokenService svc =
+        new JwtTokenService(
+            new JwtProperties(priv, pub, Duration.ofMinutes(5), Duration.ofDays(7)));
     String token = svc.createAccessToken(42L);
     assertThat(svc.parseAccessToken(token)).isEqualTo(42L);
   }
@@ -84,10 +88,11 @@ class JwtTokenServiceExtendedTest {
     assertThatThrownBy(
             () ->
                 new JwtTokenService(
-                    "-----BEGIN PRIVATE KEY-----\nXXX\n-----END PRIVATE KEY-----",
-                    "-----BEGIN PUBLIC KEY-----\nXXX\n-----END PUBLIC KEY-----",
-                    Duration.ofMinutes(5),
-                    Duration.ofDays(7)))
+                    new JwtProperties(
+                        "-----BEGIN PRIVATE KEY-----\nXXX\n-----END PRIVATE KEY-----",
+                        "-----BEGIN PUBLIC KEY-----\nXXX\n-----END PUBLIC KEY-----",
+                        Duration.ofMinutes(5),
+                        Duration.ofDays(7))))
         .isInstanceOf(GeneralSecurityException.class);
   }
 }

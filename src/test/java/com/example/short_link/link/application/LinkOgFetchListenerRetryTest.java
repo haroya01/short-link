@@ -13,7 +13,6 @@ import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.support.NoOpCacheManager;
-import org.springframework.test.util.ReflectionTestUtils;
 
 class LinkOgFetchListenerRetryTest {
 
@@ -28,8 +27,12 @@ class LinkOgFetchListenerRetryTest {
     when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
 
     LinkOgFetchListener listener =
-        new LinkOgFetchListener(scraper, repo, new SimpleMeterRegistry(), new NoOpCacheManager());
-    ReflectionTestUtils.setField(listener, "maxAttempts", 3);
+        new LinkOgFetchListener(
+            scraper,
+            repo,
+            new SimpleMeterRegistry(),
+            new NoOpCacheManager(),
+            new OgFetchProperties(3, 30, true));
 
     listener.fetchAndStore("retry001", "https://example.com/x");
 
@@ -49,8 +52,12 @@ class LinkOgFetchListenerRetryTest {
     when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
 
     LinkOgFetchListener listener =
-        new LinkOgFetchListener(scraper, repo, new SimpleMeterRegistry(), new NoOpCacheManager());
-    ReflectionTestUtils.setField(listener, "maxAttempts", 3);
+        new LinkOgFetchListener(
+            scraper,
+            repo,
+            new SimpleMeterRegistry(),
+            new NoOpCacheManager(),
+            new OgFetchProperties(3, 30, true));
 
     listener.fetchAndStore("retry002", "https://example.com/x");
 

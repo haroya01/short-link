@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -24,13 +23,11 @@ public class CampaignLifecycleJob {
   private final CampaignService service;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
-
-  @Value("${short-link.campaign.lifecycle-enabled:true}")
-  private boolean enabled;
+  private final CampaignProperties campaign;
 
   @Scheduled(cron = "${short-link.campaign.lifecycle-cron:0 * * * * *}", zone = "Asia/Seoul")
   public void tick() {
-    if (!enabled) return;
+    if (!campaign.lifecycleEnabled()) return;
     if (!lock.tryAcquire(LOCK_KEY, Duration.ofSeconds(50))) {
       log.debug("campaign lifecycle tick skipped — lock held");
       return;

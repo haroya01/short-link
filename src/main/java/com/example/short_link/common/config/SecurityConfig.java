@@ -63,11 +63,10 @@ public class SecurityConfig {
   public RateLimitFilter rateLimitFilter(
       StringRedisTemplate redis,
       JsonMapper jsonMapper,
-      @Value("${short-link.rate-limit.anonymous:100}") long anonymousLimit,
-      @Value("${short-link.rate-limit.authenticated:1000}") long authenticatedLimit,
+      RateLimitProperties rateLimit,
       MeterRegistry meterRegistry) {
     return new RateLimitFilter(
-        redis, jsonMapper, anonymousLimit, authenticatedLimit, meterRegistry);
+        redis, jsonMapper, rateLimit.anonymous(), rateLimit.authenticated(), meterRegistry);
   }
 
   @Bean

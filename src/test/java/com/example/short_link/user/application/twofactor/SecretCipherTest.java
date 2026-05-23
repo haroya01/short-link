@@ -9,7 +9,7 @@ class SecretCipherTest {
 
   @Test
   void plainModeRoundTripsPrefixed() {
-    SecretCipher cipher = new SecretCipher("");
+    SecretCipher cipher = new SecretCipher(new TwoFactorProperties("", "kurl.me"));
     String stored = cipher.encrypt("JBSWY3DPEHPK3PXP");
     assertThat(stored).startsWith("plain:");
     assertThat(cipher.decrypt(stored)).isEqualTo("JBSWY3DPEHPK3PXP");
@@ -19,7 +19,9 @@ class SecretCipherTest {
   void aesModeRoundTrips() {
     byte[] key = new byte[32];
     new java.security.SecureRandom().nextBytes(key);
-    SecretCipher cipher = new SecretCipher(Base64.getEncoder().encodeToString(key));
+    SecretCipher cipher =
+        new SecretCipher(
+            new TwoFactorProperties(Base64.getEncoder().encodeToString(key), "kurl.me"));
     String stored = cipher.encrypt("JBSWY3DPEHPK3PXP");
     assertThat(stored).startsWith("v1:");
     assertThat(cipher.decrypt(stored)).isEqualTo("JBSWY3DPEHPK3PXP");
@@ -27,7 +29,7 @@ class SecretCipherTest {
 
   @Test
   void unprefixedLegacyRowReturnedAsIs() {
-    SecretCipher cipher = new SecretCipher("");
+    SecretCipher cipher = new SecretCipher(new TwoFactorProperties("", "kurl.me"));
     assertThat(cipher.decrypt("JBSWY3DPEHPK3PXP")).isEqualTo("JBSWY3DPEHPK3PXP");
   }
 
@@ -35,7 +37,9 @@ class SecretCipherTest {
   void aesProducesDistinctCiphertextEachCall() {
     byte[] key = new byte[32];
     new java.security.SecureRandom().nextBytes(key);
-    SecretCipher cipher = new SecretCipher(Base64.getEncoder().encodeToString(key));
+    SecretCipher cipher =
+        new SecretCipher(
+            new TwoFactorProperties(Base64.getEncoder().encodeToString(key), "kurl.me"));
     String a = cipher.encrypt("hello");
     String b = cipher.encrypt("hello");
     assertThat(a).isNotEqualTo(b);

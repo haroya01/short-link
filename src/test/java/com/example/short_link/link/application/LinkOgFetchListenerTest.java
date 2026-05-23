@@ -35,7 +35,12 @@ class LinkOgFetchListenerTest {
     when(cacheManager.getCache("link")).thenReturn(cache);
 
     LinkOgFetchListener listener =
-        new LinkOgFetchListener(scraper, repository, new SimpleMeterRegistry(), cacheManager);
+        new LinkOgFetchListener(
+            scraper,
+            repository,
+            new SimpleMeterRegistry(),
+            cacheManager,
+            new OgFetchProperties(3, 30, true));
 
     listener.fetchAndStore("abc1234", "https://example.com/x");
 
@@ -59,7 +64,11 @@ class LinkOgFetchListenerTest {
 
     LinkOgFetchListener listener =
         new LinkOgFetchListener(
-            scraper, repository, new SimpleMeterRegistry(), new NoOpCacheManager());
+            scraper,
+            repository,
+            new SimpleMeterRegistry(),
+            new NoOpCacheManager(),
+            new OgFetchProperties(1, 30, true));
 
     listener.fetchAndStore("zzz1234", "https://example.com/none");
 
@@ -78,7 +87,11 @@ class LinkOgFetchListenerTest {
 
     LinkOgFetchListener listener =
         new LinkOgFetchListener(
-            scraper, repository, new SimpleMeterRegistry(), new NoOpCacheManager());
+            scraper,
+            repository,
+            new SimpleMeterRegistry(),
+            new NoOpCacheManager(),
+            new OgFetchProperties(3, 30, true));
 
     listener.fetchAndStore("gone1234", "https://example.com/x");
 
