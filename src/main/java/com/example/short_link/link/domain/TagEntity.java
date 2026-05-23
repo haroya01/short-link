@@ -1,14 +1,13 @@
 package com.example.short_link.link.domain;
 
+import com.example.short_link.common.jpa.BaseCreatedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
-import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -23,7 +22,7 @@ import lombok.NoArgsConstructor;
     })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class TagEntity {
+public class TagEntity extends BaseCreatedEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,18 +37,10 @@ public class TagEntity {
   @Column(length = 7)
   private String color;
 
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
   public TagEntity(Long userId, String name, String color) {
     this.userId = userId;
     this.name = name;
     this.color = color;
-  }
-
-  @PrePersist
-  void prePersist() {
-    this.createdAt = Instant.now();
   }
 
   public void rename(String name) {

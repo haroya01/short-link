@@ -74,9 +74,18 @@ class LinkOgFetchListenerRetryTest {
 
   private static void setField(Object target, String name, Object value) {
     try {
-      Field f = LinkEntity.class.getDeclaredField(name);
-      f.setAccessible(true);
-      f.set(target, value);
+      Class<?> c = target.getClass();
+      while (c != null) {
+        try {
+          Field f = c.getDeclaredField(name);
+          f.setAccessible(true);
+          f.set(target, value);
+          return;
+        } catch (NoSuchFieldException ignored) {
+          c = c.getSuperclass();
+        }
+      }
+      throw new NoSuchFieldException(name);
     } catch (ReflectiveOperationException e) {
       throw new IllegalStateException(e);
     }

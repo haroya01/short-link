@@ -2,7 +2,6 @@ package com.example.short_link.link.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.lang.reflect.Method;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -21,15 +20,6 @@ class LinkEntityTest {
     assertThat(link.isStatsPublic()).isFalse();
     assertThat(link.isProfileHighlighted()).isFalse();
     assertThat(link.isOnProfile()).isFalse();
-  }
-
-  @Test
-  void prePersistStampsCreatedAt() throws Exception {
-    LinkEntity link = new LinkEntity("https://x", "abc");
-    Method m = LinkEntity.class.getDeclaredMethod("prePersist");
-    m.setAccessible(true);
-    m.invoke(link);
-    assertThat(link.getCreatedAt()).isNotNull();
   }
 
   @Test
