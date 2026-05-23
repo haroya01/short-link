@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.api.OgOverrideController.OgOverrideResponse;
+import com.example.short_link.link.application.OgOverrideResult;
 import com.example.short_link.link.application.OgOverrideService;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
@@ -47,7 +47,7 @@ class OgOverrideControllerTest {
     UserEntity user = userRepository.save(new UserEntity("o@x.com", "google", "g-og"));
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(service.update(eq(user.getId()), eq("abc1234"), eq("Hi"), eq(null), eq(null)))
-        .thenReturn(new OgOverrideResponse("abc1234", "Hi", null, null));
+        .thenReturn(new OgOverrideResult("abc1234", "Hi", null, null));
 
     mvc.perform(
             patch("/api/v1/links/abc1234/og")

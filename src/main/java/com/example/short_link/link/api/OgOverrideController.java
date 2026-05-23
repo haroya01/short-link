@@ -1,5 +1,6 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.application.OgOverrideResult;
 import com.example.short_link.link.application.OgOverrideService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,8 +23,10 @@ public class OgOverrideController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @Valid @RequestBody OgOverrideRequest request) {
-    return service.update(
-        userId, shortCode, request.ogTitle(), request.ogDescription(), request.ogImage());
+    OgOverrideResult r =
+        service.update(
+            userId, shortCode, request.ogTitle(), request.ogDescription(), request.ogImage());
+    return new OgOverrideResponse(r.shortCode(), r.ogTitle(), r.ogDescription(), r.ogImage());
   }
 
   public record OgOverrideResponse(
