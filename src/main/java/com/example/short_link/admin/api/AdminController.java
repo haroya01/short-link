@@ -17,7 +17,8 @@ import com.example.short_link.admin.application.RecentErrorsService;
 import com.example.short_link.common.observability.AdminFunnelService;
 import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.common.observability.AdminSystemMetricsService;
-import com.example.short_link.link.application.LinkWebhookService;
+import com.example.short_link.link.application.WebhookReDetectResult;
+import com.example.short_link.link.application.write.ReDetectWebhookFormatsUseCase;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,7 @@ public class AdminController {
   private final AdminAnalyticsService analyticsService;
   private final AdminRouteMetricsService routeMetricsService;
   private final AdminLinkMetricsService linkMetricsService;
-  private final LinkWebhookService webhookService;
+  private final ReDetectWebhookFormatsUseCase reDetectWebhooks;
   private final AdminRequestMetricsService requestMetricsService;
   private final AdminSystemMetricsService systemMetricsService;
   private final AdminFunnelService funnelService;
@@ -116,8 +117,8 @@ public class AdminController {
    * can confirm what actually changed before the next click trigger fires.
    */
   @PostMapping("/webhooks/redetect-formats")
-  public LinkWebhookService.ReDetectResult redetectWebhookFormats() {
-    return webhookService.reDetectFormats();
+  public WebhookReDetectResult redetectWebhookFormats() {
+    return reDetectWebhooks.execute();
   }
 
   /**
