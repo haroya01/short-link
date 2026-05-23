@@ -2,8 +2,10 @@ package com.example.short_link.billing.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.billing.domain.SubscriptionGateway;
 import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
@@ -19,6 +21,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class BillingServiceTest {
 
   @Mock private UserRepository userRepository;
+  @Mock private SubscriptionGateway subscriptions;
   private SimpleMeterRegistry meterRegistry;
 
   @BeforeEach
@@ -36,14 +39,16 @@ class BillingServiceTest {
             "price_pro",
             "https://app/success",
             "https://app/cancel",
-            "https://app/portal"));
+            "https://app/portal"),
+        subscriptions);
   }
 
   private BillingService unconfigured() {
     return new BillingService(
         userRepository,
         meterRegistry,
-        new StripeProperties("", "", "", "https://app", "https://app", "https://app"));
+        new StripeProperties("", "", "", "https://app", "https://app", "https://app"),
+        subscriptions);
   }
 
   @Test
@@ -55,19 +60,9 @@ class BillingServiceTest {
             userRepository,
             meterRegistry,
             new StripeProperties(
-                "sk_test_x", "whsec_x", "", "https://app", "https://app", "https://app"));
+                "sk_test_x", "whsec_x", "", "https://app", "https://app", "https://app"),
+            subscriptions);
     assertThat(missingPrice.isConfigured()).isFalse();
-  }
-
-  @Test
-  void initDoesNotThrowWhenApiKeyBlank() {
-    unconfigured().init();
-  }
-
-  @Test
-  void initSetsStripeApiKeyWhenPresent() {
-    configured().init();
-    assertThat(com.stripe.Stripe.apiKey).isEqualTo("sk_test_x");
   }
 
   @Test
@@ -105,20 +100,9 @@ class BillingServiceTest {
   }
 
   @Test
-  void webhookWithoutSecretThrowsIllegalState() {
-    BillingService noSecret =
-        new BillingService(
-            userRepository,
-            meterRegistry,
-            new StripeProperties(
-                "sk_test_x", "", "price_pro", "https://app", "https://app", "https://app"));
-    assertThatThrownBy(() -> noSecret.handleWebhook("{}", "sig"))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessageContaining("webhook secret not configured");
-  }
-
-  @Test
-  void webhookWithBadSignatureThrowsInvalid() {
+  void webhookInvalidSignaturePropagatesAndIncrementsMeter() {
+    when(subscriptions.parseAndVerifyWebhook(anyString(), anyString()))
+        .thenThrow(new InvalidWebhookSignatureException());
     assertThatThrownBy(() -> configured().handleWebhook("{}", "bogus"))
         .isInstanceOf(InvalidWebhookSignatureException.class);
     assertThat(meterRegistry.counter("billing.webhook", "result", "invalid_signature").count())
