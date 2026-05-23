@@ -1,7 +1,6 @@
 package com.example.short_link.billing.api;
 
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
@@ -12,8 +11,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.billing.application.BillingNotConfiguredException;
 import com.example.short_link.billing.application.BillingNotEnrolledException;
-import com.example.short_link.billing.application.BillingService;
 import com.example.short_link.billing.application.InvalidWebhookSignatureException;
+import com.example.short_link.billing.application.write.HandleSubscriptionWebhookUseCase;
+import com.example.short_link.billing.application.write.IssuePortalSessionCommand;
+import com.example.short_link.billing.application.write.IssuePortalSessionUseCase;
+import com.example.short_link.billing.application.write.StartCheckoutCommand;
+import com.example.short_link.billing.application.write.StartCheckoutUseCase;
+import com.example.short_link.billing.application.write.SubscriptionWebhookCommand;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
@@ -36,7 +40,9 @@ class BillingControllerTest {
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
 
-  @MockitoBean private BillingService billing;
+  @MockitoBean private StartCheckoutUseCase startCheckout;
+  @MockitoBean private IssuePortalSessionUseCase issuePortalSession;
+  @MockitoBean private HandleSubscriptionWebhookUseCase handleWebhook;
 
   @Test
   void anonymousCheckoutIs401() throws Exception {
@@ -47,7 +53,7 @@ class BillingControllerTest {
   void checkoutReturnsUrl() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("c@x.com", "google", "g-co"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(billing.createCheckoutSession(eq(user.getId())))
+    when(startCheckout.execute(new StartCheckoutCommand(user.getId())))
         .thenReturn("https://checkout.stripe.com/c/x");
 
     mvc.perform(post("/api/v1/billing/checkout").header("Authorization", "Bearer " + token))
@@ -59,7 +65,7 @@ class BillingControllerTest {
   void checkoutWhenNotConfiguredReturns503() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-503"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(billing.createCheckoutSession(eq(user.getId())))
+    when(startCheckout.execute(any(StartCheckoutCommand.class)))
         .thenThrow(new BillingNotConfiguredException());
 
     mvc.perform(post("/api/v1/billing/checkout").header("Authorization", "Bearer " + token))
@@ -71,7 +77,7 @@ class BillingControllerTest {
   void portalReturnsUrl() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("p@x.com", "google", "g-po"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(billing.createPortalSession(eq(user.getId())))
+    when(issuePortalSession.execute(new IssuePortalSessionCommand(user.getId())))
         .thenReturn("https://billing.stripe.com/p/x");
 
     mvc.perform(post("/api/v1/billing/portal").header("Authorization", "Bearer " + token))
@@ -83,7 +89,7 @@ class BillingControllerTest {
   void portalWhenNotEnrolledReturns409() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("e@x.com", "google", "g-409"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(billing.createPortalSession(eq(user.getId())))
+    when(issuePortalSession.execute(any(IssuePortalSessionCommand.class)))
         .thenThrow(new BillingNotEnrolledException());
 
     mvc.perform(post("/api/v1/billing/portal").header("Authorization", "Bearer " + token))
@@ -93,7 +99,7 @@ class BillingControllerTest {
 
   @Test
   void webhookOkPath() throws Exception {
-    doNothing().when(billing).handleWebhook(anyString(), anyString());
+    doNothing().when(handleWebhook).execute(any(SubscriptionWebhookCommand.class));
 
     mvc.perform(
             post("/api/v1/billing/webhook")
@@ -106,8 +112,8 @@ class BillingControllerTest {
   @Test
   void webhookWithInvalidSignatureReturns400() throws Exception {
     doThrow(new InvalidWebhookSignatureException())
-        .when(billing)
-        .handleWebhook(anyString(), anyString());
+        .when(handleWebhook)
+        .execute(any(SubscriptionWebhookCommand.class));
 
     mvc.perform(
             post("/api/v1/billing/webhook")

@@ -3,8 +3,13 @@ package com.example.short_link.billing.api;
 import com.example.short_link.billing.application.BillingGatewayException;
 import com.example.short_link.billing.application.BillingNotConfiguredException;
 import com.example.short_link.billing.application.BillingNotEnrolledException;
-import com.example.short_link.billing.application.BillingService;
 import com.example.short_link.billing.application.InvalidWebhookSignatureException;
+import com.example.short_link.billing.application.write.HandleSubscriptionWebhookUseCase;
+import com.example.short_link.billing.application.write.IssuePortalSessionCommand;
+import com.example.short_link.billing.application.write.IssuePortalSessionUseCase;
+import com.example.short_link.billing.application.write.StartCheckoutCommand;
+import com.example.short_link.billing.application.write.StartCheckoutUseCase;
+import com.example.short_link.billing.application.write.SubscriptionWebhookCommand;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -26,16 +31,18 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BillingController {
 
-  private final BillingService service;
+  private final StartCheckoutUseCase startCheckout;
+  private final IssuePortalSessionUseCase issuePortalSession;
+  private final HandleSubscriptionWebhookUseCase handleWebhook;
 
   @PostMapping("/checkout")
   public CheckoutResponse checkout(@AuthenticationPrincipal Long userId) {
-    return new CheckoutResponse(service.createCheckoutSession(userId));
+    return new CheckoutResponse(startCheckout.execute(new StartCheckoutCommand(userId)));
   }
 
   @PostMapping("/portal")
   public CheckoutResponse portal(@AuthenticationPrincipal Long userId) {
-    return new CheckoutResponse(service.createPortalSession(userId));
+    return new CheckoutResponse(issuePortalSession.execute(new IssuePortalSessionCommand(userId)));
   }
 
   /**
@@ -48,7 +55,7 @@ public class BillingController {
       HttpServletRequest request, @RequestHeader("Stripe-Signature") String signature)
       throws IOException {
     String payload = new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
-    service.handleWebhook(payload, signature);
+    handleWebhook.execute(new SubscriptionWebhookCommand(payload, signature));
     return ResponseEntity.ok("ok");
   }
 
