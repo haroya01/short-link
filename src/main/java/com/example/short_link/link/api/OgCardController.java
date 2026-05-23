@@ -3,7 +3,6 @@ package com.example.short_link.link.api;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.OgCardImageRenderer;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.domain.ClickEventRepository;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -24,14 +23,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class OgCardController {
 
   private final LinkLookupService lookup;
-  private final ClickEventRepository clickRepository;
   private final OgCardImageRenderer renderer;
   private final ShortLinkUrlBuilder urlBuilder;
 
   @GetMapping(value = "/{shortCode:[0-9A-Za-z]{3,16}}/og.png", produces = MediaType.IMAGE_PNG_VALUE)
   public ResponseEntity<byte[]> ogCard(@PathVariable String shortCode) throws IOException {
     var cached = lookup.findActiveLink(shortCode);
-    long clicks = clickRepository.countHumanByLinkId(cached.linkId());
+    long clicks = lookup.countHumanClicks(cached.linkId());
     byte[] body = renderer.render(urlBuilder.build(shortCode), clicks);
     return ResponseEntity.ok()
         .contentType(MediaType.IMAGE_PNG)
