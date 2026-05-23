@@ -8,7 +8,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -43,8 +42,7 @@ public class AuditLogEntity {
   @Column(name = "occurred_at", nullable = false)
   private Instant occurredAt;
 
-  @Builder
-  public AuditLogEntity(
+  private AuditLogEntity(
       Long actorUserId,
       String action,
       String targetType,
@@ -59,5 +57,20 @@ public class AuditLogEntity {
     this.metadata = metadata;
     this.requestId = requestId;
     this.occurredAt = occurredAt;
+  }
+
+  /**
+   * Single intended creation path — caller spells out every column so we don't get half-built rows.
+   */
+  public static AuditLogEntity record(
+      Long actorUserId,
+      String action,
+      String targetType,
+      String targetId,
+      String metadataJson,
+      String requestId,
+      Instant occurredAt) {
+    return new AuditLogEntity(
+        actorUserId, action, targetType, targetId, metadataJson, requestId, occurredAt);
   }
 }
