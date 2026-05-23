@@ -15,9 +15,7 @@ import com.example.short_link.link.application.LinkViewLimitExceededException;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.UserAgentClassifier;
 import com.example.short_link.link.application.UserAgentInfo;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
@@ -43,8 +41,6 @@ public class RedirectController {
   private final ClickRecorder clickRecorder;
   private final LinkPreviewCrawlerDetector crawlerDetector;
   private final LinkPreviewRenderer previewRenderer;
-  private final LinkRepository linkRepository;
-  private final ClickEventRepository clickEventRepository;
   private final ShortLinkUrlBuilder urlBuilder;
   private final MeterRegistry meterRegistry;
   private final LinkProtectionService protectionService;
@@ -97,7 +93,7 @@ public class RedirectController {
     try {
       link = lookup.findActiveLink(shortCode);
     } catch (LinkExpiredException e) {
-      LinkEntity expired = linkRepository.findByShortCode(shortCode).orElse(null);
+      LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
       if (expired != null && expired.getExpiredMessage() != null) {
         return htmlResponse(HttpStatus.GONE, expiredPage(expired.getExpiredMessage()));
       }
@@ -124,14 +120,14 @@ public class RedirectController {
           acceptLanguage,
           src,
           crawlerLabel);
-      LinkEntity entity = linkRepository.findByShortCode(shortCode).orElse(null);
+      LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
       if (entity == null) {
         return ResponseEntity.status(HttpStatus.FOUND)
             .location(URI.create(link.originalUrl()))
             .header("X-Robots-Tag", "noindex, nofollow")
             .build();
       }
-      long clicks = clickEventRepository.countHumanByLinkId(link.linkId());
+      long clicks = lookup.countHumanClicks(link.linkId());
       String html = previewRenderer.render(entity, urlBuilder.build(shortCode), clicks);
       byte[] body = html.getBytes(StandardCharsets.UTF_8);
       return ResponseEntity.ok()
@@ -141,7 +137,7 @@ public class RedirectController {
           .header("X-Robots-Tag", "noindex, nofollow")
           .body(body);
     }
-    LinkEntity entity = linkRepository.findByShortCode(shortCode).orElse(null);
+    LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
     if (entity != null && entity.hasPassword()) {
       return htmlResponse(HttpStatus.OK, passwordPrompt(shortCode, false));
     }
@@ -196,9 +192,7 @@ public class RedirectController {
     try {
       CachedLink link = lookup.findActiveLink(shortCode);
       LinkEntity entity =
-          linkRepository
-              .findByShortCode(shortCode)
-              .orElseThrow(() -> new LinkNotFoundException(shortCode));
+          lookup.findEntity(shortCode).orElseThrow(() -> new LinkNotFoundException(shortCode));
       if (entity.hasPassword() && !protectionService.checkPassword(entity, password)) {
         outcome = "password_required";
         return htmlResponse(HttpStatus.UNAUTHORIZED, passwordPrompt(shortCode, true));
@@ -297,7 +291,7 @@ public class RedirectController {
 
   private void enforceViewLimit(LinkEntity entity) {
     if (entity.getMaxViews() == null) return;
-    int updated = linkRepository.incrementViewCountIfBelowLimit(entity.getId());
+    int updated = lookup.incrementViewCountIfBelowLimit(entity.getId());
     if (updated == 0) {
       throw new LinkViewLimitExceededException(entity.getShortCode());
     }
