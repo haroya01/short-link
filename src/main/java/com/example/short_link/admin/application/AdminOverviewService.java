@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -61,16 +62,22 @@ public class AdminOverviewService {
             .map(r -> new AdminOverview.DailyPoint(r.getDay(), r.getCount()))
             .toList();
 
+    Page<AdminMetricsRepository.UserStatRow> topByLinksPage =
+        metricsRepository.topUsersByLinks(TOP_10);
     List<AdminOverview.UserStat> topByLinks =
-        metricsRepository.topUsersByLinks(TOP_10).stream()
+        topByLinksPage.getContent().stream()
             .map(r -> new AdminOverview.UserStat(r.getUserId(), r.getEmail(), r.getCount()))
             .toList();
+    Page<AdminMetricsRepository.UserStatRow> topByClicksPage =
+        metricsRepository.topUsersByClicks(TOP_10);
     List<AdminOverview.UserStat> topByClicks =
-        metricsRepository.topUsersByClicks(TOP_10).stream()
+        topByClicksPage.getContent().stream()
             .map(r -> new AdminOverview.UserStat(r.getUserId(), r.getEmail(), r.getCount()))
             .toList();
+    Page<AdminMetricsRepository.LinkStatRow> topLinksPage =
+        metricsRepository.topLinksByClicks(TOP_10);
     List<AdminOverview.LinkStat> topLinks =
-        metricsRepository.topLinksByClicks(TOP_10).stream()
+        topLinksPage.getContent().stream()
             .map(r -> new AdminOverview.LinkStat(r.getShortCode(), r.getCount(), r.getOwnerEmail()))
             .toList();
 
@@ -86,7 +93,54 @@ public class AdminOverviewService {
         links,
         clicks,
         topByLinks,
+        topByLinksPage.getTotalElements(),
         topByClicks,
-        topLinks);
+        topByClicksPage.getTotalElements(),
+        topLinks,
+        topLinksPage.getTotalElements());
   }
+
+  @Transactional(readOnly = true)
+  public TopUsersPage topUsersByLinks(int page, int size) {
+    Page<AdminMetricsRepository.UserStatRow> rows =
+        metricsRepository.topUsersByLinks(PageRequest.of(page, clampSize(size)));
+    return new TopUsersPage(
+        rows.getContent().stream()
+            .map(r -> new AdminOverview.UserStat(r.getUserId(), r.getEmail(), r.getCount()))
+            .toList(),
+        rows.getTotalElements());
+  }
+
+  @Transactional(readOnly = true)
+  public TopUsersPage topUsersByClicks(int page, int size) {
+    Page<AdminMetricsRepository.UserStatRow> rows =
+        metricsRepository.topUsersByClicks(PageRequest.of(page, clampSize(size)));
+    return new TopUsersPage(
+        rows.getContent().stream()
+            .map(r -> new AdminOverview.UserStat(r.getUserId(), r.getEmail(), r.getCount()))
+            .toList(),
+        rows.getTotalElements());
+  }
+
+  @Transactional(readOnly = true)
+  public TopLinksPage topLinksByClicks(int page, int size) {
+    Page<AdminMetricsRepository.LinkStatRow> rows =
+        metricsRepository.topLinksByClicks(PageRequest.of(page, clampSize(size)));
+    return new TopLinksPage(
+        rows.getContent().stream()
+            .map(r -> new AdminOverview.LinkStat(r.getShortCode(), r.getCount(), r.getOwnerEmail()))
+            .toList(),
+        rows.getTotalElements());
+  }
+
+  // Hard cap protects the DB from a `?size=10000` scrape that would scan the full users / links
+  // table per request — the table is bounded but the per-page render budget on the admin UI is ~50.
+  private static int clampSize(int requested) {
+    if (requested <= 0) return 10;
+    return Math.min(requested, 50);
+  }
+
+  public record TopUsersPage(List<AdminOverview.UserStat> items, long total) {}
+
+  public record TopLinksPage(List<AdminOverview.LinkStat> items, long total) {}
 }
