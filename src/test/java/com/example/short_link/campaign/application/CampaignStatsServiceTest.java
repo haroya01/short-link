@@ -26,7 +26,13 @@ class CampaignStatsServiceTest {
 
   @Autowired private CampaignStatsService statsService;
   @Autowired private CampaignBatchService batchService;
-  @Autowired private CampaignService campaignService;
+
+  @Autowired
+  private com.example.short_link.campaign.application.write.CreateCampaignUseCase createCampaign;
+
+  @Autowired
+  private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveCampaign;
+
   @Autowired private ClickEventRepository clickEventRepository;
   @Autowired private UserRepository userRepository;
 
@@ -46,7 +52,7 @@ class CampaignStatsServiceTest {
     Long owner = newOwner("total");
     Instant start = Instant.now();
     CampaignEntity campaign =
-        campaignService.create(
+        createCampaign.execute(
             owner,
             new CampaignCreateRequest(
                 "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
@@ -72,7 +78,7 @@ class CampaignStatsServiceTest {
     Long owner = newOwner("test");
     Instant start = Instant.now().plusSeconds(3600);
     CampaignEntity campaign =
-        campaignService.create(
+        createCampaign.execute(
             owner,
             new CampaignCreateRequest(
                 "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
@@ -98,7 +104,7 @@ class CampaignStatsServiceTest {
     Long owner = newOwner("dist");
     Instant start = Instant.now();
     CampaignEntity campaign =
-        campaignService.create(
+        createCampaign.execute(
             owner,
             new CampaignCreateRequest(
                 "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
@@ -137,7 +143,7 @@ class CampaignStatsServiceTest {
     Long owner = newOwner("empty");
     Instant start = Instant.now();
     CampaignEntity campaign =
-        campaignService.create(
+        createCampaign.execute(
             owner,
             new CampaignCreateRequest(
                 "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));

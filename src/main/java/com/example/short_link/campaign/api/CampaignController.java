@@ -1,7 +1,11 @@
 package com.example.short_link.campaign.api;
 
-import com.example.short_link.campaign.application.CampaignService;
 import com.example.short_link.campaign.application.read.CampaignQueryService;
+import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
+import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
+import com.example.short_link.campaign.application.write.EndCampaignNowUseCase;
+import com.example.short_link.campaign.application.write.ReapplyCampaignPolicyUseCase;
+import com.example.short_link.campaign.application.write.UpdateCampaignPolicyUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -23,13 +27,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CampaignController {
 
-  private final CampaignService service;
   private final CampaignQueryService query;
+  private final CreateCampaignUseCase createUseCase;
+  private final UpdateCampaignPolicyUseCase updateUseCase;
+  private final ArchiveCampaignUseCase archiveUseCase;
+  private final EndCampaignNowUseCase endNowUseCase;
+  private final ReapplyCampaignPolicyUseCase reapplyUseCase;
 
   @PostMapping
   public ResponseEntity<CampaignDetailResponse> create(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody CampaignCreateRequest request) {
-    CampaignEntity campaign = service.create(userId, request);
+    CampaignEntity campaign = createUseCase.execute(userId, request);
     return ResponseEntity.created(URI.create("/api/v1/campaigns/" + campaign.getId()))
         .body(CampaignDetailResponse.from(campaign, 0L));
   }
@@ -53,30 +61,28 @@ public class CampaignController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @Valid @RequestBody CampaignUpdateRequest request) {
-    CampaignEntity c = service.updatePolicy(id, userId, request);
+    CampaignEntity c = updateUseCase.execute(id, userId, request);
     return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 
   @DeleteMapping("/{id}")
   public CampaignDetailResponse archive(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    CampaignEntity c = service.archive(id, userId);
+    CampaignEntity c = archiveUseCase.execute(id, userId);
     return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 
-  /** 운영자 수동 종료 — endsAt 전이라도 강제 종료, postEndAction 즉시 적용. */
   @PostMapping("/{id}/end")
   public CampaignDetailResponse endNow(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    CampaignEntity c = service.endNow(id, userId);
+    CampaignEntity c = endNowUseCase.execute(id, userId);
     return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 
-  /** ENDED 후 정책 (postEndAction / postEndDestinationUrl) 을 변경했을 때 batch link 에 다시 박는 명시적 액션. */
   @PostMapping("/{id}/reapply-policy")
   public CampaignDetailResponse reapplyPolicy(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    CampaignEntity c = service.reapplyPolicy(id, userId);
+    CampaignEntity c = reapplyUseCase.execute(id, userId);
     return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 }
