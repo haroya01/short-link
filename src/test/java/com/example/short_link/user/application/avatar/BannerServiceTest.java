@@ -3,34 +3,29 @@ package com.example.short_link.user.application.avatar;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
-import java.net.URI;
+import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 @ExtendWith(MockitoExtension.class)
 class BannerServiceTest {
 
   @Mock private UserRepository userRepository;
-  @Mock private S3Presigner presigner;
-  @Mock private S3Client s3Client;
+  @Mock private ObjectStorage objectStorage;
 
   private AvatarProperties props;
   private BannerService service;
@@ -38,13 +33,13 @@ class BannerServiceTest {
   @BeforeEach
   void setUp() {
     props = new AvatarProperties("bucket", "ap-northeast-2", "https://cdn.example.com", 300, 1024);
-    service = new BannerService(userRepository, props, presigner, s3Client);
+    service = new BannerService(userRepository, props, objectStorage);
   }
 
   @Test
   void presignFailsWhenNotConfigured() {
     AvatarProperties noBucket = new AvatarProperties("", "", null, 300, 1024);
-    BannerService svc = new BannerService(userRepository, noBucket, presigner, s3Client);
+    BannerService svc = new BannerService(userRepository, noBucket, objectStorage);
     assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg"))
         .isInstanceOf(AvatarUnavailableException.class);
   }
@@ -56,9 +51,9 @@ class BannerServiceTest {
   }
 
   @Test
-  void presignReturnsPresignedUrl() throws Exception {
-    PresignedPutObjectRequest signed = mockSigned("https://s3/put");
-    when(presigner.presignPutObject(any(PutObjectPresignRequest.class))).thenReturn(signed);
+  void presignReturnsPresignedUrl() {
+    when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
+        .thenReturn("https://s3/put");
     BannerService.PresignResult r = service.presignUpload(7L, "image/png");
     assertThat(r.uploadUrl()).isEqualTo("https://s3/put");
     assertThat(r.key()).startsWith("banners/7/").endsWith(".png");
@@ -73,8 +68,7 @@ class BannerServiceTest {
 
   @Test
   void commitFailsWhenObjectMissing() {
-    when(s3Client.headObject(any(HeadObjectRequest.class)))
-        .thenThrow(new RuntimeException("missing"));
+    when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
         .isInstanceOf(InvalidAvatarException.class)
         .hasMessageContaining("upload not found");
@@ -82,28 +76,26 @@ class BannerServiceTest {
 
   @Test
   void commitDeletesOversizedUpload() {
-    HeadObjectResponse head = HeadObjectResponse.builder().contentLength(9999L).build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
+    when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(9999L));
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
         .isInstanceOf(InvalidAvatarException.class)
         .hasMessageContaining("exceeds maxBytes");
-    verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
+    verify(objectStorage).delete("banners/1/x.png");
   }
 
   @Test
   void commitSwallowsOversizeDeleteFailure() {
-    HeadObjectResponse head = HeadObjectResponse.builder().contentLength(9999L).build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
-    when(s3Client.deleteObject(any(DeleteObjectRequest.class)))
-        .thenThrow(new RuntimeException("boom"));
+    when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(9999L));
+    org.mockito.Mockito.doThrow(new ObjectStorageException("boom", new RuntimeException()))
+        .when(objectStorage)
+        .delete("banners/1/x.png");
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
         .isInstanceOf(InvalidAvatarException.class);
   }
 
   @Test
   void commitMissingUserThrows() {
-    HeadObjectResponse head = HeadObjectResponse.builder().contentLength(100L).build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
+    when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(100L));
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
         .isInstanceOf(UserNotFoundException.class);
@@ -111,25 +103,25 @@ class BannerServiceTest {
 
   @Test
   void commitSetsBannerAndDeletesPrevious() {
-    HeadObjectResponse head = HeadObjectResponse.builder().contentLength(100L).build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
+    when(objectStorage.objectSize("banners/1/new.png")).thenReturn(Optional.of(100L));
     UserEntity user = new UserEntity("u@x", "google", "g-1");
     user.updateBanner("https://old", "banners/1/old.png");
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     BannerService.CommitResult r = service.commitUpload(1L, "banners/1/new.png");
     assertThat(r.bannerUrl()).isEqualTo("https://cdn.example.com/banners/1/new.png");
     assertThat(user.getBannerKey()).isEqualTo("banners/1/new.png");
+    verify(objectStorage).delete("banners/1/old.png");
   }
 
   @Test
   void commitSwallowsPreviousDeleteFailure() {
-    HeadObjectResponse head = HeadObjectResponse.builder().contentLength(100L).build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
+    when(objectStorage.objectSize("banners/1/new.png")).thenReturn(Optional.of(100L));
     UserEntity user = new UserEntity("u@x", "google", "g-1");
     user.updateBanner("https://old", "banners/1/old.png");
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-    when(s3Client.deleteObject(any(DeleteObjectRequest.class)))
-        .thenThrow(new RuntimeException("boom"));
+    org.mockito.Mockito.doThrow(new ObjectStorageException("boom", new RuntimeException()))
+        .when(objectStorage)
+        .delete("banners/1/old.png");
     BannerService.CommitResult r = service.commitUpload(1L, "banners/1/new.png");
     assertThat(r.bannerUrl()).contains("/banners/1/new.png");
   }
@@ -142,7 +134,7 @@ class BannerServiceTest {
     service.clearBanner(1L);
     assertThat(user.getBannerUrl()).isNull();
     assertThat(user.getBannerKey()).isNull();
-    verify(s3Client).deleteObject(any(DeleteObjectRequest.class));
+    verify(objectStorage).delete("banners/1/old.png");
   }
 
   @Test
@@ -150,7 +142,7 @@ class BannerServiceTest {
     UserEntity user = new UserEntity("u@x", "google", "g-1");
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     service.clearBanner(1L);
-    verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+    verify(objectStorage, never()).delete(any());
   }
 
   @Test
@@ -160,18 +152,12 @@ class BannerServiceTest {
   }
 
   @Test
-  void publicUrlFallsBackToStandardS3WhenCdnBlank() throws Exception {
+  void publicUrlFallsBackToStandardS3WhenCdnBlank() {
     AvatarProperties noCdn = new AvatarProperties("bucket", "ap-northeast-2", null, 300, 1024);
-    BannerService svc = new BannerService(userRepository, noCdn, presigner, s3Client);
-    PresignedPutObjectRequest signed = mockSigned("https://s3/put");
-    when(presigner.presignPutObject(any(PutObjectPresignRequest.class))).thenReturn(signed);
+    BannerService svc = new BannerService(userRepository, noCdn, objectStorage);
+    when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
+        .thenReturn("https://s3/put");
     BannerService.PresignResult r = svc.presignUpload(1L, "image/png");
     assertThat(r.publicUrl()).startsWith("https://bucket.s3.ap-northeast-2.amazonaws.com/");
-  }
-
-  private static PresignedPutObjectRequest mockSigned(String url) throws Exception {
-    PresignedPutObjectRequest signed = org.mockito.Mockito.mock(PresignedPutObjectRequest.class);
-    when(signed.url()).thenReturn(URI.create(url).toURL());
-    return signed;
   }
 }

@@ -3,50 +3,37 @@ package com.example.short_link.profile.image;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.user.application.avatar.AvatarProperties;
 import com.example.short_link.user.application.avatar.AvatarUnavailableException;
 import com.example.short_link.user.application.avatar.InvalidAvatarException;
-import java.net.URI;
-import java.net.URL;
+import java.time.Duration;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
 
 class ProfileImageServiceTest {
 
   private static final long MAX_BYTES = 5L * 1024 * 1024;
 
   private AvatarProperties props;
-  private S3Presigner presigner;
-  private S3Client s3Client;
+  private ObjectStorage objectStorage;
   private ProfileImageService service;
 
   @BeforeEach
-  void setUp() throws Exception {
+  void setUp() {
     props =
         new AvatarProperties("test-bucket", "ap-northeast-2", "https://cdn.test", 300, MAX_BYTES);
-    presigner = mock(S3Presigner.class);
-    s3Client = mock(S3Client.class);
-    service = new ProfileImageService(props, presigner, s3Client);
-
-    PresignedPutObjectRequest signed = mock(PresignedPutObjectRequest.class);
-    URL signedUrl = URI.create("https://test-bucket.s3.amazonaws.com/signed").toURL();
-    when(signed.url()).thenReturn(signedUrl);
-    when(presigner.presignPutObject(
-            any(software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest.class)))
-        .thenReturn(signed);
+    objectStorage = mock(ObjectStorage.class);
+    service = new ProfileImageService(props, objectStorage);
+    when(objectStorage.presignPut(any(), any(), any(Duration.class))).thenReturn("https://signed");
   }
 
   @Test
@@ -85,8 +72,7 @@ class ProfileImageServiceTest {
   @Test
   void presignFailsWhenBucketUnconfigured() {
     AvatarProperties unconfigured = new AvatarProperties("", "", null, 300, MAX_BYTES);
-    ProfileImageService unconfiguredService =
-        new ProfileImageService(unconfigured, presigner, s3Client);
+    ProfileImageService unconfiguredService = new ProfileImageService(unconfigured, objectStorage);
     assertThatThrownBy(() -> unconfiguredService.presignUpload(1L, "image/jpeg"))
         .isInstanceOf(AvatarUnavailableException.class);
   }
@@ -110,8 +96,7 @@ class ProfileImageServiceTest {
 
   @Test
   void commitRejectsMissingObject() {
-    when(s3Client.headObject(any(HeadObjectRequest.class)))
-        .thenThrow(NoSuchKeyException.builder().message("nope").build());
+    when(objectStorage.objectSize("profile-images/1/abc.jpg")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "profile-images/1/abc.jpg"))
         .isInstanceOf(InvalidAvatarException.class)
         .hasMessageContaining("not found");
@@ -119,25 +104,21 @@ class ProfileImageServiceTest {
 
   @Test
   void commitRejectsOversizeAndDeletesObject() {
-    HeadObjectResponse head = HeadObjectResponse.builder().contentLength(MAX_BYTES + 1).build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
-
+    when(objectStorage.objectSize("profile-images/1/big.jpg"))
+        .thenReturn(Optional.of(MAX_BYTES + 1));
     assertThatThrownBy(() -> service.commitUpload(1L, "profile-images/1/big.jpg"))
         .isInstanceOf(InvalidAvatarException.class)
         .hasMessageContaining("exceeds maxBytes");
-
-    verify(s3Client, times(1)).deleteObject(any(DeleteObjectRequest.class));
+    verify(objectStorage, times(1)).delete("profile-images/1/big.jpg");
   }
 
   @Test
   void commitReturnsPublicUrlOnSuccess() {
-    HeadObjectResponse head = HeadObjectResponse.builder().contentLength(1024L).build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
-
+    when(objectStorage.objectSize("profile-images/1/ok.jpg")).thenReturn(Optional.of(1024L));
     ProfileImageService.CommitResult out = service.commitUpload(1L, "profile-images/1/ok.jpg");
     assertThat(out.imageUrl()).isEqualTo("https://cdn.test/profile-images/1/ok.jpg");
     assertThat(out.key()).isEqualTo("profile-images/1/ok.jpg");
-    verify(s3Client, never()).deleteObject(any(DeleteObjectRequest.class));
+    verify(objectStorage, never()).delete(eq("profile-images/1/ok.jpg"));
   }
 
   @Test
@@ -150,23 +131,10 @@ class ProfileImageServiceTest {
   void commitFallsBackToVirtualHostUrlWhenNoCdn() {
     AvatarProperties noBaseUrl =
         new AvatarProperties("test-bucket", "ap-northeast-2", null, 300, MAX_BYTES);
-    ProfileImageService noCdnService = new ProfileImageService(noBaseUrl, presigner, s3Client);
-    HeadObjectResponse head = HeadObjectResponse.builder().contentLength(1024L).build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
-
+    ProfileImageService noCdnService = new ProfileImageService(noBaseUrl, objectStorage);
+    when(objectStorage.objectSize("profile-images/1/x.jpg")).thenReturn(Optional.of(1024L));
     ProfileImageService.CommitResult out = noCdnService.commitUpload(1L, "profile-images/1/x.jpg");
     assertThat(out.imageUrl())
         .isEqualTo("https://test-bucket.s3.ap-northeast-2.amazonaws.com/profile-images/1/x.jpg");
-  }
-
-  @Test
-  void commitToleratesObjectsWithNullContentLength() {
-    // Some S3-compatible providers (or weird HEAD responses) may not return content-length.
-    // The service should still allow commit rather than 500 — frontend resize gave us best-effort.
-    HeadObjectResponse head = HeadObjectResponse.builder().build();
-    when(s3Client.headObject(any(HeadObjectRequest.class))).thenReturn(head);
-    ProfileImageService.CommitResult out =
-        service.commitUpload(1L, "profile-images/1/unknown-size.jpg");
-    assertThat(out.imageUrl()).contains("/profile-images/1/unknown-size.jpg");
   }
 }
