@@ -18,7 +18,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PostConstruct;
 import java.time.Instant;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,43 +45,26 @@ public class BillingService {
 
   private final UserRepository userRepository;
   private final MeterRegistry meterRegistry;
-  private final String apiKey;
-  private final String webhookSecret;
-  private final String pricePro;
-  private final String successUrl;
-  private final String cancelUrl;
-  private final String portalReturnUrl;
+  private final StripeProperties stripe;
 
   public BillingService(
-      UserRepository userRepository,
-      MeterRegistry meterRegistry,
-      @Value("${short-link.stripe.api-key:}") String apiKey,
-      @Value("${short-link.stripe.webhook-secret:}") String webhookSecret,
-      @Value("${short-link.stripe.price-pro:}") String pricePro,
-      @Value("${short-link.stripe.success-url:}") String successUrl,
-      @Value("${short-link.stripe.cancel-url:}") String cancelUrl,
-      @Value("${short-link.stripe.portal-return-url:}") String portalReturnUrl) {
+      UserRepository userRepository, MeterRegistry meterRegistry, StripeProperties stripe) {
     this.userRepository = userRepository;
     this.meterRegistry = meterRegistry;
-    this.apiKey = apiKey;
-    this.webhookSecret = webhookSecret;
-    this.pricePro = pricePro;
-    this.successUrl = successUrl;
-    this.cancelUrl = cancelUrl;
-    this.portalReturnUrl = portalReturnUrl;
+    this.stripe = stripe;
   }
 
   @PostConstruct
   void init() {
-    if (apiKey != null && !apiKey.isBlank()) {
-      Stripe.apiKey = apiKey;
+    if (stripe.apiKey() != null && !stripe.apiKey().isBlank()) {
+      Stripe.apiKey = stripe.apiKey();
     } else {
       log.warn("Stripe API key not configured — billing endpoints will reject requests");
     }
   }
 
   public boolean isConfigured() {
-    return apiKey != null && !apiKey.isBlank() && pricePro != null && !pricePro.isBlank();
+    return stripe.isConfigured();
   }
 
   @Transactional
@@ -95,9 +77,9 @@ public class BillingService {
         com.stripe.param.checkout.SessionCreateParams.builder()
             .setMode(Mode.SUBSCRIPTION)
             .setCustomer(customerId)
-            .setSuccessUrl(successUrl)
-            .setCancelUrl(cancelUrl)
-            .addLineItem(LineItem.builder().setPrice(pricePro).setQuantity(1L).build())
+            .setSuccessUrl(stripe.successUrl())
+            .setCancelUrl(stripe.cancelUrl())
+            .addLineItem(LineItem.builder().setPrice(stripe.pricePro()).setQuantity(1L).build())
             .setClientReferenceId(String.valueOf(userId))
             .build();
     com.stripe.model.checkout.Session session = com.stripe.model.checkout.Session.create(params);
@@ -115,7 +97,7 @@ public class BillingService {
     SessionCreateParams params =
         SessionCreateParams.builder()
             .setCustomer(user.getStripeCustomerId())
-            .setReturnUrl(portalReturnUrl)
+            .setReturnUrl(stripe.portalReturnUrl())
             .build();
     com.stripe.model.billingportal.Session session =
         com.stripe.model.billingportal.Session.create(params);
@@ -125,12 +107,12 @@ public class BillingService {
 
   @Transactional
   public void handleWebhook(String payload, String signatureHeader) {
-    if (webhookSecret == null || webhookSecret.isBlank()) {
+    if (stripe.webhookSecret() == null || stripe.webhookSecret().isBlank()) {
       throw new IllegalStateException("Stripe webhook secret not configured");
     }
     Event event;
     try {
-      event = Webhook.constructEvent(payload, signatureHeader, webhookSecret);
+      event = Webhook.constructEvent(payload, signatureHeader, stripe.webhookSecret());
     } catch (SignatureVerificationException e) {
       meterRegistry.counter("billing.webhook", "result", "invalid_signature").increment();
       throw new InvalidWebhookSignatureException();

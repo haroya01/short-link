@@ -22,7 +22,7 @@ class AuditLogCleanupJobTest {
 
   @Test
   void deletesRowsBeyondRetention() {
-    ReflectionTestUtils.setField(job, "retentionDays", 90L);
+    ReflectionTestUtils.setField(job, "auditLog", new AuditLogProperties(90L, true));
     Instant now = Instant.now();
     Long oldId =
         repository
@@ -55,7 +55,7 @@ class AuditLogCleanupJobTest {
 
   @Test
   void noopWhenAllRowsRecent() {
-    ReflectionTestUtils.setField(job, "retentionDays", 90L);
+    ReflectionTestUtils.setField(job, "auditLog", new AuditLogProperties(90L, true));
     Long id =
         repository
             .save(
@@ -79,7 +79,7 @@ class AuditLogCleanupJobTest {
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void runDailyOpensOwnTransactionForSweep() {
-    ReflectionTestUtils.setField(job, "retentionDays", 90L);
+    ReflectionTestUtils.setField(job, "auditLog", new AuditLogProperties(90L, true));
     Long oldId =
         repository
             .save(

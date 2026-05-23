@@ -6,7 +6,6 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.util.HexFormat;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -34,18 +33,11 @@ public class PowService {
   private final int difficulty;
   private final boolean enforce;
 
-  public PowService(
-      StringRedisTemplate redis,
-      MeterRegistry meterRegistry,
-      @Value("${short-link.pow.difficulty:4}") int difficulty,
-      @Value("${short-link.pow.enforce:true}") boolean enforce) {
+  public PowService(StringRedisTemplate redis, MeterRegistry meterRegistry, PowProperties props) {
     this.redis = redis;
     this.meterRegistry = meterRegistry;
-    if (difficulty < 1 || difficulty > 8) {
-      throw new IllegalArgumentException("pow difficulty must be 1..8 (hex zeros)");
-    }
-    this.difficulty = difficulty;
-    this.enforce = enforce;
+    this.difficulty = props.difficulty();
+    this.enforce = props.enforce();
   }
 
   public boolean isEnforced() {

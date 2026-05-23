@@ -32,12 +32,13 @@ class BillingServiceWebhookTest {
         new BillingService(
             userRepository,
             meters,
-            "sk_test_dummy",
-            "whsec_test",
-            "price_pro",
-            "https://success",
-            "https://cancel",
-            "https://portal");
+            new StripeProperties(
+                "sk_test_dummy",
+                "whsec_test",
+                "price_pro",
+                "https://success",
+                "https://cancel",
+                "https://portal"));
   }
 
   @Test

@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -31,9 +30,7 @@ public class OgFetchRetryJob {
   private final LinkOgFetchListener listener;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
-
-  @Value("${short-link.og-fetch.max-attempts:3}")
-  private int maxAttempts;
+  private final OgFetchProperties ogFetch;
 
   @Scheduled(cron = "${short-link.og-fetch.retry-cron:0 30 4 * * *}", zone = "Asia/Seoul")
   public void runDaily() {
@@ -44,7 +41,8 @@ public class OgFetchRetryJob {
     try {
       Instant before = Instant.now().minus(Duration.ofHours(1));
       List<LinkEntity> candidates =
-          linkRepository.findOgRetryCandidates(maxAttempts, before, PageRequest.of(0, BATCH_SIZE));
+          linkRepository.findOgRetryCandidates(
+              ogFetch.maxAttempts(), before, PageRequest.of(0, BATCH_SIZE));
       log.info("og fetch retry: {} candidates", candidates.size());
       for (LinkEntity link : candidates) {
         try {

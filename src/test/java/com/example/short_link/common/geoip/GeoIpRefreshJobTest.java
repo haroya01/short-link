@@ -15,7 +15,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class GeoIpRefreshJobTest {
@@ -29,15 +28,12 @@ class GeoIpRefreshJobTest {
   @BeforeEach
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
-    job = new GeoIpRefreshJob(holder, lock, meterRegistry);
-    ReflectionTestUtils.setField(job, "enabled", true);
-    ReflectionTestUtils.setField(job, "licenseKey", "");
-    ReflectionTestUtils.setField(job, "overrideUrl", "");
+    job = new GeoIpRefreshJob(holder, lock, meterRegistry, new GeoipProperties(true, "", ""));
   }
 
   @Test
   void disabledSkipsEverything() {
-    ReflectionTestUtils.setField(job, "enabled", false);
+    job = new GeoIpRefreshJob(holder, lock, meterRegistry, new GeoipProperties(false, "", ""));
     job.refreshWeekly();
     verify(lock, never()).tryAcquire(anyString(), any(Duration.class));
   }
@@ -50,7 +46,7 @@ class GeoIpRefreshJobTest {
 
   @Test
   void lockNotAcquiredSkipsDownload() {
-    ReflectionTestUtils.setField(job, "licenseKey", "k");
+    job = new GeoIpRefreshJob(holder, lock, meterRegistry, new GeoipProperties(true, "k", ""));
     when(lock.tryAcquire(anyString(), any(Duration.class))).thenReturn(false);
     job.refreshWeekly();
     verify(holder, never()).set(any());
@@ -58,9 +54,13 @@ class GeoIpRefreshJobTest {
 
   @Test
   void downloadFailureRecordsFailureMetricAndReleasesLock() {
-    ReflectionTestUtils.setField(job, "licenseKey", "k");
-    ReflectionTestUtils.setField(
-        job, "overrideUrl", "https://invalid-host-for-test.example.invalid/x.tar.gz");
+    job =
+        new GeoIpRefreshJob(
+            holder,
+            lock,
+            meterRegistry,
+            new GeoipProperties(
+                true, "k", "https://invalid-host-for-test.example.invalid/x.tar.gz"));
     when(lock.tryAcquire(anyString(), any(Duration.class))).thenReturn(true);
     job.refreshWeekly();
     assertThat(meterRegistry.counter("geoip.refresh", "result", "failed").count()).isEqualTo(1.0);

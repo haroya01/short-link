@@ -1,5 +1,6 @@
 package com.example.short_link.user.api;
 
+import com.example.short_link.user.application.JwtProperties;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
@@ -17,10 +18,9 @@ public class RefreshCookieWriter {
   private final Duration maxAge;
 
   public RefreshCookieWriter(
-      @Value("${short-link.cookie.secure}") boolean secure,
-      @Value("${short-link.jwt.refresh-ttl}") Duration maxAge) {
+      @Value("${short-link.cookie.secure}") boolean secure, JwtProperties jwt) {
     this.secure = secure;
-    this.maxAge = maxAge;
+    this.maxAge = jwt.refreshTtl();
   }
 
   public void set(HttpServletResponse res, String token) {
