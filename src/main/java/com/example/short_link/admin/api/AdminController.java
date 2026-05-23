@@ -7,13 +7,13 @@ import com.example.short_link.admin.application.AdminHealthMetrics;
 import com.example.short_link.admin.application.AdminHealthService;
 import com.example.short_link.admin.application.AdminLifecycle;
 import com.example.short_link.admin.application.AdminLinkMetric;
-import com.example.short_link.admin.application.AdminLinkMetricsService;
 import com.example.short_link.admin.application.AdminOverview;
 import com.example.short_link.admin.application.AdminOverviewService;
 import com.example.short_link.admin.application.AdminRouteMetric;
 import com.example.short_link.admin.application.AdminRouteMetricsService;
 import com.example.short_link.admin.application.RecentError;
 import com.example.short_link.admin.application.RecentErrorsService;
+import com.example.short_link.admin.application.read.AdminLinkMetricsQueryService;
 import com.example.short_link.common.observability.AdminFunnelService;
 import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.common.observability.AdminSystemMetricsService;
@@ -38,7 +38,7 @@ public class AdminController {
   private final RecentErrorsService recentErrorsService;
   private final AdminAnalyticsService analyticsService;
   private final AdminRouteMetricsService routeMetricsService;
-  private final AdminLinkMetricsService linkMetricsService;
+  private final AdminLinkMetricsQueryService linkMetricsService;
   private final ReDetectWebhookFormatsUseCase reDetectWebhooks;
   private final AdminRequestMetricsService requestMetricsService;
   private final AdminSystemMetricsService systemMetricsService;
@@ -86,7 +86,8 @@ public class AdminController {
       @RequestParam(name = "window", required = false) String window,
       @RequestParam(name = "sort", required = false) String sort) {
     return linkMetricsService.linkMetrics(
-        AdminLinkMetricsService.Window.parse(window), AdminLinkMetricsService.Sort.parse(sort));
+        AdminLinkMetricsQueryService.Window.parse(window),
+        AdminLinkMetricsQueryService.Sort.parse(sort));
   }
 
   @GetMapping("/recent-errors")

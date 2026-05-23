@@ -1,4 +1,4 @@
-package com.example.short_link.admin.application;
+package com.example.short_link.admin.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -6,6 +6,8 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.admin.application.AdminLinkMetric;
+import com.example.short_link.admin.application.AdminMetricsRepository;
 import com.example.short_link.admin.application.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.common.observability.RequestMetric;
 import com.example.short_link.common.observability.RequestMetricEntity;
@@ -16,7 +18,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class AdminLinkMetricsServiceTest {
+class AdminLinkMetricsQueryServiceTest {
 
   private static final Instant NOW = Instant.parse("2026-05-19T10:00:00Z");
   private final Clock fixedClock = Clock.fixed(NOW, ZoneOffset.UTC);
@@ -36,10 +38,11 @@ class AdminLinkMetricsServiceTest {
         .thenReturn(
             List.of(linkMetricRow("abc1234", "https://example.com/a", 42L, 99L, "x@y.com")));
 
-    AdminLinkMetricsService service =
-        new AdminLinkMetricsService(requestRepo, metricsRepo, fixedClock);
+    AdminLinkMetricsQueryService service =
+        new AdminLinkMetricsQueryService(requestRepo, metricsRepo, fixedClock);
     List<AdminLinkMetric> metrics =
-        service.linkMetrics(AdminLinkMetricsService.Window.H24, AdminLinkMetricsService.Sort.COUNT);
+        service.linkMetrics(
+            AdminLinkMetricsQueryService.Window.H24, AdminLinkMetricsQueryService.Sort.COUNT);
 
     assertThat(metrics).hasSize(2);
     AdminLinkMetric abc =
@@ -52,7 +55,6 @@ class AdminLinkMetricsServiceTest {
 
     AdminLinkMetric xyz =
         metrics.stream().filter(m -> m.shortCode().equals("xyz9999")).findFirst().orElseThrow();
-    // No DB row — surfaces the slice with window count as totalRedirects fallback
     assertThat(xyz.totalRedirects()).isEqualTo(1);
     assertThat(xyz.originalUrl()).isNull();
   }
@@ -67,11 +69,12 @@ class AdminLinkMetricsServiceTest {
     AdminMetricsRepository metricsRepo = mock(AdminMetricsRepository.class);
     when(metricsRepo.linkMetricRowsByShortCodes(anyCollection())).thenReturn(List.of());
 
-    AdminLinkMetricsService service =
-        new AdminLinkMetricsService(requestRepo, metricsRepo, fixedClock);
+    AdminLinkMetricsQueryService service =
+        new AdminLinkMetricsQueryService(requestRepo, metricsRepo, fixedClock);
 
     List<AdminLinkMetric> metrics =
-        service.linkMetrics(AdminLinkMetricsService.Window.H1, AdminLinkMetricsService.Sort.COUNT);
+        service.linkMetrics(
+            AdminLinkMetricsQueryService.Window.H1, AdminLinkMetricsQueryService.Sort.COUNT);
     assertThat(metrics).hasSize(1);
     assertThat(metrics.get(0).shortCode()).isEqualTo("real");
   }
@@ -81,12 +84,12 @@ class AdminLinkMetricsServiceTest {
     RequestMetricRepository requestRepo = mock(RequestMetricRepository.class);
     when(requestRepo.findWindow(any(), any())).thenReturn(List.of());
     AdminMetricsRepository metricsRepo = mock(AdminMetricsRepository.class);
-    AdminLinkMetricsService service =
-        new AdminLinkMetricsService(requestRepo, metricsRepo, fixedClock);
+    AdminLinkMetricsQueryService service =
+        new AdminLinkMetricsQueryService(requestRepo, metricsRepo, fixedClock);
 
     assertThat(
             service.linkMetrics(
-                AdminLinkMetricsService.Window.D7, AdminLinkMetricsService.Sort.COUNT))
+                AdminLinkMetricsQueryService.Window.D7, AdminLinkMetricsQueryService.Sort.COUNT))
         .isEmpty();
   }
 
