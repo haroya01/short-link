@@ -15,6 +15,7 @@ class CampaignEntityTest {
         endsAt,
         "https://dest.example.com",
         CampaignPostEndAction.KEEP,
+        null,
         null);
   }
 
@@ -80,7 +81,8 @@ class CampaignEntityTest {
   void updatePolicyKeepsKeepWhenNullPassed() {
     CampaignEntity c = sample(Instant.now(), Instant.now().plusSeconds(60));
 
-    c.updatePolicy(Instant.parse("2026-06-01T00:00:00Z"), "https://other.example.com", null, null);
+    c.updatePolicy(
+        Instant.parse("2026-06-01T00:00:00Z"), "https://other.example.com", null, null, null);
 
     assertThat(c.getPostEndAction()).isEqualTo(CampaignPostEndAction.KEEP);
     assertThat(c.getDefaultDestinationUrl()).isEqualTo("https://other.example.com");

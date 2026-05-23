@@ -49,7 +49,7 @@ class CampaignStatsServiceTest {
         campaignService.create(
             owner,
             new CampaignCreateRequest(
-                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null));
+                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
     BatchWithLink batch =
         batchService.create(
             campaign.getId(),
@@ -75,7 +75,7 @@ class CampaignStatsServiceTest {
         campaignService.create(
             owner,
             new CampaignCreateRequest(
-                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null));
+                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
     BatchWithLink batch =
         batchService.create(
             campaign.getId(),
@@ -101,7 +101,7 @@ class CampaignStatsServiceTest {
         campaignService.create(
             owner,
             new CampaignCreateRequest(
-                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null));
+                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
     BatchWithLink a1 =
         batchService.create(
             campaign.getId(),
@@ -140,7 +140,7 @@ class CampaignStatsServiceTest {
         campaignService.create(
             owner,
             new CampaignCreateRequest(
-                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null));
+                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
 
     CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
 

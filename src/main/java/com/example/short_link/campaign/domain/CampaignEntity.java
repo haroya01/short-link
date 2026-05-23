@@ -52,6 +52,13 @@ public class CampaignEntity {
   @Column(name = "post_end_destination_url", length = 2048)
   private String postEndDestinationUrl;
 
+  /**
+   * postEndAction=EXPIRE 일 때 batch link 의 만료 페이지에 박힐 메시지. KEEP/REDIRECT 일 때는 저장만 되고 link 에는
+   * propagate 되지 않는다 — UI 가 action 을 EXPIRE 로 바꿨다가 다시 돌릴 때 메시지가 사라지지 않도록.
+   */
+  @Column(name = "post_end_message", length = 500)
+  private String postEndMessage;
+
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private CampaignStatus status = CampaignStatus.DRAFT;
@@ -71,7 +78,8 @@ public class CampaignEntity {
       Instant endsAt,
       String defaultDestinationUrl,
       CampaignPostEndAction postEndAction,
-      String postEndDestinationUrl) {
+      String postEndDestinationUrl,
+      String postEndMessage) {
     this.ownerId = ownerId;
     this.name = name;
     this.startsAt = startsAt;
@@ -79,6 +87,7 @@ public class CampaignEntity {
     this.defaultDestinationUrl = defaultDestinationUrl;
     this.postEndAction = postEndAction == null ? CampaignPostEndAction.KEEP : postEndAction;
     this.postEndDestinationUrl = postEndDestinationUrl;
+    this.postEndMessage = normalizeMessage(postEndMessage);
   }
 
   @PrePersist
@@ -127,14 +136,23 @@ public class CampaignEntity {
       Instant endsAt,
       String defaultDestinationUrl,
       CampaignPostEndAction postEndAction,
-      String postEndDestinationUrl) {
+      String postEndDestinationUrl,
+      String postEndMessage) {
     this.endsAt = endsAt;
     this.defaultDestinationUrl = defaultDestinationUrl;
     this.postEndAction = postEndAction == null ? CampaignPostEndAction.KEEP : postEndAction;
     this.postEndDestinationUrl = postEndDestinationUrl;
+    this.postEndMessage = normalizeMessage(postEndMessage);
   }
 
   public void rename(String name) {
     this.name = name;
+  }
+
+  private static String normalizeMessage(String raw) {
+    if (raw == null) return null;
+    String trimmed = raw.trim();
+    if (trimmed.isEmpty()) return null;
+    return trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
   }
 }
