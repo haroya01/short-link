@@ -2,6 +2,7 @@ package com.example.short_link.user.application.avatar;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.storage.s3.AvatarProperties;
 import org.junit.jupiter.api.Test;
 
 class AvatarPropertiesTest {

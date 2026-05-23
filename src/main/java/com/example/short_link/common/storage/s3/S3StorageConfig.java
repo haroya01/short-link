@@ -1,6 +1,5 @@
 package com.example.short_link.common.storage.s3;
 
-import com.example.short_link.user.application.avatar.AvatarProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
