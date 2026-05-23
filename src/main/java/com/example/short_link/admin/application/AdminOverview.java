@@ -15,8 +15,11 @@ public record AdminOverview(
     List<DailyPoint> dailyLinks,
     List<DailyPoint> dailyClicks,
     List<UserStat> topUsersByLinks,
+    long topUsersByLinksTotal,
     List<UserStat> topUsersByClicks,
-    List<LinkStat> topLinksByClicks) {
+    long topUsersByClicksTotal,
+    List<LinkStat> topLinksByClicks,
+    long topLinksByClicksTotal) {
 
   public record Totals(long users, long links, long clicks) {}
 

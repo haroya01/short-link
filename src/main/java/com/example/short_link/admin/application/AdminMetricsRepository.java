@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -48,26 +49,40 @@ public interface AdminMetricsRepository extends JpaRepository<ClickEventEntity, 
   List<DailyRow> dailyClicksSince(@Param("since") Instant since, @Param("tz") String tz);
 
   @Query(
-      "SELECT u.id AS userId, u.email AS email, COUNT(l) AS count "
-          + "FROM LinkEntity l JOIN UserEntity u ON u.id = l.userId "
-          + "GROUP BY u.id, u.email ORDER BY count DESC")
-  List<UserStatRow> topUsersByLinks(Pageable pageable);
+      value =
+          "SELECT u.id AS userId, u.email AS email, COUNT(l) AS count "
+              + "FROM LinkEntity l JOIN UserEntity u ON u.id = l.userId "
+              + "GROUP BY u.id, u.email ORDER BY count DESC",
+      countQuery =
+          "SELECT COUNT(DISTINCT u.id) FROM LinkEntity l JOIN UserEntity u ON u.id = l.userId")
+  Page<UserStatRow> topUsersByLinks(Pageable pageable);
 
   @Query(
-      "SELECT u.id AS userId, u.email AS email, COUNT(c) AS count "
-          + "FROM ClickEventEntity c JOIN LinkEntity l ON l.id = c.linkId "
-          + "JOIN UserEntity u ON u.id = l.userId "
-          + "WHERE c.bot = false "
-          + "GROUP BY u.id, u.email ORDER BY count DESC")
-  List<UserStatRow> topUsersByClicks(Pageable pageable);
+      value =
+          "SELECT u.id AS userId, u.email AS email, COUNT(c) AS count "
+              + "FROM ClickEventEntity c JOIN LinkEntity l ON l.id = c.linkId "
+              + "JOIN UserEntity u ON u.id = l.userId "
+              + "WHERE c.bot = false "
+              + "GROUP BY u.id, u.email ORDER BY count DESC",
+      countQuery =
+          "SELECT COUNT(DISTINCT u.id) FROM ClickEventEntity c "
+              + "JOIN LinkEntity l ON l.id = c.linkId "
+              + "JOIN UserEntity u ON u.id = l.userId "
+              + "WHERE c.bot = false")
+  Page<UserStatRow> topUsersByClicks(Pageable pageable);
 
   @Query(
-      "SELECT l.shortCode AS shortCode, COUNT(c) AS count, u.email AS ownerEmail "
-          + "FROM ClickEventEntity c JOIN LinkEntity l ON l.id = c.linkId "
-          + "LEFT JOIN UserEntity u ON u.id = l.userId "
-          + "WHERE c.bot = false "
-          + "GROUP BY l.shortCode, u.email ORDER BY count DESC")
-  List<LinkStatRow> topLinksByClicks(Pageable pageable);
+      value =
+          "SELECT l.shortCode AS shortCode, COUNT(c) AS count, u.email AS ownerEmail "
+              + "FROM ClickEventEntity c JOIN LinkEntity l ON l.id = c.linkId "
+              + "LEFT JOIN UserEntity u ON u.id = l.userId "
+              + "WHERE c.bot = false "
+              + "GROUP BY l.shortCode, u.email ORDER BY count DESC",
+      countQuery =
+          "SELECT COUNT(DISTINCT l.shortCode) FROM ClickEventEntity c "
+              + "JOIN LinkEntity l ON l.id = c.linkId "
+              + "WHERE c.bot = false")
+  Page<LinkStatRow> topLinksByClicks(Pageable pageable);
 
   interface DailyRow {
     LocalDate getDay();
