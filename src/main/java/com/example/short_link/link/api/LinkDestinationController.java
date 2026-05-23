@@ -2,6 +2,7 @@ package com.example.short_link.link.api;
 
 import com.example.short_link.link.application.LinkDestinationService;
 import com.example.short_link.link.application.LinkDestinationService.DestinationSummary;
+import com.example.short_link.link.application.read.LinkDestinationQueryService;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
@@ -31,11 +32,12 @@ public class LinkDestinationController {
   private static final String OS_PATTERN = "^(ios|android|windows|macos|linux)?$";
 
   private final LinkDestinationService service;
+  private final LinkDestinationQueryService query;
 
   @GetMapping("/{shortCode}/destinations")
   public List<DestinationSummary> list(
       @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
-    return service.list(userId, shortCode);
+    return query.list(userId, shortCode);
   }
 
   @PostMapping("/{shortCode}/destinations")
