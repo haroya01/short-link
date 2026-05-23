@@ -45,7 +45,13 @@ class CampaignBatchExportServiceTest {
         campaignService.create(
             owner,
             new CampaignCreateRequest(
-                "C", null, Instant.now().plusSeconds(3600), "https://example.com/d", null, null));
+                "C",
+                null,
+                Instant.now().plusSeconds(3600),
+                "https://example.com/d",
+                null,
+                null,
+                null));
     batchService.create(
         campaign.getId(),
         owner,
@@ -72,7 +78,13 @@ class CampaignBatchExportServiceTest {
         campaignService.create(
             owner,
             new CampaignCreateRequest(
-                "C", null, Instant.now().plusSeconds(3600), "https://example.com/d", null, null));
+                "C",
+                null,
+                Instant.now().plusSeconds(3600),
+                "https://example.com/d",
+                null,
+                null,
+                null));
     batchService.create(
         campaign.getId(), owner, new CampaignBatchCreateRequest("a", null, null, 10, null, null));
     batchService.create(
@@ -100,7 +112,13 @@ class CampaignBatchExportServiceTest {
         campaignService.create(
             owner,
             new CampaignCreateRequest(
-                "C", null, Instant.now().plusSeconds(3600), "https://example.com/d", null, null));
+                "C",
+                null,
+                Instant.now().plusSeconds(3600),
+                "https://example.com/d",
+                null,
+                null,
+                null));
     BatchWithLink original =
         batchService.create(
             campaign.getId(),
@@ -128,7 +146,13 @@ class CampaignBatchExportServiceTest {
         campaignService.create(
             owner,
             new CampaignCreateRequest(
-                "C", null, Instant.now().plusSeconds(3600), "https://example.com/d", null, null));
+                "C",
+                null,
+                Instant.now().plusSeconds(3600),
+                "https://example.com/d",
+                null,
+                null,
+                null));
     BatchWithLink created =
         batchService.create(
             campaign.getId(),

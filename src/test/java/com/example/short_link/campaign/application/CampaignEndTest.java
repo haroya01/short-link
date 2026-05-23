@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.campaign.api.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.api.CampaignCreateRequest;
+import com.example.short_link.campaign.api.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
@@ -38,6 +39,11 @@ class CampaignEndTest {
   }
 
   private CampaignEntity newCampaign(Long owner, CampaignPostEndAction action, String redirectUrl) {
+    return newCampaign(owner, action, redirectUrl, null);
+  }
+
+  private CampaignEntity newCampaign(
+      Long owner, CampaignPostEndAction action, String redirectUrl, String postEndMessage) {
     return campaignService.create(
         owner,
         new CampaignCreateRequest(
@@ -46,7 +52,8 @@ class CampaignEndTest {
             Instant.now().plusSeconds(3600),
             "https://example.com/d",
             action,
-            redirectUrl));
+            redirectUrl,
+            postEndMessage));
   }
 
   @Test
@@ -87,6 +94,25 @@ class CampaignEndTest {
   }
 
   @Test
+  void endNowOnExpirePolicyAlsoBakesMessageIntoLink() {
+    Long owner = newOwner("expmsg");
+    String message = "캠페인 종료 — 다음 이벤트는 12월 예정";
+    CampaignEntity campaign = newCampaign(owner, CampaignPostEndAction.EXPIRE, null, message);
+    BatchWithLink bwl =
+        batchService.create(
+            campaign.getId(),
+            owner,
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+
+    campaignService.endNow(campaign.getId(), owner);
+
+    LinkEntity reloaded = linkRepository.findById(bwl.link().getId()).orElseThrow();
+    assertThat(reloaded.getExpiresAt()).isNotNull();
+    assertThat(reloaded.getExpiredMessage()).isEqualTo(message);
+    assertThat(reloaded.getExpiredRedirectUrl()).isNull();
+  }
+
+  @Test
   void endNowOnRedirectPolicyBakesUrlIntoLink() {
     Long owner = newOwner("redir");
     String dest = "https://example.com/after";
@@ -120,6 +146,7 @@ class CampaignEndTest {
                 longPast.plusSeconds(60 * 60),
                 "https://example.com/x",
                 CampaignPostEndAction.EXPIRE,
+                null,
                 null));
     assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.ACTIVE);
     BatchWithLink bwl =
@@ -156,6 +183,28 @@ class CampaignEndTest {
 
     LinkEntity reapplied = linkRepository.findById(bwl.link().getId()).orElseThrow();
     assertThat(reapplied.getExpiredRedirectUrl()).isEqualTo("https://example.com/v1");
+  }
+
+  @Test
+  void reapplyPicksUpEditedExpireMessage() {
+    Long owner = newOwner("msgreapply");
+    CampaignEntity campaign = newCampaign(owner, CampaignPostEndAction.EXPIRE, null, "구버전 메시지");
+    BatchWithLink bwl =
+        batchService.create(
+            campaign.getId(),
+            owner,
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+    campaignService.endNow(campaign.getId(), owner);
+    assertThat(linkRepository.findById(bwl.link().getId()).orElseThrow().getExpiredMessage())
+        .isEqualTo("구버전 메시지");
+
+    // ENDED 상태에서 메시지만 변경. updatePolicy 는 ARCHIVED 만 거부하므로 ENDED 에선 허용.
+    campaignService.updatePolicy(
+        campaign.getId(), owner, new CampaignUpdateRequest(null, null, null, null, null, "새 메시지"));
+    campaignService.reapplyPolicy(campaign.getId(), owner);
+
+    LinkEntity reapplied = linkRepository.findById(bwl.link().getId()).orElseThrow();
+    assertThat(reapplied.getExpiredMessage()).isEqualTo("새 메시지");
   }
 
   @Test

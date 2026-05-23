@@ -34,6 +34,7 @@ class CampaignServiceTest {
             Instant.now().plusSeconds(3600),
             "https://example.com",
             CampaignPostEndAction.KEEP,
+            null,
             null);
 
     CampaignEntity created = service.create(100L, req);
@@ -51,6 +52,7 @@ class CampaignServiceTest {
             Instant.now().plusSeconds(3600),
             null,
             null,
+            null,
             null);
 
     CampaignEntity created = service.create(100L, req);
@@ -62,7 +64,8 @@ class CampaignServiceTest {
   @Test
   void rejectsEndsAtBeforeOrEqualToStartsAt() {
     Instant start = Instant.parse("2026-06-01T00:00:00Z");
-    CampaignCreateRequest req = new CampaignCreateRequest("bad", start, start, null, null, null);
+    CampaignCreateRequest req =
+        new CampaignCreateRequest("bad", start, start, null, null, null, null);
 
     assertThatThrownBy(() -> service.create(100L, req))
         .isInstanceOf(InvalidCampaignPeriodException.class);
@@ -77,7 +80,8 @@ class CampaignServiceTest {
             Instant.now().plusSeconds(3600),
             null,
             CampaignPostEndAction.REDIRECT,
-            "  ");
+            "  ",
+            null);
 
     assertThatThrownBy(() -> service.create(100L, req))
         .isInstanceOf(MissingPostEndDestinationException.class);
@@ -89,7 +93,7 @@ class CampaignServiceTest {
         service.create(
             200L,
             new CampaignCreateRequest(
-                "mine", null, Instant.now().plusSeconds(3600), null, null, null));
+                "mine", null, Instant.now().plusSeconds(3600), null, null, null, null));
 
     assertThatThrownBy(() -> service.detail(created.getId(), 999L))
         .isInstanceOf(CampaignNotOwnedException.class);
@@ -103,7 +107,7 @@ class CampaignServiceTest {
         service.create(
             300L,
             new CampaignCreateRequest(
-                "orig", null, Instant.now().plusSeconds(3600), null, null, null));
+                "orig", null, Instant.now().plusSeconds(3600), null, null, null, null));
     Instant originalStart = created.getStartsAt();
 
     Instant newEnd = Instant.now().plusSeconds(7200);
@@ -116,7 +120,8 @@ class CampaignServiceTest {
                 newEnd,
                 "https://new.example.com",
                 CampaignPostEndAction.REDIRECT,
-                "https://post.example.com"));
+                "https://post.example.com",
+                null));
 
     assertThat(updated.getName()).isEqualTo("renamed");
     assertThat(updated.getEndsAt()).isEqualTo(newEnd);
@@ -130,13 +135,15 @@ class CampaignServiceTest {
         service.create(
             400L,
             new CampaignCreateRequest(
-                "arch", null, Instant.now().plusSeconds(3600), null, null, null));
+                "arch", null, Instant.now().plusSeconds(3600), null, null, null, null));
     service.archive(created.getId(), 400L);
 
     assertThatThrownBy(
             () ->
                 service.updatePolicy(
-                    created.getId(), 400L, new CampaignUpdateRequest("x", null, null, null, null)))
+                    created.getId(),
+                    400L,
+                    new CampaignUpdateRequest("x", null, null, null, null, null)))
         .isInstanceOf(CampaignArchivedException.class);
   }
 
@@ -147,12 +154,12 @@ class CampaignServiceTest {
         service.create(
             500L,
             new CampaignCreateRequest(
-                "future", now.plusSeconds(60), now.plusSeconds(3600), null, null, null));
+                "future", now.plusSeconds(60), now.plusSeconds(3600), null, null, null, null));
     CampaignEntity past =
         service.create(
             500L,
             new CampaignCreateRequest(
-                "past", now.minusSeconds(120), now.plusSeconds(3600), null, null, null));
+                "past", now.minusSeconds(120), now.plusSeconds(3600), null, null, null, null));
 
     int activated = service.activateReady(now);
 

@@ -44,7 +44,8 @@ public class CampaignService {
             request.endsAt(),
             request.defaultDestinationUrl(),
             action,
-            request.postEndDestinationUrl());
+            request.postEndDestinationUrl(),
+            request.postEndMessage());
     campaign.activateIfStarted(now);
     return repository.save(campaign);
   }
@@ -86,10 +87,12 @@ public class CampaignService {
         request.defaultDestinationUrl() != null
             ? request.defaultDestinationUrl()
             : c.getDefaultDestinationUrl();
+    String postEndMessage =
+        request.postEndMessage() != null ? request.postEndMessage() : c.getPostEndMessage();
     if (request.name() != null) {
       c.rename(request.name());
     }
-    c.updatePolicy(endsAt, defaultDest, action, postEndUrl);
+    c.updatePolicy(endsAt, defaultDest, action, postEndUrl, postEndMessage);
     return c;
   }
 
@@ -174,10 +177,10 @@ public class CampaignService {
           // no-op — 인쇄된 QR 이 그대로 원래 destination 으로 동작
           break;
         case EXPIRE:
-          link.applyCampaignExpiration(at, null);
+          link.applyCampaignExpiration(at, null, c.getPostEndMessage());
           break;
         case REDIRECT:
-          link.applyCampaignExpiration(at, c.getPostEndDestinationUrl());
+          link.applyCampaignExpiration(at, c.getPostEndDestinationUrl(), null);
           break;
       }
     }
