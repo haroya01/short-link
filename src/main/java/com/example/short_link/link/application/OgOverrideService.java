@@ -1,6 +1,5 @@
 package com.example.short_link.link.application;
 
-import com.example.short_link.link.api.OgOverrideController.OgOverrideResponse;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +25,7 @@ public class OgOverrideService {
         @CacheEvict(value = "link", key = "#shortCode"),
         @CacheEvict(value = "public-profile", allEntries = true)
       })
-  public OgOverrideResponse update(
+  public OgOverrideResult update(
       Long userId, String shortCode, String title, String description, String image) {
     LinkEntity link =
         repository
@@ -36,7 +35,7 @@ public class OgOverrideService {
       throw new LinkNotOwnedException(shortCode);
     }
     link.changeOgOverride(title, description, image);
-    return new OgOverrideResponse(
+    return new OgOverrideResult(
         link.getShortCode(),
         link.getOgTitleOverride(),
         link.getOgDescriptionOverride(),

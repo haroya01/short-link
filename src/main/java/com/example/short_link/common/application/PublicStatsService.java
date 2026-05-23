@@ -1,6 +1,5 @@
 package com.example.short_link.common.application;
 
-import com.example.short_link.common.api.PublicStatsController.PublicStats;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkRepository;
 import lombok.RequiredArgsConstructor;

@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.link.api.LinkDetailController.LinkDetailResponse;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import java.util.List;
@@ -42,7 +41,7 @@ class LinkDetailServiceTest {
     when(repository.findByShortCode("abc")).thenReturn(Optional.of(link));
     when(linkTagService.tagNamesFor(7L, "abc")).thenReturn(List.of("a", "b"));
 
-    LinkDetailResponse r = service.detail(7L, "abc");
+    LinkDetailView r = service.detail(7L, "abc");
     assertThat(r.shortCode()).isEqualTo("abc");
     assertThat(r.originalUrl()).isEqualTo("https://example.com");
     assertThat(r.maxViews()).isEqualTo(10);
