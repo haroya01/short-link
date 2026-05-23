@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 class LinkDestinationServiceTest {
 
   @Autowired private LinkDestinationService service;
+  @Autowired private com.example.short_link.link.application.read.LinkDestinationQueryService query;
   @Autowired private LinkRepository linkRepository;
   @Autowired private UserRepository userRepository;
 
@@ -34,7 +35,7 @@ class LinkDestinationServiceTest {
     assertThat(v1.label()).isEqualTo("variant-A");
     assertThat(v1.enabled()).isTrue();
 
-    var list = service.list(user.getId(), "ab11111");
+    var list = query.list(user.getId(), "ab11111");
     assertThat(list).hasSize(1);
 
     var updated =
@@ -43,7 +44,7 @@ class LinkDestinationServiceTest {
     assertThat(updated.enabled()).isFalse();
 
     service.delete(user.getId(), "ab11111", v1.id());
-    assertThat(service.list(user.getId(), "ab11111")).isEmpty();
+    assertThat(query.list(user.getId(), "ab11111")).isEmpty();
   }
 
   @Test
@@ -97,7 +98,7 @@ class LinkDestinationServiceTest {
     var v =
         service.add(owner.getId(), "ab55555", "https://example.com/v", 50, null, null, null, null);
 
-    assertThatThrownBy(() -> service.list(stranger.getId(), "ab55555"))
+    assertThatThrownBy(() -> query.list(stranger.getId(), "ab55555"))
         .isInstanceOf(LinkNotOwnedException.class);
     assertThatThrownBy(() -> service.delete(stranger.getId(), "ab55555", v.id()))
         .isInstanceOf(LinkNotOwnedException.class);
