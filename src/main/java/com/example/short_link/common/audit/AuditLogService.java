@@ -47,15 +47,14 @@ public class AuditLogService {
               ? null
               : OBJECT_MAPPER.writeValueAsString(metadata);
       AuditLogEntity entity =
-          AuditLogEntity.builder()
-              .actorUserId(actorUserId)
-              .action(action.name())
-              .targetType(targetType)
-              .targetId(targetId)
-              .metadata(metadataJson)
-              .requestId(MDC.get("requestId"))
-              .occurredAt(Instant.now())
-              .build();
+          AuditLogEntity.record(
+              actorUserId,
+              action.name(),
+              targetType,
+              targetId,
+              metadataJson,
+              MDC.get("requestId"),
+              Instant.now());
       repository.save(entity);
       meterRegistry.counter("audit.recorded", "action", action.name()).increment();
     } catch (JsonProcessingException | RuntimeException e) {
