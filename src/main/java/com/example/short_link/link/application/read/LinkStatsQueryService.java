@@ -1,5 +1,10 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.read;
 
+import com.example.short_link.link.application.LinkAccessGuard;
+import com.example.short_link.link.application.LinkInsights;
+import com.example.short_link.link.application.LinkNotFoundException;
+import com.example.short_link.link.application.LinkStats;
+import com.example.short_link.link.application.ReferrerChannelClassifier;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkDestinationRepository;
@@ -21,9 +26,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * Click-stream aggregation for a single link. Two entry points — owner/admin {@link #stats} and
+ * public {@link #publicStats} when {@code stats_public} is on. Both go through the same compute
+ * pipeline (timezone-aware aggregations from {@link ClickEventRepository} projections) so the
+ * public view is exactly what the owner sees.
+ */
 @Service
 @RequiredArgsConstructor
-public class LinkStatsService {
+@Transactional(readOnly = true)
+public class LinkStatsQueryService {
 
   private static final Duration DAILY_WINDOW = Duration.ofDays(30);
   private static final Duration BASELINE_WINDOW = Duration.ofHours(24);
@@ -39,19 +51,16 @@ public class LinkStatsService {
   private final LinkDestinationRepository destinationRepository;
   private final LinkAccessGuard accessGuard;
 
-  @Transactional(readOnly = true)
   public LinkStats stats(Long userId, String shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
     accessGuard.requireView(userId, link);
-    // Always render in the link owner's timezone so admins see the same buckets the owner does.
     Long zoneOwnerId = link.isOwnedBy(userId) ? userId : link.getUserId();
     return computeStats(link, ownerZone(zoneOwnerId));
   }
 
-  @Transactional(readOnly = true)
   public LinkStats publicStats(String shortCode) {
     LinkEntity link =
         linkRepository
@@ -258,11 +267,6 @@ public class LinkStatsService {
         insights);
   }
 
-  /**
-   * Joins click_event.destination_id with link_destination rows so the UI gets URL/label/weight
-   * alongside counts. NULL destination_id (clicks served before A/B was set up, or fallback)
-   * appears as a synthetic "default" row pointing at the original URL.
-   */
   private List<LinkStats.DestinationClick> computeDestinationClicks(LinkEntity link) {
     var rows = clickRepository.findDestinationClicks(link.getId());
     if (rows.isEmpty()) return List.of();
@@ -271,7 +275,6 @@ public class LinkStatsService {
         .findAllByLinkIdOrderByIdAsc(link.getId())
         .forEach(d -> byId.put(d.getId(), d));
     if (byId.isEmpty() && rows.size() == 1 && rows.get(0).getDestinationId() == null) {
-      // No A/B set up — single row with NULL destination_id is just regular click volume.
       return List.of();
     }
     return rows.stream()
@@ -348,7 +351,7 @@ public class LinkStatsService {
     return userRepository.findById(userId).map(u -> safeZone(u.getTimezone())).orElse(DEFAULT_ZONE);
   }
 
-  static ZoneId safeZone(String tz) {
+  public static ZoneId safeZone(String tz) {
     if (tz == null || tz.isBlank()) return DEFAULT_ZONE;
     try {
       return ZoneId.of(tz);
@@ -357,7 +360,7 @@ public class LinkStatsService {
     }
   }
 
-  static String currentOffset(ZoneId zone) {
+  public static String currentOffset(ZoneId zone) {
     ZoneOffset offset = zone.getRules().getOffset(Instant.now());
     return offset.getId().equals("Z") ? "+00:00" : offset.getId();
   }
