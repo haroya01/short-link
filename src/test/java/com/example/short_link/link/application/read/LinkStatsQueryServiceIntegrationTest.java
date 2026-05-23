@@ -1,8 +1,11 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.link.application.LinkNotFoundException;
+import com.example.short_link.link.application.LinkStats;
+import com.example.short_link.link.application.LinkVisibilityService;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
@@ -18,9 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class LinkStatsServiceIntegrationTest {
+class LinkStatsQueryServiceIntegrationTest {
 
-  @Autowired private LinkStatsService service;
+  @Autowired private LinkStatsQueryService service;
   @Autowired private LinkRepository linkRepository;
   @Autowired private ClickEventRepository clickRepository;
   @Autowired private UserRepository userRepository;
@@ -66,8 +69,7 @@ class LinkStatsServiceIntegrationTest {
   void statsRejectsViewByNonOwnerForPrivateLink() {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-st3"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-st3a"));
-    LinkEntity link =
-        linkRepository.save(new LinkEntity("https://example.com", "st0003", owner.getId(), null));
+    linkRepository.save(new LinkEntity("https://example.com", "st0003", owner.getId(), null));
 
     assertThatThrownBy(() -> service.stats(attacker.getId(), "st0003"))
         .isInstanceOf(RuntimeException.class);
