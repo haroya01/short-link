@@ -1,5 +1,6 @@
 package com.example.short_link.campaign.domain;
 
+import com.example.short_link.common.jpa.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -7,8 +8,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
@@ -20,7 +19,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "campaign")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class CampaignEntity {
+public class CampaignEntity extends BaseTimeEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -63,12 +62,6 @@ public class CampaignEntity {
   @Column(nullable = false, length = 16)
   private CampaignStatus status = CampaignStatus.DRAFT;
 
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
-  @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt;
-
   @Version private Long version;
 
   public CampaignEntity(
@@ -88,24 +81,6 @@ public class CampaignEntity {
     this.postEndAction = postEndAction == null ? CampaignPostEndAction.KEEP : postEndAction;
     this.postEndDestinationUrl = postEndDestinationUrl;
     this.postEndMessage = normalizeMessage(postEndMessage);
-  }
-
-  @PrePersist
-  void prePersist() {
-    Instant now = Instant.now();
-    this.createdAt = now;
-    this.updatedAt = now;
-    if (this.status == null) {
-      this.status = CampaignStatus.DRAFT;
-    }
-    if (this.postEndAction == null) {
-      this.postEndAction = CampaignPostEndAction.KEEP;
-    }
-  }
-
-  @PreUpdate
-  void preUpdate() {
-    this.updatedAt = Instant.now();
   }
 
   public boolean isOwnedBy(Long userId) {

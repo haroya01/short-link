@@ -109,9 +109,18 @@ class CustomDomainRoutingE2ETest {
 
   private static void writeField(Object target, String name, Object value) {
     try {
-      Field f = target.getClass().getDeclaredField(name);
-      f.setAccessible(true);
-      f.set(target, value);
+      Class<?> c = target.getClass();
+      while (c != null) {
+        try {
+          Field f = c.getDeclaredField(name);
+          f.setAccessible(true);
+          f.set(target, value);
+          return;
+        } catch (NoSuchFieldException ignored) {
+          c = c.getSuperclass();
+        }
+      }
+      throw new NoSuchFieldException(name);
     } catch (Exception ex) {
       throw new RuntimeException(ex);
     }

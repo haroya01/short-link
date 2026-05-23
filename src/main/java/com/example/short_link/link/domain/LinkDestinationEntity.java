@@ -1,13 +1,12 @@
 package com.example.short_link.link.domain;
 
+import com.example.short_link.common.jpa.BaseCreatedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -28,7 +27,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "link_destination")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LinkDestinationEntity {
+public class LinkDestinationEntity extends BaseCreatedEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -67,9 +66,6 @@ public class LinkDestinationEntity {
   @Column(length = 16)
   private String os;
 
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
   public LinkDestinationEntity(
       Long linkId, String url, int weight, String label, String countryCode) {
     this(linkId, url, weight, label, countryCode, null, null);
@@ -91,11 +87,6 @@ public class LinkDestinationEntity {
     this.countryCode = normalizeCountry(countryCode);
     this.deviceClass = normalizeDeviceClass(deviceClass);
     this.os = normalizeOs(os);
-  }
-
-  @PrePersist
-  void prePersist() {
-    this.createdAt = Instant.now();
   }
 
   public void update(

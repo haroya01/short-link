@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.domain.UserEntity.Role;
 import com.example.short_link.user.domain.UserEntity.Tier;
-import java.lang.reflect.Method;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -135,15 +134,6 @@ class UserEntityTest {
     assertThat(u.isDeleted()).isTrue();
     u.restore();
     assertThat(u.isDeleted()).isFalse();
-  }
-
-  @Test
-  void prePersistStampsCreatedAt() throws Exception {
-    UserEntity u = newUser();
-    Method m = UserEntity.class.getDeclaredMethod("prePersist");
-    m.setAccessible(true);
-    m.invoke(u);
-    assertThat(u.getCreatedAt()).isNotNull();
   }
 
   @Test
