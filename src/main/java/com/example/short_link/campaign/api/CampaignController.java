@@ -1,6 +1,7 @@
 package com.example.short_link.campaign.api;
 
 import com.example.short_link.campaign.application.CampaignService;
+import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -23,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class CampaignController {
 
   private final CampaignService service;
+  private final CampaignQueryService query;
 
   @PostMapping
   public ResponseEntity<CampaignDetailResponse> create(
@@ -34,16 +36,16 @@ public class CampaignController {
 
   @GetMapping
   public List<CampaignSummaryResponse> list(@AuthenticationPrincipal Long userId) {
-    return service.list(userId).stream()
-        .map(c -> CampaignSummaryResponse.from(c, service.batchCount(c.getId())))
+    return query.list(userId).stream()
+        .map(c -> CampaignSummaryResponse.from(c, query.batchCount(c.getId())))
         .toList();
   }
 
   @GetMapping("/{id}")
   public CampaignDetailResponse detail(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    CampaignEntity c = service.detail(id, userId);
-    return CampaignDetailResponse.from(c, service.batchCount(c.getId()));
+    CampaignEntity c = query.detail(id, userId);
+    return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 
   @PatchMapping("/{id}")
@@ -52,14 +54,14 @@ public class CampaignController {
       @PathVariable Long id,
       @Valid @RequestBody CampaignUpdateRequest request) {
     CampaignEntity c = service.updatePolicy(id, userId, request);
-    return CampaignDetailResponse.from(c, service.batchCount(c.getId()));
+    return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 
   @DeleteMapping("/{id}")
   public CampaignDetailResponse archive(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
     CampaignEntity c = service.archive(id, userId);
-    return CampaignDetailResponse.from(c, service.batchCount(c.getId()));
+    return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 
   /** 운영자 수동 종료 — endsAt 전이라도 강제 종료, postEndAction 즉시 적용. */
@@ -67,7 +69,7 @@ public class CampaignController {
   public CampaignDetailResponse endNow(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
     CampaignEntity c = service.endNow(id, userId);
-    return CampaignDetailResponse.from(c, service.batchCount(c.getId()));
+    return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 
   /** ENDED 후 정책 (postEndAction / postEndDestinationUrl) 을 변경했을 때 batch link 에 다시 박는 명시적 액션. */
@@ -75,6 +77,6 @@ public class CampaignController {
   public CampaignDetailResponse reapplyPolicy(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
     CampaignEntity c = service.reapplyPolicy(id, userId);
-    return CampaignDetailResponse.from(c, service.batchCount(c.getId()));
+    return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 }

@@ -50,23 +50,9 @@ public class CampaignService {
     return repository.save(campaign);
   }
 
-  @Transactional(readOnly = true)
-  public List<CampaignEntity> list(Long ownerId) {
-    return repository.findByOwnerIdOrderByCreatedAtDesc(ownerId);
-  }
-
-  @Transactional(readOnly = true)
-  public CampaignEntity detail(Long id, Long ownerId) {
-    CampaignEntity c = repository.findById(id).orElseThrow(CampaignNotFoundException::new);
-    if (!c.isOwnedBy(ownerId)) {
-      throw new CampaignNotOwnedException();
-    }
-    return c;
-  }
-
   @Transactional
   public CampaignEntity updatePolicy(Long id, Long ownerId, CampaignUpdateRequest request) {
-    CampaignEntity c = detail(id, ownerId);
+    CampaignEntity c = ownedCampaign(id, ownerId);
     if (c.getStatus() == CampaignStatus.ARCHIVED) {
       throw new CampaignArchivedException();
     }
@@ -98,13 +84,9 @@ public class CampaignService {
 
   @Transactional
   public CampaignEntity archive(Long id, Long ownerId) {
-    CampaignEntity c = detail(id, ownerId);
+    CampaignEntity c = ownedCampaign(id, ownerId);
     c.archive();
     return c;
-  }
-
-  public long batchCount(Long campaignId) {
-    return batchRepository.countByCampaignId(campaignId);
   }
 
   /** 스케줄러 진입점 — DRAFT 중 startsAt 이 도래한 것을 ACTIVE 로 전환. */
@@ -137,7 +119,7 @@ public class CampaignService {
   /** 수동 종료 — 운영자가 endsAt 전에 또는 후에 명시적으로 종료. ARCHIVED 거부, ENDED 멱등 (정책 재적용 효과). */
   @Transactional
   public CampaignEntity endNow(Long id, Long ownerId) {
-    CampaignEntity c = detail(id, ownerId);
+    CampaignEntity c = ownedCampaign(id, ownerId);
     if (c.getStatus() == CampaignStatus.ARCHIVED) {
       throw new CampaignArchivedException();
     }
@@ -152,11 +134,19 @@ public class CampaignService {
   /** 종료 정책 재적용 — ENDED 후 정책 변경 (postEndAction / postEndDestinationUrl) 시 명시적 액션으로 다시 박는다. */
   @Transactional
   public CampaignEntity reapplyPolicy(Long id, Long ownerId) {
-    CampaignEntity c = detail(id, ownerId);
+    CampaignEntity c = ownedCampaign(id, ownerId);
     if (c.getStatus() != CampaignStatus.ENDED) {
       throw new ReapplyOnNonEndedException();
     }
     applyPolicyToBatchLinks(c, c.getEndedAt() != null ? c.getEndedAt() : Instant.now());
+    return c;
+  }
+
+  private CampaignEntity ownedCampaign(Long id, Long ownerId) {
+    CampaignEntity c = repository.findById(id).orElseThrow(CampaignNotFoundException::new);
+    if (!c.isOwnedBy(ownerId)) {
+      throw new CampaignNotOwnedException();
+    }
     return c;
   }
 
