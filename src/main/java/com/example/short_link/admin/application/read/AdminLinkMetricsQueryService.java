@@ -1,5 +1,7 @@
-package com.example.short_link.admin.application;
+package com.example.short_link.admin.application.read;
 
+import com.example.short_link.admin.application.AdminLinkMetric;
+import com.example.short_link.admin.application.AdminMetricsRepository;
 import com.example.short_link.admin.application.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.common.observability.RequestMetricEntity;
 import com.example.short_link.common.observability.RequestMetricRepository;
@@ -15,32 +17,23 @@ import java.util.Locale;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Per-{@code shortCode} performance view. Window-restricted latency / outcome / error rate are
- * computed off {@code request_metrics} rows where {@code short_code} is set (every redirect path
- * stamps it); lifetime totals, original URL, owner email and last-clicked-at come from the existing
- * DB query against {@code ClickEventEntity} / {@code LinkEntity} so the table can still show codes
- * that haven't seen recent traffic.
- *
- * <p>Replaces the in-process {@code LinkMetricsRecorder} that previously held an LRU ring of 500
- * hot codes — under the new source every redirect lands as a persisted row, so the table covers the
- * whole tail (and a follow-up partition prune handles old rows).
- */
 @Service
-public class AdminLinkMetricsService {
+@Transactional(readOnly = true)
+public class AdminLinkMetricsQueryService {
 
   private final RequestMetricRepository requestMetricRepository;
   private final AdminMetricsRepository metricsRepository;
   private final Clock clock;
 
   @Autowired
-  public AdminLinkMetricsService(
+  public AdminLinkMetricsQueryService(
       RequestMetricRepository requestMetricRepository, AdminMetricsRepository metricsRepository) {
     this(requestMetricRepository, metricsRepository, Clock.systemUTC());
   }
 
-  AdminLinkMetricsService(
+  AdminLinkMetricsQueryService(
       RequestMetricRepository requestMetricRepository,
       AdminMetricsRepository metricsRepository,
       Clock clock) {
@@ -72,8 +65,6 @@ public class AdminLinkMetricsService {
       List<RequestMetricEntity> group = entry.getValue();
       Aggregate agg = aggregate(group);
       LinkMetricRow row = rowByCode.get(shortCode);
-      // DB miss is possible — link could have been deleted between the request hit and the read.
-      // Surface the slice anyway so the operator at least sees the burst that happened.
       String originalUrl = row == null ? null : row.getOriginalUrl();
       Long userId = row == null ? null : row.getUserId();
       String ownerEmail = row == null ? null : row.getOwnerEmail();
