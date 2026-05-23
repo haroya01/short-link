@@ -45,6 +45,9 @@ class LinkDestinationControllerTest {
 
   @MockitoBean private LinkDestinationService service;
 
+  @MockitoBean
+  private com.example.short_link.link.application.read.LinkDestinationQueryService query;
+
   private static DestinationSummary sample() {
     return new DestinationSummary(
         1L, "https://example.com", 100, "main", true, null, null, null, Instant.EPOCH);
@@ -59,7 +62,7 @@ class LinkDestinationControllerTest {
   void listReturnsDestinations() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("d@x.com", "google", "g-dst"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.list(eq(user.getId()), eq("abc1234"))).thenReturn(List.of(sample()));
+    when(query.list(eq(user.getId()), eq("abc1234"))).thenReturn(List.of(sample()));
 
     mvc.perform(
             get("/api/v1/links/abc1234/destinations").header("Authorization", "Bearer " + token))
