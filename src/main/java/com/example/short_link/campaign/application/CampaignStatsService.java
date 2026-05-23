@@ -1,11 +1,10 @@
 package com.example.short_link.campaign.application;
 
-import com.example.short_link.campaign.api.CampaignStatsResponse;
-import com.example.short_link.campaign.api.CampaignStatsResponse.BatchStats;
-import com.example.short_link.campaign.api.CampaignStatsResponse.DayBucket;
-import com.example.short_link.campaign.api.CampaignStatsResponse.GroupStats;
-import com.example.short_link.campaign.api.CampaignStatsResponse.HeatmapCell;
-import com.example.short_link.campaign.api.CampaignStatsResponse.HourBucket;
+import com.example.short_link.campaign.application.CampaignStatsResponse.BatchStats;
+import com.example.short_link.campaign.application.CampaignStatsResponse.DayBucket;
+import com.example.short_link.campaign.application.CampaignStatsResponse.GroupStats;
+import com.example.short_link.campaign.application.CampaignStatsResponse.HeatmapCell;
+import com.example.short_link.campaign.application.CampaignStatsResponse.HourBucket;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
