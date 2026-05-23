@@ -1,9 +1,6 @@
 package com.example.short_link.link.api;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
@@ -15,10 +12,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.LinkWebhookService;
-import com.example.short_link.link.application.LinkWebhookService.IssuedWebhook;
-import com.example.short_link.link.application.LinkWebhookService.WebhookSummary;
+import com.example.short_link.link.application.IssuedWebhook;
 import com.example.short_link.link.application.WebhookFormat;
+import com.example.short_link.link.application.WebhookSummary;
+import com.example.short_link.link.application.read.LinkWebhookQueryService;
+import com.example.short_link.link.application.write.DeleteLinkWebhookCommand;
+import com.example.short_link.link.application.write.DeleteLinkWebhookUseCase;
+import com.example.short_link.link.application.write.RegisterLinkWebhookCommand;
+import com.example.short_link.link.application.write.RegisterLinkWebhookUseCase;
+import com.example.short_link.link.application.write.ToggleLinkWebhookCommand;
+import com.example.short_link.link.application.write.ToggleLinkWebhookUseCase;
+import com.example.short_link.link.application.write.UpdateLinkWebhookConfigCommand;
+import com.example.short_link.link.application.write.UpdateLinkWebhookConfigUseCase;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
@@ -44,7 +49,11 @@ class LinkWebhookControllerTest {
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
 
-  @MockitoBean private LinkWebhookService service;
+  @MockitoBean private LinkWebhookQueryService queryService;
+  @MockitoBean private RegisterLinkWebhookUseCase registerUseCase;
+  @MockitoBean private ToggleLinkWebhookUseCase toggleUseCase;
+  @MockitoBean private UpdateLinkWebhookConfigUseCase updateConfigUseCase;
+  @MockitoBean private DeleteLinkWebhookUseCase deleteUseCase;
 
   private static WebhookSummary summary() {
     return new WebhookSummary(
@@ -76,7 +85,7 @@ class LinkWebhookControllerTest {
   void listReturnsWebhooks() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("w@x.com", "google", "g-wh"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.list(eq(user.getId()), eq("abc1234"))).thenReturn(List.of(summary()));
+    when(queryService.list(eq(user.getId()), eq("abc1234"))).thenReturn(List.of(summary()));
 
     mvc.perform(get("/api/v1/links/abc1234/webhooks").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -87,7 +96,7 @@ class LinkWebhookControllerTest {
   void registerReturns201WithSecret() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("r@x.com", "google", "g-whr"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.register(eq(user.getId()), eq("abc1234"), anyString(), anyString()))
+    when(registerUseCase.execute(any(RegisterLinkWebhookCommand.class)))
         .thenReturn(
             new IssuedWebhook(
                 1L,
@@ -110,8 +119,7 @@ class LinkWebhookControllerTest {
   void toggleReturnsUpdatedSummary() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("t@x.com", "google", "g-wht"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.toggle(eq(user.getId()), eq("abc1234"), eq(1L), anyBoolean()))
-        .thenReturn(summary());
+    when(toggleUseCase.execute(any(ToggleLinkWebhookCommand.class))).thenReturn(summary());
 
     mvc.perform(
             patch("/api/v1/links/abc1234/webhooks/1")
@@ -125,7 +133,7 @@ class LinkWebhookControllerTest {
   void updateConfigReturnsSummary() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("c@x.com", "google", "g-whc"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.updateConfig(eq(user.getId()), eq("abc1234"), eq(1L), any()))
+    when(updateConfigUseCase.execute(any(UpdateLinkWebhookConfigCommand.class)))
         .thenReturn(summary());
 
     mvc.perform(
@@ -140,7 +148,7 @@ class LinkWebhookControllerTest {
   void deleteReturns204() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("d@x.com", "google", "g-whd"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    doNothing().when(service).delete(anyLong(), anyString(), anyLong());
+    doNothing().when(deleteUseCase).execute(any(DeleteLinkWebhookCommand.class));
 
     mvc.perform(
             delete("/api/v1/links/abc1234/webhooks/1").header("Authorization", "Bearer " + token))
