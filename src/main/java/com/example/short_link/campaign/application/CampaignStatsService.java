@@ -28,12 +28,13 @@ public class CampaignStatsService {
   private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
 
   private final CampaignService campaignService;
+  private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
   private final CampaignBatchService batchService;
   private final ClickEventRepository clickEventRepository;
 
   @Transactional(readOnly = true)
   public CampaignStatsResponse statsFor(Long campaignId, Long ownerId) {
-    CampaignEntity campaign = campaignService.detail(campaignId, ownerId);
+    CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     List<BatchWithLink> batches = batchService.list(campaignId, ownerId);
 
     if (batches.isEmpty()) {
@@ -111,7 +112,7 @@ public class CampaignStatsService {
     List<CampaignStatsCompareResponse.CampaignWithStats> result =
         new ArrayList<>(campaignIds.size());
     for (Long id : campaignIds) {
-      CampaignEntity c = campaignService.detail(id, ownerId);
+      CampaignEntity c = campaignQuery.detail(id, ownerId);
       CampaignStatsResponse stats = statsFor(id, ownerId);
       result.add(new CampaignStatsCompareResponse.CampaignWithStats(id, c.getName(), stats));
     }
