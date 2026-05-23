@@ -24,7 +24,6 @@ public class CampaignBatchService {
   private final CampaignBatchRepository batchRepository;
   private final LinkRepository linkRepository;
   private final LinkCreationService linkCreationService;
-  private final CampaignService campaignService;
   private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
 
   @Transactional

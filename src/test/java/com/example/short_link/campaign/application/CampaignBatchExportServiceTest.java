@@ -29,7 +29,13 @@ class CampaignBatchExportServiceTest {
 
   @Autowired private CampaignBatchExportService exportService;
   @Autowired private CampaignBatchService batchService;
-  @Autowired private CampaignService campaignService;
+
+  @Autowired
+  private com.example.short_link.campaign.application.write.CreateCampaignUseCase createCampaign;
+
+  @Autowired
+  private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveCampaign;
+
   @Autowired private UserRepository userRepository;
 
   private Long newOwner(String suffix) {
@@ -42,7 +48,7 @@ class CampaignBatchExportServiceTest {
   void csvContainsHeaderAndRowPerBatch() {
     Long owner = newOwner("csv");
     CampaignEntity campaign =
-        campaignService.create(
+        createCampaign.execute(
             owner,
             new CampaignCreateRequest(
                 "C",
@@ -75,7 +81,7 @@ class CampaignBatchExportServiceTest {
   void qrZipContainsOneEntryPerBatch() throws Exception {
     Long owner = newOwner("zip");
     CampaignEntity campaign =
-        campaignService.create(
+        createCampaign.execute(
             owner,
             new CampaignCreateRequest(
                 "C",
@@ -109,7 +115,7 @@ class CampaignBatchExportServiceTest {
   void updateMetadataKeepsLinkAndQuantity() {
     Long owner = newOwner("upd");
     CampaignEntity campaign =
-        campaignService.create(
+        createCampaign.execute(
             owner,
             new CampaignCreateRequest(
                 "C",
@@ -143,7 +149,7 @@ class CampaignBatchExportServiceTest {
   void deleteRemovesBatchAndLink() {
     Long owner = newOwner("del");
     CampaignEntity campaign =
-        campaignService.create(
+        createCampaign.execute(
             owner,
             new CampaignCreateRequest(
                 "C",
