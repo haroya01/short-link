@@ -116,6 +116,24 @@ public class ProfileQueryService {
         out);
   }
 
+  /**
+   * sitemap 용 paginated 공개 handle 목록 (login 무관 anonymous 노출 안전). page 는 0-based, size 는 caller 가
+   * 1∼1000 범위 보장.
+   */
+  public PublicHandlesPage publicHandlesPage(int page, int size) {
+    long total = userRepository.countByUsernameIsNotNullAndDeletedAtIsNull();
+    List<String> handles =
+        userRepository
+            .findAllByUsernameIsNotNullAndDeletedAtIsNullOrderByCreatedAtAsc(
+                org.springframework.data.domain.PageRequest.of(page, size))
+            .stream()
+            .map(UserEntity::getUsername)
+            .toList();
+    return new PublicHandlesPage(handles, total);
+  }
+
+  public record PublicHandlesPage(List<String> handles, long total) {}
+
   private Optional<UserEntity> resolveByHistory(String oldUsername) {
     return usernameHistoryRepository
         .findFirstByOldUsernameAndExpiresAtAfter(oldUsername, Instant.now())

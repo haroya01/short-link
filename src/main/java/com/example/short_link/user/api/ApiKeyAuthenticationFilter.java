@@ -1,9 +1,9 @@
 package com.example.short_link.user.api;
 
 import com.example.short_link.user.application.ApiKeyService;
+import com.example.short_link.user.application.UserQueryService;
 import com.example.short_link.user.domain.ApiKeyEntity;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,7 +32,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
   private static final String HEADER_X = "X-API-Key";
 
   private final ApiKeyService apiKeyService;
-  private final UserRepository userRepository;
+  private final UserQueryService userQueryService;
 
   @Override
   protected void doFilterInternal(
@@ -44,7 +44,7 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
         Optional<ApiKeyEntity> keyOpt = apiKeyService.resolve(raw);
         keyOpt.ifPresent(
             key -> {
-              UserEntity user = userRepository.findById(key.getUserId()).orElse(null);
+              UserEntity user = userQueryService.findActive(key.getUserId()).orElse(null);
               if (user == null) return;
               var authorities =
                   List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));

@@ -3,11 +3,8 @@ package com.example.short_link.profile.api;
 import com.example.short_link.profile.application.ProfileNotFoundException;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.read.ProfileQueryService;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -25,7 +22,6 @@ public class PublicProfileController {
   private static final int LIST_MAX_PAGE_SIZE = 1000;
 
   private final ProfileQueryService queryService;
-  private final UserRepository userRepository;
 
   @GetMapping("/{username}")
   public PublicProfile get(@PathVariable String username) {
@@ -43,12 +39,9 @@ public class PublicProfileController {
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "500") int size) {
     int safeSize = Math.min(Math.max(size, 1), LIST_MAX_PAGE_SIZE);
     int safePage = Math.max(page, 0);
-    long total = userRepository.countByUsernameIsNotNullAndDeletedAtIsNull();
-    List<UserEntity> users =
-        userRepository.findAllByUsernameIsNotNullAndDeletedAtIsNullOrderByCreatedAtAsc(
-            PageRequest.of(safePage, safeSize));
-    List<HandleItem> items = users.stream().map(u -> new HandleItem(u.getUsername())).toList();
-    return new ListResponse(items, total);
+    ProfileQueryService.PublicHandlesPage p = queryService.publicHandlesPage(safePage, safeSize);
+    List<HandleItem> items = p.handles().stream().map(HandleItem::new).toList();
+    return new ListResponse(items, p.total());
   }
 
   @ExceptionHandler(ProfileNotFoundException.class)
