@@ -1,5 +1,7 @@
 package com.example.short_link.user.application.avatar;
 
+import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
@@ -12,23 +14,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 /**
  * Profile banner / hero image upload. Mirrors {@link AvatarService} but writes under {@code
  * banners/{userId}/...} and updates {@link UserEntity#getBannerUrl()}. Reuses the same S3 bucket /
  * IAM / CloudFront setup — only the key prefix differs.
- *
- * <p>Banners are wider than avatars (3:1 aspect on the public profile) so the {@code maxBytes}
- * inherited from {@link AvatarProperties} should accommodate up to ~2K JPEG. The frontend's resize
- * step keeps payloads small regardless.
  */
 @Slf4j
 @Service
@@ -43,8 +33,7 @@ public class BannerService {
 
   private final UserRepository userRepository;
   private final AvatarProperties props;
-  private final S3Presigner presigner;
-  private final S3Client s3Client;
+  private final ObjectStorage objectStorage;
 
   public PresignResult presignUpload(Long userId, String contentType) {
     require(props.isConfigured());
@@ -54,21 +43,10 @@ public class BannerService {
       throw new InvalidAvatarException("contentType must be one of: " + ALLOWED_TYPES.keySet());
     }
     String key = "banners/" + userId + "/" + UUID.randomUUID() + "." + ext;
-    PutObjectRequest put =
-        PutObjectRequest.builder().bucket(props.bucket()).key(key).contentType(normalized).build();
-    PutObjectPresignRequest presign =
-        PutObjectPresignRequest.builder()
-            .signatureDuration(Duration.ofSeconds(props.presignTtlSeconds()))
-            .putObjectRequest(put)
-            .build();
-    PresignedPutObjectRequest signed = presigner.presignPutObject(presign);
+    String uploadUrl =
+        objectStorage.presignPut(key, normalized, Duration.ofSeconds(props.presignTtlSeconds()));
     return new PresignResult(
-        signed.url().toString(),
-        publicUrlFor(key),
-        key,
-        normalized,
-        props.maxBytes(),
-        props.presignTtlSeconds());
+        uploadUrl, publicUrlFor(key), key, normalized, props.maxBytes(), props.presignTtlSeconds());
   }
 
   @Transactional
@@ -78,21 +56,12 @@ public class BannerService {
     if (key == null || key.isBlank() || !key.startsWith("banners/" + userId + "/")) {
       throw new InvalidAvatarException("key not owned by user");
     }
-    HeadObjectResponse head;
-    try {
-      head =
-          s3Client.headObject(HeadObjectRequest.builder().bucket(props.bucket()).key(key).build());
-    } catch (Exception e) {
-      throw new InvalidAvatarException("upload not found");
-    }
-    Long contentLength = head.contentLength();
-    if (contentLength != null && contentLength > props.maxBytes()) {
-      try {
-        s3Client.deleteObject(
-            DeleteObjectRequest.builder().bucket(props.bucket()).key(key).build());
-      } catch (Exception e) {
-        log.warn("failed to delete oversized banner key={}", key, e);
-      }
+    long contentLength =
+        objectStorage
+            .objectSize(key)
+            .orElseThrow(() -> new InvalidAvatarException("upload not found"));
+    if (contentLength > props.maxBytes()) {
+      deleteQuietly(key, "oversized banner");
       throw new InvalidAvatarException(
           "banner exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
     }
@@ -101,12 +70,7 @@ public class BannerService {
     String publicUrl = publicUrlFor(key);
     user.updateBanner(publicUrl, key);
     if (previousKey != null && !previousKey.isBlank() && !previousKey.equals(key)) {
-      try {
-        s3Client.deleteObject(
-            DeleteObjectRequest.builder().bucket(props.bucket()).key(previousKey).build());
-      } catch (Exception e) {
-        log.warn("failed to delete previous banner key={}", previousKey, e);
-      }
+      deleteQuietly(previousKey, "previous banner");
     }
     return new CommitResult(publicUrl);
   }
@@ -118,12 +82,15 @@ public class BannerService {
     String previousKey = user.getBannerKey();
     user.updateBanner(null, null);
     if (props.isConfigured() && previousKey != null && !previousKey.isBlank()) {
-      try {
-        s3Client.deleteObject(
-            DeleteObjectRequest.builder().bucket(props.bucket()).key(previousKey).build());
-      } catch (Exception e) {
-        log.warn("failed to delete cleared banner key={}", previousKey, e);
-      }
+      deleteQuietly(previousKey, "cleared banner");
+    }
+  }
+
+  private void deleteQuietly(String key, String label) {
+    try {
+      objectStorage.delete(key);
+    } catch (ObjectStorageException e) {
+      log.warn("failed to delete {} key={}", label, key, e);
     }
   }
 

@@ -7,10 +7,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.AsnResolver;
 import com.example.short_link.link.application.BotHeuristic;
 import com.example.short_link.link.application.GeoIpResolver;
-import com.example.short_link.link.application.GeoLocation;
 import com.example.short_link.link.application.UserAgentClassifier;
 import com.example.short_link.link.application.UserAgentInfo;
 import org.junit.jupiter.api.BeforeEach;

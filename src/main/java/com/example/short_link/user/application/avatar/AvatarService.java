@@ -1,5 +1,7 @@
 package com.example.short_link.user.application.avatar;
 
+import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
@@ -12,24 +14,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
-import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
-import software.amazon.awssdk.services.s3.model.PutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.S3Presigner;
-import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
-import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class AvatarService {
 
-  /**
-   * What we let users actually upload — keeping the list short avoids weird inline content (svg,
-   * ico).
-   */
   private static final Map<String, String> ALLOWED_TYPES =
       Map.of(
           "image/jpeg", "jpg",
@@ -38,14 +28,8 @@ public class AvatarService {
 
   private final UserRepository userRepository;
   private final AvatarProperties props;
-  private final S3Presigner presigner;
-  private final S3Client s3Client;
+  private final ObjectStorage objectStorage;
 
-  /**
-   * Mints a one-shot presigned PUT URL the browser uses to upload directly to S3, plus the public
-   * URL the frontend will render once the upload commits. The key is namespaced under the user's id
-   * so on commit we can verify the caller owns it without trusting the client.
-   */
   public PresignResult presignUpload(Long userId, String contentType) {
     require(props.isConfigured(), AvatarUnavailableException::new);
     String normalized = contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
@@ -54,28 +38,12 @@ public class AvatarService {
       throw new InvalidAvatarException("contentType must be one of: " + ALLOWED_TYPES.keySet());
     }
     String key = "avatars/" + userId + "/" + UUID.randomUUID() + "." + ext;
-    PutObjectRequest put =
-        PutObjectRequest.builder().bucket(props.bucket()).key(key).contentType(normalized).build();
-    PutObjectPresignRequest presign =
-        PutObjectPresignRequest.builder()
-            .signatureDuration(Duration.ofSeconds(props.presignTtlSeconds()))
-            .putObjectRequest(put)
-            .build();
-    PresignedPutObjectRequest signed = presigner.presignPutObject(presign);
+    String uploadUrl =
+        objectStorage.presignPut(key, normalized, Duration.ofSeconds(props.presignTtlSeconds()));
     return new PresignResult(
-        signed.url().toString(),
-        publicUrlFor(key),
-        key,
-        normalized,
-        props.maxBytes(),
-        props.presignTtlSeconds());
+        uploadUrl, publicUrlFor(key), key, normalized, props.maxBytes(), props.presignTtlSeconds());
   }
 
-  /**
-   * Confirms the upload, sets {@link UserEntity#getAvatarUrl()}, and best-effort deletes the
-   * previous avatar object. Verifies the key is namespaced under {@code avatars/{userId}/} — if the
-   * caller's frontend got cute and tried to commit someone else's key it'd fail here.
-   */
   @Transactional
   @CacheEvict(value = "public-profile", allEntries = true)
   public CommitResult commitUpload(Long userId, String key) {
@@ -83,24 +51,12 @@ public class AvatarService {
     if (key == null || key.isBlank() || !key.startsWith("avatars/" + userId + "/")) {
       throw new InvalidAvatarException("key not owned by user");
     }
-    // S3 presigned PUT can't enforce content-length-range, so a bypassed-frontend client could
-    // post a 10MP / 50MB image. HEAD the freshly-uploaded object and reject + delete if it
-    // exceeds the configured cap. Authoritative — frontend size check is just UX.
-    HeadObjectResponse head;
-    try {
-      head =
-          s3Client.headObject(HeadObjectRequest.builder().bucket(props.bucket()).key(key).build());
-    } catch (Exception e) {
-      throw new InvalidAvatarException("upload not found");
-    }
-    Long contentLength = head.contentLength();
-    if (contentLength != null && contentLength > props.maxBytes()) {
-      try {
-        s3Client.deleteObject(
-            DeleteObjectRequest.builder().bucket(props.bucket()).key(key).build());
-      } catch (Exception e) {
-        log.warn("failed to delete oversized avatar key={}", key, e);
-      }
+    long contentLength =
+        objectStorage
+            .objectSize(key)
+            .orElseThrow(() -> new InvalidAvatarException("upload not found"));
+    if (contentLength > props.maxBytes()) {
+      deleteQuietly(key, "oversized avatar");
       throw new InvalidAvatarException(
           "avatar exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
     }
@@ -109,14 +65,7 @@ public class AvatarService {
     String publicUrl = publicUrlFor(key);
     user.updateAvatar(publicUrl, key);
     if (previousKey != null && !previousKey.isBlank() && !previousKey.equals(key)) {
-      // Best-effort: an orphaned object isn't a correctness issue, just cost. Don't fail the commit
-      // if S3 hiccups — the user has a working new avatar either way.
-      try {
-        s3Client.deleteObject(
-            DeleteObjectRequest.builder().bucket(props.bucket()).key(previousKey).build());
-      } catch (Exception e) {
-        log.warn("failed to delete previous avatar key={}", previousKey, e);
-      }
+      deleteQuietly(previousKey, "previous avatar");
     }
     return new CommitResult(publicUrl);
   }
@@ -128,12 +77,15 @@ public class AvatarService {
     String previousKey = user.getAvatarKey();
     user.updateAvatar(null, null);
     if (props.isConfigured() && previousKey != null && !previousKey.isBlank()) {
-      try {
-        s3Client.deleteObject(
-            DeleteObjectRequest.builder().bucket(props.bucket()).key(previousKey).build());
-      } catch (Exception e) {
-        log.warn("failed to delete cleared avatar key={}", previousKey, e);
-      }
+      deleteQuietly(previousKey, "cleared avatar");
+    }
+  }
+
+  private void deleteQuietly(String key, String label) {
+    try {
+      objectStorage.delete(key);
+    } catch (ObjectStorageException e) {
+      log.warn("failed to delete {} key={}", label, key, e);
     }
   }
 
