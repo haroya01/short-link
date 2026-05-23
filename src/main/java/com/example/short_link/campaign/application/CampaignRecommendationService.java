@@ -1,10 +1,8 @@
 package com.example.short_link.campaign.application;
 
-import com.example.short_link.campaign.api.CampaignRecommendationResponse;
-import com.example.short_link.campaign.api.CampaignRecommendationResponse.BatchRecommendation;
-import com.example.short_link.campaign.api.CampaignRecommendationResponse.RecommendationVerdict;
-import com.example.short_link.campaign.api.CampaignStatsResponse;
-import com.example.short_link.campaign.api.CampaignStatsResponse.BatchStats;
+import com.example.short_link.campaign.application.CampaignRecommendationResponse.BatchRecommendation;
+import com.example.short_link.campaign.application.CampaignRecommendationResponse.RecommendationVerdict;
+import com.example.short_link.campaign.application.CampaignStatsResponse.BatchStats;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

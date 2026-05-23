@@ -1,8 +1,5 @@
 package com.example.short_link.campaign.application;
 
-import com.example.short_link.campaign.api.CampaignBatchBulkRequest;
-import com.example.short_link.campaign.api.CampaignBatchCreateRequest;
-import com.example.short_link.campaign.api.CampaignBatchUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignBatchRepository;
 import com.example.short_link.campaign.domain.CampaignEntity;

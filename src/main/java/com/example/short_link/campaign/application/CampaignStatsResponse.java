@@ -1,4 +1,4 @@
-package com.example.short_link.campaign.api;
+package com.example.short_link.campaign.application;
 
 import java.time.Instant;
 import java.time.LocalDate;

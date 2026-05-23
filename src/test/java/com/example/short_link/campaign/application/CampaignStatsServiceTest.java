@@ -2,9 +2,6 @@ package com.example.short_link.campaign.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.campaign.api.CampaignBatchCreateRequest;
-import com.example.short_link.campaign.api.CampaignCreateRequest;
-import com.example.short_link.campaign.api.CampaignStatsResponse;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;

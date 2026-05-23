@@ -1,8 +1,11 @@
 package com.example.short_link.campaign.api;
 
 import com.example.short_link.campaign.application.BatchWithLink;
+import com.example.short_link.campaign.application.CampaignBatchBulkRequest;
+import com.example.short_link.campaign.application.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.application.CampaignBatchExportService;
 import com.example.short_link.campaign.application.CampaignBatchService;
+import com.example.short_link.campaign.application.CampaignBatchUpdateRequest;
 import com.example.short_link.campaign.application.QrOptions;
 import com.example.short_link.campaign.application.QrPngEncoder;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
