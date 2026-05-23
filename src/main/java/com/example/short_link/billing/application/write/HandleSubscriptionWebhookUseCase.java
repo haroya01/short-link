@@ -1,78 +1,37 @@
-package com.example.short_link.billing.application;
+package com.example.short_link.billing.application.write;
 
-import com.example.short_link.billing.domain.CheckoutInitiation;
-import com.example.short_link.billing.domain.PortalUrl;
+import com.example.short_link.billing.application.InvalidWebhookSignatureException;
 import com.example.short_link.billing.domain.SubscriptionEvent;
 import com.example.short_link.billing.domain.SubscriptionGateway;
-import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Pro subscription lifecycle. Three flows: Checkout, Portal, Webhook. Stripe (or any other
- * provider) lives entirely behind {@link SubscriptionGateway} — this class is SDK-agnostic.
+ * Process a Stripe subscription webhook. The webhook is the source of truth for tier state — the
+ * checkout success redirect never flips tier, only this path does.
  *
- * <p>The webhook is the source of truth for tier state. The Checkout success redirect just lands
- * the user back on the app — it does NOT mark them Pro by itself, because (a) the user could
- * navigate away before the redirect fires, and (b) we'd otherwise double-flip on the webhook.
+ * <p>Adapter ({@link SubscriptionGateway}) handles signature verification + event parsing.
+ * Application only routes the parsed domain event to the corresponding user mutation.
  */
 @Slf4j
 @Service
-public class BillingService {
+@RequiredArgsConstructor
+public class HandleSubscriptionWebhookUseCase {
 
+  private final SubscriptionGateway subscriptions;
   private final UserRepository userRepository;
   private final MeterRegistry meterRegistry;
-  private final StripeProperties stripe;
-  private final SubscriptionGateway subscriptions;
-
-  public BillingService(
-      UserRepository userRepository,
-      MeterRegistry meterRegistry,
-      StripeProperties stripe,
-      SubscriptionGateway subscriptions) {
-    this.userRepository = userRepository;
-    this.meterRegistry = meterRegistry;
-    this.stripe = stripe;
-    this.subscriptions = subscriptions;
-  }
-
-  public boolean isConfigured() {
-    return stripe.isConfigured();
-  }
 
   @Transactional
-  public String createCheckoutSession(Long userId) {
-    requireConfigured();
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
-    CheckoutInitiation init = subscriptions.initiateProCheckout(user);
-    if (init.hasNewCustomer()) {
-      user.linkStripeCustomer(init.newlyCreatedCustomerId());
-    }
-    meterRegistry.counter("billing.checkout.created").increment();
-    return init.checkoutUrl();
-  }
-
-  @Transactional
-  public String createPortalSession(Long userId) {
-    requireConfigured();
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
-    if (user.getStripeCustomerId() == null) {
-      throw new BillingNotEnrolledException();
-    }
-    PortalUrl url = subscriptions.issuePortalSession(user.getStripeCustomerId());
-    meterRegistry.counter("billing.portal.created").increment();
-    return url.url();
-  }
-
-  @Transactional
-  public void handleWebhook(String payload, String signatureHeader) {
+  public void execute(SubscriptionWebhookCommand cmd) {
     SubscriptionEvent event;
     try {
-      event = subscriptions.parseAndVerifyWebhook(payload, signatureHeader);
+      event = subscriptions.parseAndVerifyWebhook(cmd.payload(), cmd.signature());
     } catch (InvalidWebhookSignatureException e) {
       meterRegistry.counter("billing.webhook", "result", "invalid_signature").increment();
       throw e;
@@ -124,11 +83,5 @@ public class BillingService {
       return;
     }
     user.clearSubscription();
-  }
-
-  private void requireConfigured() {
-    if (!isConfigured()) {
-      throw new BillingNotConfiguredException();
-    }
   }
 }
