@@ -1,5 +1,7 @@
 package com.example.short_link.campaign.api;
 
+import com.example.short_link.campaign.application.CampaignCreateRequest;
+import com.example.short_link.campaign.application.CampaignUpdateRequest;
 import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
 import com.example.short_link.campaign.application.write.CreateCampaignUseCase;

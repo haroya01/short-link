@@ -1,4 +1,4 @@
-package com.example.short_link.campaign.api;
+package com.example.short_link.campaign.application;
 
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import jakarta.validation.constraints.NotBlank;

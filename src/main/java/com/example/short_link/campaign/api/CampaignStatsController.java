@@ -1,5 +1,6 @@
 package com.example.short_link.campaign.api;
 
+import com.example.short_link.campaign.application.CampaignStatsResponse;
 import com.example.short_link.campaign.application.CampaignStatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

@@ -1,7 +1,7 @@
 package com.example.short_link.campaign.application.write;
 
-import com.example.short_link.campaign.api.CampaignUpdateRequest;
 import com.example.short_link.campaign.application.CampaignArchivedException;
+import com.example.short_link.campaign.application.CampaignUpdateRequest;
 import com.example.short_link.campaign.application.InvalidCampaignPeriodException;
 import com.example.short_link.campaign.application.MissingPostEndDestinationException;
 import com.example.short_link.campaign.domain.CampaignEntity;
