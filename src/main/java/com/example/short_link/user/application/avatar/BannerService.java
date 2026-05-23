@@ -2,6 +2,7 @@ package com.example.short_link.user.application.avatar;
 
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
+import com.example.short_link.common.storage.s3.AvatarProperties;
 import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
