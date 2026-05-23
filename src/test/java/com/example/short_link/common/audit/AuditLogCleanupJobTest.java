@@ -27,24 +27,14 @@ class AuditLogCleanupJobTest {
     Long oldId =
         repository
             .save(
-                AuditLogEntity.builder()
-                    .actorUserId(1L)
-                    .action("ADMIN_LOGIN")
-                    .targetType("user")
-                    .targetId("1")
-                    .occurredAt(now.minus(Duration.ofDays(120)))
-                    .build())
+                AuditLogEntity.record(
+                    1L, "ADMIN_LOGIN", "user", "1", null, null, now.minus(Duration.ofDays(120))))
             .getId();
     Long recentId =
         repository
             .save(
-                AuditLogEntity.builder()
-                    .actorUserId(1L)
-                    .action("LINK_EDIT")
-                    .targetType("link")
-                    .targetId("abc")
-                    .occurredAt(now.minus(Duration.ofDays(30)))
-                    .build())
+                AuditLogEntity.record(
+                    1L, "LINK_EDIT", "link", "abc", null, null, now.minus(Duration.ofDays(30))))
             .getId();
 
     job.sweep();
@@ -59,13 +49,14 @@ class AuditLogCleanupJobTest {
     Long id =
         repository
             .save(
-                AuditLogEntity.builder()
-                    .actorUserId(2L)
-                    .action("LINK_EDIT")
-                    .targetType("link")
-                    .targetId("xyz")
-                    .occurredAt(Instant.now().minus(Duration.ofDays(10)))
-                    .build())
+                AuditLogEntity.record(
+                    2L,
+                    "LINK_EDIT",
+                    "link",
+                    "xyz",
+                    null,
+                    null,
+                    Instant.now().minus(Duration.ofDays(10))))
             .getId();
 
     job.sweep();
@@ -83,13 +74,14 @@ class AuditLogCleanupJobTest {
     Long oldId =
         repository
             .save(
-                AuditLogEntity.builder()
-                    .actorUserId(7L)
-                    .action("RUN_DAILY_PROBE")
-                    .targetType("probe")
-                    .targetId("p1")
-                    .occurredAt(Instant.now().minus(Duration.ofDays(200)))
-                    .build())
+                AuditLogEntity.record(
+                    7L,
+                    "RUN_DAILY_PROBE",
+                    "probe",
+                    "p1",
+                    null,
+                    null,
+                    Instant.now().minus(Duration.ofDays(200))))
             .getId();
     try {
       job.runDaily();
