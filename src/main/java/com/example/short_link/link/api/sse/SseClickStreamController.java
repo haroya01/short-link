@@ -22,9 +22,23 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
- * Owner-only live click stream. Auth is via {@code ?token=...} (query param) since {@code
- * EventSource} can't set custom headers — the access JWT is parsed manually here. We respond with a
- * fast-fail status code via the servlet response (instead of throwing) so the global problem-detail
+ * Live click stream. Two auth channels share the endpoint because {@code EventSource} can only put
+ * credentials in the query string:
+ *
+ * <ol>
+ *   <li><b>{@code ?token=...}</b> — access JWT. Owner + admin path, used everywhere a logged-in
+ *       session is watching.
+ *   <li><b>{@code ?claimToken=...}</b> — the 16-byte hex token handed back at anonymous link
+ *       creation. Lets the landing-page result card watch its own brand-new link in the gap between
+ *       "URL shortened" and "user signs up". The token is cleared in {@link LinkEntity#claim} so
+ *       this channel auto-closes the moment the link is adopted into an account; subscribers from
+ *       that point need the JWT path.
+ * </ol>
+ *
+ * <p>When both are provided JWT wins (a signed-in user shouldn't be downgraded to anonymous-token
+ * trust just because the old token is still in the URL). The JWT path runs its token parse before
+ * the link lookup so a bad token can't be used as a "does this shortcode exist" probe — the
+ * response is 401 either way. Fast-fail uses the servlet response so the global problem-detail
  * handler doesn't wrap our SSE channel into a JSON 500.
  */
 @Slf4j
@@ -44,20 +58,35 @@ public class SseClickStreamController {
   @GetMapping("/{shortCode}/stream")
   public SseEmitter stream(
       @PathVariable String shortCode,
-      @RequestParam("token") String token,
+      @RequestParam(value = "token", required = false) String token,
+      @RequestParam(value = "claimToken", required = false) String claimToken,
       HttpServletResponse response) {
-    Long userId;
-    try {
-      userId = jwt.parseAccessToken(token);
-    } catch (RuntimeException e) {
+    boolean hasToken = token != null && !token.isBlank();
+    boolean hasClaim = claimToken != null && !claimToken.isBlank();
+    if (!hasToken && !hasClaim) {
       return failFast(response, HttpStatus.UNAUTHORIZED);
     }
+
+    Long userId = null;
+    if (hasToken) {
+      try {
+        userId = jwt.parseAccessToken(token);
+      } catch (RuntimeException e) {
+        return failFast(response, HttpStatus.UNAUTHORIZED);
+      }
+    }
+
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!accessGuard.canView(userId, link)) {
-      throw new LinkNotOwnedException(shortCode);
+
+    if (userId != null) {
+      if (!accessGuard.canView(userId, link)) {
+        throw new LinkNotOwnedException(shortCode);
+      }
+    } else if (!isValidClaimAccess(link, claimToken)) {
+      return failFast(response, HttpStatus.UNAUTHORIZED);
     }
 
     SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
@@ -72,6 +101,23 @@ public class SseClickStreamController {
     }
     meterRegistry.counter("sse.click_stream.connected").increment();
     return emitter;
+  }
+
+  private static boolean isValidClaimAccess(LinkEntity link, String presented) {
+    if (link.getUserId() != null) return false;
+    String stored = link.getClaimToken();
+    if (stored == null) return false;
+    return constantTimeEquals(stored, presented);
+  }
+
+  private static boolean constantTimeEquals(String a, String b) {
+    if (a == null || b == null) return false;
+    if (a.length() != b.length()) return false;
+    int diff = 0;
+    for (int i = 0; i < a.length(); i++) {
+      diff |= a.charAt(i) ^ b.charAt(i);
+    }
+    return diff == 0;
   }
 
   private static SseEmitter failFast(HttpServletResponse response, HttpStatus status) {
