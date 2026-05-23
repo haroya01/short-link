@@ -1,14 +1,12 @@
 package com.example.short_link.campaign.domain;
 
+import com.example.short_link.common.jpa.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -17,7 +15,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "campaign_batch")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class CampaignBatchEntity {
+public class CampaignBatchEntity extends BaseTimeEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,12 +44,6 @@ public class CampaignBatchEntity {
   @Column(length = 500)
   private String memo;
 
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
-
-  @Column(name = "updated_at", nullable = false)
-  private Instant updatedAt;
-
   public CampaignBatchEntity(
       Long campaignId,
       Long linkId,
@@ -67,18 +59,6 @@ public class CampaignBatchEntity {
     this.areaLabel = areaLabel;
     this.quantity = quantity;
     this.memo = memo;
-  }
-
-  @PrePersist
-  void prePersist() {
-    Instant now = Instant.now();
-    this.createdAt = now;
-    this.updatedAt = now;
-  }
-
-  @PreUpdate
-  void preUpdate() {
-    this.updatedAt = Instant.now();
   }
 
   /** Metadata 만 수정 — 대표 link 와의 결합은 immutable (인쇄된 QR 의 destination 안전). */

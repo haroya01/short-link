@@ -1,11 +1,11 @@
 package com.example.short_link.link.domain;
 
+import com.example.short_link.common.jpa.BaseCreatedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.Version;
 import java.time.Instant;
@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "link")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class LinkEntity {
+public class LinkEntity extends BaseCreatedEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,9 +34,6 @@ public class LinkEntity {
 
   @Column(name = "expires_at")
   private Instant expiresAt;
-
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
 
   @Version
   @Column(nullable = false)
@@ -126,11 +123,6 @@ public class LinkEntity {
     this.shortCode = shortCode;
     this.userId = userId;
     this.expiresAt = expiresAt;
-  }
-
-  @PrePersist
-  void prePersist() {
-    this.createdAt = Instant.now();
   }
 
   public boolean isExpired(Instant now) {

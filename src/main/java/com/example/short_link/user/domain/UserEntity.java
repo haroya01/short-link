@@ -1,5 +1,6 @@
 package com.example.short_link.user.domain;
 
+import com.example.short_link.common.jpa.BaseCreatedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -7,7 +8,6 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -18,7 +18,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "users")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class UserEntity {
+public class UserEntity extends BaseCreatedEntity {
 
   public enum Role {
     USER,
@@ -53,9 +53,6 @@ public class UserEntity {
 
   @Column(nullable = false, length = 64)
   private String timezone = "Asia/Seoul";
-
-  @Column(name = "created_at", nullable = false, updatable = false)
-  private Instant createdAt;
 
   @Column(name = "deleted_at")
   private Instant deletedAt;
@@ -234,10 +231,5 @@ public class UserEntity {
 
   public void restore() {
     this.deletedAt = null;
-  }
-
-  @PrePersist
-  void prePersist() {
-    this.createdAt = Instant.now();
   }
 }
