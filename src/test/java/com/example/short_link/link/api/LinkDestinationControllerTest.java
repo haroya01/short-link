@@ -14,8 +14,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.LinkDestinationService;
-import com.example.short_link.link.application.LinkDestinationService.DestinationSummary;
+import com.example.short_link.link.application.DestinationSummary;
+import com.example.short_link.link.application.write.AddDestinationUseCase;
+import com.example.short_link.link.application.write.DeleteDestinationUseCase;
+import com.example.short_link.link.application.write.SetBlockedCountriesUseCase;
+import com.example.short_link.link.application.write.UpdateDestinationUseCase;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
@@ -43,7 +46,10 @@ class LinkDestinationControllerTest {
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
 
-  @MockitoBean private LinkDestinationService service;
+  @MockitoBean private AddDestinationUseCase addUseCase;
+  @MockitoBean private UpdateDestinationUseCase updateUseCase;
+  @MockitoBean private DeleteDestinationUseCase deleteUseCase;
+  @MockitoBean private SetBlockedCountriesUseCase setBlockedUseCase;
 
   @MockitoBean
   private com.example.short_link.link.application.read.LinkDestinationQueryService query;
@@ -74,7 +80,7 @@ class LinkDestinationControllerTest {
   void addCreatesAndReturns201() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("a@x.com", "google", "g-add"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.add(
+    when(addUseCase.execute(
             eq(user.getId()), eq("abc1234"), anyString(), any(), any(), any(), any(), any()))
         .thenReturn(sample());
 
@@ -91,7 +97,7 @@ class LinkDestinationControllerTest {
   void updateReturnsOk() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-dup"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.update(
+    when(updateUseCase.execute(
             eq(user.getId()),
             eq("abc1234"),
             eq(1L),
@@ -116,7 +122,7 @@ class LinkDestinationControllerTest {
   void deleteReturns204() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("d2@x.com", "google", "g-ddel"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    doNothing().when(service).delete(anyLong(), anyString(), anyLong());
+    doNothing().when(deleteUseCase).execute(anyLong(), anyString(), anyLong());
 
     mvc.perform(
             delete("/api/v1/links/abc1234/destinations/1")
@@ -130,8 +136,7 @@ class LinkDestinationControllerTest {
     String token = jwt.createAccessToken(user.getId(), "USER");
     LinkEntity link = Mockito.mock(LinkEntity.class);
     when(link.getBlockedCountries()).thenReturn("KP,IR");
-    when(service.setBlockedCountries(eq(user.getId()), eq("abc1234"), eq("KP,IR")))
-        .thenReturn(link);
+    when(setBlockedUseCase.execute(eq(user.getId()), eq("abc1234"), eq("KP,IR"))).thenReturn(link);
 
     mvc.perform(
             put("/api/v1/links/abc1234/blocked-countries")

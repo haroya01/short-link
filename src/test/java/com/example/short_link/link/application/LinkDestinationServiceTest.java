@@ -18,7 +18,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class LinkDestinationServiceTest {
 
-  @Autowired private LinkDestinationService service;
+  @Autowired private com.example.short_link.link.application.write.AddDestinationUseCase addUseCase;
+
+  @Autowired
+  private com.example.short_link.link.application.write.UpdateDestinationUseCase updateUseCase;
+
+  @Autowired
+  private com.example.short_link.link.application.write.DeleteDestinationUseCase deleteUseCase;
+
   @Autowired private com.example.short_link.link.application.read.LinkDestinationQueryService query;
   @Autowired private LinkRepository linkRepository;
   @Autowired private UserRepository userRepository;
@@ -28,8 +35,8 @@ class LinkDestinationServiceTest {
     UserEntity user = userRepository.save(new UserEntity("ab1@local.test", "google", "g-ab1"));
     linkRepository.save(new LinkEntity("https://example.com/ctrl", "ab11111", user.getId(), null));
 
-    LinkDestinationService.DestinationSummary v1 =
-        service.add(
+    DestinationSummary v1 =
+        addUseCase.execute(
             user.getId(), "ab11111", "https://example.com/A", 50, "variant-A", null, null, null);
     assertThat(v1.weight()).isEqualTo(50);
     assertThat(v1.label()).isEqualTo("variant-A");
@@ -39,11 +46,12 @@ class LinkDestinationServiceTest {
     assertThat(list).hasSize(1);
 
     var updated =
-        service.update(user.getId(), "ab11111", v1.id(), null, 70, null, false, null, null, null);
+        updateUseCase.execute(
+            user.getId(), "ab11111", v1.id(), null, 70, null, false, null, null, null);
     assertThat(updated.weight()).isEqualTo(70);
     assertThat(updated.enabled()).isFalse();
 
-    service.delete(user.getId(), "ab11111", v1.id());
+    deleteUseCase.execute(user.getId(), "ab11111", v1.id());
     assertThat(query.list(user.getId(), "ab11111")).isEmpty();
   }
 
@@ -52,13 +60,15 @@ class LinkDestinationServiceTest {
     UserEntity user = userRepository.save(new UserEntity("ab2@local.test", "google", "g-ab2"));
     linkRepository.save(new LinkEntity("https://example.com/c", "ab22222", user.getId(), null));
 
-    for (int i = 0; i < LinkDestinationService.MAX_PER_LINK; i++) {
-      service.add(
+    for (int i = 0;
+        i < com.example.short_link.link.application.write.AddDestinationUseCase.MAX_PER_LINK;
+        i++) {
+      addUseCase.execute(
           user.getId(), "ab22222", "https://example.com/v" + i, 10, "v" + i, null, null, null);
     }
     assertThatThrownBy(
             () ->
-                service.add(
+                addUseCase.execute(
                     user.getId(), "ab22222", "https://example.com/v9", 10, "v9", null, null, null))
         .isInstanceOf(IllegalArgumentException.class);
   }
@@ -70,7 +80,7 @@ class LinkDestinationServiceTest {
 
     assertThatThrownBy(
             () ->
-                service.add(
+                addUseCase.execute(
                     user.getId(), "ab33333", "javascript:alert(1)", 50, null, null, null, null))
         .isInstanceOf(IllegalArgumentException.class);
   }
@@ -81,12 +91,16 @@ class LinkDestinationServiceTest {
     linkRepository.save(new LinkEntity("https://example.com/c", "ab44444", user.getId(), null));
 
     var huge =
-        service.add(user.getId(), "ab44444", "https://example.com/v", 999, null, null, null, null);
-    assertThat(huge.weight()).isEqualTo(LinkDestinationService.MAX_WEIGHT);
+        addUseCase.execute(
+            user.getId(), "ab44444", "https://example.com/v", 999, null, null, null, null);
+    assertThat(huge.weight())
+        .isEqualTo(com.example.short_link.link.application.write.AddDestinationUseCase.MAX_WEIGHT);
 
     var tiny =
-        service.add(user.getId(), "ab44444", "https://example.com/w", 0, null, null, null, null);
-    assertThat(tiny.weight()).isEqualTo(LinkDestinationService.MIN_WEIGHT);
+        addUseCase.execute(
+            user.getId(), "ab44444", "https://example.com/w", 0, null, null, null, null);
+    assertThat(tiny.weight())
+        .isEqualTo(com.example.short_link.link.application.write.AddDestinationUseCase.MIN_WEIGHT);
   }
 
   @Test
@@ -96,11 +110,12 @@ class LinkDestinationServiceTest {
         userRepository.save(new UserEntity("ab5b@local.test", "google", "g-ab5b"));
     linkRepository.save(new LinkEntity("https://example.com/c", "ab55555", owner.getId(), null));
     var v =
-        service.add(owner.getId(), "ab55555", "https://example.com/v", 50, null, null, null, null);
+        addUseCase.execute(
+            owner.getId(), "ab55555", "https://example.com/v", 50, null, null, null, null);
 
     assertThatThrownBy(() -> query.list(stranger.getId(), "ab55555"))
         .isInstanceOf(LinkNotOwnedException.class);
-    assertThatThrownBy(() -> service.delete(stranger.getId(), "ab55555", v.id()))
+    assertThatThrownBy(() -> deleteUseCase.execute(stranger.getId(), "ab55555", v.id()))
         .isInstanceOf(LinkNotOwnedException.class);
   }
 }
