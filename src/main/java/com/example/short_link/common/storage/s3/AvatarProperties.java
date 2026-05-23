@@ -1,4 +1,4 @@
-package com.example.short_link.user.application.avatar;
+package com.example.short_link.common.storage.s3;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
