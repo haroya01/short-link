@@ -1,6 +1,11 @@
 package com.example.short_link.profile.api;
 
-import com.example.short_link.profile.application.ProfileService;
+import com.example.short_link.profile.application.write.CreateBlockCommand;
+import com.example.short_link.profile.application.write.CreateBlockUseCase;
+import com.example.short_link.profile.application.write.DeleteBlockCommand;
+import com.example.short_link.profile.application.write.DeleteBlockUseCase;
+import com.example.short_link.profile.application.write.UpdateBlockCommand;
+import com.example.short_link.profile.application.write.UpdateBlockUseCase;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import jakarta.validation.constraints.Size;
@@ -19,13 +24,16 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class ProfileBlockController {
 
-  private final ProfileService service;
+  private final CreateBlockUseCase createBlock;
+  private final UpdateBlockUseCase updateBlock;
+  private final DeleteBlockUseCase deleteBlock;
 
   @PostMapping
   public BlockResponse create(
       @AuthenticationPrincipal Long userId, @RequestBody CreateRequest request) {
     ProfileBlockType type = ProfileBlockType.valueOf(request.type().toUpperCase());
-    ProfileBlockEntity block = service.createBlock(userId, type, request.content());
+    ProfileBlockEntity block =
+        createBlock.execute(new CreateBlockCommand(userId, type, request.content()));
     return BlockResponse.from(block);
   }
 
@@ -34,13 +42,14 @@ public class ProfileBlockController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @RequestBody UpdateRequest request) {
-    ProfileBlockEntity block = service.updateBlock(userId, id, request.content());
+    ProfileBlockEntity block =
+        updateBlock.execute(new UpdateBlockCommand(userId, id, request.content()));
     return BlockResponse.from(block);
   }
 
   @DeleteMapping("/{id}")
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    service.deleteBlock(userId, id);
+    deleteBlock.execute(new DeleteBlockCommand(userId, id));
   }
 
   public record CreateRequest(String type, @Size(max = 120) String content) {}

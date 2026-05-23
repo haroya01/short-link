@@ -3,9 +3,9 @@ package com.example.short_link.profile.application;
 import java.util.Set;
 
 /** Usernames the public profile route would collide with or that should never be claimable. */
-final class ReservedUsernames {
+public final class ReservedUsernames {
 
-  static final Set<String> ALL =
+  public static final Set<String> ALL =
       Set.of(
           "admin",
           "api",
