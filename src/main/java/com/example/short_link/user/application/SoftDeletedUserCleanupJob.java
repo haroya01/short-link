@@ -9,7 +9,6 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -30,27 +29,22 @@ public class SoftDeletedUserCleanupJob {
   private final UserDeletionService userDeletionService;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
-
-  @Value("${short-link.user-deletion.grace-days:30}")
-  private long graceDays;
-
-  @Value("${short-link.user-deletion.cleanup-enabled:true}")
-  private boolean enabled;
+  private final UserDeletionProperties userDeletion;
 
   @Scheduled(cron = "${short-link.user-deletion.cleanup-cron:0 30 5 * * *}", zone = "Asia/Seoul")
   public void runDaily() {
-    if (!enabled) return;
+    if (!userDeletion.cleanupEnabled()) return;
     if (!lock.tryAcquire(LOCK_KEY, Duration.ofMinutes(15))) {
       log.debug("soft-deleted user cleanup skipped — lock held");
       return;
     }
     try {
-      Instant cutoff = Instant.now().minus(Duration.ofDays(graceDays));
+      Instant cutoff = Instant.now().minus(Duration.ofDays(userDeletion.graceDays()));
       List<UserEntity> candidates = userRepository.findTop200ByDeletedAtBefore(cutoff);
       log.info(
           "soft-deleted user cleanup: {} candidates older than {} days",
           candidates.size(),
-          graceDays);
+          userDeletion.graceDays());
       for (UserEntity user : candidates) {
         try {
           userDeletionService.hardDelete(user.getId());

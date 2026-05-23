@@ -27,12 +27,13 @@ class BillingServiceCheckoutTest {
         new BillingService(
             userRepository,
             new SimpleMeterRegistry(),
-            "sk_test",
-            "whsec_test",
-            "price_pro",
-            "https://success",
-            "https://cancel",
-            "https://portal");
+            new StripeProperties(
+                "sk_test",
+                "whsec_test",
+                "price_pro",
+                "https://success",
+                "https://cancel",
+                "https://portal"));
   }
 
   @Test

@@ -71,7 +71,7 @@ class SoftDeleteFlowTest {
 
   @Test
   void cleanupJobHardDeletesPastGrace() {
-    ReflectionTestUtils.setField(cleanupJob, "graceDays", 30L);
+    ReflectionTestUtils.setField(cleanupJob, "userDeletion", new UserDeletionProperties(30L, true));
 
     UserEntity old = userRepository.save(new UserEntity("sd4@local.test", "google", "g-sd4"));
     deletionService.deleteAccount(old.getId());

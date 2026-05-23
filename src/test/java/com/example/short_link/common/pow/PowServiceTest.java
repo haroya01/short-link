@@ -19,7 +19,8 @@ class PowServiceTest {
 
   @Test
   void verifyAcceptsCorrectProofAndConsumesChallenge() {
-    PowService service = new PowService(redis, new SimpleMeterRegistry(), 2, true);
+    PowService service =
+        new PowService(redis, new SimpleMeterRegistry(), new PowProperties(2, true));
     PowService.Challenge challenge = service.issue();
 
     String nonce = mineProof(challenge.challenge(), 2);
@@ -30,20 +31,23 @@ class PowServiceTest {
 
   @Test
   void verifyRejectsWrongNonce() {
-    PowService service = new PowService(redis, new SimpleMeterRegistry(), 2, true);
+    PowService service =
+        new PowService(redis, new SimpleMeterRegistry(), new PowProperties(2, true));
     PowService.Challenge challenge = service.issue();
     assertThat(service.verifyAndConsume(challenge.challenge(), "0")).isFalse();
   }
 
   @Test
   void verifyRejectsUnknownChallenge() {
-    PowService service = new PowService(redis, new SimpleMeterRegistry(), 2, true);
+    PowService service =
+        new PowService(redis, new SimpleMeterRegistry(), new PowProperties(2, true));
     assertThat(service.verifyAndConsume("deadbeefcafe", "12345")).isFalse();
   }
 
   @Test
   void verifyRejectsBlankInput() {
-    PowService service = new PowService(redis, new SimpleMeterRegistry(), 2, true);
+    PowService service =
+        new PowService(redis, new SimpleMeterRegistry(), new PowProperties(2, true));
     assertThat(service.verifyAndConsume(null, "x")).isFalse();
     assertThat(service.verifyAndConsume("c", null)).isFalse();
     assertThat(service.verifyAndConsume("", "")).isFalse();

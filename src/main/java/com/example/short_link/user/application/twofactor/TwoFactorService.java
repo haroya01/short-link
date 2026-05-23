@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,10 +36,8 @@ public class TwoFactorService {
   private final UserTwoFactorRepository repository;
   private final SecretCipher cipher;
   private final MeterRegistry meterRegistry;
+  private final TwoFactorProperties twofa;
   private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
-
-  @Value("${short-link.twofa-issuer:kurl.me}")
-  private String issuer;
 
   @Transactional(readOnly = true)
   public Status status(Long userId) {
@@ -79,7 +76,7 @@ public class TwoFactorService {
       row.rotateSecret(encrypted);
     }
     return new SetupChallenge(
-        plainSecret, TotpCodec.provisioningUri(issuer, user.getEmail(), plainSecret));
+        plainSecret, TotpCodec.provisioningUri(twofa.issuer(), user.getEmail(), plainSecret));
   }
 
   @Transactional

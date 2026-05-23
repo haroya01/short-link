@@ -8,7 +8,6 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
@@ -32,8 +31,9 @@ public class SecretCipher {
 
   private final SecretKeySpec key;
 
-  public SecretCipher(@Value("${short-link.twofa-aes-key:}") String base64Key) {
-    if (base64Key == null || base64Key.isBlank()) {
+  public SecretCipher(TwoFactorProperties props) {
+    String base64Key = props.aesKey();
+    if (base64Key.isBlank()) {
       log.warn(
           "TWOFA_AES_KEY not set — 2FA secrets will be stored unencrypted. Set the env var in"
               + " production.");

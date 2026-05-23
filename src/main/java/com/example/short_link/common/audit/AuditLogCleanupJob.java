@@ -6,7 +6,6 @@ import java.time.Duration;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,31 +25,29 @@ public class AuditLogCleanupJob {
   private final AuditLogRepository repository;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
-
-  @Value("${short-link.audit-log.retention-days:180}")
-  private long retentionDays;
-
-  @Value("${short-link.audit-log.cleanup-enabled:true}")
-  private boolean enabled;
+  private final AuditLogProperties auditLog;
 
   @Scheduled(cron = "${short-link.audit-log.cleanup-cron:0 45 4 * * *}", zone = "Asia/Seoul")
   @Transactional
   public void runDaily() {
-    if (!enabled) return;
+    if (!auditLog.cleanupEnabled()) return;
     if (!lock.tryAcquire(LOCK_KEY, Duration.ofMinutes(5))) {
       log.debug("audit-log cleanup skipped — lock held");
       return;
     }
     try {
       int removed = sweep();
-      log.info("audit-log cleanup removed {} rows older than {} days", removed, retentionDays);
+      log.info(
+          "audit-log cleanup removed {} rows older than {} days",
+          removed,
+          auditLog.retentionDays());
     } finally {
       lock.release(LOCK_KEY);
     }
   }
 
   int sweep() {
-    Instant cutoff = Instant.now().minus(Duration.ofDays(retentionDays));
+    Instant cutoff = Instant.now().minus(Duration.ofDays(auditLog.retentionDays()));
     int removed = repository.deleteByOccurredAtBefore(cutoff);
     meterRegistry.counter("cleanup.audit_log").increment(removed);
     return removed;

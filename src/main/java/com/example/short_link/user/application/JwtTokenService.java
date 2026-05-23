@@ -16,7 +16,6 @@ import java.util.Base64;
 import java.util.Date;
 import java.util.UUID;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -34,14 +33,11 @@ public class JwtTokenService {
   private final Duration accessTtl;
   private final Duration refreshTtl;
 
-  public JwtTokenService(
-      @Value("${short-link.jwt.private-key:}") String privateKeyPem,
-      @Value("${short-link.jwt.public-key:}") String publicKeyPem,
-      @Value("${short-link.jwt.access-ttl}") Duration accessTtl,
-      @Value("${short-link.jwt.refresh-ttl}") Duration refreshTtl)
-      throws GeneralSecurityException {
-    this.accessTtl = accessTtl;
-    this.refreshTtl = refreshTtl;
+  public JwtTokenService(JwtProperties props) throws GeneralSecurityException {
+    this.accessTtl = props.accessTtl();
+    this.refreshTtl = props.refreshTtl();
+    String privateKeyPem = props.privateKey();
+    String publicKeyPem = props.publicKey();
     if (privateKeyPem.isBlank() || publicKeyPem.isBlank()) {
       log.warn(
           "JWT keypair not configured. Generating ephemeral RSA keypair for this JVM only. "
