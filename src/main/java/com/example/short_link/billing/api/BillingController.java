@@ -1,10 +1,10 @@
 package com.example.short_link.billing.api;
 
+import com.example.short_link.billing.application.BillingGatewayException;
 import com.example.short_link.billing.application.BillingNotConfiguredException;
 import com.example.short_link.billing.application.BillingNotEnrolledException;
 import com.example.short_link.billing.application.BillingService;
 import com.example.short_link.billing.application.InvalidWebhookSignatureException;
-import com.stripe.exception.StripeException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,12 +29,12 @@ public class BillingController {
   private final BillingService service;
 
   @PostMapping("/checkout")
-  public CheckoutResponse checkout(@AuthenticationPrincipal Long userId) throws StripeException {
+  public CheckoutResponse checkout(@AuthenticationPrincipal Long userId) {
     return new CheckoutResponse(service.createCheckoutSession(userId));
   }
 
   @PostMapping("/portal")
-  public CheckoutResponse portal(@AuthenticationPrincipal Long userId) throws StripeException {
+  public CheckoutResponse portal(@AuthenticationPrincipal Long userId) {
     return new CheckoutResponse(service.createPortalSession(userId));
   }
 
@@ -65,6 +65,12 @@ public class BillingController {
   @ExceptionHandler(InvalidWebhookSignatureException.class)
   public ResponseEntity<String> invalidSignature() {
     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("invalid signature");
+  }
+
+  @ExceptionHandler(BillingGatewayException.class)
+  public ResponseEntity<String> gatewayError(BillingGatewayException e) {
+    log.warn("billing gateway error", e);
+    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("billing gateway error");
   }
 
   public record CheckoutResponse(String url) {}
