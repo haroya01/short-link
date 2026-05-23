@@ -3,10 +3,9 @@ package com.example.short_link.user.api;
 import com.example.short_link.user.application.UserDataExport;
 import com.example.short_link.user.application.UserDataExportService;
 import com.example.short_link.user.application.UserDeletionService;
-import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.application.UserPreferencesService;
+import com.example.short_link.user.application.UserQueryService;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
 import jakarta.validation.Valid;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
@@ -26,29 +25,24 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class UserController {
 
-  private final UserRepository userRepository;
+  private final UserQueryService queryService;
   private final UserPreferencesService preferencesService;
   private final UserDeletionService deletionService;
   private final UserDataExportService exportService;
 
   @GetMapping("/me")
   public MeResponse me(@AuthenticationPrincipal Long userId) {
-    return userRepository
-        .findById(userId)
-        .filter(u -> !u.isDeleted())
-        .map(
-            u ->
-                new MeResponse(
-                    u.getId(),
-                    u.getEmail(),
-                    u.getOauthProvider(),
-                    u.getRole().name(),
-                    u.getTimezone(),
-                    u.getCreatedAt(),
-                    u.getTier().name(),
-                    u.getSubscriptionCurrentPeriodEnd(),
-                    u.getUsername()))
-        .orElseThrow(UserNotFoundException::new);
+    UserEntity u = queryService.activeOrThrow(userId);
+    return new MeResponse(
+        u.getId(),
+        u.getEmail(),
+        u.getOauthProvider(),
+        u.getRole().name(),
+        u.getTimezone(),
+        u.getCreatedAt(),
+        u.getTier().name(),
+        u.getSubscriptionCurrentPeriodEnd(),
+        u.getUsername());
   }
 
   @PutMapping("/me/preferences")
