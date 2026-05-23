@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import java.time.Instant;
@@ -154,8 +155,8 @@ public class ClickRecorder {
               .bot(uaBot)
               .botName(botName)
               .countryCode(geo.countryCode())
-              .regionName(geo.regionName())
-              .cityName(geo.cityName())
+              .regionName(geo.region())
+              .cityName(geo.city())
               .language(LanguageExtractor.extract(acceptLanguage))
               .visitorHash(VisitorHasher.hash(linkId, clientIp, userAgent))
               .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))

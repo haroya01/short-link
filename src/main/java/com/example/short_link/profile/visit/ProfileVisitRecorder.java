@@ -1,9 +1,9 @@
 package com.example.short_link.profile.visit;
 
+import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.AsnResolver;
 import com.example.short_link.link.application.BotHeuristic;
 import com.example.short_link.link.application.GeoIpResolver;
-import com.example.short_link.link.application.GeoLocation;
 import com.example.short_link.link.application.IpMasker;
 import com.example.short_link.link.application.LanguageExtractor;
 import com.example.short_link.link.application.ReferrerNormalizer;
@@ -78,8 +78,8 @@ public class ProfileVisitRecorder {
               .bot(uaBot)
               .botName(botName)
               .countryCode(geo.countryCode())
-              .regionName(geo.regionName())
-              .cityName(geo.cityName())
+              .regionName(geo.region())
+              .cityName(geo.city())
               .language(LanguageExtractor.extract(acceptLanguage))
               .visitorHash(VisitorHasher.hash(profileUserId, clientIp, userAgent))
               .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))
