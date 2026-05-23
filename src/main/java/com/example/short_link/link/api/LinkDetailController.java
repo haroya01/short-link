@@ -1,6 +1,7 @@
 package com.example.short_link.link.api;
 
 import com.example.short_link.link.application.LinkDetailService;
+import com.example.short_link.link.application.LinkDetailView;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +21,24 @@ public class LinkDetailController {
   @GetMapping("/{shortCode}/detail")
   public LinkDetailResponse detail(
       @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
-    return service.detail(userId, shortCode);
+    LinkDetailView v = service.detail(userId, shortCode);
+    return new LinkDetailResponse(
+        v.shortCode(),
+        v.originalUrl(),
+        v.expiresAt(),
+        v.ogTitle(),
+        v.ogDescription(),
+        v.ogImage(),
+        v.ogTitleOverride(),
+        v.ogDescriptionOverride(),
+        v.ogImageOverride(),
+        v.passwordProtected(),
+        v.maxViews(),
+        v.viewCount(),
+        v.statsPublic(),
+        v.tags(),
+        v.note(),
+        v.expiredMessage());
   }
 
   public record LinkDetailResponse(
