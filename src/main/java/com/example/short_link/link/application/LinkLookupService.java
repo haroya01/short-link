@@ -73,6 +73,14 @@ public class LinkLookupService {
     return clickEventRepository.countHumanByLinkId(linkId);
   }
 
+  /**
+   * view limit 체크 + viewCount 증분 atomically. 반환값 > 0 = 증분 됐음, 0 = limit 도달 (호출자가 expire 처리).
+   * redirect 핸들러용.
+   */
+  public int incrementViewCountIfBelowLimit(Long linkId) {
+    return repository.incrementViewCountIfBelowLimit(linkId);
+  }
+
   public CachedLink findActiveLink(String shortCode) {
     CachedLink cached;
     try {
