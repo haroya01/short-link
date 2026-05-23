@@ -6,7 +6,6 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
-import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -29,14 +28,6 @@ public class LinkDestinationService {
   private final LinkRepository linkRepository;
   private final LinkDestinationRepository repository;
   private final MeterRegistry meterRegistry;
-
-  @Transactional(readOnly = true)
-  public List<DestinationSummary> list(Long userId, String shortCode) {
-    LinkEntity link = ownedLink(userId, shortCode);
-    return repository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
-        .map(this::toSummary)
-        .toList();
-  }
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
