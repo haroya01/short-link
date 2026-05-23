@@ -11,7 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.storage.ObjectStorage;
-import com.example.short_link.user.application.avatar.AvatarProperties;
+import com.example.short_link.common.storage.s3.AvatarProperties;
 import com.example.short_link.user.application.avatar.AvatarUnavailableException;
 import com.example.short_link.user.application.avatar.InvalidAvatarException;
 import java.time.Duration;
