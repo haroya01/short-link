@@ -1,6 +1,6 @@
 package com.example.short_link.link.application.read;
 
-import com.example.short_link.link.application.LinkDestinationService.DestinationSummary;
+import com.example.short_link.link.application.DestinationSummary;
 import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.domain.LinkDestinationEntity;
