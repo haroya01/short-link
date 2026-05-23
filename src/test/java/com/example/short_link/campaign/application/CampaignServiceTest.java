@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 class CampaignServiceTest {
 
   @Autowired private CampaignService service;
+  @Autowired private com.example.short_link.campaign.application.read.CampaignQueryService query;
 
   @Test
   void createsCampaignAndActivatesImmediatelyWhenStartIsPast() {
@@ -95,10 +96,9 @@ class CampaignServiceTest {
             new CampaignCreateRequest(
                 "mine", null, Instant.now().plusSeconds(3600), null, null, null, null));
 
-    assertThatThrownBy(() -> service.detail(created.getId(), 999L))
+    assertThatThrownBy(() -> query.detail(created.getId(), 999L))
         .isInstanceOf(CampaignNotOwnedException.class);
-    assertThatThrownBy(() -> service.detail(-1L, 200L))
-        .isInstanceOf(CampaignNotFoundException.class);
+    assertThatThrownBy(() -> query.detail(-1L, 200L)).isInstanceOf(CampaignNotFoundException.class);
   }
 
   @Test
@@ -164,7 +164,7 @@ class CampaignServiceTest {
     int activated = service.activateReady(now);
 
     assertThat(activated).isGreaterThanOrEqualTo(0);
-    List<CampaignEntity> mine = service.list(500L);
+    List<CampaignEntity> mine = query.list(500L);
     assertThat(mine)
         .filteredOn(c -> c.getId().equals(future.getId()))
         .extracting(CampaignEntity::getStatus)
