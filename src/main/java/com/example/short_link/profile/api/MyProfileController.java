@@ -1,8 +1,12 @@
 package com.example.short_link.profile.api;
 
 import com.example.short_link.profile.application.MyProfile;
-import com.example.short_link.profile.application.ProfileService;
 import com.example.short_link.profile.application.read.ProfileQueryService;
+import com.example.short_link.profile.application.write.ReorderItem;
+import com.example.short_link.profile.application.write.ReorderProfileCommand;
+import com.example.short_link.profile.application.write.ReorderProfileUseCase;
+import com.example.short_link.profile.application.write.UpdateProfileCommand;
+import com.example.short_link.profile.application.write.UpdateProfileUseCase;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.util.List;
@@ -19,8 +23,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class MyProfileController {
 
-  private final ProfileService service;
   private final ProfileQueryService queryService;
+  private final UpdateProfileUseCase updateProfile;
+  private final ReorderProfileUseCase reorderProfile;
 
   @GetMapping
   public MyProfile get(@AuthenticationPrincipal Long userId) {
@@ -30,14 +35,15 @@ public class MyProfileController {
   @PutMapping
   public MyProfile update(
       @AuthenticationPrincipal Long userId, @RequestBody UpdateRequest request) {
-    return service.updateProfile(
-        userId, request.username(), request.bio(), request.theme(), request.socials());
+    return updateProfile.execute(
+        new UpdateProfileCommand(
+            userId, request.username(), request.bio(), request.theme(), request.socials()));
   }
 
   @PutMapping("/order")
   public MyProfile reorder(
       @AuthenticationPrincipal Long userId, @RequestBody ReorderRequest request) {
-    service.reorderProfile(userId, request.items());
+    reorderProfile.execute(new ReorderProfileCommand(userId, request.items()));
     return queryService.myProfile(userId);
   }
 
@@ -48,5 +54,5 @@ public class MyProfileController {
           String theme,
       @Size(max = 1024) String socials) {}
 
-  public record ReorderRequest(List<ProfileService.ReorderItem> items) {}
+  public record ReorderRequest(List<ReorderItem> items) {}
 }
