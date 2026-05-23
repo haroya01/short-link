@@ -1,8 +1,8 @@
 package com.example.short_link.profile.api;
 
 import com.example.short_link.profile.application.ProfileNotFoundException;
-import com.example.short_link.profile.application.ProfileService;
 import com.example.short_link.profile.application.PublicProfile;
+import com.example.short_link.profile.application.read.ProfileQueryService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import java.util.List;
@@ -24,12 +24,12 @@ public class PublicProfileController {
 
   private static final int LIST_MAX_PAGE_SIZE = 1000;
 
-  private final ProfileService service;
+  private final ProfileQueryService queryService;
   private final UserRepository userRepository;
 
   @GetMapping("/{username}")
   public PublicProfile get(@PathVariable String username) {
-    return service.findByUsername(username);
+    return queryService.findByUsername(username);
   }
 
   /**
