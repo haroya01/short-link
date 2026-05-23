@@ -1,6 +1,9 @@
 package com.example.short_link.profile.api;
 
-import com.example.short_link.profile.application.ProfileService;
+import com.example.short_link.profile.application.write.SetLinkHighlightCommand;
+import com.example.short_link.profile.application.write.SetLinkHighlightUseCase;
+import com.example.short_link.profile.application.write.ToggleLinkOnProfileCommand;
+import com.example.short_link.profile.application.write.ToggleLinkOnProfileUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -14,14 +17,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class LinkProfileToggleController {
 
-  private final ProfileService service;
+  private final ToggleLinkOnProfileUseCase toggleLinkOnProfile;
+  private final SetLinkHighlightUseCase setLinkHighlight;
 
   @PutMapping
   public ToggleResponse toggle(
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @RequestBody ToggleRequest request) {
-    service.toggleLinkOnProfile(userId, shortCode, request.show());
+    toggleLinkOnProfile.execute(new ToggleLinkOnProfileCommand(userId, shortCode, request.show()));
     return new ToggleResponse(request.show());
   }
 
@@ -30,7 +34,7 @@ public class LinkProfileToggleController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @RequestBody HighlightRequest request) {
-    service.setLinkHighlight(userId, shortCode, request.highlighted());
+    setLinkHighlight.execute(new SetLinkHighlightCommand(userId, shortCode, request.highlighted()));
     return new HighlightResponse(request.highlighted());
   }
 
