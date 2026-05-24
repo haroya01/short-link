@@ -1,9 +1,9 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.LinkTagsRequest;
+import com.example.short_link.link.api.response.LinkTagsResponse;
 import com.example.short_link.link.application.LinkTagService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Size;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,8 +33,4 @@ public class LinkTagController {
       @Valid @RequestBody LinkTagsRequest request) {
     return new LinkTagsResponse(shortCode, service.replaceTags(userId, shortCode, request.tags()));
   }
-
-  public record LinkTagsRequest(@Size(max = LinkTagService.MAX_TAGS_PER_LINK) List<String> tags) {}
-
-  public record LinkTagsResponse(String shortCode, List<String> tags) {}
 }

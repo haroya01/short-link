@@ -1,9 +1,8 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.CustomDomainRegisterRequest;
 import com.example.short_link.link.application.CustomDomainService;
 import com.example.short_link.link.application.CustomDomainService.DomainSummary;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,7 +30,7 @@ public class CustomDomainController {
 
   @PostMapping
   public ResponseEntity<DomainSummary> register(
-      @AuthenticationPrincipal Long userId, @RequestBody RegisterRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody CustomDomainRegisterRequest request) {
     DomainSummary saved = service.register(userId, request.domain());
     return ResponseEntity.status(HttpStatus.CREATED).body(saved);
   }
@@ -46,6 +45,4 @@ public class CustomDomainController {
     service.delete(userId, id);
     return ResponseEntity.noContent().build();
   }
-
-  public record RegisterRequest(@NotBlank @Size(max = 253) String domain) {}
 }

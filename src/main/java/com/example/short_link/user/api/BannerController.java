@@ -1,5 +1,7 @@
 package com.example.short_link.user.api;
 
+import com.example.short_link.user.api.request.BannerCommitRequest;
+import com.example.short_link.user.api.request.BannerPresignRequest;
 import com.example.short_link.user.application.avatar.BannerService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,13 +21,13 @@ public class BannerController {
 
   @PostMapping("/presigned-url")
   public BannerService.PresignResult presign(
-      @AuthenticationPrincipal Long userId, @RequestBody PresignRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody BannerPresignRequest request) {
     return service.presignUpload(userId, request.contentType());
   }
 
   @PutMapping
   public BannerService.CommitResult commit(
-      @AuthenticationPrincipal Long userId, @RequestBody CommitRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody BannerCommitRequest request) {
     return service.commitUpload(userId, request.key());
   }
 
@@ -33,8 +35,4 @@ public class BannerController {
   public void clear(@AuthenticationPrincipal Long userId) {
     service.clearBanner(userId);
   }
-
-  public record PresignRequest(String contentType) {}
-
-  public record CommitRequest(String key) {}
 }

@@ -1,9 +1,8 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.response.LinkDetailResponse;
 import com.example.short_link.link.application.LinkDetailService;
 import com.example.short_link.link.application.LinkDetailView;
-import java.time.Instant;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,22 +39,4 @@ public class LinkDetailController {
         v.note(),
         v.expiredMessage());
   }
-
-  public record LinkDetailResponse(
-      String shortCode,
-      String originalUrl,
-      Instant expiresAt,
-      String ogTitle,
-      String ogDescription,
-      String ogImage,
-      String ogTitleOverride,
-      String ogDescriptionOverride,
-      String ogImageOverride,
-      boolean passwordProtected,
-      Integer maxViews,
-      int viewCount,
-      boolean statsPublic,
-      List<String> tags,
-      String note,
-      String expiredMessage) {}
 }

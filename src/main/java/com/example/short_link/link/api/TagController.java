@@ -1,9 +1,8 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.TagRequest;
 import com.example.short_link.link.application.TagService;
 import com.example.short_link.link.application.TagService.TagSummary;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -50,7 +49,4 @@ public class TagController {
     service.delete(userId, id);
     return ResponseEntity.noContent().build();
   }
-
-  public record TagRequest(
-      @Size(max = 50) String name, @Pattern(regexp = "^(#[0-9a-fA-F]{6})?$") String color) {}
 }

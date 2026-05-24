@@ -1,5 +1,7 @@
 package com.example.short_link.profile.api;
 
+import com.example.short_link.profile.api.request.ProfileImageCommitRequest;
+import com.example.short_link.profile.api.request.ProfileImagePresignRequest;
 import com.example.short_link.profile.image.ProfileImageService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -24,17 +26,13 @@ public class ProfileImageController {
 
   @PostMapping("/presigned-url")
   public ProfileImageService.PresignResult presign(
-      @AuthenticationPrincipal Long userId, @RequestBody PresignRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody ProfileImagePresignRequest request) {
     return service.presignUpload(userId, request.contentType());
   }
 
   @PutMapping
   public ProfileImageService.CommitResult commit(
-      @AuthenticationPrincipal Long userId, @RequestBody CommitRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody ProfileImageCommitRequest request) {
     return service.commitUpload(userId, request.key());
   }
-
-  public record PresignRequest(String contentType) {}
-
-  public record CommitRequest(String key) {}
 }

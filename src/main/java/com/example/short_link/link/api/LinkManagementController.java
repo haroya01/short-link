@@ -1,5 +1,9 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.BulkDeleteRequest;
+import com.example.short_link.link.api.request.UpdateLinkRequest;
+import com.example.short_link.link.api.response.BulkDeleteResponse;
+import com.example.short_link.link.api.response.MyLinkResponse;
 import com.example.short_link.link.application.LinkManagementService;
 import com.example.short_link.link.application.MyLink;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
@@ -59,6 +63,4 @@ public class LinkManagementController {
     int removed = service.bulkDelete(userId, request.shortCodes());
     return new BulkDeleteResponse(removed, request.shortCodes().size() - removed);
   }
-
-  public record BulkDeleteResponse(int deleted, int skipped) {}
 }

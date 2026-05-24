@@ -1,9 +1,9 @@
 package com.example.short_link.admin.api;
 
+import com.example.short_link.admin.api.request.BlockDomainRequest;
+import com.example.short_link.admin.api.response.BlockedDomainResponse;
 import com.example.short_link.admin.application.BlockedDomainService;
 import com.example.short_link.admin.domain.BlockedDomainEntity;
-import jakarta.validation.constraints.NotBlank;
-import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,7 +31,7 @@ public class BlockedDomainController {
 
   @PostMapping
   public ResponseEntity<BlockedDomainResponse> block(
-      @AuthenticationPrincipal Long userId, @RequestBody BlockRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody BlockDomainRequest request) {
     BlockedDomainEntity blocked = service.block(request.domain(), request.reason(), userId);
     return ResponseEntity.status(HttpStatus.CREATED).body(BlockedDomainResponse.from(blocked));
   }
@@ -40,15 +40,5 @@ public class BlockedDomainController {
   public ResponseEntity<Void> unblock(@PathVariable String domain) {
     boolean removed = service.unblock(domain);
     return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
-  }
-
-  public record BlockRequest(@NotBlank String domain, String reason) {}
-
-  public record BlockedDomainResponse(
-      Long id, String domain, String reason, Long blockedByUserId, Instant blockedAt) {
-    static BlockedDomainResponse from(BlockedDomainEntity e) {
-      return new BlockedDomainResponse(
-          e.getId(), e.getDomain(), e.getReason(), e.getBlockedByUserId(), e.getBlockedAt());
-    }
   }
 }

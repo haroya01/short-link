@@ -1,10 +1,12 @@
 package com.example.short_link.user.api;
 
+import com.example.short_link.user.api.request.TwoFactorCodeRequest;
+import com.example.short_link.user.api.response.TwoFactorConfirmResponse;
+import com.example.short_link.user.api.response.TwoFactorSetupResponse;
+import com.example.short_link.user.api.response.TwoFactorStatusResponse;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.application.twofactor.TwoFactorService.SetupChallenge;
 import com.example.short_link.user.application.twofactor.TwoFactorService.Status;
-import jakarta.validation.constraints.NotBlank;
-import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,41 +24,34 @@ public class TwoFactorController {
   private final TwoFactorService service;
 
   @GetMapping("/status")
-  public StatusResponse status(@AuthenticationPrincipal Long userId) {
+  public TwoFactorStatusResponse status(@AuthenticationPrincipal Long userId) {
     Status s = service.status(userId);
-    return new StatusResponse(s.enabled(), s.lastUsedAt());
+    return new TwoFactorStatusResponse(s.enabled(), s.lastUsedAt());
   }
 
   @PostMapping("/setup")
-  public SetupResponse setup(@AuthenticationPrincipal Long userId) {
+  public TwoFactorSetupResponse setup(@AuthenticationPrincipal Long userId) {
     SetupChallenge challenge = service.start(userId);
-    return new SetupResponse(challenge.secret(), challenge.provisioningUri());
+    return new TwoFactorSetupResponse(challenge.secret(), challenge.provisioningUri());
   }
 
   @PostMapping("/confirm")
-  public ConfirmResponse confirm(
-      @AuthenticationPrincipal Long userId, @RequestBody CodeRequest request) {
+  public TwoFactorConfirmResponse confirm(
+      @AuthenticationPrincipal Long userId, @RequestBody TwoFactorCodeRequest request) {
     List<String> codes = service.confirm(userId, request.code());
-    return new ConfirmResponse(codes);
+    return new TwoFactorConfirmResponse(codes);
   }
 
   @PostMapping("/disable")
-  public void disable(@AuthenticationPrincipal Long userId, @RequestBody CodeRequest request) {
+  public void disable(
+      @AuthenticationPrincipal Long userId, @RequestBody TwoFactorCodeRequest request) {
     service.disable(userId, request.code());
   }
 
   @PostMapping("/recovery-codes/regenerate")
-  public ConfirmResponse regenerate(
-      @AuthenticationPrincipal Long userId, @RequestBody CodeRequest request) {
+  public TwoFactorConfirmResponse regenerate(
+      @AuthenticationPrincipal Long userId, @RequestBody TwoFactorCodeRequest request) {
     List<String> codes = service.regenerateRecoveryCodes(userId, request.code());
-    return new ConfirmResponse(codes);
+    return new TwoFactorConfirmResponse(codes);
   }
-
-  public record StatusResponse(boolean enabled, Instant lastUsedAt) {}
-
-  public record SetupResponse(String secret, String provisioningUri) {}
-
-  public record CodeRequest(@NotBlank String code) {}
-
-  public record ConfirmResponse(List<String> recoveryCodes) {}
 }

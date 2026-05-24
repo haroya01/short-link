@@ -1,10 +1,11 @@
 package com.example.short_link.user.api;
 
+import com.example.short_link.user.api.request.TwoFactorVerifyRequest;
+import com.example.short_link.user.api.response.TokenResponse;
 import com.example.short_link.user.application.AuthService;
 import com.example.short_link.user.application.IssuedTokens;
 import com.example.short_link.user.exception.InvalidRefreshTokenException;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -52,7 +53,4 @@ public class AuthController {
     refreshCookieWriter.set(res, tokens.refreshToken());
     return new TokenResponse(tokens.accessToken());
   }
-
-  public record TwoFactorVerifyRequest(
-      @NotBlank String challenge, @NotBlank String code, boolean recovery) {}
 }

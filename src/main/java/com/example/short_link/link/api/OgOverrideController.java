@@ -1,5 +1,7 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.OgOverrideRequest;
+import com.example.short_link.link.api.response.OgOverrideResponse;
 import com.example.short_link.link.application.OgOverrideResult;
 import com.example.short_link.link.application.OgOverrideService;
 import jakarta.validation.Valid;
@@ -28,7 +30,4 @@ public class OgOverrideController {
             userId, shortCode, request.ogTitle(), request.ogDescription(), request.ogImage());
     return new OgOverrideResponse(r.shortCode(), r.ogTitle(), r.ogDescription(), r.ogImage());
   }
-
-  public record OgOverrideResponse(
-      String shortCode, String ogTitle, String ogDescription, String ogImage) {}
 }

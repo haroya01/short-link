@@ -1,5 +1,8 @@
 package com.example.short_link.user.api;
 
+import com.example.short_link.user.api.request.DevLoginRequest;
+import com.example.short_link.user.api.response.TokenResponse;
+import com.example.short_link.user.api.response.TwoFactorChallengeResponse;
 import com.example.short_link.user.application.AuthService;
 import com.example.short_link.user.application.AuthService.LoginResult;
 import jakarta.servlet.http.HttpServletResponse;
@@ -41,6 +44,4 @@ public class DevAuthController {
     refreshCookieWriter.set(res, tokens.issued().refreshToken());
     return ResponseEntity.ok(new TokenResponse(tokens.issued().accessToken()));
   }
-
-  public record TwoFactorChallengeResponse(String challenge) {}
 }
