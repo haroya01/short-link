@@ -1,6 +1,6 @@
 package com.example.short_link.link.application.write;
 
-import com.example.short_link.link.application.WebhookSummary;
+import com.example.short_link.link.application.dto.WebhookSummary;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

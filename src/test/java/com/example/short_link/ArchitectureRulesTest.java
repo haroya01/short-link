@@ -14,26 +14,26 @@ class ArchitectureRulesTest {
 
   private static final Path MAIN = Path.of("src/main/java/com/example/short_link");
 
-  private static final Pattern FEATURE_API_IMPORT =
+  private static final Pattern FEATURE_PRESENTATION_IMPORT =
       Pattern.compile(
-          "^import com\\.example\\.short_link\\.(admin|billing|campaign|link|profile|user)\\.api\\.",
+          "^import com\\.example\\.short_link\\.(admin|billing|campaign|link|profile|user)\\.presentation\\.",
           Pattern.MULTILINE);
 
   private static final Pattern REPOSITORY_IMPORT =
       Pattern.compile("^import com\\.example\\.short_link\\..*Repository;", Pattern.MULTILINE);
 
-  private static final Pattern API_DTO_FILE =
+  private static final Pattern PRESENTATION_DTO_FILE =
       Pattern.compile(".*(Request|Response|Page|ProblemDetails)\\.java$");
 
-  private static final Pattern NESTED_API_DTO =
+  private static final Pattern NESTED_PRESENTATION_DTO =
       Pattern.compile("\\brecord\\s+\\w*(Request|Response|Page)\\b");
 
   @Test
-  void applicationLayerDoesNotDependOnFeatureApiLayer() throws IOException {
+  void applicationLayerDoesNotDependOnFeaturePresentationLayer() throws IOException {
     List<String> violations =
         javaSources()
             .filter(path -> relative(path).contains("/application/"))
-            .filter(path -> FEATURE_API_IMPORT.matcher(read(path)).find())
+            .filter(path -> FEATURE_PRESENTATION_IMPORT.matcher(read(path)).find())
             .map(ArchitectureRulesTest::relative)
             .toList();
 
@@ -72,16 +72,22 @@ class ArchitectureRulesTest {
   }
 
   @Test
-  void apiDtosLiveInRequestOrResponsePackages() throws IOException {
+  void presentationDtosLiveInRequestResponseOrSubFeaturePackages() throws IOException {
     List<String> violations =
         javaSources()
-            .filter(path -> relative(path).contains("/api/"))
-            .filter(path -> API_DTO_FILE.matcher(path.getFileName().toString()).matches())
+            .filter(path -> relative(path).contains("/presentation/"))
+            .filter(path -> PRESENTATION_DTO_FILE.matcher(path.getFileName().toString()).matches())
             .filter(
                 path -> {
                   String relative = relative(path);
-                  return !relative.contains("/api/request/")
-                      && !relative.contains("/api/response/");
+                  if (relative.contains("/presentation/request/")
+                      || relative.contains("/presentation/response/")) {
+                    return false;
+                  }
+                  // sub-feature folder (e.g., /presentation/oembed/OembedResponse.java) is also OK.
+                  // Violation = file directly under /presentation/ (matches
+                  // /presentation/Foo.java).
+                  return relative.matches(".*/presentation/[A-Z][A-Za-z0-9]*\\.java$");
                 })
             .map(ArchitectureRulesTest::relative)
             .toList();
@@ -90,12 +96,12 @@ class ArchitectureRulesTest {
   }
 
   @Test
-  void apiControllersDoNotDeclareRequestOrResponseDtosInline() throws IOException {
+  void presentationControllersDoNotDeclareRequestOrResponseDtosInline() throws IOException {
     List<String> violations =
         javaSources()
-            .filter(path -> relative(path).contains("/api/"))
+            .filter(path -> relative(path).contains("/presentation/"))
             .filter(path -> path.getFileName().toString().endsWith("Controller.java"))
-            .filter(path -> NESTED_API_DTO.matcher(read(path)).find())
+            .filter(path -> NESTED_PRESENTATION_DTO.matcher(read(path)).find())
             .map(ArchitectureRulesTest::relative)
             .toList();
 

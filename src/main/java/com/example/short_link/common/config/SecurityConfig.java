@@ -1,11 +1,11 @@
 package com.example.short_link.common.config;
 
-import com.example.short_link.common.api.RateLimitFilter;
-import com.example.short_link.user.api.ApiKeyAuthenticationFilter;
-import com.example.short_link.user.api.JsonAuthenticationEntryPoint;
-import com.example.short_link.user.api.JwtAuthenticationFilter;
-import com.example.short_link.user.api.OAuth2LoginFailureHandler;
-import com.example.short_link.user.api.OAuth2LoginSuccessHandler;
+import com.example.short_link.common.web.RateLimitFilter;
+import com.example.short_link.user.presentation.ApiKeyAuthenticationFilter;
+import com.example.short_link.user.presentation.JsonAuthenticationEntryPoint;
+import com.example.short_link.user.presentation.JwtAuthenticationFilter;
+import com.example.short_link.user.presentation.OAuth2LoginFailureHandler;
+import com.example.short_link.user.presentation.OAuth2LoginSuccessHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Arrays;
 import java.util.List;

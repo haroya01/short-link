@@ -3,6 +3,9 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.campaign.application.dto.CampaignBatchBulkRequest;
+import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
+import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.exception.CampaignNotOwnedException;
 import com.example.short_link.campaign.exception.CampaignTerminalStateException;
