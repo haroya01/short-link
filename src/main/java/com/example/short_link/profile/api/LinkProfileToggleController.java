@@ -1,5 +1,9 @@
 package com.example.short_link.profile.api;
 
+import com.example.short_link.profile.api.request.LinkProfileHighlightRequest;
+import com.example.short_link.profile.api.request.LinkProfileToggleRequest;
+import com.example.short_link.profile.api.response.LinkProfileHighlightResponse;
+import com.example.short_link.profile.api.response.LinkProfileToggleResponse;
 import com.example.short_link.profile.application.write.SetLinkHighlightCommand;
 import com.example.short_link.profile.application.write.SetLinkHighlightUseCase;
 import com.example.short_link.profile.application.write.ToggleLinkOnProfileCommand;
@@ -21,28 +25,20 @@ public class LinkProfileToggleController {
   private final SetLinkHighlightUseCase setLinkHighlight;
 
   @PutMapping
-  public ToggleResponse toggle(
+  public LinkProfileToggleResponse toggle(
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
-      @RequestBody ToggleRequest request) {
+      @RequestBody LinkProfileToggleRequest request) {
     toggleLinkOnProfile.execute(new ToggleLinkOnProfileCommand(userId, shortCode, request.show()));
-    return new ToggleResponse(request.show());
+    return new LinkProfileToggleResponse(request.show());
   }
 
   @PutMapping("/highlight")
-  public HighlightResponse setHighlight(
+  public LinkProfileHighlightResponse setHighlight(
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
-      @RequestBody HighlightRequest request) {
+      @RequestBody LinkProfileHighlightRequest request) {
     setLinkHighlight.execute(new SetLinkHighlightCommand(userId, shortCode, request.highlighted()));
-    return new HighlightResponse(request.highlighted());
+    return new LinkProfileHighlightResponse(request.highlighted());
   }
-
-  public record ToggleRequest(boolean show) {}
-
-  public record ToggleResponse(boolean show) {}
-
-  public record HighlightRequest(boolean highlighted) {}
-
-  public record HighlightResponse(boolean highlighted) {}
 }

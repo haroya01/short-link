@@ -1,6 +1,6 @@
 package com.example.short_link.profile.api;
 
-import com.example.short_link.common.api.ProblemDetails;
+import com.example.short_link.common.api.response.ProblemDetails;
 import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
 import com.example.short_link.profile.exception.InvalidUsernameException;
 import com.example.short_link.profile.exception.OembedNotApplicableException;

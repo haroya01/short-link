@@ -1,6 +1,6 @@
 package com.example.short_link.link.api;
 
-import com.example.short_link.common.api.ProblemDetails;
+import com.example.short_link.common.api.response.ProblemDetails;
 import com.example.short_link.link.exception.BulkImportTooLargeException;
 import com.example.short_link.link.exception.CustomDomainNotFoundException;
 import com.example.short_link.link.exception.CustomDomainNotVerifiedException;

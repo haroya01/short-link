@@ -1,7 +1,8 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.LinkVisibilityRequest;
+import com.example.short_link.link.api.response.LinkVisibilityResponse;
 import com.example.short_link.link.application.LinkVisibilityService;
-import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -18,15 +19,11 @@ public class LinkVisibilityController {
   private final LinkVisibilityService service;
 
   @PatchMapping("/{shortCode}/visibility")
-  public VisibilityResponse update(
+  public LinkVisibilityResponse update(
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
-      @RequestBody VisibilityRequest request) {
+      @RequestBody LinkVisibilityRequest request) {
     boolean nowPublic = service.setStatsPublic(userId, shortCode, request.statsPublic());
-    return new VisibilityResponse(shortCode, nowPublic);
+    return new LinkVisibilityResponse(shortCode, nowPublic);
   }
-
-  public record VisibilityRequest(@NotNull Boolean statsPublic) {}
-
-  public record VisibilityResponse(String shortCode, boolean statsPublic) {}
 }

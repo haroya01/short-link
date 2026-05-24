@@ -4,7 +4,7 @@ import com.example.short_link.billing.exception.BillingGatewayException;
 import com.example.short_link.billing.exception.BillingNotConfiguredException;
 import com.example.short_link.billing.exception.BillingNotEnrolledException;
 import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
-import com.example.short_link.common.api.ProblemDetails;
+import com.example.short_link.common.api.response.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;

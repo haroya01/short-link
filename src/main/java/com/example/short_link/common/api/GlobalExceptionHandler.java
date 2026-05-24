@@ -1,5 +1,6 @@
 package com.example.short_link.common.api;
 
+import com.example.short_link.common.api.response.ProblemDetails;
 import com.example.short_link.common.pow.PowRequiredException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;

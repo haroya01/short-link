@@ -1,16 +1,15 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.LinkDestinationAddRequest;
+import com.example.short_link.link.api.request.LinkDestinationBlockedCountriesRequest;
+import com.example.short_link.link.api.request.LinkDestinationUpdateRequest;
+import com.example.short_link.link.api.response.LinkDestinationBlockedCountriesResponse;
 import com.example.short_link.link.application.DestinationSummary;
 import com.example.short_link.link.application.read.LinkDestinationQueryService;
 import com.example.short_link.link.application.write.AddDestinationUseCase;
 import com.example.short_link.link.application.write.DeleteDestinationUseCase;
 import com.example.short_link.link.application.write.SetBlockedCountriesUseCase;
 import com.example.short_link.link.application.write.UpdateDestinationUseCase;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -31,9 +30,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class LinkDestinationController {
 
-  private static final String DEVICE_PATTERN = "^(mobile|tablet|desktop)?$";
-  private static final String OS_PATTERN = "^(ios|android|windows|macos|linux)?$";
-
   private final LinkDestinationQueryService query;
   private final AddDestinationUseCase addUseCase;
   private final UpdateDestinationUseCase updateUseCase;
@@ -50,7 +46,7 @@ public class LinkDestinationController {
   public ResponseEntity<DestinationSummary> add(
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
-      @RequestBody AddRequest request) {
+      @RequestBody LinkDestinationAddRequest request) {
     DestinationSummary added =
         addUseCase.execute(
             userId,
@@ -69,7 +65,7 @@ public class LinkDestinationController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @PathVariable Long id,
-      @RequestBody UpdateRequest request) {
+      @RequestBody LinkDestinationUpdateRequest request) {
     return updateUseCase.execute(
         userId,
         shortCode,
@@ -91,38 +87,11 @@ public class LinkDestinationController {
   }
 
   @PutMapping("/{shortCode}/blocked-countries")
-  public BlockedCountriesResponse setBlocked(
+  public LinkDestinationBlockedCountriesResponse setBlocked(
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
-      @RequestBody BlockedCountriesRequest request) {
+      @RequestBody LinkDestinationBlockedCountriesRequest request) {
     var link = setBlockedUseCase.execute(userId, shortCode, request.codes());
-    return new BlockedCountriesResponse(link.getBlockedCountries());
+    return new LinkDestinationBlockedCountriesResponse(link.getBlockedCountries());
   }
-
-  public record AddRequest(
-      @NotBlank @Size(max = 2048) String url,
-      @Min(1) @Max(100) Integer weight,
-      @Size(max = 40) String label,
-      @Pattern(regexp = "^[A-Za-z]{2}$", message = "countryCode must be ISO-3166 alpha-2")
-          String countryCode,
-      @Pattern(regexp = DEVICE_PATTERN, message = "deviceClass must be mobile/tablet/desktop")
-          String deviceClass,
-      @Pattern(regexp = OS_PATTERN, message = "os must be ios/android/windows/macos/linux")
-          String os) {}
-
-  public record UpdateRequest(
-      @Size(max = 2048) String url,
-      @Min(1) @Max(100) Integer weight,
-      @Size(max = 40) String label,
-      Boolean enabled,
-      @Pattern(
-              regexp = "^([A-Za-z]{2})?$",
-              message = "countryCode must be ISO-3166 alpha-2 or empty")
-          String countryCode,
-      @Pattern(regexp = DEVICE_PATTERN) String deviceClass,
-      @Pattern(regexp = OS_PATTERN) String os) {}
-
-  public record BlockedCountriesRequest(@Size(max = 255) String codes) {}
-
-  public record BlockedCountriesResponse(String codes) {}
 }

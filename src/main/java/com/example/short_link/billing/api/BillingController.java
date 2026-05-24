@@ -1,5 +1,6 @@
 package com.example.short_link.billing.api;
 
+import com.example.short_link.billing.api.response.CheckoutResponse;
 import com.example.short_link.billing.application.write.HandleSubscriptionWebhookUseCase;
 import com.example.short_link.billing.application.write.IssuePortalSessionCommand;
 import com.example.short_link.billing.application.write.IssuePortalSessionUseCase;
@@ -50,6 +51,4 @@ public class BillingController {
     handleWebhook.execute(new SubscriptionWebhookCommand(payload, signature));
     return ResponseEntity.ok("ok");
   }
-
-  public record CheckoutResponse(String url) {}
 }

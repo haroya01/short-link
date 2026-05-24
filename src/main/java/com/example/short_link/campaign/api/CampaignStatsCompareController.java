@@ -1,5 +1,6 @@
 package com.example.short_link.campaign.api;
 
+import com.example.short_link.campaign.api.request.CampaignStatsCompareRequest;
 import com.example.short_link.campaign.application.CampaignStatsCompareResponse;
 import com.example.short_link.campaign.application.CampaignStatsService;
 import jakarta.validation.Valid;

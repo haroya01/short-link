@@ -1,5 +1,7 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.response.MyLinkResponse;
+import com.example.short_link.link.api.response.MyLinksPage;
 import com.example.short_link.link.application.MyLinksQuery;
 import com.example.short_link.link.application.MyLinksResult;
 import com.example.short_link.link.application.MyLinksService;
