@@ -1,6 +1,5 @@
 package com.example.short_link.profile.email;
 
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
@@ -14,6 +13,7 @@ import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
 import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -45,8 +45,7 @@ class EmailLeadControllerTest {
         blockRepository.save(
             new ProfileBlockEntity(
                 user.getId(), ProfileBlockType.EMAIL_FORM, "{\"title\":\"newsletter\"}", 1));
-    when(leadService.submit(eq(user.getId()), eq(block.getId()), eq("x@y.com"), anyString()))
-        .thenReturn(null);
+    when(leadService.submitPublic(eq(block.getId()), eq("x@y.com"), anyString())).thenReturn(null);
 
     mvc.perform(
             post("/api/v1/public/email-leads")
@@ -58,12 +57,16 @@ class EmailLeadControllerTest {
 
   @Test
   void submitMissingBlockReturns404() throws Exception {
+    doThrow(new ProfileNotFoundException("block 999999"))
+        .when(leadService)
+        .submitPublic(eq(999999L), eq("x@y.com"), anyString());
+
     mvc.perform(
             post("/api/v1/public/email-leads")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"blockId\":999999,\"email\":\"x@y.com\"}"))
         .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.ok").value(false));
+        .andExpect(jsonPath("$.code").value("PROFILE_NOT_FOUND"));
   }
 
   @Test
@@ -72,6 +75,9 @@ class EmailLeadControllerTest {
     ProfileBlockEntity block =
         blockRepository.save(
             new ProfileBlockEntity(user.getId(), ProfileBlockType.DIVIDER, null, 1));
+    doThrow(new ProfileNotFoundException("block " + block.getId()))
+        .when(leadService)
+        .submitPublic(eq(block.getId()), eq("x@y.com"), anyString());
 
     mvc.perform(
             post("/api/v1/public/email-leads")
@@ -89,14 +95,14 @@ class EmailLeadControllerTest {
                 user.getId(), ProfileBlockType.EMAIL_FORM, "{\"title\":\"newsletter\"}", 1));
     doThrow(new InvalidUsernameException("bad email"))
         .when(leadService)
-        .submit(anyLong(), anyLong(), anyString(), anyString());
+        .submitPublic(eq(block.getId()), eq("bogus"), anyString());
 
     mvc.perform(
             post("/api/v1/public/email-leads")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"blockId\":" + block.getId() + ",\"email\":\"bogus\"}"))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.ok").value(false));
+        .andExpect(jsonPath("$.code").value("INVALID_USERNAME"));
   }
 
   @Test
@@ -108,14 +114,14 @@ class EmailLeadControllerTest {
                 user.getId(), ProfileBlockType.EMAIL_FORM, "{\"title\":\"newsletter\"}", 1));
     doThrow(new EmailLeadRateLimitedException("too fast"))
         .when(leadService)
-        .submit(anyLong(), anyLong(), anyString(), anyString());
+        .submitPublic(eq(block.getId()), eq("a@b.com"), anyString());
 
     mvc.perform(
             post("/api/v1/public/email-leads")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"blockId\":" + block.getId() + ",\"email\":\"a@b.com\"}"))
         .andExpect(status().isTooManyRequests())
-        .andExpect(jsonPath("$.ok").value(false));
+        .andExpect(jsonPath("$.code").value("EMAIL_LEAD_RATE_LIMITED"));
   }
 
   @Test

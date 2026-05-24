@@ -2,12 +2,8 @@ package com.example.short_link.profile.api;
 
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.read.ProfileQueryService;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -24,7 +20,7 @@ public class PublicProfileController {
   private final ProfileQueryService queryService;
 
   @GetMapping("/{username}")
-  public PublicProfile get(@PathVariable String username) {
+  public PublicProfile publicProfile(@PathVariable String username) {
     return queryService.findByUsername(username);
   }
 
@@ -42,11 +38,6 @@ public class PublicProfileController {
     ProfileQueryService.PublicHandlesPage p = queryService.publicHandlesPage(safePage, safeSize);
     List<HandleItem> items = p.handles().stream().map(HandleItem::new).toList();
     return new ListResponse(items, p.total());
-  }
-
-  @ExceptionHandler(ProfileNotFoundException.class)
-  public ResponseEntity<String> notFound() {
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).body("not found");
   }
 
   public record HandleItem(String username) {}

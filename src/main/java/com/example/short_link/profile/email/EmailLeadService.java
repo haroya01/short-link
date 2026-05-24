@@ -77,6 +77,16 @@ public class EmailLeadService {
         new EmailLeadEntity(ownerUserId, block.getId(), normalizedEmail, ipHash));
   }
 
+  @Transactional
+  public EmailLeadEntity submitPublic(Long blockId, String email, String clientIp) {
+    ProfileBlockEntity block =
+        blockRepository
+            .findById(blockId)
+            .filter(b -> b.getType() == ProfileBlockType.EMAIL_FORM)
+            .orElseThrow(() -> new ProfileNotFoundException("block " + blockId));
+    return submit(block.getUserId(), block.getId(), email, clientIp);
+  }
+
   @Transactional(readOnly = true)
   public List<EmailLeadEntity> list(Long userId, int page, int size) {
     int safeSize = Math.min(Math.max(size, 1), PAGE_SIZE_MAX);

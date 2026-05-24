@@ -70,7 +70,7 @@ class BillingControllerTest {
 
     mvc.perform(post("/api/v1/billing/checkout").header("Authorization", "Bearer " + token))
         .andExpect(status().isServiceUnavailable())
-        .andExpect(content().string("billing not configured"));
+        .andExpect(jsonPath("$.code").value("BILLING_NOT_CONFIGURED"));
   }
 
   @Test
@@ -94,7 +94,7 @@ class BillingControllerTest {
 
     mvc.perform(post("/api/v1/billing/portal").header("Authorization", "Bearer " + token))
         .andExpect(status().isConflict())
-        .andExpect(content().string("not enrolled"));
+        .andExpect(jsonPath("$.code").value("BILLING_NOT_ENROLLED"));
   }
 
   @Test
@@ -120,6 +120,6 @@ class BillingControllerTest {
                 .header("Stripe-Signature", "t=1,v1=evil")
                 .content("{\"forged\":true}"))
         .andExpect(status().isBadRequest())
-        .andExpect(content().string("invalid signature"));
+        .andExpect(jsonPath("$.code").value("INVALID_WEBHOOK_SIGNATURE"));
   }
 }

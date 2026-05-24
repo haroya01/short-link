@@ -1,13 +1,8 @@
 package com.example.short_link.profile.visit;
 
-import com.example.short_link.profile.exception.ProfileNotFoundException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -26,7 +21,6 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PublicProfileVisitController {
 
-  private final UserRepository userRepository;
   private final ProfileVisitRecorder recorder;
 
   @PostMapping("/{username}/visit")
@@ -42,12 +36,8 @@ public class PublicProfileVisitController {
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
       HttpServletRequest req) {
-    UserEntity owner =
-        userRepository
-            .findByUsername(username.toLowerCase())
-            .orElseThrow(() -> new ProfileNotFoundException(username));
-    recorder.record(
-        owner.getId(),
+    recorder.recordUsername(
+        username,
         referrer,
         userAgent,
         clientIp(req),
@@ -59,11 +49,6 @@ public class PublicProfileVisitController {
         utmTerm,
         utmContent);
     return ResponseEntity.noContent().build();
-  }
-
-  @ExceptionHandler(ProfileNotFoundException.class)
-  public ResponseEntity<Void> notFound() {
-    return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
   }
 
   private static String clientIp(HttpServletRequest req) {

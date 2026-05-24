@@ -1,11 +1,13 @@
 package com.example.short_link.profile.oembed;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
+import com.example.short_link.profile.exception.OembedNotApplicableException;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -45,13 +47,15 @@ class OembedServiceTest {
   }
 
   @Test
-  void returnsNullForUnsupportedProvider() {
-    // No HTTP call should happen — unsupported host is rejected up-front.
+  void throwsForUnsupportedProvider() {
+    // No HTTP call should happen — unsupported host is rejected up-front with the domain
+    // exception the controller layer maps to 422.
     RestClient.Builder builder = RestClient.builder();
     MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
     OembedService service = new OembedService(builder.build());
 
-    assertThat(service.fetch("https://example.com/x")).isNull();
+    assertThatThrownBy(() -> service.fetch("https://example.com/x"))
+        .isInstanceOf(OembedNotApplicableException.class);
     server.verify();
   }
 

@@ -1,5 +1,6 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.application.LinkProtectionResult;
 import com.example.short_link.link.application.LinkProtectionService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,12 @@ public class LinkProtectionController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @Valid @RequestBody LinkProtectionRequest request) {
-    return service.update(userId, shortCode, request.password(), request.maxViews());
+    return toResponse(service.update(userId, shortCode, request.password(), request.maxViews()));
+  }
+
+  private static LinkProtectionResponse toResponse(LinkProtectionResult result) {
+    return new LinkProtectionResponse(
+        result.shortCode(), result.passwordProtected(), result.maxViews(), result.viewCount());
   }
 
   public record LinkProtectionResponse(

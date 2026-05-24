@@ -49,6 +49,20 @@ public class ProfileStatsService {
   }
 
   @Transactional(readOnly = true)
+  public boolean statsPublic(Long ownerUserId) {
+    UserEntity owner = userRepository.findById(ownerUserId).orElseThrow(UserNotFoundException::new);
+    return owner.isStatsPublic();
+  }
+
+  @Transactional
+  public boolean updateStatsPublic(Long ownerUserId, boolean statsPublic) {
+    UserEntity owner = userRepository.findById(ownerUserId).orElseThrow(UserNotFoundException::new);
+    owner.updateStatsPublic(statsPublic);
+    userRepository.save(owner);
+    return owner.isStatsPublic();
+  }
+
+  @Transactional(readOnly = true)
   public ProfileVisitSummary summaryForOwner(Long ownerUserId) {
     Instant now = Instant.now();
     long allTime = visits.countByProfileUserIdAndBotFalse(ownerUserId);

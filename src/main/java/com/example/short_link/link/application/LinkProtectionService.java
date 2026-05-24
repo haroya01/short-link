@@ -1,6 +1,5 @@
 package com.example.short_link.link.application;
 
-import com.example.short_link.link.api.LinkProtectionController.LinkProtectionResponse;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.link.exception.LinkNotFoundException;
@@ -20,7 +19,7 @@ public class LinkProtectionService {
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
-  public LinkProtectionResponse update(
+  public LinkProtectionResult update(
       Long userId, String shortCode, String password, Integer maxViews) {
     LinkEntity link =
         repository
@@ -33,7 +32,7 @@ public class LinkProtectionService {
       link.setPasswordHash(password.isBlank() ? null : encoder.encode(password));
     }
     link.setMaxViews(maxViews);
-    return new LinkProtectionResponse(
+    return new LinkProtectionResult(
         link.getShortCode(), link.hasPassword(), link.getMaxViews(), link.getViewCount());
   }
 

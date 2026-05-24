@@ -28,7 +28,7 @@ public class MyProfileController {
   private final ReorderProfileUseCase reorderProfile;
 
   @GetMapping
-  public MyProfile get(@AuthenticationPrincipal Long userId) {
+  public MyProfile myProfile(@AuthenticationPrincipal Long userId) {
     return queryService.myProfile(userId);
   }
 

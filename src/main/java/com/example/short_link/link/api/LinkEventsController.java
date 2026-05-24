@@ -1,5 +1,6 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.application.LinkEventsResult;
 import com.example.short_link.link.application.LinkEventsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +23,30 @@ public class LinkEventsController {
       @PathVariable String shortCode,
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) Integer limit) {
-    return service.events(userId, shortCode, cursor, limit);
+    return toResponse(service.events(userId, shortCode, cursor, limit));
+  }
+
+  private static LinkEventsPage toResponse(LinkEventsResult result) {
+    return new LinkEventsPage(
+        result.items().stream()
+            .map(
+                item ->
+                    new LinkEventResponse(
+                        item.clickedAt(),
+                        item.country(),
+                        item.region(),
+                        item.city(),
+                        item.device(),
+                        item.os(),
+                        item.browser(),
+                        item.referrer(),
+                        item.referrerHost(),
+                        item.channel(),
+                        item.language(),
+                        item.bot(),
+                        item.botName(),
+                        item.ipMasked()))
+            .toList(),
+        result.nextCursor());
   }
 }

@@ -1,8 +1,5 @@
 package com.example.short_link.profile.visit;
 
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,7 +16,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class MyProfileStatsController {
 
   private final ProfileStatsService stats;
-  private final UserRepository userRepository;
 
   @GetMapping("/stats")
   @PreAuthorize("isAuthenticated()")
@@ -36,18 +32,14 @@ public class MyProfileStatsController {
   @GetMapping("/stats/visibility")
   @PreAuthorize("isAuthenticated()")
   public StatsVisibilityResponse getVisibility(@AuthenticationPrincipal Long userId) {
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
-    return new StatsVisibilityResponse(user.isStatsPublic());
+    return new StatsVisibilityResponse(stats.statsPublic(userId));
   }
 
   @PatchMapping("/stats/visibility")
   @PreAuthorize("isAuthenticated()")
   public StatsVisibilityResponse setVisibility(
       @AuthenticationPrincipal Long userId, @RequestBody StatsVisibilityRequest body) {
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
-    user.updateStatsPublic(body.isPublic());
-    userRepository.save(user);
-    return new StatsVisibilityResponse(user.isStatsPublic());
+    return new StatsVisibilityResponse(stats.updateStatsPublic(userId, body.isPublic()));
   }
 
   public record StatsVisibilityRequest(boolean isPublic) {}
