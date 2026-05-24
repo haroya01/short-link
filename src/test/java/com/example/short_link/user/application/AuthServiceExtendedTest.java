@@ -7,7 +7,7 @@ import com.example.short_link.user.application.AuthService.LoginResult;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.InvalidRefreshTokenException;
 import com.example.short_link.user.exception.InvalidTotpCodeException;
 import org.junit.jupiter.api.Test;

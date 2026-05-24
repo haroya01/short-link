@@ -5,7 +5,7 @@ import com.example.short_link.link.application.dto.IssuedWebhook;
 import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkWebhookEntity;
-import com.example.short_link.link.domain.LinkWebhookRepository;
+import com.example.short_link.link.domain.repository.LinkWebhookRepository;
 import com.example.short_link.link.exception.InvalidWebhookUrlException;
 import com.example.short_link.link.exception.TooManyWebhooksException;
 import io.micrometer.core.instrument.MeterRegistry;

@@ -1,11 +1,20 @@
 package com.example.short_link.campaign.exception;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
 
-@ResponseStatus(HttpStatus.BAD_REQUEST)
-public class ReapplyOnNonEndedException extends RuntimeException {
+public final class ReapplyOnNonEndedException extends CampaignException {
+
   public ReapplyOnNonEndedException() {
     super("policy can only be re-applied to ENDED campaigns");
+  }
+
+  @Override
+  public HttpStatus status() {
+    return HttpStatus.BAD_REQUEST;
+  }
+
+  @Override
+  public String code() {
+    return "REAPPLY_ON_NON_ENDED";
   }
 }

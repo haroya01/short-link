@@ -1,7 +1,7 @@
 package com.example.short_link.profile.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;

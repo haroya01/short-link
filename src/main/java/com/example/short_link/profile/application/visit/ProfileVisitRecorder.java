@@ -15,7 +15,7 @@ import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.profile.exception.ProfileNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

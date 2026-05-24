@@ -1,9 +1,9 @@
 package com.example.short_link.profile.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
-import com.example.short_link.profile.domain.ProfileBlockRepository;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;

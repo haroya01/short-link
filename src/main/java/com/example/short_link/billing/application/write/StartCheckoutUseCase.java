@@ -5,7 +5,7 @@ import com.example.short_link.billing.domain.CheckoutInitiation;
 import com.example.short_link.billing.domain.SubscriptionGateway;
 import com.example.short_link.billing.exception.BillingNotConfiguredException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserNotFoundException;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;

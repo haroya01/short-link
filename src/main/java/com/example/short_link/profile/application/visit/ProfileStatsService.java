@@ -2,7 +2,7 @@ package com.example.short_link.profile.application.visit;
 
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserNotFoundException;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;

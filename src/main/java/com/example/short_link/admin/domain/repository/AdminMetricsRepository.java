@@ -1,5 +1,6 @@
-package com.example.short_link.admin.application;
+package com.example.short_link.admin.domain.repository;
 
+import com.example.short_link.admin.domain.*;
 import com.example.short_link.link.domain.ClickEventEntity;
 import java.time.Instant;
 import java.time.LocalDate;

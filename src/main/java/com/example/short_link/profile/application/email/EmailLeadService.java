@@ -1,10 +1,10 @@
 package com.example.short_link.profile.application.email;
 
 import com.example.short_link.profile.domain.ProfileBlockEntity;
-import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.email.EmailLeadEntity;
 import com.example.short_link.profile.domain.email.EmailLeadRepository;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
 import com.example.short_link.profile.exception.InvalidUsernameException;
 import com.example.short_link.profile.exception.ProfileNotFoundException;

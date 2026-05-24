@@ -1,8 +1,8 @@
 package com.example.short_link.campaign.application.read;
 
-import com.example.short_link.campaign.domain.CampaignBatchRepository;
 import com.example.short_link.campaign.domain.CampaignEntity;
-import com.example.short_link.campaign.domain.CampaignRepository;
+import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
+import com.example.short_link.campaign.domain.repository.CampaignRepository;
 import com.example.short_link.campaign.exception.CampaignNotFoundException;
 import com.example.short_link.campaign.exception.CampaignNotOwnedException;
 import java.util.List;

@@ -2,8 +2,9 @@ package com.example.short_link.campaign.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.campaign.domain.repository.*;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
 import java.util.List;

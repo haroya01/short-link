@@ -1,9 +1,9 @@
 package com.example.short_link.link.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.link.domain.LinkWebhookEntity;
-import com.example.short_link.link.domain.LinkWebhookRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkWebhookRepository;
 import com.example.short_link.link.exception.LinkNotFoundException;
 import com.example.short_link.link.exception.LinkNotOwnedException;
 import com.example.short_link.link.exception.WebhookNotFoundException;

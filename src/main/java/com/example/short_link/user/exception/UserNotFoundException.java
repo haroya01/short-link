@@ -1,8 +1,20 @@
 package com.example.short_link.user.exception;
 
-public class UserNotFoundException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public final class UserNotFoundException extends UserException {
 
   public UserNotFoundException() {
     super("user not found");
+  }
+
+  @Override
+  public HttpStatus status() {
+    return HttpStatus.NOT_FOUND;
+  }
+
+  @Override
+  public String code() {
+    return "USER_NOT_FOUND";
   }
 }

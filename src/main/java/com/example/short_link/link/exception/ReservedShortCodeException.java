@@ -1,8 +1,20 @@
 package com.example.short_link.link.exception;
 
-public class ReservedShortCodeException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public final class ReservedShortCodeException extends LinkException {
 
   public ReservedShortCodeException(String code) {
     super("short code is reserved: " + code);
+  }
+
+  @Override
+  public HttpStatus status() {
+    return HttpStatus.BAD_REQUEST;
+  }
+
+  @Override
+  public String code() {
+    return "RESERVED_SHORT_CODE";
   }
 }

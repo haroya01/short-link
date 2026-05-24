@@ -1,7 +1,7 @@
 package com.example.short_link.user.application;
 
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserNotFoundException;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;

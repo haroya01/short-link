@@ -7,7 +7,7 @@ import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.application.helper.ReservedShortCodes;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.DuplicateShortCodeException;
 import com.example.short_link.link.exception.LinkQuotaExceededException;
 import com.example.short_link.link.exception.MaliciousUrlException;

@@ -6,10 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.link.domain.CustomDomainEntity;
-import com.example.short_link.link.domain.CustomDomainRepository;
+import com.example.short_link.link.domain.repository.CustomDomainRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;

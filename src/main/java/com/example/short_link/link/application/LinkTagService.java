@@ -1,11 +1,11 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.link.domain.LinkTagEntity;
-import com.example.short_link.link.domain.LinkTagRepository;
 import com.example.short_link.link.domain.TagEntity;
-import com.example.short_link.link.domain.TagRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkTagRepository;
+import com.example.short_link.link.domain.repository.TagRepository;
 import com.example.short_link.link.exception.LinkNotFoundException;
 import com.example.short_link.link.exception.LinkNotOwnedException;
 import java.util.ArrayList;

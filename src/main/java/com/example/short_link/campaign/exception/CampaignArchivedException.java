@@ -1,11 +1,20 @@
 package com.example.short_link.campaign.exception;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.ResponseStatus;
 
-@ResponseStatus(HttpStatus.BAD_REQUEST)
-public class CampaignArchivedException extends RuntimeException {
+public final class CampaignArchivedException extends CampaignException {
+
   public CampaignArchivedException() {
     super("campaign is archived");
+  }
+
+  @Override
+  public HttpStatus status() {
+    return HttpStatus.BAD_REQUEST;
+  }
+
+  @Override
+  public String code() {
+    return "CAMPAIGN_ARCHIVED";
   }
 }

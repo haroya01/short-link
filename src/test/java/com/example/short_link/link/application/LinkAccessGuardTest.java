@@ -7,7 +7,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkNotOwnedException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

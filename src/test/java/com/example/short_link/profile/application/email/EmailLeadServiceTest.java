@@ -8,9 +8,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.email.EmailLeadEntity;
 import com.example.short_link.profile.domain.email.EmailLeadRepository;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.exception.ProfileNotFoundException;
 import java.lang.reflect.Field;
 import java.util.Optional;

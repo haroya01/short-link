@@ -1,6 +1,10 @@
 package com.example.short_link.link.exception;
 
-public class BulkImportTooLargeException extends RuntimeException {
+import lombok.Getter;
+import org.springframework.http.HttpStatus;
+
+@Getter
+public final class BulkImportTooLargeException extends LinkException {
 
   private final int rows;
   private final int limit;
@@ -11,11 +15,13 @@ public class BulkImportTooLargeException extends RuntimeException {
     this.limit = limit;
   }
 
-  public int getRows() {
-    return rows;
+  @Override
+  public HttpStatus status() {
+    return HttpStatus.PAYLOAD_TOO_LARGE;
   }
 
-  public int getLimit() {
-    return limit;
+  @Override
+  public String code() {
+    return "BULK_IMPORT_TOO_LARGE";
   }
 }

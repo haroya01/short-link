@@ -3,7 +3,7 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkNotOwnedException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;

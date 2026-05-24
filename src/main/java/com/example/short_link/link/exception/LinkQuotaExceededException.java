@@ -1,6 +1,8 @@
 package com.example.short_link.link.exception;
 
-public class LinkQuotaExceededException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public final class LinkQuotaExceededException extends LinkException {
 
   private final long limit;
 
@@ -11,5 +13,15 @@ public class LinkQuotaExceededException extends RuntimeException {
 
   public long getLimit() {
     return limit;
+  }
+
+  @Override
+  public HttpStatus status() {
+    return HttpStatus.CONFLICT;
+  }
+
+  @Override
+  public String code() {
+    return "LINK_QUOTA_EXCEEDED";
   }
 }

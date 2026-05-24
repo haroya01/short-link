@@ -3,6 +3,7 @@ package com.example.short_link.admin.application;
 import com.example.short_link.admin.application.dto.AdminActiveUsers;
 import com.example.short_link.admin.application.dto.AdminCohort;
 import com.example.short_link.admin.application.dto.AdminLifecycle;
+import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository;
 import com.example.short_link.admin.exception.InvalidActivePeriodException;
 import java.time.Duration;
 import java.time.Instant;

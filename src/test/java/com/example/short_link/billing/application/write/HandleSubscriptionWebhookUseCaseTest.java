@@ -10,7 +10,7 @@ import com.example.short_link.billing.domain.SubscriptionEvent;
 import com.example.short_link.billing.domain.SubscriptionGateway;
 import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.util.Optional;

@@ -2,9 +2,9 @@ package com.example.short_link.link.application.read;
 
 import com.example.short_link.link.application.dto.DestinationSummary;
 import com.example.short_link.link.domain.LinkDestinationEntity;
-import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkDestinationRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkNotFoundException;
 import com.example.short_link.link.exception.LinkNotOwnedException;
 import java.util.List;

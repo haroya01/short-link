@@ -1,5 +1,6 @@
-package com.example.short_link.link.domain;
+package com.example.short_link.link.domain.repository;
 
+import com.example.short_link.link.domain.*;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Pageable;

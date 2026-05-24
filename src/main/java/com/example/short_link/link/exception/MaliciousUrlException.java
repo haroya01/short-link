@@ -3,11 +3,22 @@ package com.example.short_link.link.exception;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import org.springframework.http.HttpStatus;
 
-public class MaliciousUrlException extends RuntimeException {
+public final class MaliciousUrlException extends LinkException {
 
   public MaliciousUrlException(String url) {
     super("malicious url rejected (sha256_prefix=" + hashPrefix(url) + ")");
+  }
+
+  @Override
+  public HttpStatus status() {
+    return HttpStatus.BAD_REQUEST;
+  }
+
+  @Override
+  public String code() {
+    return "MALICIOUS_URL";
   }
 
   private static String hashPrefix(String url) {

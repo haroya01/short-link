@@ -1,7 +1,20 @@
 package com.example.short_link.profile.exception;
 
-public class InvalidUsernameException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+
+public final class InvalidUsernameException extends ProfileException {
+
   public InvalidUsernameException(String reason) {
     super(reason);
+  }
+
+  @Override
+  public HttpStatus status() {
+    return HttpStatus.BAD_REQUEST;
+  }
+
+  @Override
+  public String code() {
+    return "INVALID_USERNAME";
   }
 }

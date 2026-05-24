@@ -8,7 +8,7 @@ import com.example.short_link.user.application.dto.ParsedRefresh;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.RefreshTokenStore;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.InvalidRefreshTokenException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

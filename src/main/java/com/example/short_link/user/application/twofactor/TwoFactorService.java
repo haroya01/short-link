@@ -1,9 +1,9 @@
 package com.example.short_link.user.application.twofactor;
 
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
 import com.example.short_link.user.domain.UserTwoFactorEntity;
-import com.example.short_link.user.domain.UserTwoFactorRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.domain.repository.UserTwoFactorRepository;
 import com.example.short_link.user.exception.InvalidTotpCodeException;
 import com.example.short_link.user.exception.TwoFactorStateException;
 import io.micrometer.core.instrument.MeterRegistry;

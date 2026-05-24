@@ -13,7 +13,7 @@ import com.example.short_link.campaign.exception.CampaignTerminalStateException;
 import com.example.short_link.campaign.exception.InvalidBatchRowException;
 import com.example.short_link.campaign.exception.MissingDestinationUrlException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
 import java.util.List;

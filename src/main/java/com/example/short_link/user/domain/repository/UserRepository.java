@@ -1,5 +1,6 @@
-package com.example.short_link.user.domain;
+package com.example.short_link.user.domain.repository;
 
+import com.example.short_link.user.domain.*;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

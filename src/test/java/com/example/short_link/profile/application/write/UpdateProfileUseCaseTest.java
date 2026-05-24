@@ -8,11 +8,11 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
-import com.example.short_link.profile.domain.UsernameHistoryRepository;
+import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.InvalidUsernameException;
 import com.example.short_link.profile.exception.UsernameTakenException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.Instant;

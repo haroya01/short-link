@@ -2,6 +2,7 @@ package com.example.short_link.link.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.repository.*;
 import io.queryaudit.junit5.QueryAudit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

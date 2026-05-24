@@ -5,7 +5,7 @@ import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.application.helper.WebhookPayloadAdapter;
 import com.example.short_link.link.domain.LinkWebhookEntity;
-import com.example.short_link.link.domain.LinkWebhookRepository;
+import com.example.short_link.link.domain.repository.LinkWebhookRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.net.URI;

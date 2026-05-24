@@ -2,7 +2,7 @@ package com.example.short_link.link.application;
 
 import com.example.short_link.link.application.helper.TxtResolver;
 import com.example.short_link.link.domain.CustomDomainEntity;
-import com.example.short_link.link.domain.CustomDomainRepository;
+import com.example.short_link.link.domain.repository.CustomDomainRepository;
 import com.example.short_link.link.exception.CustomDomainNotFoundException;
 import com.example.short_link.link.exception.CustomDomainNotVerifiedException;
 import io.micrometer.core.instrument.MeterRegistry;
