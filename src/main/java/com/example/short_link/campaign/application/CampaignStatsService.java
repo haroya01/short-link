@@ -9,8 +9,8 @@ import com.example.short_link.campaign.application.dto.CampaignStatsResponse.Gro
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse.HeatmapCell;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse.HourBucket;
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.link.domain.ClickEventReadRepository.LinkClickCount;
 import com.example.short_link.link.domain.ClickEventRepository;
-import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
