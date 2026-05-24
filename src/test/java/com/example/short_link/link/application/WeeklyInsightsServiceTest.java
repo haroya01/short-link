@@ -7,10 +7,10 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.WeeklyInsights;
+import com.example.short_link.link.domain.ClickEventReadRepository.HeatmapRow;
+import com.example.short_link.link.domain.ClickEventReadRepository.LinkClickCount;
+import com.example.short_link.link.domain.ClickEventReadRepository.UtmSourceClickRow;
 import com.example.short_link.link.domain.ClickEventRepository;
-import com.example.short_link.link.domain.ClickEventRepository.HeatmapRow;
-import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
-import com.example.short_link.link.domain.ClickEventRepository.UtmSourceClickRow;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
