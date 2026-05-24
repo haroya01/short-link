@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.CustomDomainService.DomainSummary;
+import com.example.short_link.link.application.helper.TxtResolver;
 import com.example.short_link.link.domain.CustomDomainEntity;
 import com.example.short_link.link.domain.CustomDomainRepository;
 import com.example.short_link.link.exception.CustomDomainNotFoundException;

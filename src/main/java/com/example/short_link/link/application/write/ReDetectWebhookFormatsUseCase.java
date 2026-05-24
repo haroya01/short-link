@@ -1,7 +1,7 @@
 package com.example.short_link.link.application.write;
 
-import com.example.short_link.link.application.WebhookFormat;
-import com.example.short_link.link.application.WebhookReDetectResult;
+import com.example.short_link.link.application.dto.WebhookReDetectResult;
+import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.LinkWebhookRepository;
 import io.micrometer.core.instrument.MeterRegistry;

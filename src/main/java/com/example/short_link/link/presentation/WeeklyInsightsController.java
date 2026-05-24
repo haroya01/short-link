@@ -1,7 +1,7 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.WeeklyInsights;
 import com.example.short_link.link.application.WeeklyInsightsService;
+import com.example.short_link.link.application.dto.WeeklyInsights;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;

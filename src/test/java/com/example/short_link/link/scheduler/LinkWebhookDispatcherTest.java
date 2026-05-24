@@ -8,8 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.link.application.ClickRecordedEvent;
-import com.example.short_link.link.application.WebhookFormat;
+import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.LinkWebhookRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

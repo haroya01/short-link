@@ -1,6 +1,6 @@
 package com.example.short_link.campaign.scheduler;
 
-import com.example.short_link.campaign.application.CampaignProperties;
+import com.example.short_link.campaign.application.properties.CampaignProperties;
 import com.example.short_link.campaign.application.write.ActivateReadyCampaignsUseCase;
 import com.example.short_link.campaign.application.write.EndDueCampaignsUseCase;
 import com.example.short_link.common.lock.RedisDistributedLock;

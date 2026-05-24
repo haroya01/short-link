@@ -2,9 +2,9 @@ package com.example.short_link.link.presentation;
 
 import com.example.short_link.common.pow.PowRequiredException;
 import com.example.short_link.common.pow.PowService;
-import com.example.short_link.link.application.LinkCreated;
 import com.example.short_link.link.application.LinkCreationService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.presentation.request.CreateLinkRequest;
 import com.example.short_link.link.presentation.response.CreateLinkResponse;
 import jakarta.validation.Valid;

@@ -1,7 +1,7 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.OgOverrideResult;
 import com.example.short_link.link.application.OgOverrideService;
+import com.example.short_link.link.application.dto.OgOverrideResult;
 import com.example.short_link.link.presentation.request.OgOverrideRequest;
 import com.example.short_link.link.presentation.response.OgOverrideResponse;
 import jakarta.validation.Valid;

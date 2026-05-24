@@ -8,6 +8,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.geoip.GeoLocation;
+import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import org.junit.jupiter.api.BeforeEach;

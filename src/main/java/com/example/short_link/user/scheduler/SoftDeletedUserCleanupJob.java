@@ -1,8 +1,8 @@
 package com.example.short_link.user.scheduler;
 
 import com.example.short_link.common.lock.RedisDistributedLock;
-import com.example.short_link.user.application.UserDeletionProperties;
 import com.example.short_link.user.application.UserDeletionService;
+import com.example.short_link.user.application.properties.UserDeletionProperties;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;

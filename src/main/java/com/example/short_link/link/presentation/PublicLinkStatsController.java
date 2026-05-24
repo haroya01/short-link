@@ -1,6 +1,6 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.LinkStats;
+import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.application.read.LinkStatsQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;

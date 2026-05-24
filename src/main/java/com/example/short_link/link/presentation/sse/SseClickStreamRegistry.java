@@ -1,6 +1,6 @@
 package com.example.short_link.link.presentation.sse;
 
-import com.example.short_link.link.application.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
 import java.util.Iterator;

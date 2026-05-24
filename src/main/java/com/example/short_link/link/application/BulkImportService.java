@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.exception.BulkImportTooLargeException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.BufferedReader;

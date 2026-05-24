@@ -9,9 +9,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.CachedLink;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.OgCardImageRenderer;
+import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.domain.ClickEventRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;

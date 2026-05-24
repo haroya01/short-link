@@ -1,6 +1,6 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.IssuedWebhook;
+import com.example.short_link.link.application.dto.IssuedWebhook;
 import com.example.short_link.link.application.dto.WebhookSummary;
 import com.example.short_link.link.application.read.LinkWebhookQueryService;
 import com.example.short_link.link.application.write.DeleteLinkWebhookCommand;

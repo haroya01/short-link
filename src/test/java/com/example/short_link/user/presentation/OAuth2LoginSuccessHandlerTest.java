@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.application.AuthService;
 import com.example.short_link.user.application.AuthService.LoginResult;
-import com.example.short_link.user.application.IssuedTokens;
+import com.example.short_link.user.application.dto.IssuedTokens;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
