@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.link.presentation.stats;
 
 import com.example.short_link.link.application.WeeklyInsightsService;
 import com.example.short_link.link.application.dto.WeeklyInsights;

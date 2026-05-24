@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.link.presentation.redirect;
 
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.OgCardImageRenderer;

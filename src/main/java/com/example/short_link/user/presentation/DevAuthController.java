@@ -2,6 +2,7 @@ package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.AuthService;
 import com.example.short_link.user.application.AuthService.LoginResult;
+import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.request.DevLoginRequest;
 import com.example.short_link.user.presentation.response.TokenResponse;
 import com.example.short_link.user.presentation.response.TwoFactorChallengeResponse;
@@ -36,12 +37,14 @@ public class DevAuthController {
         "dev-login endpoint invoked for email={} — never enable in production", request.email());
     LoginResult result =
         authService.loginWithOAuth(request.email(), DEV_PROVIDER, "dev:" + request.email());
-    if (result instanceof LoginResult.TwoFactorRequired c) {
-      return ResponseEntity.status(HttpStatus.ACCEPTED)
-          .body(new TwoFactorChallengeResponse(c.challengeToken()));
-    }
-    LoginResult.Tokens t = (LoginResult.Tokens) result;
-    refreshCookieWriter.set(res, t.issued().refreshToken());
-    return ResponseEntity.ok(TokenResponse.from(t.issued()));
+    return switch (result) {
+      case LoginResult.TwoFactorRequired c ->
+          ResponseEntity.status(HttpStatus.ACCEPTED)
+              .body(new TwoFactorChallengeResponse(c.challengeToken()));
+      case LoginResult.Tokens t -> {
+        refreshCookieWriter.set(res, t.issued().refreshToken());
+        yield ResponseEntity.ok(TokenResponse.from(t.issued()));
+      }
+    };
   }
 }

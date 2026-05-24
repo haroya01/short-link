@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.link.presentation.redirect;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Value;

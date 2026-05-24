@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.link.presentation.redirect;
 
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.application.LinkLookupService;
@@ -80,19 +80,18 @@ public class PasswordUnlockController {
   }
 
   private ResponseEntity<?> renderUnlock(RedirectOutcome outcome) {
-    if (outcome instanceof RedirectOutcome.Redirect r) {
-      return ResponseEntity.status(HttpStatus.FOUND)
-          .location(URI.create(r.picked().url()))
-          .header(HttpHeaders.CACHE_CONTROL, "no-store")
-          .header("X-Robots-Tag", "noindex, nofollow")
-          .build();
-    }
-    if (outcome instanceof RedirectOutcome.Blocked) {
-      return LinkHtmlRenderer.blockedPageResponse();
-    }
-    if (outcome instanceof RedirectOutcome.ExpiredWithMessage em) {
-      return LinkHtmlRenderer.expiredPageResponse(em.message());
-    }
-    throw new IllegalStateException("Unexpected unlock outcome: " + outcome);
+    return switch (outcome) {
+      case RedirectOutcome.Redirect r ->
+          ResponseEntity.status(HttpStatus.FOUND)
+              .location(URI.create(r.picked().url()))
+              .header(HttpHeaders.CACHE_CONTROL, "no-store")
+              .header("X-Robots-Tag", "noindex, nofollow")
+              .build();
+      case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
+      case RedirectOutcome.ExpiredWithMessage em ->
+          LinkHtmlRenderer.expiredPageResponse(em.message());
+      case RedirectOutcome.PasswordRequired pr ->
+          throw new IllegalStateException("PasswordRequired not reachable from unlock flow");
+    };
   }
 }

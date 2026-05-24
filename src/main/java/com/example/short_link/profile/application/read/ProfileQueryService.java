@@ -53,7 +53,9 @@ public class ProfileQueryService {
     return MyProfileMapper.from(user, publicProfileBaseUrl);
   }
 
-  @Cacheable(value = "public-profile", key = "#username")
+  @Cacheable(
+      value = "public-profile",
+      key = "#username == null ? '' : #username.trim().toLowerCase()")
   public PublicProfile findByUsername(String username) {
     String normalized = username == null ? "" : username.trim().toLowerCase();
     UserEntity user =

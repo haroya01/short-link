@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.link.presentation.redirect;
 
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.application.ClickRecorder;
@@ -118,21 +118,20 @@ public class RedirectController {
   }
 
   private ResponseEntity<?> render(RedirectOutcome outcome) {
-    if (outcome instanceof RedirectOutcome.Redirect r) {
-      return ResponseEntity.status(HttpStatus.FOUND)
-          .location(URI.create(r.picked().url()))
-          .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
-          .header("X-Robots-Tag", "noindex, nofollow")
-          .build();
-    }
-    if (outcome instanceof RedirectOutcome.Blocked) {
-      return LinkHtmlRenderer.blockedPageResponse();
-    }
-    if (outcome instanceof RedirectOutcome.ExpiredWithMessage em) {
-      return LinkHtmlRenderer.expiredPageResponse(em.message());
-    }
-    // PasswordRequired is decided at the controller before calling flow.execute() — unreachable.
-    throw new IllegalStateException("Unexpected redirect outcome: " + outcome);
+    return switch (outcome) {
+      case RedirectOutcome.Redirect r ->
+          ResponseEntity.status(HttpStatus.FOUND)
+              .location(URI.create(r.picked().url()))
+              .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
+              .header("X-Robots-Tag", "noindex, nofollow")
+              .build();
+      case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
+      case RedirectOutcome.ExpiredWithMessage em ->
+          LinkHtmlRenderer.expiredPageResponse(em.message());
+      case RedirectOutcome.PasswordRequired pr ->
+          throw new IllegalStateException(
+              "PasswordRequired decided at controller before flow.execute()");
+    };
   }
 
   private ResponseEntity<?> handlePreview(

@@ -1,4 +1,4 @@
-package com.example.short_link.user.presentation;
+package com.example.short_link.user.presentation.security;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -1,4 +1,4 @@
-package com.example.short_link.user.presentation;
+package com.example.short_link.user.presentation.security;
 
 import com.example.short_link.user.application.ApiKeyService;
 import com.example.short_link.user.application.UserQueryService;

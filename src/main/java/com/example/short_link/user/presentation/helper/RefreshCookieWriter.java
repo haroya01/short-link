@@ -1,4 +1,4 @@
-package com.example.short_link.user.presentation;
+package com.example.short_link.user.presentation.helper;
 
 import com.example.short_link.user.application.properties.JwtProperties;
 import jakarta.servlet.http.HttpServletResponse;

@@ -1,4 +1,4 @@
-package com.example.short_link.user.presentation;
+package com.example.short_link.user.presentation.security;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
