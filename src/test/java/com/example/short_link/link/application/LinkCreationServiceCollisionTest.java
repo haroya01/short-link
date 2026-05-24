@@ -13,6 +13,8 @@ import com.example.short_link.link.exception.ShortCodeGenerationException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 class LinkCreationServiceCollisionTest {
 
@@ -37,6 +39,7 @@ class LinkCreationServiceCollisionTest {
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
             blockedDomain,
+            noopTransactionManager(),
             200L);
 
     assertThatThrownBy(() -> service.create("https://example.com", null, null, null))
@@ -44,5 +47,11 @@ class LinkCreationServiceCollisionTest {
 
     verify(generator, times(5)).generate();
     verify(repository, times(5)).save(any());
+  }
+
+  static PlatformTransactionManager noopTransactionManager() {
+    PlatformTransactionManager m = mock(PlatformTransactionManager.class);
+    when(m.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
+    return m;
   }
 }

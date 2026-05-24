@@ -19,7 +19,7 @@ import java.util.Map;
  *
  * Kept stateless and free of Spring wiring so it can be unit-tested without context bootstrap.
  */
-final class WebhookPayloadAdapter {
+public final class WebhookPayloadAdapter {
 
   private WebhookPayloadAdapter() {}
 
@@ -29,7 +29,7 @@ final class WebhookPayloadAdapter {
   /** Slack/Discord display name on incoming messages. */
   private static final String SENDER_NAME = "kurl";
 
-  static Map<String, Object> buildClick(WebhookFormat format, Map<String, Object> click) {
+  public static Map<String, Object> buildClick(WebhookFormat format, Map<String, Object> click) {
     return switch (format) {
       case GENERIC -> click;
       case DISCORD -> discordClick(click);
@@ -37,7 +37,7 @@ final class WebhookPayloadAdapter {
     };
   }
 
-  static Map<String, Object> buildBatch(
+  public static Map<String, Object> buildBatch(
       WebhookFormat format, long linkId, List<Map<String, Object>> events) {
     return switch (format) {
       case GENERIC ->
