@@ -1,5 +1,6 @@
 package com.example.short_link.profile.application;
 
+import com.example.short_link.profile.exception.InvalidUsernameException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;

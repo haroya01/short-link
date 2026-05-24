@@ -1,12 +1,12 @@
 package com.example.short_link.billing.infrastructure.stripe;
 
-import com.example.short_link.billing.application.BillingGatewayException;
-import com.example.short_link.billing.application.InvalidWebhookSignatureException;
 import com.example.short_link.billing.application.StripeProperties;
 import com.example.short_link.billing.domain.CheckoutInitiation;
 import com.example.short_link.billing.domain.PortalUrl;
 import com.example.short_link.billing.domain.SubscriptionEvent;
 import com.example.short_link.billing.domain.SubscriptionGateway;
+import com.example.short_link.billing.exception.BillingGatewayException;
+import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
 import com.example.short_link.user.domain.UserEntity;
 import com.stripe.Stripe;
 import com.stripe.exception.SignatureVerificationException;

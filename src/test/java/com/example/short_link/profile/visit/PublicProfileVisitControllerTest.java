@@ -3,10 +3,12 @@ package com.example.short_link.profile.visit;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.profile.exception.ProfileNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -31,6 +33,11 @@ class PublicProfileVisitControllerTest {
 
   @Test
   void unknownUserReturns404() throws Exception {
+    doThrow(new ProfileNotFoundException("nobody"))
+        .when(recorder)
+        .recordUsername(
+            eq("nobody"), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+
     mvc.perform(post("/api/v1/public/profiles/nobody/visit")).andExpect(status().isNotFound());
   }
 
@@ -41,8 +48,8 @@ class PublicProfileVisitControllerTest {
     userRepository.save(user);
     doNothing()
         .when(recorder)
-        .record(
-            eq(user.getId()), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+        .recordUsername(
+            eq("visituser"), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
 
     mvc.perform(
             post("/api/v1/public/profiles/visituser/visit")
@@ -56,8 +63,8 @@ class PublicProfileVisitControllerTest {
         .andExpect(status().isNoContent());
 
     verify(recorder)
-        .record(
-            eq(user.getId()),
+        .recordUsername(
+            eq("visituser"),
             eq("https://t.co/x"),
             eq("Mozilla/5.0"),
             eq("203.0.113.1"),

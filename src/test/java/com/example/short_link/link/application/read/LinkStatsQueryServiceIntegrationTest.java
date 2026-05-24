@@ -3,13 +3,13 @@ package com.example.short_link.link.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkStats;
 import com.example.short_link.link.application.LinkVisibilityService;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.LinkNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import org.junit.jupiter.api.Test;

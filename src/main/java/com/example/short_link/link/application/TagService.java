@@ -3,6 +3,8 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.domain.LinkTagRepository;
 import com.example.short_link.link.domain.TagEntity;
 import com.example.short_link.link.domain.TagRepository;
+import com.example.short_link.link.exception.DuplicateTagNameException;
+import com.example.short_link.link.exception.TagNotFoundException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;

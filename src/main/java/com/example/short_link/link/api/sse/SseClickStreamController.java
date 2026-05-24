@@ -2,9 +2,9 @@ package com.example.short_link.link.api.sse;
 
 import com.example.short_link.link.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkLookupService;
-import com.example.short_link.link.application.LinkNotFoundException;
-import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkNotOwnedException;
 import com.example.short_link.user.application.JwtTokenService;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletResponse;

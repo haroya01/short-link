@@ -6,6 +6,8 @@ import com.example.short_link.link.domain.LinkTagEntity;
 import com.example.short_link.link.domain.LinkTagRepository;
 import com.example.short_link.link.domain.TagEntity;
 import com.example.short_link.link.domain.TagRepository;
+import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkNotOwnedException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

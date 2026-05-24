@@ -1,5 +1,6 @@
 package com.example.short_link.admin.application;
 
+import com.example.short_link.admin.exception.InvalidActivePeriodException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;

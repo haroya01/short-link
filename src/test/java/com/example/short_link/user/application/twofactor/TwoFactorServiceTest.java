@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.InvalidTotpCodeException;
+import com.example.short_link.user.exception.TwoFactorStateException;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;

@@ -1,11 +1,11 @@
 package com.example.short_link.link.application.read;
 
-import com.example.short_link.link.application.LinkNotFoundException;
-import com.example.short_link.link.application.LinkNotOwnedException;
 import com.example.short_link.link.application.WebhookSummary;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.link.domain.LinkWebhookRepository;
+import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkNotOwnedException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

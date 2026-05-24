@@ -2,6 +2,7 @@ package com.example.short_link.link.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.exception.MaliciousUrlException;
 import org.junit.jupiter.api.Test;
 
 class MaliciousUrlExceptionTest {

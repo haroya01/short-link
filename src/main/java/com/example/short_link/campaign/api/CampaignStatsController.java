@@ -17,7 +17,7 @@ public class CampaignStatsController {
   private final CampaignStatsService service;
 
   @GetMapping
-  public CampaignStatsResponse get(
+  public CampaignStatsResponse stats(
       @AuthenticationPrincipal Long userId, @PathVariable Long campaignId) {
     return service.statsFor(campaignId, userId);
   }
