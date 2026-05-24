@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.UserNotFoundException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import java.util.Map;

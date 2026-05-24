@@ -1,8 +1,8 @@
 package com.example.short_link.billing.application.write;
 
-import com.example.short_link.billing.application.InvalidWebhookSignatureException;
 import com.example.short_link.billing.domain.SubscriptionEvent;
 import com.example.short_link.billing.domain.SubscriptionGateway;
+import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;

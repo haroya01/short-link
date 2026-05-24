@@ -4,6 +4,8 @@ import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkNotOwnedException;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;

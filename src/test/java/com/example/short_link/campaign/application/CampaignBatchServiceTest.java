@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.campaign.exception.CampaignNotOwnedException;
+import com.example.short_link.campaign.exception.CampaignTerminalStateException;
+import com.example.short_link.campaign.exception.InvalidBatchRowException;
+import com.example.short_link.campaign.exception.MissingDestinationUrlException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import io.queryaudit.junit5.QueryAudit;

@@ -1,8 +1,8 @@
 package com.example.short_link.profile.visit;
 
-import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.UserNotFoundException;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -46,6 +46,20 @@ public class ProfileStatsService {
       throw new UserNotFoundException();
     }
     return computeStats(user);
+  }
+
+  @Transactional(readOnly = true)
+  public boolean statsPublic(Long ownerUserId) {
+    UserEntity owner = userRepository.findById(ownerUserId).orElseThrow(UserNotFoundException::new);
+    return owner.isStatsPublic();
+  }
+
+  @Transactional
+  public boolean updateStatsPublic(Long ownerUserId, boolean statsPublic) {
+    UserEntity owner = userRepository.findById(ownerUserId).orElseThrow(UserNotFoundException::new);
+    owner.updateStatsPublic(statsPublic);
+    userRepository.save(owner);
+    return owner.isStatsPublic();
   }
 
   @Transactional(readOnly = true)

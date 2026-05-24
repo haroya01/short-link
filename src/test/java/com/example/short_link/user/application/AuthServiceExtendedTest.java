@@ -4,10 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.application.AuthService.LoginResult;
-import com.example.short_link.user.application.twofactor.InvalidTotpCodeException;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.InvalidRefreshTokenException;
+import com.example.short_link.user.exception.InvalidTotpCodeException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

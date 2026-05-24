@@ -9,6 +9,7 @@ import com.example.short_link.profile.contact.ProductCardCarousel;
 import com.example.short_link.profile.contact.TextBlockBody;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.email.EmailFormConfig;
+import com.example.short_link.profile.exception.InvalidUsernameException;
 import com.example.short_link.profile.oembed.EmbedProvider;
 
 /**

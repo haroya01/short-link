@@ -13,6 +13,7 @@ import com.example.short_link.link.application.BotHeuristic;
 import com.example.short_link.link.application.GeoIpResolver;
 import com.example.short_link.link.application.UserAgentClassifier;
 import com.example.short_link.link.application.UserAgentInfo;
+import com.example.short_link.user.domain.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,6 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class ProfileVisitRecorderTest {
 
   @Mock private ProfileVisitRepository repository;
+  @Mock private UserRepository userRepository;
   @Mock private UserAgentClassifier uaClassifier;
   @Mock private GeoIpResolver geoResolver;
   @Mock private AsnResolver asnResolver;
@@ -34,7 +36,8 @@ class ProfileVisitRecorderTest {
   @BeforeEach
   void setUp() {
     recorder =
-        new ProfileVisitRecorder(repository, uaClassifier, geoResolver, asnResolver, botHeuristic);
+        new ProfileVisitRecorder(
+            repository, userRepository, uaClassifier, geoResolver, asnResolver, botHeuristic);
   }
 
   @Test

@@ -1,9 +1,10 @@
 package com.example.short_link.user.application;
 
-import com.example.short_link.user.application.twofactor.InvalidTotpCodeException;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.InvalidRefreshTokenException;
+import com.example.short_link.user.exception.InvalidTotpCodeException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

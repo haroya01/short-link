@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.ShortCodeGenerationException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;

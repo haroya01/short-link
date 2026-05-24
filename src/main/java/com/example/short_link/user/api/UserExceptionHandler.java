@@ -1,9 +1,11 @@
 package com.example.short_link.user.api;
 
 import com.example.short_link.common.api.ProblemDetails;
-import com.example.short_link.user.application.InvalidRefreshTokenException;
-import com.example.short_link.user.application.InvalidTimezoneException;
-import com.example.short_link.user.application.UserNotFoundException;
+import com.example.short_link.user.exception.AvatarUnavailableException;
+import com.example.short_link.user.exception.InvalidAvatarException;
+import com.example.short_link.user.exception.InvalidRefreshTokenException;
+import com.example.short_link.user.exception.InvalidTimezoneException;
+import com.example.short_link.user.exception.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -30,5 +32,17 @@ public class UserExceptionHandler {
   @ExceptionHandler(InvalidTimezoneException.class)
   public ProblemDetail handleInvalidTimezone(InvalidTimezoneException e, HttpServletRequest req) {
     return ProblemDetails.of(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_TIMEZONE", req);
+  }
+
+  @ExceptionHandler(InvalidAvatarException.class)
+  public ProblemDetail handleInvalidAvatar(InvalidAvatarException e, HttpServletRequest req) {
+    return ProblemDetails.of(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_AVATAR", req);
+  }
+
+  @ExceptionHandler(AvatarUnavailableException.class)
+  public ProblemDetail handleAvatarUnavailable(
+      AvatarUnavailableException e, HttpServletRequest req) {
+    return ProblemDetails.of(
+        HttpStatus.SERVICE_UNAVAILABLE, e.getMessage(), "AVATAR_UNAVAILABLE", req);
   }
 }

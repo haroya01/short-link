@@ -9,6 +9,7 @@ import com.example.short_link.user.application.UserDataExport.ExportedLink;
 import com.example.short_link.user.application.UserDataExport.ExportedUser;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.UserNotFoundException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

@@ -3,11 +3,11 @@ package com.example.short_link.profile.application.write;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.profile.application.InvalidUsernameException;
-import com.example.short_link.profile.application.ProfileNotFoundException;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
+import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
