@@ -30,9 +30,22 @@ import org.springframework.web.servlet.resource.NoResourceFoundException;
 @Slf4j
 public class GlobalExceptionHandler {
 
+  /**
+   * IllegalArgumentException is thrown from two very different places — domain-level input checks
+   * ("invalid domain", "shortCode required") that legitimately mean 400, and structural code paths
+   * (JWT decoding, TOTP base32) that shouldn't surface their internals to a client. We map both to
+   * 400 with a generic body so the second category doesn't leak hints; the original message is kept
+   * in the log for triage. Long-term: domain checks should throw a dedicated DomainValidation
+   * exception so this handler can drop the catch-all entirely.
+   */
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleIllegalArgument(IllegalArgumentException e, HttpServletRequest req) {
-    return ProblemDetails.of(HttpStatus.BAD_REQUEST, e.getMessage(), "INVALID_ARGUMENT", req);
+    log.debug(
+        "rejected as invalid argument: {} {} msg={}",
+        req.getMethod(),
+        req.getRequestURI(),
+        e.getMessage());
+    return ProblemDetails.of(HttpStatus.BAD_REQUEST, "invalid argument", "INVALID_ARGUMENT", req);
   }
 
   @ExceptionHandler(OptimisticLockingFailureException.class)

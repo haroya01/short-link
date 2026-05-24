@@ -1,5 +1,9 @@
 package com.example.short_link.common.config;
 
+import static org.springframework.http.HttpMethod.GET;
+import static org.springframework.http.HttpMethod.POST;
+import static org.springframework.security.web.util.matcher.RegexRequestMatcher.regexMatcher;
+
 import com.example.short_link.common.web.RateLimitFilter;
 import com.example.short_link.user.presentation.ApiKeyAuthenticationFilter;
 import com.example.short_link.user.presentation.JsonAuthenticationEntryPoint;
@@ -15,7 +19,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -32,6 +35,17 @@ import tools.jackson.databind.json.JsonMapper;
 @EnableWebSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+  /**
+   * Short-code surface — {@code /{shortCode}} for GET redirects and POST password unlocks. The
+   * regex matches {@code RedirectController}'s path constraint exactly so the security layer can't
+   * accidentally open paths the controller would never serve. Single-segment alphanumeric, 3–16
+   * chars.
+   */
+  private static final String SHORT_CODE_REGEX = "^/[0-9A-Za-z]{3,16}$";
+
+  /** OG preview image rendered for crawlers — same short-code shape with {@code /og.png} suffix. */
+  private static final String OG_CARD_REGEX = "^/[0-9A-Za-z]{3,16}/og\\.png$";
 
   private final JwtAuthenticationFilter jwtFilter;
   private final ApiKeyAuthenticationFilter apiKeyFilter;
@@ -81,108 +95,65 @@ public class SecurityConfig {
         .exceptionHandling(e -> e.authenticationEntryPoint(authenticationEntryPoint))
         .authorizeHttpRequests(
             auth ->
-                auth.requestMatchers(HttpMethod.GET, "/")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/*")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/*")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/pow/challenge")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/actuator/health")
-                    .permitAll()
-                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
-                    .hasRole("ADMIN")
-                    .requestMatchers(HttpMethod.GET, "/api/v1/public/**")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/public/email-leads")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/public/profiles/*/visit")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/*/og.png")
-                    .permitAll()
-                    .requestMatchers("/api/v1/links/*/profile")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/public-stats")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/stream")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*/protection")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/users/me/claim-anonymous")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/links")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/links/bulk")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*/visibility")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*/og")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.PATCH, "/api/v1/links/*")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.DELETE, "/api/v1/links/*")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/stats")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/events")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/events.csv")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/stats.csv")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/me")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/detail")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.GET, "/api/v1/links/*/tags")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.PUT, "/api/v1/links/*/tags")
-                    .authenticated()
-                    .requestMatchers("/api/v1/tags/**")
-                    .authenticated()
-                    .requestMatchers("/api/v1/tags")
-                    .authenticated()
-                    .requestMatchers("/api/v1/links/*/webhooks/**")
-                    .authenticated()
-                    .requestMatchers("/api/v1/links/*/webhooks")
-                    .authenticated()
-                    .requestMatchers("/api/v1/links/*/destinations/**")
-                    .authenticated()
-                    .requestMatchers("/api/v1/links/*/destinations")
-                    .authenticated()
-                    .requestMatchers("/api/v1/links/*/blocked-countries")
-                    .authenticated()
-                    .requestMatchers("/api/v1/custom-domains/**")
-                    .authenticated()
-                    .requestMatchers("/api/v1/custom-domains")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/logout")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/refresh")
-                    .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/2fa/verify")
+                auth
+                    // Infra: health probe, PoW challenge, OAuth callbacks.
+                    .requestMatchers(GET, "/actuator/health", "/api/v1/pow/challenge")
                     .permitAll()
                     .requestMatchers("/oauth2/**", "/login/oauth2/**")
                     .permitAll()
-                    .requestMatchers("/api/v1/2fa/**")
-                    .authenticated()
-                    .requestMatchers("/api/v1/users/me/**")
-                    .authenticated()
-                    .requestMatchers("/api/v1/users/me")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/auth/dev-login")
+                    // Swagger docs are admin-only — the API surface is internal product, not public
+                    // reference. Don't widen to permitAll without a docs gating story.
+                    .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
+                    .hasRole("ADMIN")
+
+                    // Short-code surface. The regex matchers keep this from accidentally opening
+                    // {@code GET /anything} the way {@code GET /*} did; the controller's path
+                    // constraint and the security matcher are now declared in one place
+                    // (SHORT_CODE_REGEX).
+                    .requestMatchers(GET, "/")
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/billing/webhook")
+                    .requestMatchers(regexMatcher(GET, SHORT_CODE_REGEX))
                     .permitAll()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/billing/checkout")
-                    .authenticated()
-                    .requestMatchers(HttpMethod.POST, "/api/v1/billing/portal")
-                    .authenticated()
+                    .requestMatchers(regexMatcher(POST, SHORT_CODE_REGEX))
+                    .permitAll()
+                    .requestMatchers(regexMatcher(GET, OG_CARD_REGEX))
+                    .permitAll()
+
+                    // Public read + low-trust write surface (rate-limited / PoW-gated upstream).
+                    .requestMatchers(GET, "/api/v1/public/**")
+                    .permitAll()
+                    .requestMatchers(
+                        POST, "/api/v1/public/email-leads", "/api/v1/public/profiles/*/visit")
+                    .permitAll()
+                    .requestMatchers(GET, "/api/v1/links/*/public-stats", "/api/v1/links/*/stream")
+                    .permitAll()
+                    // Anonymous link creation — PoW filter sits in front of this in the controller
+                    // path so it isn't an unauthenticated free-for-all.
+                    .requestMatchers(POST, "/api/v1/links")
+                    .permitAll()
+
+                    // Auth flows that must work pre-login. /2fa/verify is the second factor after
+                    // primary login (challenge token only, not full session).
+                    .requestMatchers(
+                        POST,
+                        "/api/v1/auth/refresh",
+                        "/api/v1/auth/2fa/verify",
+                        "/api/v1/auth/dev-login")
+                    .permitAll()
+                    // Stripe verifies its own signature inside the handler — auth-by-signature, not
+                    // auth-by-session.
+                    .requestMatchers(POST, "/api/v1/billing/webhook")
+                    .permitAll()
+
+                    // Admin surface.
                     .requestMatchers("/api/v1/admin/**")
                     .hasRole("ADMIN")
-                    .requestMatchers("/api/v1/campaigns/**")
-                    .authenticated()
+
+                    // Everything else (links management, profiles, billing checkout/portal,
+                    // webhooks, custom-domains, tags, campaigns, 2FA setup, /users/me, ...) needs a
+                    // session. Letting `anyRequest().authenticated()` cover them keeps the matcher
+                    // list short and removes ~70 lines of per-endpoint matchers that all said the
+                    // same thing.
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

@@ -83,10 +83,16 @@ class RedirectControllerTest {
   }
 
   @Test
-  void returns404ForMalformedCode() throws Exception {
+  void returns401ForPathOutsideShortCodeShape() throws Exception {
+    // SecurityConfig restricts the public {@code GET /{shortCode}} matcher to the same regex the
+    // controller accepts (3–16 alphanumeric). Single-segment paths that don't match (typos,
+    // hyphens, accidental routes a future controller might add) fall through to
+    // {@code anyRequest().authenticated()} and are answered by JsonAuthenticationEntryPoint with
+    // 401. The previous {@code GET /*} permitAll would have surfaced any such path to whatever
+    // handler existed without an auth check — narrowing the matcher closes that drift window.
     mvc.perform(get("/too-short"))
-        .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.code").value("NOT_FOUND"));
+        .andExpect(status().isUnauthorized())
+        .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
   }
 
   @Test
