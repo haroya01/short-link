@@ -17,6 +17,8 @@ import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
 
 class LinkCreationServiceQuotaTest {
 
@@ -38,6 +40,7 @@ class LinkCreationServiceQuotaTest {
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
             mockBlockedDomainService(),
+            noopTx(),
             200L);
 
     assertThatThrownBy(() -> svc.create("https://example.com/x", 42L, null, null))
@@ -65,6 +68,7 @@ class LinkCreationServiceQuotaTest {
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
             mockBlockedDomainService(),
+            noopTx(),
             200L);
 
     LinkCreated created = svc.create("https://example.com", null, null, null);
@@ -92,6 +96,7 @@ class LinkCreationServiceQuotaTest {
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
             mockBlockedDomainService(),
+            noopTx(),
             200L);
 
     LinkCreated created = svc.create("https://example.com/x", 99L, null, null);
@@ -116,6 +121,7 @@ class LinkCreationServiceQuotaTest {
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
             mockBlockedDomainService(),
+            noopTx(),
             200L);
 
     assertThatThrownBy(() -> svc.create("https://example.com", 1L, "login", null))
@@ -152,6 +158,7 @@ class LinkCreationServiceQuotaTest {
             event -> {},
             mock(com.example.short_link.common.audit.AuditLogService.class),
             mockBlockedDomainService(),
+            noopTx(),
             200L);
 
     LinkCreated created = svc.create("https://example.com/x", 99L, null, null);
@@ -162,6 +169,12 @@ class LinkCreationServiceQuotaTest {
       mockBlockedDomainService() {
     var m = mock(com.example.short_link.admin.application.BlockedDomainService.class);
     when(m.isBlocked(any())).thenReturn(false);
+    return m;
+  }
+
+  private static PlatformTransactionManager noopTx() {
+    PlatformTransactionManager m = mock(PlatformTransactionManager.class);
+    when(m.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
     return m;
   }
 

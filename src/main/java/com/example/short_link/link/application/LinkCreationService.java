@@ -20,13 +20,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 public class LinkCreationService {
 
   private static final int MAX_ATTEMPTS = 5;
   private static final Duration ANONYMOUS_TTL = Duration.ofDays(1);
+  private static final SecureRandom CLAIM_RANDOM = new SecureRandom();
 
   private final LinkRepository repository;
   private final ShortCodeGenerator generator;
@@ -35,6 +37,7 @@ public class LinkCreationService {
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final BlockedDomainService blockedDomainService;
+  private final TransactionTemplate tx;
   private final long quotaPerUser;
 
   public LinkCreationService(
@@ -45,6 +48,7 @@ public class LinkCreationService {
       ApplicationEventPublisher events,
       AuditLogService auditLogService,
       BlockedDomainService blockedDomainService,
+      PlatformTransactionManager transactionManager,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
     this.generator = generator;
@@ -53,10 +57,10 @@ public class LinkCreationService {
     this.events = events;
     this.auditLogService = auditLogService;
     this.blockedDomainService = blockedDomainService;
+    this.tx = new TransactionTemplate(transactionManager);
     this.quotaPerUser = quotaPerUser;
   }
 
-  @Transactional
   public LinkCreated create(
       String url, Long userId, String customCode, Instant requestedExpiresAt) {
     return create(url, userId, customCode, requestedExpiresAt, true);
@@ -67,9 +71,12 @@ public class LinkCreationService {
    *     destination 으로 여러 묶음을 만들 때 batch:link UNIQUE 제약과 충돌하므로 false 로 호출 — 각 batch 가 자기 단축 코드를 갖도록
    *     한다.
    */
-  @Transactional
   public LinkCreated create(
       String url, Long userId, String customCode, Instant requestedExpiresAt, boolean deduplicate) {
+    // Pre-transaction validation: blocked-domain lookup is cheap and Safe Browsing is an outbound
+    // HTTP call. Both used to run inside the @Transactional boundary, which held a JDBC connection
+    // for the duration of the HTTP round trip — pool starvation under load. Run them first so the
+    // DB transaction only spans the actual persistence work.
     if (blockedDomainService.isBlocked(url)) {
       meterRegistry.counter("short_link.created", "result", "blocked_domain").increment();
       throw new MaliciousUrlException(url);
@@ -77,6 +84,7 @@ public class LinkCreationService {
     if (!urlSafetyChecker.isSafe(url)) {
       throw new MaliciousUrlException(url);
     }
+
     boolean authenticated = userId != null;
     String code = authenticated ? customCode : null;
     Instant expiresAt = authenticated ? requestedExpiresAt : Instant.now().plus(ANONYMOUS_TTL);
@@ -85,6 +93,16 @@ public class LinkCreationService {
       throw new ReservedShortCodeException(code);
     }
 
+    return tx.execute(status -> persist(url, userId, code, expiresAt, deduplicate, authenticated));
+  }
+
+  private LinkCreated persist(
+      String url,
+      Long userId,
+      String code,
+      Instant expiresAt,
+      boolean deduplicate,
+      boolean authenticated) {
     if (deduplicate && authenticated && code == null) {
       Optional<LinkEntity> existing = repository.findFirstByUserIdAndOriginalUrl(userId, url);
       if (existing.isPresent()) {
@@ -105,13 +123,9 @@ public class LinkCreationService {
 
     if (code != null) {
       try {
-        LinkEntity entity = new LinkEntity(url, code, userId, expiresAt);
-        attachClaimTokenIfAnonymous(entity, authenticated);
-        LinkEntity saved = repository.save(entity);
+        LinkEntity saved = saveWithCode(url, code, userId, expiresAt, authenticated);
         recordCreated(true, true, "ok");
-        events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), url));
-        auditLogService.record(
-            AuditAction.LINK_CREATED, "link", saved.getShortCode(), userId, Map.of("custom", true));
+        publishCreated(saved, userId, true);
         return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
       } catch (DataIntegrityViolationException e) {
         throw new DuplicateShortCodeException(code);
@@ -124,17 +138,9 @@ public class LinkCreationService {
         continue;
       }
       try {
-        LinkEntity entity = new LinkEntity(url, generated, userId, expiresAt);
-        attachClaimTokenIfAnonymous(entity, authenticated);
-        LinkEntity saved = repository.save(entity);
+        LinkEntity saved = saveWithCode(url, generated, userId, expiresAt, authenticated);
         recordCreated(authenticated, false, "ok");
-        events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), url));
-        auditLogService.record(
-            AuditAction.LINK_CREATED,
-            "link",
-            saved.getShortCode(),
-            userId,
-            Map.of("custom", false));
+        publishCreated(saved, userId, false);
         return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
       } catch (DataIntegrityViolationException ignored) {
       }
@@ -142,7 +148,18 @@ public class LinkCreationService {
     throw new ShortCodeGenerationException();
   }
 
-  private static final SecureRandom CLAIM_RANDOM = new SecureRandom();
+  private LinkEntity saveWithCode(
+      String url, String code, Long userId, Instant expiresAt, boolean authenticated) {
+    LinkEntity entity = new LinkEntity(url, code, userId, expiresAt);
+    attachClaimTokenIfAnonymous(entity, authenticated);
+    return repository.save(entity);
+  }
+
+  private void publishCreated(LinkEntity saved, Long userId, boolean custom) {
+    events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), saved.getOriginalUrl()));
+    auditLogService.record(
+        AuditAction.LINK_CREATED, "link", saved.getShortCode(), userId, Map.of("custom", custom));
+  }
 
   private static void attachClaimTokenIfAnonymous(LinkEntity entity, boolean authenticated) {
     if (authenticated) return;

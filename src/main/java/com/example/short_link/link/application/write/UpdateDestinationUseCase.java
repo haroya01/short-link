@@ -1,6 +1,6 @@
 package com.example.short_link.link.application.write;
 
-import com.example.short_link.link.application.DestinationSummary;
+import com.example.short_link.link.application.dto.DestinationSummary;
 import com.example.short_link.link.domain.LinkDestinationEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;

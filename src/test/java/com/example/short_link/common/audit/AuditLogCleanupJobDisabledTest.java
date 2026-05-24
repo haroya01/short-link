@@ -7,6 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.audit.scheduler.AuditLogCleanupJob;
 import com.example.short_link.common.lock.RedisDistributedLock;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;

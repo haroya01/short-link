@@ -3,6 +3,9 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
+import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
+import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
@@ -157,7 +160,7 @@ class CampaignEndTest {
     CampaignEntity campaign =
         createCampaign.execute(
             owner,
-            new com.example.short_link.campaign.application.CampaignCreateRequest(
+            new com.example.short_link.campaign.application.dto.CampaignCreateRequest(
                 "C",
                 longPast,
                 longPast.plusSeconds(60 * 60),

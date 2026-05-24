@@ -1,16 +1,16 @@
 package com.example.short_link.profile.application;
 
-import com.example.short_link.profile.contact.Booking;
-import com.example.short_link.profile.contact.ContactCard;
-import com.example.short_link.profile.contact.Event;
-import com.example.short_link.profile.contact.Gallery;
-import com.example.short_link.profile.contact.Place;
-import com.example.short_link.profile.contact.ProductCardCarousel;
-import com.example.short_link.profile.contact.TextBlockBody;
+import com.example.short_link.profile.application.email.EmailFormConfig;
+import com.example.short_link.profile.application.oembed.EmbedProvider;
 import com.example.short_link.profile.domain.ProfileBlockType;
-import com.example.short_link.profile.email.EmailFormConfig;
+import com.example.short_link.profile.domain.contact.Booking;
+import com.example.short_link.profile.domain.contact.ContactCard;
+import com.example.short_link.profile.domain.contact.Event;
+import com.example.short_link.profile.domain.contact.Gallery;
+import com.example.short_link.profile.domain.contact.Place;
+import com.example.short_link.profile.domain.contact.ProductCardCarousel;
+import com.example.short_link.profile.domain.contact.TextBlockBody;
 import com.example.short_link.profile.exception.InvalidUsernameException;
-import com.example.short_link.profile.oembed.EmbedProvider;
 
 /**
  * Per-type validation + normalization for profile block content. Returns the trimmed value to
