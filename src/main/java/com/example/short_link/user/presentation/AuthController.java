@@ -30,9 +30,7 @@ public class AuthController {
     if (refreshToken == null) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
-    IssuedTokens tokens = authService.refresh(refreshToken);
-    refreshCookieWriter.set(res, tokens.refreshToken());
-    return new TokenResponse(tokens.accessToken());
+    return issueAndSetCookie(authService.refresh(refreshToken), res);
   }
 
   @PostMapping("/logout")
@@ -49,9 +47,13 @@ public class AuthController {
   @PostMapping("/2fa/verify")
   public TokenResponse verifyTwoFactor(
       @RequestBody TwoFactorVerifyRequest request, HttpServletResponse res) {
-    IssuedTokens tokens =
-        authService.completeTwoFactor(request.challenge(), request.code(), request.recovery());
+    return issueAndSetCookie(
+        authService.completeTwoFactor(request.challenge(), request.code(), request.recovery()),
+        res);
+  }
+
+  private TokenResponse issueAndSetCookie(IssuedTokens tokens, HttpServletResponse res) {
     refreshCookieWriter.set(res, tokens.refreshToken());
-    return new TokenResponse(tokens.accessToken());
+    return TokenResponse.from(tokens);
   }
 }

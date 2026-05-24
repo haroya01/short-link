@@ -1,13 +1,10 @@
 package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.twofactor.TwoFactorService;
-import com.example.short_link.user.application.twofactor.TwoFactorService.SetupChallenge;
-import com.example.short_link.user.application.twofactor.TwoFactorService.Status;
 import com.example.short_link.user.presentation.request.TwoFactorCodeRequest;
 import com.example.short_link.user.presentation.response.TwoFactorConfirmResponse;
 import com.example.short_link.user.presentation.response.TwoFactorSetupResponse;
 import com.example.short_link.user.presentation.response.TwoFactorStatusResponse;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,21 +22,18 @@ public class TwoFactorController {
 
   @GetMapping("/status")
   public TwoFactorStatusResponse status(@AuthenticationPrincipal Long userId) {
-    Status s = service.status(userId);
-    return new TwoFactorStatusResponse(s.enabled(), s.lastUsedAt());
+    return TwoFactorStatusResponse.from(service.status(userId));
   }
 
   @PostMapping("/setup")
   public TwoFactorSetupResponse setup(@AuthenticationPrincipal Long userId) {
-    SetupChallenge challenge = service.start(userId);
-    return new TwoFactorSetupResponse(challenge.secret(), challenge.provisioningUri());
+    return TwoFactorSetupResponse.from(service.start(userId));
   }
 
   @PostMapping("/confirm")
   public TwoFactorConfirmResponse confirm(
       @AuthenticationPrincipal Long userId, @RequestBody TwoFactorCodeRequest request) {
-    List<String> codes = service.confirm(userId, request.code());
-    return new TwoFactorConfirmResponse(codes);
+    return TwoFactorConfirmResponse.of(service.confirm(userId, request.code()));
   }
 
   @PostMapping("/disable")
@@ -51,7 +45,6 @@ public class TwoFactorController {
   @PostMapping("/recovery-codes/regenerate")
   public TwoFactorConfirmResponse regenerate(
       @AuthenticationPrincipal Long userId, @RequestBody TwoFactorCodeRequest request) {
-    List<String> codes = service.regenerateRecoveryCodes(userId, request.code());
-    return new TwoFactorConfirmResponse(codes);
+    return TwoFactorConfirmResponse.of(service.regenerateRecoveryCodes(userId, request.code()));
   }
 }

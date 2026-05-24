@@ -36,12 +36,12 @@ public class DevAuthController {
         "dev-login endpoint invoked for email={} — never enable in production", request.email());
     LoginResult result =
         authService.loginWithOAuth(request.email(), DEV_PROVIDER, "dev:" + request.email());
-    if (result instanceof LoginResult.TwoFactorRequired challenge) {
+    if (result instanceof LoginResult.TwoFactorRequired c) {
       return ResponseEntity.status(HttpStatus.ACCEPTED)
-          .body(new TwoFactorChallengeResponse(challenge.challengeToken()));
+          .body(new TwoFactorChallengeResponse(c.challengeToken()));
     }
-    LoginResult.Tokens tokens = (LoginResult.Tokens) result;
-    refreshCookieWriter.set(res, tokens.issued().refreshToken());
-    return ResponseEntity.ok(new TokenResponse(tokens.issued().accessToken()));
+    LoginResult.Tokens t = (LoginResult.Tokens) result;
+    refreshCookieWriter.set(res, t.issued().refreshToken());
+    return ResponseEntity.ok(TokenResponse.from(t.issued()));
   }
 }

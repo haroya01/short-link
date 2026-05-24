@@ -1,15 +1,12 @@
 package com.example.short_link.link.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
-import com.example.short_link.link.application.ClickRecorder;
-import com.example.short_link.link.application.GeoIpResolver;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.LinkProtectionService;
-import com.example.short_link.link.application.UserAgentClassifier;
+import com.example.short_link.link.application.LinkRedirectFlow;
+import com.example.short_link.link.application.RedirectOutcome;
 import com.example.short_link.link.application.dto.CachedLink;
-import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.application.helper.LinkHtmlRenderer;
-import com.example.short_link.link.application.helper.LinkRedirectSupport;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -26,11 +23,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Password unlock for protected links. Lives in its own controller — same path as {@link
- * RedirectController} but a separate write-shaped flow (form-encoded POST, password check, then
- * either reject with the prompt or fall through into the normal redirect pipeline). Splitting lets
- * {@code RedirectController} focus on the read-side redirect path without a second method carrying
- * its own copy of password / view-limit / country / UA / click branches.
+ * Password-protected unlock — same path / different method from {@link RedirectController}. Checks
+ * the password, then hands off to {@link LinkRedirectFlow} for the same post-load pipeline the GET
+ * side uses. Failed password renders the prompt at 401; otherwise the outcome renders identically.
  */
 @RestController
 @RequiredArgsConstructor
@@ -38,9 +33,7 @@ public class PasswordUnlockController {
 
   private final LinkLookupService lookup;
   private final LinkProtectionService protectionService;
-  private final ClickRecorder clickRecorder;
-  private final GeoIpResolver geoIpResolver;
-  private final UserAgentClassifier userAgentClassifier;
+  private final LinkRedirectFlow flow;
 
   @PostMapping(
       value = "/{shortCode:[0-9A-Za-z]{3,16}}",
@@ -64,40 +57,20 @@ public class PasswordUnlockController {
         outcome = "password_required";
         return LinkHtmlRenderer.passwordPromptResponse(HttpStatus.UNAUTHORIZED, shortCode, true);
       }
-      try {
-        enforceViewLimit(entity);
-      } catch (LinkException e) {
-        outcome = "view_limit";
-        throw e;
-      }
-      String clientCountry = geoIpResolver.resolve(LinkRedirectSupport.clientIp(req)).countryCode();
-      if (link.isBlockedFor(clientCountry)) {
-        outcome = "blocked";
-        return LinkHtmlRenderer.blockedPageResponse();
-      }
-      UserAgentInfo ua = userAgentClassifier.classify(userAgent);
-      CachedLink.Picked picked =
-          link.pick(clientCountry, LinkRedirectSupport.normalizeOs(ua.osName()), ua.deviceClass());
-      clickRecorder.record(
-          link.linkId(),
-          picked.url(),
-          referrer,
-          userAgent,
-          LinkRedirectSupport.clientIp(req),
-          acceptLanguage,
-          src,
-          picked.destinationId());
-      outcome = "redirect";
-      return ResponseEntity.status(HttpStatus.FOUND)
-          .location(URI.create(picked.url()))
-          .header(HttpHeaders.CACHE_CONTROL, "no-store")
-          .header("X-Robots-Tag", "noindex, nofollow")
-          .build();
+      RedirectOutcome result =
+          flow.execute(link, entity, referrer, userAgent, acceptLanguage, src, req);
+      ResponseEntity<?> response = renderUnlock(result);
+      outcome =
+          (result instanceof RedirectOutcome.Blocked)
+              ? "blocked"
+              : (result instanceof RedirectOutcome.ExpiredWithMessage) ? "expired" : "redirect";
+      return response;
     } catch (LinkException e) {
       outcome =
           switch (e.errorCode()) {
             case LINK_NOT_FOUND -> "not_found";
             case LINK_EXPIRED -> "expired";
+            case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
             default -> "error";
           };
       throw e;
@@ -106,11 +79,20 @@ public class PasswordUnlockController {
     }
   }
 
-  private void enforceViewLimit(LinkEntity entity) {
-    if (entity.getMaxViews() == null) return;
-    int updated = lookup.incrementViewCountIfBelowLimit(entity.getId());
-    if (updated == 0) {
-      throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode());
+  private ResponseEntity<?> renderUnlock(RedirectOutcome outcome) {
+    if (outcome instanceof RedirectOutcome.Redirect r) {
+      return ResponseEntity.status(HttpStatus.FOUND)
+          .location(URI.create(r.picked().url()))
+          .header(HttpHeaders.CACHE_CONTROL, "no-store")
+          .header("X-Robots-Tag", "noindex, nofollow")
+          .build();
     }
+    if (outcome instanceof RedirectOutcome.Blocked) {
+      return LinkHtmlRenderer.blockedPageResponse();
+    }
+    if (outcome instanceof RedirectOutcome.ExpiredWithMessage em) {
+      return LinkHtmlRenderer.expiredPageResponse(em.message());
+    }
+    throw new IllegalStateException("Unexpected unlock outcome: " + outcome);
   }
 }
