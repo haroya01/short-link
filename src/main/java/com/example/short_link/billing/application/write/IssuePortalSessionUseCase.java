@@ -1,13 +1,13 @@
 package com.example.short_link.billing.application.write;
 
-import com.example.short_link.billing.application.BillingNotConfiguredException;
-import com.example.short_link.billing.application.BillingNotEnrolledException;
 import com.example.short_link.billing.application.StripeProperties;
 import com.example.short_link.billing.domain.PortalUrl;
 import com.example.short_link.billing.domain.SubscriptionGateway;
-import com.example.short_link.user.application.UserNotFoundException;
+import com.example.short_link.billing.exception.BillingNotConfiguredException;
+import com.example.short_link.billing.exception.BillingNotEnrolledException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.UserNotFoundException;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

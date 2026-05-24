@@ -1,9 +1,5 @@
 package com.example.short_link.billing.api;
 
-import com.example.short_link.billing.application.BillingGatewayException;
-import com.example.short_link.billing.application.BillingNotConfiguredException;
-import com.example.short_link.billing.application.BillingNotEnrolledException;
-import com.example.short_link.billing.application.InvalidWebhookSignatureException;
 import com.example.short_link.billing.application.write.HandleSubscriptionWebhookUseCase;
 import com.example.short_link.billing.application.write.IssuePortalSessionCommand;
 import com.example.short_link.billing.application.write.IssuePortalSessionUseCase;
@@ -14,18 +10,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/billing")
 @RequiredArgsConstructor
@@ -57,27 +49,6 @@ public class BillingController {
     String payload = new String(request.getInputStream().readAllBytes(), StandardCharsets.UTF_8);
     handleWebhook.execute(new SubscriptionWebhookCommand(payload, signature));
     return ResponseEntity.ok("ok");
-  }
-
-  @ExceptionHandler(BillingNotConfiguredException.class)
-  public ResponseEntity<String> notConfigured() {
-    return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body("billing not configured");
-  }
-
-  @ExceptionHandler(BillingNotEnrolledException.class)
-  public ResponseEntity<String> notEnrolled() {
-    return ResponseEntity.status(HttpStatus.CONFLICT).body("not enrolled");
-  }
-
-  @ExceptionHandler(InvalidWebhookSignatureException.class)
-  public ResponseEntity<String> invalidSignature() {
-    return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("invalid signature");
-  }
-
-  @ExceptionHandler(BillingGatewayException.class)
-  public ResponseEntity<String> gatewayError(BillingGatewayException e) {
-    log.warn("billing gateway error", e);
-    return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body("billing gateway error");
   }
 
   public record CheckoutResponse(String url) {}

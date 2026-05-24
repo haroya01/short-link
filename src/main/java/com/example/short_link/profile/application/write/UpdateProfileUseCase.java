@@ -1,16 +1,16 @@
 package com.example.short_link.profile.application.write;
 
-import com.example.short_link.profile.application.InvalidUsernameException;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.MyProfileMapper;
 import com.example.short_link.profile.application.ReservedUsernames;
 import com.example.short_link.profile.application.Socials;
-import com.example.short_link.profile.application.UsernameTakenException;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.UsernameHistoryRepository;
-import com.example.short_link.user.application.UserNotFoundException;
+import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.UsernameTakenException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.UserNotFoundException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;

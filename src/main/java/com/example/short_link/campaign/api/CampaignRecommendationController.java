@@ -18,7 +18,7 @@ public class CampaignRecommendationController {
   private final CampaignRecommendationService service;
 
   @GetMapping
-  public CampaignRecommendationResponse get(
+  public CampaignRecommendationResponse recommendation(
       @AuthenticationPrincipal Long userId, @PathVariable Long campaignId) {
     return service.recommend(campaignId, userId);
   }

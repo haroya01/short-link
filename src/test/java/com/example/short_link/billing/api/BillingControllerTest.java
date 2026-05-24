@@ -9,15 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.billing.application.BillingNotConfiguredException;
-import com.example.short_link.billing.application.BillingNotEnrolledException;
-import com.example.short_link.billing.application.InvalidWebhookSignatureException;
 import com.example.short_link.billing.application.write.HandleSubscriptionWebhookUseCase;
 import com.example.short_link.billing.application.write.IssuePortalSessionCommand;
 import com.example.short_link.billing.application.write.IssuePortalSessionUseCase;
 import com.example.short_link.billing.application.write.StartCheckoutCommand;
 import com.example.short_link.billing.application.write.StartCheckoutUseCase;
 import com.example.short_link.billing.application.write.SubscriptionWebhookCommand;
+import com.example.short_link.billing.exception.BillingNotConfiguredException;
+import com.example.short_link.billing.exception.BillingNotEnrolledException;
+import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
@@ -70,7 +70,7 @@ class BillingControllerTest {
 
     mvc.perform(post("/api/v1/billing/checkout").header("Authorization", "Bearer " + token))
         .andExpect(status().isServiceUnavailable())
-        .andExpect(content().string("billing not configured"));
+        .andExpect(jsonPath("$.code").value("BILLING_NOT_CONFIGURED"));
   }
 
   @Test
@@ -94,7 +94,7 @@ class BillingControllerTest {
 
     mvc.perform(post("/api/v1/billing/portal").header("Authorization", "Bearer " + token))
         .andExpect(status().isConflict())
-        .andExpect(content().string("not enrolled"));
+        .andExpect(jsonPath("$.code").value("BILLING_NOT_ENROLLED"));
   }
 
   @Test
@@ -120,6 +120,6 @@ class BillingControllerTest {
                 .header("Stripe-Signature", "t=1,v1=evil")
                 .content("{\"forged\":true}"))
         .andExpect(status().isBadRequest())
-        .andExpect(content().string("invalid signature"));
+        .andExpect(jsonPath("$.code").value("INVALID_WEBHOOK_SIGNATURE"));
   }
 }

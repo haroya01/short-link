@@ -21,7 +21,7 @@ public class LinkTagController {
   private final LinkTagService service;
 
   @GetMapping("/{shortCode}/tags")
-  public LinkTagsResponse get(
+  public LinkTagsResponse tags(
       @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
     return new LinkTagsResponse(shortCode, service.tagNamesFor(userId, shortCode));
   }

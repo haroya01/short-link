@@ -8,8 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.profile.application.ProfileNotFoundException;
 import com.example.short_link.profile.domain.ProfileBlockRepository;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
 import java.lang.reflect.Field;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;

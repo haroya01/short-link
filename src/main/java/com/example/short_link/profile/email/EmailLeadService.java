@@ -1,10 +1,11 @@
 package com.example.short_link.profile.email;
 
-import com.example.short_link.profile.application.InvalidUsernameException;
-import com.example.short_link.profile.application.ProfileNotFoundException;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
+import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
+import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -74,6 +75,16 @@ public class EmailLeadService {
     }
     return repository.save(
         new EmailLeadEntity(ownerUserId, block.getId(), normalizedEmail, ipHash));
+  }
+
+  @Transactional
+  public EmailLeadEntity submitPublic(Long blockId, String email, String clientIp) {
+    ProfileBlockEntity block =
+        blockRepository
+            .findById(blockId)
+            .filter(b -> b.getType() == ProfileBlockType.EMAIL_FORM)
+            .orElseThrow(() -> new ProfileNotFoundException("block " + blockId));
+    return submit(block.getUserId(), block.getId(), email, clientIp);
   }
 
   @Transactional(readOnly = true)

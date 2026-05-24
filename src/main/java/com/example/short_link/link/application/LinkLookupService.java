@@ -5,6 +5,8 @@ import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.LinkExpiredException;
+import com.example.short_link.link.exception.LinkNotFoundException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.List;

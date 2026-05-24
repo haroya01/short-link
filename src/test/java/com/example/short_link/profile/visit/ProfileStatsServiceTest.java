@@ -16,9 +16,9 @@ import com.example.short_link.link.domain.ClickEventRepository.ReferrerHostClick
 import com.example.short_link.link.domain.ClickEventRepository.SourceChannelClickRow;
 import com.example.short_link.link.domain.ClickEventRepository.UtmCampaignClickRow;
 import com.example.short_link.link.domain.ClickEventRepository.UtmSourceClickRow;
-import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.UserNotFoundException;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.LocalDate;

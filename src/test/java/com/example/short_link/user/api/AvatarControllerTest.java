@@ -13,10 +13,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.avatar.AvatarService;
-import com.example.short_link.user.application.avatar.AvatarUnavailableException;
-import com.example.short_link.user.application.avatar.InvalidAvatarException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.AvatarUnavailableException;
+import com.example.short_link.user.exception.InvalidAvatarException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;

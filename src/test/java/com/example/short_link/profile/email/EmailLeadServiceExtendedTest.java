@@ -11,11 +11,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.profile.application.InvalidUsernameException;
-import com.example.short_link.profile.application.ProfileNotFoundException;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
+import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
+import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.List;

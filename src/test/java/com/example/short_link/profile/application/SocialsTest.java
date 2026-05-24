@@ -3,6 +3,7 @@ package com.example.short_link.profile.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.profile.exception.InvalidUsernameException;
 import org.junit.jupiter.api.Test;
 
 class SocialsTest {

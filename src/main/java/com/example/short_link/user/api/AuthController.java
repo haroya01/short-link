@@ -1,8 +1,8 @@
 package com.example.short_link.user.api;
 
 import com.example.short_link.user.application.AuthService;
-import com.example.short_link.user.application.InvalidRefreshTokenException;
 import com.example.short_link.user.application.IssuedTokens;
+import com.example.short_link.user.exception.InvalidRefreshTokenException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;

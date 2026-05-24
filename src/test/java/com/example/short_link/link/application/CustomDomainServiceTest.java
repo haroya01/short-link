@@ -11,6 +11,8 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.CustomDomainService.DomainSummary;
 import com.example.short_link.link.domain.CustomDomainEntity;
 import com.example.short_link.link.domain.CustomDomainRepository;
+import com.example.short_link.link.exception.CustomDomainNotFoundException;
+import com.example.short_link.link.exception.CustomDomainNotVerifiedException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.Instant;

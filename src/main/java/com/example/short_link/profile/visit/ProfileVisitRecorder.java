@@ -11,6 +11,9 @@ import com.example.short_link.link.application.SourceChannelNormalizer;
 import com.example.short_link.link.application.UserAgentClassifier;
 import com.example.short_link.link.application.UserAgentInfo;
 import com.example.short_link.link.application.VisitorHasher;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,10 +31,42 @@ import org.springframework.transaction.annotation.Transactional;
 public class ProfileVisitRecorder {
 
   private final ProfileVisitRepository repository;
+  private final UserRepository userRepository;
   private final UserAgentClassifier userAgentClassifier;
   private final GeoIpResolver geoIpResolver;
   private final AsnResolver asnResolver;
   private final BotHeuristic botHeuristic;
+
+  @Transactional
+  public void recordUsername(
+      String username,
+      String referrer,
+      String userAgent,
+      String clientIp,
+      String acceptLanguage,
+      String sourceChannel,
+      String utmSource,
+      String utmMedium,
+      String utmCampaign,
+      String utmTerm,
+      String utmContent) {
+    UserEntity owner =
+        userRepository
+            .findByUsername(username.toLowerCase())
+            .orElseThrow(() -> new ProfileNotFoundException(username));
+    record(
+        owner.getId(),
+        referrer,
+        userAgent,
+        clientIp,
+        acceptLanguage,
+        sourceChannel,
+        utmSource,
+        utmMedium,
+        utmCampaign,
+        utmTerm,
+        utmContent);
+  }
 
   @Transactional
   public void record(

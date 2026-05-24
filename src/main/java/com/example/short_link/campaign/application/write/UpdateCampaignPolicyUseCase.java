@@ -1,12 +1,12 @@
 package com.example.short_link.campaign.application.write;
 
-import com.example.short_link.campaign.application.CampaignArchivedException;
 import com.example.short_link.campaign.application.CampaignUpdateRequest;
-import com.example.short_link.campaign.application.InvalidCampaignPeriodException;
-import com.example.short_link.campaign.application.MissingPostEndDestinationException;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
+import com.example.short_link.campaign.exception.CampaignArchivedException;
+import com.example.short_link.campaign.exception.InvalidCampaignPeriodException;
+import com.example.short_link.campaign.exception.MissingPostEndDestinationException;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

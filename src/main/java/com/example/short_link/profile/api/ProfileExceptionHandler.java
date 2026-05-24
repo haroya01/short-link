@@ -1,9 +1,11 @@
 package com.example.short_link.profile.api;
 
 import com.example.short_link.common.api.ProblemDetails;
-import com.example.short_link.profile.application.InvalidUsernameException;
-import com.example.short_link.profile.application.ProfileNotFoundException;
-import com.example.short_link.profile.application.UsernameTakenException;
+import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
+import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.OembedNotApplicableException;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.exception.UsernameTakenException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
@@ -29,5 +31,19 @@ public class ProfileExceptionHandler {
   @ExceptionHandler(ProfileNotFoundException.class)
   public ProblemDetail handleProfileNotFound(ProfileNotFoundException e, HttpServletRequest req) {
     return ProblemDetails.of(HttpStatus.NOT_FOUND, e.getMessage(), "PROFILE_NOT_FOUND", req);
+  }
+
+  @ExceptionHandler(OembedNotApplicableException.class)
+  public ProblemDetail handleOembedNotApplicable(
+      OembedNotApplicableException e, HttpServletRequest req) {
+    return ProblemDetails.of(
+        HttpStatus.UNPROCESSABLE_ENTITY, e.getMessage(), "OEMBED_NOT_APPLICABLE", req);
+  }
+
+  @ExceptionHandler(EmailLeadRateLimitedException.class)
+  public ProblemDetail handleEmailLeadRateLimited(
+      EmailLeadRateLimitedException e, HttpServletRequest req) {
+    return ProblemDetails.of(
+        HttpStatus.TOO_MANY_REQUESTS, e.getMessage(), "EMAIL_LEAD_RATE_LIMITED", req);
   }
 }
