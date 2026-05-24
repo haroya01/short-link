@@ -8,7 +8,6 @@ import com.example.short_link.campaign.application.CampaignBatchService;
 import com.example.short_link.campaign.application.CampaignBatchUpdateRequest;
 import com.example.short_link.campaign.application.QrOptions;
 import com.example.short_link.campaign.application.QrPngEncoder;
-import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -35,7 +34,6 @@ public class CampaignBatchController {
 
   private final CampaignBatchService service;
   private final CampaignBatchExportService exportService;
-  private final ShortLinkUrlBuilder urlBuilder;
 
   @PostMapping
   public ResponseEntity<CampaignBatchResponse> create(
@@ -43,8 +41,7 @@ public class CampaignBatchController {
       @PathVariable Long campaignId,
       @Valid @RequestBody CampaignBatchCreateRequest request) {
     BatchWithLink result = service.create(campaignId, userId, request);
-    CampaignBatchResponse body =
-        CampaignBatchResponse.from(result.batch(), result.link(), urlBuilder);
+    CampaignBatchResponse body = CampaignBatchResponse.from(result.batch(), result.link());
     return ResponseEntity.created(
             URI.create("/api/v1/campaigns/" + campaignId + "/batches/" + result.batch().getId()))
         .body(body);
@@ -57,9 +54,7 @@ public class CampaignBatchController {
       @Valid @RequestBody CampaignBatchBulkRequest request) {
     List<BatchWithLink> results = service.createBulk(campaignId, userId, request);
     List<CampaignBatchResponse> body =
-        results.stream()
-            .map(r -> CampaignBatchResponse.from(r.batch(), r.link(), urlBuilder))
-            .toList();
+        results.stream().map(r -> CampaignBatchResponse.from(r.batch(), r.link())).toList();
     return ResponseEntity.status(201).body(body);
   }
 
@@ -67,7 +62,7 @@ public class CampaignBatchController {
   public List<CampaignBatchResponse> list(
       @AuthenticationPrincipal Long userId, @PathVariable Long campaignId) {
     return service.list(campaignId, userId).stream()
-        .map(r -> CampaignBatchResponse.from(r.batch(), r.link(), urlBuilder))
+        .map(r -> CampaignBatchResponse.from(r.batch(), r.link()))
         .toList();
   }
 
@@ -77,7 +72,7 @@ public class CampaignBatchController {
       @PathVariable Long campaignId,
       @PathVariable Long batchId) {
     BatchWithLink result = service.detail(campaignId, batchId, userId);
-    return CampaignBatchResponse.from(result.batch(), result.link(), urlBuilder);
+    return CampaignBatchResponse.from(result.batch(), result.link());
   }
 
   @PatchMapping("/{batchId}")
@@ -87,7 +82,7 @@ public class CampaignBatchController {
       @PathVariable Long batchId,
       @Valid @RequestBody CampaignBatchUpdateRequest request) {
     BatchWithLink result = service.update(campaignId, batchId, userId, request);
-    return CampaignBatchResponse.from(result.batch(), result.link(), urlBuilder);
+    return CampaignBatchResponse.from(result.batch(), result.link());
   }
 
   @DeleteMapping("/{batchId}")

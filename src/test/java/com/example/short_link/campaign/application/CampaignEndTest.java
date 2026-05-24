@@ -81,7 +81,7 @@ class CampaignEndTest {
             campaign.getId(),
             owner,
             new CampaignBatchCreateRequest("east", null, null, 100, null, null));
-    Long linkId = bwl.link().getId();
+    Long linkId = bwl.link().id();
 
     endNowUseCase.execute(campaign.getId(), owner);
 
@@ -99,7 +99,7 @@ class CampaignEndTest {
             campaign.getId(),
             owner,
             new CampaignBatchCreateRequest("east", null, null, 100, null, null));
-    Long linkId = bwl.link().getId();
+    Long linkId = bwl.link().id();
 
     Instant before = Instant.now();
     endNowUseCase.execute(campaign.getId(), owner);
@@ -122,7 +122,7 @@ class CampaignEndTest {
 
     endNowUseCase.execute(campaign.getId(), owner);
 
-    LinkEntity reloaded = linkRepository.findById(bwl.link().getId()).orElseThrow();
+    LinkEntity reloaded = linkRepository.findById(bwl.link().id()).orElseThrow();
     assertThat(reloaded.getExpiresAt()).isNotNull();
     assertThat(reloaded.getExpiredMessage()).isEqualTo(message);
     assertThat(reloaded.getExpiredRedirectUrl()).isNull();
@@ -138,7 +138,7 @@ class CampaignEndTest {
             campaign.getId(),
             owner,
             new CampaignBatchCreateRequest("east", null, null, 100, null, null));
-    Long linkId = bwl.link().getId();
+    Long linkId = bwl.link().id();
 
     endNowUseCase.execute(campaign.getId(), owner);
 
@@ -174,7 +174,7 @@ class CampaignEndTest {
     int ended = endDueUseCase.execute(Instant.now());
 
     assertThat(ended).isEqualTo(1);
-    LinkEntity reloaded = linkRepository.findById(bwl.link().getId()).orElseThrow();
+    LinkEntity reloaded = linkRepository.findById(bwl.link().id()).orElseThrow();
     assertThat(reloaded.getExpiresAt()).isNotNull();
   }
 
@@ -189,7 +189,7 @@ class CampaignEndTest {
             owner,
             new CampaignBatchCreateRequest("east", null, null, 100, null, null));
     endNowUseCase.execute(campaign.getId(), owner);
-    LinkEntity v1 = linkRepository.findById(bwl.link().getId()).orElseThrow();
+    LinkEntity v1 = linkRepository.findById(bwl.link().id()).orElseThrow();
     assertThat(v1.getExpiredRedirectUrl()).isEqualTo("https://example.com/v1");
 
     // ENDED 상태에서 updatePolicy 거부됨 → 도메인 직접 조작 우회 위해 다른 시나리오:
@@ -197,7 +197,7 @@ class CampaignEndTest {
     // 여기선 reapplyPolicy 가 멱등성 보장 + KEEP 상태에서 변경된 경우 NoOp.
     reapplyUseCase.execute(campaign.getId(), owner);
 
-    LinkEntity reapplied = linkRepository.findById(bwl.link().getId()).orElseThrow();
+    LinkEntity reapplied = linkRepository.findById(bwl.link().id()).orElseThrow();
     assertThat(reapplied.getExpiredRedirectUrl()).isEqualTo("https://example.com/v1");
   }
 
@@ -211,7 +211,7 @@ class CampaignEndTest {
             owner,
             new CampaignBatchCreateRequest("east", null, null, 100, null, null));
     endNowUseCase.execute(campaign.getId(), owner);
-    assertThat(linkRepository.findById(bwl.link().getId()).orElseThrow().getExpiredMessage())
+    assertThat(linkRepository.findById(bwl.link().id()).orElseThrow().getExpiredMessage())
         .isEqualTo("구버전 메시지");
 
     // ENDED 상태에서 메시지만 변경. updatePolicy 는 ARCHIVED 만 거부하므로 ENDED 에선 허용.
@@ -219,7 +219,7 @@ class CampaignEndTest {
         campaign.getId(), owner, new CampaignUpdateRequest(null, null, null, null, null, "새 메시지"));
     reapplyUseCase.execute(campaign.getId(), owner);
 
-    LinkEntity reapplied = linkRepository.findById(bwl.link().getId()).orElseThrow();
+    LinkEntity reapplied = linkRepository.findById(bwl.link().id()).orElseThrow();
     assertThat(reapplied.getExpiredMessage()).isEqualTo("새 메시지");
   }
 

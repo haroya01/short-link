@@ -6,6 +6,7 @@ import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignStatus;
 import com.example.short_link.link.application.LinkCreated;
 import com.example.short_link.link.application.LinkCreationService;
+import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import java.util.ArrayList;
@@ -21,6 +22,7 @@ public class CampaignBatchService {
   private final CampaignBatchRepository batchRepository;
   private final LinkRepository linkRepository;
   private final LinkCreationService linkCreationService;
+  private final ShortLinkUrlBuilder urlBuilder;
   private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
 
   @Transactional
@@ -99,7 +101,7 @@ public class CampaignBatchService {
   public void delete(Long campaignId, Long batchId, Long ownerId) {
     BatchWithLink current = detail(campaignId, batchId, ownerId);
     batchRepository.delete(current.batch());
-    linkRepository.delete(current.link());
+    linkRepository.deleteById(current.link().id());
   }
 
   private BatchWithLink pairWithLink(CampaignBatchEntity batch) {
@@ -107,7 +109,15 @@ public class CampaignBatchService {
         linkRepository
             .findById(batch.getLinkId())
             .orElseThrow(() -> new IllegalStateException("orphan batch — link missing"));
-    return new BatchWithLink(batch, link);
+    return new BatchWithLink(batch, toLinkInfo(link));
+  }
+
+  private BatchLinkInfo toLinkInfo(LinkEntity link) {
+    return new BatchLinkInfo(
+        link.getId(),
+        link.getShortCode(),
+        urlBuilder.build(link.getShortCode()),
+        link.getOriginalUrl());
   }
 
   private BatchWithLink persistRow(
@@ -129,7 +139,7 @@ public class CampaignBatchService {
                 blankToNull(row.areaLabel()),
                 row.quantity(),
                 blankToNull(row.memo())));
-    return new BatchWithLink(batch, link);
+    return new BatchWithLink(batch, toLinkInfo(link));
   }
 
   private static void rejectIfTerminal(CampaignEntity campaign) {

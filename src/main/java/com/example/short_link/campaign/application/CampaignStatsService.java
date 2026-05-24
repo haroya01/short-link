@@ -40,7 +40,7 @@ public class CampaignStatsService {
           0L, 0L, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
-    List<Long> linkIds = batches.stream().map(b -> b.link().getId()).toList();
+    List<Long> linkIds = batches.stream().map(b -> b.link().id()).toList();
 
     Map<Long, Long> clicksByLink =
         toMap(clickEventRepository.countsByLinkIdsSince(linkIds, campaign.getStartsAt()));
@@ -50,7 +50,7 @@ public class CampaignStatsService {
     List<BatchStats> byBatch = new ArrayList<>(batches.size());
     long totalClicks = 0;
     for (BatchWithLink bwl : batches) {
-      long clicks = clicksByLink.getOrDefault(bwl.link().getId(), 0L);
+      long clicks = clicksByLink.getOrDefault(bwl.link().id(), 0L);
       totalClicks += clicks;
       byBatch.add(
           new BatchStats(
@@ -59,7 +59,7 @@ public class CampaignStatsService {
               bwl.batch().getDistributorName(),
               bwl.batch().getAreaLabel(),
               bwl.batch().getQuantity(),
-              bwl.link().getShortCode(),
+              bwl.link().shortCode(),
               clicks));
     }
 

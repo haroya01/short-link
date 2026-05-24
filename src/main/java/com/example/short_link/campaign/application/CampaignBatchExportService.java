@@ -1,7 +1,6 @@
 package com.example.short_link.campaign.application;
 
 import com.example.short_link.link.application.CsvWriter;
-import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.List;
@@ -17,7 +16,6 @@ public class CampaignBatchExportService {
 
   private final CampaignBatchService batchService;
   private final QrPngEncoder qrEncoder;
-  private final ShortLinkUrlBuilder urlBuilder;
 
   public String exportCsv(Long campaignId, Long ownerId) {
     List<BatchWithLink> batches = batchService.list(campaignId, ownerId);
@@ -40,8 +38,8 @@ public class CampaignBatchExportService {
           bwl.batch().getDistributorName(),
           bwl.batch().getAreaLabel(),
           bwl.batch().getQuantity(),
-          urlBuilder.build(bwl.link().getShortCode()),
-          bwl.link().getOriginalUrl(),
+          bwl.link().shortUrl(),
+          bwl.link().originalUrl(),
           bwl.batch().getMemo());
     }
     return sb.toString();
@@ -56,7 +54,7 @@ public class CampaignBatchExportService {
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     try (ZipOutputStream zip = new ZipOutputStream(out)) {
       for (BatchWithLink bwl : batches) {
-        String shortUrl = urlBuilder.build(bwl.link().getShortCode());
+        String shortUrl = bwl.link().shortUrl();
         byte[] png =
             qrEncoder.encode(
                 shortUrl,
@@ -80,7 +78,7 @@ public class CampaignBatchExportService {
   public byte[] exportSinglePng(Long campaignId, Long batchId, Long ownerId, QrOptions options) {
     BatchWithLink bwl = batchService.detail(campaignId, batchId, ownerId);
     return qrEncoder.encode(
-        urlBuilder.build(bwl.link().getShortCode()),
+        bwl.link().shortUrl(),
         options.sizePx(),
         options.ec(),
         options.includeLabel() ? bwl.batch().getName() : null);
@@ -88,7 +86,7 @@ public class CampaignBatchExportService {
 
   private static String qrFileName(BatchWithLink bwl) {
     String safe = sanitize(bwl.batch().getName());
-    return String.format("%05d_%s_%s.png", bwl.batch().getId(), safe, bwl.link().getShortCode());
+    return String.format("%05d_%s_%s.png", bwl.batch().getId(), safe, bwl.link().shortCode());
   }
 
   private static String sanitize(String s) {

@@ -1,8 +1,7 @@
 package com.example.short_link.campaign.api;
 
+import com.example.short_link.campaign.application.BatchLinkInfo;
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
-import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.domain.LinkEntity;
 import java.time.Instant;
 
 public record CampaignBatchResponse(
@@ -19,15 +18,14 @@ public record CampaignBatchResponse(
     String memo,
     Instant createdAt) {
 
-  public static CampaignBatchResponse from(
-      CampaignBatchEntity batch, LinkEntity link, ShortLinkUrlBuilder urlBuilder) {
+  public static CampaignBatchResponse from(CampaignBatchEntity batch, BatchLinkInfo link) {
     return new CampaignBatchResponse(
         batch.getId(),
         batch.getCampaignId(),
-        link.getId(),
-        link.getShortCode(),
-        urlBuilder.build(link.getShortCode()),
-        link.getOriginalUrl(),
+        link.id(),
+        link.shortCode(),
+        link.shortUrl(),
+        link.originalUrl(),
         batch.getName(),
         batch.getDistributorName(),
         batch.getAreaLabel(),
