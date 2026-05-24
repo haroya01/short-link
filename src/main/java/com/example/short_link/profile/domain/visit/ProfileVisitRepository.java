@@ -23,8 +23,6 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
 
   long countByProfileUserIdAndBotFalse(Long profileUserId);
 
-  long countByProfileUserIdAndVisitedAtAfter(Long profileUserId, Instant after);
-
   long countByProfileUserIdAndBotFalseAndVisitedAtAfter(Long profileUserId, Instant after);
 
   @Query("SELECT COUNT(p) FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = true")
