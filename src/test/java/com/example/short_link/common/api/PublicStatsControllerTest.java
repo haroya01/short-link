@@ -25,4 +25,9 @@ class PublicStatsControllerTest {
         .andExpect(jsonPath("$.links").isNumber())
         .andExpect(jsonPath("$.clicks").isNumber());
   }
+
+  @Test
+  void healthEndpointAllowsDockerHealthcheckWithoutAuth() throws Exception {
+    mvc.perform(get("/actuator/health")).andExpect(status().isOk());
+  }
 }
