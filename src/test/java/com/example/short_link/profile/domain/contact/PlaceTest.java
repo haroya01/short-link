@@ -3,7 +3,7 @@ package com.example.short_link.profile.domain.contact;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.Test;
 
 class PlaceTest {
@@ -30,37 +30,37 @@ class PlaceTest {
   @Test
   void nameRequired() {
     assertThatThrownBy(() -> Place.normalize("{\"address\":\"서울\",\"lat\":37,\"lng\":127}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () -> Place.normalize("{\"name\":\"   \",\"address\":\"서울\",\"lat\":37,\"lng\":127}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void addressRequired() {
     assertThatThrownBy(() -> Place.normalize("{\"name\":\"x\",\"lat\":37,\"lng\":127}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void latLngRequired() {
     assertThatThrownBy(() -> Place.normalize("{\"name\":\"x\",\"address\":\"서울\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> Place.normalize("{\"name\":\"x\",\"address\":\"서울\",\"lat\":37}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void latLngOutOfRange() {
     assertThatThrownBy(
             () -> Place.normalize("{\"name\":\"x\",\"address\":\"서울\",\"lat\":91,\"lng\":127}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () -> Place.normalize("{\"name\":\"x\",\"address\":\"서울\",\"lat\":37,\"lng\":181}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () -> Place.normalize("{\"name\":\"x\",\"address\":\"서울\",\"lat\":-91,\"lng\":127}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -96,13 +96,13 @@ class PlaceTest {
                 Place.normalize(
                     "{\"name\":\"x\",\"address\":\"서울\",\"lat\":37,\"lng\":127,"
                         + "\"coverUrl\":\"javascript:alert(1)\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () ->
                 Place.normalize(
                     "{\"name\":\"x\",\"address\":\"서울\",\"lat\":37,\"lng\":127,"
                         + "\"coverUrl\":\"file:///etc/passwd\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -127,8 +127,7 @@ class PlaceTest {
 
   @Test
   void rejectsMalformedJson() {
-    assertThatThrownBy(() -> Place.normalize("not json"))
-        .isInstanceOf(InvalidUsernameException.class);
-    assertThatThrownBy(() -> Place.normalize("")).isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(() -> Place.normalize("not json")).isInstanceOf(ProfileException.class);
+    assertThatThrownBy(() -> Place.normalize("")).isInstanceOf(ProfileException.class);
   }
 }

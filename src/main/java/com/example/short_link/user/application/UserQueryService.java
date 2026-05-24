@@ -2,7 +2,8 @@ package com.example.short_link.user.application;
 
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,7 @@ public class UserQueryService {
     return userRepository
         .findById(userId)
         .filter(u -> !u.isDeleted())
-        .orElseThrow(UserNotFoundException::new);
+        .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
   }
 
   /** Filter 등 비-throw 경로용. deleted 도 포함된 row 가 그대로 필요한 곳은 직접 repository 사용 X. */

@@ -7,7 +7,7 @@ import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.properties.UserDeletionProperties;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.InvalidRefreshTokenException;
+import com.example.short_link.user.exception.UserException;
 import com.example.short_link.user.scheduler.SoftDeletedUserCleanupJob;
 import java.time.Duration;
 import java.time.Instant;
@@ -70,7 +70,7 @@ class SoftDeleteFlowTest {
     deletionService.deleteAccount(user.getId());
 
     assertThatThrownBy(() -> authService.refresh(initial.refreshToken()))
-        .isInstanceOf(InvalidRefreshTokenException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test

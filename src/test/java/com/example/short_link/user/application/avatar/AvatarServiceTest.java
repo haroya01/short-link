@@ -13,9 +13,7 @@ import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.s3.AvatarProperties;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.AvatarUnavailableException;
-import com.example.short_link.user.exception.InvalidAvatarException;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,16 +41,14 @@ class AvatarServiceTest {
   void presignFailsWhenNotConfigured() {
     AvatarProperties noBucket = new AvatarProperties("", "", null, 300, 1024);
     AvatarService svc = new AvatarService(userRepository, noBucket, objectStorage);
-    assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg"))
-        .isInstanceOf(AvatarUnavailableException.class);
+    assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg")).isInstanceOf(UserException.class);
   }
 
   @Test
   void presignRejectsUnsupportedContentType() {
     assertThatThrownBy(() -> service.presignUpload(1L, "image/svg+xml"))
-        .isInstanceOf(InvalidAvatarException.class);
-    assertThatThrownBy(() -> service.presignUpload(1L, null))
-        .isInstanceOf(InvalidAvatarException.class);
+        .isInstanceOf(UserException.class);
+    assertThatThrownBy(() -> service.presignUpload(1L, null)).isInstanceOf(UserException.class);
   }
 
   @Test
@@ -72,18 +68,16 @@ class AvatarServiceTest {
   @Test
   void commitRejectsKeyNotOwnedByUser() {
     assertThatThrownBy(() -> service.commitUpload(1L, "avatars/2/x.jpg"))
-        .isInstanceOf(InvalidAvatarException.class);
-    assertThatThrownBy(() -> service.commitUpload(1L, ""))
-        .isInstanceOf(InvalidAvatarException.class);
-    assertThatThrownBy(() -> service.commitUpload(1L, null))
-        .isInstanceOf(InvalidAvatarException.class);
+        .isInstanceOf(UserException.class);
+    assertThatThrownBy(() -> service.commitUpload(1L, "")).isInstanceOf(UserException.class);
+    assertThatThrownBy(() -> service.commitUpload(1L, null)).isInstanceOf(UserException.class);
   }
 
   @Test
   void commitFailsWhenObjectMissing() {
     when(objectStorage.objectSize("avatars/1/x.jpg")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "avatars/1/x.jpg"))
-        .isInstanceOf(InvalidAvatarException.class)
+        .isInstanceOf(UserException.class)
         .hasMessageContaining("upload not found");
   }
 
@@ -91,7 +85,7 @@ class AvatarServiceTest {
   void commitDeletesOversizedUploadAndThrows() {
     when(objectStorage.objectSize("avatars/1/x.jpg")).thenReturn(Optional.of(9999L));
     assertThatThrownBy(() -> service.commitUpload(1L, "avatars/1/x.jpg"))
-        .isInstanceOf(InvalidAvatarException.class)
+        .isInstanceOf(UserException.class)
         .hasMessageContaining("exceeds maxBytes");
     verify(objectStorage).delete("avatars/1/x.jpg");
   }
@@ -103,7 +97,7 @@ class AvatarServiceTest {
         .when(objectStorage)
         .delete("avatars/1/x.jpg");
     assertThatThrownBy(() -> service.commitUpload(1L, "avatars/1/x.jpg"))
-        .isInstanceOf(InvalidAvatarException.class)
+        .isInstanceOf(UserException.class)
         .hasMessageContaining("exceeds maxBytes");
   }
 
@@ -112,7 +106,7 @@ class AvatarServiceTest {
     when(objectStorage.objectSize("avatars/1/x.jpg")).thenReturn(Optional.of(100L));
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "avatars/1/x.jpg"))
-        .isInstanceOf(UserNotFoundException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -165,7 +159,7 @@ class AvatarServiceTest {
   @Test
   void clearAvatarThrowsWhenUserMissing() {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.clearAvatar(1L)).isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.clearAvatar(1L)).isInstanceOf(UserException.class);
   }
 
   @Test

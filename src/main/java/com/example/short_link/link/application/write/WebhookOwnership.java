@@ -4,9 +4,8 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.domain.repository.LinkWebhookRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
-import com.example.short_link.link.exception.WebhookNotFoundException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -26,16 +25,19 @@ class WebhookOwnership {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!link.isOwnedBy(userId)) throw new LinkNotOwnedException(shortCode);
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
+    if (!link.isOwnedBy(userId)) throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
     return link;
   }
 
   LinkWebhookEntity ownedHook(Long userId, String shortCode, Long webhookId) {
     LinkEntity link = ownedLink(userId, shortCode);
     LinkWebhookEntity hook =
-        repository.findById(webhookId).orElseThrow(WebhookNotFoundException::new);
-    if (!hook.getLinkId().equals(link.getId())) throw new WebhookNotFoundException();
+        repository
+            .findById(webhookId)
+            .orElseThrow(() -> new LinkException(LinkErrorCode.WEBHOOK_NOT_FOUND));
+    if (!hook.getLinkId().equals(link.getId()))
+      throw new LinkException(LinkErrorCode.WEBHOOK_NOT_FOUND);
     return hook;
   }
 }

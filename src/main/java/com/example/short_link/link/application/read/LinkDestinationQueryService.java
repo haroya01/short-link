@@ -5,8 +5,8 @@ import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,8 +24,8 @@ public class LinkDestinationQueryService {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
-    if (!link.isOwnedBy(userId)) throw new LinkNotOwnedException(shortCode);
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
+    if (!link.isOwnedBy(userId)) throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
     return repository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
         .map(LinkDestinationQueryService::toSummary)
         .toList();

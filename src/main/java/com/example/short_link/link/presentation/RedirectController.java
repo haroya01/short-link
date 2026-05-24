@@ -14,9 +14,8 @@ import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.application.helper.LinkHtmlRenderer;
 import com.example.short_link.link.application.helper.LinkRedirectSupport;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.exception.LinkExpiredException;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkViewLimitExceededException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
@@ -70,14 +69,14 @@ public class RedirectController {
           handleRedirect(shortCode, src, referrer, userAgent, acceptLanguage, req);
       outcome = LinkRedirectSupport.classifyOutcome(response);
       return response;
-    } catch (LinkNotFoundException e) {
-      outcome = "not_found";
-      throw e;
-    } catch (LinkExpiredException e) {
-      outcome = "expired";
-      throw e;
-    } catch (LinkViewLimitExceededException e) {
-      outcome = "view_limit";
+    } catch (LinkException e) {
+      outcome =
+          switch (e.errorCode()) {
+            case LINK_NOT_FOUND -> "not_found";
+            case LINK_EXPIRED -> "expired";
+            case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
+            default -> "error";
+          };
       throw e;
     } finally {
       sample.stop(meterRegistry.timer("redirect.latency", "outcome", outcome));
@@ -98,7 +97,7 @@ public class RedirectController {
     CachedLink link;
     try {
       link = lookup.findActiveLink(shortCode);
-    } catch (LinkExpiredException e) {
+    } catch (LinkException e) {
       LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
       if (expired != null && expired.getExpiredMessage() != null) {
         return LinkHtmlRenderer.expiredPageResponse(expired.getExpiredMessage());
@@ -110,7 +109,7 @@ public class RedirectController {
     // customer's domain. Default Host (kurl.me, www.kurl.me) skips the check.
     Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
     if (customOwner != null && !customOwner.equals(link.userId())) {
-      throw new LinkNotFoundException(shortCode);
+      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
     if (crawlerLabel != null) {
@@ -124,7 +123,7 @@ public class RedirectController {
     if (entity != null) {
       try {
         enforceViewLimit(entity);
-      } catch (LinkViewLimitExceededException e) {
+      } catch (LinkException e) {
         if (entity.getExpiredMessage() != null) {
           return LinkHtmlRenderer.expiredPageResponse(entity.getExpiredMessage());
         }
@@ -200,7 +199,7 @@ public class RedirectController {
     if (entity.getMaxViews() == null) return;
     int updated = lookup.incrementViewCountIfBelowLimit(entity.getId());
     if (updated == 0) {
-      throw new LinkViewLimitExceededException(entity.getShortCode());
+      throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode());
     }
   }
 }

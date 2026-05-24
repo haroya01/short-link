@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.DuplicateShortCodeException;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
@@ -75,7 +75,7 @@ class LinkCreationServiceTest {
 
     assertThatThrownBy(
             () -> service.create("https://example.com/second", user.getId(), "taken1", null))
-        .isInstanceOf(DuplicateShortCodeException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test

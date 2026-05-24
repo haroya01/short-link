@@ -12,9 +12,8 @@ import com.example.short_link.profile.application.email.EmailLeadService;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
-import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
-import com.example.short_link.profile.exception.InvalidUsernameException;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -58,7 +57,7 @@ class EmailLeadControllerTest {
 
   @Test
   void submitMissingBlockReturns404() throws Exception {
-    doThrow(new ProfileNotFoundException("block 999999"))
+    doThrow(new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "block 999999"))
         .when(leadService)
         .submitPublic(eq(999999L), eq("x@y.com"), anyString());
 
@@ -76,7 +75,7 @@ class EmailLeadControllerTest {
     ProfileBlockEntity block =
         blockRepository.save(
             new ProfileBlockEntity(user.getId(), ProfileBlockType.DIVIDER, null, 1));
-    doThrow(new ProfileNotFoundException("block " + block.getId()))
+    doThrow(new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "block " + block.getId()))
         .when(leadService)
         .submitPublic(eq(block.getId()), eq("x@y.com"), anyString());
 
@@ -94,7 +93,7 @@ class EmailLeadControllerTest {
         blockRepository.save(
             new ProfileBlockEntity(
                 user.getId(), ProfileBlockType.EMAIL_FORM, "{\"title\":\"newsletter\"}", 1));
-    doThrow(new InvalidUsernameException("bad email"))
+    doThrow(new ProfileException(ProfileErrorCode.INVALID_USERNAME, "bad email"))
         .when(leadService)
         .submitPublic(eq(block.getId()), eq("bogus"), anyString());
 
@@ -113,7 +112,7 @@ class EmailLeadControllerTest {
         blockRepository.save(
             new ProfileBlockEntity(
                 user.getId(), ProfileBlockType.EMAIL_FORM, "{\"title\":\"newsletter\"}", 1));
-    doThrow(new EmailLeadRateLimitedException("too fast"))
+    doThrow(new ProfileException(ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "too fast"))
         .when(leadService)
         .submitPublic(eq(block.getId()), eq("a@b.com"), anyString());
 

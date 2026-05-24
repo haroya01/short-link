@@ -9,7 +9,7 @@ import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -62,7 +62,7 @@ class LinkStatsQueryServiceIntegrationTest {
   void statsThrowsForUnknownShortCode() {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-st2"));
     assertThatThrownBy(() -> service.stats(user.getId(), "nope9999"))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -80,8 +80,7 @@ class LinkStatsQueryServiceIntegrationTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-pst1"));
     linkRepository.save(new LinkEntity("https://example.com", "pst0001", owner.getId(), null));
 
-    assertThatThrownBy(() -> service.publicStats("pst0001"))
-        .isInstanceOf(LinkNotFoundException.class);
+    assertThatThrownBy(() -> service.publicStats("pst0001")).isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -96,7 +95,6 @@ class LinkStatsQueryServiceIntegrationTest {
 
   @Test
   void publicStatsThrowsForUnknown() {
-    assertThatThrownBy(() -> service.publicStats("nope9999"))
-        .isInstanceOf(LinkNotFoundException.class);
+    assertThatThrownBy(() -> service.publicStats("nope9999")).isInstanceOf(LinkException.class);
   }
 }

@@ -6,7 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -49,7 +49,7 @@ class ToggleLinkOnProfileUseCaseTest {
   void missingThrows() {
     when(linkRepository.findByShortCode("missing")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> useCase.execute(new ToggleLinkOnProfileCommand(7L, "missing", true)))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -57,6 +57,6 @@ class ToggleLinkOnProfileUseCaseTest {
     LinkEntity link = new LinkEntity("https://t", "abc", 99L, null);
     when(linkRepository.findByShortCode("abc")).thenReturn(Optional.of(link));
     assertThatThrownBy(() -> useCase.execute(new ToggleLinkOnProfileCommand(7L, "abc", true)))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 }

@@ -10,7 +10,8 @@ import com.example.short_link.user.application.dto.UserDataExport.ExportedLink;
 import com.example.short_link.user.application.dto.UserDataExport.ExportedUser;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -31,7 +32,10 @@ public class UserDataExportService {
 
   @Transactional(readOnly = true)
   public UserDataExport export(Long userId) {
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    UserEntity user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
 
     List<LinkEntity> links = linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     List<ExportedLink> exportedLinks =

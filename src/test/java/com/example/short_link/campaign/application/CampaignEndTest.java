@@ -10,7 +10,7 @@ import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
-import com.example.short_link.campaign.exception.ReapplyOnNonEndedException;
+import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -234,6 +234,6 @@ class CampaignEndTest {
     CampaignEntity campaign = newCampaign(owner, CampaignPostEndAction.KEEP, null);
 
     assertThatThrownBy(() -> reapplyUseCase.execute(campaign.getId(), owner))
-        .isInstanceOf(ReapplyOnNonEndedException.class);
+        .isInstanceOf(CampaignException.class);
   }
 }

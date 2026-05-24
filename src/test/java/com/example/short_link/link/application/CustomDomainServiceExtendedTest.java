@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.CustomDomainEntity;
 import com.example.short_link.link.domain.repository.CustomDomainRepository;
-import com.example.short_link.link.exception.CustomDomainNotFoundException;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -40,14 +40,14 @@ class CustomDomainServiceExtendedTest {
     CustomDomainService.DomainSummary saved = service.register(owner.getId(), "owners.example.com");
 
     assertThatThrownBy(() -> service.delete(attacker.getId(), saved.id()))
-        .isInstanceOf(CustomDomainNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
   void deleteUnknownIdThrows() {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-cddu"));
     assertThatThrownBy(() -> service.delete(user.getId(), 999_999_999L))
-        .isInstanceOf(CustomDomainNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test

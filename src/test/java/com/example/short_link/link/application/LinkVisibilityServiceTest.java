@@ -5,8 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -46,12 +45,12 @@ class LinkVisibilityServiceTest {
     linkRepository.save(new LinkEntity("https://example.com", "vis0002", owner.getId(), null));
 
     assertThatThrownBy(() -> service.setStatsPublic(other.getId(), "vis0002", true))
-        .isInstanceOf(LinkNotOwnedException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
   void rejectsUnknownLink() {
     assertThatThrownBy(() -> service.setStatsPublic(1L, "missing1", true))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 }

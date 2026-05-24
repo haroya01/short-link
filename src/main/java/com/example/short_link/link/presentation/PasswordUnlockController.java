@@ -11,9 +11,8 @@ import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.application.helper.LinkHtmlRenderer;
 import com.example.short_link.link.application.helper.LinkRedirectSupport;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.exception.LinkExpiredException;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkViewLimitExceededException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import lombok.RequiredArgsConstructor;
@@ -58,14 +57,16 @@ public class PasswordUnlockController {
     try {
       CachedLink link = lookup.findActiveLink(shortCode);
       LinkEntity entity =
-          lookup.findEntity(shortCode).orElseThrow(() -> new LinkNotFoundException(shortCode));
+          lookup
+              .findEntity(shortCode)
+              .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
       if (entity.hasPassword() && !protectionService.checkPassword(entity, password)) {
         outcome = "password_required";
         return LinkHtmlRenderer.passwordPromptResponse(HttpStatus.UNAUTHORIZED, shortCode, true);
       }
       try {
         enforceViewLimit(entity);
-      } catch (LinkViewLimitExceededException e) {
+      } catch (LinkException e) {
         outcome = "view_limit";
         throw e;
       }
@@ -92,11 +93,13 @@ public class PasswordUnlockController {
           .header(HttpHeaders.CACHE_CONTROL, "no-store")
           .header("X-Robots-Tag", "noindex, nofollow")
           .build();
-    } catch (LinkNotFoundException e) {
-      outcome = "not_found";
-      throw e;
-    } catch (LinkExpiredException e) {
-      outcome = "expired";
+    } catch (LinkException e) {
+      outcome =
+          switch (e.errorCode()) {
+            case LINK_NOT_FOUND -> "not_found";
+            case LINK_EXPIRED -> "expired";
+            default -> "error";
+          };
       throw e;
     } finally {
       req.setAttribute(OutcomeResolver.ATTRIBUTE, outcome);
@@ -107,7 +110,7 @@ public class PasswordUnlockController {
     if (entity.getMaxViews() == null) return;
     int updated = lookup.incrementViewCountIfBelowLimit(entity.getId());
     if (updated == 0) {
-      throw new LinkViewLimitExceededException(entity.getShortCode());
+      throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode());
     }
   }
 }

@@ -9,7 +9,8 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;
@@ -55,7 +56,7 @@ public class LinkStatsQueryService {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     Long zoneOwnerId = link.isOwnedBy(userId) ? userId : link.getUserId();
     return computeStats(link, ownerZone(zoneOwnerId));
@@ -65,9 +66,9 @@ public class LinkStatsQueryService {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     if (!link.isStatsPublic()) {
-      throw new LinkNotFoundException(shortCode);
+      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
     return computeStats(link, ownerZone(link.getUserId()));
   }

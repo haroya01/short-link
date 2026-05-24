@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.admin.application.dto.AdminActiveUsers;
 import com.example.short_link.admin.application.dto.AdminCohort;
 import com.example.short_link.admin.application.dto.AdminLifecycle;
-import com.example.short_link.admin.exception.InvalidActivePeriodException;
+import com.example.short_link.admin.exception.AdminException;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.ClickEventRepository;
@@ -120,8 +120,7 @@ class AdminAnalyticsServiceIntegrationTest {
 
   @Test
   void activeUsersRejectsUnknownPeriod() {
-    assertThatThrownBy(() -> service.activeUsers("annual"))
-        .isInstanceOf(InvalidActivePeriodException.class);
+    assertThatThrownBy(() -> service.activeUsers("annual")).isInstanceOf(AdminException.class);
   }
 
   private void seedActiveUser(String code) {

@@ -16,9 +16,8 @@ import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.email.EmailLeadEntity;
 import com.example.short_link.profile.domain.email.EmailLeadRepository;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
-import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
-import com.example.short_link.profile.exception.InvalidUsernameException;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.List;
@@ -52,7 +51,7 @@ class EmailLeadServiceExtendedTest {
   void submitMissingBlockThrows() {
     when(blockRepository.findById(11L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.submit(7L, 11L, "u@x.com", "1.1.1.1"))
-        .isInstanceOf(ProfileNotFoundException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -61,27 +60,27 @@ class EmailLeadServiceExtendedTest {
     writeField(wrong, "id", 11L);
     when(blockRepository.findById(11L)).thenReturn(Optional.of(wrong));
     assertThatThrownBy(() -> service.submit(7L, 11L, "u@x.com", "1.1.1.1"))
-        .isInstanceOf(ProfileNotFoundException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void submitWrongOwnerThrows() {
     when(blockRepository.findById(11L)).thenReturn(Optional.of(emailBlock(11L, 7L)));
     assertThatThrownBy(() -> service.submit(9L, 11L, "u@x.com", "1.1.1.1"))
-        .isInstanceOf(ProfileNotFoundException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void submitInvalidEmailThrows() {
     assertThatThrownBy(() -> service.submit(7L, 11L, "", "1.1.1.1"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> service.submit(7L, 11L, null, "1.1.1.1"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> service.submit(7L, 11L, "not-an-email", "1.1.1.1"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     String tooLong = "a".repeat(250) + "@x.com";
     assertThatThrownBy(() -> service.submit(7L, 11L, tooLong, "1.1.1.1"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -90,7 +89,7 @@ class EmailLeadServiceExtendedTest {
     when(repository.countByBlockIdAndSubmittedAtAfter(eq(11L), any(Instant.class)))
         .thenReturn(999L);
     assertThatThrownBy(() -> service.submit(7L, 11L, "u@x.com", "1.1.1.1"))
-        .isInstanceOf(EmailLeadRateLimitedException.class)
+        .isInstanceOf(ProfileException.class)
         .hasMessageContaining("block window");
   }
 
@@ -102,7 +101,7 @@ class EmailLeadServiceExtendedTest {
     when(repository.countByIpHashAndSubmittedAtAfter(anyString(), any(Instant.class)))
         .thenReturn(99L);
     assertThatThrownBy(() -> service.submit(7L, 11L, "u@x.com", "1.1.1.1"))
-        .isInstanceOf(EmailLeadRateLimitedException.class)
+        .isInstanceOf(ProfileException.class)
         .hasMessageContaining("ip window");
   }
 
@@ -171,13 +170,13 @@ class EmailLeadServiceExtendedTest {
   void deleteNonOwnerThrows() {
     EmailLeadEntity lead = new EmailLeadEntity(7L, 1L, "u@x.com", null);
     when(repository.findById(99L)).thenReturn(Optional.of(lead));
-    assertThatThrownBy(() -> service.delete(8L, 99L)).isInstanceOf(ProfileNotFoundException.class);
+    assertThatThrownBy(() -> service.delete(8L, 99L)).isInstanceOf(ProfileException.class);
   }
 
   @Test
   void deleteMissingThrows() {
     when(repository.findById(99L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.delete(7L, 99L)).isInstanceOf(ProfileNotFoundException.class);
+    assertThatThrownBy(() -> service.delete(7L, 99L)).isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -195,7 +194,7 @@ class EmailLeadServiceExtendedTest {
 
   @Test
   void rateLimitedExceptionCarriesMessage() {
-    assertThat(new EmailLeadRateLimitedException("x")).hasMessage("x");
+    assertThat(new ProfileException(ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "x")).hasMessage("x");
   }
 
   private static void writeField(Object target, String name, Object value) {

@@ -13,9 +13,7 @@ import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.s3.AvatarProperties;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.AvatarUnavailableException;
-import com.example.short_link.user.exception.InvalidAvatarException;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -43,14 +41,13 @@ class BannerServiceTest {
   void presignFailsWhenNotConfigured() {
     AvatarProperties noBucket = new AvatarProperties("", "", null, 300, 1024);
     BannerService svc = new BannerService(userRepository, noBucket, objectStorage);
-    assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg"))
-        .isInstanceOf(AvatarUnavailableException.class);
+    assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg")).isInstanceOf(UserException.class);
   }
 
   @Test
   void presignRejectsUnsupportedContentType() {
     assertThatThrownBy(() -> service.presignUpload(1L, "image/svg+xml"))
-        .isInstanceOf(InvalidAvatarException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -66,14 +63,14 @@ class BannerServiceTest {
   @Test
   void commitRejectsForeignKey() {
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/2/x.png"))
-        .isInstanceOf(InvalidAvatarException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
   void commitFailsWhenObjectMissing() {
     when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
-        .isInstanceOf(InvalidAvatarException.class)
+        .isInstanceOf(UserException.class)
         .hasMessageContaining("upload not found");
   }
 
@@ -81,7 +78,7 @@ class BannerServiceTest {
   void commitDeletesOversizedUpload() {
     when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(9999L));
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
-        .isInstanceOf(InvalidAvatarException.class)
+        .isInstanceOf(UserException.class)
         .hasMessageContaining("exceeds maxBytes");
     verify(objectStorage).delete("banners/1/x.png");
   }
@@ -93,7 +90,7 @@ class BannerServiceTest {
         .when(objectStorage)
         .delete("banners/1/x.png");
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
-        .isInstanceOf(InvalidAvatarException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -101,7 +98,7 @@ class BannerServiceTest {
     when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(100L));
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
-        .isInstanceOf(UserNotFoundException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -151,7 +148,7 @@ class BannerServiceTest {
   @Test
   void clearBannerMissingUserThrows() {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.clearBanner(1L)).isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.clearBanner(1L)).isInstanceOf(UserException.class);
   }
 
   @Test

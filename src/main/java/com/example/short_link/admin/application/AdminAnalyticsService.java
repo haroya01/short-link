@@ -4,7 +4,8 @@ import com.example.short_link.admin.application.dto.AdminActiveUsers;
 import com.example.short_link.admin.application.dto.AdminCohort;
 import com.example.short_link.admin.application.dto.AdminLifecycle;
 import com.example.short_link.admin.domain.repository.AdminAnalyticsRepository;
-import com.example.short_link.admin.exception.InvalidActivePeriodException;
+import com.example.short_link.admin.exception.AdminErrorCode;
+import com.example.short_link.admin.exception.AdminException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -78,7 +79,7 @@ public class AdminAnalyticsService {
       case "day", "dau" -> dailyActive();
       case "week", "wau" -> weeklyActive();
       case "month", "mau" -> monthlyActive();
-      default -> throw new InvalidActivePeriodException(period);
+      default -> throw new AdminException(AdminErrorCode.INVALID_ACTIVE_PERIOD, period);
     };
   }
 

@@ -10,7 +10,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.RefreshTokenStore;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -66,6 +66,6 @@ class UserDeletionServiceTest {
   @Test
   void throwsForUnknownUser() {
     assertThatThrownBy(() -> deletionService.deleteAccount(9_999_999L))
-        .isInstanceOf(UserNotFoundException.class);
+        .isInstanceOf(UserException.class);
   }
 }

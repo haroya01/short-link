@@ -3,8 +3,8 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.application.helper.TxtResolver;
 import com.example.short_link.link.domain.CustomDomainEntity;
 import com.example.short_link.link.domain.repository.CustomDomainRepository;
-import com.example.short_link.link.exception.CustomDomainNotFoundException;
-import com.example.short_link.link.exception.CustomDomainNotVerifiedException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -75,7 +75,7 @@ public class CustomDomainService {
     if (!ok) {
       entity.markCheckFailed();
       meterRegistry.counter("custom_domain.verify", "result", "failed").increment();
-      throw new CustomDomainNotVerifiedException(entity.getDomain());
+      throw new LinkException(LinkErrorCode.CUSTOM_DOMAIN_NOT_VERIFIED, entity.getDomain());
     }
     entity.markVerified();
     meterRegistry.counter("custom_domain.verify", "result", "ok").increment();
@@ -134,9 +134,11 @@ public class CustomDomainService {
 
   private CustomDomainEntity ownedDomain(Long userId, Long id) {
     CustomDomainEntity entity =
-        repository.findById(id).orElseThrow(CustomDomainNotFoundException::new);
+        repository
+            .findById(id)
+            .orElseThrow(() -> new LinkException(LinkErrorCode.CUSTOM_DOMAIN_NOT_FOUND));
     if (!entity.getUserId().equals(userId)) {
-      throw new CustomDomainNotFoundException();
+      throw new LinkException(LinkErrorCode.CUSTOM_DOMAIN_NOT_FOUND);
     }
     return entity;
   }

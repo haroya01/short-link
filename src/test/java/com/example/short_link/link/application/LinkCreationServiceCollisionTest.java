@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.ShortCodeGenerationException;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -43,7 +43,7 @@ class LinkCreationServiceCollisionTest {
             200L);
 
     assertThatThrownBy(() -> service.create("https://example.com", null, null, null))
-        .isInstanceOf(ShortCodeGenerationException.class);
+        .isInstanceOf(LinkException.class);
 
     verify(generator, times(5)).generate();
     verify(repository, times(5)).save(any());

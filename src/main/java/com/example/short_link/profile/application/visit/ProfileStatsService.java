@@ -3,7 +3,8 @@ package com.example.short_link.profile.application.visit;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;
 import java.time.Duration;
@@ -30,34 +31,45 @@ public class ProfileStatsService {
 
   @Transactional(readOnly = true)
   public ProfileStats statsForOwner(Long ownerUserId) {
-    UserEntity owner = userRepository.findById(ownerUserId).orElseThrow(UserNotFoundException::new);
+    UserEntity owner =
+        userRepository
+            .findById(ownerUserId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     return computeStats(owner);
   }
 
   /**
-   * Public stats lookup by username. Throws {@link UserNotFoundException} when the user doesn't
-   * exist OR when they haven't opted into public stats — collapsing the two into the same 404 so
-   * the existence of a profile that's opted out isn't leaked.
+   * Public stats lookup by username. Throws {@link UserException} when the user doesn't exist OR
+   * when they haven't opted into public stats — collapsing the two into the same 404 so the
+   * existence of a profile that's opted out isn't leaked.
    */
   @Transactional(readOnly = true)
   public ProfileStats publicStats(String username) {
     UserEntity user =
-        userRepository.findByUsername(username).orElseThrow(UserNotFoundException::new);
+        userRepository
+            .findByUsername(username)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (!user.isStatsPublic()) {
-      throw new UserNotFoundException();
+      throw new UserException(UserErrorCode.USER_NOT_FOUND);
     }
     return computeStats(user);
   }
 
   @Transactional(readOnly = true)
   public boolean statsPublic(Long ownerUserId) {
-    UserEntity owner = userRepository.findById(ownerUserId).orElseThrow(UserNotFoundException::new);
+    UserEntity owner =
+        userRepository
+            .findById(ownerUserId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     return owner.isStatsPublic();
   }
 
   @Transactional
   public boolean updateStatsPublic(Long ownerUserId, boolean statsPublic) {
-    UserEntity owner = userRepository.findById(ownerUserId).orElseThrow(UserNotFoundException::new);
+    UserEntity owner =
+        userRepository
+            .findById(ownerUserId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     owner.updateStatsPublic(statsPublic);
     userRepository.save(owner);
     return owner.isStatsPublic();

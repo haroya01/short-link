@@ -6,11 +6,12 @@ import com.example.short_link.profile.application.ReservedUsernames;
 import com.example.short_link.profile.application.Socials;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
-import com.example.short_link.profile.exception.InvalidUsernameException;
-import com.example.short_link.profile.exception.UsernameTakenException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
@@ -40,27 +41,30 @@ public class UpdateProfileUseCase {
   @Transactional
   @CacheEvict(value = "public-profile", allEntries = true)
   public MyProfile execute(UpdateProfileCommand cmd) {
-    UserEntity user = userRepository.findById(cmd.userId()).orElseThrow(UserNotFoundException::new);
+    UserEntity user =
+        userRepository
+            .findById(cmd.userId())
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (cmd.username() != null) {
       String normalized = cmd.username().trim().toLowerCase();
       validateUsername(normalized);
       if (!normalized.equals(user.getUsername())) {
         if (ReservedUsernames.ALL.contains(normalized)) {
-          throw new InvalidUsernameException("reserved");
+          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "reserved");
         }
         userRepository
             .findByUsername(normalized)
             .filter(other -> !other.getId().equals(cmd.userId()))
             .ifPresent(
                 other -> {
-                  throw new UsernameTakenException(normalized);
+                  throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
                 });
         usernameHistoryRepository
             .findFirstByOldUsernameAndExpiresAtAfter(normalized, Instant.now())
             .filter(history -> !history.getUserId().equals(cmd.userId()))
             .ifPresent(
                 history -> {
-                  throw new UsernameTakenException(normalized);
+                  throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
                 });
         String previous = user.getUsername();
         if (previous != null && !previous.isBlank()) {
@@ -74,7 +78,7 @@ public class UpdateProfileUseCase {
     if (cmd.bio() != null) {
       String trimmed = cmd.bio().trim();
       if (trimmed.length() > 280) {
-        throw new InvalidUsernameException("bio too long");
+        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "bio too long");
       }
       user.updateBio(trimmed.isEmpty() ? null : trimmed);
     }
@@ -89,9 +93,9 @@ public class UpdateProfileUseCase {
   }
 
   private static void validateUsername(String username) {
-    if (username.isBlank()) throw new InvalidUsernameException("blank");
+    if (username.isBlank()) throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "blank");
     if (!USERNAME.matcher(username).matches()) {
-      throw new InvalidUsernameException("invalid format");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "invalid format");
     }
   }
 }

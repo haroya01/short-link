@@ -5,8 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.InvalidTotpCodeException;
-import com.example.short_link.user.exception.TwoFactorStateException;
+import com.example.short_link.user.exception.UserException;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -43,7 +42,7 @@ class TwoFactorServiceTest {
     UserEntity user = userRepository.save(new UserEntity("tf2@local.test", "google", "g-tf2"));
     service.start(user.getId());
     assertThatThrownBy(() -> service.confirm(user.getId(), "000000"))
-        .isInstanceOf(InvalidTotpCodeException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -69,7 +68,7 @@ class TwoFactorServiceTest {
     service.confirm(user.getId(), setupCode);
 
     assertThatThrownBy(() -> service.disable(user.getId(), "000000"))
-        .isInstanceOf(InvalidTotpCodeException.class);
+        .isInstanceOf(UserException.class);
     assertThat(service.isEnabled(user.getId())).isTrue();
 
     String disableCode =
@@ -85,8 +84,7 @@ class TwoFactorServiceTest {
     String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
     service.confirm(user.getId(), code);
 
-    assertThatThrownBy(() -> service.start(user.getId()))
-        .isInstanceOf(TwoFactorStateException.class);
+    assertThatThrownBy(() -> service.start(user.getId())).isInstanceOf(UserException.class);
   }
 
   @Test

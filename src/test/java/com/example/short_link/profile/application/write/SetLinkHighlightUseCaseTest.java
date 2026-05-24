@@ -6,7 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkException;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
@@ -32,7 +32,7 @@ class SetLinkHighlightUseCaseTest {
   void throwsWhenLinkMissing() {
     when(linkRepository.findByShortCode("missing")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> useCase.execute(new SetLinkHighlightCommand(7L, "missing", true)))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -40,7 +40,7 @@ class SetLinkHighlightUseCaseTest {
     LinkEntity link = new LinkEntity("https://x", "abc", 99L, null);
     when(linkRepository.findByShortCode("abc")).thenReturn(Optional.of(link));
     assertThatThrownBy(() -> useCase.execute(new SetLinkHighlightCommand(7L, "abc", true)))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test

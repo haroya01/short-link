@@ -15,6 +15,8 @@ public class AdminExceptionHandler {
 
   @ExceptionHandler(AdminException.class)
   public ProblemDetail handle(AdminException e, HttpServletRequest req) {
-    return ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
+    ProblemDetail body = ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
+    e.properties().forEach(body::setProperty);
+    return body;
   }
 }

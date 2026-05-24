@@ -1,27 +1,19 @@
-package com.example.short_link.link.exception;
+package com.example.short_link.link.application.helper;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import org.springframework.http.HttpStatus;
 
-public final class MaliciousUrlException extends LinkException {
+/**
+ * SHA-256 prefix of a user-supplied URL — used in malicious-URL responses / logs so we never echo
+ * the raw URL back (avoids reflecting phishing strings into logs and clients while keeping enough
+ * fingerprint to correlate with upstream Safe Browsing telemetry).
+ */
+public final class LinkUrlHasher {
 
-  public MaliciousUrlException(String url) {
-    super("malicious url rejected (sha256_prefix=" + hashPrefix(url) + ")");
-  }
+  private LinkUrlHasher() {}
 
-  @Override
-  public HttpStatus status() {
-    return HttpStatus.BAD_REQUEST;
-  }
-
-  @Override
-  public String code() {
-    return "MALICIOUS_URL";
-  }
-
-  private static String hashPrefix(String url) {
+  public static String sha256Prefix(String url) {
     String input = url == null ? "" : url;
     byte[] digest = sha256().digest(input.getBytes(StandardCharsets.UTF_8));
     StringBuilder hex = new StringBuilder(16);

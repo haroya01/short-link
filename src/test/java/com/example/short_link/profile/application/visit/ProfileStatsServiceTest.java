@@ -19,7 +19,7 @@ import com.example.short_link.link.domain.repository.ClickEventReadRepository.Ut
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserException;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -60,22 +60,20 @@ class ProfileStatsServiceTest {
   @Test
   void statsForOwnerMissingThrows() {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.statsForOwner(1L)).isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.statsForOwner(1L)).isInstanceOf(UserException.class);
   }
 
   @Test
   void publicStatsMissingUserThrows() {
     when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.publicStats("ghost"))
-        .isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.publicStats("ghost")).isInstanceOf(UserException.class);
   }
 
   @Test
   void publicStatsOptedOut404s() {
     UserEntity u = user(1L, "Asia/Seoul", false);
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(u));
-    assertThatThrownBy(() -> service.publicStats("alice"))
-        .isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.publicStats("alice")).isInstanceOf(UserException.class);
   }
 
   @Test

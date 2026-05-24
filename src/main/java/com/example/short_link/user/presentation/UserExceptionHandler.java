@@ -15,6 +15,8 @@ public class UserExceptionHandler {
 
   @ExceptionHandler(UserException.class)
   public ProblemDetail handle(UserException e, HttpServletRequest req) {
-    return ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
+    ProblemDetail body = ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
+    e.properties().forEach(body::setProperty);
+    return body;
   }
 }

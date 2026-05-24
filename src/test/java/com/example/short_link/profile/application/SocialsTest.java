@@ -3,7 +3,7 @@ package com.example.short_link.profile.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.Test;
 
 class SocialsTest {
@@ -44,7 +44,7 @@ class SocialsTest {
   void rejectsUnknownChannel() {
     assertThatThrownBy(
             () -> Socials.normalize("[{\"channel\":\"myspace\",\"url\":\"https://myspace.com\"}]"))
-        .isInstanceOf(InvalidUsernameException.class)
+        .isInstanceOf(ProfileException.class)
         .hasMessageContaining("unknown channel");
   }
 
@@ -58,7 +58,7 @@ class SocialsTest {
             + "{\"channel\":\"threads\",\"url\":\"https://threads.net/c\"}"
             + "]";
     assertThatThrownBy(() -> Socials.normalize(json))
-        .isInstanceOf(InvalidUsernameException.class)
+        .isInstanceOf(ProfileException.class)
         .hasMessageContaining("up to " + Socials.MAX);
   }
 
@@ -66,21 +66,21 @@ class SocialsTest {
   void rejectsNonHttpScheme() {
     assertThatThrownBy(
             () -> Socials.normalize("[{\"channel\":\"x\",\"url\":\"javascript:alert(1)\"}]"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> Socials.normalize("[{\"channel\":\"x\",\"url\":\"ftp://x.com\"}]"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void rejectsUrlMissingHost() {
     assertThatThrownBy(() -> Socials.normalize("[{\"channel\":\"x\",\"url\":\"https://\"}]"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void rejectsMalformedJson() {
     assertThatThrownBy(() -> Socials.normalize("not json"))
-        .isInstanceOf(InvalidUsernameException.class)
+        .isInstanceOf(ProfileException.class)
         .hasMessageContaining("malformed");
   }
 
@@ -133,7 +133,7 @@ class SocialsTest {
   void rejectsOverlongUrl() {
     String longUrl = "https://x.com/" + "a".repeat(300);
     assertThatThrownBy(() -> Socials.normalize("[{\"channel\":\"x\",\"url\":\"" + longUrl + "\"}]"))
-        .isInstanceOf(InvalidUsernameException.class)
+        .isInstanceOf(ProfileException.class)
         .hasMessageContaining("too long");
   }
 

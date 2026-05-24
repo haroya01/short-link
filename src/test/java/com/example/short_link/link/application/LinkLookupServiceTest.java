@@ -5,8 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkExpiredException;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
@@ -42,12 +41,12 @@ class LinkLookupServiceTest {
             Instant.now().minus(1, ChronoUnit.MINUTES)));
 
     assertThatThrownBy(() -> service.findActiveOriginalUrl("lk00002"))
-        .isInstanceOf(LinkExpiredException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
   void throwsForUnknownCode() {
     assertThatThrownBy(() -> service.findActiveOriginalUrl("missing"))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 }

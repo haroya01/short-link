@@ -7,8 +7,8 @@ import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.RefreshTokenStore;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.InvalidRefreshTokenException;
-import com.example.short_link.user.exception.InvalidTotpCodeException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -57,13 +57,15 @@ public class AuthService {
     try {
       userId = jwt.parseTwoFactorChallengeToken(challengeToken);
     } catch (Exception e) {
-      throw new InvalidRefreshTokenException();
+      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
     boolean ok = recovery ? twoFactor.verifyRecovery(userId, code) : twoFactor.verify(userId, code);
-    if (!ok) throw new InvalidTotpCodeException();
+    if (!ok) throw new UserException(UserErrorCode.INVALID_TOTP);
     UserEntity user =
-        userRepository.findById(userId).orElseThrow(InvalidRefreshTokenException::new);
-    if (user.isDeleted()) throw new InvalidRefreshTokenException();
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+    if (user.isDeleted()) throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     return issue(user);
   }
 
@@ -73,20 +75,22 @@ public class AuthService {
     try {
       parsed = jwt.parseRefreshToken(refreshToken);
     } catch (Exception e) {
-      throw new InvalidRefreshTokenException();
+      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
     if (!refreshStore.exists(parsed.userId(), parsed.jti())) {
       log.warn(
           "refresh token reuse or theft suspected for userId={}, wiping all sessions",
           parsed.userId());
       refreshStore.deleteAllForUser(parsed.userId());
-      throw new InvalidRefreshTokenException();
+      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
     refreshStore.delete(parsed.userId(), parsed.jti());
     UserEntity user =
-        userRepository.findById(parsed.userId()).orElseThrow(InvalidRefreshTokenException::new);
+        userRepository
+            .findById(parsed.userId())
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (user.isDeleted()) {
-      throw new InvalidRefreshTokenException();
+      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
     return issue(user);
   }

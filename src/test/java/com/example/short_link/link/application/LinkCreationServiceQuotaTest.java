@@ -11,8 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkQuotaExceededException;
-import com.example.short_link.link.exception.ReservedShortCodeException;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -45,7 +44,7 @@ class LinkCreationServiceQuotaTest {
             200L);
 
     assertThatThrownBy(() -> svc.create("https://example.com/x", 42L, null, null))
-        .isInstanceOf(LinkQuotaExceededException.class);
+        .isInstanceOf(LinkException.class);
 
     verify(repo, never()).save(any(LinkEntity.class));
   }
@@ -126,7 +125,7 @@ class LinkCreationServiceQuotaTest {
             200L);
 
     assertThatThrownBy(() -> svc.create("https://example.com", 1L, "login", null))
-        .isInstanceOf(ReservedShortCodeException.class);
+        .isInstanceOf(LinkException.class);
 
     verify(repo, never()).save(any(LinkEntity.class));
   }

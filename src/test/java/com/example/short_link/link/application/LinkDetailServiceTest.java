@@ -9,8 +9,8 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.dto.LinkDetailView;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -58,15 +58,16 @@ class LinkDetailServiceTest {
   @Test
   void detailThrowsWhenLinkMissing() {
     when(repository.findByShortCode("missing")).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.detail(7L, "missing"))
-        .isInstanceOf(LinkNotFoundException.class);
+    assertThatThrownBy(() -> service.detail(7L, "missing")).isInstanceOf(LinkException.class);
   }
 
   @Test
   void detailRespectsAccessGuard() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
     when(repository.findByShortCode("abc")).thenReturn(Optional.of(link));
-    doThrow(new LinkNotOwnedException("abc")).when(accessGuard).requireView(any(), any());
-    assertThatThrownBy(() -> service.detail(99L, "abc")).isInstanceOf(LinkNotOwnedException.class);
+    doThrow(new LinkException(LinkErrorCode.LINK_NOT_OWNED, "abc"))
+        .when(accessGuard)
+        .requireView(any(), any());
+    assertThatThrownBy(() -> service.detail(99L, "abc")).isInstanceOf(LinkException.class);
   }
 }

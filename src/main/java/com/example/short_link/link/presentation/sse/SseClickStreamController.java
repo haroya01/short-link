@@ -3,8 +3,8 @@ package com.example.short_link.link.presentation.sse;
 import com.example.short_link.link.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.application.JwtTokenService;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletResponse;
@@ -77,11 +77,13 @@ public class SseClickStreamController {
     }
 
     LinkEntity link =
-        lookup.findEntity(shortCode).orElseThrow(() -> new LinkNotFoundException(shortCode));
+        lookup
+            .findEntity(shortCode)
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
 
     if (userId != null) {
       if (!accessGuard.canView(userId, link)) {
-        throw new LinkNotOwnedException(shortCode);
+        throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
       }
     } else if (!isValidClaimAccess(link, claimToken)) {
       return failFast(response, HttpStatus.UNAUTHORIZED);

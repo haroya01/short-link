@@ -8,10 +8,8 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignStatus;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
-import com.example.short_link.campaign.exception.CampaignBatchNotFoundException;
-import com.example.short_link.campaign.exception.CampaignTerminalStateException;
-import com.example.short_link.campaign.exception.InvalidBatchRowException;
-import com.example.short_link.campaign.exception.MissingDestinationUrlException;
+import com.example.short_link.campaign.exception.CampaignErrorCode;
+import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.link.application.LinkCreationService;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
@@ -73,9 +71,11 @@ public class CampaignBatchService {
   public BatchWithLink detail(Long campaignId, Long batchId, Long ownerId) {
     campaignQuery.detail(campaignId, ownerId);
     CampaignBatchEntity batch =
-        batchRepository.findById(batchId).orElseThrow(CampaignBatchNotFoundException::new);
+        batchRepository
+            .findById(batchId)
+            .orElseThrow(() -> new CampaignException(CampaignErrorCode.CAMPAIGN_NOT_FOUND));
     if (!batch.getCampaignId().equals(campaignId)) {
-      throw new CampaignBatchNotFoundException();
+      throw new CampaignException(CampaignErrorCode.CAMPAIGN_BATCH_NOT_FOUND);
     }
     return pairWithLink(batch);
   }
@@ -143,7 +143,7 @@ public class CampaignBatchService {
   private static void rejectIfTerminal(CampaignEntity campaign) {
     if (campaign.getStatus() == CampaignStatus.ENDED
         || campaign.getStatus() == CampaignStatus.ARCHIVED) {
-      throw new CampaignTerminalStateException();
+      throw new CampaignException(CampaignErrorCode.CAMPAIGN_TERMINAL_STATE);
     }
   }
 
@@ -157,13 +157,14 @@ public class CampaignBatchService {
 
   private static void validateRow(CampaignBatchCreateRequest row, String destination, int index) {
     if (row.name() == null || row.name().isBlank()) {
-      throw new InvalidBatchRowException(index, "name required");
+      throw new CampaignException(CampaignErrorCode.INVALID_BATCH_ROW, index, "name required");
     }
     if (row.quantity() <= 0) {
-      throw new InvalidBatchRowException(index, "quantity must be positive");
+      throw new CampaignException(
+          CampaignErrorCode.INVALID_BATCH_ROW, index, "quantity must be positive");
     }
     if (destination == null) {
-      throw new MissingDestinationUrlException();
+      throw new CampaignException(CampaignErrorCode.MISSING_DESTINATION_URL);
     }
   }
 

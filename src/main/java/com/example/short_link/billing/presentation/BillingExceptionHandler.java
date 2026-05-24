@@ -1,7 +1,7 @@
 package com.example.short_link.billing.presentation;
 
+import com.example.short_link.billing.exception.BillingErrorCode;
 import com.example.short_link.billing.exception.BillingException;
-import com.example.short_link.billing.exception.BillingGatewayException;
 import com.example.short_link.common.web.response.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -18,12 +18,11 @@ public class BillingExceptionHandler {
 
   @ExceptionHandler(BillingException.class)
   public ProblemDetail handle(BillingException e, HttpServletRequest req) {
-    String detail = e.getMessage();
-    if (e instanceof BillingGatewayException) {
+    if (e.errorCode() == BillingErrorCode.BILLING_GATEWAY_ERROR) {
       log.warn("billing gateway error", e);
-      // Hide upstream-specific wording (Stripe error strings) from the response.
-      detail = "billing gateway error";
     }
-    return ProblemDetails.of(e.status(), detail, e.code(), req);
+    ProblemDetail body = ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
+    e.properties().forEach(body::setProperty);
+    return body;
   }
 }

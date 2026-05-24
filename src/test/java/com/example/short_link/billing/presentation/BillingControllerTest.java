@@ -15,9 +15,8 @@ import com.example.short_link.billing.application.write.IssuePortalSessionUseCas
 import com.example.short_link.billing.application.write.StartCheckoutCommand;
 import com.example.short_link.billing.application.write.StartCheckoutUseCase;
 import com.example.short_link.billing.application.write.SubscriptionWebhookCommand;
-import com.example.short_link.billing.exception.BillingNotConfiguredException;
-import com.example.short_link.billing.exception.BillingNotEnrolledException;
-import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
+import com.example.short_link.billing.exception.BillingErrorCode;
+import com.example.short_link.billing.exception.BillingException;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -66,7 +65,7 @@ class BillingControllerTest {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-503"));
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(startCheckout.execute(any(StartCheckoutCommand.class)))
-        .thenThrow(new BillingNotConfiguredException());
+        .thenThrow(new BillingException(BillingErrorCode.BILLING_NOT_CONFIGURED));
 
     mvc.perform(post("/api/v1/billing/checkout").header("Authorization", "Bearer " + token))
         .andExpect(status().isServiceUnavailable())
@@ -90,7 +89,7 @@ class BillingControllerTest {
     UserEntity user = userRepository.save(new UserEntity("e@x.com", "google", "g-409"));
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(issuePortalSession.execute(any(IssuePortalSessionCommand.class)))
-        .thenThrow(new BillingNotEnrolledException());
+        .thenThrow(new BillingException(BillingErrorCode.BILLING_NOT_ENROLLED));
 
     mvc.perform(post("/api/v1/billing/portal").header("Authorization", "Bearer " + token))
         .andExpect(status().isConflict())
@@ -111,7 +110,7 @@ class BillingControllerTest {
 
   @Test
   void webhookWithInvalidSignatureReturns400() throws Exception {
-    doThrow(new InvalidWebhookSignatureException())
+    doThrow(new BillingException(BillingErrorCode.INVALID_WEBHOOK_SIGNATURE))
         .when(handleWebhook)
         .execute(any(SubscriptionWebhookCommand.class));
 

@@ -7,10 +7,10 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.billing.application.StripeProperties;
 import com.example.short_link.billing.domain.CheckoutInitiation;
 import com.example.short_link.billing.domain.SubscriptionGateway;
-import com.example.short_link.billing.exception.BillingNotConfiguredException;
+import com.example.short_link.billing.exception.BillingException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -45,7 +45,7 @@ class StartCheckoutUseCaseTest {
             Mockito.mock(UserRepository.class),
             new SimpleMeterRegistry());
     assertThatThrownBy(() -> useCase.execute(new StartCheckoutCommand(1L)))
-        .isInstanceOf(BillingNotConfiguredException.class);
+        .isInstanceOf(BillingException.class);
   }
 
   @Test
@@ -56,7 +56,7 @@ class StartCheckoutUseCaseTest {
         new StartCheckoutUseCase(
             CONFIGURED, Mockito.mock(SubscriptionGateway.class), users, new SimpleMeterRegistry());
     assertThatThrownBy(() -> useCase.execute(new StartCheckoutCommand(1L)))
-        .isInstanceOf(UserNotFoundException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test

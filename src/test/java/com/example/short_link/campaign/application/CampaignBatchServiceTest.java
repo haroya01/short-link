@@ -8,10 +8,7 @@ import com.example.short_link.campaign.application.dto.CampaignBatchBulkRequest;
 import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
-import com.example.short_link.campaign.exception.CampaignNotOwnedException;
-import com.example.short_link.campaign.exception.CampaignTerminalStateException;
-import com.example.short_link.campaign.exception.InvalidBatchRowException;
-import com.example.short_link.campaign.exception.MissingDestinationUrlException;
+import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;
@@ -94,7 +91,7 @@ class CampaignBatchServiceTest {
                     campaign.getId(),
                     owner,
                     new CampaignBatchCreateRequest("n", null, null, 50, null, null)))
-        .isInstanceOf(MissingDestinationUrlException.class);
+        .isInstanceOf(CampaignException.class);
   }
 
   @Test
@@ -109,7 +106,7 @@ class CampaignBatchServiceTest {
                     campaign.getId(),
                     owner,
                     new CampaignBatchCreateRequest("n", null, null, 50, null, null)))
-        .isInstanceOf(CampaignTerminalStateException.class);
+        .isInstanceOf(CampaignException.class);
   }
 
   @Test
@@ -124,7 +121,7 @@ class CampaignBatchServiceTest {
                 new CampaignBatchCreateRequest("zero-q", null, null, 0, null, null)));
 
     assertThatThrownBy(() -> batchService.createBulk(campaign.getId(), owner, req))
-        .isInstanceOf(InvalidBatchRowException.class);
+        .isInstanceOf(CampaignException.class);
 
     assertThat(batchService.list(campaign.getId(), owner)).isEmpty();
   }
@@ -158,6 +155,6 @@ class CampaignBatchServiceTest {
         mine.getId(), owner, new CampaignBatchCreateRequest("n", null, null, 10, null, null));
 
     assertThatThrownBy(() -> batchService.list(mine.getId(), stranger))
-        .isInstanceOf(CampaignNotOwnedException.class);
+        .isInstanceOf(CampaignException.class);
   }
 }

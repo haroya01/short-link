@@ -15,6 +15,8 @@ public class CampaignExceptionHandler {
 
   @ExceptionHandler(CampaignException.class)
   public ProblemDetail handle(CampaignException e, HttpServletRequest req) {
-    return ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
+    ProblemDetail body = ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
+    e.properties().forEach(body::setProperty);
+    return body;
   }
 }

@@ -20,9 +20,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.domain.repository.LinkWebhookRepository;
-import com.example.short_link.link.exception.InvalidWebhookUrlException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
-import com.example.short_link.link.exception.TooManyWebhooksException;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -73,7 +71,7 @@ class LinkWebhookIntegrationTest {
     linkRepository.save(new LinkEntity("https://example.com/wh2", "wh22222", user.getId(), null));
 
     assertThatThrownBy(() -> register(user.getId(), "wh22222", "http://127.0.0.1/hook", null))
-        .isInstanceOf(InvalidWebhookUrlException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -82,7 +80,7 @@ class LinkWebhookIntegrationTest {
     linkRepository.save(new LinkEntity("https://example.com/wh3", "wh33333", user.getId(), null));
 
     assertThatThrownBy(() -> register(user.getId(), "wh33333", "javascript:alert(1)", null))
-        .isInstanceOf(InvalidWebhookUrlException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -94,7 +92,7 @@ class LinkWebhookIntegrationTest {
       register(user.getId(), "wh44444", "https://example.com/hook" + i, "h" + i);
     }
     assertThatThrownBy(() -> register(user.getId(), "wh44444", "https://example.com/hook9", null))
-        .isInstanceOf(TooManyWebhooksException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -109,7 +107,7 @@ class LinkWebhookIntegrationTest {
             () ->
                 deleteUseCase.execute(
                     new DeleteLinkWebhookCommand(other.getId(), "wh55555", issued.id())))
-        .isInstanceOf(LinkNotOwnedException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test

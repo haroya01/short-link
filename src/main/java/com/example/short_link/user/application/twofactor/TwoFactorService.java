@@ -4,8 +4,8 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserTwoFactorEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.domain.repository.UserTwoFactorRepository;
-import com.example.short_link.user.exception.InvalidTotpCodeException;
-import com.example.short_link.user.exception.TwoFactorStateException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;
 import java.time.Instant;
@@ -67,7 +67,8 @@ public class TwoFactorService {
 
     UserTwoFactorEntity row = repository.findById(userId).orElse(null);
     if (row != null && row.isEnabled()) {
-      throw new TwoFactorStateException("2FA is already enabled — disable first to re-enrol");
+      throw new UserException(
+          UserErrorCode.TWO_FACTOR_STATE, "2FA is already enabled — disable first to re-enrol");
     }
     String plainSecret = TotpCodec.generateBase32Secret();
     String encrypted = cipher.encrypt(plainSecret);
@@ -86,11 +87,12 @@ public class TwoFactorService {
     UserTwoFactorEntity row =
         repository
             .findById(userId)
-            .orElseThrow(() -> new TwoFactorStateException("setup not started"));
-    if (row.isEnabled()) throw new TwoFactorStateException("already enabled");
+            .orElseThrow(
+                () -> new UserException(UserErrorCode.TWO_FACTOR_STATE, "setup not started"));
+    if (row.isEnabled()) throw new UserException(UserErrorCode.TWO_FACTOR_STATE, "already enabled");
     String secret = cipher.decrypt(row.getSecret());
     if (!TotpCodec.verify(secret, code, Instant.now().getEpochSecond())) {
-      throw new InvalidTotpCodeException();
+      throw new UserException(UserErrorCode.INVALID_TOTP);
     }
     List<String> plainCodes = generateRecoveryCodes();
     row.enable(joinHashes(hashAll(plainCodes)));
@@ -143,10 +145,10 @@ public class TwoFactorService {
   public void disable(Long userId, String code) {
     UserTwoFactorEntity row = repository.findById(userId).orElse(null);
     if (row == null || !row.isEnabled()) {
-      throw new TwoFactorStateException("not enabled");
+      throw new UserException(UserErrorCode.TWO_FACTOR_STATE, "not enabled");
     }
     if (!verify(userId, code) && !verifyRecovery(userId, code)) {
-      throw new InvalidTotpCodeException();
+      throw new UserException(UserErrorCode.INVALID_TOTP);
     }
     row.disable();
     meterRegistry.counter("twofa.disabled").increment();
@@ -156,10 +158,10 @@ public class TwoFactorService {
   public List<String> regenerateRecoveryCodes(Long userId, String code) {
     UserTwoFactorEntity row = repository.findById(userId).orElse(null);
     if (row == null || !row.isEnabled()) {
-      throw new TwoFactorStateException("not enabled");
+      throw new UserException(UserErrorCode.TWO_FACTOR_STATE, "not enabled");
     }
     if (!verify(userId, code)) {
-      throw new InvalidTotpCodeException();
+      throw new UserException(UserErrorCode.INVALID_TOTP);
     }
     List<String> plain = generateRecoveryCodes();
     row.replaceRecoveryCodes(joinHashes(hashAll(plain)));
