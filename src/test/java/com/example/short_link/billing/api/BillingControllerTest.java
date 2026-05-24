@@ -9,15 +9,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.billing.application.BillingNotConfiguredException;
-import com.example.short_link.billing.application.BillingNotEnrolledException;
-import com.example.short_link.billing.application.InvalidWebhookSignatureException;
 import com.example.short_link.billing.application.write.HandleSubscriptionWebhookUseCase;
 import com.example.short_link.billing.application.write.IssuePortalSessionCommand;
 import com.example.short_link.billing.application.write.IssuePortalSessionUseCase;
 import com.example.short_link.billing.application.write.StartCheckoutCommand;
 import com.example.short_link.billing.application.write.StartCheckoutUseCase;
 import com.example.short_link.billing.application.write.SubscriptionWebhookCommand;
+import com.example.short_link.billing.exception.BillingNotConfiguredException;
+import com.example.short_link.billing.exception.BillingNotEnrolledException;
+import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;

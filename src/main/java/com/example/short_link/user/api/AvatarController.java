@@ -1,8 +1,8 @@
 package com.example.short_link.user.api;
 
 import com.example.short_link.user.application.avatar.AvatarService;
-import com.example.short_link.user.application.avatar.AvatarUnavailableException;
-import com.example.short_link.user.application.avatar.InvalidAvatarException;
+import com.example.short_link.user.exception.AvatarUnavailableException;
+import com.example.short_link.user.exception.InvalidAvatarException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;

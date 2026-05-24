@@ -6,11 +6,11 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.profile.application.InvalidUsernameException;
 import com.example.short_link.profile.application.MyProfile;
-import com.example.short_link.profile.application.UsernameTakenException;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.UsernameHistoryRepository;
+import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.UsernameTakenException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

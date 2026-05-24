@@ -2,7 +2,6 @@ package com.example.short_link.link.application.read;
 
 import com.example.short_link.link.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkInsights;
-import com.example.short_link.link.application.LinkNotFoundException;
 import com.example.short_link.link.application.LinkStats;
 import com.example.short_link.link.application.ReferrerChannelClassifier;
 import com.example.short_link.link.domain.ClickEventRepository;
@@ -10,6 +9,7 @@ import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.LinkNotFoundException;
 import com.example.short_link.user.domain.UserRepository;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;

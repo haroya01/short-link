@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.InvalidRefreshTokenException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;

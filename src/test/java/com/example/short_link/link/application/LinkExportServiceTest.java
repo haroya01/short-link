@@ -6,6 +6,8 @@ import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkNotOwnedException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import org.junit.jupiter.api.Test;

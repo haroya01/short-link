@@ -6,6 +6,8 @@ import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.InvalidCursorException;
+import com.example.short_link.link.exception.LinkNotFoundException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;

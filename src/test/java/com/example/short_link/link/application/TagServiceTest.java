@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.link.application.TagService.TagSummary;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.DuplicateTagNameException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import java.util.List;

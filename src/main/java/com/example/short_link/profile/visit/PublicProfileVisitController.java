@@ -1,6 +1,6 @@
 package com.example.short_link.profile.visit;
 
-import com.example.short_link.profile.application.ProfileNotFoundException;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import jakarta.servlet.http.HttpServletRequest;

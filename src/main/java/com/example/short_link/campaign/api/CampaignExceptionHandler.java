@@ -1,15 +1,15 @@
 package com.example.short_link.campaign.api;
 
-import com.example.short_link.campaign.application.CampaignArchivedException;
-import com.example.short_link.campaign.application.CampaignBatchNotFoundException;
-import com.example.short_link.campaign.application.CampaignNotFoundException;
-import com.example.short_link.campaign.application.CampaignNotOwnedException;
-import com.example.short_link.campaign.application.CampaignTerminalStateException;
-import com.example.short_link.campaign.application.InvalidBatchRowException;
-import com.example.short_link.campaign.application.InvalidCampaignPeriodException;
-import com.example.short_link.campaign.application.MissingDestinationUrlException;
-import com.example.short_link.campaign.application.MissingPostEndDestinationException;
-import com.example.short_link.campaign.application.ReapplyOnNonEndedException;
+import com.example.short_link.campaign.exception.CampaignArchivedException;
+import com.example.short_link.campaign.exception.CampaignBatchNotFoundException;
+import com.example.short_link.campaign.exception.CampaignNotFoundException;
+import com.example.short_link.campaign.exception.CampaignNotOwnedException;
+import com.example.short_link.campaign.exception.CampaignTerminalStateException;
+import com.example.short_link.campaign.exception.InvalidBatchRowException;
+import com.example.short_link.campaign.exception.InvalidCampaignPeriodException;
+import com.example.short_link.campaign.exception.MissingDestinationUrlException;
+import com.example.short_link.campaign.exception.MissingPostEndDestinationException;
+import com.example.short_link.campaign.exception.ReapplyOnNonEndedException;
 import com.example.short_link.common.api.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;

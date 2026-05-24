@@ -1,9 +1,9 @@
 package com.example.short_link.user.api;
 
 import com.example.short_link.common.api.ProblemDetails;
-import com.example.short_link.user.application.InvalidRefreshTokenException;
-import com.example.short_link.user.application.InvalidTimezoneException;
-import com.example.short_link.user.application.UserNotFoundException;
+import com.example.short_link.user.exception.InvalidRefreshTokenException;
+import com.example.short_link.user.exception.InvalidTimezoneException;
+import com.example.short_link.user.exception.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;

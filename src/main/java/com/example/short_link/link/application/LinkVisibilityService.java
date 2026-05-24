@@ -2,6 +2,8 @@ package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkNotOwnedException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;

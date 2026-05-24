@@ -3,6 +3,7 @@ package com.example.short_link.link.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.link.exception.BulkImportTooLargeException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import java.io.ByteArrayInputStream;

@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
+import com.example.short_link.campaign.exception.ReapplyOnNonEndedException;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;

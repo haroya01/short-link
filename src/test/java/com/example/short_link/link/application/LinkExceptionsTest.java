@@ -2,6 +2,16 @@ package com.example.short_link.link.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.exception.BulkImportTooLargeException;
+import com.example.short_link.link.exception.CustomDomainNotVerifiedException;
+import com.example.short_link.link.exception.DuplicateTagNameException;
+import com.example.short_link.link.exception.InvalidWebhookUrlException;
+import com.example.short_link.link.exception.LinkExpiredException;
+import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.exception.LinkViewLimitExceededException;
+import com.example.short_link.link.exception.ReservedShortCodeException;
+import com.example.short_link.link.exception.TooManyWebhooksException;
 import org.junit.jupiter.api.Test;
 
 class LinkExceptionsTest {

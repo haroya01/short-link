@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.CustomDomainEntity;
 import com.example.short_link.link.domain.CustomDomainRepository;
+import com.example.short_link.link.exception.CustomDomainNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import org.junit.jupiter.api.Test;

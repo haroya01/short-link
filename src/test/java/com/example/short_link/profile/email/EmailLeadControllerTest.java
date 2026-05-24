@@ -9,10 +9,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.profile.application.InvalidUsernameException;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
+import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
+import com.example.short_link.profile.exception.InvalidUsernameException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import org.junit.jupiter.api.Test;

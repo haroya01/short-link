@@ -1,8 +1,8 @@
 package com.example.short_link.profile.visit;
 
-import com.example.short_link.user.application.UserNotFoundException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.exception.UserNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

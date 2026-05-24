@@ -1,8 +1,8 @@
 package com.example.short_link.profile.api;
 
-import com.example.short_link.profile.application.ProfileNotFoundException;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.read.ProfileQueryService;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

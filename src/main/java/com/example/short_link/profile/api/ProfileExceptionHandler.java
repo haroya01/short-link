@@ -1,9 +1,9 @@
 package com.example.short_link.profile.api;
 
 import com.example.short_link.common.api.ProblemDetails;
-import com.example.short_link.profile.application.InvalidUsernameException;
-import com.example.short_link.profile.application.ProfileNotFoundException;
-import com.example.short_link.profile.application.UsernameTakenException;
+import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.exception.UsernameTakenException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
