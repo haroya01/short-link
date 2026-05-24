@@ -1,12 +1,11 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.common.net.PublicHttpUrlGuard;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Connection;
@@ -17,8 +16,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Fetches Open Graph metadata from a URL with safety guards: SSRF protection (no private IPs),
- * timeouts, body size limit, content-type whitelist.
+ * Fetches Open Graph metadata from a URL with safety guards: SSRF protection (via shared {@link
+ * PublicHttpUrlGuard}), timeouts, body size limit, content-type whitelist.
+ *
+ * <p>DNS rebinding caveat: Jsoup re-resolves the host when it opens the connection, so a malicious
+ * DNS server can still return a private IP after the guard's public lookup. Timeouts, body-size,
+ * and content-type checks keep the blast radius bounded, but closing the rebinding window properly
+ * requires switching the HTTP client to one with a {@code DnsResolver} hook (Apache HttpClient 5) —
+ * out of scope for the wave-0 security pass.
  */
 @Slf4j
 @Service
@@ -43,7 +48,7 @@ public class OgScraper {
   }
 
   public OgMetadata fetch(String url) {
-    if (!isPublicHttpUrl(url)) {
+    if (!PublicHttpUrlGuard.isPublic(url)) {
       // Guard rejection still costs a DNS lookup, but no outbound HTTP — don't pollute the
       // outbound.http timer with these.
       return OgMetadata.empty();
@@ -102,40 +107,6 @@ public class OgScraper {
   static OgMetadata parseHtml(String html, String baseUrl) {
     Document doc = org.jsoup.Jsoup.parse(html, baseUrl);
     return parseDocument(doc, baseUrl);
-  }
-
-  static boolean isPublicHttpUrl(String url) {
-    if (url == null || url.isBlank()) return false;
-    URI uri;
-    try {
-      uri = new URI(url);
-    } catch (URISyntaxException e) {
-      return false;
-    }
-    String scheme = uri.getScheme();
-    if (scheme == null || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
-      return false;
-    }
-    String host = uri.getHost();
-    if (host == null || host.isBlank()) return false;
-    try {
-      for (InetAddress addr : InetAddress.getAllByName(host)) {
-        if (isPrivateOrLoopback(addr)) {
-          return false;
-        }
-      }
-    } catch (UnknownHostException e) {
-      return false;
-    }
-    return true;
-  }
-
-  private static boolean isPrivateOrLoopback(InetAddress addr) {
-    return addr.isLoopbackAddress()
-        || addr.isLinkLocalAddress()
-        || addr.isSiteLocalAddress()
-        || addr.isAnyLocalAddress()
-        || addr.isMulticastAddress();
   }
 
   private static String metaContent(Document doc, String property) {
