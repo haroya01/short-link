@@ -89,6 +89,8 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/v1/pow/challenge")
                     .permitAll()
+                    .requestMatchers(HttpMethod.GET, "/actuator/health")
+                    .permitAll()
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                     .hasRole("ADMIN")
                     .requestMatchers(HttpMethod.GET, "/api/v1/public/**")
