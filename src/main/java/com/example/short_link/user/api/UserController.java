@@ -1,5 +1,7 @@
 package com.example.short_link.user.api;
 
+import com.example.short_link.user.api.request.UpdatePreferencesRequest;
+import com.example.short_link.user.api.response.MeResponse;
 import com.example.short_link.user.application.UserDataExport;
 import com.example.short_link.user.application.UserDataExportService;
 import com.example.short_link.user.application.UserDeletionService;

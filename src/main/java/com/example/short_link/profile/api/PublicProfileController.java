@@ -1,5 +1,7 @@
 package com.example.short_link.profile.api;
 
+import com.example.short_link.profile.api.response.PublicProfileHandleItem;
+import com.example.short_link.profile.api.response.PublicProfileListResponse;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.read.ProfileQueryService;
 import java.util.List;
@@ -31,16 +33,13 @@ public class PublicProfileController {
    * actually crawled, so this stays cheap at any user count.
    */
   @GetMapping
-  public ListResponse list(
+  public PublicProfileListResponse list(
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "500") int size) {
     int safeSize = Math.min(Math.max(size, 1), LIST_MAX_PAGE_SIZE);
     int safePage = Math.max(page, 0);
     ProfileQueryService.PublicHandlesPage p = queryService.publicHandlesPage(safePage, safeSize);
-    List<HandleItem> items = p.handles().stream().map(HandleItem::new).toList();
-    return new ListResponse(items, p.total());
+    List<PublicProfileHandleItem> items =
+        p.handles().stream().map(PublicProfileHandleItem::new).toList();
+    return new PublicProfileListResponse(items, p.total());
   }
-
-  public record HandleItem(String username) {}
-
-  public record ListResponse(List<HandleItem> items, long total) {}
 }

@@ -2,6 +2,8 @@ package com.example.short_link.link.api;
 
 import com.example.short_link.common.pow.PowRequiredException;
 import com.example.short_link.common.pow.PowService;
+import com.example.short_link.link.api.request.CreateLinkRequest;
+import com.example.short_link.link.api.response.CreateLinkResponse;
 import com.example.short_link.link.application.LinkCreated;
 import com.example.short_link.link.application.LinkCreationService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;

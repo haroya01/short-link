@@ -1,7 +1,7 @@
 package com.example.short_link.admin.api;
 
 import com.example.short_link.admin.exception.InvalidActivePeriodException;
-import com.example.short_link.common.api.ProblemDetails;
+import com.example.short_link.common.api.response.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;

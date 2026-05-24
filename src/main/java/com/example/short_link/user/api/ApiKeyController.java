@@ -1,9 +1,9 @@
 package com.example.short_link.user.api;
 
+import com.example.short_link.user.api.request.ApiKeyCreateRequest;
 import com.example.short_link.user.application.ApiKeyService;
 import com.example.short_link.user.application.ApiKeyService.ApiKeySummary;
 import com.example.short_link.user.application.ApiKeyService.IssuedApiKey;
-import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,7 +26,7 @@ public class ApiKeyController {
 
   @PostMapping
   public ResponseEntity<IssuedApiKey> issue(
-      @AuthenticationPrincipal Long userId, @RequestBody CreateApiKeyRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody ApiKeyCreateRequest request) {
     IssuedApiKey issued = service.issue(userId, request.name());
     return ResponseEntity.status(HttpStatus.CREATED).body(issued);
   }
@@ -41,6 +41,4 @@ public class ApiKeyController {
     boolean removed = service.revoke(userId, id);
     return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
   }
-
-  public record CreateApiKeyRequest(@Size(max = 100) String name) {}
 }

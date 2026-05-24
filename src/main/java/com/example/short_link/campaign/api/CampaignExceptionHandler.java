@@ -10,7 +10,7 @@ import com.example.short_link.campaign.exception.InvalidCampaignPeriodException;
 import com.example.short_link.campaign.exception.MissingDestinationUrlException;
 import com.example.short_link.campaign.exception.MissingPostEndDestinationException;
 import com.example.short_link.campaign.exception.ReapplyOnNonEndedException;
-import com.example.short_link.common.api.ProblemDetails;
+import com.example.short_link.common.api.response.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
