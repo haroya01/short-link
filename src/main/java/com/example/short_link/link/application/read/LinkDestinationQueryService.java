@@ -1,6 +1,6 @@
 package com.example.short_link.link.application.read;
 
-import com.example.short_link.link.application.DestinationSummary;
+import com.example.short_link.link.application.dto.DestinationSummary;
 import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;

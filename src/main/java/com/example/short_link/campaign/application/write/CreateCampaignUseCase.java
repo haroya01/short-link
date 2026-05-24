@@ -1,6 +1,6 @@
 package com.example.short_link.campaign.application.write;
 
-import com.example.short_link.campaign.application.CampaignCreateRequest;
+import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignRepository;
