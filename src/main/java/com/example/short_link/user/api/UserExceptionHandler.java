@@ -1,6 +1,6 @@
 package com.example.short_link.user.api;
 
-import com.example.short_link.common.api.ProblemDetails;
+import com.example.short_link.common.api.response.ProblemDetails;
 import com.example.short_link.user.exception.AvatarUnavailableException;
 import com.example.short_link.user.exception.InvalidAvatarException;
 import com.example.short_link.user.exception.InvalidRefreshTokenException;

@@ -22,6 +22,12 @@ class ArchitectureRulesTest {
   private static final Pattern REPOSITORY_IMPORT =
       Pattern.compile("^import com\\.example\\.short_link\\..*Repository;", Pattern.MULTILINE);
 
+  private static final Pattern API_DTO_FILE =
+      Pattern.compile(".*(Request|Response|Page|ProblemDetails)\\.java$");
+
+  private static final Pattern NESTED_API_DTO =
+      Pattern.compile("\\brecord\\s+\\w*(Request|Response|Page)\\b");
+
   @Test
   void applicationLayerDoesNotDependOnFeatureApiLayer() throws IOException {
     List<String> violations =
@@ -63,6 +69,37 @@ class ArchitectureRulesTest {
     String securityConfig = Files.readString(MAIN.resolve("common/config/SecurityConfig.java"));
 
     assertThat(securityConfig).doesNotContainPattern("(?s)\\.anyRequest\\(\\)\\s*\\.permitAll\\(");
+  }
+
+  @Test
+  void apiDtosLiveInRequestOrResponsePackages() throws IOException {
+    List<String> violations =
+        javaSources()
+            .filter(path -> relative(path).contains("/api/"))
+            .filter(path -> API_DTO_FILE.matcher(path.getFileName().toString()).matches())
+            .filter(
+                path -> {
+                  String relative = relative(path);
+                  return !relative.contains("/api/request/")
+                      && !relative.contains("/api/response/");
+                })
+            .map(ArchitectureRulesTest::relative)
+            .toList();
+
+    assertThat(violations).isEmpty();
+  }
+
+  @Test
+  void apiControllersDoNotDeclareRequestOrResponseDtosInline() throws IOException {
+    List<String> violations =
+        javaSources()
+            .filter(path -> relative(path).contains("/api/"))
+            .filter(path -> path.getFileName().toString().endsWith("Controller.java"))
+            .filter(path -> NESTED_API_DTO.matcher(read(path)).find())
+            .map(ArchitectureRulesTest::relative)
+            .toList();
+
+    assertThat(violations).isEmpty();
   }
 
   private static Stream<Path> javaSources() throws IOException {

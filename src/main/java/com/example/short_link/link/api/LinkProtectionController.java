@@ -1,5 +1,7 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.LinkProtectionRequest;
+import com.example.short_link.link.api.response.LinkProtectionResponse;
 import com.example.short_link.link.application.LinkProtectionResult;
 import com.example.short_link.link.application.LinkProtectionService;
 import jakarta.validation.Valid;
@@ -30,7 +32,4 @@ public class LinkProtectionController {
     return new LinkProtectionResponse(
         result.shortCode(), result.passwordProtected(), result.maxViews(), result.viewCount());
   }
-
-  public record LinkProtectionResponse(
-      String shortCode, boolean passwordProtected, Integer maxViews, int viewCount) {}
 }

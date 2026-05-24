@@ -1,5 +1,7 @@
 package com.example.short_link.user.api;
 
+import com.example.short_link.user.api.request.AvatarCommitRequest;
+import com.example.short_link.user.api.request.AvatarPresignRequest;
 import com.example.short_link.user.application.avatar.AvatarService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,13 +21,13 @@ public class AvatarController {
 
   @PostMapping("/presigned-url")
   public AvatarService.PresignResult presign(
-      @AuthenticationPrincipal Long userId, @RequestBody PresignRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody AvatarPresignRequest request) {
     return service.presignUpload(userId, request.contentType());
   }
 
   @PutMapping
   public AvatarService.CommitResult commit(
-      @AuthenticationPrincipal Long userId, @RequestBody CommitRequest request) {
+      @AuthenticationPrincipal Long userId, @RequestBody AvatarCommitRequest request) {
     return service.commitUpload(userId, request.key());
   }
 
@@ -33,8 +35,4 @@ public class AvatarController {
   public void clear(@AuthenticationPrincipal Long userId) {
     service.clearAvatar(userId);
   }
-
-  public record PresignRequest(String contentType) {}
-
-  public record CommitRequest(String key) {}
 }

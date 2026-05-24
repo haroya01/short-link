@@ -1,5 +1,8 @@
 package com.example.short_link.link.api;
 
+import com.example.short_link.link.api.request.LinkWebhookConfigRequest;
+import com.example.short_link.link.api.request.LinkWebhookRegisterRequest;
+import com.example.short_link.link.api.request.LinkWebhookToggleRequest;
 import com.example.short_link.link.application.IssuedWebhook;
 import com.example.short_link.link.application.WebhookSummary;
 import com.example.short_link.link.application.read.LinkWebhookQueryService;
@@ -11,10 +14,6 @@ import com.example.short_link.link.application.write.ToggleLinkWebhookCommand;
 import com.example.short_link.link.application.write.ToggleLinkWebhookUseCase;
 import com.example.short_link.link.application.write.UpdateLinkWebhookConfigCommand;
 import com.example.short_link.link.application.write.UpdateLinkWebhookConfigUseCase;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -51,7 +50,7 @@ public class LinkWebhookController {
   public ResponseEntity<IssuedWebhook> register(
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
-      @RequestBody RegisterRequest request) {
+      @RequestBody LinkWebhookRegisterRequest request) {
     IssuedWebhook issued =
         registerUseCase.execute(
             new RegisterLinkWebhookCommand(userId, shortCode, request.url(), request.name()));
@@ -63,7 +62,7 @@ public class LinkWebhookController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @PathVariable Long id,
-      @RequestBody ToggleRequest request) {
+      @RequestBody LinkWebhookToggleRequest request) {
     return toggleUseCase.execute(
         new ToggleLinkWebhookCommand(userId, shortCode, id, request.enabled()));
   }
@@ -73,7 +72,7 @@ public class LinkWebhookController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @PathVariable Long id,
-      @RequestBody ConfigRequest request) {
+      @RequestBody LinkWebhookConfigRequest request) {
     return updateConfigUseCase.execute(
         new UpdateLinkWebhookConfigCommand(
             userId,
@@ -93,17 +92,4 @@ public class LinkWebhookController {
     deleteUseCase.execute(new DeleteLinkWebhookCommand(userId, shortCode, id));
     return ResponseEntity.noContent().build();
   }
-
-  public record RegisterRequest(
-      @NotBlank @Size(max = 2048) String url, @Size(max = 100) String name) {}
-
-  public record ToggleRequest(boolean enabled) {}
-
-  public record ConfigRequest(
-      Boolean includeBots,
-      @Min(1) @Max(100) Integer sampleRate,
-      Boolean batchEnabled,
-      Integer dailyQuota,
-      @Size(max = 255) String referrerHostFilter,
-      @Size(max = 100) String utmSourceFilter) {}
 }
