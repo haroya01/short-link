@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
@@ -45,7 +47,9 @@ class LinkWebhookDispatcherTest {
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
     jsonMapper = JsonMapper.builder().build();
-    dispatcher = new LinkWebhookDispatcher(repository, jsonMapper, meterRegistry, redis);
+    dispatcher =
+        new LinkWebhookDispatcher(
+            repository, jsonMapper, meterRegistry, redis, mock(HttpFetcher.class));
   }
 
   private LinkWebhookEntity hook(WebhookFormat format) {
