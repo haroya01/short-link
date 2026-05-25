@@ -48,15 +48,7 @@ public class LinkManagementController {
                 request.expiresAt(),
                 request.note(),
                 request.expiredMessage()));
-    return new MyLinkResponse(
-        updated.shortCode(),
-        urlBuilder.build(updated.shortCode()),
-        updated.originalUrl(),
-        updated.createdAt(),
-        updated.expiresAt(),
-        updated.clickCount(),
-        updated.tags(),
-        updated.clicksLast7d());
+    return MyLinkResponse.from(updated, urlBuilder);
   }
 
   @DeleteMapping("/{shortCode}")
