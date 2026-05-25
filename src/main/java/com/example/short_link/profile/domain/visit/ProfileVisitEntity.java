@@ -29,7 +29,6 @@ public class ProfileVisitEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  /** Owner of the profile being visited. */
   @Column(name = "profile_user_id", nullable = false)
   private Long profileUserId;
 

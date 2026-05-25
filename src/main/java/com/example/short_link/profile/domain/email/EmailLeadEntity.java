@@ -22,11 +22,9 @@ public class EmailLeadEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  /** Profile owner — the user that gets to read / export this lead. */
   @Column(name = "user_id", nullable = false)
   private Long userId;
 
-  /** Which EMAIL_FORM block on the owner's profile produced this submission. */
   @Column(name = "block_id", nullable = false)
   private Long blockId;
 
