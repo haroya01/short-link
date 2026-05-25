@@ -17,6 +17,7 @@ import com.example.short_link.link.domain.repository.ClickEventReadRepository.So
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.UtmCampaignClickRow;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.UtmSourceClickRow;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
+import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
@@ -50,7 +51,7 @@ class ProfileStatsServiceTest {
 
   private UserEntity user(long id, String tz, boolean publicStats) {
     UserEntity u = new UserEntity("u@x", "google", "g-" + id);
-    writeField(u, "id", id);
+    TestEntities.withId(u, id);
     if (tz != null) u.changeTimezone(tz);
     if (publicStats) u.updateStatsPublic(true);
     u.claimUsername("alice");
