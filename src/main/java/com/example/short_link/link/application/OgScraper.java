@@ -1,15 +1,30 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.common.net.PublicHttpUrlGuard;
+import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.link.application.dto.OgMetadata;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
-import org.jsoup.Connection;
+import org.apache.hc.client5.http.DnsResolver;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.util.Timeout;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -17,14 +32,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Fetches Open Graph metadata from a URL with safety guards: SSRF protection (via shared {@link
- * PublicHttpUrlGuard}), timeouts, body size limit, content-type whitelist.
- *
- * <p>DNS rebinding caveat: Jsoup re-resolves the host when it opens the connection, so a malicious
- * DNS server can still return a private IP after the guard's public lookup. Timeouts, body-size,
- * and content-type checks keep the blast radius bounded, but closing the rebinding window properly
- * requires switching the HTTP client to one with a {@code DnsResolver} hook (Apache HttpClient 5) —
- * out of scope for the wave-0 security pass.
+ * Fetches Open Graph metadata. Closes the DNS rebinding window via Apache HttpClient 5 with a
+ * per-request DnsResolver pinned to the IPs PublicHttpUrlGuard already vetted — same pattern as the
+ * webhook dispatcher. Body is capped at {@link #MAX_BODY_BYTES} (read manually, since HC5 doesn't
+ * enforce a response size limit out of the box) and parsed with Jsoup as text/html only.
  */
 @Slf4j
 @Service
@@ -33,7 +44,6 @@ public class OgScraper {
   private static final int CONNECT_TIMEOUT_MS = 3_000;
   private static final int READ_TIMEOUT_MS = 5_000;
   private static final int MAX_BODY_BYTES = 1_024 * 1_024;
-  private static final int MAX_REDIRECTS = 3;
   private static final String USER_AGENT = "kurl-link-preview/1.0 (+https://kurl.me/bot)";
 
   private final MeterRegistry meterRegistry;
@@ -49,37 +59,43 @@ public class OgScraper {
   }
 
   public OgMetadata fetch(String url) {
-    if (!PublicHttpUrlGuard.isPublic(url)) {
-      // Guard rejection still costs a DNS lookup, but no outbound HTTP — don't pollute the
-      // outbound.http timer with these.
+    Resolved resolved = PublicHttpUrlGuard.resolve(url).orElse(null);
+    if (resolved == null) {
       return OgMetadata.empty();
     }
     Timer.Sample sample = meterRegistry == null ? null : Timer.start(meterRegistry);
-    String result = "exception";
-    try {
-      Connection conn =
-          Jsoup.connect(url)
-              .userAgent(USER_AGENT)
-              .timeout(CONNECT_TIMEOUT_MS + READ_TIMEOUT_MS)
-              .maxBodySize(MAX_BODY_BYTES)
-              .followRedirects(true)
-              .ignoreContentType(false)
-              .ignoreHttpErrors(true)
-              .header("Accept", "text/html,application/xhtml+xml")
-              .header("Accept-Language", "en;q=0.9,ko;q=0.8,ja;q=0.7");
-      Connection.Response response = conn.execute();
-      if (response.statusCode() >= 400) {
-        result = "non_2xx";
-        return OgMetadata.empty();
-      }
-      String contentType = response.contentType();
-      if (contentType == null || !contentType.toLowerCase().startsWith("text/html")) {
-        result = "non_html";
-        return OgMetadata.empty();
-      }
-      Document doc = response.parse();
-      result = "ok";
-      return parseDocument(doc, response.url().toString());
+    AtomicReference<String> resultTag = new AtomicReference<>("exception");
+    String baseUrl = resolved.uri().toString();
+    try (CloseableHttpClient client = buildPinnedClient(resolved)) {
+      HttpGet get = new HttpGet(resolved.uri());
+      get.setHeader("User-Agent", USER_AGENT);
+      get.setHeader("Accept", "text/html,application/xhtml+xml");
+      get.setHeader("Accept-Language", "en;q=0.9,ko;q=0.8,ja;q=0.7");
+      return client.execute(
+          get,
+          response -> {
+            int code = response.getCode();
+            if (code >= 400) {
+              resultTag.set("non_2xx");
+              return OgMetadata.empty();
+            }
+            Header ct = response.getFirstHeader("Content-Type");
+            if (ct == null || !ct.getValue().toLowerCase().startsWith("text/html")) {
+              resultTag.set("non_html");
+              return OgMetadata.empty();
+            }
+            if (response.getEntity() == null) {
+              resultTag.set("non_html");
+              return OgMetadata.empty();
+            }
+            byte[] body;
+            try (InputStream in = response.getEntity().getContent()) {
+              body = readUpTo(in, MAX_BODY_BYTES);
+            }
+            Document doc = Jsoup.parse(new String(body, StandardCharsets.UTF_8), baseUrl);
+            resultTag.set("ok");
+            return parseDocument(doc, baseUrl);
+          });
     } catch (IOException e) {
       log.debug("OG fetch failed for {}: {}", url, e.getMessage());
       return OgMetadata.empty();
@@ -88,15 +104,66 @@ public class OgScraper {
       return OgMetadata.empty();
     } finally {
       if (sample != null) {
-        sample.stop(meterRegistry.timer("outbound.http", "client", "og_fetch", "result", result));
+        sample.stop(
+            meterRegistry.timer("outbound.http", "client", "og_fetch", "result", resultTag.get()));
       }
     }
   }
 
-  /**
-   * Extracts OG metadata from a parsed HTML document. Visible for testing so the parsing logic can
-   * be exercised without a real HTTP fetch.
-   */
+  /** Visible for tests. */
+  protected CloseableHttpClient buildPinnedClient(Resolved resolved) {
+    String pinnedHost = resolved.uri().getHost();
+    InetAddress[] pinnedAddrs = resolved.addresses().toArray(new InetAddress[0]);
+    DnsResolver pinned =
+        new DnsResolver() {
+          @Override
+          public InetAddress[] resolve(String host) throws UnknownHostException {
+            if (host != null && host.equalsIgnoreCase(pinnedHost)) {
+              return pinnedAddrs;
+            }
+            throw new UnknownHostException("DNS pinned to " + pinnedHost + "; refused " + host);
+          }
+
+          @Override
+          public String resolveCanonicalHostname(String host) {
+            return host;
+          }
+        };
+    ConnectionConfig connConfig =
+        ConnectionConfig.custom()
+            .setConnectTimeout(Timeout.ofMilliseconds(CONNECT_TIMEOUT_MS))
+            .setSocketTimeout(Timeout.ofMilliseconds(READ_TIMEOUT_MS))
+            .build();
+    var connMgr =
+        PoolingHttpClientConnectionManagerBuilder.create()
+            .setDnsResolver(pinned)
+            .setDefaultConnectionConfig(connConfig)
+            .build();
+    RequestConfig reqConfig =
+        RequestConfig.custom()
+            .setResponseTimeout(Timeout.ofMilliseconds(CONNECT_TIMEOUT_MS + READ_TIMEOUT_MS))
+            .build();
+    return HttpClients.custom()
+        .setConnectionManager(connMgr)
+        .setConnectionManagerShared(false)
+        .setDefaultRequestConfig(reqConfig)
+        .disableAutomaticRetries()
+        .build();
+  }
+
+  private static byte[] readUpTo(InputStream in, int max) throws IOException {
+    ByteArrayOutputStream out = new ByteArrayOutputStream(Math.min(max, 8192));
+    byte[] buf = new byte[8192];
+    int total = 0;
+    while (total < max) {
+      int n = in.read(buf, 0, Math.min(buf.length, max - total));
+      if (n <= 0) break;
+      out.write(buf, 0, n);
+      total += n;
+    }
+    return out.toByteArray();
+  }
+
   static OgMetadata parseDocument(Document doc, String baseUrl) {
     String title = pickFirst(metaContent(doc, "og:title"), title(doc));
     String description =
