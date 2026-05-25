@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -33,6 +34,7 @@ class LinkCreationServiceCollisionTest {
     LinkCreationService service =
         new LinkCreationService(
             repository,
+            mock(LinkOgMetadataRepository.class),
             generator,
             new SimpleMeterRegistry(),
             safetyChecker,

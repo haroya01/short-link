@@ -4,6 +4,8 @@ import com.example.short_link.link.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkOgMetadataEntity;
+import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
@@ -29,6 +31,7 @@ public class LinkOgFetchListener {
 
   private final OgScraper scraper;
   private final LinkRepository repository;
+  private final LinkOgMetadataRepository ogMetadataRepository;
   private final MeterRegistry meterRegistry;
   private final CacheManager cacheManager;
   private final OgFetchProperties ogFetch;
@@ -47,14 +50,22 @@ public class LinkOgFetchListener {
       return;
     }
     Instant now = Instant.now();
+    LinkOgMetadataEntity ogMeta =
+        ogMetadataRepository
+            .findById(entity.getId())
+            .orElseGet(() -> new LinkOgMetadataEntity(entity.getId()));
     if (og.hasAny()) {
       entity.applyOgMetadata(og.title(), og.description(), og.image(), now);
+      ogMeta.applyFetched(og.title(), og.description(), og.image(), now);
       repository.save(entity);
+      ogMetadataRepository.save(ogMeta);
       meterRegistry.counter("short_link.og_fetch", "result", "ok").increment();
     } else {
       boolean willRetry = entity.getOgFetchAttempts() + 1 < ogFetch.maxAttempts();
       entity.markOgFetchFailed(now, willRetry);
+      ogMeta.markFetchFailed(now, willRetry);
       repository.save(entity);
+      ogMetadataRepository.save(ogMeta);
       meterRegistry
           .counter("short_link.og_fetch", "result", willRetry ? "retryable" : "error")
           .increment();
