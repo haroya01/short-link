@@ -18,9 +18,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Profile banner / hero image upload. Mirrors {@link AvatarService} but writes under {@code
- * banners/{userId}/...} and updates {@link UserEntity#getBannerUrl()}. Reuses the same S3 bucket /
- * IAM / CloudFront setup — only the key prefix differs.
+ * Mirrors {@link AvatarService} but writes under {@code banners/{userId}/...} and updates {@link
+ * UserEntity#getBannerUrl()}. Reuses the same S3 bucket / IAM / CloudFront setup — only the key
+ * prefix differs.
  */
 @Slf4j
 @Service
