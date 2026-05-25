@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.read;
 
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
@@ -19,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class LinkLookupService {
+public class LinkLookupQueryService {
 
   private final LinkRepository repository;
   private final LinkDestinationRepository destinationRepository;
@@ -35,7 +35,7 @@ public class LinkLookupService {
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     List<CachedLink.Variant> variants =
         destinationRepository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
-            .map(LinkLookupService::toVariant)
+            .map(LinkLookupQueryService::toVariant)
             .toList();
     return new CachedLink(
         link.getId(),
@@ -70,14 +70,6 @@ public class LinkLookupService {
   @Transactional(readOnly = true)
   public long countHumanClicks(Long linkId) {
     return clickEventRepository.countHumanByLinkId(linkId);
-  }
-
-  /**
-   * view limit 체크 + viewCount 증분 atomically. 반환값 > 0 = 증분 됐음, 0 = limit 도달 (호출자가 expire 처리).
-   * redirect 핸들러용.
-   */
-  public int incrementViewCountIfBelowLimit(Long linkId) {
-    return repository.incrementViewCountIfBelowLimit(linkId);
   }
 
   public CachedLink findActiveLink(String shortCode) {
