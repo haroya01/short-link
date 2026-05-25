@@ -8,7 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.access.application.LinkAccessGuard;
-import com.example.short_link.link.application.LinkLookupService;
+import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.support.TestEntities;
@@ -28,7 +28,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 class SseClickStreamControllerTest {
 
   @Mock private JwtTokenService jwt;
-  @Mock private LinkLookupService lookup;
+  @Mock private LinkLookupQueryService lookup;
   @Mock private SseClickStreamRegistry registry;
   @Mock private LinkAccessGuard accessGuard;
   @Mock private HttpServletResponse response;

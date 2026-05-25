@@ -1,8 +1,10 @@
 package com.example.short_link.link.redirect.application;
 
-import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.dto.UserAgentInfo;
+import com.example.short_link.link.application.read.LinkLookupQueryService;
+import com.example.short_link.link.application.write.IncrementViewCountCommand;
+import com.example.short_link.link.application.write.IncrementViewCountUseCase;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.domain.LinkEntity;
@@ -27,7 +29,8 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class LinkRedirectFlow {
 
-  private final LinkLookupService lookup;
+  private final LinkLookupQueryService lookup;
+  private final IncrementViewCountUseCase incrementViewCount;
   private final ClickRecorder clickRecorder;
   private final GeoIpResolver geoIpResolver;
   private final UserAgentClassifier userAgentClassifier;
@@ -82,7 +85,7 @@ public class LinkRedirectFlow {
 
   private void enforceViewLimit(LinkEntity entity) {
     if (entity.getMaxViews() == null) return;
-    int updated = lookup.incrementViewCountIfBelowLimit(entity.getId());
+    int updated = incrementViewCount.execute(new IncrementViewCountCommand(entity.getId()));
     if (updated == 0) {
       throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode());
     }

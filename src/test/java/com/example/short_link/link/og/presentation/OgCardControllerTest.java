@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.og.application.OgCardImageRenderer;
 import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
 import java.util.List;
@@ -32,7 +32,7 @@ class OgCardControllerTest {
 
   @Autowired private MockMvc mvc;
 
-  @MockitoBean private LinkLookupService lookup;
+  @MockitoBean private LinkLookupQueryService lookup;
   @MockitoBean private OgCardImageRenderer renderer;
   @MockitoBean private ClickEventReadRepository clickRepository;
 

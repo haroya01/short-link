@@ -2,9 +2,9 @@ package com.example.short_link.link.redirect.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.customdomain.application.CustomDomainService;
-import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -41,7 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class RedirectController {
 
-  private final LinkLookupService lookup;
+  private final LinkLookupQueryService lookup;
   private final LinkRedirectFlow flow;
   private final ClickRecorder clickRecorder;
   private final LinkPreviewCrawlerDetector crawlerDetector;

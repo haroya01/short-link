@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -28,11 +28,11 @@ class LinkDetailServiceTest {
   @Mock private LinkTagService linkTagService;
   @Mock private LinkAccessGuard accessGuard;
 
-  private LinkDetailService service;
+  private LinkDetailQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new LinkDetailService(repository, linkTagService, accessGuard);
+    service = new LinkDetailQueryService(repository, linkTagService, accessGuard);
   }
 
   @Test
