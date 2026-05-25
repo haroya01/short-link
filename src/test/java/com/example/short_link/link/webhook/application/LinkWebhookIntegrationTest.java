@@ -159,7 +159,11 @@ class LinkWebhookIntegrationTest {
                 true,
                 1000,
                 "twitter.com",
-                "instagram"));
+                "instagram",
+                null,
+                null,
+                null,
+                null));
 
     assertThat(updated.includeBots()).isTrue();
     assertThat(updated.sampleRate()).isEqualTo(25);
@@ -179,14 +183,38 @@ class LinkWebhookIntegrationTest {
             () ->
                 updateConfigUseCase.execute(
                     new UpdateLinkWebhookConfigCommand(
-                        user.getId(), "wh99999", issued.id(), null, 0, null, null, null, null)))
+                        user.getId(),
+                        "wh99999",
+                        issued.id(),
+                        null,
+                        0,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null)))
         .isInstanceOf(IllegalArgumentException.class);
 
     assertThatThrownBy(
             () ->
                 updateConfigUseCase.execute(
                     new UpdateLinkWebhookConfigCommand(
-                        user.getId(), "wh99999", issued.id(), null, 101, null, null, null, null)))
+                        user.getId(),
+                        "wh99999",
+                        issued.id(),
+                        null,
+                        101,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null)))
         .isInstanceOf(IllegalArgumentException.class);
   }
 

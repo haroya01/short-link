@@ -22,6 +22,13 @@ public class UpdateLinkWebhookConfigUseCase {
         cmd.dailyQuota(),
         cmd.referrerHostFilter(),
         cmd.utmSourceFilter());
+    if (cmd.deliveryMode() != null) {
+      hook.changeDeliveryMode(
+          cmd.deliveryMode(),
+          cmd.summaryHourOfDay(),
+          cmd.spikeThreshold(),
+          cmd.spikeWindowMinutes());
+    }
     return WebhookSummary.from(hook);
   }
 }

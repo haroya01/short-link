@@ -1,6 +1,7 @@
 package com.example.short_link.link.webhook.application.dto;
 
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
+import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
 import java.time.Instant;
 
@@ -21,7 +22,11 @@ public record WebhookSummary(
     String autoDisabledReason,
     String referrerHostFilter,
     String utmSourceFilter,
-    WebhookFormat format) {
+    WebhookFormat format,
+    WebhookDeliveryMode deliveryMode,
+    Integer summaryHourOfDay,
+    Integer spikeThreshold,
+    Integer spikeWindowMinutes) {
 
   public static WebhookSummary from(LinkWebhookEntity h) {
     return new WebhookSummary(
@@ -41,6 +46,10 @@ public record WebhookSummary(
         h.getAutoDisabledReason(),
         h.getReferrerHostFilter(),
         h.getUtmSourceFilter(),
-        h.getFormat());
+        h.getFormat(),
+        h.getDeliveryMode(),
+        h.getSummaryHourOfDay(),
+        h.getSpikeThreshold(),
+        h.getSpikeWindowMinutes());
   }
 }

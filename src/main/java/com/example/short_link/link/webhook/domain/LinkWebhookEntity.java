@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.LocalDate;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -77,6 +78,25 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
   @Enumerated(EnumType.STRING)
   @Column(name = "format", nullable = false, length = 16)
   private WebhookFormat format = WebhookFormat.GENERIC;
+
+  @Enumerated(EnumType.STRING)
+  @Column(name = "delivery_mode", nullable = false, length = 32)
+  private WebhookDeliveryMode deliveryMode = WebhookDeliveryMode.PER_EVENT;
+
+  @Column(name = "summary_hour_of_day")
+  private Integer summaryHourOfDay;
+
+  @Column(name = "summary_last_sent_date")
+  private LocalDate summaryLastSentDate;
+
+  @Column(name = "spike_threshold")
+  private Integer spikeThreshold;
+
+  @Column(name = "spike_window_minutes")
+  private Integer spikeWindowMinutes;
+
+  @Column(name = "spike_last_fired_at")
+  private Instant spikeLastFiredAt;
 
   public LinkWebhookEntity(Long linkId, String url, String secret, String name) {
     this(linkId, url, secret, name, WebhookFormat.GENERIC);
@@ -156,6 +176,55 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
       this.referrerHostFilter = referrerHostFilter.isBlank() ? null : referrerHostFilter.trim();
     if (utmSourceFilter != null)
       this.utmSourceFilter = utmSourceFilter.isBlank() ? null : utmSourceFilter.trim();
+  }
+
+  /**
+   * Switch the hook's delivery mode + the mode-specific knobs. Caller passes only the values that
+   * apply to the new mode; the entity nulls out the others to keep the row coherent (e.g. switching
+   * from DAILY_SUMMARY to PER_EVENT clears the summary hour so a future re-enable doesn't fire
+   * yesterday's stats at a stale hour).
+   */
+  public void changeDeliveryMode(
+      WebhookDeliveryMode mode,
+      Integer summaryHourOfDay,
+      Integer spikeThreshold,
+      Integer spikeWindowMinutes) {
+    if (mode == null) return;
+    this.deliveryMode = mode;
+    if (mode.sendsDailySummary()) {
+      if (summaryHourOfDay == null) {
+        throw new IllegalArgumentException("summaryHourOfDay required for " + mode);
+      }
+      if (summaryHourOfDay < 0 || summaryHourOfDay > 23) {
+        throw new IllegalArgumentException("summaryHourOfDay must be 0..23");
+      }
+      this.summaryHourOfDay = summaryHourOfDay;
+    } else {
+      this.summaryHourOfDay = null;
+      this.summaryLastSentDate = null;
+    }
+    if (mode.sendsSpikeAlert()) {
+      if (spikeThreshold == null || spikeThreshold < 1) {
+        throw new IllegalArgumentException("spikeThreshold must be >= 1 for " + mode);
+      }
+      if (spikeWindowMinutes == null || spikeWindowMinutes < 1) {
+        throw new IllegalArgumentException("spikeWindowMinutes must be >= 1 for " + mode);
+      }
+      this.spikeThreshold = spikeThreshold;
+      this.spikeWindowMinutes = spikeWindowMinutes;
+    } else {
+      this.spikeThreshold = null;
+      this.spikeWindowMinutes = null;
+      this.spikeLastFiredAt = null;
+    }
+  }
+
+  public void markSummarySent(LocalDate date) {
+    this.summaryLastSentDate = date;
+  }
+
+  public void markSpikeFired(Instant at) {
+    this.spikeLastFiredAt = at;
   }
 
   private static int clamp(int value, int min, int max) {
