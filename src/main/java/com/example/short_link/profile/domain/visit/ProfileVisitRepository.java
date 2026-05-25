@@ -8,15 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/**
- * Aggregation queries for {@link ProfileVisitEntity}. Structurally mirrors {@link
- * ClickEventRepository} but keyed on {@code profileUserId} + {@code visitedAt} instead of link id +
- * clickedAt, so the chart pipeline ({@code ProfileStatsService}) can read the same kind of
- * two-field {@code (bucket, count)} projections the link side uses. We reuse the projection
- * interfaces from {@link ClickEventRepository} ({@link ClickEventReadRepository.DailyClickRow},
- * etc.) because they're just generic name/count interfaces — there's nothing link-specific about
- * them and duplicating them for profile would only encourage them drifting out of sync.
- */
 public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity, Long> {
 
   long countByProfileUserId(Long profileUserId);
