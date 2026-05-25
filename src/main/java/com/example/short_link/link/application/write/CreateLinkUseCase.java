@@ -1,10 +1,11 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.write;
 
 import com.example.short_link.admin.application.BlockedDomainService;
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.access.domain.LinkAccessControlEntity;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
+import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.application.helper.LinkUrlHasher;
 import com.example.short_link.link.application.helper.ReservedShortCodes;
@@ -34,7 +35,7 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
-public class LinkCreationService {
+public class CreateLinkUseCase {
 
   private static final int MAX_ATTEMPTS = 5;
   private static final Duration ANONYMOUS_TTL = Duration.ofDays(1);
@@ -54,7 +55,7 @@ public class LinkCreationService {
   private final TransactionTemplate tx;
   private final long quotaPerUser;
 
-  public LinkCreationService(
+  public CreateLinkUseCase(
       LinkRepository repository,
       LinkOgMetadataRepository ogMetadataRepository,
       LinkAccessControlRepository accessControlRepository,
@@ -83,18 +84,8 @@ public class LinkCreationService {
     this.quotaPerUser = quotaPerUser;
   }
 
-  public LinkCreated create(
-      String url, Long userId, String customCode, Instant requestedExpiresAt) {
-    return create(url, userId, customCode, requestedExpiresAt, true);
-  }
-
-  /**
-   * @param deduplicate true 면 같은 owner + 같은 URL 의 기존 link 재사용 (일반 단축 흐름). Campaign batch 가 같은
-   *     destination 으로 여러 묶음을 만들 때 batch:link UNIQUE 제약과 충돌하므로 false 로 호출 — 각 batch 가 자기 단축 코드를 갖도록
-   *     한다.
-   */
-  public LinkCreated create(
-      String url, Long userId, String customCode, Instant requestedExpiresAt, boolean deduplicate) {
+  public LinkCreated execute(CreateLinkCommand command) {
+    String url = command.url();
     // Pre-transaction validation: blocked-domain lookup is cheap and Safe Browsing is an outbound
     // HTTP call. Both used to run inside the @Transactional boundary, which held a JDBC connection
     // for the duration of the HTTP round trip — pool starvation under load. Run them first so the
@@ -107,15 +98,17 @@ public class LinkCreationService {
       throw new LinkException(LinkErrorCode.MALICIOUS_URL, LinkUrlHasher.sha256Prefix(url));
     }
 
-    boolean authenticated = userId != null;
-    String code = authenticated ? customCode : null;
-    Instant expiresAt = authenticated ? requestedExpiresAt : Instant.now().plus(ANONYMOUS_TTL);
+    boolean authenticated = command.userId() != null;
+    String code = authenticated ? command.customCode() : null;
+    Instant expiresAt = authenticated ? command.expiresAt() : Instant.now().plus(ANONYMOUS_TTL);
 
     if (code != null && ReservedShortCodes.isReserved(code)) {
       throw new LinkException(LinkErrorCode.RESERVED_SHORT_CODE, code);
     }
 
-    return tx.execute(status -> persist(url, userId, code, expiresAt, deduplicate, authenticated));
+    return tx.execute(
+        status ->
+            persist(url, command.userId(), code, expiresAt, command.deduplicate(), authenticated));
   }
 
   private LinkCreated persist(
