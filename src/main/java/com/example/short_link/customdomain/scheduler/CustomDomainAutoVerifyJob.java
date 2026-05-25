@@ -1,7 +1,7 @@
-package com.example.short_link.link.scheduler;
+package com.example.short_link.customdomain.scheduler;
 
-import com.example.short_link.link.application.CustomDomainService;
-import com.example.short_link.link.domain.CustomDomainEntity;
+import com.example.short_link.customdomain.application.CustomDomainService;
+import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

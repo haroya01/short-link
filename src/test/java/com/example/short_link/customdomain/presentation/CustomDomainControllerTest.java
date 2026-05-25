@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.customdomain.presentation;
 
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -10,8 +10,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.CustomDomainService;
-import com.example.short_link.link.application.CustomDomainService.DomainSummary;
+import com.example.short_link.customdomain.application.CustomDomainService;
+import com.example.short_link.customdomain.application.CustomDomainService.DomainSummary;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;

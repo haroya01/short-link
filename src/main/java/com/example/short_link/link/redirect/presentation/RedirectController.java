@@ -1,7 +1,7 @@
 package com.example.short_link.link.redirect.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
-import com.example.short_link.link.application.CustomDomainService;
+import com.example.short_link.customdomain.application.CustomDomainService;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.CachedLink;
