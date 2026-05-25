@@ -1,9 +1,9 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.write;
 
+import com.example.short_link.link.application.dto.ClaimResult;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
-public class AnonymousClaimService {
+public class ClaimAnonymousLinksUseCase {
 
   public static final int MAX_TOKENS_PER_REQUEST = 50;
 
@@ -25,18 +25,15 @@ public class AnonymousClaimService {
   private final MeterRegistry meterRegistry;
 
   @Transactional
-  public ClaimResult claim(Long userId, Collection<String> claimTokens) {
-    if (userId == null) {
-      throw new IllegalStateException("userId required");
-    }
-    if (claimTokens == null || claimTokens.isEmpty()) {
+  public ClaimResult execute(ClaimAnonymousLinksCommand command) {
+    if (command.claimTokens().isEmpty()) {
       return new ClaimResult(0, 0);
     }
-    List<String> bounded = claimTokens.stream().limit(MAX_TOKENS_PER_REQUEST).toList();
+    List<String> bounded = command.claimTokens().stream().limit(MAX_TOKENS_PER_REQUEST).toList();
     List<LinkEntity> matches = repository.findAllByClaimTokenInAndUserIdIsNull(bounded);
     int claimed = 0;
     for (LinkEntity link : matches) {
-      link.claim(userId);
+      link.claim(command.userId());
       claimed++;
     }
     int skipped = bounded.size() - claimed;
@@ -44,6 +41,4 @@ public class AnonymousClaimService {
     meterRegistry.counter("link.claim", "result", "skipped").increment(skipped);
     return new ClaimResult(claimed, skipped);
   }
-
-  public record ClaimResult(int claimed, int skipped) {}
 }
