@@ -17,8 +17,8 @@ import com.example.short_link.admin.application.read.AdminLinkMetricsQueryServic
 import com.example.short_link.common.observability.AdminFunnelService;
 import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.common.observability.AdminSystemMetricsService;
-import com.example.short_link.link.application.dto.WebhookReDetectResult;
-import com.example.short_link.link.application.write.ReDetectWebhookFormatsUseCase;
+import com.example.short_link.link.webhook.application.dto.WebhookReDetectResult;
+import com.example.short_link.link.webhook.application.write.ReDetectWebhookFormatsUseCase;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
