@@ -1,6 +1,7 @@
 package com.example.short_link.link.scheduler;
 
 import com.example.short_link.common.net.PublicHttpUrlGuard;
+import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.application.helper.WebhookPayloadAdapter;
@@ -8,10 +9,8 @@ import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.repository.LinkWebhookRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.net.URI;
-import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -25,6 +24,16 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.hc.client5.http.DnsResolver;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.io.entity.StringEntity;
+import org.apache.hc.core5.util.Timeout;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -75,7 +84,6 @@ public class LinkWebhookDispatcher {
   private final JsonMapper jsonMapper;
   private final MeterRegistry meterRegistry;
   private final StringRedisTemplate redis;
-  private final HttpClient httpClient;
   private final ConcurrentHashMap<Long, ConcurrentLinkedQueue<Map<String, Object>>> batchQueues =
       new ConcurrentHashMap<>();
 
@@ -88,7 +96,6 @@ public class LinkWebhookDispatcher {
     this.jsonMapper = jsonMapper;
     this.meterRegistry = meterRegistry;
     this.redis = redis;
-    this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
   }
 
   /**
@@ -208,7 +215,8 @@ public class LinkWebhookDispatcher {
   }
 
   void deliver(LinkWebhookEntity hook, String body, String eventType) {
-    if (!PublicHttpUrlGuard.isPublic(hook.getUrl())) {
+    Resolved resolved = PublicHttpUrlGuard.resolve(hook.getUrl()).orElse(null);
+    if (resolved == null) {
       // Most common cause here is DNS lookup failure on the receiver host (intermittent network /
       // misconfigured CNAME), not the user changing the URL. Surface that so 5 of these don't
       // silently auto-disable a hook the user hasn't touched.
@@ -236,27 +244,36 @@ public class LinkWebhookDispatcher {
         return;
       }
     }
-    HttpRequest.Builder builder =
-        HttpRequest.newBuilder(URI.create(hook.getUrl()))
-            .timeout(TIMEOUT)
-            .header("Content-Type", "application/json")
-            .header("User-Agent", USER_AGENT)
-            .header(EVENT_HEADER, eventType)
-            .POST(HttpRequest.BodyPublishers.ofString(body, StandardCharsets.UTF_8));
+    HttpPost request = new HttpPost(resolved.uri());
+    request.setHeader("Content-Type", "application/json");
+    request.setHeader("User-Agent", USER_AGENT);
+    request.setHeader(EVENT_HEADER, eventType);
     if (signed) {
-      builder.header(SIGNATURE_HEADER, "sha256=" + signature);
+      request.setHeader(SIGNATURE_HEADER, "sha256=" + signature);
     }
-    HttpRequest request = builder.build();
+    request.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
     // Timer captures wall-clock latency of the actual HTTP call (including DNS, TLS, server
     // processing, body discard). Tagged with result so the dashboard can split p95 of healthy
     // deliveries from p95 of degraded ones — receivers that 5xx slowly are otherwise invisible
     // in the existing counter view.
     Timer.Sample sample = Timer.start(meterRegistry);
     String resultTag = "exception";
-    try {
-      HttpResponse<Void> response =
-          httpClient.send(request, HttpResponse.BodyHandlers.discarding());
-      int status = response.statusCode();
+    // Per-request HttpClient with a DnsResolver pinned to the addresses the guard already vetted.
+    // Closes the DNS rebinding window: even if the receiver's DNS now answers with a private IP
+    // (10.x / 169.254.x / link-local IPv6 metadata), Apache HttpClient won't see it — the resolver
+    // only ever returns the addresses we resolved up-front.
+    try (CloseableHttpClient client = buildPinnedClient(resolved)) {
+      int status =
+          client.execute(
+              request,
+              response -> {
+                int code = response.getCode();
+                // Drain body so the connection can be reused / pooled cleanly.
+                if (response.getEntity() != null) {
+                  org.apache.hc.core5.http.io.entity.EntityUtils.consume(response.getEntity());
+                }
+                return code;
+              });
       if (status / 100 == 2) {
         hook.recordSuccess(status);
         meterRegistry.counter("webhook.delivery", "result", "ok").increment();
@@ -284,6 +301,44 @@ public class LinkWebhookDispatcher {
     } finally {
       sample.stop(meterRegistry.timer("outbound.http", "client", "webhook", "result", resultTag));
     }
+  }
+
+  private CloseableHttpClient buildPinnedClient(Resolved resolved) {
+    String pinnedHost = resolved.uri().getHost();
+    InetAddress[] pinnedAddrs = resolved.addresses().toArray(new InetAddress[0]);
+    DnsResolver pinned =
+        new DnsResolver() {
+          @Override
+          public InetAddress[] resolve(String host) throws UnknownHostException {
+            if (host != null && host.equalsIgnoreCase(pinnedHost)) {
+              return pinnedAddrs;
+            }
+            throw new UnknownHostException("DNS pinned to " + pinnedHost + "; refused " + host);
+          }
+
+          @Override
+          public String resolveCanonicalHostname(String host) {
+            return host;
+          }
+        };
+    ConnectionConfig connConfig =
+        ConnectionConfig.custom()
+            .setConnectTimeout(Timeout.ofSeconds(3))
+            .setSocketTimeout(Timeout.ofSeconds(5))
+            .build();
+    var connMgr =
+        PoolingHttpClientConnectionManagerBuilder.create()
+            .setDnsResolver(pinned)
+            .setDefaultConnectionConfig(connConfig)
+            .build();
+    RequestConfig reqConfig =
+        RequestConfig.custom().setResponseTimeout(Timeout.of(TIMEOUT)).build();
+    return HttpClients.custom()
+        .setConnectionManager(connMgr)
+        .setConnectionManagerShared(false)
+        .setDefaultRequestConfig(reqConfig)
+        .disableAutomaticRetries()
+        .build();
   }
 
   private Map<String, Object> clickPayload(ClickRecordedEvent event) {
