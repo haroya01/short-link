@@ -12,6 +12,7 @@ import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
+import com.example.short_link.link.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -38,6 +39,7 @@ class LinkCreationServiceQuotaTest {
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
+            mock(LinkProfileBindingRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -68,6 +70,7 @@ class LinkCreationServiceQuotaTest {
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
+            mock(LinkProfileBindingRepository.class),
             gen,
             new SimpleMeterRegistry(),
             safety,
@@ -98,6 +101,7 @@ class LinkCreationServiceQuotaTest {
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
+            mock(LinkProfileBindingRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -125,6 +129,7 @@ class LinkCreationServiceQuotaTest {
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
+            mock(LinkProfileBindingRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -164,6 +169,7 @@ class LinkCreationServiceQuotaTest {
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
+            mock(LinkProfileBindingRepository.class),
             gen,
             new SimpleMeterRegistry(),
             safety,
