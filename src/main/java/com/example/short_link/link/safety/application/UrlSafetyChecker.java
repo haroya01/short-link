@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.safety.application;
 
 import com.example.short_link.common.config.SafeBrowsingProperties;
 import com.example.short_link.link.application.helper.ReferrerNormalizer;

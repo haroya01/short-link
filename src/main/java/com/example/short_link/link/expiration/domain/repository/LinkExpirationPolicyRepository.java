@@ -1,6 +1,6 @@
-package com.example.short_link.link.domain.repository;
+package com.example.short_link.link.expiration.domain.repository;
 
-import com.example.short_link.link.domain.LinkExpirationPolicyEntity;
+import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface LinkExpirationPolicyRepository
