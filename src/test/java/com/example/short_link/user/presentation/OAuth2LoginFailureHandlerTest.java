@@ -3,6 +3,7 @@ package com.example.short_link.user.presentation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
+import com.example.short_link.user.presentation.security.OAuth2LoginFailureHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;

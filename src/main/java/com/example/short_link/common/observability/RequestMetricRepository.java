@@ -20,6 +20,4 @@ public interface RequestMetricRepository extends JpaRepository<RequestMetricEnti
           + "ORDER BY m.occurredAt ASC")
   List<RequestMetricEntity> findShortCodeWindow(
       @Param("shortCode") String shortCode, @Param("from") Instant from, @Param("to") Instant to);
-
-  long deleteByOccurredAtBefore(Instant cutoff);
 }

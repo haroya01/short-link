@@ -5,14 +5,12 @@ import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.application.dto.LinkOgFetchRequested;
+import com.example.short_link.link.application.helper.LinkUrlHasher;
 import com.example.short_link.link.application.helper.ReservedShortCodes;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.DuplicateShortCodeException;
-import com.example.short_link.link.exception.LinkQuotaExceededException;
-import com.example.short_link.link.exception.MaliciousUrlException;
-import com.example.short_link.link.exception.ReservedShortCodeException;
-import com.example.short_link.link.exception.ShortCodeGenerationException;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -82,10 +80,10 @@ public class LinkCreationService {
     // DB transaction only spans the actual persistence work.
     if (blockedDomainService.isBlocked(url)) {
       meterRegistry.counter("short_link.created", "result", "blocked_domain").increment();
-      throw new MaliciousUrlException(url);
+      throw new LinkException(LinkErrorCode.MALICIOUS_URL, LinkUrlHasher.sha256Prefix(url));
     }
     if (!urlSafetyChecker.isSafe(url)) {
-      throw new MaliciousUrlException(url);
+      throw new LinkException(LinkErrorCode.MALICIOUS_URL, LinkUrlHasher.sha256Prefix(url));
     }
 
     boolean authenticated = userId != null;
@@ -93,7 +91,7 @@ public class LinkCreationService {
     Instant expiresAt = authenticated ? requestedExpiresAt : Instant.now().plus(ANONYMOUS_TTL);
 
     if (code != null && ReservedShortCodes.isReserved(code)) {
-      throw new ReservedShortCodeException(code);
+      throw new LinkException(LinkErrorCode.RESERVED_SHORT_CODE, code);
     }
 
     return tx.execute(status -> persist(url, userId, code, expiresAt, deduplicate, authenticated));
@@ -120,7 +118,8 @@ public class LinkCreationService {
     if (authenticated) {
       long current = repository.countByUserId(userId);
       if (current >= quotaPerUser) {
-        throw new LinkQuotaExceededException(quotaPerUser);
+        throw new LinkException(LinkErrorCode.LINK_QUOTA_EXCEEDED, quotaPerUser)
+            .with("limit", quotaPerUser);
       }
     }
 
@@ -131,7 +130,7 @@ public class LinkCreationService {
         publishCreated(saved, userId, true);
         return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
       } catch (DataIntegrityViolationException e) {
-        throw new DuplicateShortCodeException(code);
+        throw new LinkException(LinkErrorCode.DUPLICATE_SHORT_CODE, code);
       }
     }
 
@@ -148,7 +147,7 @@ public class LinkCreationService {
       } catch (DataIntegrityViolationException ignored) {
       }
     }
-    throw new ShortCodeGenerationException();
+    throw new LinkException(LinkErrorCode.SHORT_CODE_EXHAUSTED);
   }
 
   private LinkEntity saveWithCode(

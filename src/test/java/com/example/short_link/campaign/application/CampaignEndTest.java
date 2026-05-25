@@ -10,11 +10,11 @@ import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
-import com.example.short_link.campaign.exception.ReapplyOnNonEndedException;
+import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -234,6 +234,6 @@ class CampaignEndTest {
     CampaignEntity campaign = newCampaign(owner, CampaignPostEndAction.KEEP, null);
 
     assertThatThrownBy(() -> reapplyUseCase.execute(campaign.getId(), owner))
-        .isInstanceOf(ReapplyOnNonEndedException.class);
+        .isInstanceOf(CampaignException.class);
   }
 }

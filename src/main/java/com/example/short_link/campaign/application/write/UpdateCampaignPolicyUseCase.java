@@ -4,9 +4,8 @@ import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
-import com.example.short_link.campaign.exception.CampaignArchivedException;
-import com.example.short_link.campaign.exception.InvalidCampaignPeriodException;
-import com.example.short_link.campaign.exception.MissingPostEndDestinationException;
+import com.example.short_link.campaign.exception.CampaignErrorCode;
+import com.example.short_link.campaign.exception.CampaignException;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,11 +21,11 @@ public class UpdateCampaignPolicyUseCase {
   public CampaignEntity execute(Long id, Long ownerId, CampaignUpdateRequest request) {
     CampaignEntity c = ownership.require(id, ownerId);
     if (c.getStatus() == CampaignStatus.ARCHIVED) {
-      throw new CampaignArchivedException();
+      throw new CampaignException(CampaignErrorCode.CAMPAIGN_ARCHIVED);
     }
     Instant endsAt = request.endsAt() != null ? request.endsAt() : c.getEndsAt();
     if (!endsAt.isAfter(c.getStartsAt())) {
-      throw new InvalidCampaignPeriodException();
+      throw new CampaignException(CampaignErrorCode.INVALID_CAMPAIGN_PERIOD);
     }
     CampaignPostEndAction action =
         request.postEndAction() != null ? request.postEndAction() : c.getPostEndAction();
@@ -35,7 +34,7 @@ public class UpdateCampaignPolicyUseCase {
             ? request.postEndDestinationUrl()
             : c.getPostEndDestinationUrl();
     if (action == CampaignPostEndAction.REDIRECT && isBlank(postEndUrl)) {
-      throw new MissingPostEndDestinationException();
+      throw new CampaignException(CampaignErrorCode.MISSING_POST_END_DESTINATION);
     }
     String defaultDest =
         request.defaultDestinationUrl() != null

@@ -6,9 +6,9 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.admin.application.AdminMetricsRepository;
-import com.example.short_link.admin.application.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.admin.application.dto.AdminLinkMetric;
+import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
+import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.common.observability.RequestMetric;
 import com.example.short_link.common.observability.RequestMetricEntity;
 import com.example.short_link.common.observability.RequestMetricRepository;

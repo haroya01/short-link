@@ -1,5 +1,6 @@
 package com.example.short_link.user.domain;
 
+import com.example.short_link.user.domain.repository.*;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;

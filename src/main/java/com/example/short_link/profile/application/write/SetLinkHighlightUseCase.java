@@ -1,10 +1,11 @@
 package com.example.short_link.profile.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,15 +18,16 @@ import org.springframework.transaction.annotation.Transactional;
 public class SetLinkHighlightUseCase {
 
   private final LinkRepository linkRepository;
+  private final ProfileCacheEviction cacheEviction;
 
   @Transactional
-  @CacheEvict(value = "public-profile", allEntries = true)
   public void execute(SetLinkHighlightCommand cmd) {
     LinkEntity link =
         linkRepository
             .findByShortCode(cmd.shortCode())
-            .orElseThrow(() -> new LinkNotFoundException(cmd.shortCode()));
-    if (!link.isOwnedBy(cmd.userId())) throw new LinkNotFoundException(cmd.shortCode());
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, cmd.shortCode()));
+    if (!link.isOwnedBy(cmd.userId()))
+      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, cmd.shortCode());
     if (cmd.highlighted()) {
       for (LinkEntity other :
           linkRepository.findAllByUserIdAndProfileHighlightedIsTrue(cmd.userId())) {
@@ -35,5 +37,6 @@ public class SetLinkHighlightUseCase {
     } else {
       link.setProfileHighlighted(false);
     }
+    cacheEviction.evictByUserId(cmd.userId());
   }
 }

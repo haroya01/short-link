@@ -2,6 +2,7 @@ package com.example.short_link.campaign.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.campaign.domain.repository.*;
 import org.junit.jupiter.api.Test;
 
 class CampaignBatchEntityTest {

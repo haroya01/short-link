@@ -11,7 +11,7 @@ import com.example.short_link.link.application.helper.SourceChannelNormalizer;
 import com.example.short_link.link.application.helper.UtmExtractor;
 import com.example.short_link.link.application.helper.VisitorHasher;
 import com.example.short_link.link.domain.ClickEventEntity;
-import com.example.short_link.link.domain.ClickEventRepository;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

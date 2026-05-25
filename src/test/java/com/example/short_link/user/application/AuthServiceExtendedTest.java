@@ -7,9 +7,8 @@ import com.example.short_link.user.application.AuthService.LoginResult;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.InvalidRefreshTokenException;
-import com.example.short_link.user.exception.InvalidTotpCodeException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -61,7 +60,7 @@ class AuthServiceExtendedTest {
   @Test
   void completeTwoFactorRejectsGarbageChallenge() {
     assertThatThrownBy(() -> authService.completeTwoFactor("not-a-jwt", "000000", false))
-        .isInstanceOf(InvalidRefreshTokenException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -69,8 +68,8 @@ class AuthServiceExtendedTest {
     String challenge = jwt.createTwoFactorChallengeToken(999_999_999L);
     assertThatThrownBy(() -> authService.completeTwoFactor(challenge, "000000", false))
         .satisfiesAnyOf(
-            t -> assertThat(t).isInstanceOf(InvalidRefreshTokenException.class),
-            t -> assertThat(t).isInstanceOf(InvalidTotpCodeException.class));
+            t -> assertThat(t).isInstanceOf(UserException.class),
+            t -> assertThat(t).isInstanceOf(UserException.class));
   }
 
   @Test
@@ -82,8 +81,8 @@ class AuthServiceExtendedTest {
 
     assertThatThrownBy(() -> authService.completeTwoFactor(challenge, "000000", false))
         .satisfiesAnyOf(
-            t -> assertThat(t).isInstanceOf(InvalidRefreshTokenException.class),
-            t -> assertThat(t).isInstanceOf(InvalidTotpCodeException.class));
+            t -> assertThat(t).isInstanceOf(UserException.class),
+            t -> assertThat(t).isInstanceOf(UserException.class));
   }
 
   @Test
@@ -95,7 +94,7 @@ class AuthServiceExtendedTest {
     userRepository.save(user);
 
     assertThatThrownBy(() -> authService.refresh(tokens.refreshToken()))
-        .isInstanceOf(InvalidRefreshTokenException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test

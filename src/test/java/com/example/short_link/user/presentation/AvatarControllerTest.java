@@ -14,9 +14,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.avatar.AvatarService;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.AvatarUnavailableException;
-import com.example.short_link.user.exception.InvalidAvatarException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -76,7 +76,7 @@ class AvatarControllerTest {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-avi"));
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(service.presignUpload(anyLong(), eq("image/gif")))
-        .thenThrow(new InvalidAvatarException("contentType not allowed"));
+        .thenThrow(new UserException(UserErrorCode.INVALID_AVATAR, "contentType not allowed"));
 
     mvc.perform(
             post("/api/v1/users/me/avatar/presigned-url")
@@ -91,7 +91,7 @@ class AvatarControllerTest {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-avu"));
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(service.presignUpload(anyLong(), eq("image/jpeg")))
-        .thenThrow(new AvatarUnavailableException());
+        .thenThrow(new UserException(UserErrorCode.AVATAR_UNAVAILABLE));
 
     mvc.perform(
             post("/api/v1/users/me/avatar/presigned-url")
@@ -131,7 +131,9 @@ class AvatarControllerTest {
   void clearWhenS3NotConfiguredReturns503() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("ds@x.com", "google", "g-avds"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    doThrow(new AvatarUnavailableException()).when(service).clearAvatar(eq(user.getId()));
+    doThrow(new UserException(UserErrorCode.AVATAR_UNAVAILABLE))
+        .when(service)
+        .clearAvatar(eq(user.getId()));
 
     mvc.perform(delete("/api/v1/users/me/avatar").header("Authorization", "Bearer " + token))
         .andExpect(status().isServiceUnavailable());

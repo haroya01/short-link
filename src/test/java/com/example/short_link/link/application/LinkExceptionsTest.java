@@ -2,80 +2,72 @@ package com.example.short_link.link.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.exception.BulkImportTooLargeException;
-import com.example.short_link.link.exception.CustomDomainNotVerifiedException;
-import com.example.short_link.link.exception.DuplicateTagNameException;
-import com.example.short_link.link.exception.InvalidWebhookUrlException;
-import com.example.short_link.link.exception.LinkExpiredException;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
-import com.example.short_link.link.exception.LinkViewLimitExceededException;
-import com.example.short_link.link.exception.ReservedShortCodeException;
-import com.example.short_link.link.exception.TooManyWebhooksException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import org.junit.jupiter.api.Test;
 
 class LinkExceptionsTest {
 
   @Test
   void duplicateTagNameCarriesName() {
-    DuplicateTagNameException ex = new DuplicateTagNameException("blog");
+    LinkException ex = new LinkException(LinkErrorCode.DUPLICATE_TAG_NAME, "blog");
     assertThat(ex).hasMessageContaining("blog");
   }
 
   @Test
   void linkViewLimitExceededCarriesShortCode() {
-    LinkViewLimitExceededException ex = new LinkViewLimitExceededException("abc");
+    LinkException ex = new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, "abc");
     assertThat(ex).hasMessageContaining("abc");
   }
 
   @Test
   void customDomainNotVerifiedCarriesDomain() {
-    CustomDomainNotVerifiedException ex = new CustomDomainNotVerifiedException("example.com");
+    LinkException ex = new LinkException(LinkErrorCode.CUSTOM_DOMAIN_NOT_VERIFIED, "example.com");
     assertThat(ex).hasMessageContaining("example.com");
   }
 
   @Test
   void tooManyWebhooksCarriesLimit() {
-    TooManyWebhooksException ex = new TooManyWebhooksException(5);
-    assertThat(ex.getLimit()).isEqualTo(5);
+    LinkException ex = new LinkException(LinkErrorCode.TOO_MANY_WEBHOOKS, 5);
+    assertThat(ex.properties().get("limit")).isEqualTo(5);
     assertThat(ex).hasMessageContaining("5");
   }
 
   @Test
   void reservedShortCodeCarriesCode() {
-    ReservedShortCodeException ex = new ReservedShortCodeException("admin");
+    LinkException ex = new LinkException(LinkErrorCode.RESERVED_SHORT_CODE, "admin");
     assertThat(ex).hasMessageContaining("admin");
   }
 
   @Test
   void bulkImportTooLargeCarriesNumbers() {
-    BulkImportTooLargeException ex = new BulkImportTooLargeException(2000, 1000);
-    assertThat(ex.getRows()).isEqualTo(2000);
-    assertThat(ex.getLimit()).isEqualTo(1000);
+    LinkException ex = new LinkException(LinkErrorCode.BULK_IMPORT_TOO_LARGE, 2000, 1000);
+    assertThat(ex.properties().get("rows")).isEqualTo(2000);
+    assertThat(ex.properties().get("limit")).isEqualTo(1000);
     assertThat(ex).hasMessageContaining("2000").hasMessageContaining("1000");
   }
 
   @Test
   void linkNotFoundCarriesCode() {
-    LinkNotFoundException ex = new LinkNotFoundException("abc");
+    LinkException ex = new LinkException(LinkErrorCode.LINK_NOT_FOUND, "abc");
     assertThat(ex).hasMessageContaining("abc");
   }
 
   @Test
   void linkExpiredCarriesCode() {
-    LinkExpiredException ex = new LinkExpiredException("abc");
+    LinkException ex = new LinkException(LinkErrorCode.LINK_EXPIRED, "abc");
     assertThat(ex).hasMessageContaining("abc");
   }
 
   @Test
   void invalidWebhookUrlMessage() {
-    InvalidWebhookUrlException ex = new InvalidWebhookUrlException();
+    LinkException ex = new LinkException(LinkErrorCode.INVALID_WEBHOOK_URL);
     assertThat(ex).hasMessageContaining("webhook url");
   }
 
   @Test
   void linkNotOwnedCarriesCode() {
-    LinkNotOwnedException ex = new LinkNotOwnedException("abc");
+    LinkException ex = new LinkException(LinkErrorCode.LINK_NOT_OWNED, "abc");
     assertThat(ex).hasMessageContaining("abc");
   }
 }

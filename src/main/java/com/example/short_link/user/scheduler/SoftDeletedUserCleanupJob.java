@@ -4,7 +4,7 @@ import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.user.application.UserDeletionService;
 import com.example.short_link.user.application.properties.UserDeletionProperties;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;

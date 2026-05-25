@@ -13,9 +13,10 @@ import com.example.short_link.link.application.helper.SourceChannelNormalizer;
 import com.example.short_link.link.application.helper.VisitorHasher;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,7 +56,7 @@ public class ProfileVisitRecorder {
     UserEntity owner =
         userRepository
             .findByUsername(username.toLowerCase())
-            .orElseThrow(() -> new ProfileNotFoundException(username));
+            .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, username));
     record(
         owner.getId(),
         referrer,

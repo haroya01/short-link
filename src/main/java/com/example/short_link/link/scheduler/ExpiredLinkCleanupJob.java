@@ -2,9 +2,9 @@ package com.example.short_link.link.scheduler;
 
 import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.application.properties.CleanupProperties;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;

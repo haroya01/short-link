@@ -2,7 +2,9 @@ package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.AuthService;
 import com.example.short_link.user.application.dto.IssuedTokens;
-import com.example.short_link.user.exception.InvalidRefreshTokenException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
+import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.request.TwoFactorVerifyRequest;
 import com.example.short_link.user.presentation.response.TokenResponse;
 import jakarta.servlet.http.HttpServletResponse;
@@ -27,11 +29,9 @@ public class AuthController {
       @CookieValue(name = "refresh_token", required = false) String refreshToken,
       HttpServletResponse res) {
     if (refreshToken == null) {
-      throw new InvalidRefreshTokenException();
+      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
-    IssuedTokens tokens = authService.refresh(refreshToken);
-    refreshCookieWriter.set(res, tokens.refreshToken());
-    return new TokenResponse(tokens.accessToken());
+    return issueAndSetCookie(authService.refresh(refreshToken), res);
   }
 
   @PostMapping("/logout")
@@ -48,9 +48,13 @@ public class AuthController {
   @PostMapping("/2fa/verify")
   public TokenResponse verifyTwoFactor(
       @RequestBody TwoFactorVerifyRequest request, HttpServletResponse res) {
-    IssuedTokens tokens =
-        authService.completeTwoFactor(request.challenge(), request.code(), request.recovery());
+    return issueAndSetCookie(
+        authService.completeTwoFactor(request.challenge(), request.code(), request.recovery()),
+        res);
+  }
+
+  private TokenResponse issueAndSetCookie(IssuedTokens tokens, HttpServletResponse res) {
     refreshCookieWriter.set(res, tokens.refreshToken());
-    return new TokenResponse(tokens.accessToken());
+    return TokenResponse.from(tokens);
   }
 }

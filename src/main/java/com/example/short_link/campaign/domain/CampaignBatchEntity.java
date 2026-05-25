@@ -1,5 +1,6 @@
 package com.example.short_link.campaign.domain;
 
+import com.example.short_link.campaign.domain.repository.*;
 import com.example.short_link.common.jpa.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

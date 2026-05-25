@@ -1,8 +1,9 @@
 package com.example.short_link.admin.application;
 
 import com.example.short_link.admin.application.dto.AdminOverview;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;

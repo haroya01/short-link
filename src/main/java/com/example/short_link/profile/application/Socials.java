@@ -1,6 +1,7 @@
 package com.example.short_link.profile.application;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,11 +53,12 @@ public final class Socials {
     try {
       parsed = MAPPER.readValue(trimmed, LIST_TYPE);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("socials: malformed json");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "socials: malformed json");
     }
     if (parsed == null) return null;
     if (parsed.size() > MAX) {
-      throw new InvalidUsernameException("socials: up to " + MAX + " allowed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "socials: up to " + MAX + " allowed");
     }
     List<Social> out = new ArrayList<>(parsed.size());
     Set<String> seen = new HashSet<>();
@@ -66,10 +68,11 @@ public final class Socials {
       String url = s.url() == null ? "" : s.url().trim();
       if (channel.isEmpty() || url.isEmpty()) continue;
       if (!ALLOWED_SET.contains(channel)) {
-        throw new InvalidUsernameException("socials: unknown channel: " + channel);
+        throw new ProfileException(
+            ProfileErrorCode.INVALID_USERNAME, "socials: unknown channel: " + channel);
       }
       if (url.length() > URL_MAX) {
-        throw new InvalidUsernameException("socials: url too long");
+        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "socials: url too long");
       }
       validateUrl(url);
       if (!seen.add(channel)) continue;
@@ -79,7 +82,8 @@ public final class Socials {
     try {
       return MAPPER.writeValueAsString(out);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("socials: serialization failed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "socials: serialization failed");
     }
   }
 
@@ -99,14 +103,14 @@ public final class Socials {
     try {
       uri = URI.create(url);
     } catch (IllegalArgumentException ex) {
-      throw new InvalidUsernameException("socials: url malformed");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "socials: url malformed");
     }
     String scheme = uri.getScheme();
     if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-      throw new InvalidUsernameException("socials: url must be http(s)");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "socials: url must be http(s)");
     }
     if (uri.getHost() == null || uri.getHost().isBlank()) {
-      throw new InvalidUsernameException("socials: url missing host");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "socials: url missing host");
     }
   }
 }

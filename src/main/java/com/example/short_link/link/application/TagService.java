@@ -1,10 +1,10 @@
 package com.example.short_link.link.application;
 
-import com.example.short_link.link.domain.LinkTagRepository;
 import com.example.short_link.link.domain.TagEntity;
-import com.example.short_link.link.domain.TagRepository;
-import com.example.short_link.link.exception.DuplicateTagNameException;
-import com.example.short_link.link.exception.TagNotFoundException;
+import com.example.short_link.link.domain.repository.LinkTagRepository;
+import com.example.short_link.link.domain.repository.TagRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -48,7 +48,7 @@ public class TagService {
   public TagSummary create(Long userId, String name, String color) {
     String trimmed = sanitizeName(name);
     if (tagRepository.findFirstByUserIdAndName(userId, trimmed).isPresent()) {
-      throw new DuplicateTagNameException(trimmed);
+      throw new LinkException(LinkErrorCode.DUPLICATE_TAG_NAME, trimmed);
     }
     TagEntity saved = tagRepository.save(new TagEntity(userId, trimmed, sanitizeColor(color)));
     return new TagSummary(
@@ -57,13 +57,16 @@ public class TagService {
 
   @Transactional
   public TagSummary update(Long userId, Long id, String name, String color) {
-    TagEntity tag = tagRepository.findById(id).orElseThrow(() -> new TagNotFoundException(id));
-    if (!tag.getUserId().equals(userId)) throw new TagNotFoundException(id);
+    TagEntity tag =
+        tagRepository
+            .findById(id)
+            .orElseThrow(() -> new LinkException(LinkErrorCode.TAG_NOT_FOUND, id));
+    if (!tag.getUserId().equals(userId)) throw new LinkException(LinkErrorCode.TAG_NOT_FOUND, id);
     if (name != null) {
       String trimmed = sanitizeName(name);
       if (!trimmed.equals(tag.getName())
           && tagRepository.findFirstByUserIdAndName(userId, trimmed).isPresent()) {
-        throw new DuplicateTagNameException(trimmed);
+        throw new LinkException(LinkErrorCode.DUPLICATE_TAG_NAME, trimmed);
       }
       tag.rename(trimmed);
     }
@@ -74,8 +77,11 @@ public class TagService {
 
   @Transactional
   public void delete(Long userId, Long id) {
-    TagEntity tag = tagRepository.findById(id).orElseThrow(() -> new TagNotFoundException(id));
-    if (!tag.getUserId().equals(userId)) throw new TagNotFoundException(id);
+    TagEntity tag =
+        tagRepository
+            .findById(id)
+            .orElseThrow(() -> new LinkException(LinkErrorCode.TAG_NOT_FOUND, id));
+    if (!tag.getUserId().equals(userId)) throw new LinkException(LinkErrorCode.TAG_NOT_FOUND, id);
     linkTagRepository.deleteByTagId(id);
     tagRepository.delete(tag);
   }

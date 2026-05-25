@@ -1,7 +1,7 @@
 package com.example.short_link.link.application.write;
 
 import com.example.short_link.link.domain.LinkWebhookEntity;
-import com.example.short_link.link.domain.LinkWebhookRepository;
+import com.example.short_link.link.domain.repository.LinkWebhookRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

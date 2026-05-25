@@ -1,17 +1,19 @@
 package com.example.short_link.user.application;
 
-import com.example.short_link.link.domain.ClickEventEntity;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.application.dto.UserDataExport;
 import com.example.short_link.user.application.dto.UserDataExport.ExportedClick;
 import com.example.short_link.user.application.dto.UserDataExport.ExportedLink;
 import com.example.short_link.user.application.dto.UserDataExport.ExportedUser;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,64 +33,27 @@ public class UserDataExportService {
 
   @Transactional(readOnly = true)
   public UserDataExport export(Long userId) {
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    UserEntity user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
 
     List<LinkEntity> links = linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
-    List<ExportedLink> exportedLinks =
-        links.stream()
-            .map(
-                l ->
-                    new ExportedLink(
-                        l.getShortCode(),
-                        l.getOriginalUrl(),
-                        l.getCreatedAt(),
-                        l.getExpiresAt(),
-                        l.getOgTitle(),
-                        l.getOgDescription(),
-                        l.getOgImage()))
-            .toList();
+    List<ExportedLink> exportedLinks = links.stream().map(ExportedLink::from).toList();
+    List<ExportedClick> exportedClicks = exportClicks(links);
 
-    List<ExportedClick> exportedClicks = List.of();
-    if (!links.isEmpty()) {
-      List<Long> linkIds = links.stream().map(LinkEntity::getId).toList();
-      List<ClickEventEntity> events =
-          clickEventRepository.findAllByLinkIdInOrderByClickedAtAsc(linkIds);
-      exportedClicks =
-          events.stream()
-              .map(
-                  c -> {
-                    String shortCode =
-                        links.stream()
-                            .filter(l -> l.getId().equals(c.getLinkId()))
-                            .map(LinkEntity::getShortCode)
-                            .findFirst()
-                            .orElse(null);
-                    return new ExportedClick(
-                        shortCode,
-                        c.getClickedAt(),
-                        c.getReferrerHost(),
-                        c.getDeviceClass(),
-                        c.getOsName(),
-                        c.getBrowserName(),
-                        c.getCountryCode(),
-                        c.getRegionName(),
-                        c.getCityName(),
-                        c.getLanguage(),
-                        c.isBot(),
-                        c.getBotName());
-                  })
-              .toList();
-    }
+    return new UserDataExport(ExportedUser.from(user), exportedLinks, exportedClicks);
+  }
 
-    return new UserDataExport(
-        new ExportedUser(
-            user.getId(),
-            user.getEmail(),
-            user.getOauthProvider(),
-            user.getRole().name(),
-            user.getTimezone(),
-            user.getCreatedAt()),
-        exportedLinks,
-        exportedClicks);
+  private List<ExportedClick> exportClicks(List<LinkEntity> links) {
+    if (links.isEmpty()) return List.of();
+    // O(1) shortCode lookup — previously each click did a links.stream().filter().findFirst()
+    // (O(N×M) over the whole user's click history).
+    Map<Long, String> shortCodeByLinkId =
+        links.stream().collect(Collectors.toMap(LinkEntity::getId, LinkEntity::getShortCode));
+    List<Long> linkIds = List.copyOf(shortCodeByLinkId.keySet());
+    return clickEventRepository.findAllByLinkIdInOrderByClickedAtAsc(linkIds).stream()
+        .map(c -> ExportedClick.from(c, shortCodeByLinkId.get(c.getLinkId())))
+        .toList();
   }
 }

@@ -5,11 +5,11 @@ import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.security.web.util.matcher.RegexRequestMatcher.regexMatcher;
 
 import com.example.short_link.common.web.RateLimitFilter;
-import com.example.short_link.user.presentation.ApiKeyAuthenticationFilter;
-import com.example.short_link.user.presentation.JsonAuthenticationEntryPoint;
-import com.example.short_link.user.presentation.JwtAuthenticationFilter;
-import com.example.short_link.user.presentation.OAuth2LoginFailureHandler;
-import com.example.short_link.user.presentation.OAuth2LoginSuccessHandler;
+import com.example.short_link.user.presentation.security.ApiKeyAuthenticationFilter;
+import com.example.short_link.user.presentation.security.JsonAuthenticationEntryPoint;
+import com.example.short_link.user.presentation.security.JwtAuthenticationFilter;
+import com.example.short_link.user.presentation.security.OAuth2LoginFailureHandler;
+import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Arrays;
 import java.util.List;

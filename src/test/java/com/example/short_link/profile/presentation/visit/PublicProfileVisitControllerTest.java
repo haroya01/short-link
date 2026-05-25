@@ -9,9 +9,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.profile.application.visit.ProfileVisitRecorder;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -34,7 +35,7 @@ class PublicProfileVisitControllerTest {
 
   @Test
   void unknownUserReturns404() throws Exception {
-    doThrow(new ProfileNotFoundException("nobody"))
+    doThrow(new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "nobody"))
         .when(recorder)
         .recordUsername(
             eq("nobody"), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());

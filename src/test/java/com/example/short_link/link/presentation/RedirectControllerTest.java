@@ -7,9 +7,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
@@ -28,7 +29,8 @@ class RedirectControllerTest {
 
   @Autowired private MockMvc mvc;
   @Autowired private LinkRepository repository;
-  @Autowired private ClickEventRepository clickRepository;
+  @Autowired private ClickEventRepository clickEventRepository;
+  @Autowired private ClickEventReadRepository clickRepository;
 
   @Test
   void redirectsToOriginalUrl() throws Exception {
@@ -69,7 +71,7 @@ class RedirectControllerTest {
                 .header("User-Agent", "Mozilla/5.0 (iPhone)"))
         .andExpect(status().isFound());
 
-    assertThat(clickRepository.countByLinkId(link.getId())).isEqualTo(1);
+    assertThat(clickEventRepository.countByLinkId(link.getId())).isEqualTo(1);
   }
 
   @Test
@@ -111,7 +113,7 @@ class RedirectControllerTest {
 
     // Preview hits now persist as bot click_event rows so per-link stats can split \"social
     // preview\" out of generic bot traffic. They must NOT count toward human clicks.
-    assertThat(clickRepository.countByLinkId(link.getId())).isEqualTo(1);
+    assertThat(clickEventRepository.countByLinkId(link.getId())).isEqualTo(1);
     assertThat(clickRepository.countHumanByLinkId(link.getId())).isZero();
     assertThat(clickRepository.countBotByLinkId(link.getId())).isEqualTo(1);
   }
