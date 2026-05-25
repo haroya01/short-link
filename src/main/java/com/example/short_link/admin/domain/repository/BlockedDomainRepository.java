@@ -10,6 +10,4 @@ public interface BlockedDomainRepository extends JpaRepository<BlockedDomainEnti
   Optional<BlockedDomainEntity> findByDomain(String domain);
 
   List<BlockedDomainEntity> findAllByOrderByBlockedAtDesc();
-
-  boolean existsByDomain(String domain);
 }

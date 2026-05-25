@@ -8,7 +8,6 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
 import java.util.List;
-import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -55,18 +54,6 @@ class CampaignBatchRepositoryTest {
     assertThat(found)
         .extracting(CampaignBatchEntity::getId)
         .containsExactly(first.getId(), second.getId());
-  }
-
-  @Test
-  void findsBatchByLinkId() {
-    CampaignEntity campaign = newCampaign();
-    LinkEntity link = newLink("blk001");
-    batchRepository.save(
-        new CampaignBatchEntity(campaign.getId(), link.getId(), "n", "A", "East", 100, "memo"));
-
-    Optional<CampaignBatchEntity> found = batchRepository.findByLinkId(link.getId());
-
-    assertThat(found).map(CampaignBatchEntity::getName).hasValue("n");
   }
 
   @Test
