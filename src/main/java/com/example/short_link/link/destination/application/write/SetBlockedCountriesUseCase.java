@@ -1,8 +1,8 @@
 package com.example.short_link.link.destination.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkExpirationPolicyEntity;
-import com.example.short_link.link.domain.repository.LinkExpirationPolicyRepository;
+import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
+import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;

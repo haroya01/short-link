@@ -1,4 +1,4 @@
-package com.example.short_link.link.domain;
+package com.example.short_link.link.expiration.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
 import jakarta.persistence.Column;

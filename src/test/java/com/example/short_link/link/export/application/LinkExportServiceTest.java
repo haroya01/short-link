@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.export.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

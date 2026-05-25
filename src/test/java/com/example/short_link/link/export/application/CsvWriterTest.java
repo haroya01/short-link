@@ -1,8 +1,8 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.export.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.application.helper.CsvWriter;
+import com.example.short_link.link.export.application.helper.CsvWriter;
 import org.junit.jupiter.api.Test;
 
 class CsvWriterTest {

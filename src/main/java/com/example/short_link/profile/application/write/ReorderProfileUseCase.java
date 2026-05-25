@@ -1,9 +1,9 @@
 package com.example.short_link.profile.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkProfileBindingEntity;
-import com.example.short_link.link.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.profile_binding.domain.LinkProfileBindingEntity;
+import com.example.short_link.link.profile_binding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
