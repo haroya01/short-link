@@ -2,8 +2,8 @@ package com.example.short_link.link.access.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.access.application.LinkProtectionService;
-import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -31,7 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PasswordUnlockController {
 
-  private final LinkLookupService lookup;
+  private final LinkLookupQueryService lookup;
   private final LinkProtectionService protectionService;
   private final LinkRedirectFlow flow;
 

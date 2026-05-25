@@ -1,7 +1,7 @@
 package com.example.short_link.link.og.presentation;
 
-import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.og.application.OgCardImageRenderer;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class OgCardController {
 
-  private final LinkLookupService lookup;
+  private final LinkLookupQueryService lookup;
   private final OgCardImageRenderer renderer;
   private final ShortLinkUrlBuilder urlBuilder;
 
