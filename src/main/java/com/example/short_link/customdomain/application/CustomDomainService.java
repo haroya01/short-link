@@ -16,9 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Manages user-owned custom domains for short-link routing.
- *
- * <p>The verification flow: register a domain, receive a token, place a TXT record at {@code
+ * Verification flow: register a domain, receive a token, place a TXT record at {@code
  * _kurl-verify.<domain>} with that exact value, then call verify. TXT lookups go through {@link
  * TxtResolver} so verification doesn't depend on any third-party API and is injectable for tests.
  *

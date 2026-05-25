@@ -14,9 +14,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Per-user tag CRUD. Names are case-sensitive but trimmed; uniqueness is enforced by the (user_id,
- * name) DB constraint and double-checked in the service to give a friendly error code instead of a
- * raw integrity violation.
+ * Names are case-sensitive but trimmed; uniqueness is enforced by the (user_id, name) DB constraint
+ * and double-checked in the service to give a friendly error code instead of a raw integrity
+ * violation.
  */
 @Service
 @RequiredArgsConstructor
