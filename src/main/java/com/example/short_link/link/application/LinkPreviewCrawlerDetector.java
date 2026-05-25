@@ -5,14 +5,9 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 /**
- * Identifies link-preview crawlers (KakaoTalk, Slack, Twitter, Facebook, LinkedIn, Discord,
- * WhatsApp, Telegram, etc.) by User-Agent substring. These bots want OG metadata, not the actual
- * destination — so the redirect handler should respond with an OG-tagged HTML page instead of a
- * 302.
- *
- * <p>This is intentionally separate from {@link UserAgentClassifier}: that one classifies for
- * analytics ("is this a bot click"), while this one decides response shape. A given crawler is
- * usually both, but the lists are not identical.
+ * Decides whether a request should get OG-tagged HTML instead of a 302. Intentionally separate from
+ * {@link UserAgentClassifier}, which classifies for analytics — a given crawler is usually both,
+ * but the two lists are not identical.
  */
 @Component
 public class LinkPreviewCrawlerDetector {
