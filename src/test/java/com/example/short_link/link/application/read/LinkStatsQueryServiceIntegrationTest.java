@@ -3,8 +3,8 @@ package com.example.short_link.link.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.link.application.LinkStats;
 import com.example.short_link.link.application.LinkVisibilityService;
+import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;

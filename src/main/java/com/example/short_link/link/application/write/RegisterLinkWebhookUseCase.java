@@ -1,8 +1,8 @@
 package com.example.short_link.link.application.write;
 
 import com.example.short_link.common.net.PublicHttpUrlGuard;
-import com.example.short_link.link.application.IssuedWebhook;
-import com.example.short_link.link.application.WebhookFormat;
+import com.example.short_link.link.application.dto.IssuedWebhook;
+import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.LinkWebhookRepository;

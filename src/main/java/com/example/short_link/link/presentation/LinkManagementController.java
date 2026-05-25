@@ -1,8 +1,8 @@
 package com.example.short_link.link.presentation;
 
 import com.example.short_link.link.application.LinkManagementService;
-import com.example.short_link.link.application.MyLink;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.presentation.request.BulkDeleteRequest;
 import com.example.short_link.link.presentation.request.UpdateLinkRequest;
 import com.example.short_link.link.presentation.response.BulkDeleteResponse;

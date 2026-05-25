@@ -1,6 +1,7 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.common.net.PublicHttpUrlGuard;
+import com.example.short_link.link.application.dto.OgMetadata;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import java.io.IOException;

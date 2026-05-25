@@ -3,6 +3,8 @@ package com.example.short_link.user.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.user.application.dto.ParsedAccess;
+import com.example.short_link.user.application.properties.JwtProperties;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;

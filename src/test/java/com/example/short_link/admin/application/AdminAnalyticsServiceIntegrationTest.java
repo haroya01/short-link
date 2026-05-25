@@ -3,6 +3,9 @@ package com.example.short_link.admin.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.admin.application.dto.AdminActiveUsers;
+import com.example.short_link.admin.application.dto.AdminCohort;
+import com.example.short_link.admin.application.dto.AdminLifecycle;
 import com.example.short_link.admin.exception.InvalidActivePeriodException;
 import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.ClickEventRepository;

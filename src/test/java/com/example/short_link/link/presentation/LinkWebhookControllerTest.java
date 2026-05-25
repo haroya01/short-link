@@ -12,9 +12,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.IssuedWebhook;
-import com.example.short_link.link.application.WebhookFormat;
+import com.example.short_link.link.application.dto.IssuedWebhook;
 import com.example.short_link.link.application.dto.WebhookSummary;
+import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.application.read.LinkWebhookQueryService;
 import com.example.short_link.link.application.write.DeleteLinkWebhookCommand;
 import com.example.short_link.link.application.write.DeleteLinkWebhookUseCase;

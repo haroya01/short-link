@@ -3,6 +3,8 @@ package com.example.short_link.user.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.user.application.dto.IssuedTokens;
+import com.example.short_link.user.application.properties.UserDeletionProperties;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;
 import com.example.short_link.user.exception.InvalidRefreshTokenException;

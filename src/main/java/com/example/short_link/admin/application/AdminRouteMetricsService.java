@@ -1,5 +1,6 @@
 package com.example.short_link.admin.application;
 
+import com.example.short_link.admin.application.dto.AdminRouteMetric;
 import com.example.short_link.common.observability.RequestMetricEntity;
 import com.example.short_link.common.observability.RequestMetricRepository;
 import java.time.Clock;

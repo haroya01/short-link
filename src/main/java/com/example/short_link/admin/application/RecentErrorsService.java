@@ -1,5 +1,6 @@
 package com.example.short_link.admin.application;
 
+import com.example.short_link.admin.application.dto.RecentError;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

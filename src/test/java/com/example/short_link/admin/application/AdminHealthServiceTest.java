@@ -2,6 +2,7 @@ package com.example.short_link.admin.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.admin.application.dto.AdminHealthMetrics;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

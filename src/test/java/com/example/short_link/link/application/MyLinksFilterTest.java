@@ -2,6 +2,9 @@ package com.example.short_link.link.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.application.dto.MyLink;
+import com.example.short_link.link.application.dto.MyLinksQuery;
+import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;

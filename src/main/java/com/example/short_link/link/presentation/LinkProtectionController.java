@@ -1,7 +1,7 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.LinkProtectionResult;
 import com.example.short_link.link.application.LinkProtectionService;
+import com.example.short_link.link.application.dto.LinkProtectionResult;
 import com.example.short_link.link.presentation.request.LinkProtectionRequest;
 import com.example.short_link.link.presentation.response.LinkProtectionResponse;
 import jakarta.validation.Valid;

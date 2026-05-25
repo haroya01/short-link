@@ -2,6 +2,8 @@ package com.example.short_link.link.application;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.link.application.dto.LinkOgFetchRequested;
+import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.link.exception.LinkNotFoundException;

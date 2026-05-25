@@ -1,5 +1,8 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.application.dto.LinkOgFetchRequested;
+import com.example.short_link.link.application.dto.OgMetadata;
+import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;

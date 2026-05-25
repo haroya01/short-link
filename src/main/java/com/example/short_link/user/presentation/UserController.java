@@ -1,10 +1,10 @@
 package com.example.short_link.user.presentation;
 
-import com.example.short_link.user.application.UserDataExport;
 import com.example.short_link.user.application.UserDataExportService;
 import com.example.short_link.user.application.UserDeletionService;
 import com.example.short_link.user.application.UserPreferencesService;
 import com.example.short_link.user.application.UserQueryService;
+import com.example.short_link.user.application.dto.UserDataExport;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.presentation.request.UpdatePreferencesRequest;
 import com.example.short_link.user.presentation.response.MeResponse;

@@ -2,6 +2,7 @@ package com.example.short_link.admin.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.admin.application.dto.RecentError;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;

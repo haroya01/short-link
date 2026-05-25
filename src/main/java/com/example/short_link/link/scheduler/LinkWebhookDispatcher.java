@@ -1,9 +1,9 @@
 package com.example.short_link.link.scheduler;
 
 import com.example.short_link.common.net.PublicHttpUrlGuard;
-import com.example.short_link.link.application.ClickRecordedEvent;
-import com.example.short_link.link.application.WebhookFormat;
-import com.example.short_link.link.application.WebhookPayloadAdapter;
+import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.application.helper.WebhookFormat;
+import com.example.short_link.link.application.helper.WebhookPayloadAdapter;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.LinkWebhookRepository;
 import io.micrometer.core.instrument.MeterRegistry;
