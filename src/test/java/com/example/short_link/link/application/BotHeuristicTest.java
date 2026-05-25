@@ -36,12 +36,10 @@ class BotHeuristicTest {
 
   @Test
   void disabledWhenThresholdIsZeroOrNegative() {
-    BotHeuristic zero = new BotHeuristic(redis);
-    org.springframework.test.util.ReflectionTestUtils.setField(zero, "rateThreshold", 0L);
+    BotHeuristic zero = new BotHeuristic(redis, 0L);
     assertThat(zero.isSuspectBurst("9.9.9.9")).isFalse();
 
-    BotHeuristic negative = new BotHeuristic(redis);
-    org.springframework.test.util.ReflectionTestUtils.setField(negative, "rateThreshold", -1L);
+    BotHeuristic negative = new BotHeuristic(redis, -1L);
     assertThat(negative.isSuspectBurst("9.9.9.9")).isFalse();
   }
 
@@ -54,8 +52,7 @@ class BotHeuristicTest {
     org.mockito.Mockito.when(template.opsForValue()).thenReturn(ops);
     org.mockito.Mockito.when(ops.increment(org.mockito.ArgumentMatchers.anyString()))
         .thenThrow(new RuntimeException("redis down"));
-    BotHeuristic h = new BotHeuristic(template);
-    org.springframework.test.util.ReflectionTestUtils.setField(h, "rateThreshold", 5L);
+    BotHeuristic h = new BotHeuristic(template, 5L);
 
     assertThat(h.isSuspectBurst("1.2.3.4")).isFalse();
   }
@@ -69,8 +66,7 @@ class BotHeuristicTest {
     org.mockito.Mockito.when(template.opsForValue()).thenReturn(ops);
     org.mockito.Mockito.when(ops.increment(org.mockito.ArgumentMatchers.anyString()))
         .thenReturn(null);
-    BotHeuristic h = new BotHeuristic(template);
-    org.springframework.test.util.ReflectionTestUtils.setField(h, "rateThreshold", 5L);
+    BotHeuristic h = new BotHeuristic(template, 5L);
 
     assertThat(h.isSuspectBurst("1.2.3.4")).isFalse();
   }

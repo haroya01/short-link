@@ -9,7 +9,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -18,15 +17,17 @@ import org.springframework.transaction.annotation.Transactional;
 class AdminBootstrapTest {
 
   @Autowired private UserRepository userRepository;
-  @Autowired private AdminBootstrap bootstrap;
+
+  private AdminBootstrap bootstrapWith(String email) {
+    return new AdminBootstrap(userRepository, email);
+  }
 
   @Test
   void promotesExistingUserWhenEmailMatches() {
     UserEntity user = userRepository.save(new UserEntity("admin@x.com", "google", "g-bs1"));
     assertThat(user.isAdmin()).isFalse();
 
-    ReflectionTestUtils.setField(bootstrap, "bootstrapAdminEmail", "admin@x.com");
-    bootstrap.promote();
+    bootstrapWith("admin@x.com").promote();
 
     UserEntity reloaded = userRepository.findById(user.getId()).orElseThrow();
     assertThat(reloaded.isAdmin()).isTrue();
@@ -36,8 +37,7 @@ class AdminBootstrapTest {
   void noOpWhenEmailIsBlank() {
     UserEntity user = userRepository.save(new UserEntity("plain@x.com", "google", "g-bs2"));
 
-    ReflectionTestUtils.setField(bootstrap, "bootstrapAdminEmail", "");
-    bootstrap.promote();
+    bootstrapWith("").promote();
 
     assertThat(userRepository.findById(user.getId()).orElseThrow().isAdmin()).isFalse();
   }
@@ -46,8 +46,7 @@ class AdminBootstrapTest {
   void noOpWhenEmailIsNull() {
     UserEntity user = userRepository.save(new UserEntity("plain2@x.com", "google", "g-bs3"));
 
-    ReflectionTestUtils.setField(bootstrap, "bootstrapAdminEmail", null);
-    bootstrap.promote();
+    bootstrapWith(null).promote();
 
     assertThat(userRepository.findById(user.getId()).orElseThrow().isAdmin()).isFalse();
   }
@@ -58,16 +57,14 @@ class AdminBootstrapTest {
     user.promoteToAdmin();
     userRepository.save(user);
 
-    ReflectionTestUtils.setField(bootstrap, "bootstrapAdminEmail", "ex-admin@x.com");
-    bootstrap.promote();
+    bootstrapWith("ex-admin@x.com").promote();
 
     assertThat(userRepository.findById(user.getId()).orElseThrow().isAdmin()).isTrue();
   }
 
   @Test
   void noOpWhenUserNotFound() {
-    ReflectionTestUtils.setField(bootstrap, "bootstrapAdminEmail", "ghost@x.com");
-    bootstrap.promote();
+    bootstrapWith("ghost@x.com").promote();
     assertThat(userRepository.findByEmail("ghost@x.com")).isEmpty();
   }
 }

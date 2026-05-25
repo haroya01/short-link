@@ -15,14 +15,12 @@ import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class EmailLeadService {
 
   // RFC 5321 caps the local-part at 64 and total at 254; this regex matches the common form and
@@ -45,9 +43,17 @@ public class EmailLeadService {
   private final EmailLeadRepository repository;
   private final ProfileBlockRepository blockRepository;
 
-  /** Optional salt so leaked DB hashes can't be reversed by a generic rainbow table. */
-  @Value("${short-link.email-lead.ip-hash-salt:}")
-  private String ipHashSalt;
+  /** Optional salt so leaked DB hashes can\u0027t be reversed by a generic rainbow table. */
+  private final String ipHashSalt;
+
+  public EmailLeadService(
+      EmailLeadRepository repository,
+      ProfileBlockRepository blockRepository,
+      @Value("${short-link.email-lead.ip-hash-salt:}") String ipHashSalt) {
+    this.repository = repository;
+    this.blockRepository = blockRepository;
+    this.ipHashSalt = ipHashSalt;
+  }
 
   @Transactional
   public EmailLeadEntity submit(Long ownerUserId, Long blockId, String email, String clientIp) {
