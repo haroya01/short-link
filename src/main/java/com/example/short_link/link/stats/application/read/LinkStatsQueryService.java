@@ -11,7 +11,6 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.application.LinkInsights;
 import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.DateTimeException;
 import java.time.DayOfWeek;
@@ -46,7 +45,6 @@ public class LinkStatsQueryService {
   private static final int LIFECYCLE_MAX_DAY = 30;
 
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
   private final ClickEventReadRepository clickReadRepository;
   private final UserRepository userRepository;
   private final ReferrerChannelClassifier channelClassifier;
@@ -79,7 +77,7 @@ public class LinkStatsQueryService {
     Long linkId = link.getId();
     String reportTz = currentOffset(reportZone);
 
-    long total = clickRepository.countByLinkId(linkId);
+    long total = clickReadRepository.countByLinkId(linkId);
     long human = clickReadRepository.countHumanByLinkId(linkId);
     long bot = clickReadRepository.countBotByLinkId(linkId);
     long unique = clickReadRepository.countUniqueVisitorsByLinkId(linkId);

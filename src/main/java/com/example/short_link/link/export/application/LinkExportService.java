@@ -10,7 +10,7 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.export.application.helper.CsvWriter;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -22,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkExportService {
 
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
+  private final ClickEventReadRepository clickRepository;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkStatsQueryService statsService;
   private final LinkAccessGuard accessGuard;

@@ -3,9 +3,11 @@ package com.example.short_link.link.stats.domain.repository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.NoRepositoryBean;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
@@ -18,7 +20,23 @@ import org.springframework.data.repository.query.Param;
  * recommends JdbcTemplate + record over JPA @Query for a ReadDao — that migration is a separate
  * wave; this PR only separates the interface so callers know which side they're on.
  */
+@NoRepositoryBean
 public interface ClickEventReadRepository extends Repository<ClickEventEntity, Long> {
+
+  long count();
+
+  long countByLinkId(Long linkId);
+
+  List<ClickEventEntity> findAllByLinkIdInOrderByClickedAtAsc(Collection<Long> linkIds);
+
+  @Query(
+      "SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.id < :cursorId "
+          + "ORDER BY c.id DESC")
+  List<ClickEventEntity> findEventsByLinkIdBefore(
+      @Param("linkId") Long linkId, @Param("cursorId") Long cursorId, Pageable pageable);
+
+  @Query("SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId ORDER BY c.id DESC")
+  List<ClickEventEntity> findEventsByLinkIdLatest(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query("SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false")
   long countHumanByLinkId(@Param("linkId") Long linkId);

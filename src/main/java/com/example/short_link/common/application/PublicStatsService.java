@@ -1,7 +1,7 @@
 package com.example.short_link.common.application;
 
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -11,7 +11,7 @@ import org.springframework.stereotype.Service;
 public class PublicStatsService {
 
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickEventRepository;
+  private final ClickEventReadRepository clickEventRepository;
 
   @Cacheable("public-stats")
   public PublicStats totals() {

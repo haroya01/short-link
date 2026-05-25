@@ -10,7 +10,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
@@ -27,7 +27,7 @@ public class LinkEventsService {
   private static final int MAX_LIMIT = 200;
 
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
+  private final ClickEventReadRepository clickRepository;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkAccessGuard accessGuard;
 

@@ -2,7 +2,7 @@ package com.example.short_link.user.application;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
 import com.example.short_link.user.application.dto.UserDataExport;
 import com.example.short_link.user.application.dto.UserDataExport.ExportedClick;
 import com.example.short_link.user.application.dto.UserDataExport.ExportedLink;
@@ -29,7 +29,7 @@ public class UserDataExportService {
 
   private final UserRepository userRepository;
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickEventRepository;
+  private final ClickEventReadRepository clickEventRepository;
 
   @Transactional(readOnly = true)
   public UserDataExport export(Long userId) {
