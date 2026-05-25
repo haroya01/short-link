@@ -3,6 +3,7 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.campaign.application.dto.BatchWithLink;
 import com.example.short_link.campaign.application.dto.CampaignBatchBulkRequest;
 import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignCreateRequest;

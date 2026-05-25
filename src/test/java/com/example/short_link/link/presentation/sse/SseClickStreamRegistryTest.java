@@ -2,7 +2,7 @@ package com.example.short_link.link.presentation.sse;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.application.ClickRecordedEvent;
+import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;

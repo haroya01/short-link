@@ -1,7 +1,6 @@
 package com.example.short_link.link.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
-import com.example.short_link.link.application.CachedLink;
 import com.example.short_link.link.application.ClickRecorder;
 import com.example.short_link.link.application.CustomDomainService;
 import com.example.short_link.link.application.GeoIpResolver;
@@ -11,7 +10,8 @@ import com.example.short_link.link.application.LinkPreviewRenderer;
 import com.example.short_link.link.application.LinkProtectionService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.UserAgentClassifier;
-import com.example.short_link.link.application.UserAgentInfo;
+import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkExpiredException;
 import com.example.short_link.link.exception.LinkNotFoundException;

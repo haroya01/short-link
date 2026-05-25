@@ -2,8 +2,8 @@ package com.example.short_link.link.application.read;
 
 import com.example.short_link.link.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkInsights;
-import com.example.short_link.link.application.LinkStats;
 import com.example.short_link.link.application.ReferrerChannelClassifier;
+import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkDestinationRepository;

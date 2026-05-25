@@ -1,6 +1,6 @@
 package db.migration;
 
-import com.example.short_link.link.application.WebhookFormat;
+import com.example.short_link.link.application.helper.WebhookFormat;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.Statement;

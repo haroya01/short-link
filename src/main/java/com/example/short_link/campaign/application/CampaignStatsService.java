@@ -1,5 +1,6 @@
 package com.example.short_link.campaign.application;
 
+import com.example.short_link.campaign.application.dto.BatchWithLink;
 import com.example.short_link.campaign.application.dto.CampaignStatsCompareResponse;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse.BatchStats;

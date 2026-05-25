@@ -1,9 +1,9 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.MyLinksQuery;
-import com.example.short_link.link.application.MyLinksResult;
 import com.example.short_link.link.application.MyLinksService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.dto.MyLinksQuery;
+import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.presentation.response.MyLinkResponse;
 import com.example.short_link.link.presentation.response.MyLinksPage;
 import java.util.List;

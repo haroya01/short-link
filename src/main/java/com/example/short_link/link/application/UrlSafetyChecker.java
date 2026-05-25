@@ -1,6 +1,7 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.common.config.SafeBrowsingProperties;
+import com.example.short_link.link.application.helper.ReferrerNormalizer;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

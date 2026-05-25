@@ -1,5 +1,6 @@
 package com.example.short_link.campaign.application;
 
+import com.example.short_link.campaign.application.dto.BatchWithLink;
 import com.example.short_link.campaign.application.dto.CampaignBatchBulkRequest;
 import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignBatchUpdateRequest;
@@ -11,8 +12,8 @@ import com.example.short_link.campaign.exception.CampaignBatchNotFoundException;
 import com.example.short_link.campaign.exception.CampaignTerminalStateException;
 import com.example.short_link.campaign.exception.InvalidBatchRowException;
 import com.example.short_link.campaign.exception.MissingDestinationUrlException;
-import com.example.short_link.link.application.LinkCreated;
 import com.example.short_link.link.application.LinkCreationService;
+import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import java.util.ArrayList;
