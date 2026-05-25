@@ -2,7 +2,7 @@ spring:
   datasource:
     url: jdbc:mysql://localhost:3306/short_link?useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Seoul
     username: short_link
-    password: haroya0117!
+    password: local-dev
     driver-class-name: com.mysql.cj.jdbc.Driver
     # @MockitoBean 가 많을수록 Spring 컨텍스트가 분기되어 컨텍스트당 HikariCP 풀이 새로 생긴다.
     # 기본 10 커넥션 × 컨텍스트 N개 → MySQL max_connections 초과. 컨텍스트당 2 커넥션으로 캡해
@@ -24,7 +24,7 @@ spring:
     redis:
       host: localhost
       port: 6379
-      password: haroya0117!
+      password: local-dev
 
 short-link:
   safe-browsing:
