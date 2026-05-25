@@ -18,11 +18,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Per-user TOTP enrolment and verification. Setup is two-step: a {@code start} call writes a
- * pending row with a fresh secret + provisioning URI, then {@code confirm(code)} flips it to
- * enabled and returns 10 single-use recovery codes (only shown once). Login verification accepts
- * either a current TOTP code or one of the recovery codes — recovery consumption rewrites the
- * stored hash list.
+ * Setup is two-step: {@code start} writes a pending row with a fresh secret + provisioning URI,
+ * then {@code confirm(code)} flips it to enabled and returns 10 single-use recovery codes (only
+ * shown once). Login verification accepts either a current TOTP code or one of the recovery codes —
+ * recovery consumption rewrites the stored hash list.
  */
 @Slf4j
 @Service
