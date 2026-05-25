@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class ProfileQueryServiceTest {
@@ -52,8 +51,8 @@ class ProfileQueryServiceTest {
             clickRepository,
             usernameHistoryRepository,
             profileBlockRepository,
-            urlBuilder);
-    ReflectionTestUtils.setField(service, "publicProfileBaseUrl", "https://kurl.app/u/");
+            urlBuilder,
+            "https://kurl.app/u/");
   }
 
   private UserEntity userWithId(long id) {

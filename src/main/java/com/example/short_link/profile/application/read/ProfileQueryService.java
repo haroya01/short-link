@@ -24,14 +24,12 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ProfileQueryService {
 
@@ -41,9 +39,25 @@ public class ProfileQueryService {
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final ShortLinkUrlBuilder urlBuilder;
+  private final String publicProfileBaseUrl;
 
-  @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
-  private String publicProfileBaseUrl;
+  public ProfileQueryService(
+      UserRepository userRepository,
+      LinkRepository linkRepository,
+      ClickEventReadRepository clickRepository,
+      UsernameHistoryRepository usernameHistoryRepository,
+      ProfileBlockRepository profileBlockRepository,
+      ShortLinkUrlBuilder urlBuilder,
+      @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
+          String publicProfileBaseUrl) {
+    this.userRepository = userRepository;
+    this.linkRepository = linkRepository;
+    this.clickRepository = clickRepository;
+    this.usernameHistoryRepository = usernameHistoryRepository;
+    this.profileBlockRepository = profileBlockRepository;
+    this.urlBuilder = urlBuilder;
+    this.publicProfileBaseUrl = publicProfileBaseUrl;
+  }
 
   public MyProfile myProfile(Long userId) {
     UserEntity user =

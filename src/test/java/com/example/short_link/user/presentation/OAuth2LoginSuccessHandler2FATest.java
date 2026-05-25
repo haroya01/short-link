@@ -20,7 +20,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class OAuth2LoginSuccessHandler2FATest {
@@ -34,8 +33,8 @@ class OAuth2LoginSuccessHandler2FATest {
 
   @BeforeEach
   void setUp() {
-    handler = new OAuth2LoginSuccessHandler(authService, refreshCookieWriter);
-    ReflectionTestUtils.setField(handler, "frontendBaseUrl", "http://localhost:3001");
+    handler =
+        new OAuth2LoginSuccessHandler(authService, refreshCookieWriter, "http://localhost:3001");
   }
 
   @Test
