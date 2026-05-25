@@ -48,6 +48,7 @@ class CustomDomainVerificationE2ETest {
 
   @Test
   void register_thenVerify_marksDomainVerifiedAndEnablesRouting() throws Exception {
+    // given
     UserEntity user = userRepository.save(new UserEntity("cdv-1@x.com", "google", "g-cdv-1"));
     String token = jwt.createAccessToken(user.getId(), "USER");
 
@@ -74,15 +75,16 @@ class CustomDomainVerificationE2ETest {
 
     Integer domainId = JsonPath.read(registerBody, "$.id");
     String issuedToken = JsonPath.read(registerBody, "$.verificationToken");
-
     txtResolver.put("_kurl-verify.go.verify-flow.example.com", issuedToken);
 
+    // when
     mvc.perform(
             post("/api/v1/custom-domains/" + domainId + "/verify")
                 .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.verified").value(true));
 
+    // then
     mvc.perform(get("/cdv00001").header("Host", "go.verify-flow.example.com"))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://owner-verify.com"));
@@ -90,6 +92,7 @@ class CustomDomainVerificationE2ETest {
 
   @Test
   void register_thenVerify_returns422WhenTokenMissingAtTxt() throws Exception {
+    // given
     UserEntity user = userRepository.save(new UserEntity("cdv-2@x.com", "google", "g-cdv-2"));
     String token = jwt.createAccessToken(user.getId(), "USER");
 
@@ -105,6 +108,7 @@ class CustomDomainVerificationE2ETest {
             .getContentAsString();
     Integer domainId = JsonPath.read(registerBody, "$.id");
 
+    // when / then
     mvc.perform(
             post("/api/v1/custom-domains/" + domainId + "/verify")
                 .header("Authorization", "Bearer " + token))
@@ -113,6 +117,7 @@ class CustomDomainVerificationE2ETest {
 
   @Test
   void register_thenVerify_returns422WhenTokenMismatch() throws Exception {
+    // given
     UserEntity user = userRepository.save(new UserEntity("cdv-3@x.com", "google", "g-cdv-3"));
     String token = jwt.createAccessToken(user.getId(), "USER");
 
@@ -130,6 +135,7 @@ class CustomDomainVerificationE2ETest {
 
     txtResolver.put("_kurl-verify.go.wrong-txt.example.com", "kurl-verify=someone-elses-token");
 
+    // when / then
     mvc.perform(
             post("/api/v1/custom-domains/" + domainId + "/verify")
                 .header("Authorization", "Bearer " + token))

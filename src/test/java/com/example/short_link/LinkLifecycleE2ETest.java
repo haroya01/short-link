@@ -1,5 +1,6 @@
 package com.example.short_link;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -12,6 +13,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,9 +35,11 @@ class LinkLifecycleE2ETest {
 
   @Test
   void updateInvalidatesCache_redirectFollowsNewUrl() throws Exception {
+    // given
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-e1"));
     String token = jwt.createAccessToken(user.getId(), "USER");
 
+    // when
     mvc.perform(
             post("/api/v1/links")
                 .header("Authorization", "Bearer " + token)
@@ -54,6 +58,7 @@ class LinkLifecycleE2ETest {
                 .content("{\"originalUrl\":\"https://new.com\"}"))
         .andExpect(status().isOk());
 
+    // then
     mvc.perform(get("/e2e0001"))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://new.com"));
@@ -61,9 +66,11 @@ class LinkLifecycleE2ETest {
 
   @Test
   void deleteInvalidatesCache_redirectReturns404() throws Exception {
+    // given
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-e2"));
     String token = jwt.createAccessToken(user.getId(), "USER");
 
+    // when
     mvc.perform(
             post("/api/v1/links")
                 .header("Authorization", "Bearer " + token)
@@ -76,11 +83,13 @@ class LinkLifecycleE2ETest {
     mvc.perform(delete("/api/v1/links/e2e0002").header("Authorization", "Bearer " + token))
         .andExpect(status().isNoContent());
 
+    // then
     mvc.perform(get("/e2e0002")).andExpect(status().isNotFound());
   }
 
   @Test
   void disableViaPastExpiresAt_redirectReturns410() throws Exception {
+    // given
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-e3"));
     String token = jwt.createAccessToken(user.getId(), "USER");
 
@@ -93,6 +102,7 @@ class LinkLifecycleE2ETest {
 
     mvc.perform(get("/e2e0003")).andExpect(status().isFound());
 
+    // when
     Instant past = Instant.now().minusSeconds(60);
     mvc.perform(
             patch("/api/v1/links/e2e0003")
@@ -101,11 +111,13 @@ class LinkLifecycleE2ETest {
                 .content("{\"expiresAt\":\"" + past + "\"}"))
         .andExpect(status().isOk());
 
+    // then
     mvc.perform(get("/e2e0003")).andExpect(status().isGone());
   }
 
   @Test
   void anonymousLinkCanBeRedirectedButNotManaged() throws Exception {
+    // given
     String body =
         mvc.perform(
                 post("/api/v1/links")
@@ -117,8 +129,10 @@ class LinkLifecycleE2ETest {
             .getContentAsString();
     String shortCode = JsonPath.read(body, "$.shortCode");
 
+    // when
     mvc.perform(get("/" + shortCode)).andExpect(status().isFound());
 
+    // then
     mvc.perform(
             patch("/api/v1/links/" + shortCode)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -130,6 +144,7 @@ class LinkLifecycleE2ETest {
 
   @Test
   void authenticatedUserSeesOnlyOwnLinksInMyList() throws Exception {
+    // given
     UserEntity me = userRepository.save(new UserEntity("me@x.com", "google", "g-e5"));
     UserEntity other = userRepository.save(new UserEntity("other@x.com", "google", "g-e5o"));
     String myToken = jwt.createAccessToken(me.getId(), "USER");
@@ -148,6 +163,7 @@ class LinkLifecycleE2ETest {
                 .content("{\"url\":\"https://yours.com\",\"customCode\":\"e2e0005o\"}"))
         .andExpect(status().isCreated());
 
+    // when
     String body =
         mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + myToken))
             .andExpect(status().isOk())
@@ -155,11 +171,12 @@ class LinkLifecycleE2ETest {
             .getResponse()
             .getContentAsString();
 
-    java.util.List<?> items = JsonPath.read(body, "$.items");
-    org.assertj.core.api.Assertions.assertThat(items).hasSize(1);
+    // then
+    List<?> items = JsonPath.read(body, "$.items");
+    assertThat(items).hasSize(1);
     boolean hasMore = JsonPath.read(body, "$.hasMore");
-    org.assertj.core.api.Assertions.assertThat(hasMore).isFalse();
+    assertThat(hasMore).isFalse();
     String shortCode = JsonPath.read(body, "$.items[0].shortCode");
-    org.assertj.core.api.Assertions.assertThat(shortCode).isEqualTo("e2e0005");
+    assertThat(shortCode).isEqualTo("e2e0005");
   }
 }

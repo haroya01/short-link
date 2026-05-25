@@ -35,6 +35,7 @@ class CustomDomainRoutingE2ETest {
 
   @Test
   void customDomainHost_serves_ownerLink_andBlocksCrossUserCodes() throws Exception {
+    // given
     UserEntity owner = userRepository.save(new UserEntity("cd-owner@x.com", "google", "g-cd-own"));
     UserEntity other = userRepository.save(new UserEntity("cd-other@x.com", "google", "g-cd-oth"));
     String ownerToken = jwt.createAccessToken(owner.getId(), "USER");
@@ -60,6 +61,7 @@ class CustomDomainRoutingE2ETest {
     verified.markVerified();
     customDomainRepository.saveAndFlush(verified);
 
+    // when / then
     mvc.perform(get("/cd0owner").header("Host", domain))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://owner.com"));
@@ -76,6 +78,7 @@ class CustomDomainRoutingE2ETest {
 
   @Test
   void unverifiedCustomDomain_doesNotGateRouting() throws Exception {
+    // given
     UserEntity owner = userRepository.save(new UserEntity("cd-pend@x.com", "google", "g-cd-pend"));
     UserEntity other = userRepository.save(new UserEntity("cd-pend2@x.com", "google", "g-cd-pen2"));
     String ownerToken = jwt.createAccessToken(owner.getId(), "USER");
@@ -100,6 +103,7 @@ class CustomDomainRoutingE2ETest {
     TestEntities.setField(pending, "createdAt", Instant.now());
     customDomainRepository.saveAndFlush(pending);
 
+    // when / then
     mvc.perform(get("/cd0pend1").header("Host", domain))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://owner-pend.com"));
