@@ -447,6 +447,20 @@ public interface ClickEventReadRepository extends Repository<ClickEventEntity, L
       @Param("to") Instant to,
       @Param("tz") String tz);
 
+  /**
+   * Top referrer host for the link within the given window, used by the threshold-spike alert
+   * payload. Native + {@code LIMIT 1} so the application caller doesn't need Spring Data Pageable.
+   */
+  @Query(
+      value =
+          "SELECT referrer_host AS host, COUNT(*) AS count FROM click_event "
+              + "WHERE link_id = :linkId AND is_bot = 0 AND referrer_host IS NOT NULL "
+              + "AND clicked_at >= :since "
+              + "GROUP BY referrer_host ORDER BY count DESC LIMIT 1",
+      nativeQuery = true)
+  Optional<ReferrerHostClickRow> findTopReferrerHostByLinkIdSince(
+      @Param("linkId") Long linkId, @Param("since") Instant since);
+
   interface ReturnRateRow {
     Long getNewCount();
 
