@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkAccessControlRepository;
+import com.example.short_link.link.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -39,6 +40,7 @@ class LinkCreationServiceCollisionTest {
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
             mock(LinkProfileBindingRepository.class),
+            mock(LinkExpirationPolicyRepository.class),
             generator,
             new SimpleMeterRegistry(),
             safetyChecker,

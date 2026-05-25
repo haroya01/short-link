@@ -4,6 +4,8 @@ import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkExpirationPolicyEntity;
+import com.example.short_link.link.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import java.time.Instant;
 import java.util.List;
@@ -20,6 +22,7 @@ class BatchPolicyApplier {
 
   private final CampaignBatchRepository batchRepository;
   private final LinkRepository linkRepository;
+  private final LinkExpirationPolicyRepository expirationPolicyRepository;
 
   void apply(CampaignEntity c, Instant at) {
     List<CampaignBatchEntity> batches =
@@ -32,11 +35,23 @@ class BatchPolicyApplier {
           break;
         case EXPIRE:
           link.applyCampaignExpiration(at, null, c.getPostEndMessage());
+          mirrorPolicy(link);
           break;
         case REDIRECT:
           link.applyCampaignExpiration(at, c.getPostEndDestinationUrl(), null);
+          mirrorPolicy(link);
           break;
       }
     }
+  }
+
+  private void mirrorPolicy(LinkEntity link) {
+    LinkExpirationPolicyEntity policy =
+        expirationPolicyRepository
+            .findById(link.getId())
+            .orElseGet(() -> new LinkExpirationPolicyEntity(link.getId()));
+    policy.changeExpiredMessage(link.getExpiredMessage());
+    policy.changeExpiredRedirectUrl(link.getExpiredRedirectUrl());
+    expirationPolicyRepository.save(policy);
   }
 }
