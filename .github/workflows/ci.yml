@@ -32,7 +32,7 @@ jobs:
       - name: Wait for MySQL
         run: |
           for i in {1..30}; do
-            if docker exec short-link-mysql mysqladmin ping -h localhost -u short_link -pharoya0117! --silent 2>/dev/null; then
+            if docker exec short-link-mysql mysqladmin ping -h localhost -u short_link -plocal-dev --silent 2>/dev/null; then
               echo "MySQL ready"
               exit 0
             fi
@@ -46,7 +46,7 @@ jobs:
       - name: Wait for Redis
         run: |
           for i in {1..30}; do
-            if docker exec short-link-redis redis-cli -a haroya0117! ping 2>/dev/null | grep -q PONG; then
+            if docker exec short-link-redis redis-cli -a local-dev ping 2>/dev/null | grep -q PONG; then
               echo "Redis ready"
               exit 0
             fi
