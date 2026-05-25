@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.profile.application.ProfileCacheEviction;
@@ -28,7 +29,11 @@ class SetLinkHighlightUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new SetLinkHighlightUseCase(linkRepository, mock(ProfileCacheEviction.class));
+    useCase =
+        new SetLinkHighlightUseCase(
+            linkRepository,
+            mock(LinkProfileBindingRepository.class),
+            mock(ProfileCacheEviction.class));
   }
 
   @Test
