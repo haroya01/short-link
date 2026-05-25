@@ -2,6 +2,7 @@ package com.example.short_link.link.domain.repository;
 
 import com.example.short_link.link.domain.*;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -47,7 +48,7 @@ public interface LinkRepository
 
   Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);
 
-  List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(java.util.Collection<String> claimTokens);
+  List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(Collection<String> claimTokens);
 
   @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
   @Query(

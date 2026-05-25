@@ -13,6 +13,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -182,7 +183,7 @@ class CampaignControllerTest {
       CampaignPostEndAction postEndAction,
       String postEndDestinationUrl)
       throws Exception {
-    var body = new java.util.HashMap<String, Object>();
+    var body = new HashMap<String, Object>();
     body.put("name", name);
     body.put("endsAt", endsAt.toString());
     body.put("postEndAction", postEndAction.name());

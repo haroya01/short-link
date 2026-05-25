@@ -7,6 +7,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.admin.application.BlockedDomainService;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.domain.LinkEntity;
@@ -34,7 +36,7 @@ class LinkCreationServiceCollisionTest {
 
     UrlSafetyChecker safetyChecker = mock(UrlSafetyChecker.class);
     when(safetyChecker.isSafe(any())).thenReturn(true);
-    var blockedDomain = mock(com.example.short_link.admin.application.BlockedDomainService.class);
+    var blockedDomain = mock(BlockedDomainService.class);
     when(blockedDomain.isBlocked(any())).thenReturn(false);
     CreateLinkUseCase service =
         new CreateLinkUseCase(
@@ -47,7 +49,7 @@ class LinkCreationServiceCollisionTest {
             new SimpleMeterRegistry(),
             safetyChecker,
             event -> {},
-            mock(com.example.short_link.common.audit.AuditLogService.class),
+            mock(AuditLogService.class),
             blockedDomain,
             noopTransactionManager(),
             200L);
