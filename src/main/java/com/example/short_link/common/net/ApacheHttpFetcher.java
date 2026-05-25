@@ -12,6 +12,7 @@ import org.apache.hc.client5.http.classic.methods.HttpGet;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
 import org.apache.hc.client5.http.classic.methods.HttpUriRequestBase;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ClassicHttpResponse;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
@@ -20,13 +21,13 @@ import org.springframework.stereotype.Component;
 
 /**
  * Apache HttpClient 5 implementation of {@link HttpFetcher}. The single place in the codebase that
- * touches {@code org.apache.hc.*} — see ArchUnit {@code apacheHttpClientConfinedExceptKnownLeaks}.
+ * touches {@code org.apache.hc.*} (along with {@link PinnedHttpClientFactory}) — see ArchUnit
+ * {@code apacheHttpClientConfinedExceptKnownLeaks}.
  *
- * <p>Builds a per-request pinned client (DNS rebinding defense via {@link
- * PinnedHttpClientFactory}), executes the request, reads the response body up to {@code
- * maxBodyBytes}, and closes the client. Connection reuse across calls is intentionally not done —
- * pinning the resolved IP per request matters more than connection pooling for our outbound traffic
- * profile (low QPS, security-critical).
+ * <p>Builds a per-request pinned client (DNS rebinding defense), executes the request, reads the
+ * response body up to {@code maxBodyBytes}, and closes the client. Connection reuse across calls is
+ * intentionally not done — pinning the resolved IP per request matters more than connection pooling
+ * for our outbound traffic profile (low QPS, security-critical).
  */
 @Component
 public class ApacheHttpFetcher implements HttpFetcher {
@@ -53,13 +54,11 @@ public class ApacheHttpFetcher implements HttpFetcher {
       case GET -> httpReq = new HttpGet(request.uri());
       case POST -> {
         HttpPost post = new HttpPost(request.uri());
-        if (request.body() != null) {
-          ContentType ct =
-              request.bodyContentType() == null
-                  ? ContentType.APPLICATION_OCTET_STREAM
-                  : ContentType.parse(request.bodyContentType());
-          post.setEntity(new ByteArrayEntity(request.body(), ct));
-        }
+        ContentType ct =
+            request.bodyContentType() == null
+                ? ContentType.APPLICATION_OCTET_STREAM
+                : ContentType.parse(request.bodyContentType());
+        post.setEntity(new ByteArrayEntity(request.body(), ct));
         httpReq = post;
       }
       default -> throw new IllegalArgumentException("unsupported method: " + request.method());
@@ -70,8 +69,8 @@ public class ApacheHttpFetcher implements HttpFetcher {
     return httpReq;
   }
 
-  private static Response readResponse(
-      org.apache.hc.core5.http.ClassicHttpResponse response, int maxBodyBytes) throws IOException {
+  private static Response readResponse(ClassicHttpResponse response, int maxBodyBytes)
+      throws IOException {
     Map<String, List<String>> headers = new LinkedHashMap<>();
     for (Header h : response.getHeaders()) {
       headers.computeIfAbsent(h.getName(), k -> new ArrayList<>()).add(h.getValue());
