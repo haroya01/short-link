@@ -1,6 +1,6 @@
-package com.example.short_link.link.domain.repository;
+package com.example.short_link.customdomain.domain.repository;
 
-import com.example.short_link.link.domain.*;
+import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;

@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation.request;
+package com.example.short_link.customdomain.presentation.request;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
