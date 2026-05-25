@@ -1,9 +1,9 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.MyLinksService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.MyLinksQuery;
 import com.example.short_link.link.application.dto.MyLinksResult;
+import com.example.short_link.link.application.read.MyLinksQueryService;
 import com.example.short_link.link.presentation.response.MyLinkResponse;
 import com.example.short_link.link.presentation.response.MyLinksPage;
 import java.util.List;
@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class MyLinksController {
 
-  private final MyLinksService service;
+  private final MyLinksQueryService service;
   private final ShortLinkUrlBuilder urlBuilder;
 
   @GetMapping("/me")

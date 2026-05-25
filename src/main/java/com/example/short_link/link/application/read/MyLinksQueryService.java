@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.read;
 
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.application.dto.MyLinksCursor;
@@ -27,7 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class MyLinksService {
+public class MyLinksQueryService {
 
   // (createdAt DESC, id DESC) — the id tie-break stops same-millisecond rows from sliding between
   // pages when the cursor predicate kicks in. Backed by idx_link_user_created (V42).

@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.read;
 
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.dto.LinkDetailView;
@@ -13,7 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
-public class LinkDetailService {
+public class LinkDetailQueryService {
 
   private final LinkRepository repository;
   private final LinkTagService linkTagService;

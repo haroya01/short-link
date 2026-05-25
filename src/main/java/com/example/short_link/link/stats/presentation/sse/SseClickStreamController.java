@@ -1,7 +1,7 @@
 package com.example.short_link.link.stats.presentation.sse;
 
 import com.example.short_link.link.access.application.LinkAccessGuard;
-import com.example.short_link.link.application.LinkLookupService;
+import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -50,7 +50,7 @@ public class SseClickStreamController {
   private static final long STREAM_TIMEOUT_MS = Duration.ofMinutes(5).toMillis();
 
   private final JwtTokenService jwt;
-  private final LinkLookupService lookup;
+  private final LinkLookupQueryService lookup;
   private final SseClickStreamRegistry registry;
   private final MeterRegistry meterRegistry;
   private final LinkAccessGuard accessGuard;

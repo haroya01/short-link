@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -21,15 +21,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * End-to-end coverage for the my-links filter pipeline. Each test seeds a small set of links and
- * checks that the {@link MyLinksService} returns exactly the matching subset for a given filter
- * combination.
+ * checks that the {@link MyLinksQueryService} returns exactly the matching subset for a given
+ * filter combination.
  */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 class MyLinksFilterTest {
 
-  @Autowired private MyLinksService service;
+  @Autowired private MyLinksQueryService service;
   @Autowired private LinkRepository linkRepository;
   @Autowired private UserRepository userRepository;
   @Autowired private LinkTagService linkTagService;
