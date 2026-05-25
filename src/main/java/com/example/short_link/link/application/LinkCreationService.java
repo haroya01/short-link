@@ -7,8 +7,10 @@ import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.application.helper.LinkUrlHasher;
 import com.example.short_link.link.application.helper.ReservedShortCodes;
+import com.example.short_link.link.domain.LinkAccessControlEntity;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkOgMetadataEntity;
+import com.example.short_link.link.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
@@ -35,6 +37,7 @@ public class LinkCreationService {
 
   private final LinkRepository repository;
   private final LinkOgMetadataRepository ogMetadataRepository;
+  private final LinkAccessControlRepository accessControlRepository;
   private final ShortCodeGenerator generator;
   private final MeterRegistry meterRegistry;
   private final UrlSafetyChecker urlSafetyChecker;
@@ -47,6 +50,7 @@ public class LinkCreationService {
   public LinkCreationService(
       LinkRepository repository,
       LinkOgMetadataRepository ogMetadataRepository,
+      LinkAccessControlRepository accessControlRepository,
       ShortCodeGenerator generator,
       MeterRegistry meterRegistry,
       UrlSafetyChecker urlSafetyChecker,
@@ -57,6 +61,7 @@ public class LinkCreationService {
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
     this.ogMetadataRepository = ogMetadataRepository;
+    this.accessControlRepository = accessControlRepository;
     this.generator = generator;
     this.meterRegistry = meterRegistry;
     this.urlSafetyChecker = urlSafetyChecker;
@@ -161,6 +166,7 @@ public class LinkCreationService {
     attachClaimTokenIfAnonymous(entity, authenticated);
     LinkEntity saved = repository.save(entity);
     ogMetadataRepository.save(new LinkOgMetadataEntity(saved.getId()));
+    accessControlRepository.save(new LinkAccessControlEntity(saved.getId()));
     return saved;
   }
 
