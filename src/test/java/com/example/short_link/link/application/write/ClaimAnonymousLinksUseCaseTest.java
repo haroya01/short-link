@@ -2,7 +2,6 @@ package com.example.short_link.link.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.application.LinkCreationService;
 import com.example.short_link.link.application.dto.ClaimResult;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
@@ -24,14 +23,16 @@ import org.springframework.transaction.annotation.Transactional;
 class ClaimAnonymousLinksUseCaseTest {
 
   @Autowired private ClaimAnonymousLinksUseCase useCase;
-  @Autowired private LinkCreationService creationService;
+  @Autowired private CreateLinkUseCase creationService;
   @Autowired private LinkRepository linkRepository;
   @Autowired private UserRepository userRepository;
 
   @Test
   void claimsAnonymousLinkByToken() {
     UserEntity user = userRepository.save(new UserEntity("c@example.com", "google", "g-c"));
-    LinkCreated created = creationService.create("https://example.com/claim", null, null, null);
+    LinkCreated created =
+        creationService.execute(
+            CreateLinkCommand.of("https://example.com/claim", null, null, null));
     String token = created.claimToken();
     assertThat(token).isNotNull();
 
@@ -48,7 +49,9 @@ class ClaimAnonymousLinksUseCaseTest {
   @Test
   void replayingClaimIsNoOp() {
     UserEntity user = userRepository.save(new UserEntity("c2@example.com", "google", "g-c2"));
-    LinkCreated created = creationService.create("https://example.com/claim2", null, null, null);
+    LinkCreated created =
+        creationService.execute(
+            CreateLinkCommand.of("https://example.com/claim2", null, null, null));
     useCase.execute(ClaimAnonymousLinksCommand.of(user.getId(), List.of(created.claimToken())));
 
     ClaimResult second =
@@ -72,7 +75,9 @@ class ClaimAnonymousLinksUseCaseTest {
   void claimClearsExpiry() {
     UserEntity user = userRepository.save(new UserEntity("c5@example.com", "google", "g-c5"));
     Instant ttl = Instant.now().plus(Duration.ofHours(24));
-    LinkCreated created = creationService.create("https://example.com/claim5", null, null, ttl);
+    LinkCreated created =
+        creationService.execute(
+            CreateLinkCommand.of("https://example.com/claim5", null, null, ttl));
 
     LinkEntity beforeClaim = linkRepository.findByShortCode(created.shortCode()).orElseThrow();
     assertThat(beforeClaim.getExpiresAt()).isNotNull();
@@ -88,7 +93,8 @@ class ClaimAnonymousLinksUseCaseTest {
   void authenticatedShorteningHasNoClaimToken() {
     UserEntity user = userRepository.save(new UserEntity("c4@example.com", "google", "g-c4"));
     LinkCreated created =
-        creationService.create("https://example.com/claim4", user.getId(), null, null);
+        creationService.execute(
+            CreateLinkCommand.of("https://example.com/claim4", user.getId(), null, null));
     assertThat(created.claimToken()).isNull();
   }
 }
