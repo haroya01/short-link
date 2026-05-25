@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.application.dto.OgOverrideResult;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;
 import com.example.short_link.link.exception.LinkNotFoundException;

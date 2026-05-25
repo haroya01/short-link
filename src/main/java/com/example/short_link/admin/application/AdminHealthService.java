@@ -1,5 +1,6 @@
 package com.example.short_link.admin.application;
 
+import com.example.short_link.admin.application.dto.AdminHealthMetrics;
 import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.Meter;

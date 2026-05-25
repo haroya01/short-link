@@ -1,13 +1,13 @@
 package com.example.short_link.campaign.presentation;
 
-import com.example.short_link.campaign.application.BatchWithLink;
 import com.example.short_link.campaign.application.CampaignBatchExportService;
 import com.example.short_link.campaign.application.CampaignBatchService;
-import com.example.short_link.campaign.application.QrOptions;
-import com.example.short_link.campaign.application.QrPngEncoder;
+import com.example.short_link.campaign.application.dto.BatchWithLink;
 import com.example.short_link.campaign.application.dto.CampaignBatchBulkRequest;
 import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignBatchUpdateRequest;
+import com.example.short_link.campaign.application.dto.QrOptions;
+import com.example.short_link.campaign.application.helper.QrPngEncoder;
 import com.example.short_link.campaign.presentation.response.CampaignBatchResponse;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import jakarta.validation.Valid;

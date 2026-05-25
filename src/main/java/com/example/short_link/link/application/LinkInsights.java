@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.application.dto.LinkStats;
 import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;

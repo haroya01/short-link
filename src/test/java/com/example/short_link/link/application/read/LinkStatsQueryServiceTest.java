@@ -2,7 +2,7 @@ package com.example.short_link.link.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.application.LinkStats;
+import com.example.short_link.link.application.dto.LinkStats;
 import org.junit.jupiter.api.Test;
 
 class LinkStatsQueryServiceTest {

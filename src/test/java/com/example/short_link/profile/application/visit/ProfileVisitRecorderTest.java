@@ -12,7 +12,7 @@ import com.example.short_link.link.application.AsnResolver;
 import com.example.short_link.link.application.BotHeuristic;
 import com.example.short_link.link.application.GeoIpResolver;
 import com.example.short_link.link.application.UserAgentClassifier;
-import com.example.short_link.link.application.UserAgentInfo;
+import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.user.domain.UserRepository;

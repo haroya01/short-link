@@ -1,6 +1,6 @@
 package com.example.short_link.user.presentation;
 
-import com.example.short_link.user.application.JwtProperties;
+import com.example.short_link.user.application.properties.JwtProperties;
 import jakarta.servlet.http.HttpServletResponse;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;

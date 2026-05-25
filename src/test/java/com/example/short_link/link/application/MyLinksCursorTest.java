@@ -3,6 +3,7 @@ package com.example.short_link.link.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.link.application.dto.MyLinksCursor;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 

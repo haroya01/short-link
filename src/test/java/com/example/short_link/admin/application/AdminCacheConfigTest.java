@@ -2,6 +2,9 @@ package com.example.short_link.admin.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.admin.application.dto.AdminActiveUsers;
+import com.example.short_link.admin.application.dto.AdminCohort;
+import com.example.short_link.admin.application.dto.AdminLifecycle;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
@@ -30,11 +33,11 @@ class AdminCacheConfigTest {
     String json = new String(serializer.serialize(sample));
 
     assertThat(json)
-        .contains("\"@class\":\"com.example.short_link.admin.application.AdminCohort\"");
+        .contains("\"@class\":\"com.example.short_link.admin.application.dto.AdminCohort\"");
     assertThat(json)
-        .contains("\"@class\":\"com.example.short_link.admin.application.AdminCohort$Row\"");
+        .contains("\"@class\":\"com.example.short_link.admin.application.dto.AdminCohort$Row\"");
     assertThat(json)
-        .contains("\"@class\":\"com.example.short_link.admin.application.AdminCohort$Cell\"");
+        .contains("\"@class\":\"com.example.short_link.admin.application.dto.AdminCohort$Cell\"");
   }
 
   @Test

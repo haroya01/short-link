@@ -1,7 +1,7 @@
 package com.example.short_link.link.scheduler;
 
 import com.example.short_link.common.lock.RedisDistributedLock;
-import com.example.short_link.link.application.CleanupProperties;
+import com.example.short_link.link.application.properties.CleanupProperties;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkRepository;

@@ -1,7 +1,7 @@
 package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.AuthService;
-import com.example.short_link.user.application.IssuedTokens;
+import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.exception.InvalidRefreshTokenException;
 import com.example.short_link.user.presentation.request.TwoFactorVerifyRequest;
 import com.example.short_link.user.presentation.response.TokenResponse;

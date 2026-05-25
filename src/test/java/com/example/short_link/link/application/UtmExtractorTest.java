@@ -2,6 +2,8 @@ package com.example.short_link.link.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.application.dto.UtmParams;
+import com.example.short_link.link.application.helper.UtmExtractor;
 import org.junit.jupiter.api.Test;
 
 class UtmExtractorTest {

@@ -1,6 +1,6 @@
 package com.example.short_link.link.application.dto;
 
-import com.example.short_link.link.application.WebhookFormat;
+import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import java.time.Instant;
 

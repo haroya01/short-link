@@ -6,8 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.OgOverrideResult;
 import com.example.short_link.link.application.OgOverrideService;
+import com.example.short_link.link.application.dto.OgOverrideResult;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserRepository;

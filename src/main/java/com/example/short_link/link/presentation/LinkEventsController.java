@@ -1,7 +1,7 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.LinkEventsResult;
 import com.example.short_link.link.application.LinkEventsService;
+import com.example.short_link.link.application.dto.LinkEventsResult;
 import com.example.short_link.link.presentation.response.LinkEventResponse;
 import com.example.short_link.link.presentation.response.LinkEventsPage;
 import lombok.RequiredArgsConstructor;

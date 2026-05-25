@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.application.read.LinkStatsQueryService;
 import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.ClickEventRepository.HeatmapRow;

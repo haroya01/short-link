@@ -6,7 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.link.application.WebhookFormat;
+import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.LinkWebhookRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;

@@ -1,7 +1,7 @@
 package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.JwtTokenService;
-import com.example.short_link.user.application.ParsedAccess;
+import com.example.short_link.user.application.dto.ParsedAccess;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
