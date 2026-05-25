@@ -35,7 +35,7 @@ class MyLinksControllerTest {
     linkRepository.save(new LinkEntity("https://example.com/mine", "mine001", owner.getId(), null));
     linkRepository.save(
         new LinkEntity("https://example.com/other", "other01", other.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -54,7 +54,7 @@ class MyLinksControllerTest {
       String code = String.format("page%03d", i);
       linkRepository.save(new LinkEntity("https://example.com/p" + i, code, owner.getId(), null));
     }
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     String firstResponse =
         mvc.perform(
@@ -106,7 +106,7 @@ class MyLinksControllerTest {
         new LinkEntity("https://example.com/other", "BLOG002", owner.getId(), null));
     linkRepository.save(
         new LinkEntity("https://other.org/marketing-page", "OTH0003", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             get("/api/v1/links/me")

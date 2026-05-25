@@ -49,7 +49,7 @@ class LinkStatsControllerTest {
     for (int i = 0; i < 3; i++) {
       clickRepository.save(humanClick(link.getId(), "desktop"));
     }
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/stats01/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -74,7 +74,7 @@ class LinkStatsControllerTest {
             .deviceClass("bot")
             .bot(true)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/statbot/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -93,7 +93,7 @@ class LinkStatsControllerTest {
     clickRepository.save(humanClick(link.getId(), "mobile"));
     clickRepository.save(humanClick(link.getId(), "tablet"));
     clickRepository.save(humanClick(link.getId(), "desktop"));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/stats02/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -127,7 +127,7 @@ class LinkStatsControllerTest {
             .browserName("Chrome")
             .bot(false)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/statosb/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -170,7 +170,7 @@ class LinkStatsControllerTest {
             .bot(false)
             .build());
     clickRepository.save(humanClick(link.getId(), "desktop"));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/stats03/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -218,7 +218,7 @@ class LinkStatsControllerTest {
             .deviceClass("desktop")
             .bot(false)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/statutm/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -258,7 +258,7 @@ class LinkStatsControllerTest {
             .countryCode("US")
             .bot(false)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/statcty/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -312,7 +312,7 @@ class LinkStatsControllerTest {
             .visitorHash("c".repeat(64))
             .bot(true)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/statadv/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -336,7 +336,7 @@ class LinkStatsControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-s4"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-s4a"));
     linkRepository.save(new LinkEntity("https://example.com", "stats04", owner.getId(), null));
-    String attackerToken = jwt.createAccessToken(attacker.getId());
+    String attackerToken = jwt.createAccessToken(attacker.getId(), "USER");
 
     mvc.perform(
             get("/api/v1/links/stats04/stats").header("Authorization", "Bearer " + attackerToken))
@@ -347,7 +347,7 @@ class LinkStatsControllerTest {
   @Test
   void rejectsStatsForUnknownCode() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-s5"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/missing/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isNotFound());
@@ -386,7 +386,7 @@ class LinkStatsControllerTest {
             .visitorHash("newcomer".repeat(8).substring(0, 64))
             .bot(false)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/statrli/stats").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())

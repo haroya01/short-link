@@ -74,7 +74,7 @@ public class BlockedDomainService {
   }
 
   @Cacheable("blocked-domains")
-  public Set<String> currentBlockedSet() {
+  private Set<String> currentBlockedSet() {
     return Set.copyOf(repository.findAll().stream().map(BlockedDomainEntity::getDomain).toList());
   }
 

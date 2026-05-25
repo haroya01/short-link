@@ -29,7 +29,7 @@ class PreferencesControllerTest {
   @Test
   void updatesTimezoneForCurrentUser() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("t@x.com", "google", "g-tz"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             put("/api/v1/users/me/preferences")
@@ -43,7 +43,7 @@ class PreferencesControllerTest {
   @Test
   void rejectsInvalidTimezone() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("t@x.com", "google", "g-tz2"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             put("/api/v1/users/me/preferences")
@@ -57,7 +57,7 @@ class PreferencesControllerTest {
   @Test
   void rejectsBlankTimezone() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("t@x.com", "google", "g-tz3"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             put("/api/v1/users/me/preferences")

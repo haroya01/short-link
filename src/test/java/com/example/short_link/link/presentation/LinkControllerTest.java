@@ -92,7 +92,7 @@ class LinkControllerTest {
   @Test
   void createsWithCustomCodeWhenAuthenticated() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-c1"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
@@ -106,7 +106,7 @@ class LinkControllerTest {
   @Test
   void rejectsCustomCodeWithInvalidFormat() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-c2"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
@@ -120,7 +120,7 @@ class LinkControllerTest {
   @Test
   void rejectsCustomCodeTooShort() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-c3"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
@@ -133,7 +133,7 @@ class LinkControllerTest {
   @Test
   void rejectsDuplicateCustomCode() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-c4"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")

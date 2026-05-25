@@ -28,7 +28,7 @@ public class LinkLookupService {
 
   @Cacheable("link")
   @Transactional(readOnly = true)
-  public CachedLink loadByShortCode(String shortCode) {
+  private CachedLink loadByShortCode(String shortCode) {
     LinkEntity link =
         repository
             .findByShortCode(shortCode)
@@ -58,10 +58,6 @@ public class LinkLookupService {
         d.getCountryCode(),
         d.getDeviceClass(),
         d.getOs());
-  }
-
-  public String findActiveOriginalUrl(String shortCode) {
-    return findActiveLink(shortCode).originalUrl();
   }
 
   /** SSE / OG card 등 entity 가 직접 필요한 controller 용. 못 찾으면 empty. */

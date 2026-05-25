@@ -97,7 +97,11 @@ class CampaignBatchExportServiceTest {
     batchService.create(
         campaign.getId(), owner, new CampaignBatchCreateRequest("b", null, null, 10, null, null));
 
-    byte[] zip = exportService.exportQrZip(campaign.getId(), owner);
+    byte[] zip =
+        exportService.exportQrZip(
+            campaign.getId(),
+            owner,
+            com.example.short_link.campaign.application.dto.QrOptions.defaults());
 
     Set<String> entries = new HashSet<>();
     try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(zip))) {

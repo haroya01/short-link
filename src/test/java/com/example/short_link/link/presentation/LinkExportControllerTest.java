@@ -48,7 +48,7 @@ class LinkExportControllerTest {
             .cityName("Seoul")
             .bot(false)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     var result =
         mvc.perform(
@@ -80,7 +80,7 @@ class LinkExportControllerTest {
             .deviceClass("mobile")
             .bot(false)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     var result =
         mvc.perform(
@@ -99,7 +99,7 @@ class LinkExportControllerTest {
   void rejectsInvalidDimension() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-csv3"));
     linkRepository.save(new LinkEntity("https://example.com", "csv003", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             get("/api/v1/links/csv003/stats.csv")
@@ -114,7 +114,7 @@ class LinkExportControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-csv4"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-csv4a"));
     linkRepository.save(new LinkEntity("https://example.com", "csv004", owner.getId(), null));
-    String token = jwt.createAccessToken(attacker.getId());
+    String token = jwt.createAccessToken(attacker.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/csv004/events.csv").header("Authorization", "Bearer " + token))
         .andExpect(status().isForbidden());

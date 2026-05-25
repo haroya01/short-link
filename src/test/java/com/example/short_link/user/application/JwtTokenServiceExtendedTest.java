@@ -31,7 +31,7 @@ class JwtTokenServiceExtendedTest {
   @Test
   void parseAccessTokenDetailedDefaultsRoleWhenMissing() throws Exception {
     JwtTokenService svc = freshService();
-    String token = svc.createAccessToken(42L);
+    String token = svc.createAccessToken(42L, "USER");
     assertThat(svc.parseAccessTokenDetailed(token).role()).isEqualTo("USER");
   }
 
@@ -53,7 +53,7 @@ class JwtTokenServiceExtendedTest {
   @Test
   void twoFactorChallengeRejectsAccessToken() throws Exception {
     JwtTokenService svc = freshService();
-    String access = svc.createAccessToken(42L);
+    String access = svc.createAccessToken(42L, "USER");
     assertThatThrownBy(() -> svc.parseTwoFactorChallengeToken(access))
         .isInstanceOf(IllegalArgumentException.class);
   }
@@ -81,7 +81,7 @@ class JwtTokenServiceExtendedTest {
     JwtTokenService svc =
         new JwtTokenService(
             new JwtProperties(priv, pub, Duration.ofMinutes(5), Duration.ofDays(7)));
-    String token = svc.createAccessToken(42L);
+    String token = svc.createAccessToken(42L, "USER");
     assertThat(svc.parseAccessToken(token)).isEqualTo(42L);
   }
 

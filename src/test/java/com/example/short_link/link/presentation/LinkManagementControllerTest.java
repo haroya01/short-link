@@ -35,7 +35,7 @@ class LinkManagementControllerTest {
   void updatesOriginalUrlWhenOwner() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-uo1"));
     linkRepository.save(new LinkEntity("https://old.com", "upd0001", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0001")
@@ -51,7 +51,7 @@ class LinkManagementControllerTest {
   void updatesExpiresAtWhenOwner() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-uo2"));
     linkRepository.save(new LinkEntity("https://example.com", "upd0002", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0002")
@@ -66,7 +66,7 @@ class LinkManagementControllerTest {
   void updatesBothFieldsWhenOwner() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-uo3"));
     linkRepository.save(new LinkEntity("https://example.com", "upd0003", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0003")
@@ -83,7 +83,7 @@ class LinkManagementControllerTest {
   void noOpWhenBothFieldsNull() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-uo4"));
     linkRepository.save(new LinkEntity("https://stable.com", "upd0004", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0004")
@@ -99,7 +99,7 @@ class LinkManagementControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-uo5"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-att"));
     linkRepository.save(new LinkEntity("https://example.com", "upd0005", owner.getId(), null));
-    String attackerToken = jwt.createAccessToken(attacker.getId());
+    String attackerToken = jwt.createAccessToken(attacker.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0005")
@@ -114,7 +114,7 @@ class LinkManagementControllerTest {
   void rejectsUpdateForAnonymousLink() throws Exception {
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-uo6"));
     linkRepository.save(new LinkEntity("https://anon.com", "upd0006", null, null));
-    String token = jwt.createAccessToken(attacker.getId());
+    String token = jwt.createAccessToken(attacker.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0006")
@@ -139,7 +139,7 @@ class LinkManagementControllerTest {
   @Test
   void rejectsUpdateForUnknownCode() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-uo8"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/missing")
@@ -154,7 +154,7 @@ class LinkManagementControllerTest {
   void rejectsUpdateWithInvalidUrl() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-uo9"));
     linkRepository.save(new LinkEntity("https://example.com", "upd0009", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0009")
@@ -168,7 +168,7 @@ class LinkManagementControllerTest {
   void rejectsUpdateWithEmptyUrl() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-uem"));
     linkRepository.save(new LinkEntity("https://example.com", "upd0011", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0011")
@@ -183,7 +183,7 @@ class LinkManagementControllerTest {
   void rejectsUpdateWithJavascriptScheme() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-u10"));
     linkRepository.save(new LinkEntity("https://example.com", "upd0010", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             patch("/api/v1/links/upd0010")
@@ -197,7 +197,7 @@ class LinkManagementControllerTest {
   void deletesWhenOwner() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-d1"));
     linkRepository.save(new LinkEntity("https://example.com", "del0001", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(delete("/api/v1/links/del0001").header("Authorization", "Bearer " + token))
         .andExpect(status().isNoContent());
@@ -210,7 +210,7 @@ class LinkManagementControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-d2"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-d2a"));
     linkRepository.save(new LinkEntity("https://example.com", "del0002", owner.getId(), null));
-    String attackerToken = jwt.createAccessToken(attacker.getId());
+    String attackerToken = jwt.createAccessToken(attacker.getId(), "USER");
 
     mvc.perform(delete("/api/v1/links/del0002").header("Authorization", "Bearer " + attackerToken))
         .andExpect(status().isForbidden());
@@ -228,7 +228,7 @@ class LinkManagementControllerTest {
   @Test
   void rejectsDeleteForUnknownCode() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-d4"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(delete("/api/v1/links/missing").header("Authorization", "Bearer " + token))
         .andExpect(status().isNotFound());

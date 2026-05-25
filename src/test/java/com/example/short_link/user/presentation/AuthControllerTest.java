@@ -71,7 +71,7 @@ class AuthControllerTest {
   @Test
   void logoutClearsRefreshFromStore() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
-    String access = jwt.createAccessToken(user.getId());
+    String access = jwt.createAccessToken(user.getId(), "USER");
     RefreshToken refresh = jwt.createRefreshToken(user.getId());
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
 

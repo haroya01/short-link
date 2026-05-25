@@ -46,7 +46,7 @@ class LinkEventsControllerTest {
             .cityName("Seoul")
             .bot(false)
             .build());
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/evt001/events").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -62,7 +62,7 @@ class LinkEventsControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-evt2"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-evt2a"));
     linkRepository.save(new LinkEntity("https://example.com", "evt002", owner.getId(), null));
-    String token = jwt.createAccessToken(attacker.getId());
+    String token = jwt.createAccessToken(attacker.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/evt002/events").header("Authorization", "Bearer " + token))
         .andExpect(status().isForbidden());
@@ -77,7 +77,7 @@ class LinkEventsControllerTest {
   void rejectsInvalidCursor() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-evt4"));
     linkRepository.save(new LinkEntity("https://example.com", "evt004", owner.getId(), null));
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(
             get("/api/v1/links/evt004/events")
@@ -102,7 +102,7 @@ class LinkEventsControllerTest {
               .bot(false)
               .build());
     }
-    String token = jwt.createAccessToken(owner.getId());
+    String token = jwt.createAccessToken(owner.getId(), "USER");
 
     var first =
         mvc.perform(

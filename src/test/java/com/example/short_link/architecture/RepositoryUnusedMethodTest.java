@@ -10,17 +10,26 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Async;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Catches the kind of dead Repository method that grew on {@code
- * ProfileVisitRepository.countByProfileUserIdAndVisitedAtAfter} — declared but never called from
- * anywhere in main source. Spring Data JPA derivation queries are still static call targets, so
- * byte-code analysis picks up real uses; methods with zero callers are confirmed dead.
+ * Catches dead methods on Repository / Service / UseCase classes. Byte-code call analysis sees
+ * every static call site (including Spring Data JPA derivation queries and AOP'd targets) — a
+ * method with zero callers in main source is confirmed dead, even when grep would have missed it
+ * (substring match / declaring-class noise).
  *
- * <p>Scope: only our project's {@code com.example.short_link.*.domain.**Repository} interfaces.
- * Inherited methods from Spring's JpaRepository / CrudRepository (save / findById / etc.) are
- * skipped because they're declared in framework code, not ours. Test-source callers are ignored on
- * purpose — a method "only used in tests" is still dead from the production perspective.
+ * <p>Excluded on purpose:
+ *
+ * <ul>
+ *   <li>Test-source callers — a method "only used in tests" is still dead from production.
+ *   <li>Controllers — Spring routes HTTP requests via {@code @RequestMapping}, so there's no
+ *       byte-code caller.
+ *   <li>Schedulers / event listeners — {@code @Scheduled}, {@code @EventListener},
+ *       {@code @TransactionalEventListener} are reflection-invoked by Spring.
+ * </ul>
  */
 @AnalyzeClasses(
     packages = "com.example.short_link",
@@ -42,8 +51,41 @@ public class RepositoryUnusedMethodTest {
           .areNotStatic()
           .should(beCalledFromOutsideOwner());
 
+  @ArchTest
+  static final ArchRule no_unused_service_or_usecase_methods =
+      methods()
+          .that()
+          .areDeclaredInClassesThat()
+          .haveSimpleNameEndingWith("Service")
+          .or()
+          .areDeclaredInClassesThat()
+          .haveSimpleNameEndingWith("UseCase")
+          .and()
+          .areDeclaredInClassesThat()
+          .resideInAPackage("com.example.short_link..")
+          .and()
+          .arePublic()
+          .and()
+          .areNotStatic()
+          .and()
+          .areNotAnnotatedWith(Scheduled.class)
+          .and()
+          .areNotAnnotatedWith(EventListener.class)
+          .and()
+          .areNotAnnotatedWith(TransactionalEventListener.class)
+          .and()
+          .areNotAnnotatedWith(Async.class)
+          // EmailLeadService.submit(4-arg) is an internal helper exposed for the existing extended
+          // test suite. Production goes through submitPublic(3-arg). Narrowing to private is a
+          // separate cleanup once those tests migrate to the public entry point.
+          .and()
+          .doNotHaveFullName(
+              "com.example.short_link.profile.application.email.EmailLeadService.submit("
+                  + "java.lang.Long, java.lang.Long, java.lang.String, java.lang.String)")
+          .should(beCalledFromOutsideOwner());
+
   private static ArchCondition<JavaMethod> beCalledFromOutsideOwner() {
-    return new ArchCondition<>("be called from outside the declaring repository") {
+    return new ArchCondition<>("be called from outside its declaring class") {
       @Override
       public void check(JavaMethod method, ConditionEvents events) {
         boolean calledExternally =
@@ -52,8 +94,7 @@ public class RepositoryUnusedMethodTest {
         if (!calledExternally) {
           events.add(
               SimpleConditionEvent.violated(
-                  method,
-                  "Repository method " + method.getFullName() + " has zero callers in main src"));
+                  method, "Method " + method.getFullName() + " has zero callers in main src"));
         }
       }
     };

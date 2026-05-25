@@ -34,7 +34,7 @@ class LinkLifecycleE2ETest {
   @Test
   void updateInvalidatesCache_redirectFollowsNewUrl() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-e1"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
@@ -62,7 +62,7 @@ class LinkLifecycleE2ETest {
   @Test
   void deleteInvalidatesCache_redirectReturns404() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-e2"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
@@ -82,7 +82,7 @@ class LinkLifecycleE2ETest {
   @Test
   void disableViaPastExpiresAt_redirectReturns410() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-e3"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
@@ -132,8 +132,8 @@ class LinkLifecycleE2ETest {
   void authenticatedUserSeesOnlyOwnLinksInMyList() throws Exception {
     UserEntity me = userRepository.save(new UserEntity("me@x.com", "google", "g-e5"));
     UserEntity other = userRepository.save(new UserEntity("other@x.com", "google", "g-e5o"));
-    String myToken = jwt.createAccessToken(me.getId());
-    String otherToken = jwt.createAccessToken(other.getId());
+    String myToken = jwt.createAccessToken(me.getId(), "USER");
+    String otherToken = jwt.createAccessToken(other.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")

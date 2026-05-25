@@ -67,7 +67,7 @@ class RateLimitFilterTest {
   @Test
   void blocksAuthenticatedUserAfterLimit() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-rl"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
     redis.opsForValue().set("rate:user:" + user.getId(), "1000", Duration.ofMinutes(1));
 
     mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + token))
@@ -77,7 +77,7 @@ class RateLimitFilterTest {
   @Test
   void distinguishesIpAndUserBuckets() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-rl2"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
     redis.opsForValue().set("rate:ip:127.0.0.1", "100", Duration.ofMinutes(1));
 
     mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + token))
