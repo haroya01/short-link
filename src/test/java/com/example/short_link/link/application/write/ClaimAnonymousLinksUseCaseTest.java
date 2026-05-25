@@ -1,7 +1,9 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.application.LinkCreationService;
+import com.example.short_link.link.application.dto.ClaimResult;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -19,9 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class AnonymousClaimServiceTest {
+class ClaimAnonymousLinksUseCaseTest {
 
-  @Autowired private AnonymousClaimService service;
+  @Autowired private ClaimAnonymousLinksUseCase useCase;
   @Autowired private LinkCreationService creationService;
   @Autowired private LinkRepository linkRepository;
   @Autowired private UserRepository userRepository;
@@ -33,7 +35,8 @@ class AnonymousClaimServiceTest {
     String token = created.claimToken();
     assertThat(token).isNotNull();
 
-    AnonymousClaimService.ClaimResult result = service.claim(user.getId(), List.of(token));
+    ClaimResult result =
+        useCase.execute(ClaimAnonymousLinksCommand.of(user.getId(), List.of(token)));
     assertThat(result.claimed()).isEqualTo(1);
     assertThat(result.skipped()).isZero();
 
@@ -46,10 +49,10 @@ class AnonymousClaimServiceTest {
   void replayingClaimIsNoOp() {
     UserEntity user = userRepository.save(new UserEntity("c2@example.com", "google", "g-c2"));
     LinkCreated created = creationService.create("https://example.com/claim2", null, null, null);
-    service.claim(user.getId(), List.of(created.claimToken()));
+    useCase.execute(ClaimAnonymousLinksCommand.of(user.getId(), List.of(created.claimToken())));
 
-    AnonymousClaimService.ClaimResult second =
-        service.claim(user.getId(), List.of(created.claimToken()));
+    ClaimResult second =
+        useCase.execute(ClaimAnonymousLinksCommand.of(user.getId(), List.of(created.claimToken())));
     assertThat(second.claimed()).isZero();
     assertThat(second.skipped()).isEqualTo(1);
   }
@@ -57,8 +60,10 @@ class AnonymousClaimServiceTest {
   @Test
   void unknownTokensSkipped() {
     UserEntity user = userRepository.save(new UserEntity("c3@example.com", "google", "g-c3"));
-    AnonymousClaimService.ClaimResult result =
-        service.claim(user.getId(), List.of("00000000000000000000000000000000"));
+    ClaimResult result =
+        useCase.execute(
+            ClaimAnonymousLinksCommand.of(
+                user.getId(), List.of("00000000000000000000000000000000")));
     assertThat(result.claimed()).isZero();
     assertThat(result.skipped()).isEqualTo(1);
   }
@@ -72,7 +77,7 @@ class AnonymousClaimServiceTest {
     LinkEntity beforeClaim = linkRepository.findByShortCode(created.shortCode()).orElseThrow();
     assertThat(beforeClaim.getExpiresAt()).isNotNull();
 
-    service.claim(user.getId(), List.of(created.claimToken()));
+    useCase.execute(ClaimAnonymousLinksCommand.of(user.getId(), List.of(created.claimToken())));
 
     LinkEntity afterClaim = linkRepository.findByShortCode(created.shortCode()).orElseThrow();
     assertThat(afterClaim.getUserId()).isEqualTo(user.getId());
