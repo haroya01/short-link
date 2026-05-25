@@ -1,4 +1,4 @@
-package com.example.short_link.link.domain;
+package com.example.short_link.tag.domain;
 
 import com.example.short_link.link.domain.repository.*;
 import jakarta.persistence.Column;

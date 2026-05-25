@@ -1,8 +1,8 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.tag.presentation;
 
-import com.example.short_link.link.application.LinkTagService;
-import com.example.short_link.link.presentation.request.LinkTagsRequest;
-import com.example.short_link.link.presentation.response.LinkTagsResponse;
+import com.example.short_link.tag.application.LinkTagService;
+import com.example.short_link.tag.presentation.request.LinkTagsRequest;
+import com.example.short_link.tag.presentation.response.LinkTagsResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
