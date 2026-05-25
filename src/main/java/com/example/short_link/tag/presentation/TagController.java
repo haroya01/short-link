@@ -1,8 +1,8 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.tag.presentation;
 
-import com.example.short_link.link.application.TagService;
-import com.example.short_link.link.application.TagService.TagSummary;
 import com.example.short_link.link.presentation.request.TagRequest;
+import com.example.short_link.tag.application.TagService;
+import com.example.short_link.tag.application.TagService.TagSummary;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;

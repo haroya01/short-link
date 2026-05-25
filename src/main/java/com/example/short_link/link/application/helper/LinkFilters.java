@@ -2,8 +2,8 @@ package com.example.short_link.link.application.helper;
 
 import com.example.short_link.link.application.dto.MyLinksCursor;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkTagEntity;
-import com.example.short_link.link.domain.TagEntity;
+import com.example.short_link.tag.domain.LinkTagEntity;
+import com.example.short_link.tag.domain.TagEntity;
 import jakarta.persistence.criteria.Subquery;
 import java.time.Duration;
 import java.time.Instant;

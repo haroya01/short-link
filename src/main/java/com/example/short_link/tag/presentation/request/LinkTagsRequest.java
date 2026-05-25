@@ -1,6 +1,6 @@
-package com.example.short_link.link.presentation.request;
+package com.example.short_link.tag.presentation.request;
 
-import com.example.short_link.link.application.LinkTagService;
+import com.example.short_link.tag.application.LinkTagService;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 

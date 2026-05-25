@@ -8,6 +8,7 @@ import com.example.short_link.link.application.helper.LinkFilters;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.tag.application.LinkTagService;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
