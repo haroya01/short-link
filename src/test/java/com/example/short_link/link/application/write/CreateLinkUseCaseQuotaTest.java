@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
+import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -36,8 +37,8 @@ class LinkCreationServiceQuotaTest {
     UrlSafetyChecker safety = mock(UrlSafetyChecker.class);
     when(safety.isSafe(any())).thenReturn(true);
 
-    LinkCreationService svc =
-        new LinkCreationService(
+    CreateLinkUseCase svc =
+        new CreateLinkUseCase(
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
@@ -52,7 +53,8 @@ class LinkCreationServiceQuotaTest {
             noopTx(),
             200L);
 
-    assertThatThrownBy(() -> svc.create("https://example.com/x", 42L, null, null))
+    assertThatThrownBy(
+            () -> svc.execute(CreateLinkCommand.of("https://example.com/x", 42L, null, null)))
         .isInstanceOf(LinkException.class);
 
     verify(repo, never()).save(any(LinkEntity.class));
@@ -68,8 +70,8 @@ class LinkCreationServiceQuotaTest {
     UrlSafetyChecker safety = mock(UrlSafetyChecker.class);
     when(safety.isSafe(any())).thenReturn(true);
 
-    LinkCreationService svc =
-        new LinkCreationService(
+    CreateLinkUseCase svc =
+        new CreateLinkUseCase(
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
@@ -84,7 +86,8 @@ class LinkCreationServiceQuotaTest {
             noopTx(),
             200L);
 
-    LinkCreated created = svc.create("https://example.com", null, null, null);
+    LinkCreated created =
+        svc.execute(CreateLinkCommand.of("https://example.com", null, null, null));
 
     assertThat(created.shortCode()).isEqualTo("anon123");
     verify(repo, never()).countByUserId(any());
@@ -100,8 +103,8 @@ class LinkCreationServiceQuotaTest {
     UrlSafetyChecker safety = mock(UrlSafetyChecker.class);
     when(safety.isSafe(any())).thenReturn(true);
 
-    LinkCreationService svc =
-        new LinkCreationService(
+    CreateLinkUseCase svc =
+        new CreateLinkUseCase(
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
@@ -116,7 +119,8 @@ class LinkCreationServiceQuotaTest {
             noopTx(),
             200L);
 
-    LinkCreated created = svc.create("https://example.com/x", 99L, null, null);
+    LinkCreated created =
+        svc.execute(CreateLinkCommand.of("https://example.com/x", 99L, null, null));
 
     assertThat(created.shortCode()).isEqualTo("exist01");
     verify(repo, never()).save(any(LinkEntity.class));
@@ -129,8 +133,8 @@ class LinkCreationServiceQuotaTest {
     UrlSafetyChecker safety = mock(UrlSafetyChecker.class);
     when(safety.isSafe(any())).thenReturn(true);
 
-    LinkCreationService svc =
-        new LinkCreationService(
+    CreateLinkUseCase svc =
+        new CreateLinkUseCase(
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
@@ -145,7 +149,8 @@ class LinkCreationServiceQuotaTest {
             noopTx(),
             200L);
 
-    assertThatThrownBy(() -> svc.create("https://example.com", 1L, "login", null))
+    assertThatThrownBy(
+            () -> svc.execute(CreateLinkCommand.of("https://example.com", 1L, "login", null)))
         .isInstanceOf(LinkException.class);
 
     verify(repo, never()).save(any(LinkEntity.class));
@@ -170,8 +175,8 @@ class LinkCreationServiceQuotaTest {
     UrlSafetyChecker safety = mock(UrlSafetyChecker.class);
     when(safety.isSafe(any())).thenReturn(true);
 
-    LinkCreationService svc =
-        new LinkCreationService(
+    CreateLinkUseCase svc =
+        new CreateLinkUseCase(
             repo,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
@@ -186,7 +191,8 @@ class LinkCreationServiceQuotaTest {
             noopTx(),
             200L);
 
-    LinkCreated created = svc.create("https://example.com/x", 99L, null, null);
+    LinkCreated created =
+        svc.execute(CreateLinkCommand.of("https://example.com/x", 99L, null, null));
     assertThat(created.shortCode()).isEqualTo("newcode");
   }
 

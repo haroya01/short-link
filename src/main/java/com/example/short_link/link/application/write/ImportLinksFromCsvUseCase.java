@@ -1,6 +1,5 @@
 package com.example.short_link.link.application.write;
 
-import com.example.short_link.link.application.LinkCreationService;
 import com.example.short_link.link.application.dto.BulkImportResult;
 import com.example.short_link.link.application.dto.BulkImportRow;
 import com.example.short_link.link.application.dto.LinkCreated;
@@ -33,7 +32,7 @@ public class ImportLinksFromCsvUseCase {
 
   public static final int MAX_ROWS = 100;
 
-  private final LinkCreationService creationService;
+  private final CreateLinkUseCase creationService;
   private final MeterRegistry meterRegistry;
 
   public BulkImportResult execute(ImportLinksFromCsvCommand command) throws IOException {
@@ -57,8 +56,9 @@ public class ImportLinksFromCsvUseCase {
         }
         Instant expires = parseInstant(row.expiresAt());
         LinkCreated created =
-            creationService.create(
-                row.url().trim(), command.userId(), blankToNull(row.customCode()), expires);
+            creationService.execute(
+                CreateLinkCommand.of(
+                    row.url().trim(), command.userId(), blankToNull(row.customCode()), expires));
         results.add(row.withResult(created.shortCode(), null));
         ok++;
       } catch (RuntimeException e) {
