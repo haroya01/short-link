@@ -8,6 +8,8 @@ import com.example.short_link.link.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.application.helper.LinkUrlHasher;
 import com.example.short_link.link.application.helper.ReservedShortCodes;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkOgMetadataEntity;
+import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -32,6 +34,7 @@ public class LinkCreationService {
   private static final SecureRandom CLAIM_RANDOM = new SecureRandom();
 
   private final LinkRepository repository;
+  private final LinkOgMetadataRepository ogMetadataRepository;
   private final ShortCodeGenerator generator;
   private final MeterRegistry meterRegistry;
   private final UrlSafetyChecker urlSafetyChecker;
@@ -43,6 +46,7 @@ public class LinkCreationService {
 
   public LinkCreationService(
       LinkRepository repository,
+      LinkOgMetadataRepository ogMetadataRepository,
       ShortCodeGenerator generator,
       MeterRegistry meterRegistry,
       UrlSafetyChecker urlSafetyChecker,
@@ -52,6 +56,7 @@ public class LinkCreationService {
       PlatformTransactionManager transactionManager,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
+    this.ogMetadataRepository = ogMetadataRepository;
     this.generator = generator;
     this.meterRegistry = meterRegistry;
     this.urlSafetyChecker = urlSafetyChecker;
@@ -154,7 +159,9 @@ public class LinkCreationService {
       String url, String code, Long userId, Instant expiresAt, boolean authenticated) {
     LinkEntity entity = new LinkEntity(url, code, userId, expiresAt);
     attachClaimTokenIfAnonymous(entity, authenticated);
-    return repository.save(entity);
+    LinkEntity saved = repository.save(entity);
+    ogMetadataRepository.save(new LinkOgMetadataEntity(saved.getId()));
+    return saved;
   }
 
   private void publishCreated(LinkEntity saved, Long userId, boolean custom) {

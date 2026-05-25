@@ -2,6 +2,8 @@ package com.example.short_link.link.application;
 
 import com.example.short_link.link.application.dto.OgOverrideResult;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkOgMetadataEntity;
+import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class OgOverrideService {
 
   private final LinkRepository repository;
+  private final LinkOgMetadataRepository ogMetadataRepository;
   private final ProfileCacheEviction cacheEviction;
 
   @Transactional
@@ -35,6 +38,12 @@ public class OgOverrideService {
       throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
     }
     link.changeOgOverride(title, description, image);
+    LinkOgMetadataEntity ogMeta =
+        ogMetadataRepository
+            .findById(link.getId())
+            .orElseGet(() -> new LinkOgMetadataEntity(link.getId()));
+    ogMeta.changeOverride(title, description, image);
+    ogMetadataRepository.save(ogMeta);
     cacheEviction.evictByUserId(userId);
     return new OgOverrideResult(
         link.getShortCode(),

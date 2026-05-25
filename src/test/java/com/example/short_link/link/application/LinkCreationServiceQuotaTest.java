@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -34,6 +35,7 @@ class LinkCreationServiceQuotaTest {
     LinkCreationService svc =
         new LinkCreationService(
             repo,
+            mock(LinkOgMetadataRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -62,6 +64,7 @@ class LinkCreationServiceQuotaTest {
     LinkCreationService svc =
         new LinkCreationService(
             repo,
+            mock(LinkOgMetadataRepository.class),
             gen,
             new SimpleMeterRegistry(),
             safety,
@@ -90,6 +93,7 @@ class LinkCreationServiceQuotaTest {
     LinkCreationService svc =
         new LinkCreationService(
             repo,
+            mock(LinkOgMetadataRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -115,6 +119,7 @@ class LinkCreationServiceQuotaTest {
     LinkCreationService svc =
         new LinkCreationService(
             repo,
+            mock(LinkOgMetadataRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -152,6 +157,7 @@ class LinkCreationServiceQuotaTest {
     LinkCreationService svc =
         new LinkCreationService(
             repo,
+            mock(LinkOgMetadataRepository.class),
             gen,
             new SimpleMeterRegistry(),
             safety,
