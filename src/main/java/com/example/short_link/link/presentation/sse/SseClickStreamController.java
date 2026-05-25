@@ -1,6 +1,6 @@
 package com.example.short_link.link.presentation.sse;
 
-import com.example.short_link.link.application.LinkAccessGuard;
+import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;

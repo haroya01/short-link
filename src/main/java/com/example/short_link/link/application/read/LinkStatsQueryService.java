@@ -1,14 +1,14 @@
 package com.example.short_link.link.application.read;
 
-import com.example.short_link.link.application.LinkAccessGuard;
+import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkInsights;
 import com.example.short_link.link.application.ReferrerChannelClassifier;
 import com.example.short_link.link.application.dto.LinkStats;
-import com.example.short_link.link.domain.LinkDestinationEntity;
+import com.example.short_link.link.destination.domain.LinkDestinationEntity;
+import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.domain.repository.ClickEventRepository;
-import com.example.short_link.link.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
