@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.link.domain.CustomDomainEntity;
 import com.example.short_link.link.domain.repository.CustomDomainRepository;
+import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -55,7 +56,7 @@ class CustomDomainRoutingE2ETest {
     String domain = "go.brand-a.example.com";
     CustomDomainEntity verified =
         new CustomDomainEntity(owner.getId(), domain, "kurl-verify=ignored");
-    writeField(verified, "createdAt", Instant.now());
+    TestEntities.setField(verified, "createdAt", Instant.now());
     verified.markVerified();
     customDomainRepository.saveAndFlush(verified);
 
@@ -96,7 +97,7 @@ class CustomDomainRoutingE2ETest {
     String domain = "go.brand-pending.example.com";
     CustomDomainEntity pending =
         new CustomDomainEntity(owner.getId(), domain, "kurl-verify=pending");
-    writeField(pending, "createdAt", Instant.now());
+    TestEntities.setField(pending, "createdAt", Instant.now());
     customDomainRepository.saveAndFlush(pending);
 
     mvc.perform(get("/cd0pend1").header("Host", domain))

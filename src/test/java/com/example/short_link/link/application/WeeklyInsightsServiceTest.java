@@ -13,9 +13,9 @@ import com.example.short_link.link.domain.repository.ClickEventReadRepository.He
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.LinkClickCount;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.UtmSourceClickRow;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -70,7 +70,7 @@ class WeeklyInsightsServiceTest {
     when(clickRepository.findTopLinksByUserIdAndRange(anyLong(), any(), any(), any(Pageable.class)))
         .thenReturn(List.of(top));
     LinkEntity link = new LinkEntity("https://example.com", "abc", 7L, null);
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(linkRepository.findById(1L)).thenReturn(Optional.of(link));
     UtmSourceClickRow source = mock(UtmSourceClickRow.class);
     when(source.getSource()).thenReturn("twitter");
@@ -132,27 +132,5 @@ class WeeklyInsightsServiceTest {
     assertThat(p.dayOfWeek()).isEqualTo(2);
     assertThat(p.hour()).isEqualTo(21);
     assertThat(p.clicks()).isEqualTo(5L);
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = findField(target.getClass(), name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
-  }
-
-  private static Field findField(Class<?> cls, String name) throws NoSuchFieldException {
-    Class<?> c = cls;
-    while (c != null) {
-      try {
-        return c.getDeclaredField(name);
-      } catch (NoSuchFieldException ignored) {
-        c = c.getSuperclass();
-      }
-    }
-    throw new NoSuchFieldException(name);
   }
 }

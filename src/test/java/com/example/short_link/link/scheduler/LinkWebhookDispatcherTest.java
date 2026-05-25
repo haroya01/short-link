@@ -12,6 +12,7 @@ import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.repository.LinkWebhookRepository;
+import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -50,7 +51,7 @@ class LinkWebhookDispatcherTest {
   private LinkWebhookEntity hook(WebhookFormat format) {
     LinkWebhookEntity h =
         new LinkWebhookEntity(1L, "https://example.com/hook", "secret", "test", format);
-    writeField(h, "id", 99L);
+    TestEntities.withId(h, 99L);
     return h;
   }
 
@@ -69,7 +70,7 @@ class LinkWebhookDispatcherTest {
   void deliverBlocksWhenUrlNotPublic() {
     LinkWebhookEntity h =
         new LinkWebhookEntity(1L, "http://localhost/hook", "secret", "n", WebhookFormat.GENERIC);
-    writeField(h, "id", 99L);
+    TestEntities.withId(h, 99L);
     dispatcher.deliver(h, "{\"a\":1}", "click");
     assertThat(meterRegistry.counter("webhook.delivery", "result", "blocked").count())
         .isEqualTo(1.0);
@@ -182,7 +183,7 @@ class LinkWebhookDispatcherTest {
   void deliverFailsToSignWhenSecretInvalid() {
     LinkWebhookEntity h =
         new LinkWebhookEntity(1L, "https://example.com/hook", null, "n", WebhookFormat.GENERIC);
-    writeField(h, "id", 99L);
+    TestEntities.withId(h, 99L);
     dispatcher.deliver(h, "{\"a\":1}", "click");
     assertThat(meterRegistry.counter("webhook.delivery", "result", "sign_error").count())
         .isEqualTo(1.0);
