@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.tag.presentation;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -7,8 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.TagService;
-import com.example.short_link.link.application.TagService.TagSummary;
+import com.example.short_link.tag.application.TagService;
+import com.example.short_link.tag.application.TagService.TagSummary;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;

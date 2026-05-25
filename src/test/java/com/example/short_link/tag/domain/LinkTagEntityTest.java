@@ -1,9 +1,9 @@
-package com.example.short_link.link.domain;
+package com.example.short_link.tag.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.domain.LinkTagEntity.LinkTagId;
 import com.example.short_link.link.domain.repository.*;
+import com.example.short_link.tag.domain.LinkTagEntity.LinkTagId;
 import org.junit.jupiter.api.Test;
 
 class LinkTagEntityTest {

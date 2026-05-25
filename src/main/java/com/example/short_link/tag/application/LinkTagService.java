@@ -1,14 +1,14 @@
-package com.example.short_link.link.application;
+package com.example.short_link.tag.application;
 
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkTagEntity;
-import com.example.short_link.link.domain.TagEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.domain.repository.LinkTagRepository;
-import com.example.short_link.link.domain.repository.TagRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.tag.domain.LinkTagEntity;
+import com.example.short_link.tag.domain.TagEntity;
+import com.example.short_link.tag.domain.repository.LinkTagRepository;
+import com.example.short_link.tag.domain.repository.TagRepository;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

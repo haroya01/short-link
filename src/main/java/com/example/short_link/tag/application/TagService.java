@@ -1,10 +1,10 @@
-package com.example.short_link.link.application;
+package com.example.short_link.tag.application;
 
-import com.example.short_link.link.domain.TagEntity;
-import com.example.short_link.link.domain.repository.LinkTagRepository;
-import com.example.short_link.link.domain.repository.TagRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.tag.domain.TagEntity;
+import com.example.short_link.tag.domain.repository.LinkTagRepository;
+import com.example.short_link.tag.domain.repository.TagRepository;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
