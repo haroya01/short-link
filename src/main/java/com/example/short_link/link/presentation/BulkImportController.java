@@ -1,9 +1,10 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.BulkImportService;
-import com.example.short_link.link.application.BulkImportService.BulkImportResult;
-import com.example.short_link.link.application.BulkImportService.BulkImportRow;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.application.dto.BulkImportResult;
+import com.example.short_link.link.application.dto.BulkImportRow;
+import com.example.short_link.link.application.write.ImportLinksFromCsvCommand;
+import com.example.short_link.link.application.write.ImportLinksFromCsvUseCase;
 import java.io.IOException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -21,7 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class BulkImportController {
 
-  private final BulkImportService service;
+  private final ImportLinksFromCsvUseCase useCase;
   private final ShortLinkUrlBuilder urlBuilder;
 
   @PostMapping(value = "/bulk", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -31,7 +32,8 @@ public class BulkImportController {
     if (file.isEmpty()) {
       return ResponseEntity.badRequest().body("empty file");
     }
-    BulkImportResult result = service.importCsv(userId, file.getInputStream());
+    BulkImportResult result =
+        useCase.execute(new ImportLinksFromCsvCommand(userId, file.getInputStream()));
     String csv = renderCsv(result);
     return ResponseEntity.ok()
         .contentType(MediaType.parseMediaType("text/csv; charset=utf-8"))
