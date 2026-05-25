@@ -10,8 +10,9 @@ import com.example.short_link.campaign.domain.CampaignStatus;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.campaign.exception.CampaignErrorCode;
 import com.example.short_link.campaign.exception.CampaignException;
-import com.example.short_link.link.application.LinkCreationService;
 import com.example.short_link.link.application.dto.LinkCreated;
+import com.example.short_link.link.application.write.CreateLinkCommand;
+import com.example.short_link.link.application.write.CreateLinkUseCase;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import java.util.ArrayList;
@@ -26,7 +27,7 @@ public class CampaignBatchService {
 
   private final CampaignBatchRepository batchRepository;
   private final LinkRepository linkRepository;
-  private final LinkCreationService linkCreationService;
+  private final CreateLinkUseCase linkCreationService;
   private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
 
   @Transactional
@@ -122,7 +123,8 @@ public class CampaignBatchService {
       CampaignEntity campaign, Long ownerId, CampaignBatchCreateRequest row, String destination) {
     // dedup=false — 같은 destination 의 여러 batch 가 각자 다른 short code 를 갖도록 (batch:link
     // UNIQUE 제약). 인쇄물 발주 시 batch 별 추적이 가능해야 함.
-    LinkCreated created = linkCreationService.create(destination, ownerId, null, null, false);
+    LinkCreated created =
+        linkCreationService.execute(new CreateLinkCommand(destination, ownerId, null, null, false));
     LinkEntity link =
         linkRepository
             .findByShortCode(created.shortCode())

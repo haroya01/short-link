@@ -2,9 +2,10 @@ package com.example.short_link.link.presentation;
 
 import com.example.short_link.common.pow.PowRequiredException;
 import com.example.short_link.common.pow.PowService;
-import com.example.short_link.link.application.LinkCreationService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.LinkCreated;
+import com.example.short_link.link.application.write.CreateLinkCommand;
+import com.example.short_link.link.application.write.CreateLinkUseCase;
 import com.example.short_link.link.presentation.request.CreateLinkRequest;
 import com.example.short_link.link.presentation.response.CreateLinkResponse;
 import jakarta.validation.Valid;
@@ -23,7 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class LinkController {
 
-  private final LinkCreationService service;
+  private final CreateLinkUseCase service;
   private final ShortLinkUrlBuilder urlBuilder;
   private final PowService powService;
 
@@ -39,7 +40,8 @@ public class LinkController {
       }
     }
     LinkCreated created =
-        service.create(request.url(), userId, request.customCode(), request.expiresAt());
+        service.execute(
+            CreateLinkCommand.of(request.url(), userId, request.customCode(), request.expiresAt()));
     String shortUrl = urlBuilder.build(created.shortCode());
     return ResponseEntity.created(URI.create(shortUrl))
         .body(new CreateLinkResponse(created.shortCode(), shortUrl, created.claimToken()));

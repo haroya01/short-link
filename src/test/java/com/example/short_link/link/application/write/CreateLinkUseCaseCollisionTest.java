@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.write;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
+import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
@@ -35,8 +36,8 @@ class LinkCreationServiceCollisionTest {
     when(safetyChecker.isSafe(any())).thenReturn(true);
     var blockedDomain = mock(com.example.short_link.admin.application.BlockedDomainService.class);
     when(blockedDomain.isBlocked(any())).thenReturn(false);
-    LinkCreationService service =
-        new LinkCreationService(
+    CreateLinkUseCase service =
+        new CreateLinkUseCase(
             repository,
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
@@ -51,7 +52,8 @@ class LinkCreationServiceCollisionTest {
             noopTransactionManager(),
             200L);
 
-    assertThatThrownBy(() -> service.create("https://example.com", null, null, null))
+    assertThatThrownBy(
+            () -> service.execute(CreateLinkCommand.of("https://example.com", null, null, null)))
         .isInstanceOf(LinkException.class);
 
     verify(generator, times(5)).generate();
