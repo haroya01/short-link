@@ -17,13 +17,11 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.regex.Pattern;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class UpdateProfileUseCase {
 
   private static final Pattern USERNAME = Pattern.compile("^[a-z0-9][a-z0-9_]{2,15}$");
@@ -35,9 +33,21 @@ public class UpdateProfileUseCase {
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final MeterRegistry meterRegistry;
   private final ProfileCacheEviction cacheEviction;
+  private final String publicProfileBaseUrl;
 
-  @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
-  private String publicProfileBaseUrl;
+  public UpdateProfileUseCase(
+      UserRepository userRepository,
+      UsernameHistoryRepository usernameHistoryRepository,
+      MeterRegistry meterRegistry,
+      ProfileCacheEviction cacheEviction,
+      @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
+          String publicProfileBaseUrl) {
+    this.userRepository = userRepository;
+    this.usernameHistoryRepository = usernameHistoryRepository;
+    this.meterRegistry = meterRegistry;
+    this.cacheEviction = cacheEviction;
+    this.publicProfileBaseUrl = publicProfileBaseUrl;
+  }
 
   @Transactional
   public MyProfile execute(UpdateProfileCommand cmd) {

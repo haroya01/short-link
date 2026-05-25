@@ -23,7 +23,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class UpdateProfileUseCaseTest {
@@ -42,8 +41,8 @@ class UpdateProfileUseCaseTest {
             userRepository,
             usernameHistoryRepository,
             meterRegistry,
-            mock(ProfileCacheEviction.class));
-    ReflectionTestUtils.setField(useCase, "publicProfileBaseUrl", "https://kurl.app/u/");
+            mock(ProfileCacheEviction.class),
+            "https://kurl.app/u/");
   }
 
   private UserEntity userWithId(long id) {

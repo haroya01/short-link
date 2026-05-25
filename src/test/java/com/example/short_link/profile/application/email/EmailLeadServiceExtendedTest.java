@@ -25,7 +25,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.test.util.ReflectionTestUtils;
 
 class EmailLeadServiceExtendedTest {
 
@@ -37,8 +36,7 @@ class EmailLeadServiceExtendedTest {
   void setUp() {
     repository = mock(EmailLeadRepository.class);
     blockRepository = mock(ProfileBlockRepository.class);
-    service = new EmailLeadService(repository, blockRepository);
-    ReflectionTestUtils.setField(service, "ipHashSalt", "salt");
+    service = new EmailLeadService(repository, blockRepository, "salt");
   }
 
   private ProfileBlockEntity emailBlock(long blockId, long ownerId) {
