@@ -1,6 +1,6 @@
 package com.example.short_link.link.webhook.scheduler;
 
-import com.example.short_link.common.net.PinnedHttpClientFactory;
+import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
@@ -15,6 +15,7 @@ import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -23,11 +24,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.core5.http.ContentType;
-import org.apache.hc.core5.http.io.entity.StringEntity;
-import org.apache.hc.core5.util.Timeout;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
@@ -74,10 +70,14 @@ public class LinkWebhookDispatcher {
               + "return c",
           Long.class);
 
+  private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(3);
+  private static final Duration READ_TIMEOUT = Duration.ofSeconds(5);
+
   private final LinkWebhookRepository repository;
   private final JsonMapper jsonMapper;
   private final MeterRegistry meterRegistry;
   private final StringRedisTemplate redis;
+  private final HttpFetcher httpFetcher;
   private final ConcurrentHashMap<Long, ConcurrentLinkedQueue<Map<String, Object>>> batchQueues =
       new ConcurrentHashMap<>();
 
@@ -85,11 +85,13 @@ public class LinkWebhookDispatcher {
       LinkWebhookRepository repository,
       JsonMapper jsonMapper,
       MeterRegistry meterRegistry,
-      StringRedisTemplate redis) {
+      StringRedisTemplate redis,
+      HttpFetcher httpFetcher) {
     this.repository = repository;
     this.jsonMapper = jsonMapper;
     this.meterRegistry = meterRegistry;
     this.redis = redis;
+    this.httpFetcher = httpFetcher;
   }
 
   /**
@@ -238,36 +240,30 @@ public class LinkWebhookDispatcher {
         return;
       }
     }
-    HttpPost request = new HttpPost(resolved.uri());
-    request.setHeader("Content-Type", "application/json");
-    request.setHeader("User-Agent", USER_AGENT);
-    request.setHeader(EVENT_HEADER, eventType);
+    Map<String, String> headers = new LinkedHashMap<>();
+    headers.put("User-Agent", USER_AGENT);
+    headers.put(EVENT_HEADER, eventType);
     if (signed) {
-      request.setHeader(SIGNATURE_HEADER, "sha256=" + signature);
+      headers.put(SIGNATURE_HEADER, "sha256=" + signature);
     }
-    request.setEntity(new StringEntity(body, ContentType.APPLICATION_JSON));
     // Timer captures wall-clock latency of the actual HTTP call (including DNS, TLS, server
     // processing, body discard). Tagged with result so the dashboard can split p95 of healthy
     // deliveries from p95 of degraded ones — receivers that 5xx slowly are otherwise invisible
     // in the existing counter view.
     Timer.Sample sample = Timer.start(meterRegistry);
     String resultTag = "exception";
-    // Per-request HttpClient with a DnsResolver pinned to the addresses the guard already vetted.
-    // Closes the DNS rebinding window: even if the receiver's DNS now answers with a private IP
-    // (10.x / 169.254.x / link-local IPv6 metadata), Apache HttpClient won't see it — the resolver
-    // only ever returns the addresses we resolved up-front.
-    try (CloseableHttpClient client = buildPinnedClient(resolved)) {
-      int status =
-          client.execute(
-              request,
-              response -> {
-                int code = response.getCode();
-                // Drain body so the connection can be reused / pooled cleanly.
-                if (response.getEntity() != null) {
-                  org.apache.hc.core5.http.io.entity.EntityUtils.consume(response.getEntity());
-                }
-                return code;
-              });
+    try {
+      HttpFetcher.Response response =
+          httpFetcher.fetch(
+              HttpFetcher.Request.post(
+                  resolved,
+                  headers,
+                  body.getBytes(StandardCharsets.UTF_8),
+                  "application/json",
+                  CONNECT_TIMEOUT,
+                  READ_TIMEOUT,
+                  0));
+      int status = response.status();
       if (status / 100 == 2) {
         hook.recordSuccess(status);
         meterRegistry.counter("webhook.delivery", "result", "ok").increment();
@@ -295,12 +291,6 @@ public class LinkWebhookDispatcher {
     } finally {
       sample.stop(meterRegistry.timer("outbound.http", "client", "webhook", "result", resultTag));
     }
-  }
-
-  // protected for test seam: subclass overrides to return a fake client.
-  protected CloseableHttpClient buildPinnedClient(Resolved resolved) {
-    return PinnedHttpClientFactory.build(
-        resolved, Timeout.ofSeconds(3), Timeout.ofSeconds(5), Timeout.of(TIMEOUT));
   }
 
   private Map<String, Object> clickPayload(ClickRecordedEvent event) {
