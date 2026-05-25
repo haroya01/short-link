@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation.response;
+package com.example.short_link.tag.presentation.response;
 
 import java.util.List;
 

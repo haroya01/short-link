@@ -1,6 +1,6 @@
-package com.example.short_link.link.domain.repository;
+package com.example.short_link.tag.domain.repository;
 
-import com.example.short_link.link.domain.*;
+import com.example.short_link.tag.domain.LinkTagEntity;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
