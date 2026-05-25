@@ -27,7 +27,7 @@ class EmailLeadServiceTest {
   void setUp() {
     repository = mock(EmailLeadRepository.class);
     ProfileBlockRepository blockRepository = mock(ProfileBlockRepository.class);
-    service = new EmailLeadService(repository, blockRepository);
+    service = new EmailLeadService(repository, blockRepository, "");
   }
 
   @Test

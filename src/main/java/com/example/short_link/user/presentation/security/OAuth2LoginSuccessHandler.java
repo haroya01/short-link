@@ -8,7 +8,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -17,14 +16,20 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationSu
 import org.springframework.stereotype.Component;
 
 @Component
-@RequiredArgsConstructor
 public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHandler {
 
   private final AuthService authService;
   private final RefreshCookieWriter refreshCookieWriter;
+  private final String frontendBaseUrl;
 
-  @Value("${short-link.frontend-base-url}")
-  private String frontendBaseUrl;
+  public OAuth2LoginSuccessHandler(
+      AuthService authService,
+      RefreshCookieWriter refreshCookieWriter,
+      @Value("${short-link.frontend-base-url}") String frontendBaseUrl) {
+    this.authService = authService;
+    this.refreshCookieWriter = refreshCookieWriter;
+    this.frontendBaseUrl = frontendBaseUrl;
+  }
 
   @Override
   public void onAuthenticationSuccess(
