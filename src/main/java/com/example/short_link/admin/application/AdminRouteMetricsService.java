@@ -18,13 +18,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Route-level performance view. Reads raw rows out of {@code request_metrics} (the buffered
- * async-written log of every finished HTTP request) and aggregates per-{@code (method, uri)}.
- * {@link #routeMetrics()} returns lifetime stats (the full {@code request_metrics} table); {@link
- * #routeMetricsWindow(Window)} restricts to a recent slice.
- *
- * <p>Replaces the in-process {@code RouteMetricsRingBuffer} that used to drive these endpoints —
- * the ring sampled Micrometer's {@code http.server.requests} timer once a minute, which gave us
+ * Replaces the in-process {@code RouteMetricsRingBuffer} that used to drive these endpoints — the
+ * ring sampled Micrometer's {@code http.server.requests} timer once a minute, which gave us
  * per-minute deltas but no raw events to drill into. The new source carries every request, so
  * percentile and error-rate computations operate over the actual sample set rather than the timer's
  * bucketed approximation.
