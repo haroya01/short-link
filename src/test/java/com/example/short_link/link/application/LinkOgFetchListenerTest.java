@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
@@ -40,6 +41,7 @@ class LinkOgFetchListenerTest {
         new LinkOgFetchListener(
             scraper,
             repository,
+            mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
             cacheManager,
             new OgFetchProperties(3, 30, true));
@@ -68,6 +70,7 @@ class LinkOgFetchListenerTest {
         new LinkOgFetchListener(
             scraper,
             repository,
+            mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
             new NoOpCacheManager(),
             new OgFetchProperties(1, 30, true));
@@ -91,6 +94,7 @@ class LinkOgFetchListenerTest {
         new LinkOgFetchListener(
             scraper,
             repository,
+            mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
             new NoOpCacheManager(),
             new OgFetchProperties(3, 30, true));

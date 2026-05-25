@@ -5,6 +5,8 @@ import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkOgMetadataEntity;
+import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -25,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkManagementService {
 
   private final LinkRepository repository;
+  private final LinkOgMetadataRepository ogMetadataRepository;
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final CacheManager cacheManager;
@@ -50,6 +53,12 @@ public class LinkManagementService {
     if (note != null) link.updateNote(note);
     if (expiredMessage != null) link.updateExpiredMessage(expiredMessage);
     if (urlChanged) {
+      LinkOgMetadataEntity ogMeta =
+          ogMetadataRepository
+              .findById(link.getId())
+              .orElseGet(() -> new LinkOgMetadataEntity(link.getId()));
+      ogMeta.resetForNewUrl();
+      ogMetadataRepository.save(ogMeta);
       events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));
     }
     auditLogService.record(
