@@ -1,8 +1,13 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.LinkManagementService;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.MyLink;
+import com.example.short_link.link.application.write.BulkDeleteLinksCommand;
+import com.example.short_link.link.application.write.BulkDeleteLinksUseCase;
+import com.example.short_link.link.application.write.DeleteLinkCommand;
+import com.example.short_link.link.application.write.DeleteLinkUseCase;
+import com.example.short_link.link.application.write.UpdateLinkCommand;
+import com.example.short_link.link.application.write.UpdateLinkUseCase;
 import com.example.short_link.link.presentation.request.BulkDeleteRequest;
 import com.example.short_link.link.presentation.request.UpdateLinkRequest;
 import com.example.short_link.link.presentation.response.BulkDeleteResponse;
@@ -24,7 +29,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class LinkManagementController {
 
-  private final LinkManagementService service;
+  private final UpdateLinkUseCase updateLink;
+  private final DeleteLinkUseCase deleteLink;
+  private final BulkDeleteLinksUseCase bulkDeleteLinks;
   private final ShortLinkUrlBuilder urlBuilder;
 
   @PatchMapping("/{shortCode}")
@@ -33,13 +40,14 @@ public class LinkManagementController {
       @PathVariable String shortCode,
       @Valid @RequestBody UpdateLinkRequest request) {
     MyLink updated =
-        service.update(
-            userId,
-            shortCode,
-            request.originalUrl(),
-            request.expiresAt(),
-            request.note(),
-            request.expiredMessage());
+        updateLink.execute(
+            new UpdateLinkCommand(
+                userId,
+                shortCode,
+                request.originalUrl(),
+                request.expiresAt(),
+                request.note(),
+                request.expiredMessage()));
     return new MyLinkResponse(
         updated.shortCode(),
         urlBuilder.build(updated.shortCode()),
@@ -54,13 +62,13 @@ public class LinkManagementController {
   @DeleteMapping("/{shortCode}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
-    service.delete(userId, shortCode);
+    deleteLink.execute(new DeleteLinkCommand(userId, shortCode));
   }
 
   @DeleteMapping
   public BulkDeleteResponse bulkDelete(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody BulkDeleteRequest request) {
-    int removed = service.bulkDelete(userId, request.shortCodes());
+    int removed = bulkDeleteLinks.execute(BulkDeleteLinksCommand.of(userId, request.shortCodes()));
     return new BulkDeleteResponse(removed, request.shortCodes().size() - removed);
   }
 }
