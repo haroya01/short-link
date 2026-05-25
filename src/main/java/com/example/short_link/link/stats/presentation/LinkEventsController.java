@@ -30,25 +30,6 @@ public class LinkEventsController {
 
   private static LinkEventsPage toResponse(LinkEventsResult result) {
     return new LinkEventsPage(
-        result.items().stream()
-            .map(
-                item ->
-                    new LinkEventResponse(
-                        item.clickedAt(),
-                        item.country(),
-                        item.region(),
-                        item.city(),
-                        item.device(),
-                        item.os(),
-                        item.browser(),
-                        item.referrer(),
-                        item.referrerHost(),
-                        item.channel(),
-                        item.language(),
-                        item.bot(),
-                        item.botName(),
-                        item.ipMasked()))
-            .toList(),
-        result.nextCursor());
+        result.items().stream().map(LinkEventResponse::from).toList(), result.nextCursor());
   }
 }
