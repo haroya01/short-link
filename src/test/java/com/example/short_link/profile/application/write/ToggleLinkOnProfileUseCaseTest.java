@@ -2,11 +2,13 @@ package com.example.short_link.profile.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,9 @@ class ToggleLinkOnProfileUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new ToggleLinkOnProfileUseCase(linkRepository, profileOrdering);
+    useCase =
+        new ToggleLinkOnProfileUseCase(
+            linkRepository, profileOrdering, mock(ProfileCacheEviction.class));
   }
 
   @Test
@@ -49,7 +53,7 @@ class ToggleLinkOnProfileUseCaseTest {
   void missingThrows() {
     when(linkRepository.findByShortCode("missing")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> useCase.execute(new ToggleLinkOnProfileCommand(7L, "missing", true)))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -57,6 +61,6 @@ class ToggleLinkOnProfileUseCaseTest {
     LinkEntity link = new LinkEntity("https://t", "abc", 99L, null);
     when(linkRepository.findByShortCode("abc")).thenReturn(Optional.of(link));
     assertThatThrownBy(() -> useCase.execute(new ToggleLinkOnProfileCommand(7L, "abc", true)))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 }

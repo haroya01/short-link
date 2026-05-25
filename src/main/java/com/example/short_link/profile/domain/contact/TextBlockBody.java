@@ -1,6 +1,7 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -62,11 +63,11 @@ public final class TextBlockBody {
    */
   public static String normalize(String raw) {
     if (raw == null) {
-      throw new InvalidUsernameException("text block content required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block content required");
     }
     String trimmed = raw.trim();
     if (trimmed.isEmpty()) {
-      throw new InvalidUsernameException("text block content required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block content required");
     }
 
     String body;
@@ -99,16 +100,17 @@ public final class TextBlockBody {
 
     body = body.trim();
     if (body.isEmpty()) {
-      throw new InvalidUsernameException("text block content required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block content required");
     }
     if (body.length() > BODY_MAX) {
-      throw new InvalidUsernameException("text block too long");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block too long");
     }
 
     try {
       return MAPPER.writeValueAsString(new PayloadOut(body, layout, accent, icon));
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("text block: serialization failed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "text block: serialization failed");
     }
   }
 

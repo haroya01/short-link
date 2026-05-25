@@ -4,11 +4,11 @@ import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.application.helper.CsvWriter;
 import com.example.short_link.link.application.read.LinkStatsQueryService;
 import com.example.short_link.link.domain.ClickEventEntity;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.InvalidExportDimensionException;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -36,7 +36,7 @@ public class LinkExportService {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     StringBuilder sb = new StringBuilder(64 * 1024);
     CsvWriter.appendRow(
@@ -134,7 +134,7 @@ public class LinkExportService {
         CsvWriter.appendRow(sb, "channel", "count");
         stats.channelClicks().forEach(d -> CsvWriter.appendRow(sb, d.channel(), d.count()));
       }
-      default -> throw new InvalidExportDimensionException(dim);
+      default -> throw new LinkException(LinkErrorCode.INVALID_EXPORT_DIMENSION, dim);
     }
     return sb.toString();
   }

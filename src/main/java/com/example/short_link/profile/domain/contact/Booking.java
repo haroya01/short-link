@@ -1,6 +1,7 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -31,20 +32,21 @@ public record Booking(String url, String title, String description, String ctaLa
 
   public static String normalize(String raw) {
     if (raw == null || raw.isBlank()) {
-      throw new InvalidUsernameException("booking: config required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "booking: config required");
     }
     Booking parsed;
     try {
       parsed = MAPPER.readValue(raw.trim(), Booking.class);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("booking: malformed json");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "booking: malformed json");
     }
     String url = trimTo(parsed.url, URL_MAX);
     if (url == null) {
-      throw new InvalidUsernameException("booking: url required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "booking: url required");
     }
     if (Provider.resolve(url).isEmpty()) {
-      throw new InvalidUsernameException("booking: unsupported provider");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "booking: unsupported provider");
     }
     Booking out =
         new Booking(
@@ -55,7 +57,8 @@ public record Booking(String url, String title, String description, String ctaLa
     try {
       return MAPPER.writeValueAsString(out);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("booking: serialization failed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "booking: serialization failed");
     }
   }
 

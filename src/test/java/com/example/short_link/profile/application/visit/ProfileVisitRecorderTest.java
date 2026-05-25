@@ -15,7 +15,7 @@ import com.example.short_link.link.application.UserAgentClassifier;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

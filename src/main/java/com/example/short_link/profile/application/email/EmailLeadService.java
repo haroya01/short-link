@@ -1,13 +1,12 @@
 package com.example.short_link.profile.application.email;
 
 import com.example.short_link.profile.domain.ProfileBlockEntity;
-import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.email.EmailLeadEntity;
 import com.example.short_link.profile.domain.email.EmailLeadRepository;
-import com.example.short_link.profile.exception.EmailLeadRateLimitedException;
-import com.example.short_link.profile.exception.InvalidUsernameException;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -58,17 +57,21 @@ public class EmailLeadService {
             .findById(blockId)
             .filter(b -> b.getType() == ProfileBlockType.EMAIL_FORM)
             .filter(b -> b.isOwnedBy(ownerUserId))
-            .orElseThrow(() -> new ProfileNotFoundException("email form block " + blockId));
+            .orElseThrow(
+                () ->
+                    new ProfileException(
+                        ProfileErrorCode.PROFILE_NOT_FOUND, "email form block " + blockId));
     String ipHash = hashIp(clientIp);
     Instant blockSince = Instant.now().minus(BLOCK_WINDOW);
     if (repository.countByBlockIdAndSubmittedAtAfter(block.getId(), blockSince)
         >= BLOCK_WINDOW_MAX) {
-      throw new EmailLeadRateLimitedException("block window exhausted");
+      throw new ProfileException(
+          ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "block window exhausted");
     }
     Instant ipSince = Instant.now().minus(IP_WINDOW);
     if (ipHash != null
         && repository.countByIpHashAndSubmittedAtAfter(ipHash, ipSince) >= IP_WINDOW_MAX) {
-      throw new EmailLeadRateLimitedException("ip window exhausted");
+      throw new ProfileException(ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "ip window exhausted");
     }
     if (repository.existsByBlockIdAndEmail(block.getId(), normalizedEmail)) {
       // Idempotent for the visitor — return a synthetic OK without writing again. The owner
@@ -85,7 +88,8 @@ public class EmailLeadService {
         blockRepository
             .findById(blockId)
             .filter(b -> b.getType() == ProfileBlockType.EMAIL_FORM)
-            .orElseThrow(() -> new ProfileNotFoundException("block " + blockId));
+            .orElseThrow(
+                () -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "block " + blockId));
     return submit(block.getUserId(), block.getId(), email, clientIp);
   }
 
@@ -116,7 +120,8 @@ public class EmailLeadService {
         repository
             .findById(leadId)
             .filter(l -> l.isOwnedBy(userId))
-            .orElseThrow(() -> new ProfileNotFoundException("lead " + leadId));
+            .orElseThrow(
+                () -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "lead " + leadId));
     repository.delete(lead);
   }
 
@@ -126,16 +131,20 @@ public class EmailLeadService {
         repository
             .findById(leadId)
             .filter(l -> l.isOwnedBy(userId))
-            .orElseThrow(() -> new ProfileNotFoundException("lead " + leadId));
+            .orElseThrow(
+                () -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "lead " + leadId));
     lead.setOptedOut(optedOut);
     return repository.save(lead);
   }
 
   private static String normalizeEmail(String raw) {
     String trimmed = raw == null ? "" : raw.trim().toLowerCase();
-    if (trimmed.isEmpty()) throw new InvalidUsernameException("email required");
-    if (trimmed.length() > 254) throw new InvalidUsernameException("email too long");
-    if (!EMAIL.matcher(trimmed).matches()) throw new InvalidUsernameException("email malformed");
+    if (trimmed.isEmpty())
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email required");
+    if (trimmed.length() > 254)
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email too long");
+    if (!EMAIL.matcher(trimmed).matches())
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email malformed");
     return trimmed;
   }
 

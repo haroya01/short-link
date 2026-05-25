@@ -4,11 +4,11 @@ import com.example.short_link.link.application.dto.LinkEventView;
 import com.example.short_link.link.application.dto.LinkEventsResult;
 import com.example.short_link.link.application.helper.IpMasker;
 import com.example.short_link.link.domain.ClickEventEntity;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.InvalidCursorException;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
@@ -34,7 +34,7 @@ public class LinkEventsService {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     int pageSize = clampLimit(limit);
     PageRequest req = PageRequest.ofSize(pageSize);
@@ -92,7 +92,7 @@ public class LinkEventsService {
         String raw = new String(Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
         return Long.parseLong(raw);
       } catch (IllegalArgumentException e) {
-        throw new InvalidCursorException();
+        throw new LinkException(LinkErrorCode.INVALID_CURSOR);
       }
     }
   }

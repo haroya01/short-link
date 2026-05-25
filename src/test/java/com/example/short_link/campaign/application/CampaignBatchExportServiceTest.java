@@ -8,7 +8,7 @@ import com.example.short_link.campaign.application.dto.CampaignBatchUpdateReques
 import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;
 import java.io.ByteArrayInputStream;
 import java.time.Instant;
@@ -97,7 +97,11 @@ class CampaignBatchExportServiceTest {
     batchService.create(
         campaign.getId(), owner, new CampaignBatchCreateRequest("b", null, null, 10, null, null));
 
-    byte[] zip = exportService.exportQrZip(campaign.getId(), owner);
+    byte[] zip =
+        exportService.exportQrZip(
+            campaign.getId(),
+            owner,
+            com.example.short_link.campaign.application.dto.QrOptions.defaults());
 
     Set<String> entries = new HashSet<>();
     try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(zip))) {

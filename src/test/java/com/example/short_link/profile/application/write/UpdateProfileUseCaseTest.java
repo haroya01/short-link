@@ -3,16 +3,17 @@ package com.example.short_link.profile.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.profile.application.MyProfile;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
-import com.example.short_link.profile.domain.UsernameHistoryRepository;
-import com.example.short_link.profile.exception.InvalidUsernameException;
-import com.example.short_link.profile.exception.UsernameTakenException;
+import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
+import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -36,7 +37,12 @@ class UpdateProfileUseCaseTest {
   @BeforeEach
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
-    useCase = new UpdateProfileUseCase(userRepository, usernameHistoryRepository, meterRegistry);
+    useCase =
+        new UpdateProfileUseCase(
+            userRepository,
+            usernameHistoryRepository,
+            meterRegistry,
+            mock(ProfileCacheEviction.class));
     ReflectionTestUtils.setField(useCase, "publicProfileBaseUrl", "https://kurl.app/u/");
   }
 
@@ -63,7 +69,7 @@ class UpdateProfileUseCaseTest {
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
     String big = "x".repeat(300);
     assertThatThrownBy(() -> useCase.execute(new UpdateProfileCommand(7L, null, big, null, null)))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -80,10 +86,10 @@ class UpdateProfileUseCaseTest {
     UserEntity u = userWithId(7L);
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
     assertThatThrownBy(() -> useCase.execute(new UpdateProfileCommand(7L, "AB", null, null, null)))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () -> useCase.execute(new UpdateProfileCommand(7L, "has space", null, null, null)))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -92,7 +98,7 @@ class UpdateProfileUseCaseTest {
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
     assertThatThrownBy(
             () -> useCase.execute(new UpdateProfileCommand(7L, "admin", null, null, null)))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -103,7 +109,7 @@ class UpdateProfileUseCaseTest {
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(other));
     assertThatThrownBy(
             () -> useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null)))
-        .isInstanceOf(UsernameTakenException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -118,7 +124,7 @@ class UpdateProfileUseCaseTest {
         .thenReturn(Optional.of(hist));
     assertThatThrownBy(
             () -> useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null)))
-        .isInstanceOf(UsernameTakenException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test

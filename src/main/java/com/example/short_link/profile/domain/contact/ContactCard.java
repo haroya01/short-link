@@ -1,6 +1,7 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -80,21 +81,23 @@ public record ContactCard(
 
   public static String normalize(String raw) {
     if (raw == null || raw.isBlank()) {
-      throw new InvalidUsernameException("contact card: config required");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "contact card: config required");
     }
     ContactCard parsed;
     try {
       parsed = MAPPER.readValue(raw.trim(), ContactCard.class);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("contact card: malformed json");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "contact card: malformed json");
     }
     String name = trimTo(parsed.name, NAME_MAX);
     if (name == null || name.isEmpty()) {
-      throw new InvalidUsernameException("contact card: name required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "contact card: name required");
     }
     String email = trimTo(parsed.email, EMAIL_MAX);
     if (email != null && !EMAIL_PATTERN.matcher(email).matches()) {
-      throw new InvalidUsernameException("contact card: email malformed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "contact card: email malformed");
     }
     String website = trimTo(parsed.website, WEBSITE_MAX);
     if (website != null) validateHttpUrl(website, "website");
@@ -102,7 +105,8 @@ public record ContactCard(
     if (logoUrl != null) validateHttpUrl(logoUrl, "logoUrl");
     String palette = trimTo(parsed.palette, 32);
     if (palette != null && !ALLOWED_PALETTES.contains(palette)) {
-      throw new InvalidUsernameException(
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME,
           "contact card: palette must be one of " + ALLOWED_PALETTES);
     }
     ContactCard out =
@@ -121,7 +125,8 @@ public record ContactCard(
     try {
       return MAPPER.writeValueAsString(out);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("contact card: serialization failed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "contact card: serialization failed");
     }
   }
 
@@ -146,13 +151,16 @@ public record ContactCard(
       String scheme = uri.getScheme();
       if (scheme == null
           || (!scheme.equalsIgnoreCase("http") && !scheme.equalsIgnoreCase("https"))) {
-        throw new InvalidUsernameException("contact card: " + field + " must be http(s)");
+        throw new ProfileException(
+            ProfileErrorCode.INVALID_USERNAME, "contact card: " + field + " must be http(s)");
       }
       if (uri.getHost() == null || uri.getHost().isBlank()) {
-        throw new InvalidUsernameException("contact card: " + field + " missing host");
+        throw new ProfileException(
+            ProfileErrorCode.INVALID_USERNAME, "contact card: " + field + " missing host");
       }
     } catch (IllegalArgumentException ex) {
-      throw new InvalidUsernameException("contact card: " + field + " malformed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "contact card: " + field + " malformed");
     }
   }
 }

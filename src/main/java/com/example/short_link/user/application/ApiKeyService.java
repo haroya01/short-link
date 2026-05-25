@@ -1,7 +1,7 @@
 package com.example.short_link.user.application;
 
 import com.example.short_link.user.domain.ApiKeyEntity;
-import com.example.short_link.user.domain.ApiKeyRepository;
+import com.example.short_link.user.domain.repository.ApiKeyRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

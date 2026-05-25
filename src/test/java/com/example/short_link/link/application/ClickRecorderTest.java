@@ -10,7 +10,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.domain.ClickEventEntity;
-import com.example.short_link.link.domain.ClickEventRepository;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

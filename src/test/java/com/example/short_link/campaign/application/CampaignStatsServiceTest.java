@@ -8,9 +8,10 @@ import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.link.domain.ClickEventEntity;
-import com.example.short_link.link.domain.ClickEventRepository;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -34,7 +35,8 @@ class CampaignStatsServiceTest {
   @Autowired
   private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveCampaign;
 
-  @Autowired private ClickEventRepository clickEventRepository;
+  @Autowired private ClickEventRepository clickRepository;
+  private ClickEventReadRepository clickEventRepository;
   @Autowired private UserRepository userRepository;
 
   private Long newOwner(String suffix) {
@@ -45,7 +47,7 @@ class CampaignStatsServiceTest {
 
   private void recordClick(Long linkId, Instant at, boolean bot) {
     ClickEventEntity evt = ClickEventEntity.builder().linkId(linkId).clickedAt(at).bot(bot).build();
-    clickEventRepository.save(evt);
+    clickRepository.save(evt);
   }
 
   @Test
