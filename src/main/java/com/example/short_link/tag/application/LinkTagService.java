@@ -10,6 +10,7 @@ import com.example.short_link.tag.domain.TagEntity;
 import com.example.short_link.tag.domain.repository.LinkTagRepository;
 import com.example.short_link.tag.domain.repository.TagRepository;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -66,7 +67,7 @@ public class LinkTagService {
     for (LinkTagEntity j : joins) {
       out.computeIfAbsent(j.getLinkId(), k -> new ArrayList<>()).add(tagNames.get(j.getTagId()));
     }
-    out.values().forEach(java.util.Collections::sort);
+    out.values().forEach(Collections::sort);
     return out;
   }
 

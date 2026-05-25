@@ -13,6 +13,7 @@ import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.support.TestEntities;
 import java.lang.reflect.Field;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,7 +49,7 @@ class ReorderProfileUseCaseTest {
         .thenReturn(List.of(l1, l2));
     when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L)).thenReturn(List.of(b1));
 
-    java.util.List<ReorderItem> items = new java.util.ArrayList<>();
+    List<ReorderItem> items = new ArrayList<>();
     items.add(new ReorderItem("LINK", "a1"));
     items.add(new ReorderItem("BLOCK", "11"));
     items.add(new ReorderItem("LINK", "b2"));

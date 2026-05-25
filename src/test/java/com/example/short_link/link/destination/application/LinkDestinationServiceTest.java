@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
+import com.example.short_link.link.destination.application.read.LinkDestinationQueryService;
+import com.example.short_link.link.destination.application.write.AddDestinationUseCase;
+import com.example.short_link.link.destination.application.write.DeleteDestinationUseCase;
+import com.example.short_link.link.destination.application.write.UpdateDestinationUseCase;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
@@ -20,21 +24,13 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class LinkDestinationServiceTest {
 
-  @Autowired
-  private com.example.short_link.link.destination.application.write.AddDestinationUseCase
-      addUseCase;
+  @Autowired private AddDestinationUseCase addUseCase;
 
-  @Autowired
-  private com.example.short_link.link.destination.application.write.UpdateDestinationUseCase
-      updateUseCase;
+  @Autowired private UpdateDestinationUseCase updateUseCase;
 
-  @Autowired
-  private com.example.short_link.link.destination.application.write.DeleteDestinationUseCase
-      deleteUseCase;
+  @Autowired private DeleteDestinationUseCase deleteUseCase;
 
-  @Autowired
-  private com.example.short_link.link.destination.application.read.LinkDestinationQueryService
-      query;
+  @Autowired private LinkDestinationQueryService query;
 
   @Autowired private LinkRepository linkRepository;
   @Autowired private UserRepository userRepository;
@@ -69,11 +65,7 @@ class LinkDestinationServiceTest {
     UserEntity user = userRepository.save(new UserEntity("ab2@local.test", "google", "g-ab2"));
     linkRepository.save(new LinkEntity("https://example.com/c", "ab22222", user.getId(), null));
 
-    for (int i = 0;
-        i
-            < com.example.short_link.link.destination.application.write.AddDestinationUseCase
-                .MAX_PER_LINK;
-        i++) {
+    for (int i = 0; i < AddDestinationUseCase.MAX_PER_LINK; i++) {
       addUseCase.execute(
           user.getId(), "ab22222", "https://example.com/v" + i, 10, "v" + i, null, null, null);
     }
@@ -104,18 +96,12 @@ class LinkDestinationServiceTest {
     var huge =
         addUseCase.execute(
             user.getId(), "ab44444", "https://example.com/v", 999, null, null, null, null);
-    assertThat(huge.weight())
-        .isEqualTo(
-            com.example.short_link.link.destination.application.write.AddDestinationUseCase
-                .MAX_WEIGHT);
+    assertThat(huge.weight()).isEqualTo(AddDestinationUseCase.MAX_WEIGHT);
 
     var tiny =
         addUseCase.execute(
             user.getId(), "ab44444", "https://example.com/w", 0, null, null, null, null);
-    assertThat(tiny.weight())
-        .isEqualTo(
-            com.example.short_link.link.destination.application.write.AddDestinationUseCase
-                .MIN_WEIGHT);
+    assertThat(tiny.weight()).isEqualTo(AddDestinationUseCase.MIN_WEIGHT);
   }
 
   @Test
