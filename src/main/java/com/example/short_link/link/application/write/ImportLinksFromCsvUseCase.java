@@ -1,5 +1,8 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.write;
 
+import com.example.short_link.link.application.LinkCreationService;
+import com.example.short_link.link.application.dto.BulkImportResult;
+import com.example.short_link.link.application.dto.BulkImportRow;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -26,15 +29,15 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class BulkImportService {
+public class ImportLinksFromCsvUseCase {
 
   public static final int MAX_ROWS = 100;
 
   private final LinkCreationService creationService;
   private final MeterRegistry meterRegistry;
 
-  public BulkImportResult importCsv(Long userId, InputStream csv) throws IOException {
-    List<BulkImportRow> rows = parse(csv);
+  public BulkImportResult execute(ImportLinksFromCsvCommand command) throws IOException {
+    List<BulkImportRow> rows = parse(command.csv());
     if (rows.size() > MAX_ROWS) {
       throw new LinkException(LinkErrorCode.BULK_IMPORT_TOO_LARGE, rows.size(), MAX_ROWS)
           .with("rows", rows.size())
@@ -55,14 +58,14 @@ public class BulkImportService {
         Instant expires = parseInstant(row.expiresAt());
         LinkCreated created =
             creationService.create(
-                row.url().trim(), userId, blankToNull(row.customCode()), expires);
+                row.url().trim(), command.userId(), blankToNull(row.customCode()), expires);
         results.add(row.withResult(created.shortCode(), null));
         ok++;
       } catch (RuntimeException e) {
         results.add(
             row.withResult(
                 null,
-                e instanceof com.example.short_link.link.exception.LinkException le
+                e instanceof LinkException le
                     ? le.errorCode().name() + ": " + e.getMessage()
                     : e.getClass().getSimpleName() + ": " + e.getMessage()));
         failed++;
@@ -112,16 +115,6 @@ public class BulkImportService {
   private static String[] splitCsv(String line) {
     return line.split(",", -1);
   }
-
-  public record BulkImportRow(
-      String url, String customCode, String expiresAt, String shortCode, String error) {
-
-    public BulkImportRow withResult(String shortCode, String error) {
-      return new BulkImportRow(url, customCode, expiresAt, shortCode, error);
-    }
-  }
-
-  public record BulkImportResult(int ok, int failed, List<BulkImportRow> rows) {}
 
   /**
    * Maps column positions. If the first row looks like a header, we use the named columns;

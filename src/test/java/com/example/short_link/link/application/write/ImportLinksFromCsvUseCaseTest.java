@@ -1,8 +1,10 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.link.application.dto.BulkImportResult;
+import com.example.short_link.link.application.dto.BulkImportRow;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -17,9 +19,9 @@ import org.springframework.transaction.annotation.Transactional;
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
-class BulkImportServiceTest {
+class ImportLinksFromCsvUseCaseTest {
 
-  @Autowired private BulkImportService service;
+  @Autowired private ImportLinksFromCsvUseCase useCase;
   @Autowired private UserRepository userRepository;
 
   @Test
@@ -33,9 +35,10 @@ class BulkImportServiceTest {
         https://example.com/bulk-3
         """;
 
-    BulkImportService.BulkImportResult result =
-        service.importCsv(
-            user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)));
+    BulkImportResult result =
+        useCase.execute(
+            new ImportLinksFromCsvCommand(
+                user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
 
     assertThat(result.ok()).isEqualTo(3);
     assertThat(result.failed()).isZero();
@@ -53,13 +56,14 @@ class BulkImportServiceTest {
         https://example.com/with-reserved,login
         """;
 
-    BulkImportService.BulkImportResult result =
-        service.importCsv(
-            user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)));
+    BulkImportResult result =
+        useCase.execute(
+            new ImportLinksFromCsvCommand(
+                user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
 
     assertThat(result.ok()).isEqualTo(1);
     assertThat(result.failed()).isEqualTo(2);
-    BulkImportService.BulkImportRow okRow = result.rows().get(0);
+    BulkImportRow okRow = result.rows().get(0);
     assertThat(okRow.shortCode()).isNotNull();
     assertThat(result.rows().get(1).error()).isNotNull();
     assertThat(result.rows().get(2).error()).contains("RESERVED_SHORT_CODE");
@@ -74,9 +78,10 @@ class BulkImportServiceTest {
     }
     assertThatThrownBy(
             () ->
-                service.importCsv(
-                    user.getId(),
-                    new ByteArrayInputStream(csv.toString().getBytes(StandardCharsets.UTF_8))))
+                useCase.execute(
+                    new ImportLinksFromCsvCommand(
+                        user.getId(),
+                        new ByteArrayInputStream(csv.toString().getBytes(StandardCharsets.UTF_8)))))
         .isInstanceOf(LinkException.class);
   }
 
@@ -85,9 +90,10 @@ class BulkImportServiceTest {
     UserEntity user = userRepository.save(new UserEntity("bulk4@example.com", "google", "g-bulk4"));
     String csv = "https://example.com/no-header-1\nhttps://example.com/no-header-2,nh2code\n";
 
-    BulkImportService.BulkImportResult result =
-        service.importCsv(
-            user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8)));
+    BulkImportResult result =
+        useCase.execute(
+            new ImportLinksFromCsvCommand(
+                user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
 
     assertThat(result.ok()).isEqualTo(2);
     assertThat(result.rows().get(1).shortCode()).isEqualTo("nh2code");
