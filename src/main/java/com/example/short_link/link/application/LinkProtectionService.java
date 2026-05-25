@@ -1,7 +1,9 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.link.application.dto.LinkProtectionResult;
+import com.example.short_link.link.domain.LinkAccessControlEntity;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -16,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkProtectionService {
 
   private final LinkRepository repository;
+  private final LinkAccessControlRepository accessControlRepository;
   private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 
   @Transactional
@@ -29,10 +32,18 @@ public class LinkProtectionService {
     if (!link.isOwnedBy(userId)) {
       throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
     }
+    LinkAccessControlEntity access =
+        accessControlRepository
+            .findById(link.getId())
+            .orElseGet(() -> new LinkAccessControlEntity(link.getId()));
     if (password != null) {
-      link.setPasswordHash(password.isBlank() ? null : encoder.encode(password));
+      String hash = password.isBlank() ? null : encoder.encode(password);
+      link.setPasswordHash(hash);
+      access.changePasswordHash(hash);
     }
     link.setMaxViews(maxViews);
+    access.changeMaxViews(maxViews);
+    accessControlRepository.save(access);
     return new LinkProtectionResult(
         link.getShortCode(), link.hasPassword(), link.getMaxViews(), link.getViewCount());
   }
