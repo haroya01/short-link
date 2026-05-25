@@ -1,4 +1,4 @@
-package com.example.short_link.user.application;
+package com.example.short_link.user.application.read;
 
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
