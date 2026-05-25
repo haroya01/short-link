@@ -83,7 +83,11 @@ public class LinkWebhookController {
             request.batchEnabled(),
             request.dailyQuota(),
             request.referrerHostFilter(),
-            request.utmSourceFilter()));
+            request.utmSourceFilter(),
+            request.deliveryMode(),
+            request.summaryHourOfDay(),
+            request.spikeThreshold(),
+            request.spikeWindowMinutes()));
   }
 
   @DeleteMapping("/{shortCode}/webhooks/{id}")
