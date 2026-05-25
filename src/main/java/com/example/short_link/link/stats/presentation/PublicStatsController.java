@@ -1,4 +1,4 @@
-package com.example.short_link.common.web;
+package com.example.short_link.link.stats.presentation;
 
 import com.example.short_link.common.application.PublicStats;
 import com.example.short_link.common.application.PublicStatsService;
