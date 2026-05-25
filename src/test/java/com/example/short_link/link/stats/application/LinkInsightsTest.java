@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.application.dto.LinkStats;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
@@ -72,7 +73,7 @@ class LinkInsightsTest {
   @Test
   void detectsWeekOverWeekGrowth() {
     LocalDate base = LocalDate.of(2026, 4, 1);
-    var daily = new java.util.ArrayList<LinkStats.DailyClick>();
+    var daily = new ArrayList<LinkStats.DailyClick>();
     for (int i = 0; i < 14; i++) {
       daily.add(new LinkStats.DailyClick(base.plusDays(i), i < 7 ? 5L : 10L));
     }
@@ -84,7 +85,7 @@ class LinkInsightsTest {
   @Test
   void weekOverWeekDeclineEmitsWarning() {
     LocalDate base = LocalDate.of(2026, 4, 1);
-    var daily = new java.util.ArrayList<LinkStats.DailyClick>();
+    var daily = new ArrayList<LinkStats.DailyClick>();
     for (int i = 0; i < 14; i++) {
       daily.add(new LinkStats.DailyClick(base.plusDays(i), i < 7 ? 20L : 5L));
     }
@@ -98,7 +99,7 @@ class LinkInsightsTest {
   @Test
   void weekOverWeekSkippedWhenPrevWeekTooSmall() {
     LocalDate base = LocalDate.of(2026, 4, 1);
-    var daily = new java.util.ArrayList<LinkStats.DailyClick>();
+    var daily = new ArrayList<LinkStats.DailyClick>();
     for (int i = 0; i < 14; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 0L));
     daily.set(13, new LinkStats.DailyClick(base.plusDays(13), 50L));
     List<LinkStats.Insight> result =

@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.admin.application.BlockedDomainService;
+import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.application.dto.LinkCreated;
@@ -48,7 +50,7 @@ class LinkCreationServiceQuotaTest {
             new SimpleMeterRegistry(),
             safety,
             event -> {},
-            mock(com.example.short_link.common.audit.AuditLogService.class),
+            mock(AuditLogService.class),
             mockBlockedDomainService(),
             noopTx(),
             200L);
@@ -81,7 +83,7 @@ class LinkCreationServiceQuotaTest {
             new SimpleMeterRegistry(),
             safety,
             event -> {},
-            mock(com.example.short_link.common.audit.AuditLogService.class),
+            mock(AuditLogService.class),
             mockBlockedDomainService(),
             noopTx(),
             200L);
@@ -114,7 +116,7 @@ class LinkCreationServiceQuotaTest {
             new SimpleMeterRegistry(),
             safety,
             event -> {},
-            mock(com.example.short_link.common.audit.AuditLogService.class),
+            mock(AuditLogService.class),
             mockBlockedDomainService(),
             noopTx(),
             200L);
@@ -144,7 +146,7 @@ class LinkCreationServiceQuotaTest {
             new SimpleMeterRegistry(),
             safety,
             event -> {},
-            mock(com.example.short_link.common.audit.AuditLogService.class),
+            mock(AuditLogService.class),
             mockBlockedDomainService(),
             noopTx(),
             200L);
@@ -186,7 +188,7 @@ class LinkCreationServiceQuotaTest {
             new SimpleMeterRegistry(),
             safety,
             event -> {},
-            mock(com.example.short_link.common.audit.AuditLogService.class),
+            mock(AuditLogService.class),
             mockBlockedDomainService(),
             noopTx(),
             200L);
@@ -198,7 +200,7 @@ class LinkCreationServiceQuotaTest {
 
   private static com.example.short_link.admin.application.BlockedDomainService
       mockBlockedDomainService() {
-    var m = mock(com.example.short_link.admin.application.BlockedDomainService.class);
+    var m = mock(BlockedDomainService.class);
     when(m.isBlocked(any())).thenReturn(false);
     return m;
   }

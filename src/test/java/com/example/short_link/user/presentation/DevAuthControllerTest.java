@@ -1,5 +1,6 @@
 package com.example.short_link.user.presentation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -35,7 +36,7 @@ class DevAuthControllerTest {
         .andExpect(jsonPath("$.accessToken").isString())
         .andExpect(cookie().exists("refresh_token"));
     long after = userRepository.count();
-    org.assertj.core.api.Assertions.assertThat(after).isEqualTo(before + 1);
+    assertThat(after).isEqualTo(before + 1);
   }
 
   @Test
@@ -51,7 +52,7 @@ class DevAuthControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"dev2@local.test\"}"))
         .andExpect(status().isOk());
-    org.assertj.core.api.Assertions.assertThat(userRepository.count()).isEqualTo(beforeSecond);
+    assertThat(userRepository.count()).isEqualTo(beforeSecond);
   }
 
   @Test

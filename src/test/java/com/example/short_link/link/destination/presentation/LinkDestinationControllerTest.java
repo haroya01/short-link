@@ -15,6 +15,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
+import com.example.short_link.link.destination.application.read.LinkDestinationQueryService;
 import com.example.short_link.link.destination.application.write.AddDestinationUseCase;
 import com.example.short_link.link.destination.application.write.DeleteDestinationUseCase;
 import com.example.short_link.link.destination.application.write.SetBlockedCountriesUseCase;
@@ -51,9 +52,7 @@ class LinkDestinationControllerTest {
   @MockitoBean private DeleteDestinationUseCase deleteUseCase;
   @MockitoBean private SetBlockedCountriesUseCase setBlockedUseCase;
 
-  @MockitoBean
-  private com.example.short_link.link.destination.application.read.LinkDestinationQueryService
-      query;
+  @MockitoBean private LinkDestinationQueryService query;
 
   private static DestinationSummary sample() {
     return new DestinationSummary(

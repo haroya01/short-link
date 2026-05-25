@@ -7,6 +7,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -98,7 +99,7 @@ public record Booking(String url, String title, String description, String ctaLa
       return id;
     }
 
-    public static java.util.Optional<Provider> resolve(String url) {
+    public static Optional<Provider> resolve(String url) {
       if (url == null || url.isBlank()) return java.util.Optional.empty();
       URI uri;
       try {
