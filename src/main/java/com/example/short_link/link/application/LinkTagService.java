@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkTagEntity;
 import com.example.short_link.link.domain.TagEntity;
