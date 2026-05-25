@@ -6,20 +6,20 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.link.domain.ClickEventReadRepository.BrowserClickRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.CountryClickRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.DailyClickRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.DeviceClickRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.HeatmapRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.HourClickRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.ReferrerHostClickRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.SourceChannelClickRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.UtmCampaignClickRow;
-import com.example.short_link.link.domain.ClickEventReadRepository.UtmSourceClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.BrowserClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.CountryClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.DailyClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.DeviceClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.HeatmapRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.HourClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.ReferrerHostClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.SourceChannelClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.UtmCampaignClickRow;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.UtmSourceClickRow;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserException;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -60,22 +60,20 @@ class ProfileStatsServiceTest {
   @Test
   void statsForOwnerMissingThrows() {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.statsForOwner(1L)).isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.statsForOwner(1L)).isInstanceOf(UserException.class);
   }
 
   @Test
   void publicStatsMissingUserThrows() {
     when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.publicStats("ghost"))
-        .isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.publicStats("ghost")).isInstanceOf(UserException.class);
   }
 
   @Test
   void publicStatsOptedOut404s() {
     UserEntity u = user(1L, "Asia/Seoul", false);
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(u));
-    assertThatThrownBy(() -> service.publicStats("alice"))
-        .isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.publicStats("alice")).isInstanceOf(UserException.class);
   }
 
   @Test

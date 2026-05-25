@@ -5,11 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -58,7 +57,7 @@ class LinkManagementServiceTest {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-lmu3"));
     assertThatThrownBy(
             () -> service.update(user.getId(), "nope9999", "https://x.com", null, null, null))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -69,7 +68,7 @@ class LinkManagementServiceTest {
 
     assertThatThrownBy(
             () -> service.update(attacker.getId(), "lmu0003", "https://hax.com", null, null, null))
-        .isInstanceOf(LinkNotOwnedException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -89,7 +88,7 @@ class LinkManagementServiceTest {
     linkRepository.save(new LinkEntity("https://x.com", "lmd0002", owner.getId(), null));
 
     assertThatThrownBy(() -> service.delete(attacker.getId(), "lmd0002"))
-        .isInstanceOf(LinkNotOwnedException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test

@@ -1,7 +1,7 @@
 package com.example.short_link.admin.application;
 
 import com.example.short_link.admin.domain.BlockedDomainEntity;
-import com.example.short_link.admin.domain.BlockedDomainRepository;
+import com.example.short_link.admin.domain.repository.BlockedDomainRepository;
 import java.net.URI;
 import java.util.List;
 import java.util.Locale;
@@ -74,7 +74,7 @@ public class BlockedDomainService {
   }
 
   @Cacheable("blocked-domains")
-  public Set<String> currentBlockedSet() {
+  private Set<String> currentBlockedSet() {
     return Set.copyOf(repository.findAll().stream().map(BlockedDomainEntity::getDomain).toList());
   }
 

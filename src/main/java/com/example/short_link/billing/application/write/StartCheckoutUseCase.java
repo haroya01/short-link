@@ -3,10 +3,12 @@ package com.example.short_link.billing.application.write;
 import com.example.short_link.billing.application.StripeProperties;
 import com.example.short_link.billing.domain.CheckoutInitiation;
 import com.example.short_link.billing.domain.SubscriptionGateway;
-import com.example.short_link.billing.exception.BillingNotConfiguredException;
+import com.example.short_link.billing.exception.BillingErrorCode;
+import com.example.short_link.billing.exception.BillingException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,8 +30,11 @@ public class StartCheckoutUseCase {
 
   @Transactional
   public String execute(StartCheckoutCommand cmd) {
-    if (!stripe.isConfigured()) throw new BillingNotConfiguredException();
-    UserEntity user = userRepository.findById(cmd.userId()).orElseThrow(UserNotFoundException::new);
+    if (!stripe.isConfigured()) throw new BillingException(BillingErrorCode.BILLING_NOT_CONFIGURED);
+    UserEntity user =
+        userRepository
+            .findById(cmd.userId())
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     CheckoutInitiation init = subscriptions.initiateProCheckout(user);
     if (init.hasNewCustomer()) {
       user.linkStripeCustomer(init.newlyCreatedCustomerId());

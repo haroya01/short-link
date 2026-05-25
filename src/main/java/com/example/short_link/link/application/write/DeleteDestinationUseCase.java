@@ -1,7 +1,7 @@
 package com.example.short_link.link.application.write;
 
 import com.example.short_link.link.domain.LinkDestinationEntity;
-import com.example.short_link.link.domain.LinkDestinationRepository;
+import com.example.short_link.link.domain.repository.LinkDestinationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;

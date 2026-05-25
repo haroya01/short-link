@@ -3,7 +3,7 @@ package com.example.short_link.profile.domain.contact;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.Test;
 
 class ContactCardTest {
@@ -22,26 +22,25 @@ class ContactCardTest {
 
   @Test
   void nameRequired() {
-    assertThatThrownBy(() -> ContactCard.normalize("{}"))
-        .isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(() -> ContactCard.normalize("{}")).isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> ContactCard.normalize("{\"name\":\"   \"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void emailValidationRunsWhenPresent() {
     assertThatThrownBy(() -> ContactCard.normalize("{\"name\":\"x\",\"email\":\"not-an-email\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void websiteMustBeHttp() {
     assertThatThrownBy(
             () -> ContactCard.normalize("{\"name\":\"x\",\"website\":\"javascript:alert(1)\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () -> ContactCard.normalize("{\"name\":\"x\",\"website\":\"ftp://example.com\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -54,9 +53,8 @@ class ContactCardTest {
   @Test
   void rejectsMalformedJson() {
     assertThatThrownBy(() -> ContactCard.normalize("not json"))
-        .isInstanceOf(InvalidUsernameException.class);
-    assertThatThrownBy(() -> ContactCard.normalize(""))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
+    assertThatThrownBy(() -> ContactCard.normalize("")).isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -71,10 +69,10 @@ class ContactCardTest {
   void logoUrlMustBeHttp() {
     assertThatThrownBy(
             () -> ContactCard.normalize("{\"name\":\"x\",\"logoUrl\":\"javascript:alert(1)\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () -> ContactCard.normalize("{\"name\":\"x\",\"logoUrl\":\"ftp://example.com/logo\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -107,10 +105,10 @@ class ContactCardTest {
   void rejectsUnknownPalette() {
     assertThatThrownBy(
             () -> ContactCard.normalize("{\"name\":\"x\",\"palette\":\"rainbow-vomit\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () -> ContactCard.normalize("{\"name\":\"x\",\"palette\":\"javascript:alert(1)\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test

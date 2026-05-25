@@ -3,12 +3,14 @@ package com.example.short_link.profile.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
-import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -25,7 +27,9 @@ class CreateBlockUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new CreateBlockUseCase(profileBlockRepository, profileOrdering);
+    useCase =
+        new CreateBlockUseCase(
+            profileBlockRepository, profileOrdering, mock(ProfileCacheEviction.class));
   }
 
   @Test
@@ -43,7 +47,7 @@ class CreateBlockUseCaseTest {
   void rejectsImageWithoutUrl() {
     assertThatThrownBy(
             () -> useCase.execute(new CreateBlockCommand(7L, ProfileBlockType.IMAGE, "  ")))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -52,7 +56,7 @@ class CreateBlockUseCaseTest {
             () ->
                 useCase.execute(
                     new CreateBlockCommand(7L, ProfileBlockType.IMAGE, "javascript:alert(1)")))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -60,7 +64,7 @@ class CreateBlockUseCaseTest {
     assertThatThrownBy(
             () ->
                 useCase.execute(new CreateBlockCommand(7L, ProfileBlockType.IMAGE, "http://[bad")))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -68,7 +72,7 @@ class CreateBlockUseCaseTest {
     String long2049 = "https://x.com/" + "a".repeat(2049);
     assertThatThrownBy(
             () -> useCase.execute(new CreateBlockCommand(7L, ProfileBlockType.IMAGE, long2049)))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -78,13 +82,13 @@ class CreateBlockUseCaseTest {
                 useCase.execute(
                     new CreateBlockCommand(
                         7L, ProfileBlockType.EMBED, "https://unknown-domain.example/x")))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void rejectsEmbedEmpty() {
     assertThatThrownBy(
             () -> useCase.execute(new CreateBlockCommand(7L, ProfileBlockType.EMBED, "")))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 }

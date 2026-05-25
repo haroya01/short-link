@@ -3,7 +3,7 @@ package com.example.short_link.profile.domain.contact;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.Test;
 
 class BookingTest {
@@ -32,23 +32,23 @@ class BookingTest {
   @Test
   void rejectsArbitraryHost() {
     assertThatThrownBy(() -> Booking.normalize("{\"url\":\"https://evil.example/phish\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void rejectsNonHttpScheme() {
     assertThatThrownBy(() -> Booking.normalize("{\"url\":\"javascript:alert(1)\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> Booking.normalize("{\"url\":\"ftp://calendly.com/abc\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void requiresUrl() {
     assertThatThrownBy(() -> Booking.normalize("{\"title\":\"예약\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> Booking.normalize("{\"url\":\"\"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -61,8 +61,7 @@ class BookingTest {
 
   @Test
   void rejectsMalformedJson() {
-    assertThatThrownBy(() -> Booking.normalize("not json"))
-        .isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(() -> Booking.normalize("not json")).isInstanceOf(ProfileException.class);
   }
 
   @Test

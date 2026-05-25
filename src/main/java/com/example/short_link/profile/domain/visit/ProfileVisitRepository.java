@@ -1,6 +1,6 @@
 package com.example.short_link.profile.domain.visit;
 
-import com.example.short_link.link.domain.ClickEventReadRepository;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -22,8 +22,6 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
   long countByProfileUserId(Long profileUserId);
 
   long countByProfileUserIdAndBotFalse(Long profileUserId);
-
-  long countByProfileUserIdAndVisitedAtAfter(Long profileUserId, Instant after);
 
   long countByProfileUserIdAndBotFalseAndVisitedAtAfter(Long profileUserId, Instant after);
 

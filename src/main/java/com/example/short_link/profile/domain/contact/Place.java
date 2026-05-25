@@ -1,6 +1,7 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -55,31 +56,31 @@ public record Place(
 
   public static String normalize(String raw) {
     if (raw == null || raw.isBlank()) {
-      throw new InvalidUsernameException("place: config required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: config required");
     }
     Place parsed;
     try {
       parsed = MAPPER.readValue(raw.trim(), Place.class);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("place: malformed json");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: malformed json");
     }
 
     String name = trimTo(parsed.name, NAME_MAX);
     if (name == null) {
-      throw new InvalidUsernameException("place: name required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: name required");
     }
     String address = trimTo(parsed.address, ADDRESS_MAX);
     if (address == null) {
-      throw new InvalidUsernameException("place: address required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: address required");
     }
     if (parsed.lat == null || parsed.lng == null) {
-      throw new InvalidUsernameException("place: lat/lng required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: lat/lng required");
     }
     if (parsed.lat < -90 || parsed.lat > 90) {
-      throw new InvalidUsernameException("place: lat out of range");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: lat out of range");
     }
     if (parsed.lng < -180 || parsed.lng > 180) {
-      throw new InvalidUsernameException("place: lng out of range");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: lng out of range");
     }
 
     String placeId = trimTo(parsed.placeId, PLACE_ID_MAX);
@@ -100,7 +101,7 @@ public record Place(
     try {
       return MAPPER.writeValueAsString(out);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("place: serialization failed");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: serialization failed");
     }
   }
 
@@ -116,14 +117,16 @@ public record Place(
     try {
       uri = URI.create(url);
     } catch (IllegalArgumentException ex) {
-      throw new InvalidUsernameException("place: cover url malformed");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "place: cover url malformed");
     }
     String scheme = uri.getScheme();
     if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-      throw new InvalidUsernameException("place: cover url must be http(s)");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "place: cover url must be http(s)");
     }
     if (uri.getHost() == null || uri.getHost().isBlank()) {
-      throw new InvalidUsernameException("place: cover url missing host");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "place: cover url missing host");
     }
   }
 }

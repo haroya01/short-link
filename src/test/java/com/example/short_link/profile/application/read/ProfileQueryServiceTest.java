@@ -6,20 +6,20 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
-import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
-import com.example.short_link.profile.domain.UsernameHistoryRepository;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
+import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
+import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserException;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.List;
@@ -36,7 +36,7 @@ class ProfileQueryServiceTest {
 
   @Mock private UserRepository userRepository;
   @Mock private LinkRepository linkRepository;
-  @Mock private ClickEventRepository clickRepository;
+  @Mock private ClickEventReadRepository clickRepository;
   @Mock private UsernameHistoryRepository usernameHistoryRepository;
   @Mock private ProfileBlockRepository profileBlockRepository;
   @Mock private ShortLinkUrlBuilder urlBuilder;
@@ -65,7 +65,7 @@ class ProfileQueryServiceTest {
   @Test
   void myProfileThrowsWhenUserMissing() {
     when(userRepository.findById(7L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.myProfile(7L)).isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.myProfile(7L)).isInstanceOf(UserException.class);
   }
 
   @Test
@@ -93,8 +93,7 @@ class ProfileQueryServiceTest {
     when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
             any(), any(Instant.class)))
         .thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.findByUsername("ghost"))
-        .isInstanceOf(ProfileNotFoundException.class);
+    assertThatThrownBy(() -> service.findByUsername("ghost")).isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -105,8 +104,7 @@ class ProfileQueryServiceTest {
     when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
             any(), any(Instant.class)))
         .thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.findByUsername("alice"))
-        .isInstanceOf(ProfileNotFoundException.class);
+    assertThatThrownBy(() -> service.findByUsername("alice")).isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -115,8 +113,7 @@ class ProfileQueryServiceTest {
     when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
             any(), any(Instant.class)))
         .thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.findByUsername(null))
-        .isInstanceOf(ProfileNotFoundException.class);
+    assertThatThrownBy(() -> service.findByUsername(null)).isInstanceOf(ProfileException.class);
   }
 
   @Test

@@ -8,11 +8,7 @@ import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
-import com.example.short_link.campaign.exception.CampaignArchivedException;
-import com.example.short_link.campaign.exception.CampaignNotFoundException;
-import com.example.short_link.campaign.exception.CampaignNotOwnedException;
-import com.example.short_link.campaign.exception.InvalidCampaignPeriodException;
-import com.example.short_link.campaign.exception.MissingPostEndDestinationException;
+import com.example.short_link.campaign.exception.CampaignException;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
 import java.util.List;
@@ -94,7 +90,7 @@ class CampaignServiceTest {
         new CampaignCreateRequest("bad", start, start, null, null, null, null);
 
     assertThatThrownBy(() -> createUseCase.execute(100L, req))
-        .isInstanceOf(InvalidCampaignPeriodException.class);
+        .isInstanceOf(CampaignException.class);
   }
 
   @Test
@@ -110,7 +106,7 @@ class CampaignServiceTest {
             null);
 
     assertThatThrownBy(() -> createUseCase.execute(100L, req))
-        .isInstanceOf(MissingPostEndDestinationException.class);
+        .isInstanceOf(CampaignException.class);
   }
 
   @Test
@@ -122,8 +118,8 @@ class CampaignServiceTest {
                 "mine", null, Instant.now().plusSeconds(3600), null, null, null, null));
 
     assertThatThrownBy(() -> query.detail(created.getId(), 999L))
-        .isInstanceOf(CampaignNotOwnedException.class);
-    assertThatThrownBy(() -> query.detail(-1L, 200L)).isInstanceOf(CampaignNotFoundException.class);
+        .isInstanceOf(CampaignException.class);
+    assertThatThrownBy(() -> query.detail(-1L, 200L)).isInstanceOf(CampaignException.class);
   }
 
   @Test
@@ -169,7 +165,7 @@ class CampaignServiceTest {
                     created.getId(),
                     400L,
                     new CampaignUpdateRequest("x", null, null, null, null, null)))
-        .isInstanceOf(CampaignArchivedException.class);
+        .isInstanceOf(CampaignException.class);
   }
 
   @Test

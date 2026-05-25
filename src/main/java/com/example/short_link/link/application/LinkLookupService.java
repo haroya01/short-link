@@ -1,13 +1,13 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.link.application.dto.CachedLink;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkDestinationEntity;
-import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.LinkExpiredException;
-import com.example.short_link.link.exception.LinkNotFoundException;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.domain.repository.LinkDestinationRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.List;
@@ -23,16 +23,16 @@ public class LinkLookupService {
 
   private final LinkRepository repository;
   private final LinkDestinationRepository destinationRepository;
-  private final ClickEventRepository clickEventRepository;
+  private final ClickEventReadRepository clickEventRepository;
   private final MeterRegistry meterRegistry;
 
   @Cacheable("link")
   @Transactional(readOnly = true)
-  public CachedLink loadByShortCode(String shortCode) {
+  private CachedLink loadByShortCode(String shortCode) {
     LinkEntity link =
         repository
             .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     List<CachedLink.Variant> variants =
         destinationRepository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
             .map(LinkLookupService::toVariant)
@@ -60,10 +60,6 @@ public class LinkLookupService {
         d.getOs());
   }
 
-  public String findActiveOriginalUrl(String shortCode) {
-    return findActiveLink(shortCode).originalUrl();
-  }
-
   /** SSE / OG card 등 entity 가 직접 필요한 controller 용. 못 찾으면 empty. */
   @Transactional(readOnly = true)
   public Optional<LinkEntity> findEntity(String shortCode) {
@@ -88,13 +84,13 @@ public class LinkLookupService {
     CachedLink cached;
     try {
       cached = loadByShortCode(shortCode);
-    } catch (LinkNotFoundException e) {
+    } catch (LinkException e) {
       meterRegistry.counter("short_link.lookup", "result", "not_found").increment();
       throw e;
     }
     if (cached.isExpired(Instant.now())) {
       meterRegistry.counter("short_link.lookup", "result", "expired").increment();
-      throw new LinkExpiredException(shortCode);
+      throw new LinkException(LinkErrorCode.LINK_EXPIRED, shortCode);
     }
     meterRegistry.counter("short_link.lookup", "result", "redirected").increment();
     return cached;

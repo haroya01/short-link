@@ -6,13 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.admin.application.dto.AdminActiveUsers;
 import com.example.short_link.admin.application.dto.AdminCohort;
 import com.example.short_link.admin.application.dto.AdminLifecycle;
-import com.example.short_link.admin.exception.InvalidActivePeriodException;
+import com.example.short_link.admin.exception.AdminException;
 import com.example.short_link.link.domain.ClickEventEntity;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -120,8 +120,7 @@ class AdminAnalyticsServiceIntegrationTest {
 
   @Test
   void activeUsersRejectsUnknownPeriod() {
-    assertThatThrownBy(() -> service.activeUsers("annual"))
-        .isInstanceOf(InvalidActivePeriodException.class);
+    assertThatThrownBy(() -> service.activeUsers("annual")).isInstanceOf(AdminException.class);
   }
 
   private void seedActiveUser(String code) {

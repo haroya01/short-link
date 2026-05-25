@@ -3,7 +3,7 @@ package com.example.short_link.profile.domain.contact;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.Test;
 
 class TextBlockBodyTest {
@@ -59,19 +59,16 @@ class TextBlockBodyTest {
 
   @Test
   void emptyBodyRejected() {
-    assertThatThrownBy(() -> TextBlockBody.normalize(""))
-        .isInstanceOf(InvalidUsernameException.class);
-    assertThatThrownBy(() -> TextBlockBody.normalize("   "))
-        .isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(() -> TextBlockBody.normalize("")).isInstanceOf(ProfileException.class);
+    assertThatThrownBy(() -> TextBlockBody.normalize("   ")).isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> TextBlockBody.normalize("{\"body\":\"  \"}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void bodyOver2000CharsRejected() {
     String huge = "a".repeat(2001);
-    assertThatThrownBy(() -> TextBlockBody.normalize(huge))
-        .isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(() -> TextBlockBody.normalize(huge)).isInstanceOf(ProfileException.class);
   }
 
   @Test

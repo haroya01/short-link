@@ -22,7 +22,7 @@ class JwtTokenServiceTest {
 
   @Test
   void parseAccessTokenReturnsUserId() {
-    String token = service.createAccessToken(42L);
+    String token = service.createAccessToken(42L, "USER");
 
     assertThat(service.parseAccessToken(token)).isEqualTo(42L);
   }
@@ -47,7 +47,7 @@ class JwtTokenServiceTest {
 
   @Test
   void parseRefreshTokenRejectsAccessToken() {
-    String access = service.createAccessToken(42L);
+    String access = service.createAccessToken(42L, "USER");
 
     assertThatThrownBy(() -> service.parseRefreshToken(access))
         .isInstanceOf(IllegalArgumentException.class);

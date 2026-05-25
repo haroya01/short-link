@@ -55,10 +55,6 @@ public class JwtTokenService {
     }
   }
 
-  public String createAccessToken(Long userId) {
-    return createAccessToken(userId, "USER");
-  }
-
   public String createAccessToken(Long userId, String role) {
     Instant now = Instant.now();
     return Jwts.builder()

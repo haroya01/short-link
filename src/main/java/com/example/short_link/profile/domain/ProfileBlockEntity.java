@@ -1,6 +1,7 @@
 package com.example.short_link.profile.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.profile.domain.repository.*;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;

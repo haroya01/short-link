@@ -8,10 +8,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.profile.domain.ProfileBlockRepository;
 import com.example.short_link.profile.domain.email.EmailLeadEntity;
 import com.example.short_link.profile.domain.email.EmailLeadRepository;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
+import com.example.short_link.profile.exception.ProfileException;
 import java.lang.reflect.Field;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,7 +46,7 @@ class EmailLeadServiceTest {
     when(repository.findById(11L)).thenReturn(Optional.of(leadOwnedBy(7L, false)));
 
     assertThatThrownBy(() -> service.setOptedOut(9L, 11L, true))
-        .isInstanceOf(ProfileNotFoundException.class);
+        .isInstanceOf(ProfileException.class);
     verify(repository, never()).save(any());
   }
 
@@ -55,7 +55,7 @@ class EmailLeadServiceTest {
     when(repository.findById(99L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.setOptedOut(7L, 99L, true))
-        .isInstanceOf(ProfileNotFoundException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test

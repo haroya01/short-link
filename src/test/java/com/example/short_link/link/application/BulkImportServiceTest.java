@@ -3,9 +3,9 @@ package com.example.short_link.link.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.link.exception.BulkImportTooLargeException;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import org.junit.jupiter.api.Test;
@@ -62,7 +62,7 @@ class BulkImportServiceTest {
     BulkImportService.BulkImportRow okRow = result.rows().get(0);
     assertThat(okRow.shortCode()).isNotNull();
     assertThat(result.rows().get(1).error()).isNotNull();
-    assertThat(result.rows().get(2).error()).contains("Reserved");
+    assertThat(result.rows().get(2).error()).contains("RESERVED_SHORT_CODE");
   }
 
   @Test
@@ -77,7 +77,7 @@ class BulkImportServiceTest {
                 service.importCsv(
                     user.getId(),
                     new ByteArrayInputStream(csv.toString().getBytes(StandardCharsets.UTF_8))))
-        .isInstanceOf(BulkImportTooLargeException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test

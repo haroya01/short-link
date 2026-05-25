@@ -50,10 +50,6 @@ public class CampaignBatchExportService {
     return sb.toString();
   }
 
-  public byte[] exportQrZip(Long campaignId, Long ownerId) {
-    return exportQrZip(campaignId, ownerId, QrOptions.defaults());
-  }
-
   public byte[] exportQrZip(Long campaignId, Long ownerId, QrOptions options) {
     List<BatchWithLink> batches = batchService.list(campaignId, ownerId);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -74,10 +70,6 @@ public class CampaignBatchExportService {
       throw new IllegalStateException("zip writing failed", e);
     }
     return out.toByteArray();
-  }
-
-  public byte[] exportSinglePng(Long campaignId, Long batchId, Long ownerId) {
-    return exportSinglePng(campaignId, batchId, ownerId, QrOptions.defaults());
   }
 
   public byte[] exportSinglePng(Long campaignId, Long batchId, Long ownerId, QrOptions options) {

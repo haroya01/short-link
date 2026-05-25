@@ -5,8 +5,8 @@ import com.example.short_link.billing.domain.CheckoutInitiation;
 import com.example.short_link.billing.domain.PortalUrl;
 import com.example.short_link.billing.domain.SubscriptionEvent;
 import com.example.short_link.billing.domain.SubscriptionGateway;
-import com.example.short_link.billing.exception.BillingGatewayException;
-import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
+import com.example.short_link.billing.exception.BillingErrorCode;
+import com.example.short_link.billing.exception.BillingException;
 import com.example.short_link.user.domain.UserEntity;
 import com.stripe.Stripe;
 import com.stripe.exception.SignatureVerificationException;
@@ -69,7 +69,7 @@ public class StripeSubscriptionGateway implements SubscriptionGateway {
       com.stripe.model.checkout.Session session = com.stripe.model.checkout.Session.create(params);
       return new CheckoutInitiation(session.getUrl(), newlyCreated);
     } catch (StripeException e) {
-      throw new BillingGatewayException("stripe checkout failed", e);
+      throw new BillingException(BillingErrorCode.BILLING_GATEWAY_ERROR, e);
     }
   }
 
@@ -85,7 +85,7 @@ public class StripeSubscriptionGateway implements SubscriptionGateway {
           com.stripe.model.billingportal.Session.create(params);
       return new PortalUrl(session.getUrl());
     } catch (StripeException e) {
-      throw new BillingGatewayException("stripe portal session failed", e);
+      throw new BillingException(BillingErrorCode.BILLING_GATEWAY_ERROR, e);
     }
   }
 
@@ -98,7 +98,7 @@ public class StripeSubscriptionGateway implements SubscriptionGateway {
     try {
       event = Webhook.constructEvent(body, signature, stripe.webhookSecret());
     } catch (SignatureVerificationException e) {
-      throw new InvalidWebhookSignatureException();
+      throw new BillingException(BillingErrorCode.INVALID_WEBHOOK_SIGNATURE);
     }
     return switch (event.getType()) {
       case "checkout.session.completed" -> parseCheckoutCompleted(event);
