@@ -3,6 +3,7 @@ package com.example.short_link.user.application.avatar;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.s3.AvatarProperties;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -13,7 +14,6 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,6 +31,7 @@ public class AvatarService {
   private final UserRepository userRepository;
   private final AvatarProperties props;
   private final ObjectStorage objectStorage;
+  private final ProfileCacheEviction cacheEviction;
 
   public PresignResult presignUpload(Long userId, String contentType) {
     require(props.isConfigured(), () -> new UserException(UserErrorCode.USER_NOT_FOUND));
@@ -48,7 +49,6 @@ public class AvatarService {
   }
 
   @Transactional
-  @CacheEvict(value = "public-profile", allEntries = true)
   public CommitResult commitUpload(Long userId, String key) {
     require(props.isConfigured(), () -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (key == null || key.isBlank() || !key.startsWith("avatars/" + userId + "/")) {
@@ -74,11 +74,11 @@ public class AvatarService {
     if (previousKey != null && !previousKey.isBlank() && !previousKey.equals(key)) {
       deleteQuietly(previousKey, "previous avatar");
     }
+    cacheEviction.evictByUsername(user.getUsername());
     return new CommitResult(publicUrl);
   }
 
   @Transactional
-  @CacheEvict(value = "public-profile", allEntries = true)
   public void clearAvatar(Long userId) {
     UserEntity user =
         userRepository
@@ -89,6 +89,7 @@ public class AvatarService {
     if (props.isConfigured() && previousKey != null && !previousKey.isBlank()) {
       deleteQuietly(previousKey, "cleared avatar");
     }
+    cacheEviction.evictByUsername(user.getUsername());
   }
 
   private void deleteQuietly(String key, String label) {
