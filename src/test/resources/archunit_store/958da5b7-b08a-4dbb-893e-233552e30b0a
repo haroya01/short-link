@@ -1,0 +1,2 @@
+Class <com.example.short_link.common.pow.PowController> does not reside in a package '..presentation..' in (PowController.java:0)
+Class <com.example.short_link.common.web.PublicStatsController> does not reside in a package '..presentation..' in (PublicStatsController.java:0)
