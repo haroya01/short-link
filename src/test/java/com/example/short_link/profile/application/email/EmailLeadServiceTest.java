@@ -12,6 +12,7 @@ import com.example.short_link.profile.domain.email.EmailLeadEntity;
 import com.example.short_link.profile.domain.email.EmailLeadRepository;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.exception.ProfileException;
+import com.example.short_link.support.TestEntities;
 import java.lang.reflect.Field;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -74,7 +75,7 @@ class EmailLeadServiceTest {
   private static EmailLeadEntity leadOwnedBy(long userId, boolean optedOut) {
     EmailLeadEntity lead = new EmailLeadEntity(userId, 1L, "u@example.com", null);
     if (optedOut) {
-      writeField(lead, "optedOut", true);
+      TestEntities.setField(lead, "optedOut", true);
     }
     return lead;
   }

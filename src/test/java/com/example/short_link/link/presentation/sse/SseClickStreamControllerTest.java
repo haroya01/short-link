@@ -11,6 +11,7 @@ import com.example.short_link.link.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.JwtTokenService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.HttpServletResponse;
@@ -59,7 +60,7 @@ class SseClickStreamControllerTest {
   @Test
   void deniedAccessThrowsNotOwned() {
     LinkEntity link = new LinkEntity("https://x", "abc", 99L, null);
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(false);
@@ -70,7 +71,7 @@ class SseClickStreamControllerTest {
   @Test
   void registryRejectsReturns429FailFast() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
@@ -83,7 +84,7 @@ class SseClickStreamControllerTest {
   @Test
   void acceptedConnectionSendsReadyAndCounts() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
@@ -111,7 +112,7 @@ class SseClickStreamControllerTest {
   void matchingClaimTokenOnAnonymousLinkConnects() {
     LinkEntity link = new LinkEntity("https://x", "abc", null, null);
     link.setClaimToken("ctok");
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
     when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(true);
 
@@ -125,7 +126,7 @@ class SseClickStreamControllerTest {
   void wrongClaimTokenReturns401() {
     LinkEntity link = new LinkEntity("https://x", "abc", null, null);
     link.setClaimToken("real-ctok");
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
 
     SseEmitter emitter = controller.stream("abc", null, "wrong-ctok", response);
@@ -137,7 +138,7 @@ class SseClickStreamControllerTest {
   @Test
   void claimTokenOnClaimedLinkReturns401() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
 
     SseEmitter emitter = controller.stream("abc", null, "ctok", response);
@@ -149,7 +150,7 @@ class SseClickStreamControllerTest {
   @Test
   void claimTokenWhenStoredIsNullReturns401() {
     LinkEntity link = new LinkEntity("https://x", "abc", null, null);
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
 
     SseEmitter emitter = controller.stream("abc", null, "anything", response);
@@ -161,7 +162,7 @@ class SseClickStreamControllerTest {
   @Test
   void bothTokensProvidedPrefersJwt() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);

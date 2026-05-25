@@ -13,6 +13,7 @@ import com.example.short_link.link.application.helper.TxtResolver;
 import com.example.short_link.link.domain.CustomDomainEntity;
 import com.example.short_link.link.domain.repository.CustomDomainRepository;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -48,8 +49,8 @@ class CustomDomainServiceTest {
 
   private CustomDomainEntity domain(long id, long userId, String name, boolean verified) {
     CustomDomainEntity d = new CustomDomainEntity(userId, name, "kurl-verify=abc");
-    writeField(d, "id", id);
-    writeField(d, "createdAt", Instant.now());
+    TestEntities.withId(d, id);
+    TestEntities.setField(d, "createdAt", Instant.now());
     if (verified) d.markVerified();
     return d;
   }
@@ -111,7 +112,7 @@ class CustomDomainServiceTest {
         .thenAnswer(
             inv -> {
               CustomDomainEntity saved = inv.getArgument(0);
-              writeField(saved, "createdAt", Instant.now());
+              TestEntities.setField(saved, "createdAt", Instant.now());
               return saved;
             });
     DomainSummary out = service.register(7L, "  HTTPS://go.example.com/path/x  ");

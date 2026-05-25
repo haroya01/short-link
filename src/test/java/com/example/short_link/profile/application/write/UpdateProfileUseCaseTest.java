@@ -12,10 +12,10 @@ import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.ProfileException;
+import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,7 +48,7 @@ class UpdateProfileUseCaseTest {
 
   private UserEntity userWithId(long id) {
     UserEntity u = new UserEntity("u@x.com", "google", "g-" + id);
-    writeField(u, "id", id);
+    TestEntities.withId(u, id);
     return u;
   }
 
@@ -148,27 +148,5 @@ class UpdateProfileUseCaseTest {
     String socials = "[{\"channel\":\"x\",\"url\":\"https://x.com/me\"}]";
     useCase.execute(new UpdateProfileCommand(7L, null, null, null, socials));
     assertThat(u.getSocials()).contains("\"x\"");
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = findField(target.getClass(), name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
-  }
-
-  private static Field findField(Class<?> cls, String name) throws NoSuchFieldException {
-    Class<?> c = cls;
-    while (c != null) {
-      try {
-        return c.getDeclaredField(name);
-      } catch (NoSuchFieldException ignored) {
-        c = c.getSuperclass();
-      }
-    }
-    throw new NoSuchFieldException(name);
   }
 }

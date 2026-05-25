@@ -18,7 +18,7 @@ import com.example.short_link.profile.domain.email.EmailLeadRepository;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
-import java.lang.reflect.Field;
+import com.example.short_link.support.TestEntities;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +43,7 @@ class EmailLeadServiceExtendedTest {
 
   private ProfileBlockEntity emailBlock(long blockId, long ownerId) {
     ProfileBlockEntity b = new ProfileBlockEntity(ownerId, ProfileBlockType.EMAIL_FORM, "{}", 1);
-    writeField(b, "id", blockId);
+    TestEntities.withId(b, blockId);
     return b;
   }
 
@@ -57,7 +57,7 @@ class EmailLeadServiceExtendedTest {
   @Test
   void submitWrongTypeThrows() {
     ProfileBlockEntity wrong = new ProfileBlockEntity(7L, ProfileBlockType.TEXT, "x", 1);
-    writeField(wrong, "id", 11L);
+    TestEntities.withId(wrong, 11L);
     when(blockRepository.findById(11L)).thenReturn(Optional.of(wrong));
     assertThatThrownBy(() -> service.submit(7L, 11L, "u@x.com", "1.1.1.1"))
         .isInstanceOf(ProfileException.class);
@@ -195,27 +195,5 @@ class EmailLeadServiceExtendedTest {
   @Test
   void rateLimitedExceptionCarriesMessage() {
     assertThat(new ProfileException(ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "x")).hasMessage("x");
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = findField(target.getClass(), name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
-  }
-
-  private static Field findField(Class<?> cls, String name) throws NoSuchFieldException {
-    Class<?> c = cls;
-    while (c != null) {
-      try {
-        return c.getDeclaredField(name);
-      } catch (NoSuchFieldException ignored) {
-        c = c.getSuperclass();
-      }
-    }
-    throw new NoSuchFieldException(name);
   }
 }
