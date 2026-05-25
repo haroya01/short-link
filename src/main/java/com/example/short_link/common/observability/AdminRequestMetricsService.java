@@ -15,18 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Reads aggregates out of {@code request_metrics}. Three views match the dashboards we actually
- * need:
- *
- * <ul>
- *   <li>{@link #routes(Window)} — per-route count / p50 / p95 / p99 / error rate, replacing the
- *       per-minute snapshot ring (one PR ahead the ring will go away).
- *   <li>{@link #outcomes(String, Window)} — per-{@code shortCode} outcome distribution so the
- *       link-metrics drilldown can show the redirect / not_found / expired / blocked split.
- *   <li>{@link #raw(RawQuery)} — paged raw rows for incident drill-downs. Filters compose freely.
- * </ul>
- *
- * <p>Percentiles are computed in-process from the windowed slice. At 100k req/day a 7-day window is
+ * Percentiles are computed in-process from the windowed slice. At 100k req/day a 7-day window is
  * ~700k rows; the indexed range scan keeps the read cheap, but the in-memory sort would not scale
  * past that, so {@link Window} caps the window length and {@link RawQuery} caps the page size.
  */
