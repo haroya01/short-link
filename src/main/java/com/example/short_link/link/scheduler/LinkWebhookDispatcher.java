@@ -303,7 +303,9 @@ public class LinkWebhookDispatcher {
     }
   }
 
-  private CloseableHttpClient buildPinnedClient(Resolved resolved) {
+  // protected for test seam: subclass overrides to return a fake client that records the request
+  // and returns a canned status, sidestepping the per-request resolver/SSL stack entirely.
+  protected CloseableHttpClient buildPinnedClient(Resolved resolved) {
     String pinnedHost = resolved.uri().getHost();
     InetAddress[] pinnedAddrs = resolved.addresses().toArray(new InetAddress[0]);
     DnsResolver pinned =
