@@ -3,10 +3,10 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.application.read.LinkStatsQueryService;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.HeatmapRow;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.LinkClickCount;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.UtmSourceClickRow;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
@@ -30,7 +30,7 @@ public class WeeklyInsightsService {
   private static final Duration WINDOW = Duration.ofDays(7);
   private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
 
-  private final ClickEventRepository clickRepository;
+  private final ClickEventReadRepository clickRepository;
   private final LinkRepository linkRepository;
   private final UserRepository userRepository;
 

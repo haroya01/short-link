@@ -2,8 +2,8 @@ package com.example.short_link.profile.application.read;
 
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.LinkClickCount;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.MyProfileMapper;
@@ -37,7 +37,7 @@ public class ProfileQueryService {
 
   private final UserRepository userRepository;
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
+  private final ClickEventReadRepository clickRepository;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final ShortLinkUrlBuilder urlBuilder;

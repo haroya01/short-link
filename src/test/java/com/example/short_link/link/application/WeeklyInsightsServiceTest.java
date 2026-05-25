@@ -8,10 +8,10 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.HeatmapRow;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.LinkClickCount;
 import com.example.short_link.link.domain.repository.ClickEventReadRepository.UtmSourceClickRow;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -28,7 +28,7 @@ import org.springframework.data.domain.Pageable;
 @ExtendWith(MockitoExtension.class)
 class WeeklyInsightsServiceTest {
 
-  @Mock private ClickEventRepository clickRepository;
+  @Mock private ClickEventReadRepository clickRepository;
   @Mock private LinkRepository linkRepository;
   @Mock private UserRepository userRepository;
 

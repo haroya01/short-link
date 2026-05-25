@@ -6,6 +6,7 @@ import com.example.short_link.link.application.ReferrerChannelClassifier;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -46,6 +47,7 @@ public class LinkStatsQueryService {
 
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickRepository;
+  private final ClickEventReadRepository clickReadRepository;
   private final UserRepository userRepository;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkInsights insightsCalculator;
@@ -78,33 +80,34 @@ public class LinkStatsQueryService {
     String reportTz = currentOffset(reportZone);
 
     long total = clickRepository.countByLinkId(linkId);
-    long human = clickRepository.countHumanByLinkId(linkId);
-    long bot = clickRepository.countBotByLinkId(linkId);
-    long unique = clickRepository.countUniqueVisitorsByLinkId(linkId);
+    long human = clickReadRepository.countHumanByLinkId(linkId);
+    long bot = clickReadRepository.countBotByLinkId(linkId);
+    long unique = clickReadRepository.countUniqueVisitorsByLinkId(linkId);
 
-    Instant firstClickAt = clickRepository.findFirstClickAt(linkId);
-    Instant lastClickAt = clickRepository.findLastClickAt(linkId);
-    long previewClicks = clickRepository.countPreviewByLinkId(linkId);
-    long profileClicks = clickRepository.countProfileChannelByLinkId(linkId);
+    Instant firstClickAt = clickReadRepository.findFirstClickAt(linkId);
+    Instant lastClickAt = clickReadRepository.findLastClickAt(linkId);
+    long previewClicks = clickReadRepository.countPreviewByLinkId(linkId);
+    long profileClicks = clickReadRepository.countProfileChannelByLinkId(linkId);
     Long timeToFirstClickMinutes =
         firstClickAt == null
             ? null
             : Math.max(0, Duration.between(link.getCreatedAt(), firstClickAt).toMinutes());
 
     Instant now = Instant.now();
-    long currentHour = clickRepository.countSinceByLinkId(linkId, now.minus(Duration.ofHours(1)));
-    long last24h = clickRepository.countSinceByLinkId(linkId, now.minus(BASELINE_WINDOW));
+    long currentHour =
+        clickReadRepository.countSinceByLinkId(linkId, now.minus(Duration.ofHours(1)));
+    long last24h = clickReadRepository.countSinceByLinkId(linkId, now.minus(BASELINE_WINDOW));
     double baseline = last24h / 24.0;
     double ratio = baseline > 0 ? currentHour / baseline : 0.0;
     LinkStats.Velocity velocity = new LinkStats.Velocity(currentHour, baseline, ratio);
 
     List<LinkStats.DailyClick> daily =
-        clickRepository.findDailyClicks(linkId, now.minus(DAILY_WINDOW), reportTz).stream()
+        clickReadRepository.findDailyClicks(linkId, now.minus(DAILY_WINDOW), reportTz).stream()
             .map(r -> new LinkStats.DailyClick(r.getDay(), r.getCount()))
             .toList();
 
     List<LinkStats.HourClick> hourly =
-        clickRepository.findHourlyClicks(linkId, reportTz).stream()
+        clickReadRepository.findHourlyClicks(linkId, reportTz).stream()
             .map(r -> new LinkStats.HourClick(r.getHour(), r.getCount()))
             .toList();
     Integer peakHour =
@@ -114,30 +117,30 @@ public class LinkStatsQueryService {
             .orElse(null);
 
     List<LinkStats.DayOfWeekClick> dayOfWeek =
-        clickRepository.findDayOfWeekClicks(linkId, reportTz).stream()
+        clickReadRepository.findDayOfWeekClicks(linkId, reportTz).stream()
             .map(r -> new LinkStats.DayOfWeekClick(mapDayOfWeek(r.getDow()), r.getCount()))
             .toList();
 
     List<LinkStats.HeatmapCell> heatmap =
-        clickRepository.findHeatmap(linkId, reportTz).stream()
+        clickReadRepository.findHeatmap(linkId, reportTz).stream()
             .map(
                 r -> new LinkStats.HeatmapCell(mapDayOfWeek(r.getDow()), r.getHour(), r.getCount()))
             .toList();
 
     List<LinkStats.ReferrerClick> referrers =
-        clickRepository.findReferrerClicks(linkId, TOP_50).stream()
+        clickReadRepository.findReferrerClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.ReferrerClick(r.getReferrer(), r.getCount()))
             .toList();
 
     List<LinkStats.ReferrerHostClick> referrerHosts =
-        clickRepository.findReferrerHostClicks(linkId, TOP_50).stream()
+        clickReadRepository.findReferrerHostClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.ReferrerHostClick(r.getHost(), r.getCount()))
             .toList();
 
     Map<String, Long> channelTotals = new HashMap<>();
     referrers.forEach(
         r -> channelTotals.merge(channelClassifier.classify(r.referrer()), r.count(), Long::sum));
-    long direct = clickRepository.countDirectByLinkId(linkId);
+    long direct = clickReadRepository.countDirectByLinkId(linkId);
     if (direct > 0) {
       channelTotals.merge("direct", direct, Long::sum);
     }
@@ -148,77 +151,77 @@ public class LinkStatsQueryService {
             .toList();
 
     List<LinkStats.DeviceClick> devices =
-        clickRepository.findDeviceClicks(linkId).stream()
+        clickReadRepository.findDeviceClicks(linkId).stream()
             .map(r -> new LinkStats.DeviceClick(orUnknown(r.getDevice()), r.getCount()))
             .toList();
 
     List<LinkStats.OsClick> os =
-        clickRepository.findOsClicks(linkId, TOP_50).stream()
+        clickReadRepository.findOsClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.OsClick(orUnknown(r.getOs()), r.getCount()))
             .toList();
 
     List<LinkStats.BrowserClick> browsers =
-        clickRepository.findBrowserClicks(linkId, TOP_50).stream()
+        clickReadRepository.findBrowserClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.BrowserClick(orUnknown(r.getBrowser()), r.getCount()))
             .toList();
 
     List<LinkStats.BotClick> botBreakdown =
-        clickRepository.findBotClicks(linkId, TOP_50).stream()
+        clickReadRepository.findBotClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.BotClick(orUnknown(r.getBot()), r.getCount()))
             .toList();
 
     List<LinkStats.UtmCampaignClick> campaigns =
-        clickRepository.findUtmCampaignClicks(linkId, TOP_50).stream()
+        clickReadRepository.findUtmCampaignClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmCampaignClick(r.getCampaign(), r.getCount()))
             .toList();
 
     List<LinkStats.UtmSourceClick> utmSources =
-        clickRepository.findUtmSourceClicks(linkId, TOP_50).stream()
+        clickReadRepository.findUtmSourceClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmSourceClick(r.getSource(), r.getCount()))
             .toList();
 
     List<LinkStats.UtmMediumClick> utmMediums =
-        clickRepository.findUtmMediumClicks(linkId, TOP_50).stream()
+        clickReadRepository.findUtmMediumClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmMediumClick(r.getMedium(), r.getCount()))
             .toList();
 
     List<LinkStats.UtmContentClick> utmContents =
-        clickRepository.findUtmContentClicks(linkId, TOP_50).stream()
+        clickReadRepository.findUtmContentClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmContentClick(r.getContent(), r.getCount()))
             .toList();
 
     List<LinkStats.SourceChannelClick> sourceChannels =
-        clickRepository.findSourceChannelClicks(linkId, TOP_50).stream()
+        clickReadRepository.findSourceChannelClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.SourceChannelClick(r.getSource(), r.getCount()))
             .toList();
 
     List<LinkStats.DestinationClick> destinations = computeDestinationClicks(link);
 
     List<LinkStats.CountryClick> countries =
-        clickRepository.findCountryClicks(linkId, TOP_50).stream()
+        clickReadRepository.findCountryClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
             .toList();
 
     List<LinkStats.RegionClick> regions =
-        clickRepository.findRegionClicks(linkId, TOP_50).stream()
+        clickReadRepository.findRegionClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.RegionClick(r.getRegion(), r.getCount()))
             .toList();
 
     List<LinkStats.CityClick> cities =
-        clickRepository.findCityClicks(linkId, TOP_50).stream()
+        clickReadRepository.findCityClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.CityClick(r.getCity(), r.getCount()))
             .toList();
 
     List<LinkStats.LanguageClick> languages =
-        clickRepository.findLanguageClicks(linkId, TOP_50).stream()
+        clickReadRepository.findLanguageClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.LanguageClick(r.getLanguage(), r.getCount()))
             .toList();
 
     List<LinkStats.AsnClick> asns =
-        clickRepository.findAsnClicks(linkId, TOP_50).stream()
+        clickReadRepository.findAsnClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.AsnClick(r.getAsn(), r.getOrganization(), r.getCount()))
             .toList();
-    long datacenterClicks = clickRepository.countDatacenterClicks(linkId);
+    long datacenterClicks = clickReadRepository.countDatacenterClicks(linkId);
 
     LinkStats.ReturnRate returnRate = computeReturnRate(linkId);
     LinkStats.Lifecycle lifecycle = computeLifecycle(linkId);
@@ -269,7 +272,7 @@ public class LinkStatsQueryService {
   }
 
   private List<LinkStats.DestinationClick> computeDestinationClicks(LinkEntity link) {
-    var rows = clickRepository.findDestinationClicks(link.getId());
+    var rows = clickReadRepository.findDestinationClicks(link.getId());
     if (rows.isEmpty()) return List.of();
     var byId = new HashMap<Long, LinkDestinationEntity>();
     destinationRepository
@@ -298,7 +301,7 @@ public class LinkStatsQueryService {
   }
 
   private LinkStats.ReturnRate computeReturnRate(Long linkId) {
-    var row = clickRepository.findReturnRate(linkId);
+    var row = clickReadRepository.findReturnRate(linkId);
     long newCount = row == null || row.getNewCount() == null ? 0 : row.getNewCount();
     long returningCount =
         row == null || row.getReturningCount() == null ? 0 : row.getReturningCount();
@@ -309,7 +312,7 @@ public class LinkStatsQueryService {
 
   private LinkStats.Lifecycle computeLifecycle(Long linkId) {
     List<LinkStats.DayClick> days =
-        clickRepository.findLifecycleClicks(linkId, LIFECYCLE_MAX_DAY).stream()
+        clickReadRepository.findLifecycleClicks(linkId, LIFECYCLE_MAX_DAY).stream()
             .map(r -> new LinkStats.DayClick(r.getDay(), r.getCount()))
             .toList();
     Integer halfLife = halfLife(days);

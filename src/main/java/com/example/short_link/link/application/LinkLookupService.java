@@ -3,7 +3,7 @@ package com.example.short_link.link.application;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.domain.LinkDestinationEntity;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
@@ -23,7 +23,7 @@ public class LinkLookupService {
 
   private final LinkRepository repository;
   private final LinkDestinationRepository destinationRepository;
-  private final ClickEventRepository clickEventRepository;
+  private final ClickEventReadRepository clickEventRepository;
   private final MeterRegistry meterRegistry;
 
   @Cacheable("link")

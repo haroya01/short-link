@@ -20,8 +20,7 @@ import org.springframework.data.repository.query.Param;
  * existing callers to the narrower interface is a follow-up cleanup; this PR just splits the
  * surface so the next reader can tell which side they're using.
  */
-public interface ClickEventRepository
-    extends JpaRepository<ClickEventEntity, Long>, ClickEventReadRepository {
+public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Long> {
 
   long countByLinkId(Long linkId);
 
