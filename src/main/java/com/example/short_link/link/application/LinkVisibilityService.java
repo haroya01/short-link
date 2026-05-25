@@ -1,9 +1,9 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -21,9 +21,9 @@ public class LinkVisibilityService {
     LinkEntity link =
         repository
             .findByShortCode(shortCode)
-            .orElseThrow(() -> new LinkNotFoundException(shortCode));
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     if (!link.isOwnedBy(userId)) {
-      throw new LinkNotOwnedException(shortCode);
+      throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
     }
     link.changeStatsVisibility(isPublic);
     return link.isStatsPublic();

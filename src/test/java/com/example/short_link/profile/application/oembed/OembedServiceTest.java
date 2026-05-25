@@ -7,7 +7,7 @@ import static org.springframework.test.web.client.match.MockRestRequestMatchers.
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withServerError;
 import static org.springframework.test.web.client.response.MockRestResponseCreators.withSuccess;
 
-import com.example.short_link.profile.exception.OembedNotApplicableException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpMethod;
@@ -55,7 +55,7 @@ class OembedServiceTest {
     OembedService service = new OembedService(builder.build());
 
     assertThatThrownBy(() -> service.fetch("https://example.com/x"))
-        .isInstanceOf(OembedNotApplicableException.class);
+        .isInstanceOf(ProfileException.class);
     server.verify();
   }
 

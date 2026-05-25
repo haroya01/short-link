@@ -1,6 +1,7 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -32,20 +33,22 @@ public final class Gallery {
 
   public static String normalize(String raw) {
     if (raw == null || raw.isBlank()) {
-      throw new InvalidUsernameException("gallery: config required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "gallery: config required");
     }
     GalleryPayload parsed;
     try {
       parsed = MAPPER.readValue(raw.trim(), PAYLOAD_TYPE);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("gallery: malformed json");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "gallery: malformed json");
     }
     List<String> images = parsed == null ? null : parsed.images;
     if (images == null || images.isEmpty()) {
-      throw new InvalidUsernameException("gallery: at least 1 image required");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "gallery: at least 1 image required");
     }
     if (images.size() > MAX_IMAGES) {
-      throw new InvalidUsernameException("gallery: max " + MAX_IMAGES + " images");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "gallery: max " + MAX_IMAGES + " images");
     }
     List<String> out = new ArrayList<>(images.size());
     for (String url : images) {
@@ -53,18 +56,20 @@ public final class Gallery {
       String trimmed = url.trim();
       if (trimmed.isEmpty()) continue;
       if (trimmed.length() > URL_MAX) {
-        throw new InvalidUsernameException("gallery: url too long");
+        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "gallery: url too long");
       }
       validateImageUrl(trimmed);
       out.add(trimmed);
     }
     if (out.isEmpty()) {
-      throw new InvalidUsernameException("gallery: at least 1 image required");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "gallery: at least 1 image required");
     }
     try {
       return MAPPER.writeValueAsString(new GalleryPayload(out));
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("gallery: serialization failed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "gallery: serialization failed");
     }
   }
 
@@ -73,14 +78,14 @@ public final class Gallery {
     try {
       uri = URI.create(url);
     } catch (IllegalArgumentException ex) {
-      throw new InvalidUsernameException("gallery: url malformed");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "gallery: url malformed");
     }
     String scheme = uri.getScheme();
     if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-      throw new InvalidUsernameException("gallery: url must be http(s)");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "gallery: url must be http(s)");
     }
     if (uri.getHost() == null || uri.getHost().isBlank()) {
-      throw new InvalidUsernameException("gallery: url missing host");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "gallery: url missing host");
     }
   }
 }

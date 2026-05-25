@@ -1,7 +1,8 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.link.application.dto.LinkCreated;
-import com.example.short_link.link.exception.BulkImportTooLargeException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -35,7 +36,9 @@ public class BulkImportService {
   public BulkImportResult importCsv(Long userId, InputStream csv) throws IOException {
     List<BulkImportRow> rows = parse(csv);
     if (rows.size() > MAX_ROWS) {
-      throw new BulkImportTooLargeException(rows.size(), MAX_ROWS);
+      throw new LinkException(LinkErrorCode.BULK_IMPORT_TOO_LARGE, rows.size(), MAX_ROWS)
+          .with("rows", rows.size())
+          .with("limit", MAX_ROWS);
     }
 
     int ok = 0;
@@ -56,7 +59,12 @@ public class BulkImportService {
         results.add(row.withResult(created.shortCode(), null));
         ok++;
       } catch (RuntimeException e) {
-        results.add(row.withResult(null, e.getClass().getSimpleName() + ": " + e.getMessage()));
+        results.add(
+            row.withResult(
+                null,
+                e instanceof com.example.short_link.link.exception.LinkException le
+                    ? le.errorCode().name() + ": " + e.getMessage()
+                    : e.getClass().getSimpleName() + ": " + e.getMessage()));
         failed++;
       }
     }

@@ -8,9 +8,10 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.billing.domain.SubscriptionEvent;
 import com.example.short_link.billing.domain.SubscriptionGateway;
-import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
+import com.example.short_link.billing.exception.BillingErrorCode;
+import com.example.short_link.billing.exception.BillingException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
 import java.util.Optional;
@@ -48,9 +49,9 @@ class HandleSubscriptionWebhookUseCaseTest {
   @Test
   void invalidSignaturePropagatesAndIncrementsMeter() {
     when(subscriptions.parseAndVerifyWebhook(anyString(), anyString()))
-        .thenThrow(new InvalidWebhookSignatureException());
+        .thenThrow(new BillingException(BillingErrorCode.INVALID_WEBHOOK_SIGNATURE));
     assertThatThrownBy(() -> useCase.execute(new SubscriptionWebhookCommand("{}", "bogus")))
-        .isInstanceOf(InvalidWebhookSignatureException.class);
+        .isInstanceOf(BillingException.class);
     assertThat(meters.counter("billing.webhook", "result", "invalid_signature").count())
         .isEqualTo(1.0);
   }

@@ -15,8 +15,4 @@ import org.springframework.transaction.annotation.Transactional;
 public class BillingQueryService {
 
   private final StripeProperties stripe;
-
-  public boolean isBillingConfigured() {
-    return stripe.isConfigured();
-  }
 }

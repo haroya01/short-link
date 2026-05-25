@@ -10,8 +10,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.exception.LinkNotFoundException;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.application.JwtTokenService;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.HttpServletResponse;
@@ -54,7 +53,7 @@ class SseClickStreamControllerTest {
   void missingLinkThrowsLinkNotFound() {
     when(lookup.findEntity("abc")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> controller.stream("abc", "tok", null, response))
-        .isInstanceOf(LinkNotFoundException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
@@ -65,7 +64,7 @@ class SseClickStreamControllerTest {
     when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(false);
     assertThatThrownBy(() -> controller.stream("abc", "tok", null, response))
-        .isInstanceOf(LinkNotOwnedException.class);
+        .isInstanceOf(LinkException.class);
   }
 
   @Test

@@ -9,7 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.link.application.helper.TxtResolver;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import com.jayway.jsonpath.JsonPath;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -49,7 +49,7 @@ class CustomDomainVerificationE2ETest {
   @Test
   void register_thenVerify_marksDomainVerifiedAndEnablesRouting() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("cdv-1@x.com", "google", "g-cdv-1"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
@@ -91,7 +91,7 @@ class CustomDomainVerificationE2ETest {
   @Test
   void register_thenVerify_returns422WhenTokenMissingAtTxt() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("cdv-2@x.com", "google", "g-cdv-2"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     String registerBody =
         mvc.perform(
@@ -114,7 +114,7 @@ class CustomDomainVerificationE2ETest {
   @Test
   void register_thenVerify_returns422WhenTokenMismatch() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("cdv-3@x.com", "google", "g-cdv-3"));
-    String token = jwt.createAccessToken(user.getId());
+    String token = jwt.createAccessToken(user.getId(), "USER");
 
     String registerBody =
         mvc.perform(

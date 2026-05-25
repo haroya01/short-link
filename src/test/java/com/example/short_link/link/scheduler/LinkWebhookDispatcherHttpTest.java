@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.helper.WebhookFormat;
 import com.example.short_link.link.domain.LinkWebhookEntity;
-import com.example.short_link.link.domain.LinkWebhookRepository;
+import com.example.short_link.link.domain.repository.LinkWebhookRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.lang.reflect.Field;

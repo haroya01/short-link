@@ -3,7 +3,7 @@ package com.example.short_link.profile.application.email;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.Test;
 
 class EmailFormConfigTest {
@@ -22,23 +22,20 @@ class EmailFormConfigTest {
   @Test
   void titleRequired() {
     assertThatThrownBy(() -> EmailFormConfig.normalize("{\"title\":\"   \"}"))
-        .isInstanceOf(InvalidUsernameException.class);
-    assertThatThrownBy(() -> EmailFormConfig.normalize("{}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
+    assertThatThrownBy(() -> EmailFormConfig.normalize("{}")).isInstanceOf(ProfileException.class);
   }
 
   @Test
   void rejectsBlank() {
-    assertThatThrownBy(() -> EmailFormConfig.normalize(null))
-        .isInstanceOf(InvalidUsernameException.class);
-    assertThatThrownBy(() -> EmailFormConfig.normalize(""))
-        .isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(() -> EmailFormConfig.normalize(null)).isInstanceOf(ProfileException.class);
+    assertThatThrownBy(() -> EmailFormConfig.normalize("")).isInstanceOf(ProfileException.class);
   }
 
   @Test
   void rejectsMalformedJson() {
     assertThatThrownBy(() -> EmailFormConfig.normalize("not json"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test

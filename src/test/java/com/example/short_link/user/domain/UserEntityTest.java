@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.domain.UserEntity.Role;
 import com.example.short_link.user.domain.UserEntity.Tier;
+import com.example.short_link.user.domain.repository.*;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 

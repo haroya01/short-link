@@ -3,18 +3,17 @@ package com.example.short_link.user.application.avatar;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.s3.AvatarProperties;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.AvatarUnavailableException;
-import com.example.short_link.user.exception.InvalidAvatarException;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,13 +36,15 @@ public class BannerService {
   private final UserRepository userRepository;
   private final AvatarProperties props;
   private final ObjectStorage objectStorage;
+  private final ProfileCacheEviction cacheEviction;
 
   public PresignResult presignUpload(Long userId, String contentType) {
     require(props.isConfigured());
     String normalized = contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
     String ext = ALLOWED_TYPES.get(normalized);
     if (ext == null) {
-      throw new InvalidAvatarException("contentType must be one of: " + ALLOWED_TYPES.keySet());
+      throw new UserException(
+          UserErrorCode.INVALID_AVATAR, "contentType must be one of: " + ALLOWED_TYPES.keySet());
     }
     String key = "banners/" + userId + "/" + UUID.randomUUID() + "." + ext;
     String uploadUrl =
@@ -53,40 +54,47 @@ public class BannerService {
   }
 
   @Transactional
-  @CacheEvict(value = "public-profile", allEntries = true)
   public CommitResult commitUpload(Long userId, String key) {
     require(props.isConfigured());
     if (key == null || key.isBlank() || !key.startsWith("banners/" + userId + "/")) {
-      throw new InvalidAvatarException("key not owned by user");
+      throw new UserException(UserErrorCode.INVALID_AVATAR, "key not owned by user");
     }
     long contentLength =
         objectStorage
             .objectSize(key)
-            .orElseThrow(() -> new InvalidAvatarException("upload not found"));
+            .orElseThrow(() -> new UserException(UserErrorCode.INVALID_AVATAR, "upload not found"));
     if (contentLength > props.maxBytes()) {
       deleteQuietly(key, "oversized banner");
-      throw new InvalidAvatarException(
+      throw new UserException(
+          UserErrorCode.INVALID_AVATAR,
           "banner exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
     }
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    UserEntity user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     String previousKey = user.getBannerKey();
     String publicUrl = publicUrlFor(key);
     user.updateBanner(publicUrl, key);
     if (previousKey != null && !previousKey.isBlank() && !previousKey.equals(key)) {
       deleteQuietly(previousKey, "previous banner");
     }
+    cacheEviction.evictByUsername(user.getUsername());
     return new CommitResult(publicUrl);
   }
 
   @Transactional
-  @CacheEvict(value = "public-profile", allEntries = true)
   public void clearBanner(Long userId) {
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    UserEntity user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     String previousKey = user.getBannerKey();
     user.updateBanner(null, null);
     if (props.isConfigured() && previousKey != null && !previousKey.isBlank()) {
       deleteQuietly(previousKey, "cleared banner");
     }
+    cacheEviction.evictByUsername(user.getUsername());
   }
 
   private void deleteQuietly(String key, String label) {
@@ -107,7 +115,7 @@ public class BannerService {
   }
 
   private static void require(boolean condition) {
-    if (!condition) throw new AvatarUnavailableException();
+    if (!condition) throw new UserException(UserErrorCode.AVATAR_UNAVAILABLE);
   }
 
   public record PresignResult(

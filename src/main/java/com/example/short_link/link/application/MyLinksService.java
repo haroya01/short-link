@@ -5,9 +5,9 @@ import com.example.short_link.link.application.dto.MyLinksCursor;
 import com.example.short_link.link.application.dto.MyLinksQuery;
 import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.application.helper.LinkFilters;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -34,7 +34,7 @@ public class MyLinksService {
       Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
 
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
+  private final ClickEventReadRepository clickRepository;
   private final LinkTagService linkTagService;
 
   @Transactional(readOnly = true)

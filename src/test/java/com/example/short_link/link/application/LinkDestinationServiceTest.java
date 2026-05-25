@@ -5,10 +5,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.application.dto.DestinationSummary;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -116,8 +116,8 @@ class LinkDestinationServiceTest {
             owner.getId(), "ab55555", "https://example.com/v", 50, null, null, null, null);
 
     assertThatThrownBy(() -> query.list(stranger.getId(), "ab55555"))
-        .isInstanceOf(LinkNotOwnedException.class);
+        .isInstanceOf(LinkException.class);
     assertThatThrownBy(() -> deleteUseCase.execute(stranger.getId(), "ab55555", v.id()))
-        .isInstanceOf(LinkNotOwnedException.class);
+        .isInstanceOf(LinkException.class);
   }
 }

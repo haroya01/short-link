@@ -1,6 +1,7 @@
 package com.example.short_link.profile.application.oembed;
 
-import com.example.short_link.profile.exception.OembedNotApplicableException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
@@ -25,16 +26,17 @@ public class OembedService {
   }
 
   /**
-   * Returns oembed metadata for a whitelisted provider URL. Throws {@link
-   * OembedNotApplicableException} when the host isn't a registered provider — the controller maps
-   * that to 422 via {@code ProfileExceptionHandler}. Cached 24h per input URL; provider 4xx/5xx are
-   * swallowed into an empty response so the frontend can render the bare URL as a fallback without
-   * surfacing a transient outage.
+   * Returns oembed metadata for a whitelisted provider URL. Throws {@link ProfileException} when
+   * the host isn't a registered provider — the controller maps that to 422 via {@code
+   * ProfileExceptionHandler}. Cached 24h per input URL; provider 4xx/5xx are swallowed into an
+   * empty response so the frontend can render the bare URL as a fallback without surfacing a
+   * transient outage.
    */
   @Cacheable(value = CACHE, key = "#url")
   public OembedResponse fetch(String url) {
     EmbedProvider provider =
-        EmbedProvider.resolve(url).orElseThrow(OembedNotApplicableException::new);
+        EmbedProvider.resolve(url)
+            .orElseThrow(() -> new ProfileException(ProfileErrorCode.OEMBED_NOT_APPLICABLE));
     return fetchFromProvider(provider, url);
   }
 

@@ -1,9 +1,10 @@
 package com.example.short_link.link.application;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,7 +30,7 @@ public class LinkAccessGuard {
 
   public void requireView(Long userId, LinkEntity link) {
     if (!canView(userId, link)) {
-      throw new LinkNotOwnedException(link.getShortCode());
+      throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, link.getShortCode());
     }
   }
 }

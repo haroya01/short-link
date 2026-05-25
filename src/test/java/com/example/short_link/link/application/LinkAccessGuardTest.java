@@ -5,9 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.exception.LinkNotOwnedException;
+import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -66,8 +66,7 @@ class LinkAccessGuardTest {
   void requireViewThrowsWhenDenied() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
     when(userRepository.findById(99L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> guard.requireView(99L, link))
-        .isInstanceOf(LinkNotOwnedException.class);
+    assertThatThrownBy(() -> guard.requireView(99L, link)).isInstanceOf(LinkException.class);
   }
 
   @Test

@@ -4,7 +4,7 @@ import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.application.LinkOgFetchListener;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;

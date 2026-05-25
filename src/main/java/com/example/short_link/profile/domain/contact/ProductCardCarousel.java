@@ -1,6 +1,7 @@
 package com.example.short_link.profile.domain.contact;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -114,19 +115,22 @@ public final class ProductCardCarousel {
 
   public static String normalize(String raw) {
     if (raw == null || raw.isBlank()) {
-      throw new InvalidUsernameException("product card: config required");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: config required");
     }
     Payload parsed;
     try {
       parsed = MAPPER.readValue(raw.trim(), Payload.class);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("product card: malformed json");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "product card: malformed json");
     }
     if (parsed == null || parsed.items == null || parsed.items.isEmpty()) {
-      throw new InvalidUsernameException("product card: at least 1 item required");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: at least 1 item required");
     }
     if (parsed.items.size() > MAX_ITEMS) {
-      throw new InvalidUsernameException("product card: max " + MAX_ITEMS + " items");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: max " + MAX_ITEMS + " items");
     }
     String title = trimTo(parsed.title, TITLE_MAX);
     String layout = normalizeLayout(parsed.layout);
@@ -135,7 +139,8 @@ public final class ProductCardCarousel {
       if (item == null) continue;
       String name = trimTo(item.name, NAME_MAX);
       if (name == null || name.isEmpty()) {
-        throw new InvalidUsernameException("product card: each item needs a name");
+        throw new ProfileException(
+            ProfileErrorCode.INVALID_USERNAME, "product card: each item needs a name");
       }
       List<ImageEntry> images = normalizeImages(item.images, item.image);
       String ctaUrl = trimTo(item.ctaUrl, CTA_URL_MAX);
@@ -152,12 +157,14 @@ public final class ProductCardCarousel {
               ctaUrl));
     }
     if (out.isEmpty()) {
-      throw new InvalidUsernameException("product card: at least 1 item required");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: at least 1 item required");
     }
     try {
       return MAPPER.writeValueAsString(new PayloadOut(title, layout, out));
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("product card: serialization failed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: serialization failed");
     }
   }
 
@@ -170,7 +177,8 @@ public final class ProductCardCarousel {
     List<ImageEntry> out = new ArrayList<>();
     if (images != null && !images.isEmpty()) {
       if (images.size() > MAX_IMAGES_PER_ITEM) {
-        throw new InvalidUsernameException(
+        throw new ProfileException(
+            ProfileErrorCode.INVALID_USERNAME,
             "product card: max " + MAX_IMAGES_PER_ITEM + " images per item");
       }
       for (ImageEntry entry : images) {
@@ -233,14 +241,17 @@ public final class ProductCardCarousel {
     try {
       uri = URI.create(url);
     } catch (IllegalArgumentException ex) {
-      throw new InvalidUsernameException("product card: " + field + " url malformed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: " + field + " url malformed");
     }
     String scheme = uri.getScheme();
     if (scheme == null || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-      throw new InvalidUsernameException("product card: " + field + " url must be http(s)");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: " + field + " url must be http(s)");
     }
     if (uri.getHost() == null || uri.getHost().isBlank()) {
-      throw new InvalidUsernameException("product card: " + field + " url missing host");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: " + field + " url missing host");
     }
   }
 }

@@ -6,10 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.link.domain.CustomDomainEntity;
-import com.example.short_link.link.domain.CustomDomainRepository;
+import com.example.short_link.link.domain.repository.CustomDomainRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import java.lang.reflect.Field;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -36,8 +36,8 @@ class CustomDomainRoutingE2ETest {
   void customDomainHost_serves_ownerLink_andBlocksCrossUserCodes() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("cd-owner@x.com", "google", "g-cd-own"));
     UserEntity other = userRepository.save(new UserEntity("cd-other@x.com", "google", "g-cd-oth"));
-    String ownerToken = jwt.createAccessToken(owner.getId());
-    String otherToken = jwt.createAccessToken(other.getId());
+    String ownerToken = jwt.createAccessToken(owner.getId(), "USER");
+    String otherToken = jwt.createAccessToken(other.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
@@ -77,8 +77,8 @@ class CustomDomainRoutingE2ETest {
   void unverifiedCustomDomain_doesNotGateRouting() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("cd-pend@x.com", "google", "g-cd-pend"));
     UserEntity other = userRepository.save(new UserEntity("cd-pend2@x.com", "google", "g-cd-pen2"));
-    String ownerToken = jwt.createAccessToken(owner.getId());
-    String otherToken = jwt.createAccessToken(other.getId());
+    String ownerToken = jwt.createAccessToken(owner.getId(), "USER");
+    String otherToken = jwt.createAccessToken(other.getId(), "USER");
 
     mvc.perform(
             post("/api/v1/links")
