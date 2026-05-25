@@ -1,7 +1,7 @@
 package com.example.short_link.common.application;
 
-import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;

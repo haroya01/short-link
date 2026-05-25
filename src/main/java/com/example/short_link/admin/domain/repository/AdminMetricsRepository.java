@@ -1,7 +1,7 @@
 package com.example.short_link.admin.domain.repository;
 
 import com.example.short_link.admin.domain.*;
-import com.example.short_link.link.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Collection;

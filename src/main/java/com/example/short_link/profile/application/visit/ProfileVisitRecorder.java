@@ -1,16 +1,16 @@
 package com.example.short_link.profile.application.visit;
 
 import com.example.short_link.common.geoip.GeoLocation;
-import com.example.short_link.link.application.AsnResolver;
-import com.example.short_link.link.application.BotHeuristic;
-import com.example.short_link.link.application.GeoIpResolver;
-import com.example.short_link.link.application.UserAgentClassifier;
 import com.example.short_link.link.application.dto.UserAgentInfo;
-import com.example.short_link.link.application.helper.IpMasker;
-import com.example.short_link.link.application.helper.LanguageExtractor;
-import com.example.short_link.link.application.helper.ReferrerNormalizer;
-import com.example.short_link.link.application.helper.SourceChannelNormalizer;
-import com.example.short_link.link.application.helper.VisitorHasher;
+import com.example.short_link.link.classifier.application.AsnResolver;
+import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.GeoIpResolver;
+import com.example.short_link.link.classifier.application.UserAgentClassifier;
+import com.example.short_link.link.classifier.application.helper.IpMasker;
+import com.example.short_link.link.classifier.application.helper.LanguageExtractor;
+import com.example.short_link.link.classifier.application.helper.ReferrerNormalizer;
+import com.example.short_link.link.classifier.application.helper.SourceChannelNormalizer;
+import com.example.short_link.link.classifier.application.helper.VisitorHasher;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.profile.exception.ProfileErrorCode;
@@ -25,7 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Records a {@link ProfileVisitEntity} for each visit to a /u/&lt;handle&gt; page. Reuses the same
  * UA / geo / ASN / bot-heuristic services as {@link
- * com.example.short_link.link.application.ClickRecorder} so the enrichment quality (and the
+ * com.example.short_link.link.stats.application.ClickRecorder} so the enrichment quality (and the
  * downstream stats UX) stays consistent between link clicks and profile visits.
  */
 @Slf4j

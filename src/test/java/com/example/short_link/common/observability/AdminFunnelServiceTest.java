@@ -4,10 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.observability.AdminFunnelService.Funnel;
 import com.example.short_link.common.observability.AdminFunnelService.Window;
-import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import com.example.short_link.user.domain.UserEntity;

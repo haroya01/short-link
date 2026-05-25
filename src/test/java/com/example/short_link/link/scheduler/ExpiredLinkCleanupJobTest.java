@@ -2,10 +2,10 @@ package com.example.short_link.link.scheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
