@@ -67,7 +67,6 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "profile_theme", length = 16)
   private String profileTheme;
 
-  /** Public CDN/S3 URL of the avatar image, or null if user hasn't uploaded one. */
   @Column(name = "avatar_url", length = 512)
   private String avatarUrl;
 
@@ -78,7 +77,6 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "avatar_key", length = 256)
   private String avatarKey;
 
-  /** Public CDN/S3 URL of the profile banner / hero image, or null if not uploaded. */
   @Column(name = "banner_url", length = 512)
   private String bannerUrl;
 
