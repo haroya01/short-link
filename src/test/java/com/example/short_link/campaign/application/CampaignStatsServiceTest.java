@@ -7,9 +7,9 @@ import com.example.short_link.campaign.application.dto.CampaignBatchCreateReques
 import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
 import com.example.short_link.campaign.domain.CampaignEntity;
-import com.example.short_link.link.domain.ClickEventEntity;
-import com.example.short_link.link.domain.repository.ClickEventReadRepository;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;

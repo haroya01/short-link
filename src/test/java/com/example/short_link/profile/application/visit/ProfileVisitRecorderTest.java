@@ -8,11 +8,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.geoip.GeoLocation;
-import com.example.short_link.link.application.AsnResolver;
-import com.example.short_link.link.application.BotHeuristic;
-import com.example.short_link.link.application.GeoIpResolver;
-import com.example.short_link.link.application.UserAgentClassifier;
 import com.example.short_link.link.application.dto.UserAgentInfo;
+import com.example.short_link.link.classifier.application.AsnResolver;
+import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.GeoIpResolver;
+import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.profile.domain.visit.ProfileVisitEntity;
 import com.example.short_link.profile.domain.visit.ProfileVisitRepository;
 import com.example.short_link.user.domain.repository.UserRepository;

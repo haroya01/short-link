@@ -11,8 +11,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.application.dto.CachedLink;
-import com.example.short_link.link.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.og.application.OgCardImageRenderer;
+import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

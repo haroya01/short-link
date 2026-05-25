@@ -6,10 +6,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
