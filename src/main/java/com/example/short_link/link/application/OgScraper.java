@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.common.net.PinnedHttpClientFactory;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.link.application.dto.OgMetadata;
@@ -8,21 +9,14 @@ import io.micrometer.core.instrument.Timer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hc.client5.http.DnsResolver;
 import org.apache.hc.client5.http.classic.methods.HttpGet;
-import org.apache.hc.client5.http.config.ConnectionConfig;
-import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.http.Header;
 import org.apache.hc.core5.util.Timeout;
 import org.jsoup.Jsoup;
@@ -112,43 +106,11 @@ public class OgScraper {
 
   /** Visible for tests. */
   protected CloseableHttpClient buildPinnedClient(Resolved resolved) {
-    String pinnedHost = resolved.uri().getHost();
-    InetAddress[] pinnedAddrs = resolved.addresses().toArray(new InetAddress[0]);
-    DnsResolver pinned =
-        new DnsResolver() {
-          @Override
-          public InetAddress[] resolve(String host) throws UnknownHostException {
-            if (host != null && host.equalsIgnoreCase(pinnedHost)) {
-              return pinnedAddrs;
-            }
-            throw new UnknownHostException("DNS pinned to " + pinnedHost + "; refused " + host);
-          }
-
-          @Override
-          public String resolveCanonicalHostname(String host) {
-            return host;
-          }
-        };
-    ConnectionConfig connConfig =
-        ConnectionConfig.custom()
-            .setConnectTimeout(Timeout.ofMilliseconds(CONNECT_TIMEOUT_MS))
-            .setSocketTimeout(Timeout.ofMilliseconds(READ_TIMEOUT_MS))
-            .build();
-    var connMgr =
-        PoolingHttpClientConnectionManagerBuilder.create()
-            .setDnsResolver(pinned)
-            .setDefaultConnectionConfig(connConfig)
-            .build();
-    RequestConfig reqConfig =
-        RequestConfig.custom()
-            .setResponseTimeout(Timeout.ofMilliseconds(CONNECT_TIMEOUT_MS + READ_TIMEOUT_MS))
-            .build();
-    return HttpClients.custom()
-        .setConnectionManager(connMgr)
-        .setConnectionManagerShared(false)
-        .setDefaultRequestConfig(reqConfig)
-        .disableAutomaticRetries()
-        .build();
+    return PinnedHttpClientFactory.build(
+        resolved,
+        Timeout.ofMilliseconds(CONNECT_TIMEOUT_MS),
+        Timeout.ofMilliseconds(READ_TIMEOUT_MS),
+        Timeout.ofMilliseconds(CONNECT_TIMEOUT_MS + READ_TIMEOUT_MS));
   }
 
   private static byte[] readUpTo(InputStream in, int max) throws IOException {
