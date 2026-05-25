@@ -1,4 +1,4 @@
-package com.example.short_link.link.application;
+package com.example.short_link.link.safety.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;

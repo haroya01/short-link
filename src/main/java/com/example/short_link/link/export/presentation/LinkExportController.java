@@ -1,6 +1,6 @@
-package com.example.short_link.link.presentation.stats;
+package com.example.short_link.link.export.presentation;
 
-import com.example.short_link.link.application.LinkExportService;
+import com.example.short_link.link.export.application.LinkExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
