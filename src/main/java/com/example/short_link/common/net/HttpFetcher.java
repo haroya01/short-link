@@ -8,8 +8,8 @@ import java.util.Map;
 
 /**
  * Outbound HTTP port. Wraps the Apache HttpClient 5 + DNS-pinning machinery
- * (PinnedHttpClientFactory) so callers don't depend on org.apache.hc.* directly — that dependency
- * stays confined to the adapter in common.net.
+ * (PinnedHttpClientFactory) so callers don't depend on {@code org.apache.hc.*} directly — that
+ * dependency stays confined to the adapter in {@code common.net}.
  *
  * <p>Each call is independent: the implementation builds a per-request client pinned to the
  * resolved IP (DNS rebinding defense) and closes it after the response is fully read. Body is
@@ -79,8 +79,8 @@ public interface HttpFetcher {
   }
 
   /**
-   * Response value. {@code body} is empty (not null) when the entity was absent. Header lookups
-   * preserve insertion order from the wire but are case-insensitive on read.
+   * Response value. {@code body} is empty (not null) when the entity was absent. Header lookups are
+   * case-insensitive on read.
    */
   record Response(int status, Map<String, List<String>> headers, byte[] body) {
 
