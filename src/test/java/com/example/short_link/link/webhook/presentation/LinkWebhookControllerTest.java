@@ -73,7 +73,11 @@ class LinkWebhookControllerTest {
         null,
         null,
         null,
-        WebhookFormat.GENERIC);
+        WebhookFormat.GENERIC,
+        com.example.short_link.link.webhook.domain.WebhookDeliveryMode.PER_EVENT,
+        null,
+        null,
+        null);
   }
 
   @Test
