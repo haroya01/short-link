@@ -13,13 +13,7 @@ import com.example.short_link.profile.domain.contact.TextBlockBody;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
 
-/**
- * Per-type validation + normalization for profile block content. Returns the trimmed value to
- * persist (null for types that don't carry content). Throws {@link ProfileException} on bad input —
- * controller turns it into 400.
- *
- * <p>Shared by {@code CreateBlockUseCase} and {@code UpdateBlockUseCase}.
- */
+/** Throws {@link ProfileException} on bad input — controller turns it into HTTP 400. */
 public final class BlockContentValidator {
 
   private BlockContentValidator() {}
