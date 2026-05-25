@@ -22,9 +22,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Sets/queries the tags attached to a single link. {@link #replaceTags(Long, String, List)} is a
- * full replace — it auto-creates missing tags so the UI can let users type a new tag inline without
- * a separate \"create tag\" step.
+ * {@link #replaceTags(Long, String, List)} is a full replace — it auto-creates missing tags so the
+ * UI can let users type a new tag inline without a separate "create tag" step.
  */
 @Service
 @RequiredArgsConstructor
