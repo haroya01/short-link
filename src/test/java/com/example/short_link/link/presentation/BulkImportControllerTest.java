@@ -1,16 +1,15 @@
 package com.example.short_link.link.presentation;
 
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.link.application.BulkImportService;
-import com.example.short_link.link.application.BulkImportService.BulkImportResult;
-import com.example.short_link.link.application.BulkImportService.BulkImportRow;
+import com.example.short_link.link.application.dto.BulkImportResult;
+import com.example.short_link.link.application.dto.BulkImportRow;
+import com.example.short_link.link.application.write.ImportLinksFromCsvUseCase;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -35,7 +34,7 @@ class BulkImportControllerTest {
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
 
-  @MockitoBean private BulkImportService service;
+  @MockitoBean private ImportLinksFromCsvUseCase useCase;
 
   @Test
   void anonymousIs401() throws Exception {
@@ -60,7 +59,7 @@ class BulkImportControllerTest {
   void importSucceedsAndReturnsCsvWithHeaders() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-bu"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.importCsv(eq(user.getId()), any()))
+    when(useCase.execute(any()))
         .thenReturn(
             new BulkImportResult(
                 1,
