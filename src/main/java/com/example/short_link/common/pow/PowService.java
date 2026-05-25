@@ -44,10 +44,6 @@ public class PowService {
     return enforce;
   }
 
-  public int difficulty() {
-    return difficulty;
-  }
-
   public Challenge issue() {
     byte[] buf = new byte[16];
     RANDOM.nextBytes(buf);

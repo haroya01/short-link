@@ -1,10 +1,10 @@
 package com.example.short_link.campaign.application.write;
 
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
-import com.example.short_link.campaign.domain.CampaignBatchRepository;
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

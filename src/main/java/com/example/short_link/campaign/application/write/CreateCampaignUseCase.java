@@ -3,9 +3,9 @@ package com.example.short_link.campaign.application.write;
 import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
-import com.example.short_link.campaign.domain.CampaignRepository;
-import com.example.short_link.campaign.exception.InvalidCampaignPeriodException;
-import com.example.short_link.campaign.exception.MissingPostEndDestinationException;
+import com.example.short_link.campaign.domain.repository.CampaignRepository;
+import com.example.short_link.campaign.exception.CampaignErrorCode;
+import com.example.short_link.campaign.exception.CampaignException;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,12 +22,12 @@ public class CreateCampaignUseCase {
     Instant now = Instant.now();
     Instant startsAt = request.startsAt() != null ? request.startsAt() : now;
     if (!request.endsAt().isAfter(startsAt)) {
-      throw new InvalidCampaignPeriodException();
+      throw new CampaignException(CampaignErrorCode.INVALID_CAMPAIGN_PERIOD);
     }
     CampaignPostEndAction action =
         request.postEndAction() != null ? request.postEndAction() : CampaignPostEndAction.KEEP;
     if (action == CampaignPostEndAction.REDIRECT && isBlank(request.postEndDestinationUrl())) {
-      throw new MissingPostEndDestinationException();
+      throw new CampaignException(CampaignErrorCode.MISSING_POST_END_DESTINATION);
     }
     CampaignEntity campaign =
         new CampaignEntity(

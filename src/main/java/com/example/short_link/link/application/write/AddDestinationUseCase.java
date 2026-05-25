@@ -2,8 +2,8 @@ package com.example.short_link.link.application.write;
 
 import com.example.short_link.link.application.dto.DestinationSummary;
 import com.example.short_link.link.domain.LinkDestinationEntity;
-import com.example.short_link.link.domain.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkDestinationRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;

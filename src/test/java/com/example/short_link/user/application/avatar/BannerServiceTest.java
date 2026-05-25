@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,11 +12,10 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.s3.AvatarProperties;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.AvatarUnavailableException;
-import com.example.short_link.user.exception.InvalidAvatarException;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,21 +36,23 @@ class BannerServiceTest {
   @BeforeEach
   void setUp() {
     props = new AvatarProperties("bucket", "ap-northeast-2", "https://cdn.example.com", 300, 1024);
-    service = new BannerService(userRepository, props, objectStorage);
+    service =
+        new BannerService(userRepository, props, objectStorage, mock(ProfileCacheEviction.class));
   }
 
   @Test
   void presignFailsWhenNotConfigured() {
     AvatarProperties noBucket = new AvatarProperties("", "", null, 300, 1024);
-    BannerService svc = new BannerService(userRepository, noBucket, objectStorage);
-    assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg"))
-        .isInstanceOf(AvatarUnavailableException.class);
+    BannerService svc =
+        new BannerService(
+            userRepository, noBucket, objectStorage, mock(ProfileCacheEviction.class));
+    assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg")).isInstanceOf(UserException.class);
   }
 
   @Test
   void presignRejectsUnsupportedContentType() {
     assertThatThrownBy(() -> service.presignUpload(1L, "image/svg+xml"))
-        .isInstanceOf(InvalidAvatarException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -66,14 +68,14 @@ class BannerServiceTest {
   @Test
   void commitRejectsForeignKey() {
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/2/x.png"))
-        .isInstanceOf(InvalidAvatarException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
   void commitFailsWhenObjectMissing() {
     when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
-        .isInstanceOf(InvalidAvatarException.class)
+        .isInstanceOf(UserException.class)
         .hasMessageContaining("upload not found");
   }
 
@@ -81,7 +83,7 @@ class BannerServiceTest {
   void commitDeletesOversizedUpload() {
     when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(9999L));
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
-        .isInstanceOf(InvalidAvatarException.class)
+        .isInstanceOf(UserException.class)
         .hasMessageContaining("exceeds maxBytes");
     verify(objectStorage).delete("banners/1/x.png");
   }
@@ -93,7 +95,7 @@ class BannerServiceTest {
         .when(objectStorage)
         .delete("banners/1/x.png");
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
-        .isInstanceOf(InvalidAvatarException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -101,7 +103,7 @@ class BannerServiceTest {
     when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(100L));
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
-        .isInstanceOf(UserNotFoundException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
@@ -151,13 +153,14 @@ class BannerServiceTest {
   @Test
   void clearBannerMissingUserThrows() {
     when(userRepository.findById(1L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.clearBanner(1L)).isInstanceOf(UserNotFoundException.class);
+    assertThatThrownBy(() -> service.clearBanner(1L)).isInstanceOf(UserException.class);
   }
 
   @Test
   void publicUrlFallsBackToStandardS3WhenCdnBlank() {
     AvatarProperties noCdn = new AvatarProperties("bucket", "ap-northeast-2", null, 300, 1024);
-    BannerService svc = new BannerService(userRepository, noCdn, objectStorage);
+    BannerService svc =
+        new BannerService(userRepository, noCdn, objectStorage, mock(ProfileCacheEviction.class));
     when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
         .thenReturn("https://s3/put");
     BannerService.PresignResult r = svc.presignUpload(1L, "image/png");

@@ -3,8 +3,8 @@ package com.example.short_link.profile.application.image;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.s3.AvatarProperties;
-import com.example.short_link.user.exception.AvatarUnavailableException;
-import com.example.short_link.user.exception.InvalidAvatarException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
@@ -38,12 +38,13 @@ public class ProfileImageService {
   private final ObjectStorage objectStorage;
 
   public PresignResult presignUpload(Long userId, String contentType) {
-    if (userId == null) throw new InvalidAvatarException("userId required");
+    if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     require(props.isConfigured());
     String normalized = contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
     String ext = ALLOWED_TYPES.get(normalized);
     if (ext == null) {
-      throw new InvalidAvatarException("contentType must be one of: " + ALLOWED_TYPES.keySet());
+      throw new UserException(
+          UserErrorCode.INVALID_AVATAR, "contentType must be one of: " + ALLOWED_TYPES.keySet());
     }
     String key = KEY_PREFIX + userId + "/" + UUID.randomUUID() + "." + ext;
     String uploadUrl =
@@ -53,23 +54,24 @@ public class ProfileImageService {
   }
 
   public CommitResult commitUpload(Long userId, String key) {
-    if (userId == null) throw new InvalidAvatarException("userId required");
+    if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     require(props.isConfigured());
     String expectedPrefix = KEY_PREFIX + userId + "/";
     if (key == null || key.isBlank() || !key.startsWith(expectedPrefix)) {
-      throw new InvalidAvatarException("key not owned by user");
+      throw new UserException(UserErrorCode.INVALID_AVATAR, "key not owned by user");
     }
     long contentLength =
         objectStorage
             .objectSize(key)
-            .orElseThrow(() -> new InvalidAvatarException("upload not found"));
+            .orElseThrow(() -> new UserException(UserErrorCode.INVALID_AVATAR, "upload not found"));
     if (contentLength > props.maxBytes()) {
       try {
         objectStorage.delete(key);
       } catch (ObjectStorageException e) {
         log.warn("failed to delete oversized profile image key={}", key, e);
       }
-      throw new InvalidAvatarException(
+      throw new UserException(
+          UserErrorCode.INVALID_AVATAR,
           "image exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
     }
     return new CommitResult(publicUrlFor(key), key);
@@ -85,7 +87,7 @@ public class ProfileImageService {
   }
 
   private static void require(boolean condition) {
-    if (!condition) throw new AvatarUnavailableException();
+    if (!condition) throw new UserException(UserErrorCode.AVATAR_UNAVAILABLE);
   }
 
   public record PresignResult(

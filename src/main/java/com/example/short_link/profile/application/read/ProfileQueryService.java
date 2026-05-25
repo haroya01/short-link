@@ -1,21 +1,23 @@
 package com.example.short_link.profile.application.read;
 
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.domain.ClickEventRepository;
-import com.example.short_link.link.domain.ClickEventRepository.LinkClickCount;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.domain.repository.ClickEventReadRepository.LinkClickCount;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.MyProfileMapper;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.Socials;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
-import com.example.short_link.profile.domain.ProfileBlockRepository;
-import com.example.short_link.profile.domain.UsernameHistoryRepository;
-import com.example.short_link.profile.exception.ProfileNotFoundException;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
+import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -35,7 +37,7 @@ public class ProfileQueryService {
 
   private final UserRepository userRepository;
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
+  private final ClickEventReadRepository clickRepository;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final ShortLinkUrlBuilder urlBuilder;
@@ -44,11 +46,16 @@ public class ProfileQueryService {
   private String publicProfileBaseUrl;
 
   public MyProfile myProfile(Long userId) {
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    UserEntity user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     return MyProfileMapper.from(user, publicProfileBaseUrl);
   }
 
-  @Cacheable(value = "public-profile", key = "#username")
+  @Cacheable(
+      value = "public-profile",
+      key = "#username == null ? '' : #username.trim().toLowerCase()")
   public PublicProfile findByUsername(String username) {
     String normalized = username == null ? "" : username.trim().toLowerCase();
     UserEntity user =
@@ -56,7 +63,8 @@ public class ProfileQueryService {
             .findByUsername(normalized)
             .filter(u -> !u.isDeleted())
             .or(() -> resolveByHistory(normalized))
-            .orElseThrow(() -> new ProfileNotFoundException(normalized));
+            .orElseThrow(
+                () -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));
     List<LinkEntity> links =
         linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(user.getId());
     List<ProfileBlockEntity> blocks =

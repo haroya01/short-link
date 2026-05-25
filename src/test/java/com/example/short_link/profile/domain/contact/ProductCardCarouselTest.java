@@ -3,7 +3,7 @@ package com.example.short_link.profile.domain.contact;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.Test;
 
 class ProductCardCarouselTest {
@@ -94,24 +94,24 @@ class ProductCardCarouselTest {
     }
     json.append("]}]}");
     assertThatThrownBy(() -> ProductCardCarousel.normalize(json.toString()))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void requiresAtLeastOneItem() {
     assertThatThrownBy(() -> ProductCardCarousel.normalize("{\"items\":[]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () -> ProductCardCarousel.normalize("{\"title\":\"empty\",\"items\":[null]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void itemNameRequired() {
     assertThatThrownBy(() -> ProductCardCarousel.normalize("{\"items\":[{\"price\":\"$10\"}]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> ProductCardCarousel.normalize("{\"items\":[{\"name\":\"   \"}]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -123,7 +123,7 @@ class ProductCardCarouselTest {
     }
     json.append("]}");
     assertThatThrownBy(() -> ProductCardCarousel.normalize(json.toString()))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -133,19 +133,19 @@ class ProductCardCarouselTest {
                 ProductCardCarousel.normalize(
                     "{\"items\":[{\"name\":\"x\","
                         + "\"images\":[{\"url\":\"file:///etc/passwd\"}]}]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
             () ->
                 ProductCardCarousel.normalize(
                     "{\"items\":[{\"name\":\"x\","
                         + "\"images\":[{\"url\":\"javascript:alert(1)\"}]}]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     // Legacy field still validated.
     assertThatThrownBy(
             () ->
                 ProductCardCarousel.normalize(
                     "{\"items\":[{\"name\":\"x\",\"image\":\"file:///etc/passwd\"}]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -154,7 +154,7 @@ class ProductCardCarouselTest {
             () ->
                 ProductCardCarousel.normalize(
                     "{\"items\":[{\"name\":\"x\",\"ctaUrl\":\"javascript:alert(1)\"}]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -169,9 +169,9 @@ class ProductCardCarouselTest {
   @Test
   void rejectsMalformedJson() {
     assertThatThrownBy(() -> ProductCardCarousel.normalize("not json"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> ProductCardCarousel.normalize(""))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test

@@ -2,9 +2,9 @@ package com.example.short_link.billing.application.write;
 
 import com.example.short_link.billing.domain.SubscriptionEvent;
 import com.example.short_link.billing.domain.SubscriptionGateway;
-import com.example.short_link.billing.exception.InvalidWebhookSignatureException;
+import com.example.short_link.billing.exception.BillingException;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -32,7 +32,7 @@ public class HandleSubscriptionWebhookUseCase {
     SubscriptionEvent event;
     try {
       event = subscriptions.parseAndVerifyWebhook(cmd.payload(), cmd.signature());
-    } catch (InvalidWebhookSignatureException e) {
+    } catch (BillingException e) {
       meterRegistry.counter("billing.webhook", "result", "invalid_signature").increment();
       throw e;
     }

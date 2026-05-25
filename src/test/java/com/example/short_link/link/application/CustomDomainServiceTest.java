@@ -11,9 +11,8 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.CustomDomainService.DomainSummary;
 import com.example.short_link.link.application.helper.TxtResolver;
 import com.example.short_link.link.domain.CustomDomainEntity;
-import com.example.short_link.link.domain.CustomDomainRepository;
-import com.example.short_link.link.exception.CustomDomainNotFoundException;
-import com.example.short_link.link.exception.CustomDomainNotVerifiedException;
+import com.example.short_link.link.domain.repository.CustomDomainRepository;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -125,23 +124,20 @@ class CustomDomainServiceTest {
   void verifyOwnerCheckIsEnforced() {
     CustomDomainEntity d = domain(1L, 99L, "go.example.com", false);
     when(repository.findById(1L)).thenReturn(Optional.of(d));
-    assertThatThrownBy(() -> service.verify(7L, 1L))
-        .isInstanceOf(CustomDomainNotFoundException.class);
+    assertThatThrownBy(() -> service.verify(7L, 1L)).isInstanceOf(LinkException.class);
   }
 
   @Test
   void verifyMissingDomainThrows() {
     when(repository.findById(1L)).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.verify(7L, 1L))
-        .isInstanceOf(CustomDomainNotFoundException.class);
+    assertThatThrownBy(() -> service.verify(7L, 1L)).isInstanceOf(LinkException.class);
   }
 
   @Test
   void verifyFailureMarksAndCounts() {
     CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
     when(repository.findById(1L)).thenReturn(Optional.of(d));
-    assertThatThrownBy(() -> service.verify(7L, 1L))
-        .isInstanceOf(CustomDomainNotVerifiedException.class);
+    assertThatThrownBy(() -> service.verify(7L, 1L)).isInstanceOf(LinkException.class);
     assertThat(meterRegistry.counter("custom_domain.verify", "result", "failed").count())
         .isEqualTo(1.0);
     assertThat(d.getLastCheckedAt()).isNotNull();
@@ -208,8 +204,7 @@ class CustomDomainServiceTest {
   void deleteNonOwnerThrows() {
     CustomDomainEntity d = domain(1L, 99L, "go.example.com", true);
     when(repository.findById(1L)).thenReturn(Optional.of(d));
-    assertThatThrownBy(() -> service.delete(7L, 1L))
-        .isInstanceOf(CustomDomainNotFoundException.class);
+    assertThatThrownBy(() -> service.delete(7L, 1L)).isInstanceOf(LinkException.class);
     verify(repository, never()).delete(any());
   }
 

@@ -1,5 +1,6 @@
 package com.example.short_link.user.domain;
 
+import com.example.short_link.user.domain.repository.*;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.Set;

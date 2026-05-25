@@ -1,6 +1,7 @@
 package com.example.short_link.profile.application.email;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,17 +35,17 @@ public record EmailFormConfig(
 
   public static String normalize(String raw) {
     if (raw == null || raw.isBlank()) {
-      throw new InvalidUsernameException("email form: config required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email form: config required");
     }
     EmailFormConfig parsed;
     try {
       parsed = MAPPER.readValue(raw.trim(), EmailFormConfig.class);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("email form: malformed json");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email form: malformed json");
     }
     String title = trimTo(parsed.title, TITLE_MAX);
     if (title == null || title.isEmpty()) {
-      throw new InvalidUsernameException("email form: title required");
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email form: title required");
     }
     String subtitle = trimTo(parsed.subtitle, SUBTITLE_MAX);
     String placeholder = trimTo(parsed.placeholder, PLACEHOLDER_MAX);
@@ -53,7 +54,8 @@ public record EmailFormConfig(
     try {
       return MAPPER.writeValueAsString(out);
     } catch (JsonProcessingException ex) {
-      throw new InvalidUsernameException("email form: serialization failed");
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "email form: serialization failed");
     }
   }
 

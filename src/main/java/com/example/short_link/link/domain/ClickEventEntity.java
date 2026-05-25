@@ -1,5 +1,6 @@
 package com.example.short_link.link.domain;
 
+import com.example.short_link.link.domain.repository.*;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

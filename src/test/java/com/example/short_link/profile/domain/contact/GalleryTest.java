@@ -3,7 +3,7 @@ package com.example.short_link.profile.domain.contact;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.profile.exception.InvalidUsernameException;
+import com.example.short_link.profile.exception.ProfileException;
 import org.junit.jupiter.api.Test;
 
 class GalleryTest {
@@ -19,9 +19,9 @@ class GalleryTest {
   @Test
   void requiresAtLeastOneImage() {
     assertThatThrownBy(() -> Gallery.normalize("{\"images\":[]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> Gallery.normalize("{\"images\":[\"  \",\"\"]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
@@ -33,21 +33,20 @@ class GalleryTest {
     }
     json.append("]}");
     assertThatThrownBy(() -> Gallery.normalize(json.toString()))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void rejectsNonHttpScheme() {
     assertThatThrownBy(() -> Gallery.normalize("{\"images\":[\"file:///etc/passwd\"]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> Gallery.normalize("{\"images\":[\"javascript:alert(1)\"]}"))
-        .isInstanceOf(InvalidUsernameException.class);
+        .isInstanceOf(ProfileException.class);
   }
 
   @Test
   void rejectsMalformedJson() {
-    assertThatThrownBy(() -> Gallery.normalize("not json"))
-        .isInstanceOf(InvalidUsernameException.class);
+    assertThatThrownBy(() -> Gallery.normalize("not json")).isInstanceOf(ProfileException.class);
   }
 
   @Test

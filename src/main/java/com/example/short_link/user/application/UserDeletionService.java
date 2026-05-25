@@ -2,13 +2,14 @@ package com.example.short_link.user.application;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
-import com.example.short_link.link.domain.ClickEventRepository;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.ClickEventRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.RefreshTokenStore;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.UserNotFoundException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
 import java.util.Map;
@@ -40,7 +41,10 @@ public class UserDeletionService {
 
   @Transactional
   public void deleteAccount(Long userId) {
-    UserEntity user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
+    UserEntity user =
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (user.isDeleted()) {
       // already pending deletion — idempotent
       return;

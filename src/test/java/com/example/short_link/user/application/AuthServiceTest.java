@@ -8,8 +8,8 @@ import com.example.short_link.user.application.dto.ParsedRefresh;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.RefreshTokenStore;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.UserRepository;
-import com.example.short_link.user.exception.InvalidRefreshTokenException;
+import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserException;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -78,13 +78,12 @@ class AuthServiceTest {
     RefreshToken refresh = jwt.createRefreshToken(user.getId());
 
     assertThatThrownBy(() -> authService.refresh(refresh.token()))
-        .isInstanceOf(InvalidRefreshTokenException.class);
+        .isInstanceOf(UserException.class);
   }
 
   @Test
   void refreshThrowsForGarbageToken() {
-    assertThatThrownBy(() -> authService.refresh("not-a-jwt"))
-        .isInstanceOf(InvalidRefreshTokenException.class);
+    assertThatThrownBy(() -> authService.refresh("not-a-jwt")).isInstanceOf(UserException.class);
   }
 
   @Test
@@ -101,7 +100,7 @@ class AuthServiceTest {
     assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isTrue();
 
     assertThatThrownBy(() -> authService.refresh(initial.token()))
-        .isInstanceOf(InvalidRefreshTokenException.class);
+        .isInstanceOf(UserException.class);
 
     assertThat(refreshStore.exists(user.getId(), rotatedParsed.jti())).isFalse();
     assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isFalse();

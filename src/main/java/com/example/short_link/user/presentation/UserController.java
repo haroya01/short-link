@@ -5,7 +5,6 @@ import com.example.short_link.user.application.UserDeletionService;
 import com.example.short_link.user.application.UserPreferencesService;
 import com.example.short_link.user.application.UserQueryService;
 import com.example.short_link.user.application.dto.UserDataExport;
-import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.presentation.request.UpdatePreferencesRequest;
 import com.example.short_link.user.presentation.response.MeResponse;
 import jakarta.validation.Valid;
@@ -34,33 +33,13 @@ public class UserController {
 
   @GetMapping("/me")
   public MeResponse me(@AuthenticationPrincipal Long userId) {
-    UserEntity u = queryService.activeOrThrow(userId);
-    return new MeResponse(
-        u.getId(),
-        u.getEmail(),
-        u.getOauthProvider(),
-        u.getRole().name(),
-        u.getTimezone(),
-        u.getCreatedAt(),
-        u.getTier().name(),
-        u.getSubscriptionCurrentPeriodEnd(),
-        u.getUsername());
+    return MeResponse.from(queryService.activeOrThrow(userId));
   }
 
   @PutMapping("/me/preferences")
   public MeResponse updatePreferences(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody UpdatePreferencesRequest request) {
-    UserEntity user = preferencesService.updateTimezone(userId, request.timezone());
-    return new MeResponse(
-        user.getId(),
-        user.getEmail(),
-        user.getOauthProvider(),
-        user.getRole().name(),
-        user.getTimezone(),
-        user.getCreatedAt(),
-        user.getTier().name(),
-        user.getSubscriptionCurrentPeriodEnd(),
-        user.getUsername());
+    return MeResponse.from(preferencesService.updateTimezone(userId, request.timezone()));
   }
 
   @GetMapping("/me/export")

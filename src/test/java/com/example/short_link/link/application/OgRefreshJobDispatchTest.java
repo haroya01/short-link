@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.LinkRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.scheduler.OgRefreshJob;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
