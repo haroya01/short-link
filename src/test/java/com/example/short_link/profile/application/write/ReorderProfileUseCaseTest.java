@@ -10,6 +10,7 @@ import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
+import com.example.short_link.support.TestEntities;
 import java.lang.reflect.Field;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,7 +39,7 @@ class ReorderProfileUseCaseTest {
     LinkEntity l1 = new LinkEntity("https://a", "a1", 7L, null);
     LinkEntity l2 = new LinkEntity("https://b", "b2", 7L, null);
     ProfileBlockEntity b1 = new ProfileBlockEntity(7L, ProfileBlockType.TEXT, "t", 99);
-    writeField(b1, "id", 11L);
+    TestEntities.withId(b1, 11L);
     when(linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(7L))
         .thenReturn(List.of(l1, l2));
     when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L)).thenReturn(List.of(b1));

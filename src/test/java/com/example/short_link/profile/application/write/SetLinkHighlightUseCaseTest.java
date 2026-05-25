@@ -9,6 +9,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.profile.application.ProfileCacheEviction;
+import com.example.short_link.support.TestEntities;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
@@ -48,9 +49,9 @@ class SetLinkHighlightUseCaseTest {
   @Test
   void enablesAndClearsOtherHighlights() {
     LinkEntity target = new LinkEntity("https://t", "abc", 7L, null);
-    writeField(target, "id", 1L);
+    TestEntities.withId(target, 1L);
     LinkEntity existing = new LinkEntity("https://e", "xyz", 7L, null);
-    writeField(existing, "id", 2L);
+    TestEntities.withId(existing, 2L);
     existing.setProfileHighlighted(true);
     when(linkRepository.findByShortCode("abc")).thenReturn(Optional.of(target));
     when(linkRepository.findAllByUserIdAndProfileHighlightedIsTrue(7L))

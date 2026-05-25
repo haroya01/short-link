@@ -17,10 +17,10 @@ import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.ProfileException;
+import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
-import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -58,7 +58,7 @@ class ProfileQueryServiceTest {
 
   private UserEntity userWithId(long id) {
     UserEntity u = new UserEntity("u@x.com", "google", "g-" + id);
-    writeField(u, "id", id);
+    TestEntities.withId(u, id);
     return u;
   }
 
@@ -138,12 +138,12 @@ class ProfileQueryServiceTest {
     UserEntity u = userWithId(7L);
     u.claimUsername("alice");
     LinkEntity link = new LinkEntity("https://example.com", "abc", 7L, null);
-    writeField(link, "id", 1L);
+    TestEntities.withId(link, 1L);
     link.setProfileOrder(1);
     ProfileBlockEntity divider = new ProfileBlockEntity(7L, ProfileBlockType.DIVIDER, null, 2);
-    writeField(divider, "id", 11L);
+    TestEntities.withId(divider, 11L);
     ProfileBlockEntity textBlock = new ProfileBlockEntity(7L, ProfileBlockType.TEXT, "hello", 3);
-    writeField(textBlock, "id", 12L);
+    TestEntities.withId(textBlock, 12L);
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(u));
     when(linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(7L))
         .thenReturn(List.of(link));
@@ -156,27 +156,5 @@ class ProfileQueryServiceTest {
     assertThat(p.entries().get(0).kind()).isEqualTo("LINK");
     assertThat(p.entries().get(1).kind()).isEqualTo("DIVIDER");
     assertThat(p.entries().get(2).kind()).isEqualTo("TEXT");
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = findField(target.getClass(), name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
-  }
-
-  private static Field findField(Class<?> cls, String name) throws NoSuchFieldException {
-    Class<?> c = cls;
-    while (c != null) {
-      try {
-        return c.getDeclaredField(name);
-      } catch (NoSuchFieldException ignored) {
-        c = c.getSuperclass();
-      }
-    }
-    throw new NoSuchFieldException(name);
   }
 }
