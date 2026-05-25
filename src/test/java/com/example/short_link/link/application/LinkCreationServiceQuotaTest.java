@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkAccessControlRepository;
+import com.example.short_link.link.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -40,6 +41,7 @@ class LinkCreationServiceQuotaTest {
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
             mock(LinkProfileBindingRepository.class),
+            mock(LinkExpirationPolicyRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -71,6 +73,7 @@ class LinkCreationServiceQuotaTest {
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
             mock(LinkProfileBindingRepository.class),
+            mock(LinkExpirationPolicyRepository.class),
             gen,
             new SimpleMeterRegistry(),
             safety,
@@ -102,6 +105,7 @@ class LinkCreationServiceQuotaTest {
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
             mock(LinkProfileBindingRepository.class),
+            mock(LinkExpirationPolicyRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -130,6 +134,7 @@ class LinkCreationServiceQuotaTest {
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
             mock(LinkProfileBindingRepository.class),
+            mock(LinkExpirationPolicyRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
             safety,
@@ -170,6 +175,7 @@ class LinkCreationServiceQuotaTest {
             mock(LinkOgMetadataRepository.class),
             mock(LinkAccessControlRepository.class),
             mock(LinkProfileBindingRepository.class),
+            mock(LinkExpirationPolicyRepository.class),
             gen,
             new SimpleMeterRegistry(),
             safety,
