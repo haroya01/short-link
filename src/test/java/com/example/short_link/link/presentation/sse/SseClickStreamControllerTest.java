@@ -7,7 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.link.application.LinkAccessGuard;
+import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.LinkLookupService;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkException;

@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.application.helper.CsvWriter;
 import com.example.short_link.link.application.read.LinkStatsQueryService;
