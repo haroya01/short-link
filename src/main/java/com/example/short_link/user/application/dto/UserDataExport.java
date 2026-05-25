@@ -1,7 +1,7 @@
 package com.example.short_link.user.application.dto;
 
-import com.example.short_link.link.domain.ClickEventEntity;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.user.domain.UserEntity;
 import java.time.Instant;
 import java.util.List;

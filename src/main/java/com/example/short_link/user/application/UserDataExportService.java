@@ -1,8 +1,8 @@
 package com.example.short_link.user.application;
 
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.domain.repository.ClickEventRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.dto.UserDataExport;
 import com.example.short_link.user.application.dto.UserDataExport.ExportedClick;
 import com.example.short_link.user.application.dto.UserDataExport.ExportedLink;
