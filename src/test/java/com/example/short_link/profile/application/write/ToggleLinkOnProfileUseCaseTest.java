@@ -2,11 +2,13 @@ package com.example.short_link.profile.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -24,7 +26,9 @@ class ToggleLinkOnProfileUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new ToggleLinkOnProfileUseCase(linkRepository, profileOrdering);
+    useCase =
+        new ToggleLinkOnProfileUseCase(
+            linkRepository, profileOrdering, mock(ProfileCacheEviction.class));
   }
 
   @Test

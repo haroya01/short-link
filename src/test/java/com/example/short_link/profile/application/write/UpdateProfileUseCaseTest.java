@@ -3,10 +3,12 @@ package com.example.short_link.profile.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.profile.application.MyProfile;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
 import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
 import com.example.short_link.profile.exception.ProfileException;
@@ -35,7 +37,12 @@ class UpdateProfileUseCaseTest {
   @BeforeEach
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
-    useCase = new UpdateProfileUseCase(userRepository, usernameHistoryRepository, meterRegistry);
+    useCase =
+        new UpdateProfileUseCase(
+            userRepository,
+            usernameHistoryRepository,
+            meterRegistry,
+            mock(ProfileCacheEviction.class));
     ReflectionTestUtils.setField(useCase, "publicProfileBaseUrl", "https://kurl.app/u/");
   }
 

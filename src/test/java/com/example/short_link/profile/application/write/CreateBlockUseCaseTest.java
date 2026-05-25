@@ -3,8 +3,10 @@ package com.example.short_link.profile.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
@@ -25,7 +27,9 @@ class CreateBlockUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new CreateBlockUseCase(profileBlockRepository, profileOrdering);
+    useCase =
+        new CreateBlockUseCase(
+            profileBlockRepository, profileOrdering, mock(ProfileCacheEviction.class));
   }
 
   @Test

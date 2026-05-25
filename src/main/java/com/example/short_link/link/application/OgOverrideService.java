@@ -5,9 +5,9 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,13 +21,10 @@ import org.springframework.transaction.annotation.Transactional;
 public class OgOverrideService {
 
   private final LinkRepository repository;
+  private final ProfileCacheEviction cacheEviction;
 
   @Transactional
-  @Caching(
-      evict = {
-        @CacheEvict(value = "link", key = "#shortCode"),
-        @CacheEvict(value = "public-profile", allEntries = true)
-      })
+  @CacheEvict(value = "link", key = "#shortCode")
   public OgOverrideResult update(
       Long userId, String shortCode, String title, String description, String image) {
     LinkEntity link =
@@ -38,6 +35,7 @@ public class OgOverrideService {
       throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
     }
     link.changeOgOverride(title, description, image);
+    cacheEviction.evictByUserId(userId);
     return new OgOverrideResult(
         link.getShortCode(),
         link.getOgTitleOverride(),

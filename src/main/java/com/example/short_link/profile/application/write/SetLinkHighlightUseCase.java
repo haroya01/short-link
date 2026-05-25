@@ -4,8 +4,8 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,9 +18,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class SetLinkHighlightUseCase {
 
   private final LinkRepository linkRepository;
+  private final ProfileCacheEviction cacheEviction;
 
   @Transactional
-  @CacheEvict(value = "public-profile", allEntries = true)
   public void execute(SetLinkHighlightCommand cmd) {
     LinkEntity link =
         linkRepository
@@ -37,5 +37,6 @@ public class SetLinkHighlightUseCase {
     } else {
       link.setProfileHighlighted(false);
     }
+    cacheEviction.evictByUserId(cmd.userId());
   }
 }

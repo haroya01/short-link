@@ -2,6 +2,7 @@ package com.example.short_link.profile.application.write;
 
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.MyProfileMapper;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.application.ReservedUsernames;
 import com.example.short_link.profile.application.Socials;
 import com.example.short_link.profile.domain.UsernameHistoryEntity;
@@ -18,7 +19,6 @@ import java.time.Instant;
 import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,12 +34,12 @@ public class UpdateProfileUseCase {
   private final UserRepository userRepository;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final MeterRegistry meterRegistry;
+  private final ProfileCacheEviction cacheEviction;
 
   @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
   private String publicProfileBaseUrl;
 
   @Transactional
-  @CacheEvict(value = "public-profile", allEntries = true)
   public MyProfile execute(UpdateProfileCommand cmd) {
     UserEntity user =
         userRepository

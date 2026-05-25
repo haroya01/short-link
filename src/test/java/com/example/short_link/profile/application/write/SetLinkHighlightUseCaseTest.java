@@ -2,11 +2,13 @@ package com.example.short_link.profile.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
@@ -25,7 +27,7 @@ class SetLinkHighlightUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new SetLinkHighlightUseCase(linkRepository);
+    useCase = new SetLinkHighlightUseCase(linkRepository, mock(ProfileCacheEviction.class));
   }
 
   @Test

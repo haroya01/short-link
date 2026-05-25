@@ -1,10 +1,12 @@
 package com.example.short_link.profile.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
@@ -26,7 +28,9 @@ class ReorderProfileUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new ReorderProfileUseCase(linkRepository, profileBlockRepository);
+    useCase =
+        new ReorderProfileUseCase(
+            linkRepository, profileBlockRepository, mock(ProfileCacheEviction.class));
   }
 
   @Test
