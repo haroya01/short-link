@@ -3,6 +3,7 @@ package com.example.short_link.user.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.properties.UserDeletionProperties;
 import com.example.short_link.user.domain.UserEntity;
@@ -80,7 +81,7 @@ class SoftDeleteFlowTest {
     UserEntity old = userRepository.save(new UserEntity("sd4@local.test", "google", "g-sd4"));
     deletionService.deleteAccount(old.getId());
     Instant longAgo = Instant.now().minus(Duration.ofDays(45));
-    ReflectionTestUtils.setField(old, "deletedAt", longAgo);
+    TestEntities.setField(old, "deletedAt", longAgo);
     userRepository.save(old);
 
     UserEntity recent = userRepository.save(new UserEntity("sd5@local.test", "google", "g-sd5"));
@@ -96,7 +97,7 @@ class SoftDeleteFlowTest {
   void findTop200ByDeletedAtBeforePicksOnlyExpired() {
     UserEntity expired = userRepository.save(new UserEntity("sd6@local.test", "google", "g-sd6"));
     expired.softDelete();
-    ReflectionTestUtils.setField(expired, "deletedAt", Instant.now().minus(Duration.ofDays(40)));
+    TestEntities.setField(expired, "deletedAt", Instant.now().minus(Duration.ofDays(40)));
     userRepository.save(expired);
 
     UserEntity withinGrace =
