@@ -5,6 +5,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
@@ -31,7 +32,10 @@ class ReorderProfileUseCaseTest {
   void setUp() {
     useCase =
         new ReorderProfileUseCase(
-            linkRepository, profileBlockRepository, mock(ProfileCacheEviction.class));
+            linkRepository,
+            mock(LinkProfileBindingRepository.class),
+            profileBlockRepository,
+            mock(ProfileCacheEviction.class));
   }
 
   @Test

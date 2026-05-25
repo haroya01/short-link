@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.profile.application.ProfileCacheEviction;
@@ -28,7 +29,10 @@ class ToggleLinkOnProfileUseCaseTest {
   void setUp() {
     useCase =
         new ToggleLinkOnProfileUseCase(
-            linkRepository, profileOrdering, mock(ProfileCacheEviction.class));
+            linkRepository,
+            mock(LinkProfileBindingRepository.class),
+            profileOrdering,
+            mock(ProfileCacheEviction.class));
   }
 
   @Test
