@@ -1,4 +1,4 @@
-package com.example.short_link.link.domain;
+package com.example.short_link.customdomain.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
 import com.example.short_link.link.domain.repository.*;

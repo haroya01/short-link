@@ -1,10 +1,10 @@
-package com.example.short_link.link.application;
+package com.example.short_link.customdomain.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.link.domain.CustomDomainEntity;
-import com.example.short_link.link.domain.repository.CustomDomainRepository;
+import com.example.short_link.customdomain.domain.CustomDomainEntity;
+import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;

@@ -1,8 +1,8 @@
-package com.example.short_link.link.application;
+package com.example.short_link.customdomain.application;
 
+import com.example.short_link.customdomain.domain.CustomDomainEntity;
+import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
 import com.example.short_link.link.classifier.application.helper.TxtResolver;
-import com.example.short_link.link.domain.CustomDomainEntity;
-import com.example.short_link.link.domain.repository.CustomDomainRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.MeterRegistry;

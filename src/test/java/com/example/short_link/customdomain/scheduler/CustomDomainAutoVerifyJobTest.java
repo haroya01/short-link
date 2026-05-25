@@ -1,4 +1,4 @@
-package com.example.short_link.link.scheduler;
+package com.example.short_link.customdomain.scheduler;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -6,8 +6,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.link.application.CustomDomainService;
-import com.example.short_link.link.domain.CustomDomainEntity;
+import com.example.short_link.customdomain.application.CustomDomainService;
+import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

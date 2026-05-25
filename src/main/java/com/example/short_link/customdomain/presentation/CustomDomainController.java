@@ -1,8 +1,8 @@
-package com.example.short_link.link.presentation;
+package com.example.short_link.customdomain.presentation;
 
-import com.example.short_link.link.application.CustomDomainService;
-import com.example.short_link.link.application.CustomDomainService.DomainSummary;
-import com.example.short_link.link.presentation.request.CustomDomainRegisterRequest;
+import com.example.short_link.customdomain.application.CustomDomainService;
+import com.example.short_link.customdomain.application.CustomDomainService.DomainSummary;
+import com.example.short_link.customdomain.presentation.request.CustomDomainRegisterRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
