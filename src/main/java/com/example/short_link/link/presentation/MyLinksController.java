@@ -6,7 +6,6 @@ import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.application.read.MyLinksQueryService;
 import com.example.short_link.link.presentation.response.MyLinkResponse;
 import com.example.short_link.link.presentation.response.MyLinksPage;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -36,20 +35,9 @@ public class MyLinksController {
     MyLinksQuery query =
         MyLinksQuery.of(size, after, q, tag, domain, expiry, createdAfter, createdBefore);
     MyLinksResult result = service.myLinks(userId, query);
-    List<MyLinkResponse> items =
-        result.items().stream()
-            .map(
-                my ->
-                    new MyLinkResponse(
-                        my.shortCode(),
-                        urlBuilder.build(my.shortCode()),
-                        my.originalUrl(),
-                        my.createdAt(),
-                        my.expiresAt(),
-                        my.clickCount(),
-                        my.tags(),
-                        my.clicksLast7d()))
-            .toList();
-    return new MyLinksPage(items, result.nextCursor(), result.hasMore());
+    return new MyLinksPage(
+        result.items().stream().map(my -> MyLinkResponse.from(my, urlBuilder)).toList(),
+        result.nextCursor(),
+        result.hasMore());
   }
 }
