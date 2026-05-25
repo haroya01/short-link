@@ -1,5 +1,6 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.dto.LinkEventView;
 import com.example.short_link.link.application.dto.LinkEventsResult;
 import com.example.short_link.link.application.helper.IpMasker;
