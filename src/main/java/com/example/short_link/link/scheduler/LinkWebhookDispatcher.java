@@ -1,5 +1,6 @@
 package com.example.short_link.link.scheduler;
 
+import com.example.short_link.common.net.PinnedHttpClientFactory;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
@@ -9,8 +10,6 @@ import com.example.short_link.link.domain.LinkWebhookEntity;
 import com.example.short_link.link.domain.repository.LinkWebhookRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.LocalDate;
@@ -24,13 +23,8 @@ import java.util.concurrent.ThreadLocalRandom;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.hc.client5.http.DnsResolver;
 import org.apache.hc.client5.http.classic.methods.HttpPost;
-import org.apache.hc.client5.http.config.ConnectionConfig;
-import org.apache.hc.client5.http.config.RequestConfig;
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.http.ContentType;
 import org.apache.hc.core5.http.io.entity.StringEntity;
 import org.apache.hc.core5.util.Timeout;
@@ -303,44 +297,10 @@ public class LinkWebhookDispatcher {
     }
   }
 
-  // protected for test seam: subclass overrides to return a fake client that records the request
-  // and returns a canned status, sidestepping the per-request resolver/SSL stack entirely.
+  // protected for test seam: subclass overrides to return a fake client.
   protected CloseableHttpClient buildPinnedClient(Resolved resolved) {
-    String pinnedHost = resolved.uri().getHost();
-    InetAddress[] pinnedAddrs = resolved.addresses().toArray(new InetAddress[0]);
-    DnsResolver pinned =
-        new DnsResolver() {
-          @Override
-          public InetAddress[] resolve(String host) throws UnknownHostException {
-            if (host != null && host.equalsIgnoreCase(pinnedHost)) {
-              return pinnedAddrs;
-            }
-            throw new UnknownHostException("DNS pinned to " + pinnedHost + "; refused " + host);
-          }
-
-          @Override
-          public String resolveCanonicalHostname(String host) {
-            return host;
-          }
-        };
-    ConnectionConfig connConfig =
-        ConnectionConfig.custom()
-            .setConnectTimeout(Timeout.ofSeconds(3))
-            .setSocketTimeout(Timeout.ofSeconds(5))
-            .build();
-    var connMgr =
-        PoolingHttpClientConnectionManagerBuilder.create()
-            .setDnsResolver(pinned)
-            .setDefaultConnectionConfig(connConfig)
-            .build();
-    RequestConfig reqConfig =
-        RequestConfig.custom().setResponseTimeout(Timeout.of(TIMEOUT)).build();
-    return HttpClients.custom()
-        .setConnectionManager(connMgr)
-        .setConnectionManagerShared(false)
-        .setDefaultRequestConfig(reqConfig)
-        .disableAutomaticRetries()
-        .build();
+    return PinnedHttpClientFactory.build(
+        resolved, Timeout.ofSeconds(3), Timeout.ofSeconds(5), Timeout.of(TIMEOUT));
   }
 
   private Map<String, Object> clickPayload(ClickRecordedEvent event) {
