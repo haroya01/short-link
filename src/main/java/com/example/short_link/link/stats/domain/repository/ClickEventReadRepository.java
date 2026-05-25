@@ -4,6 +4,7 @@ import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
@@ -374,6 +375,77 @@ public interface ClickEventReadRepository extends Repository<ClickEventEntity, L
       @Param("to") Instant to,
       @Param("tz") String tz,
       Pageable pageable);
+
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :to")
+  long countHumanByLinkIdAndRange(
+      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = true "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :to")
+  long countBotByLinkIdAndRange(
+      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+
+  @Query(
+      "SELECT COUNT(DISTINCT c.visitorHash) FROM ClickEventEntity c "
+          + "WHERE c.linkId = :linkId AND c.bot = false AND c.visitorHash IS NOT NULL "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :to")
+  long countUniqueVisitorsByLinkIdAndRange(
+      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+
+  /**
+   * Top-N-of-1 variants for the daily-summary payload. Native SQL with {@code LIMIT 1} keeps Spring
+   * Data {@code Pageable} out of the application layer (rule {@code springDataNotInApplication}).
+   * Returning {@code Optional} so the caller stays branch-free.
+   */
+  @Query(
+      value =
+          "SELECT source_channel AS source, COUNT(*) AS count FROM click_event "
+              + "WHERE link_id = :linkId AND is_bot = 0 AND source_channel IS NOT NULL "
+              + "AND clicked_at >= :from AND clicked_at < :to "
+              + "GROUP BY source_channel ORDER BY count DESC LIMIT 1",
+      nativeQuery = true)
+  Optional<SourceChannelClickRow> findTopChannelByLinkIdAndRange(
+      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+
+  @Query(
+      value =
+          "SELECT country_code AS country, COUNT(*) AS count FROM click_event "
+              + "WHERE link_id = :linkId AND is_bot = 0 AND country_code IS NOT NULL "
+              + "AND clicked_at >= :from AND clicked_at < :to "
+              + "GROUP BY country_code ORDER BY count DESC LIMIT 1",
+      nativeQuery = true)
+  Optional<CountryClickRow> findTopCountryByLinkIdAndRange(
+      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+
+  @Query(
+      value =
+          "SELECT device_class AS device, COUNT(*) AS count FROM click_event "
+              + "WHERE link_id = :linkId AND is_bot = 0 "
+              + "AND clicked_at >= :from AND clicked_at < :to "
+              + "GROUP BY device_class ORDER BY count DESC LIMIT 1",
+      nativeQuery = true)
+  Optional<DeviceClickRow> findTopDeviceByLinkIdAndRange(
+      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+
+  @Query(
+      value =
+          "SELECT HOUR(CONVERT_TZ(clicked_at, '+00:00', :tz)) AS hour, COUNT(*) AS count "
+              + "FROM click_event "
+              + "WHERE link_id = :linkId AND is_bot = 0 "
+              + "AND clicked_at >= :from AND clicked_at < :to "
+              + "GROUP BY HOUR(CONVERT_TZ(clicked_at, '+00:00', :tz)) "
+              + "ORDER BY count DESC LIMIT 1",
+      nativeQuery = true)
+  Optional<HourClickRow> findPeakHourByLinkIdAndRange(
+      @Param("linkId") Long linkId,
+      @Param("from") Instant from,
+      @Param("to") Instant to,
+      @Param("tz") String tz);
 
   interface ReturnRateRow {
     Long getNewCount();
