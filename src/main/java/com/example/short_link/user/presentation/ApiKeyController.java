@@ -1,8 +1,8 @@
 package com.example.short_link.user.presentation;
 
-import com.example.short_link.user.application.ApiKeyService;
-import com.example.short_link.user.application.ApiKeyService.ApiKeySummary;
-import com.example.short_link.user.application.ApiKeyService.IssuedApiKey;
+import com.example.short_link.user.application.write.ApiKeyService;
+import com.example.short_link.user.application.write.ApiKeyService.ApiKeySummary;
+import com.example.short_link.user.application.write.ApiKeyService.IssuedApiKey;
 import com.example.short_link.user.presentation.request.ApiKeyCreateRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

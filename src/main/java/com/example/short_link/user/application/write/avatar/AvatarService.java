@@ -1,4 +1,4 @@
-package com.example.short_link.user.application.avatar;
+package com.example.short_link.user.application.write.avatar;
 
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
