@@ -1,4 +1,4 @@
-package com.example.short_link.user.application.avatar;
+package com.example.short_link.user.application.write.avatar;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

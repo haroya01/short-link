@@ -1,4 +1,4 @@
-package com.example.short_link.user.application;
+package com.example.short_link.user.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;

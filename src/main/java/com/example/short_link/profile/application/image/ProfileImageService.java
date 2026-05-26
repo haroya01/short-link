@@ -15,11 +15,11 @@ import org.springframework.stereotype.Service;
 
 /**
  * Generic user-uploaded image storage for profile blocks (gallery, product cards, etc.). Mirrors
- * {@link com.example.short_link.user.application.avatar.BannerService} but writes under {@code
- * profile-images/{userId}/...}, and does <b>not</b> mutate any entity on commit — the resulting URL
- * is meant to be embedded into a block's JSON content via the existing block update endpoint.
- * Multiple uploads per user are expected (gallery is up to 6 images, product cards may have several
- * too), so we never delete a previous key on a new upload.
+ * {@link com.example.short_link.user.application.write.avatar.BannerService} but writes under
+ * {@code profile-images/{userId}/...}, and does <b>not</b> mutate any entity on commit — the
+ * resulting URL is meant to be embedded into a block's JSON content via the existing block update
+ * endpoint. Multiple uploads per user are expected (gallery is up to 6 images, product cards may
+ * have several too), so we never delete a previous key on a new upload.
  */
 @Slf4j
 @Service
