@@ -3,10 +3,10 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
-import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignBatchUpdateRequest;
-import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignBatchUpdateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignCreateRequest;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;
@@ -50,24 +50,25 @@ class CampaignBatchExportServiceTest {
     Long owner = newOwner("csv");
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
             new CampaignCreateRequest(
-                "C",
-                null,
-                Instant.now().plusSeconds(3600),
-                "https://example.com/d",
-                null,
-                null,
-                null));
+                    "C",
+                    null,
+                    Instant.now().plusSeconds(3600),
+                    "https://example.com/d",
+                    null,
+                    null,
+                    null)
+                .toCommand(owner));
     batchService.create(
         campaign.getId(),
         owner,
-        new CampaignBatchCreateRequest("east", "A", "East", 500, null, null));
+        new CampaignBatchCreateRequest("east", "A", "East", 500, null, null).toCommand());
     batchService.create(
         campaign.getId(),
         owner,
         new CampaignBatchCreateRequest(
-            "west", "B", "West", 300, "https://example.com/special", null));
+                "west", "B", "West", 300, "https://example.com/special", null)
+            .toCommand());
 
     String csv = exportService.exportCsv(campaign.getId(), owner);
 
@@ -83,19 +84,23 @@ class CampaignBatchExportServiceTest {
     Long owner = newOwner("zip");
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
             new CampaignCreateRequest(
-                "C",
-                null,
-                Instant.now().plusSeconds(3600),
-                "https://example.com/d",
-                null,
-                null,
-                null));
+                    "C",
+                    null,
+                    Instant.now().plusSeconds(3600),
+                    "https://example.com/d",
+                    null,
+                    null,
+                    null)
+                .toCommand(owner));
     batchService.create(
-        campaign.getId(), owner, new CampaignBatchCreateRequest("a", null, null, 10, null, null));
+        campaign.getId(),
+        owner,
+        new CampaignBatchCreateRequest("a", null, null, 10, null, null).toCommand());
     batchService.create(
-        campaign.getId(), owner, new CampaignBatchCreateRequest("b", null, null, 10, null, null));
+        campaign.getId(),
+        owner,
+        new CampaignBatchCreateRequest("b", null, null, 10, null, null).toCommand());
 
     byte[] zip =
         exportService.exportQrZip(
@@ -121,20 +126,20 @@ class CampaignBatchExportServiceTest {
     Long owner = newOwner("upd");
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
             new CampaignCreateRequest(
-                "C",
-                null,
-                Instant.now().plusSeconds(3600),
-                "https://example.com/d",
-                null,
-                null,
-                null));
+                    "C",
+                    null,
+                    Instant.now().plusSeconds(3600),
+                    "https://example.com/d",
+                    null,
+                    null,
+                    null)
+                .toCommand(owner));
     BatchWithLink original =
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("orig", "A", "East", 500, null, null));
+            new CampaignBatchCreateRequest("orig", "A", "East", 500, null, null).toCommand());
     Long originalLinkId = original.link().getId();
 
     BatchWithLink updated =
@@ -142,7 +147,8 @@ class CampaignBatchExportServiceTest {
             campaign.getId(),
             original.batch().getId(),
             owner,
-            new CampaignBatchUpdateRequest("renamed", "B", "West", 700, "updated memo"));
+            new CampaignBatchUpdateRequest("renamed", "B", "West", 700, "updated memo")
+                .toCommand());
 
     assertThat(updated.batch().getName()).isEqualTo("renamed");
     assertThat(updated.batch().getDistributorName()).isEqualTo("B");
@@ -155,20 +161,20 @@ class CampaignBatchExportServiceTest {
     Long owner = newOwner("del");
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
             new CampaignCreateRequest(
-                "C",
-                null,
-                Instant.now().plusSeconds(3600),
-                "https://example.com/d",
-                null,
-                null,
-                null));
+                    "C",
+                    null,
+                    Instant.now().plusSeconds(3600),
+                    "https://example.com/d",
+                    null,
+                    null,
+                    null)
+                .toCommand(owner));
     BatchWithLink created =
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("doomed", null, null, 50, null, null));
+            new CampaignBatchCreateRequest("doomed", null, null, 50, null, null).toCommand());
 
     batchService.delete(campaign.getId(), created.batch().getId(), owner);
 

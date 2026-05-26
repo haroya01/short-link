@@ -4,11 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
-import com.example.short_link.campaign.application.dto.CampaignBatchBulkRequest;
-import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.exception.CampaignException;
+import com.example.short_link.campaign.presentation.request.CampaignBatchBulkRequest;
+import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignCreateRequest;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import io.queryaudit.junit5.QueryAudit;
@@ -44,9 +44,9 @@ class CampaignBatchServiceTest {
 
   private CampaignEntity newCampaign(Long ownerId, String defaultDestination) {
     return createCampaign.execute(
-        ownerId,
         new CampaignCreateRequest(
-            "C", null, Instant.now().plusSeconds(3600), defaultDestination, null, null, null));
+                "C", null, Instant.now().plusSeconds(3600), defaultDestination, null, null, null)
+            .toCommand(ownerId));
   }
 
   @Test
@@ -58,7 +58,8 @@ class CampaignBatchServiceTest {
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", "A", "Shinjuku East", 500, null, null));
+            new CampaignBatchCreateRequest("east", "A", "Shinjuku East", 500, null, null)
+                .toCommand());
 
     assertThat(result.batch().getLinkId()).isEqualTo(result.link().getId());
     assertThat(result.link().getOriginalUrl()).isEqualTo("https://example.com/landing");
@@ -75,7 +76,8 @@ class CampaignBatchServiceTest {
             campaign.getId(),
             owner,
             new CampaignBatchCreateRequest(
-                "south", null, null, 100, "https://example.com/special", null));
+                    "south", null, null, 100, "https://example.com/special", null)
+                .toCommand());
 
     assertThat(result.link().getOriginalUrl()).isEqualTo("https://example.com/special");
   }
@@ -90,7 +92,7 @@ class CampaignBatchServiceTest {
                 batchService.create(
                     campaign.getId(),
                     owner,
-                    new CampaignBatchCreateRequest("n", null, null, 50, null, null)))
+                    new CampaignBatchCreateRequest("n", null, null, 50, null, null).toCommand()))
         .isInstanceOf(CampaignException.class);
   }
 
@@ -105,7 +107,7 @@ class CampaignBatchServiceTest {
                 batchService.create(
                     campaign.getId(),
                     owner,
-                    new CampaignBatchCreateRequest("n", null, null, 50, null, null)))
+                    new CampaignBatchCreateRequest("n", null, null, 50, null, null).toCommand()))
         .isInstanceOf(CampaignException.class);
   }
 
@@ -120,7 +122,7 @@ class CampaignBatchServiceTest {
                 new CampaignBatchCreateRequest("ok", null, null, 100, null, null),
                 new CampaignBatchCreateRequest("zero-q", null, null, 0, null, null)));
 
-    assertThatThrownBy(() -> batchService.createBulk(campaign.getId(), owner, req))
+    assertThatThrownBy(() -> batchService.createBulk(campaign.getId(), owner, req.toCommand()))
         .isInstanceOf(CampaignException.class);
 
     assertThat(batchService.list(campaign.getId(), owner)).isEmpty();
@@ -138,7 +140,7 @@ class CampaignBatchServiceTest {
                 new CampaignBatchCreateRequest("second", "B", "West", 200, null, null),
                 new CampaignBatchCreateRequest("third", "C", "South", 300, null, null)));
 
-    List<BatchWithLink> created = batchService.createBulk(campaign.getId(), owner, req);
+    List<BatchWithLink> created = batchService.createBulk(campaign.getId(), owner, req.toCommand());
 
     assertThat(created).hasSize(3);
     assertThat(created)
@@ -152,7 +154,9 @@ class CampaignBatchServiceTest {
     Long stranger = newOwner("stranger");
     CampaignEntity mine = newCampaign(owner, "https://example.com/d");
     batchService.create(
-        mine.getId(), owner, new CampaignBatchCreateRequest("n", null, null, 10, null, null));
+        mine.getId(),
+        owner,
+        new CampaignBatchCreateRequest("n", null, null, 10, null, null).toCommand());
 
     assertThatThrownBy(() -> batchService.list(mine.getId(), stranger))
         .isInstanceOf(CampaignException.class);

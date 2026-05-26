@@ -1,6 +1,5 @@
 package com.example.short_link.campaign.application.write;
 
-import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
@@ -18,32 +17,32 @@ public class UpdateCampaignPolicyUseCase {
   private final CampaignOwnership ownership;
 
   @Transactional
-  public CampaignEntity execute(Long id, Long ownerId, CampaignUpdateRequest request) {
-    CampaignEntity c = ownership.require(id, ownerId);
+  public CampaignEntity execute(UpdateCampaignPolicyCommand command) {
+    CampaignEntity c = ownership.require(command.campaignId(), command.ownerId());
     if (c.getStatus() == CampaignStatus.ARCHIVED) {
       throw new CampaignException(CampaignErrorCode.CAMPAIGN_ARCHIVED);
     }
-    Instant endsAt = request.endsAt() != null ? request.endsAt() : c.getEndsAt();
+    Instant endsAt = command.endsAt() != null ? command.endsAt() : c.getEndsAt();
     if (!endsAt.isAfter(c.getStartsAt())) {
       throw new CampaignException(CampaignErrorCode.INVALID_CAMPAIGN_PERIOD);
     }
     CampaignPostEndAction action =
-        request.postEndAction() != null ? request.postEndAction() : c.getPostEndAction();
+        command.postEndAction() != null ? command.postEndAction() : c.getPostEndAction();
     String postEndUrl =
-        request.postEndDestinationUrl() != null
-            ? request.postEndDestinationUrl()
+        command.postEndDestinationUrl() != null
+            ? command.postEndDestinationUrl()
             : c.getPostEndDestinationUrl();
     if (action == CampaignPostEndAction.REDIRECT && isBlank(postEndUrl)) {
       throw new CampaignException(CampaignErrorCode.MISSING_POST_END_DESTINATION);
     }
     String defaultDest =
-        request.defaultDestinationUrl() != null
-            ? request.defaultDestinationUrl()
+        command.defaultDestinationUrl() != null
+            ? command.defaultDestinationUrl()
             : c.getDefaultDestinationUrl();
     String postEndMessage =
-        request.postEndMessage() != null ? request.postEndMessage() : c.getPostEndMessage();
-    if (request.name() != null) {
-      c.rename(request.name());
+        command.postEndMessage() != null ? command.postEndMessage() : c.getPostEndMessage();
+    if (command.name() != null) {
+      c.rename(command.name());
     }
     c.updatePolicy(endsAt, defaultDest, action, postEndUrl, postEndMessage);
     return c;
