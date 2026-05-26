@@ -21,7 +21,11 @@ public class LinkAccessControlEntity extends BaseTimeEntity {
 
   @Id
   @Column(name = "link_id")
-  private LinkId linkId;
+  private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(name = "password_hash", length = 60)
   private String passwordHash;
@@ -30,7 +34,7 @@ public class LinkAccessControlEntity extends BaseTimeEntity {
   private Integer maxViews;
 
   public LinkAccessControlEntity(LinkId linkId) {
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
   }
 
   public void changePasswordHash(String hash) {

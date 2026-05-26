@@ -19,7 +19,11 @@ public class LinkProfileBindingEntity extends BaseTimeEntity {
 
   @Id
   @Column(name = "link_id")
-  private LinkId linkId;
+  private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(name = "profile_order")
   private Integer profileOrder;
@@ -28,7 +32,7 @@ public class LinkProfileBindingEntity extends BaseTimeEntity {
   private boolean profileHighlighted = false;
 
   public LinkProfileBindingEntity(LinkId linkId) {
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
   }
 
   public void changeProfileOrder(Integer order) {

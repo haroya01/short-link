@@ -20,7 +20,11 @@ public class LinkOgMetadataEntity extends BaseTimeEntity {
 
   @Id
   @Column(name = "link_id")
-  private LinkId linkId;
+  private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(name = "og_title", length = 300)
   private String ogTitle;
@@ -50,7 +54,7 @@ public class LinkOgMetadataEntity extends BaseTimeEntity {
   private String ogImageOverride;
 
   public LinkOgMetadataEntity(LinkId linkId) {
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
   }
 
   public void applyFetched(String title, String description, String image, Instant fetchedAt) {

@@ -19,7 +19,11 @@ public class LinkExpirationPolicyEntity extends BaseTimeEntity {
 
   @Id
   @Column(name = "link_id")
-  private LinkId linkId;
+  private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(name = "blocked_countries", length = 255)
   private String blockedCountries;
@@ -31,7 +35,7 @@ public class LinkExpirationPolicyEntity extends BaseTimeEntity {
   private String expiredRedirectUrl;
 
   public LinkExpirationPolicyEntity(LinkId linkId) {
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
   }
 
   public void changeBlockedCountries(String csv) {

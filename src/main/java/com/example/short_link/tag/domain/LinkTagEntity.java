@@ -22,25 +22,29 @@ public class LinkTagEntity {
 
   @Id
   @Column(name = "link_id")
-  private LinkId linkId;
+  private Long linkId;
 
   @Id
   @Column(name = "tag_id")
   private Long tagId;
 
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
+
   public LinkTagEntity(LinkId linkId, Long tagId) {
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
     this.tagId = tagId;
   }
 
   public static class LinkTagId implements Serializable {
-    private LinkId linkId;
+    private Long linkId;
     private Long tagId;
 
     public LinkTagId() {}
 
     public LinkTagId(LinkId linkId, Long tagId) {
-      this.linkId = linkId;
+      this.linkId = linkId == null ? null : linkId.value();
       this.tagId = tagId;
     }
 

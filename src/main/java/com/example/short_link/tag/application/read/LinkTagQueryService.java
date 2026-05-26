@@ -58,8 +58,7 @@ public class LinkTagQueryService {
     }
     Map<Long, List<String>> out = new HashMap<>();
     for (LinkTagEntity j : joins) {
-      out.computeIfAbsent(j.getLinkId().value(), k -> new ArrayList<>())
-          .add(tagNames.get(j.getTagId()));
+      out.computeIfAbsent(j.getLinkId(), k -> new ArrayList<>()).add(tagNames.get(j.getTagId()));
     }
     out.values().forEach(Collections::sort);
     return out;

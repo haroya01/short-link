@@ -12,7 +12,7 @@ class LinkTagEntityTest {
   @Test
   void constructorSetsIds() {
     LinkTagEntity e = new LinkTagEntity(new LinkId(1L), 2L);
-    assertThat(e.getLinkId()).isEqualTo(new LinkId(1L));
+    assertThat(e.getLinkId()).isEqualTo(1L);
     assertThat(e.getTagId()).isEqualTo(2L);
   }
 
