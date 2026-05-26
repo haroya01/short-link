@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.dto;
 
+import com.example.short_link.link.domain.LinkId;
 import java.time.Instant;
 
 /**
@@ -9,7 +10,7 @@ import java.time.Instant;
  * existing SSE/webhook consumers).
  */
 public record ClickRecordedEvent(
-    Long linkId,
+    LinkId linkId,
     Instant occurredAt,
     String countryCode,
     String deviceClass,

@@ -63,9 +63,9 @@ public class LinkExportService {
     while (written < eventHardCap) {
       List<ClickEventEntity> rows;
       if (cursorId == null) {
-        rows = clickRepository.findEventsByLinkIdLatest(link.getId(), req);
+        rows = clickRepository.findEventsByLinkIdLatest(link.linkId().value(), req);
       } else {
-        rows = clickRepository.findEventsByLinkIdBefore(link.getId(), cursorId, req);
+        rows = clickRepository.findEventsByLinkIdBefore(link.linkId().value(), cursorId, req);
       }
       if (rows.isEmpty()) break;
       for (ClickEventEntity c : rows) {

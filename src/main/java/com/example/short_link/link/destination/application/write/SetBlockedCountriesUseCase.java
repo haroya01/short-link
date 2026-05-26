@@ -24,7 +24,7 @@ public class SetBlockedCountriesUseCase {
     LinkExpirationPolicyEntity policy =
         expirationPolicyRepository
             .findById(link.getId())
-            .orElseGet(() -> new LinkExpirationPolicyEntity(link.getId()));
+            .orElseGet(() -> new LinkExpirationPolicyEntity(link.linkId()));
     policy.changeBlockedCountries(link.getBlockedCountries());
     expirationPolicyRepository.save(policy);
     return link;

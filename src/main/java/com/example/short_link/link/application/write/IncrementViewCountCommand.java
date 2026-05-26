@@ -1,6 +1,8 @@
 package com.example.short_link.link.application.write;
 
-public record IncrementViewCountCommand(Long linkId) {
+import com.example.short_link.link.domain.LinkId;
+
+public record IncrementViewCountCommand(LinkId linkId) {
 
   public IncrementViewCountCommand {
     if (linkId == null) {

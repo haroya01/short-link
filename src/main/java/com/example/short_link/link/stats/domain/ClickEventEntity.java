@@ -1,5 +1,6 @@
 package com.example.short_link.link.stats.domain;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.*;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -26,6 +27,10 @@ public class ClickEventEntity {
 
   @Column(name = "link_id", nullable = false)
   private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(name = "clicked_at", nullable = false, updatable = false)
   private Instant clickedAt;
@@ -108,7 +113,7 @@ public class ClickEventEntity {
 
   @Builder
   public ClickEventEntity(
-      Long linkId,
+      LinkId linkId,
       Instant clickedAt,
       String referrer,
       String referrerHost,
@@ -133,7 +138,7 @@ public class ClickEventEntity {
       Long destinationId,
       Integer asn,
       String asnOrg) {
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
     this.clickedAt = clickedAt;
     this.referrer = referrer;
     this.referrerHost = referrerHost;

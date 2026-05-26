@@ -49,7 +49,7 @@ class BatchPolicyApplier {
     LinkExpirationPolicyEntity policy =
         expirationPolicyRepository
             .findById(link.getId())
-            .orElseGet(() -> new LinkExpirationPolicyEntity(link.getId()));
+            .orElseGet(() -> new LinkExpirationPolicyEntity(link.linkId()));
     policy.changeExpiredMessage(link.getExpiredMessage());
     policy.changeExpiredRedirectUrl(link.getExpiredRedirectUrl());
     expirationPolicyRepository.save(policy);

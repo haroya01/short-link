@@ -87,7 +87,7 @@ public class ThresholdSpikeDetector {
             WebhookDeliveryMode.THRESHOLD_SPIKE, WebhookDeliveryMode.BOTH);
     if (candidates.isEmpty()) return;
     for (LinkWebhookEntity hook : candidates) {
-      if (!hook.getLinkId().equals(event.linkId())) continue;
+      if (!hook.getLinkId().equals(event.linkId().value())) continue;
       tryFire(hook);
     }
   }

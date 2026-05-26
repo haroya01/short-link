@@ -61,7 +61,7 @@ class AdminFunnelServiceTest {
         linkRepository.save(new LinkEntity("https://example.com", "fun0002", u3.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(l3.getId())
+            .linkId(l3.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.4")
             .deviceClass("desktop")
@@ -73,14 +73,14 @@ class AdminFunnelServiceTest {
         linkRepository.save(new LinkEntity("https://example.com", "fun0003", u4.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(l4.getId())
+            .linkId(l4.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.4")
             .deviceClass("desktop")
             .bot(false)
             .build());
     webhookRepository.save(
-        new LinkWebhookEntity(l4.getId(), "https://wh.example/post", "secret", "name"));
+        new LinkWebhookEntity(l4.linkId(), "https://wh.example/post", "secret", "name"));
 
     Funnel f = service.snapshot(Window.ALL);
 
@@ -98,7 +98,7 @@ class AdminFunnelServiceTest {
         linkRepository.save(new LinkEntity("https://example.com", "fun0bot1", u.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.4")
             .deviceClass("desktop")

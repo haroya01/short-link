@@ -13,6 +13,7 @@ import com.example.short_link.link.classifier.application.AsnResolver;
 import com.example.short_link.link.classifier.application.BotHeuristic;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,7 +40,8 @@ class ClickRecorderTest {
   }
 
   private ClickContext ctx(String referrer, String clientIp, String acceptLanguage) {
-    return ClickContext.of(1L, "https://example.com", referrer, "ua", clientIp, acceptLanguage);
+    return ClickContext.of(
+        new LinkId(1L), "https://example.com", referrer, "ua", clientIp, acceptLanguage);
   }
 
   @Test

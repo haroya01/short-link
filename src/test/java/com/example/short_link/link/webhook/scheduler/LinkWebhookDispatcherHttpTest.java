@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
@@ -67,7 +68,7 @@ class LinkWebhookDispatcherHttpTest {
             mock(StringRedisTemplate.class),
             fetcher);
     LinkWebhookEntity hook =
-        new LinkWebhookEntity(1L, URL, "secret", "test", WebhookFormat.GENERIC);
+        new LinkWebhookEntity(new LinkId(1L), URL, "secret", "test", WebhookFormat.GENERIC);
     TestEntities.withId(hook, 99L);
     try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
       Resolved resolved = new Resolved(URI.create(URL), List.<InetAddress>of());

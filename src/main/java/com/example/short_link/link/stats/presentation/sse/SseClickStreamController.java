@@ -91,7 +91,7 @@ public class SseClickStreamController {
     }
 
     SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
-    boolean accepted = registry.register(link.getId(), emitter);
+    boolean accepted = registry.register(link.linkId(), emitter);
     if (!accepted) {
       return failFast(response, HttpStatus.TOO_MANY_REQUESTS);
     }

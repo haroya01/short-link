@@ -95,7 +95,7 @@ class WeeklyInsightsServiceTest {
     assertThat(out.deltaPercent()).isEqualTo(1.0);
     assertThat(out.humanRatio()).isEqualTo(0.8);
     assertThat(out.topLink()).isNotNull();
-    assertThat(out.topLink().shortCode()).isEqualTo("abc");
+    assertThat(out.topLink().shortCode().value()).isEqualTo("abc");
     assertThat(out.topLink().clicks()).isEqualTo(50L);
     assertThat(out.topLink().topUtmSource()).isEqualTo("twitter");
     assertThat(out.peak()).isNotNull();

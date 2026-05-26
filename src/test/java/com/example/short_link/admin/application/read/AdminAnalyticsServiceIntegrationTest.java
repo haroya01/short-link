@@ -8,6 +8,7 @@ import com.example.short_link.admin.application.dto.AdminCohort;
 import com.example.short_link.admin.application.dto.AdminLifecycle;
 import com.example.short_link.admin.exception.AdminException;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
@@ -46,8 +47,8 @@ class AdminAnalyticsServiceIntegrationTest {
         linkRepository.save(new LinkEntity("https://example.com/1", "coh0001", u1.getId(), null));
     LinkEntity l2 =
         linkRepository.save(new LinkEntity("https://example.com/2", "coh0002", u2.getId(), null));
-    clickRepository.save(humanClick(l1.getId()));
-    clickRepository.save(humanClick(l2.getId()));
+    clickRepository.save(humanClick(l1.linkId()));
+    clickRepository.save(humanClick(l2.linkId()));
 
     AdminCohort cohort = service.cohort(4);
 
@@ -69,8 +70,8 @@ class AdminAnalyticsServiceIntegrationTest {
     UserEntity u = userRepository.save(new UserEntity("l@x.com", "google", "g-life"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "lif0001", u.getId(), null));
-    clickRepository.save(humanClick(link.getId()));
-    clickRepository.save(humanClick(link.getId()));
+    clickRepository.save(humanClick(link.linkId()));
+    clickRepository.save(humanClick(link.linkId()));
 
     AdminLifecycle lifecycle = service.lifecycle(7);
 
@@ -128,10 +129,10 @@ class AdminAnalyticsServiceIntegrationTest {
     String shortCode = "act" + Math.abs(code.hashCode() % 10000);
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", shortCode, u.getId(), null));
-    clickRepository.save(humanClick(link.getId()));
+    clickRepository.save(humanClick(link.linkId()));
   }
 
-  private static ClickEventEntity humanClick(Long linkId) {
+  private static ClickEventEntity humanClick(LinkId linkId) {
     return ClickEventEntity.builder()
         .linkId(linkId)
         .userAgent("ua")

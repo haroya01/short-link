@@ -36,7 +36,7 @@ class UserDeletionServiceTest {
         linkRepository.save(new LinkEntity("https://example.com/x", "del0001", user.getId(), null));
     ClickEventEntity click =
         clickEventRepository.save(
-            ClickEventEntity.builder().linkId(link.getId()).bot(false).build());
+            ClickEventEntity.builder().linkId(link.linkId()).bot(false).build());
     refreshTokenStore.save(user.getId(), "jti-1", java.time.Duration.ofMinutes(5));
 
     // deleteAccount is a soft delete — it just flags the row and revokes refresh tokens.

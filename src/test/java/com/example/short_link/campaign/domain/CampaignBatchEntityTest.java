@@ -3,6 +3,7 @@ package com.example.short_link.campaign.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.campaign.domain.repository.*;
+import com.example.short_link.link.domain.LinkId;
 import org.junit.jupiter.api.Test;
 
 class CampaignBatchEntityTest {
@@ -10,7 +11,7 @@ class CampaignBatchEntityTest {
   @Test
   void editMetadataUpdatesAllowedFields() {
     CampaignBatchEntity batch =
-        new CampaignBatchEntity(10L, 100L, "Old", "A", "East", 500, "first batch");
+        new CampaignBatchEntity(10L, new LinkId(100L), "Old", "A", "East", 500, "first batch");
 
     batch.editMetadata("New", "B", "West", 700, "second drop");
 
@@ -23,7 +24,8 @@ class CampaignBatchEntityTest {
 
   @Test
   void editMetadataDoesNotTouchAssociations() {
-    CampaignBatchEntity batch = new CampaignBatchEntity(10L, 100L, "Name", "A", "East", 500, null);
+    CampaignBatchEntity batch =
+        new CampaignBatchEntity(10L, new LinkId(100L), "Name", "A", "East", 500, null);
 
     batch.editMetadata("Renamed", "C", "North", 200, "memo");
 

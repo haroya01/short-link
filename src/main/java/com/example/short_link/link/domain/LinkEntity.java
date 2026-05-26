@@ -24,6 +24,16 @@ public class LinkEntity extends BaseCreatedEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  /**
+   * Typed accessor for the primary key. Use this everywhere outside the JPA boundary so a stray
+   * {@code Long} can't be silently passed where this link's id was expected. The raw {@code id}
+   * field stays {@code Long} so Hibernate's identity generation + persistence cache stay on their
+   * proven path.
+   */
+  public LinkId linkId() {
+    return id == null ? null : new LinkId(id);
+  }
+
   @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
   private String originalUrl;
 
