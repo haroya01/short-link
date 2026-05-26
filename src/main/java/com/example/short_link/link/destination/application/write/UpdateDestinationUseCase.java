@@ -2,6 +2,8 @@ package com.example.short_link.link.destination.application.write;
 
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
+import com.example.short_link.link.destination.exception.DestinationErrorCode;
+import com.example.short_link.link.destination.exception.DestinationException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -28,7 +30,7 @@ public class UpdateDestinationUseCase {
       String os) {
     LinkDestinationEntity dest = ownership.ownedDestination(userId, shortCode, destinationId);
     if (url != null && !AddDestinationUseCase.isValidUrl(url)) {
-      throw new IllegalArgumentException("destination url must be http(s)");
+      throw new DestinationException(DestinationErrorCode.INVALID_DESTINATION_URL);
     }
     Integer clampedWeight = weight == null ? null : AddDestinationUseCase.clampWeight(weight);
     dest.update(

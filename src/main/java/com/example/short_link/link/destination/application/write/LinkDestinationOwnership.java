@@ -2,6 +2,8 @@ package com.example.short_link.link.destination.application.write;
 
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
+import com.example.short_link.link.destination.exception.DestinationErrorCode;
+import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
@@ -30,9 +32,10 @@ class LinkDestinationOwnership {
     LinkDestinationEntity dest =
         repository
             .findById(destinationId)
-            .orElseThrow(() -> new IllegalArgumentException("destination not found"));
+            .orElseThrow(
+                () -> new DestinationException(DestinationErrorCode.DESTINATION_NOT_FOUND));
     if (!dest.getLinkId().equals(link.getId())) {
-      throw new IllegalArgumentException("destination not found");
+      throw new DestinationException(DestinationErrorCode.DESTINATION_NOT_FOUND);
     }
     return dest;
   }

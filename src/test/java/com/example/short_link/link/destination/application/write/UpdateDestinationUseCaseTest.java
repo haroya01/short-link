@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
+import com.example.short_link.link.destination.exception.DestinationException;
 import org.junit.jupiter.api.Test;
 
 class UpdateDestinationUseCaseTest {
@@ -46,7 +47,7 @@ class UpdateDestinationUseCaseTest {
             () ->
                 useCase.execute(
                     7L, "abc", 99L, "javascript:alert(1)", null, null, null, null, null, null))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(DestinationException.class);
   }
 
   @Test
