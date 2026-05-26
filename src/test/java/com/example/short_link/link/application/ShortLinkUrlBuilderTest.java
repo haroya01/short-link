@@ -2,6 +2,7 @@ package com.example.short_link.link.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.ShortCode;
 import org.junit.jupiter.api.Test;
 
 class ShortLinkUrlBuilderTest {
@@ -9,7 +10,7 @@ class ShortLinkUrlBuilderTest {
   @Test
   void buildsCanonicalShortUrl() {
     ShortLinkUrlBuilder builder = new ShortLinkUrlBuilder("https://kurl.me");
-    assertThat(builder.build("aBc1234")).isEqualTo("https://kurl.me/aBc1234");
+    assertThat(builder.build(new ShortCode("aBc1234"))).isEqualTo("https://kurl.me/aBc1234");
   }
 
   @Test
@@ -18,12 +19,12 @@ class ShortLinkUrlBuilderTest {
     // hands us "https://kurl.me/" we get a double slash, which is the visible signal to fix the
     // base URL config, not to silently paper over it here.
     ShortLinkUrlBuilder builder = new ShortLinkUrlBuilder("https://kurl.me/");
-    assertThat(builder.build("xyz")).isEqualTo("https://kurl.me//xyz");
+    assertThat(builder.build(new ShortCode("xyz"))).isEqualTo("https://kurl.me//xyz");
   }
 
   @Test
   void supportsCustomDomainBase() {
     ShortLinkUrlBuilder builder = new ShortLinkUrlBuilder("https://go.example.com");
-    assertThat(builder.build("a")).isEqualTo("https://go.example.com/a");
+    assertThat(builder.build(new ShortCode("aaa"))).isEqualTo("https://go.example.com/a");
   }
 }

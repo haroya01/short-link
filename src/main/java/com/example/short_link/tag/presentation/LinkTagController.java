@@ -1,5 +1,6 @@
 package com.example.short_link.tag.presentation;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.tag.application.read.LinkTagQueryService;
 import com.example.short_link.tag.application.write.ReplaceLinkTagsUseCase;
 import com.example.short_link.tag.presentation.request.LinkTagsRequest;
@@ -24,14 +25,14 @@ public class LinkTagController {
 
   @GetMapping("/{shortCode}/tags")
   public LinkTagsResponse tags(
-      @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
+      @AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
     return new LinkTagsResponse(shortCode, queryService.tagNamesFor(userId, shortCode));
   }
 
   @PutMapping("/{shortCode}/tags")
   public LinkTagsResponse replace(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @Valid @RequestBody LinkTagsRequest request) {
     return new LinkTagsResponse(shortCode, replaceTags.execute(userId, shortCode, request.tags()));
   }

@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.presentation;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.application.dto.IssuedWebhook;
 import com.example.short_link.link.webhook.application.dto.WebhookSummary;
 import com.example.short_link.link.webhook.application.read.LinkWebhookQueryService;
@@ -42,14 +43,14 @@ public class LinkWebhookController {
 
   @GetMapping("/{shortCode}/webhooks")
   public List<WebhookSummary> list(
-      @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
+      @AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
     return queryService.list(userId, shortCode);
   }
 
   @PostMapping("/{shortCode}/webhooks")
   public ResponseEntity<IssuedWebhook> register(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestBody LinkWebhookRegisterRequest request) {
     IssuedWebhook issued =
         registerUseCase.execute(
@@ -60,7 +61,7 @@ public class LinkWebhookController {
   @PatchMapping("/{shortCode}/webhooks/{id}")
   public WebhookSummary toggle(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @PathVariable Long id,
       @RequestBody LinkWebhookToggleRequest request) {
     return toggleUseCase.execute(
@@ -70,7 +71,7 @@ public class LinkWebhookController {
   @PutMapping("/{shortCode}/webhooks/{id}/config")
   public WebhookSummary updateConfig(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @PathVariable Long id,
       @RequestBody LinkWebhookConfigRequest request) {
     return updateConfigUseCase.execute(
@@ -92,7 +93,9 @@ public class LinkWebhookController {
 
   @DeleteMapping("/{shortCode}/webhooks/{id}")
   public ResponseEntity<Void> delete(
-      @AuthenticationPrincipal Long userId, @PathVariable String shortCode, @PathVariable Long id) {
+      @AuthenticationPrincipal Long userId,
+      @PathVariable ShortCode shortCode,
+      @PathVariable Long id) {
     deleteUseCase.execute(new DeleteLinkWebhookCommand(userId, shortCode, id));
     return ResponseEntity.noContent().build();
   }

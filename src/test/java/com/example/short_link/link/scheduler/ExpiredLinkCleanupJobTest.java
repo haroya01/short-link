@@ -3,6 +3,7 @@ package com.example.short_link.link.scheduler;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
@@ -47,9 +48,9 @@ class ExpiredLinkCleanupJobTest {
     int deleted = job.sweep();
 
     assertThat(deleted).isEqualTo(1);
-    assertThat(linkRepository.findByShortCode("expired1")).isEmpty();
-    assertThat(linkRepository.findByShortCode("recent01")).isPresent();
-    assertThat(linkRepository.findByShortCode("active01")).isPresent();
+    assertThat(linkRepository.findByShortCode(new ShortCode("expired1"))).isEmpty();
+    assertThat(linkRepository.findByShortCode(new ShortCode("recent01"))).isPresent();
+    assertThat(linkRepository.findByShortCode(new ShortCode("active01"))).isPresent();
     assertThat(clickEventRepository.countByLinkId(expiredLink.getId())).isZero();
   }
 

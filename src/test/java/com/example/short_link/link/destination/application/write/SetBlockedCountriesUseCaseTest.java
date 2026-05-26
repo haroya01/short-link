@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import java.util.Optional;
@@ -30,7 +31,7 @@ class SetBlockedCountriesUseCaseTest {
     } catch (Exception e) {
       throw new RuntimeException(e);
     }
-    when(ownership.ownedLink(7L, "abc")).thenReturn(l);
+    when(ownership.ownedLink(7L, new ShortCode("abc"))).thenReturn(l);
     return l;
   }
 
@@ -39,7 +40,7 @@ class SetBlockedCountriesUseCaseTest {
     LinkEntity l = link();
     when(policies.findById(1L)).thenReturn(Optional.empty());
 
-    useCase.execute(7L, "abc", "KR,JP");
+    useCase.execute(7L, new ShortCode("abc"), "KR,JP");
 
     assertThat(l.getBlockedCountries()).isNotNull();
   }
@@ -49,7 +50,7 @@ class SetBlockedCountriesUseCaseTest {
     link();
     when(policies.findById(1L)).thenReturn(Optional.empty());
 
-    useCase.execute(7L, "abc", "KR,JP");
+    useCase.execute(7L, new ShortCode("abc"), "KR,JP");
 
     verify(policies, times(1)).save(any(LinkExpirationPolicyEntity.class));
   }
@@ -60,7 +61,7 @@ class SetBlockedCountriesUseCaseTest {
     LinkExpirationPolicyEntity existing = new LinkExpirationPolicyEntity(1L);
     when(policies.findById(1L)).thenReturn(Optional.of(existing));
 
-    useCase.execute(7L, "abc", "KR,JP");
+    useCase.execute(7L, new ShortCode("abc"), "KR,JP");
 
     verify(policies, times(1)).save(existing);
   }
@@ -70,6 +71,6 @@ class SetBlockedCountriesUseCaseTest {
     LinkEntity l = link();
     when(policies.findById(1L)).thenReturn(Optional.empty());
 
-    assertThat(useCase.execute(7L, "abc", "KR,JP")).isSameAs(l);
+    assertThat(useCase.execute(7L, new ShortCode("abc"), "KR,JP")).isSameAs(l);
   }
 }

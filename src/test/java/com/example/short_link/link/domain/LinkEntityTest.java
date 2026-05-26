@@ -167,7 +167,7 @@ class LinkEntityTest {
 
   @Test
   void isCountryBlockedCaseInsensitive() {
-    LinkEntity link = new LinkEntity("https://x", "abc");
+    LinkEntity link = new LinkEntity("https://x", new ShortCode("abc"));
     link.setBlockedCountries("KR,JP");
     assertThat(link.isCountryBlocked("kr")).isTrue();
     assertThat(link.isCountryBlocked("US")).isFalse();
@@ -217,7 +217,7 @@ class LinkEntityTest {
 
   @Test
   void ogOverrideTrimmedAndBlankBecomesNull() {
-    LinkEntity link = new LinkEntity("https://x", "abc");
+    LinkEntity link = new LinkEntity("https://x", new ShortCode("abc"));
     link.changeOgOverride(" T ", " D ", " I ");
     assertThat(link.getOgTitleOverride()).isEqualTo("T");
     assertThat(link.getOgDescriptionOverride()).isEqualTo("D");

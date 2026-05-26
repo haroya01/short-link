@@ -2,6 +2,7 @@ package com.example.short_link.link.webhook.application.write;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.link.domain.ShortCode;
 import org.junit.jupiter.api.Test;
 
 class UpdateLinkWebhookConfigCommandTest {
@@ -11,7 +12,19 @@ class UpdateLinkWebhookConfigCommandTest {
     assertThatThrownBy(
             () ->
                 new UpdateLinkWebhookConfigCommand(
-                    1L, "abcde", 1L, null, null, null, null, null, null, null, -1, null, null))
+                    1L,
+                    new ShortCode("abcde"),
+                    1L,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    -1,
+                    null,
+                    null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -20,7 +33,19 @@ class UpdateLinkWebhookConfigCommandTest {
     assertThatThrownBy(
             () ->
                 new UpdateLinkWebhookConfigCommand(
-                    1L, "abcde", 1L, null, null, null, null, null, null, null, 24, null, null))
+                    1L,
+                    new ShortCode("abcde"),
+                    1L,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    24,
+                    null,
+                    null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -29,7 +54,19 @@ class UpdateLinkWebhookConfigCommandTest {
     assertThatThrownBy(
             () ->
                 new UpdateLinkWebhookConfigCommand(
-                    1L, "abcde", 1L, null, null, null, null, null, null, null, null, 0, null))
+                    1L,
+                    new ShortCode("abcde"),
+                    1L,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0,
+                    null))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
@@ -38,7 +75,19 @@ class UpdateLinkWebhookConfigCommandTest {
     assertThatThrownBy(
             () ->
                 new UpdateLinkWebhookConfigCommand(
-                    1L, "abcde", 1L, null, null, null, null, null, null, null, null, null, 0))
+                    1L,
+                    new ShortCode("abcde"),
+                    1L,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    0))
         .isInstanceOf(IllegalArgumentException.class);
   }
 }

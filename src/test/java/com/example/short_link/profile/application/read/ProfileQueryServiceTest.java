@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.profile.application.MyProfile;
@@ -149,7 +150,7 @@ class ProfileQueryServiceTest {
     when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L))
         .thenReturn(List.of(divider, textBlock));
     when(clickRepository.countsByLinkIds(any())).thenReturn(List.of());
-    when(urlBuilder.build("abc")).thenReturn("https://kurl/abc");
+    when(urlBuilder.build(new ShortCode("abc"))).thenReturn("https://kurl/abc");
     PublicProfile p = service.findByUsername("alice");
     assertThat(p.entries()).hasSize(3);
     assertThat(p.entries().get(0).kind()).isEqualTo("LINK");

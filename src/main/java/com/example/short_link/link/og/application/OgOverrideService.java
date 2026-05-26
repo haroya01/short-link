@@ -1,6 +1,7 @@
 package com.example.short_link.link.og.application;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -29,7 +30,7 @@ public class OgOverrideService {
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
   public OgOverrideResult update(
-      Long userId, String shortCode, String title, String description, String image) {
+      Long userId, ShortCode shortCode, String title, String description, String image) {
     LinkEntity link =
         repository
             .findByShortCode(shortCode)
@@ -46,7 +47,7 @@ public class OgOverrideService {
     ogMetadataRepository.save(ogMeta);
     cacheEviction.evictByUserId(userId);
     return new OgOverrideResult(
-        link.getShortCode().value(),
+        link.getShortCode(),
         link.getOgTitleOverride(),
         link.getOgDescriptionOverride(),
         link.getOgImageOverride());

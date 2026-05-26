@@ -9,6 +9,7 @@ import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import java.lang.reflect.Field;
@@ -25,57 +26,58 @@ class LinkDestinationOwnershipTest {
   @Test
   void ownedLinkReturnsLinkWhenOwned() {
     LinkEntity link = new LinkEntity("https://x.com", "abc1234", 42L, null);
-    when(linkRepository.findByShortCode("abc1234")).thenReturn(Optional.of(link));
+    when(linkRepository.findByShortCode(new ShortCode("abc1234"))).thenReturn(Optional.of(link));
 
-    assertThat(ownership.ownedLink(42L, "abc1234")).isSameAs(link);
+    assertThat(ownership.ownedLink(42L, new ShortCode("abc1234"))).isSameAs(link);
   }
 
   @Test
   void ownedLinkThrowsWhenShortCodeNotFound() {
-    when(linkRepository.findByShortCode("nope0001")).thenReturn(Optional.empty());
+    when(linkRepository.findByShortCode(new ShortCode("nope0001"))).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> ownership.ownedLink(42L, "nope0001"))
+    assertThatThrownBy(() -> ownership.ownedLink(42L, new ShortCode("nope0001")))
         .isInstanceOf(LinkException.class);
   }
 
   @Test
   void ownedLinkThrowsWhenOwnedByDifferentUser() {
     LinkEntity link = new LinkEntity("https://x.com", "abc1234", 42L, null);
-    when(linkRepository.findByShortCode("abc1234")).thenReturn(Optional.of(link));
+    when(linkRepository.findByShortCode(new ShortCode("abc1234"))).thenReturn(Optional.of(link));
 
-    assertThatThrownBy(() -> ownership.ownedLink(99L, "abc1234")).isInstanceOf(LinkException.class);
+    assertThatThrownBy(() -> ownership.ownedLink(99L, new ShortCode("abc1234")))
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
   void ownedDestinationReturnsDestinationWhenLinkOwnsIt() throws Exception {
     LinkEntity link = setId(new LinkEntity("https://x.com", "abc1234", 42L, null), 1L);
-    when(linkRepository.findByShortCode("abc1234")).thenReturn(Optional.of(link));
+    when(linkRepository.findByShortCode(new ShortCode("abc1234"))).thenReturn(Optional.of(link));
     LinkDestinationEntity dest =
         new LinkDestinationEntity(1L, "https://dest.com", 50, null, null, null, null);
     when(repository.findById(99L)).thenReturn(Optional.of(dest));
 
-    assertThat(ownership.ownedDestination(42L, "abc1234", 99L)).isSameAs(dest);
+    assertThat(ownership.ownedDestination(42L, new ShortCode("abc1234"), 99L)).isSameAs(dest);
   }
 
   @Test
   void ownedDestinationThrowsWhenDestinationIdNotFound() throws Exception {
     LinkEntity link = setId(new LinkEntity("https://x.com", "abc1234", 42L, null), 1L);
-    when(linkRepository.findByShortCode("abc1234")).thenReturn(Optional.of(link));
+    when(linkRepository.findByShortCode(new ShortCode("abc1234"))).thenReturn(Optional.of(link));
     when(repository.findById(99L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> ownership.ownedDestination(42L, "abc1234", 99L))
+    assertThatThrownBy(() -> ownership.ownedDestination(42L, new ShortCode("abc1234"), 99L))
         .isInstanceOf(DestinationException.class);
   }
 
   @Test
   void ownedDestinationThrowsWhenDestinationBelongsToDifferentLink() throws Exception {
     LinkEntity link = setId(new LinkEntity("https://x.com", "abc1234", 42L, null), 1L);
-    when(linkRepository.findByShortCode("abc1234")).thenReturn(Optional.of(link));
+    when(linkRepository.findByShortCode(new ShortCode("abc1234"))).thenReturn(Optional.of(link));
     LinkDestinationEntity dest =
         new LinkDestinationEntity(7L, "https://other.com", 50, null, null, null, null);
     when(repository.findById(99L)).thenReturn(Optional.of(dest));
 
-    assertThatThrownBy(() -> ownership.ownedDestination(42L, "abc1234", 99L))
+    assertThatThrownBy(() -> ownership.ownedDestination(42L, new ShortCode("abc1234"), 99L))
         .isInstanceOf(DestinationException.class);
   }
 

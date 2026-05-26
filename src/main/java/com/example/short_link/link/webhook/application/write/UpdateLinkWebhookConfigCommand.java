@@ -1,10 +1,11 @@
 package com.example.short_link.link.webhook.application.write;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 
 public record UpdateLinkWebhookConfigCommand(
     Long userId,
-    String shortCode,
+    ShortCode shortCode,
     Long webhookId,
     Boolean includeBots,
     Integer sampleRate,
@@ -19,7 +20,7 @@ public record UpdateLinkWebhookConfigCommand(
 
   public UpdateLinkWebhookConfigCommand {
     if (userId == null) throw new IllegalArgumentException("userId required");
-    if (shortCode == null || shortCode.isBlank()) {
+    if (shortCode == null) {
       throw new IllegalArgumentException("shortCode required");
     }
     if (webhookId == null) throw new IllegalArgumentException("webhookId required");

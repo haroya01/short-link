@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -26,7 +27,7 @@ class LinkOgFetchListenerRetryTest {
 
     LinkRepository repo = mock(LinkRepository.class);
     LinkEntity entity = link("retry001", "https://example.com/x");
-    when(repo.findByShortCode("retry001")).thenReturn(Optional.of(entity));
+    when(repo.findByShortCode(new ShortCode("retry001"))).thenReturn(Optional.of(entity));
     when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
 
     LinkOgFetchListener listener =
@@ -38,7 +39,7 @@ class LinkOgFetchListenerRetryTest {
             new NoOpCacheManager(),
             new OgFetchProperties(3, 30, true));
 
-    listener.fetchAndStore("retry001", "https://example.com/x");
+    listener.fetchAndStore(new ShortCode("retry001"), "https://example.com/x");
 
     assertThat(entity.getOgFetchStatus()).isEqualTo("RETRYABLE");
     assertThat(entity.getOgFetchAttempts()).isEqualTo(1);
@@ -52,7 +53,7 @@ class LinkOgFetchListenerRetryTest {
     LinkRepository repo = mock(LinkRepository.class);
     LinkEntity entity = link("retry002", "https://example.com/x");
     setField(entity, "ogFetchAttempts", 2);
-    when(repo.findByShortCode("retry002")).thenReturn(Optional.of(entity));
+    when(repo.findByShortCode(new ShortCode("retry002"))).thenReturn(Optional.of(entity));
     when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
 
     LinkOgFetchListener listener =
@@ -64,7 +65,7 @@ class LinkOgFetchListenerRetryTest {
             new NoOpCacheManager(),
             new OgFetchProperties(3, 30, true));
 
-    listener.fetchAndStore("retry002", "https://example.com/x");
+    listener.fetchAndStore(new ShortCode("retry002"), "https://example.com/x");
 
     assertThat(entity.getOgFetchStatus()).isEqualTo("ERROR");
     assertThat(entity.getOgFetchAttempts()).isEqualTo(3);

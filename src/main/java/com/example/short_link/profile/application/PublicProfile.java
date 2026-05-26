@@ -1,5 +1,6 @@
 package com.example.short_link.profile.application;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.profile.application.Socials.Social;
 import java.util.List;
 
@@ -20,7 +21,7 @@ public record PublicProfile(
   public record ProfileEntry(
       String kind,
       Long id,
-      String shortCode,
+      ShortCode shortCode,
       String shortUrl,
       String originalUrl,
       String ogTitle,
@@ -30,7 +31,7 @@ public record PublicProfile(
       String content) {
 
     public static ProfileEntry link(
-        String shortCode,
+        ShortCode shortCode,
         String shortUrl,
         String originalUrl,
         String ogTitle,

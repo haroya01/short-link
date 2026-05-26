@@ -6,6 +6,7 @@ import com.example.short_link.link.application.dto.LinkEventsResult;
 import com.example.short_link.link.classifier.application.ReferrerChannelClassifier;
 import com.example.short_link.link.classifier.application.helper.IpMasker;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -32,7 +33,7 @@ public class LinkEventsService {
   private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)
-  public LinkEventsResult events(Long userId, String shortCode, String cursor, Integer limit) {
+  public LinkEventsResult events(Long userId, ShortCode shortCode, String cursor, Integer limit) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)

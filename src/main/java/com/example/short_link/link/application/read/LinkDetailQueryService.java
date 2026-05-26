@@ -3,6 +3,7 @@ package com.example.short_link.link.application.read;
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.dto.LinkDetailView;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -20,14 +21,14 @@ public class LinkDetailQueryService {
   private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)
-  public LinkDetailView detail(Long userId, String shortCode) {
+  public LinkDetailView detail(Long userId, ShortCode shortCode) {
     LinkEntity link =
         repository
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     return new LinkDetailView(
-        link.getShortCode().value(),
+        link.getShortCode(),
         link.getOriginalUrl(),
         link.getExpiresAt(),
         link.getOgTitle(),

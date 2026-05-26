@@ -1,8 +1,10 @@
 package com.example.short_link.link.application.dto;
 
-public record LinkCreated(String shortCode, String claimToken) {
+import com.example.short_link.link.domain.ShortCode;
 
-  public LinkCreated(String shortCode) {
+public record LinkCreated(ShortCode shortCode, String claimToken) {
+
+  public LinkCreated(ShortCode shortCode) {
     this(shortCode, null);
   }
 }

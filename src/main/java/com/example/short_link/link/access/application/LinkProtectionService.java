@@ -4,6 +4,7 @@ import com.example.short_link.link.access.application.dto.LinkProtectionResult;
 import com.example.short_link.link.access.domain.LinkAccessControlEntity;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -24,7 +25,7 @@ public class LinkProtectionService {
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
   public LinkProtectionResult update(
-      Long userId, String shortCode, String password, Integer maxViews) {
+      Long userId, ShortCode shortCode, String password, Integer maxViews) {
     LinkEntity link =
         repository
             .findByShortCode(shortCode)
@@ -45,7 +46,7 @@ public class LinkProtectionService {
     access.changeMaxViews(maxViews);
     accessControlRepository.save(access);
     return new LinkProtectionResult(
-        link.getShortCode().value(), link.hasPassword(), link.getMaxViews(), link.getViewCount());
+        link.getShortCode(), link.hasPassword(), link.getMaxViews(), link.getViewCount());
   }
 
   public boolean checkPassword(LinkEntity link, String supplied) {

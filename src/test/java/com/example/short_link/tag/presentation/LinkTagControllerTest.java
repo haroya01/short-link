@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.tag.application.read.LinkTagQueryService;
 import com.example.short_link.tag.application.write.ReplaceLinkTagsUseCase;
 import com.example.short_link.user.application.JwtTokenService;
@@ -46,7 +47,7 @@ class LinkTagControllerTest {
   void getReturnsTagNames() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("t@x.com", "google", "g-lt"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(queryService.tagNamesFor(eq(user.getId()), eq("abc1234")))
+    when(queryService.tagNamesFor(eq(user.getId()), eq(new ShortCode("abc1234"))))
         .thenReturn(List.of("work", "urgent"));
 
     mvc.perform(get("/api/v1/links/abc1234/tags").header("Authorization", "Bearer " + token))
@@ -59,7 +60,7 @@ class LinkTagControllerTest {
   void replaceTagsReturnsNewList() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("r@x.com", "google", "g-ltr"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(replaceTags.execute(eq(user.getId()), eq("abc1234"), any()))
+    when(replaceTags.execute(eq(user.getId()), eq(new ShortCode("abc1234")), any()))
         .thenReturn(List.of("new-tag"));
 
     mvc.perform(

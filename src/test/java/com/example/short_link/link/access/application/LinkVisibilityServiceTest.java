@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
@@ -31,10 +32,10 @@ class LinkVisibilityServiceTest {
 
     assertThat(link.isStatsPublic()).isFalse();
 
-    boolean nowPublic = service.setStatsPublic(user.getId(), "vis0001", true);
+    boolean nowPublic = service.setStatsPublic(user.getId(), new ShortCode("vis0001"), true);
     assertThat(nowPublic).isTrue();
 
-    boolean nowPrivate = service.setStatsPublic(user.getId(), "vis0001", false);
+    boolean nowPrivate = service.setStatsPublic(user.getId(), new ShortCode("vis0001"), false);
     assertThat(nowPrivate).isFalse();
   }
 
@@ -44,13 +45,13 @@ class LinkVisibilityServiceTest {
     UserEntity other = userRepository.save(new UserEntity("x@example.com", "google", "g-x"));
     linkRepository.save(new LinkEntity("https://example.com", "vis0002", owner.getId(), null));
 
-    assertThatThrownBy(() -> service.setStatsPublic(other.getId(), "vis0002", true))
+    assertThatThrownBy(() -> service.setStatsPublic(other.getId(), new ShortCode("vis0002"), true))
         .isInstanceOf(LinkException.class);
   }
 
   @Test
   void rejectsUnknownLink() {
-    assertThatThrownBy(() -> service.setStatsPublic(1L, "missing1", true))
+    assertThatThrownBy(() -> service.setStatsPublic(1L, new ShortCode("missing1"), true))
         .isInstanceOf(LinkException.class);
   }
 }

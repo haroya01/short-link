@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.og.application.LinkOgFetchListener;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -61,7 +62,7 @@ class OgFetchRetryJobTest {
 
     job.runDaily();
 
-    verify(listener).fetchAndStore("r000001", "https://r.example");
+    verify(listener).fetchAndStore(new ShortCode("r000001"), "https://r.example");
     verify(lock).release("kurl:og-fetch:retry");
   }
 
@@ -78,11 +79,11 @@ class OgFetchRetryJobTest {
         .thenReturn(List.of(a, b));
     Mockito.doThrow(new RuntimeException("boom"))
         .when(listener)
-        .fetchAndStore(eq("a000001"), anyString());
+        .fetchAndStore(eq(new ShortCode("a000001")), anyString());
 
     job.runDaily();
 
-    verify(listener, times(1)).fetchAndStore("b000001", "https://b.example");
+    verify(listener, times(1)).fetchAndStore(new ShortCode("b000001"), "https://b.example");
     verify(lock).release("kurl:og-fetch:retry");
   }
 }

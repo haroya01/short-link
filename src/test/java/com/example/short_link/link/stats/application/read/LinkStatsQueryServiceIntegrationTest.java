@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.link.access.application.LinkVisibilityService;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
@@ -51,7 +52,7 @@ class LinkStatsQueryServiceIntegrationTest {
             .bot(true)
             .build());
 
-    LinkStats stats = service.stats(owner.getId(), "st0001");
+    LinkStats stats = service.stats(owner.getId(), new ShortCode("st0001"));
 
     assertThat(stats.totalClicks()).isGreaterThanOrEqualTo(2);
     assertThat(stats.humanClicks()).isGreaterThanOrEqualTo(1);
@@ -61,7 +62,7 @@ class LinkStatsQueryServiceIntegrationTest {
   @Test
   void statsThrowsForUnknownShortCode() {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-st2"));
-    assertThatThrownBy(() -> service.stats(user.getId(), "nope9999"))
+    assertThatThrownBy(() -> service.stats(user.getId(), new ShortCode("nope9999")))
         .isInstanceOf(LinkException.class);
   }
 
@@ -71,7 +72,7 @@ class LinkStatsQueryServiceIntegrationTest {
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-st3a"));
     linkRepository.save(new LinkEntity("https://example.com", "st0003", owner.getId(), null));
 
-    assertThatThrownBy(() -> service.stats(attacker.getId(), "st0003"))
+    assertThatThrownBy(() -> service.stats(attacker.getId(), new ShortCode("st0003")))
         .isInstanceOf(RuntimeException.class);
   }
 
@@ -80,21 +81,23 @@ class LinkStatsQueryServiceIntegrationTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-pst1"));
     linkRepository.save(new LinkEntity("https://example.com", "pst0001", owner.getId(), null));
 
-    assertThatThrownBy(() -> service.publicStats("pst0001")).isInstanceOf(LinkException.class);
+    assertThatThrownBy(() -> service.publicStats(new ShortCode("pst0001")))
+        .isInstanceOf(LinkException.class);
   }
 
   @Test
   void publicStatsAllowsWhenPublic() {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-pst2"));
     linkRepository.save(new LinkEntity("https://example.com", "pst0002", owner.getId(), null));
-    visibilityService.setStatsPublic(owner.getId(), "pst0002", true);
+    visibilityService.setStatsPublic(owner.getId(), new ShortCode("pst0002"), true);
 
-    LinkStats stats = service.publicStats("pst0002");
+    LinkStats stats = service.publicStats(new ShortCode("pst0002"));
     assertThat(stats).isNotNull();
   }
 
   @Test
   void publicStatsThrowsForUnknown() {
-    assertThatThrownBy(() -> service.publicStats("nope9999")).isInstanceOf(LinkException.class);
+    assertThatThrownBy(() -> service.publicStats(new ShortCode("nope9999")))
+        .isInstanceOf(LinkException.class);
   }
 }

@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.application.helper;
 
+import com.example.short_link.link.domain.ShortCode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -9,7 +10,7 @@ import java.util.Map;
  * receiver's templating simple.
  */
 public record ThresholdSpikePayload(
-    String shortCode, String window, long clicks, int threshold, String topReferrer) {
+    ShortCode shortCode, String window, long clicks, int threshold, String topReferrer) {
 
   public Map<String, Object> toJsonMap() {
     Map<String, Object> root = new LinkedHashMap<>();

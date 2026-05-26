@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.og.scheduler.OgRefreshJob;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -76,8 +77,8 @@ class OgRefreshJobDispatchTest {
 
     job.runWeekly();
 
-    verify(listener).fetchAndStore("a000001", "https://a.example");
-    verify(listener).fetchAndStore("b000001", "https://b.example");
+    verify(listener).fetchAndStore(new ShortCode("a000001"), "https://a.example");
+    verify(listener).fetchAndStore(new ShortCode("b000001"), "https://b.example");
     verify(lock).release("kurl:og-fetch:refresh");
   }
 
@@ -94,11 +95,11 @@ class OgRefreshJobDispatchTest {
         .thenReturn(List.of(a, b));
     Mockito.doThrow(new RuntimeException("boom"))
         .when(listener)
-        .fetchAndStore(eq("a000001"), anyString());
+        .fetchAndStore(eq(new ShortCode("a000001")), anyString());
 
     job.runWeekly();
 
-    verify(listener, times(1)).fetchAndStore("b000001", "https://b.example");
+    verify(listener, times(1)).fetchAndStore(new ShortCode("b000001"), "https://b.example");
     verify(lock).release("kurl:og-fetch:refresh");
   }
 }

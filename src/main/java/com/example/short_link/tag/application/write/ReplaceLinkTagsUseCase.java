@@ -1,6 +1,7 @@
 package com.example.short_link.tag.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -34,7 +35,7 @@ public class ReplaceLinkTagsUseCase {
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
-  public List<String> execute(Long userId, String shortCode, List<String> rawNames) {
+  public List<String> execute(Long userId, ShortCode shortCode, List<String> rawNames) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
