@@ -10,8 +10,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.customdomain.application.CustomDomainService;
-import com.example.short_link.customdomain.application.CustomDomainService.DomainSummary;
+import com.example.short_link.customdomain.application.dto.DomainSummary;
+import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
+import com.example.short_link.customdomain.application.write.DeleteCustomDomainUseCase;
+import com.example.short_link.customdomain.application.write.RegisterCustomDomainUseCase;
+import com.example.short_link.customdomain.application.write.VerifyCustomDomainUseCase;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -36,7 +39,10 @@ class CustomDomainControllerTest {
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
 
-  @MockitoBean private CustomDomainService service;
+  @MockitoBean private CustomDomainQueryService queryService;
+  @MockitoBean private RegisterCustomDomainUseCase register;
+  @MockitoBean private VerifyCustomDomainUseCase verify;
+  @MockitoBean private DeleteCustomDomainUseCase delete;
 
   @Test
   void anonymousListIs401() throws Exception {
@@ -47,7 +53,7 @@ class CustomDomainControllerTest {
   void listReturnsDomains() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("c@x.com", "google", "g-cd"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.list(eq(user.getId()))).thenReturn(List.of());
+    when(queryService.list(eq(user.getId()))).thenReturn(List.of());
 
     mvc.perform(get("/api/v1/custom-domains").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
@@ -58,7 +64,7 @@ class CustomDomainControllerTest {
   void registerReturns201() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("r@x.com", "google", "g-cdr"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.register(eq(user.getId()), eq("kurl.me")))
+    when(register.execute(eq(user.getId()), eq("kurl.me")))
         .thenReturn(new DomainSummary(1L, "kurl.me", "tok", "host", false, null, null, null, null));
 
     mvc.perform(
@@ -74,7 +80,7 @@ class CustomDomainControllerTest {
   void verifyReturnsUpdatedSummary() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("v@x.com", "google", "g-cdv"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(service.verify(eq(user.getId()), eq(7L)))
+    when(verify.execute(eq(user.getId()), eq(7L)))
         .thenReturn(new DomainSummary(7L, "kurl.me", "tok", "host", true, null, null, null, null));
 
     mvc.perform(post("/api/v1/custom-domains/7/verify").header("Authorization", "Bearer " + token))
@@ -86,7 +92,7 @@ class CustomDomainControllerTest {
   void deleteReturns204() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("d@x.com", "google", "g-cdd"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    doNothing().when(service).delete(anyLong(), eq(9L));
+    doNothing().when(delete).execute(anyLong(), eq(9L));
 
     mvc.perform(delete("/api/v1/custom-domains/9").header("Authorization", "Bearer " + token))
         .andExpect(status().isNoContent());

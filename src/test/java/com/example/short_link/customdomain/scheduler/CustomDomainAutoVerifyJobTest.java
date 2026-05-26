@@ -6,7 +6,8 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.customdomain.application.CustomDomainService;
+import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
+import com.example.short_link.customdomain.application.write.AutoVerifyCustomDomainUseCase;
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,20 +16,22 @@ import org.mockito.Mockito;
 
 class CustomDomainAutoVerifyJobTest {
 
-  private CustomDomainService service;
+  private CustomDomainQueryService queryService;
+  private AutoVerifyCustomDomainUseCase autoVerify;
   private CustomDomainAutoVerifyJob job;
 
   @BeforeEach
   void setUp() {
-    service = Mockito.mock(CustomDomainService.class);
-    job = new CustomDomainAutoVerifyJob(service);
+    queryService = Mockito.mock(CustomDomainQueryService.class);
+    autoVerify = Mockito.mock(AutoVerifyCustomDomainUseCase.class);
+    job = new CustomDomainAutoVerifyJob(queryService, autoVerify);
   }
 
   @Test
   void noPendingShortcuts() {
-    when(service.findPendingWithinWindow()).thenReturn(List.of());
+    when(queryService.findPendingWithinWindow()).thenReturn(List.of());
     job.run();
-    verify(service, never()).autoVerifyOne(any());
+    verify(autoVerify, never()).execute(any());
   }
 
   @Test
@@ -37,13 +40,13 @@ class CustomDomainAutoVerifyJobTest {
     CustomDomainEntity b = Mockito.mock(CustomDomainEntity.class);
     when(a.getDomain()).thenReturn("a.example.com");
     when(b.getDomain()).thenReturn("b.example.com");
-    when(service.findPendingWithinWindow()).thenReturn(List.of(a, b));
-    when(service.autoVerifyOne(a)).thenReturn(true);
-    when(service.autoVerifyOne(b)).thenReturn(false);
+    when(queryService.findPendingWithinWindow()).thenReturn(List.of(a, b));
+    when(autoVerify.execute(a)).thenReturn(true);
+    when(autoVerify.execute(b)).thenReturn(false);
 
     job.run();
 
-    verify(service, times(2)).autoVerifyOne(any());
+    verify(autoVerify, times(2)).execute(any());
   }
 
   @Test
@@ -52,12 +55,12 @@ class CustomDomainAutoVerifyJobTest {
     CustomDomainEntity b = Mockito.mock(CustomDomainEntity.class);
     when(a.getDomain()).thenReturn("boom.example.com");
     when(b.getDomain()).thenReturn("ok.example.com");
-    when(service.findPendingWithinWindow()).thenReturn(List.of(a, b));
-    when(service.autoVerifyOne(a)).thenThrow(new RuntimeException("dns timeout"));
-    when(service.autoVerifyOne(b)).thenReturn(true);
+    when(queryService.findPendingWithinWindow()).thenReturn(List.of(a, b));
+    when(autoVerify.execute(a)).thenThrow(new RuntimeException("dns timeout"));
+    when(autoVerify.execute(b)).thenReturn(true);
 
     job.run();
 
-    verify(service).autoVerifyOne(b);
+    verify(autoVerify).execute(b);
   }
 }
