@@ -77,7 +77,7 @@ public class WeeklyInsightsService {
             link.getId(), from, to, PageRequest.ofSize(1));
     String topSource = utm.isEmpty() ? null : utm.get(0).getSource();
     return new WeeklyInsights.TopLink(
-        link.getShortCode(), link.getOriginalUrl(), best.getCount(), topSource);
+        link.getShortCode().value(), link.getOriginalUrl(), best.getCount(), topSource);
   }
 
   private WeeklyInsights.Peak resolvePeak(Long userId, Instant from, Instant to) {

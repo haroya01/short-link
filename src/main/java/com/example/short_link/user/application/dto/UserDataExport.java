@@ -39,7 +39,7 @@ public record UserDataExport(
 
     public static ExportedLink from(LinkEntity l) {
       return new ExportedLink(
-          l.getShortCode(),
+          l.getShortCode().value(),
           l.getOriginalUrl(),
           l.getCreatedAt(),
           l.getExpiresAt(),

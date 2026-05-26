@@ -30,7 +30,7 @@ public class LinkAccessGuard {
 
   public void requireView(Long userId, LinkEntity link) {
     if (!canView(userId, link)) {
-      throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, link.getShortCode());
+      throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, link.getShortCode().value());
     }
   }
 }

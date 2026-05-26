@@ -45,6 +45,6 @@ class OgRefreshJobTest {
     Instant cutoff = now.minus(Duration.ofDays(30));
     List<LinkEntity> stale30 = linkRepository.findStaleOgCandidates(cutoff, PageRequest.of(0, 10));
 
-    assertThat(stale30).extracting(LinkEntity::getShortCode).containsExactly("rfsh001");
+    assertThat(stale30).extracting(l -> l.getShortCode().value()).containsExactly("rfsh001");
   }
 }
