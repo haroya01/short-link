@@ -35,9 +35,11 @@ class ClickRecorderTest {
 
   @BeforeEach
   void stubDefaults() {
-    // ASN lookup happens on every record() but tests don't care about its result; stub it lenient
-    // so individual tests don't have to and Mockito's strict mode doesn't complain.
     lenient().when(asnResolver.resolve(any())).thenReturn(AsnResolver.AsnInfo.empty());
+  }
+
+  private ClickContext ctx(String referrer, String clientIp, String acceptLanguage) {
+    return ClickContext.of(1L, "https://example.com", referrer, "ua", clientIp, acceptLanguage);
   }
 
   @Test
@@ -46,8 +48,7 @@ class ClickRecorderTest {
     when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
     doThrow(new RuntimeException("db down")).when(repository).save(any());
 
-    assertThatNoException()
-        .isThrownBy(() -> recorder.record(1L, "https://example.com", null, "ua", "1.2.3.4", null));
+    assertThatNoException().isThrownBy(() -> recorder.record(ctx(null, "1.2.3.4", null)));
   }
 
   @Test
@@ -58,13 +59,7 @@ class ClickRecorderTest {
         org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
     when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
-    recorder.record(
-        1L,
-        "https://example.com",
-        "https://www.youtube.com/watch?v=xyz&token=secret",
-        "ua",
-        "1.2.3.4",
-        null);
+    recorder.record(ctx("https://www.youtube.com/watch?v=xyz&token=secret", "1.2.3.4", null));
 
     assertThat(captor.getValue().getReferrer()).isEqualTo("https://www.youtube.com/watch");
     assertThat(captor.getValue().getReferrerHost()).isEqualTo("www.youtube.com");
@@ -78,7 +73,7 @@ class ClickRecorderTest {
         org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
     when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
-    recorder.record(1L, "https://example.com", null, "ua", "203.0.113.42", null);
+    recorder.record(ctx(null, "203.0.113.42", null));
 
     assertThat(captor.getValue().getClientIp()).isEqualTo("203.0.113.*");
     assertThat(captor.getValue().getClientIp()).doesNotContain("42");
@@ -93,7 +88,7 @@ class ClickRecorderTest {
         org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
     when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
-    recorder.record(1L, "https://example.com", null, "ua", "8.8.8.8", "ko-KR,ko;q=0.9");
+    recorder.record(ctx(null, "8.8.8.8", "ko-KR,ko;q=0.9"));
 
     ClickEventEntity saved = captor.getValue();
     assertThat(saved.getCountryCode()).isEqualTo("US");
