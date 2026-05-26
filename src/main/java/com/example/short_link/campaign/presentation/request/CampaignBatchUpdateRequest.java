@@ -1,5 +1,6 @@
-package com.example.short_link.campaign.application.dto;
+package com.example.short_link.campaign.presentation.request;
 
+import com.example.short_link.campaign.application.write.CampaignBatchUpdateCommand;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
@@ -9,4 +10,9 @@ public record CampaignBatchUpdateRequest(
     @Size(max = 255) String distributorName,
     @Size(max = 255) String areaLabel,
     @Positive Integer quantity,
-    @Size(max = 500) String memo) {}
+    @Size(max = 500) String memo) {
+
+  public CampaignBatchUpdateCommand toCommand() {
+    return new CampaignBatchUpdateCommand(name, distributorName, areaLabel, quantity, memo);
+  }
+}

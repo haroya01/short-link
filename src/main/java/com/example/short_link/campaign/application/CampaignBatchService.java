@@ -1,9 +1,9 @@
 package com.example.short_link.campaign.application;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
-import com.example.short_link.campaign.application.dto.CampaignBatchBulkRequest;
-import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignBatchUpdateRequest;
+import com.example.short_link.campaign.application.write.CampaignBatchBulkCommand;
+import com.example.short_link.campaign.application.write.CampaignBatchCreateCommand;
+import com.example.short_link.campaign.application.write.CampaignBatchUpdateCommand;
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignStatus;
@@ -31,31 +31,31 @@ public class CampaignBatchService {
   private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
 
   @Transactional
-  public BatchWithLink create(Long campaignId, Long ownerId, CampaignBatchCreateRequest request) {
+  public BatchWithLink create(Long campaignId, Long ownerId, CampaignBatchCreateCommand command) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     rejectIfTerminal(campaign);
-    String destination = resolveDestination(request.destinationUrl(), campaign);
-    validateRow(request, destination, 0);
-    return persistRow(campaign, ownerId, request, destination);
+    String destination = resolveDestination(command.destinationUrl(), campaign);
+    validateRow(command, destination, 0);
+    return persistRow(campaign, ownerId, command, destination);
   }
 
   @Transactional
   public List<BatchWithLink> createBulk(
-      Long campaignId, Long ownerId, CampaignBatchBulkRequest request) {
+      Long campaignId, Long ownerId, CampaignBatchBulkCommand command) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     rejectIfTerminal(campaign);
 
-    List<String> destinations = new ArrayList<>(request.batches().size());
-    for (int i = 0; i < request.batches().size(); i++) {
-      CampaignBatchCreateRequest row = request.batches().get(i);
+    List<String> destinations = new ArrayList<>(command.batches().size());
+    for (int i = 0; i < command.batches().size(); i++) {
+      CampaignBatchCreateCommand row = command.batches().get(i);
       String destination = resolveDestination(row.destinationUrl(), campaign);
       validateRow(row, destination, i);
       destinations.add(destination);
     }
 
-    List<BatchWithLink> out = new ArrayList<>(request.batches().size());
-    for (int i = 0; i < request.batches().size(); i++) {
-      out.add(persistRow(campaign, ownerId, request.batches().get(i), destinations.get(i)));
+    List<BatchWithLink> out = new ArrayList<>(command.batches().size());
+    for (int i = 0; i < command.batches().size(); i++) {
+      out.add(persistRow(campaign, ownerId, command.batches().get(i), destinations.get(i)));
     }
     return out;
   }
@@ -87,19 +87,19 @@ public class CampaignBatchService {
    */
   @Transactional
   public BatchWithLink update(
-      Long campaignId, Long batchId, Long ownerId, CampaignBatchUpdateRequest request) {
+      Long campaignId, Long batchId, Long ownerId, CampaignBatchUpdateCommand command) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     rejectIfTerminal(campaign);
     BatchWithLink current = detail(campaignId, batchId, ownerId);
     CampaignBatchEntity batch = current.batch();
     batch.editMetadata(
-        request.name() != null && !request.name().isBlank() ? request.name() : batch.getName(),
-        request.distributorName() != null
-            ? blankToNull(request.distributorName())
+        command.name() != null && !command.name().isBlank() ? command.name() : batch.getName(),
+        command.distributorName() != null
+            ? blankToNull(command.distributorName())
             : batch.getDistributorName(),
-        request.areaLabel() != null ? blankToNull(request.areaLabel()) : batch.getAreaLabel(),
-        request.quantity() != null ? request.quantity() : batch.getQuantity(),
-        request.memo() != null ? blankToNull(request.memo()) : batch.getMemo());
+        command.areaLabel() != null ? blankToNull(command.areaLabel()) : batch.getAreaLabel(),
+        command.quantity() != null ? command.quantity() : batch.getQuantity(),
+        command.memo() != null ? blankToNull(command.memo()) : batch.getMemo());
     return new BatchWithLink(batch, current.link());
   }
 
@@ -120,7 +120,7 @@ public class CampaignBatchService {
   }
 
   private BatchWithLink persistRow(
-      CampaignEntity campaign, Long ownerId, CampaignBatchCreateRequest row, String destination) {
+      CampaignEntity campaign, Long ownerId, CampaignBatchCreateCommand row, String destination) {
     // dedup=false — 같은 destination 의 여러 batch 가 각자 다른 short code 를 갖도록 (batch:link
     // UNIQUE 제약). 인쇄물 발주 시 batch 별 추적이 가능해야 함.
     LinkCreated created =
@@ -157,7 +157,7 @@ public class CampaignBatchService {
     return (fallback == null || fallback.isBlank()) ? null : fallback;
   }
 
-  private static void validateRow(CampaignBatchCreateRequest row, String destination, int index) {
+  private static void validateRow(CampaignBatchCreateCommand row, String destination, int index) {
     if (row.name() == null || row.name().isBlank()) {
       throw new CampaignException(CampaignErrorCode.INVALID_BATCH_ROW, index, "name required");
     }

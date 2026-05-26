@@ -1,7 +1,5 @@
 package com.example.short_link.campaign.presentation;
 
-import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
 import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
@@ -9,6 +7,8 @@ import com.example.short_link.campaign.application.write.EndCampaignNowUseCase;
 import com.example.short_link.campaign.application.write.ReapplyCampaignPolicyUseCase;
 import com.example.short_link.campaign.application.write.UpdateCampaignPolicyUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.campaign.presentation.request.CampaignCreateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignUpdateRequest;
 import com.example.short_link.campaign.presentation.response.CampaignDetailResponse;
 import com.example.short_link.campaign.presentation.response.CampaignSummaryResponse;
 import jakarta.validation.Valid;
@@ -41,7 +41,7 @@ public class CampaignController {
   @PostMapping
   public ResponseEntity<CampaignDetailResponse> create(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody CampaignCreateRequest request) {
-    CampaignEntity campaign = createUseCase.execute(userId, request);
+    CampaignEntity campaign = createUseCase.execute(request.toCommand(userId));
     return ResponseEntity.created(URI.create("/api/v1/campaigns/" + campaign.getId()))
         .body(CampaignDetailResponse.from(campaign, 0L));
   }
@@ -65,7 +65,7 @@ public class CampaignController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @Valid @RequestBody CampaignUpdateRequest request) {
-    CampaignEntity c = updateUseCase.execute(id, userId, request);
+    CampaignEntity c = updateUseCase.execute(request.toCommand(id, userId));
     return CampaignDetailResponse.from(c, query.batchCount(c.getId()));
   }
 

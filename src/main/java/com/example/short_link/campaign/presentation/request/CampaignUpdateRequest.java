@@ -1,5 +1,6 @@
-package com.example.short_link.campaign.application.dto;
+package com.example.short_link.campaign.presentation.request;
 
+import com.example.short_link.campaign.application.write.UpdateCampaignPolicyCommand;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
@@ -12,4 +13,17 @@ public record CampaignUpdateRequest(
     @URL @Size(max = 2048) String defaultDestinationUrl,
     CampaignPostEndAction postEndAction,
     @URL @Size(max = 2048) String postEndDestinationUrl,
-    @Size(max = 500) String postEndMessage) {}
+    @Size(max = 500) String postEndMessage) {
+
+  public UpdateCampaignPolicyCommand toCommand(Long campaignId, Long ownerId) {
+    return new UpdateCampaignPolicyCommand(
+        campaignId,
+        ownerId,
+        name,
+        endsAt,
+        defaultDestinationUrl,
+        postEndAction,
+        postEndDestinationUrl,
+        postEndMessage);
+  }
+}
