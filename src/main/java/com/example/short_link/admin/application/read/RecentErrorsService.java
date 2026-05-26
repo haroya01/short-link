@@ -1,5 +1,6 @@
-package com.example.short_link.admin.application;
+package com.example.short_link.admin.application.read;
 
+import com.example.short_link.admin.application.RecentErrorsBuffer;
 import com.example.short_link.admin.application.dto.RecentError;
 import java.util.List;
 import lombok.RequiredArgsConstructor;

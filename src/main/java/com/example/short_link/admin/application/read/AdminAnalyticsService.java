@@ -1,4 +1,4 @@
-package com.example.short_link.admin.application;
+package com.example.short_link.admin.application.read;
 
 import com.example.short_link.admin.application.dto.AdminActiveUsers;
 import com.example.short_link.admin.application.dto.AdminCohort;

@@ -1,7 +1,7 @@
 package com.example.short_link.user.presentation;
 
-import com.example.short_link.user.application.AuthService;
-import com.example.short_link.user.application.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService;
+import com.example.short_link.user.application.write.AuthService.LoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.request.DevLoginRequest;
 import com.example.short_link.user.presentation.response.TokenResponse;

@@ -1,6 +1,6 @@
 package com.example.short_link.user.presentation;
 
-import com.example.short_link.user.application.avatar.AvatarService;
+import com.example.short_link.user.application.write.avatar.AvatarService;
 import com.example.short_link.user.presentation.request.AvatarCommitRequest;
 import com.example.short_link.user.presentation.request.AvatarPresignRequest;
 import lombok.RequiredArgsConstructor;

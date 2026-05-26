@@ -1,7 +1,7 @@
 package com.example.short_link.user.presentation;
 
-import com.example.short_link.user.application.AuthService;
 import com.example.short_link.user.application.dto.IssuedTokens;
+import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
