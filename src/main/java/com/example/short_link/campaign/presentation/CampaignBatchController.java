@@ -3,11 +3,11 @@ package com.example.short_link.campaign.presentation;
 import com.example.short_link.campaign.application.CampaignBatchExportService;
 import com.example.short_link.campaign.application.CampaignBatchService;
 import com.example.short_link.campaign.application.dto.BatchWithLink;
-import com.example.short_link.campaign.application.dto.CampaignBatchBulkRequest;
-import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignBatchUpdateRequest;
 import com.example.short_link.campaign.application.dto.QrOptions;
 import com.example.short_link.campaign.application.helper.QrPngEncoder;
+import com.example.short_link.campaign.presentation.request.CampaignBatchBulkRequest;
+import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignBatchUpdateRequest;
 import com.example.short_link.campaign.presentation.response.CampaignBatchResponse;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import jakarta.validation.Valid;
@@ -43,7 +43,7 @@ public class CampaignBatchController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long campaignId,
       @Valid @RequestBody CampaignBatchCreateRequest request) {
-    BatchWithLink result = service.create(campaignId, userId, request);
+    BatchWithLink result = service.create(campaignId, userId, request.toCommand());
     CampaignBatchResponse body =
         CampaignBatchResponse.from(result.batch(), result.link(), urlBuilder);
     return ResponseEntity.created(
@@ -56,7 +56,7 @@ public class CampaignBatchController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long campaignId,
       @Valid @RequestBody CampaignBatchBulkRequest request) {
-    List<BatchWithLink> results = service.createBulk(campaignId, userId, request);
+    List<BatchWithLink> results = service.createBulk(campaignId, userId, request.toCommand());
     List<CampaignBatchResponse> body =
         results.stream()
             .map(r -> CampaignBatchResponse.from(r.batch(), r.link(), urlBuilder))
@@ -87,7 +87,7 @@ public class CampaignBatchController {
       @PathVariable Long campaignId,
       @PathVariable Long batchId,
       @Valid @RequestBody CampaignBatchUpdateRequest request) {
-    BatchWithLink result = service.update(campaignId, batchId, userId, request);
+    BatchWithLink result = service.update(campaignId, batchId, userId, request.toCommand());
     return CampaignBatchResponse.from(result.batch(), result.link(), urlBuilder);
   }
 

@@ -3,10 +3,10 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
-import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignCreateRequest;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
@@ -55,14 +55,14 @@ class CampaignStatsServiceTest {
     Instant start = Instant.now();
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
             new CampaignCreateRequest(
-                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
+                    "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null)
+                .toCommand(owner));
     BatchWithLink batch =
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", "A", "East", 100, null, null));
+            new CampaignBatchCreateRequest("east", "A", "East", 100, null, null).toCommand());
 
     recordClick(batch.link().linkId(), start.plusSeconds(60), false);
     recordClick(batch.link().linkId(), start.plusSeconds(120), false);
@@ -81,14 +81,14 @@ class CampaignStatsServiceTest {
     Instant start = Instant.now().plusSeconds(3600);
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
             new CampaignCreateRequest(
-                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
+                    "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null)
+                .toCommand(owner));
     BatchWithLink batch =
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null).toCommand());
 
     Instant testScan = start.minusSeconds(60);
     recordClick(batch.link().linkId(), testScan, false);
@@ -107,24 +107,24 @@ class CampaignStatsServiceTest {
     Instant start = Instant.now();
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
             new CampaignCreateRequest(
-                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
+                    "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null)
+                .toCommand(owner));
     BatchWithLink a1 =
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("a1", "A", "East", 500, null, null));
+            new CampaignBatchCreateRequest("a1", "A", "East", 500, null, null).toCommand());
     BatchWithLink a2 =
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("a2", "A", "West", 500, null, null));
+            new CampaignBatchCreateRequest("a2", "A", "West", 500, null, null).toCommand());
     BatchWithLink b1 =
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("b1", "B", "South", 1000, null, null));
+            new CampaignBatchCreateRequest("b1", "B", "South", 1000, null, null).toCommand());
 
     for (int i = 0; i < 50; i++) recordClick(a1.link().linkId(), start.plusSeconds(60 + i), false);
     for (int i = 0; i < 70; i++) recordClick(a2.link().linkId(), start.plusSeconds(60 + i), false);
@@ -146,9 +146,9 @@ class CampaignStatsServiceTest {
     Instant start = Instant.now();
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
             new CampaignCreateRequest(
-                "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null));
+                    "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null)
+                .toCommand(owner));
 
     CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
 

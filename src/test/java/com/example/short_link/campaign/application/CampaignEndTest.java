@@ -4,13 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
-import com.example.short_link.campaign.application.dto.CampaignBatchCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
 import com.example.short_link.campaign.exception.CampaignException;
+import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignCreateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignUpdateRequest;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -66,15 +66,15 @@ class CampaignEndTest {
   private CampaignEntity newCampaign(
       Long owner, CampaignPostEndAction action, String redirectUrl, String postEndMessage) {
     return createCampaign.execute(
-        owner,
         new CampaignCreateRequest(
-            "C",
-            null,
-            Instant.now().plusSeconds(3600),
-            "https://example.com/d",
-            action,
-            redirectUrl,
-            postEndMessage));
+                "C",
+                null,
+                Instant.now().plusSeconds(3600),
+                "https://example.com/d",
+                action,
+                redirectUrl,
+                postEndMessage)
+            .toCommand(owner));
   }
 
   @Test
@@ -85,7 +85,7 @@ class CampaignEndTest {
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null).toCommand());
     Long linkId = bwl.link().getId();
 
     endNowUseCase.execute(campaign.getId(), owner);
@@ -103,7 +103,7 @@ class CampaignEndTest {
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null).toCommand());
     Long linkId = bwl.link().getId();
 
     Instant before = Instant.now();
@@ -123,7 +123,7 @@ class CampaignEndTest {
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null).toCommand());
 
     endNowUseCase.execute(campaign.getId(), owner);
 
@@ -142,7 +142,7 @@ class CampaignEndTest {
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null).toCommand());
     Long linkId = bwl.link().getId();
 
     endNowUseCase.execute(campaign.getId(), owner);
@@ -160,21 +160,21 @@ class CampaignEndTest {
     Instant longPast = Instant.now().minusSeconds(60 * 60 * 24 * 14);
     CampaignEntity campaign =
         createCampaign.execute(
-            owner,
-            new com.example.short_link.campaign.application.dto.CampaignCreateRequest(
-                "C",
-                longPast,
-                longPast.plusSeconds(60 * 60),
-                "https://example.com/x",
-                CampaignPostEndAction.EXPIRE,
-                null,
-                null));
+            new com.example.short_link.campaign.presentation.request.CampaignCreateRequest(
+                    "C",
+                    longPast,
+                    longPast.plusSeconds(60 * 60),
+                    "https://example.com/x",
+                    CampaignPostEndAction.EXPIRE,
+                    null,
+                    null)
+                .toCommand(owner));
     assertThat(campaign.getStatus()).isEqualTo(CampaignStatus.ACTIVE);
     BatchWithLink bwl =
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null).toCommand());
 
     int ended = endDueUseCase.execute(Instant.now());
 
@@ -192,7 +192,7 @@ class CampaignEndTest {
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null).toCommand());
     endNowUseCase.execute(campaign.getId(), owner);
     LinkEntity v1 = linkRepository.findById(bwl.link().getId()).orElseThrow();
     assertThat(v1.getExpiredRedirectUrl()).isEqualTo("https://example.com/v1");
@@ -214,14 +214,15 @@ class CampaignEndTest {
         batchService.create(
             campaign.getId(),
             owner,
-            new CampaignBatchCreateRequest("east", null, null, 100, null, null));
+            new CampaignBatchCreateRequest("east", null, null, 100, null, null).toCommand());
     endNowUseCase.execute(campaign.getId(), owner);
     assertThat(linkRepository.findById(bwl.link().getId()).orElseThrow().getExpiredMessage())
         .isEqualTo("구버전 메시지");
 
     // ENDED 상태에서 메시지만 변경. updatePolicy 는 ARCHIVED 만 거부하므로 ENDED 에선 허용.
     updateUseCase.execute(
-        campaign.getId(), owner, new CampaignUpdateRequest(null, null, null, null, null, "새 메시지"));
+        new CampaignUpdateRequest(null, null, null, null, null, "새 메시지")
+            .toCommand(campaign.getId(), owner));
     reapplyUseCase.execute(campaign.getId(), owner);
 
     LinkEntity reapplied = linkRepository.findById(bwl.link().getId()).orElseThrow();
