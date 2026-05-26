@@ -7,7 +7,8 @@ import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.application.helper.LinkFilters;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.tag.application.read.LinkTagQueryService;
 import java.time.Duration;
 import java.time.Instant;
@@ -35,7 +36,8 @@ public class MyLinksQueryService {
       Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by(Sort.Direction.DESC, "id"));
 
   private final LinkRepository linkRepository;
-  private final ClickEventReadRepository clickRepository;
+  private final ClickTotalsReadRepository clickTotals;
+  private final ClickTimeReadRepository clickTime;
   private final LinkTagQueryService linkTagService;
 
   @Transactional(readOnly = true)
@@ -53,9 +55,7 @@ public class MyLinksQueryService {
     }
     List<Long> ids = links.stream().map(LinkEntity::getId).toList();
     Map<Long, Long> counts = new HashMap<>();
-    clickRepository
-        .countsByLinkIds(ids)
-        .forEach(row -> counts.put(row.getLinkId(), row.getCount()));
+    clickTotals.countsByLinkIds(ids).forEach(row -> counts.put(row.getLinkId(), row.getCount()));
     Map<Long, List<String>> tagsByLinkId = linkTagService.tagNamesByLinkIds(ids);
     Map<Long, List<Long>> sparkByLinkId = sparklineByLinkIds(ids);
     List<MyLink> items =
@@ -88,7 +88,7 @@ public class MyLinksQueryService {
     Instant from = Instant.now().minus(Duration.ofDays(7));
     LocalDate today = LocalDate.now(ZoneOffset.UTC);
     Map<Long, long[]> byLink = new HashMap<>();
-    for (var row : clickRepository.findDailyClicksByLinkIdsSince(ids, from)) {
+    for (var row : clickTime.findDailyClicksByLinkIdsSince(ids, from)) {
       long offset = ChronoUnit.DAYS.between(row.getDay(), today);
       if (offset < 0 || offset >= 7) continue;
       long[] bucket = byLink.computeIfAbsent(row.getLinkId(), k -> new long[7]);
