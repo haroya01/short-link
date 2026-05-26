@@ -1,6 +1,7 @@
 package com.example.short_link.link.webhook.application.helper;
 
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -11,14 +12,15 @@ import org.springframework.stereotype.Component;
 
 /**
  * Builds a {@link DailySummaryPayload} for one link over one local-day window. Pure-ish (Spring
- * bean only to depend on the read repository) so the unit test mocks the repository and verifies
- * the JSON-shape decisions (delta math, empty-top handling, etc.) without touching MySQL.
+ * bean only to depend on the read repositories) so the unit test mocks them and verifies the
+ * JSON-shape decisions (delta math, empty-top handling, etc.) without touching MySQL.
  */
 @Component
 @RequiredArgsConstructor
 public class DailySummaryAssembler {
 
-  private final ClickEventReadRepository clicks;
+  private final ClickRangeReadRepository clickRanges;
+  private final ClickAlertReadRepository clickAlerts;
 
   public DailySummaryPayload assemble(
       Long linkId, String shortCode, LocalDate localDay, ZoneId tz) {
@@ -27,31 +29,32 @@ public class DailySummaryAssembler {
     Instant prevStart = localDay.minusDays(1).atStartOfDay(tz).toInstant();
     Instant sevenDayStart = localDay.minusDays(7).atStartOfDay(tz).toInstant();
 
-    long human = clicks.countHumanByLinkIdAndRange(linkId, windowStart, windowEnd);
-    long bot = clicks.countBotByLinkIdAndRange(linkId, windowStart, windowEnd);
-    long unique = clicks.countUniqueVisitorsByLinkIdAndRange(linkId, windowStart, windowEnd);
+    long human = clickRanges.countHumanByLinkIdAndRange(linkId, windowStart, windowEnd);
+    long bot = clickRanges.countBotByLinkIdAndRange(linkId, windowStart, windowEnd);
+    long unique = clickRanges.countUniqueVisitorsByLinkIdAndRange(linkId, windowStart, windowEnd);
     long total = human + bot;
 
-    long prevHuman = clicks.countHumanByLinkIdAndRange(linkId, prevStart, windowStart);
-    long sevenDayHuman = clicks.countHumanByLinkIdAndRange(linkId, sevenDayStart, windowStart);
+    long prevHuman = clickRanges.countHumanByLinkIdAndRange(linkId, prevStart, windowStart);
+    long sevenDayHuman = clickRanges.countHumanByLinkIdAndRange(linkId, sevenDayStart, windowStart);
 
     String topChannel =
-        clicks
+        clickAlerts
             .findTopChannelByLinkIdAndRange(linkId, windowStart, windowEnd)
             .map(r -> r.getSource())
             .orElse(null);
     String topCountry =
-        clicks
+        clickAlerts
             .findTopCountryByLinkIdAndRange(linkId, windowStart, windowEnd)
             .map(r -> r.getCountry())
             .orElse(null);
     String topDevice =
-        clicks
+        clickAlerts
             .findTopDeviceByLinkIdAndRange(linkId, windowStart, windowEnd)
             .map(r -> r.getDevice())
             .orElse(null);
 
-    var peakRow = clicks.findPeakHourByLinkIdAndRange(linkId, windowStart, windowEnd, tz.getId());
+    var peakRow =
+        clickAlerts.findPeakHourByLinkIdAndRange(linkId, windowStart, windowEnd, tz.getId());
     int peakHour = peakRow.map(r -> r.getHour()).orElse(0);
     long peakHourClicks = peakRow.map(r -> r.getCount()).orElse(0L);
 

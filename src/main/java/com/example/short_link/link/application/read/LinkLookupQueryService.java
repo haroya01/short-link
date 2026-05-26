@@ -7,7 +7,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import java.util.List;
@@ -23,7 +23,7 @@ public class LinkLookupQueryService {
 
   private final LinkRepository repository;
   private final LinkDestinationRepository destinationRepository;
-  private final ClickEventReadRepository clickEventRepository;
+  private final ClickTotalsReadRepository clickTotalsRepository;
   private final MeterRegistry meterRegistry;
 
   @Cacheable("link")
@@ -69,7 +69,7 @@ public class LinkLookupQueryService {
   /** OG card 의 click count 배지용. bot 제외 휴먼 클릭만. */
   @Transactional(readOnly = true)
   public long countHumanClicks(Long linkId) {
-    return clickEventRepository.countHumanByLinkId(linkId);
+    return clickTotalsRepository.countHumanByLinkId(linkId);
   }
 
   public CachedLink findActiveLink(String shortCode) {

@@ -9,10 +9,10 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.LinkClickCount;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.UtmSourceClickRow;
+import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
 import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -28,7 +28,7 @@ import org.springframework.data.domain.Pageable;
 @ExtendWith(MockitoExtension.class)
 class WeeklyInsightsServiceTest {
 
-  @Mock private ClickEventReadRepository clickRepository;
+  @Mock private ClickRangeReadRepository clickRepository;
   @Mock private LinkRepository linkRepository;
   @Mock private UserRepository userRepository;
 
