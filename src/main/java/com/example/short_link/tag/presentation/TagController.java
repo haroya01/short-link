@@ -1,8 +1,11 @@
 package com.example.short_link.tag.presentation;
 
-import com.example.short_link.link.presentation.request.TagRequest;
-import com.example.short_link.tag.application.TagService;
-import com.example.short_link.tag.application.TagService.TagSummary;
+import com.example.short_link.tag.application.dto.TagSummary;
+import com.example.short_link.tag.application.read.TagQueryService;
+import com.example.short_link.tag.application.write.CreateTagUseCase;
+import com.example.short_link.tag.application.write.DeleteTagUseCase;
+import com.example.short_link.tag.application.write.UpdateTagUseCase;
+import com.example.short_link.tag.presentation.request.TagRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -22,17 +25,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class TagController {
 
-  private final TagService service;
+  private final TagQueryService tagQueryService;
+  private final CreateTagUseCase createTag;
+  private final UpdateTagUseCase updateTag;
+  private final DeleteTagUseCase deleteTag;
 
   @GetMapping
   public List<TagSummary> list(@AuthenticationPrincipal Long userId) {
-    return service.list(userId);
+    return tagQueryService.list(userId);
   }
 
   @PostMapping
   public ResponseEntity<TagSummary> create(
       @AuthenticationPrincipal Long userId, @RequestBody TagRequest request) {
-    TagSummary created = service.create(userId, request.name(), request.color());
+    TagSummary created = createTag.execute(userId, request.name(), request.color());
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
 
@@ -41,12 +47,12 @@ public class TagController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @RequestBody TagRequest request) {
-    return service.update(userId, id, request.name(), request.color());
+    return updateTag.execute(userId, id, request.name(), request.color());
   }
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    service.delete(userId, id);
+    deleteTag.execute(userId, id);
     return ResponseEntity.noContent().build();
   }
 }

@@ -1,6 +1,8 @@
 package com.example.short_link.customdomain.scheduler;
 
-import com.example.short_link.customdomain.application.CustomDomainService;
+import com.example.short_link.customdomain.application.helper.CustomDomainPolicy;
+import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
+import com.example.short_link.customdomain.application.write.AutoVerifyCustomDomainUseCase;
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -11,7 +13,7 @@ import org.springframework.stereotype.Component;
 /**
  * Polls DNS for newly-registered custom domains so the user doesn't have to babysit a Verify
  * button. Each tick walks all unverified rows created within {@link
- * CustomDomainService#AUTO_VERIFY_WINDOW} and runs one TXT lookup per row; verified rows fall out
+ * CustomDomainPolicy#AUTO_VERIFY_WINDOW} and runs one TXT lookup per row; verified rows fall out
  * naturally on the next tick. Beyond the window we stop probing — the manual /verify endpoint is
  * the fallback for slow propagation.
  */
@@ -20,16 +22,17 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class CustomDomainAutoVerifyJob {
 
-  private final CustomDomainService service;
+  private final CustomDomainQueryService queryService;
+  private final AutoVerifyCustomDomainUseCase autoVerify;
 
   @Scheduled(fixedDelay = 30_000, initialDelay = 30_000)
   public void run() {
-    List<CustomDomainEntity> pending = service.findPendingWithinWindow();
+    List<CustomDomainEntity> pending = queryService.findPendingWithinWindow();
     if (pending.isEmpty()) return;
     int verified = 0;
     for (CustomDomainEntity entity : pending) {
       try {
-        if (service.autoVerifyOne(entity)) verified++;
+        if (autoVerify.execute(entity)) verified++;
       } catch (RuntimeException e) {
         log.warn("auto-verify failed for {}: {}", entity.getDomain(), e.getMessage());
       }

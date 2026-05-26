@@ -1,6 +1,7 @@
 package com.example.short_link.tag.presentation;
 
-import com.example.short_link.tag.application.LinkTagService;
+import com.example.short_link.tag.application.read.LinkTagQueryService;
+import com.example.short_link.tag.application.write.ReplaceLinkTagsUseCase;
 import com.example.short_link.tag.presentation.request.LinkTagsRequest;
 import com.example.short_link.tag.presentation.response.LinkTagsResponse;
 import jakarta.validation.Valid;
@@ -18,12 +19,13 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class LinkTagController {
 
-  private final LinkTagService service;
+  private final LinkTagQueryService queryService;
+  private final ReplaceLinkTagsUseCase replaceTags;
 
   @GetMapping("/{shortCode}/tags")
   public LinkTagsResponse tags(
       @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
-    return new LinkTagsResponse(shortCode, service.tagNamesFor(userId, shortCode));
+    return new LinkTagsResponse(shortCode, queryService.tagNamesFor(userId, shortCode));
   }
 
   @PutMapping("/{shortCode}/tags")
@@ -31,6 +33,6 @@ public class LinkTagController {
       @AuthenticationPrincipal Long userId,
       @PathVariable String shortCode,
       @Valid @RequestBody LinkTagsRequest request) {
-    return new LinkTagsResponse(shortCode, service.replaceTags(userId, shortCode, request.tags()));
+    return new LinkTagsResponse(shortCode, replaceTags.execute(userId, shortCode, request.tags()));
   }
 }

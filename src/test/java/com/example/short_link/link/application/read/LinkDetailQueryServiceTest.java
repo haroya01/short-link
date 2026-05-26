@@ -12,7 +12,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.tag.application.LinkTagService;
+import com.example.short_link.tag.application.read.LinkTagQueryService;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,7 +25,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class LinkDetailServiceTest {
 
   @Mock private LinkRepository repository;
-  @Mock private LinkTagService linkTagService;
+  @Mock private LinkTagQueryService linkTagService;
   @Mock private LinkAccessGuard accessGuard;
 
   private LinkDetailQueryService service;

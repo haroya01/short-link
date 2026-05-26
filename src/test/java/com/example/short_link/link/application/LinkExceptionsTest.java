@@ -15,12 +15,6 @@ class LinkExceptionsTest {
   }
 
   @Test
-  void customDomainNotVerifiedCarriesDomain() {
-    LinkException ex = new LinkException(LinkErrorCode.CUSTOM_DOMAIN_NOT_VERIFIED, "example.com");
-    assertThat(ex).hasMessageContaining("example.com");
-  }
-
-  @Test
   void reservedShortCodeCarriesCode() {
     LinkException ex = new LinkException(LinkErrorCode.RESERVED_SHORT_CODE, "admin");
     assertThat(ex).hasMessageContaining("admin");

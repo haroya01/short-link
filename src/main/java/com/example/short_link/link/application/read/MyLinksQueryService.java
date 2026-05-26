@@ -8,7 +8,7 @@ import com.example.short_link.link.application.helper.LinkFilters;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
-import com.example.short_link.tag.application.LinkTagService;
+import com.example.short_link.tag.application.read.LinkTagQueryService;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -36,7 +36,7 @@ public class MyLinksQueryService {
 
   private final LinkRepository linkRepository;
   private final ClickEventReadRepository clickRepository;
-  private final LinkTagService linkTagService;
+  private final LinkTagQueryService linkTagService;
 
   @Transactional(readOnly = true)
   public MyLinksResult myLinks(Long userId, MyLinksQuery query) {
