@@ -46,13 +46,13 @@ class LinkVisibilityControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "vis0001", user.getId(), null));
 
     mvc.perform(
-            patch("/api/v1/links/" + link.getShortCode() + "/visibility")
+            patch("/api/v1/links/" + link.getShortCode().value() + "/visibility")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"statsPublic\":true}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.statsPublic").value(true))
-        .andExpect(jsonPath("$.shortCode").value(link.getShortCode()));
+        .andExpect(jsonPath("$.shortCode").value(link.getShortCode().value()));
   }
 
   @Test
@@ -64,7 +64,7 @@ class LinkVisibilityControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "vis0002", owner.getId(), null));
 
     mvc.perform(
-            patch("/api/v1/links/" + link.getShortCode() + "/visibility")
+            patch("/api/v1/links/" + link.getShortCode().value() + "/visibility")
                 .header("Authorization", "Bearer " + attackerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"statsPublic\":true}"))

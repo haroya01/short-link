@@ -46,7 +46,7 @@ class LinkProfileToggleControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "tg00001", user.getId(), null));
 
     mvc.perform(
-            put("/api/v1/links/" + link.getShortCode() + "/profile")
+            put("/api/v1/links/" + link.getShortCode().value() + "/profile")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"show\":true}"))
@@ -62,7 +62,7 @@ class LinkProfileToggleControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "tg00002", user.getId(), null));
 
     mvc.perform(
-            put("/api/v1/links/" + link.getShortCode() + "/profile")
+            put("/api/v1/links/" + link.getShortCode().value() + "/profile")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"show\":false}"))
@@ -79,7 +79,7 @@ class LinkProfileToggleControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "tg00003", owner.getId(), null));
 
     mvc.perform(
-            put("/api/v1/links/" + link.getShortCode() + "/profile")
+            put("/api/v1/links/" + link.getShortCode().value() + "/profile")
                 .header("Authorization", "Bearer " + attackerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"show\":true}"))
@@ -94,7 +94,7 @@ class LinkProfileToggleControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "tg00004", user.getId(), null));
 
     mvc.perform(
-            put("/api/v1/links/" + link.getShortCode() + "/profile/highlight")
+            put("/api/v1/links/" + link.getShortCode().value() + "/profile/highlight")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"highlighted\":true}"))
@@ -110,7 +110,7 @@ class LinkProfileToggleControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "tg00005", user.getId(), null));
 
     mvc.perform(
-            put("/api/v1/links/" + link.getShortCode() + "/profile/highlight")
+            put("/api/v1/links/" + link.getShortCode().value() + "/profile/highlight")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"highlighted\":false}"))
@@ -127,7 +127,7 @@ class LinkProfileToggleControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "tg00006", owner.getId(), null));
 
     mvc.perform(
-            put("/api/v1/links/" + link.getShortCode() + "/profile/highlight")
+            put("/api/v1/links/" + link.getShortCode().value() + "/profile/highlight")
                 .header("Authorization", "Bearer " + attackerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"highlighted\":true}"))

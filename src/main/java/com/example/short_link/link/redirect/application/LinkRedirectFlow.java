@@ -89,7 +89,8 @@ public class LinkRedirectFlow {
     if (entity.getMaxViews() == null) return;
     int updated = incrementViewCount.execute(new IncrementViewCountCommand(entity.getId()));
     if (updated == 0) {
-      throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode());
+      throw new LinkException(
+          LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode().value());
     }
   }
 }

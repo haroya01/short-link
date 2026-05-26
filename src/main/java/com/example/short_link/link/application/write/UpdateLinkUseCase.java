@@ -56,16 +56,17 @@ public class UpdateLinkUseCase {
               .orElseGet(() -> new LinkOgMetadataEntity(link.getId()));
       ogMeta.resetForNewUrl();
       ogMetadataRepository.save(ogMeta);
-      events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));
+      events.publishEvent(
+          new LinkOgFetchRequested(link.getShortCode().value(), link.getOriginalUrl()));
     }
     auditLogService.record(
         AuditAction.LINK_UPDATED,
         "link",
-        link.getShortCode(),
+        link.getShortCode().value(),
         command.userId(),
         Map.of("urlChanged", urlChanged, "expiresAtChanged", command.expiresAt() != null));
     return new MyLink(
-        link.getShortCode(),
+        link.getShortCode().value(),
         link.getOriginalUrl(),
         link.getCreatedAt(),
         link.getExpiresAt(),

@@ -32,7 +32,7 @@ class LinkCreationServiceTest {
         service.execute(CreateLinkCommand.of("https://example.com/anon", null, null, null));
 
     LinkEntity saved = linkRepository.findByShortCode(created.shortCode()).orElseThrow();
-    assertThat(saved.getShortCode()).hasSize(7);
+    assertThat(saved.getShortCode().value()).hasSize(7);
     assertThat(saved.getUserId()).isNull();
     assertThat(saved.getExpiresAt())
         .isBetween(Instant.now().plusSeconds(86000), Instant.now().plusSeconds(87000));

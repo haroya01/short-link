@@ -35,7 +35,7 @@ public class ReorderProfileUseCase {
     for (var link :
         linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(
             cmd.userId())) {
-      ownedLinks.put(link.getShortCode(), link);
+      ownedLinks.put(link.getShortCode().value(), link);
     }
     Map<Long, ProfileBlockEntity> ownedBlocks = new HashMap<>();
     for (var block : profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(cmd.userId())) {

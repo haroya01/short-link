@@ -50,7 +50,7 @@ public class UserDataExportService {
     // O(1) shortCode lookup — previously each click did a links.stream().filter().findFirst()
     // (O(N×M) over the whole user's click history).
     Map<Long, String> shortCodeByLinkId =
-        links.stream().collect(Collectors.toMap(LinkEntity::getId, LinkEntity::getShortCode));
+        links.stream().collect(Collectors.toMap(LinkEntity::getId, l -> l.getShortCode().value()));
     List<Long> linkIds = List.copyOf(shortCodeByLinkId.keySet());
     return clickEventRepository.findAllByLinkIdInOrderByClickedAtAsc(linkIds).stream()
         .map(c -> ExportedClick.from(c, shortCodeByLinkId.get(c.getLinkId())))

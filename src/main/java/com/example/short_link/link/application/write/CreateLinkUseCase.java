@@ -124,7 +124,7 @@ public class CreateLinkUseCase {
         LinkEntity link = existing.get();
         if (!link.isExpired(Instant.now())) {
           recordCreated(true, false, "deduplicated");
-          return new LinkCreated(link.getShortCode());
+          return new LinkCreated(link.getShortCode().value());
         }
       }
     }
@@ -142,7 +142,7 @@ public class CreateLinkUseCase {
         LinkEntity saved = saveWithCode(url, code, userId, expiresAt, authenticated);
         recordCreated(true, true, "ok");
         publishCreated(saved, userId, true);
-        return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
+        return new LinkCreated(saved.getShortCode().value(), saved.getClaimToken());
       } catch (DataIntegrityViolationException e) {
         throw new LinkException(LinkErrorCode.DUPLICATE_SHORT_CODE, code);
       }
@@ -157,7 +157,7 @@ public class CreateLinkUseCase {
         LinkEntity saved = saveWithCode(url, generated, userId, expiresAt, authenticated);
         recordCreated(authenticated, false, "ok");
         publishCreated(saved, userId, false);
-        return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
+        return new LinkCreated(saved.getShortCode().value(), saved.getClaimToken());
       } catch (DataIntegrityViolationException ignored) {
       }
     }
@@ -177,9 +177,14 @@ public class CreateLinkUseCase {
   }
 
   private void publishCreated(LinkEntity saved, Long userId, boolean custom) {
-    events.publishEvent(new LinkOgFetchRequested(saved.getShortCode(), saved.getOriginalUrl()));
+    events.publishEvent(
+        new LinkOgFetchRequested(saved.getShortCode().value(), saved.getOriginalUrl()));
     auditLogService.record(
-        AuditAction.LINK_CREATED, "link", saved.getShortCode(), userId, Map.of("custom", custom));
+        AuditAction.LINK_CREATED,
+        "link",
+        saved.getShortCode().value(),
+        userId,
+        Map.of("custom", custom));
   }
 
   private static void attachClaimTokenIfAnonymous(LinkEntity entity, boolean authenticated) {

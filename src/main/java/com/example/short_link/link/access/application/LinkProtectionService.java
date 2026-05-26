@@ -45,7 +45,7 @@ public class LinkProtectionService {
     access.changeMaxViews(maxViews);
     accessControlRepository.save(access);
     return new LinkProtectionResult(
-        link.getShortCode(), link.hasPassword(), link.getMaxViews(), link.getViewCount());
+        link.getShortCode().value(), link.hasPassword(), link.getMaxViews(), link.getViewCount());
   }
 
   public boolean checkPassword(LinkEntity link, String supplied) {
