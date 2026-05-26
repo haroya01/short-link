@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
+import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
@@ -83,7 +84,7 @@ class AddDestinationUseCaseTest {
 
     assertThatThrownBy(
             () -> useCase.execute(42L, "abc1234", "ftp://x.com", null, null, null, null, null))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(DestinationException.class);
   }
 
   @Test
@@ -94,7 +95,7 @@ class AddDestinationUseCaseTest {
 
     assertThatThrownBy(
             () -> useCase.execute(42L, "abc1234", "https://dest.com", null, null, null, null, null))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(DestinationException.class);
   }
 
   @Test

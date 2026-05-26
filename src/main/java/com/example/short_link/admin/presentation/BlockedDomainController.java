@@ -1,6 +1,8 @@
 package com.example.short_link.admin.presentation;
 
-import com.example.short_link.admin.application.BlockedDomainService;
+import com.example.short_link.admin.application.read.BlockedDomainQueryService;
+import com.example.short_link.admin.application.write.BlockDomainUseCase;
+import com.example.short_link.admin.application.write.UnblockDomainUseCase;
 import com.example.short_link.admin.domain.BlockedDomainEntity;
 import com.example.short_link.admin.presentation.request.BlockDomainRequest;
 import com.example.short_link.admin.presentation.response.BlockedDomainResponse;
@@ -22,23 +24,25 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class BlockedDomainController {
 
-  private final BlockedDomainService service;
+  private final BlockedDomainQueryService queryService;
+  private final BlockDomainUseCase blockDomain;
+  private final UnblockDomainUseCase unblockDomain;
 
   @GetMapping
   public List<BlockedDomainResponse> list() {
-    return service.list().stream().map(BlockedDomainResponse::from).toList();
+    return queryService.list().stream().map(BlockedDomainResponse::from).toList();
   }
 
   @PostMapping
   public ResponseEntity<BlockedDomainResponse> block(
       @AuthenticationPrincipal Long userId, @RequestBody BlockDomainRequest request) {
-    BlockedDomainEntity blocked = service.block(request.domain(), request.reason(), userId);
+    BlockedDomainEntity blocked = blockDomain.execute(request.domain(), request.reason(), userId);
     return ResponseEntity.status(HttpStatus.CREATED).body(BlockedDomainResponse.from(blocked));
   }
 
   @DeleteMapping("/{domain}")
   public ResponseEntity<Void> unblock(@PathVariable String domain) {
-    boolean removed = service.unblock(domain);
+    boolean removed = unblockDomain.execute(domain);
     return removed ? ResponseEntity.noContent().build() : ResponseEntity.notFound().build();
   }
 }

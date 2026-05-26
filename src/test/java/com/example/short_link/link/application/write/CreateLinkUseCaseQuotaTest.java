@@ -8,7 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.admin.application.BlockedDomainService;
+import com.example.short_link.admin.application.read.BlockedDomainQueryService;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.ShortCodeGenerator;
@@ -198,9 +198,9 @@ class LinkCreationServiceQuotaTest {
     assertThat(created.shortCode()).isEqualTo("newcode");
   }
 
-  private static com.example.short_link.admin.application.BlockedDomainService
+  private static com.example.short_link.admin.application.read.BlockedDomainQueryService
       mockBlockedDomainService() {
-    var m = mock(BlockedDomainService.class);
+    var m = mock(BlockedDomainQueryService.class);
     when(m.isBlocked(any())).thenReturn(false);
     return m;
   }

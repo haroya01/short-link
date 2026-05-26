@@ -7,7 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.admin.application.BlockedDomainService;
+import com.example.short_link.admin.application.read.BlockedDomainQueryService;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.ShortCodeGenerator;
@@ -36,7 +36,7 @@ class LinkCreationServiceCollisionTest {
 
     UrlSafetyChecker safetyChecker = mock(UrlSafetyChecker.class);
     when(safetyChecker.isSafe(any())).thenReturn(true);
-    var blockedDomain = mock(BlockedDomainService.class);
+    var blockedDomain = mock(BlockedDomainQueryService.class);
     when(blockedDomain.isBlocked(any())).thenReturn(false);
     CreateLinkUseCase service =
         new CreateLinkUseCase(
