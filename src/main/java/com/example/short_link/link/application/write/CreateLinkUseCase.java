@@ -1,8 +1,8 @@
 package com.example.short_link.link.application.write;
 
-import com.example.short_link.admin.application.read.BlockedDomainQueryService;
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.access.domain.LinkAccessControlEntity;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.ShortCodeGenerator;
@@ -51,7 +51,7 @@ public class CreateLinkUseCase {
   private final UrlSafetyChecker urlSafetyChecker;
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
-  private final BlockedDomainQueryService blockedDomainQuery;
+  private final BlockedDomainChecker blockedDomainChecker;
   private final TransactionTemplate tx;
   private final long quotaPerUser;
 
@@ -66,7 +66,7 @@ public class CreateLinkUseCase {
       UrlSafetyChecker urlSafetyChecker,
       ApplicationEventPublisher events,
       AuditLogService auditLogService,
-      BlockedDomainQueryService blockedDomainQuery,
+      BlockedDomainChecker blockedDomainChecker,
       PlatformTransactionManager transactionManager,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
@@ -79,7 +79,7 @@ public class CreateLinkUseCase {
     this.urlSafetyChecker = urlSafetyChecker;
     this.events = events;
     this.auditLogService = auditLogService;
-    this.blockedDomainQuery = blockedDomainQuery;
+    this.blockedDomainChecker = blockedDomainChecker;
     this.tx = new TransactionTemplate(transactionManager);
     this.quotaPerUser = quotaPerUser;
   }
@@ -90,7 +90,7 @@ public class CreateLinkUseCase {
     // HTTP call. Both used to run inside the @Transactional boundary, which held a JDBC connection
     // for the duration of the HTTP round trip — pool starvation under load. Run them first so the
     // DB transaction only spans the actual persistence work.
-    if (blockedDomainQuery.isBlocked(url)) {
+    if (blockedDomainChecker.isBlocked(url)) {
       meterRegistry.counter("short_link.created", "result", "blocked_domain").increment();
       throw new LinkException(LinkErrorCode.MALICIOUS_URL, LinkUrlHasher.sha256Prefix(url));
     }

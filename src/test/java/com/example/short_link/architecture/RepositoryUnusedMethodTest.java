@@ -87,10 +87,23 @@ public class RepositoryUnusedMethodTest {
                   + "java.lang.Long, java.lang.Long, java.lang.String, java.lang.String)")
           .should(beCalledFromOutsideOwner());
 
+  private static boolean implementsInterfaceMethod(JavaMethod method) {
+    return method.getOwner().getAllRawInterfaces().stream()
+        .flatMap(i -> i.getMethods().stream())
+        .anyMatch(
+            ifaceMethod ->
+                ifaceMethod.getName().equals(method.getName())
+                    && ifaceMethod.getRawParameterTypes().equals(method.getRawParameterTypes()));
+  }
+
   private static ArchCondition<JavaMethod> beCalledFromOutsideOwner() {
     return new ArchCondition<>("be called from outside its declaring class") {
       @Override
       public void check(JavaMethod method, ConditionEvents events) {
+        // Interface implementations are routed through the interface — byte-code analysis sees
+        // the caller invoking iface.method(), not impl.method(). Skip them so port-and-adapter
+        // patterns don't trip this rule.
+        if (implementsInterfaceMethod(method)) return;
         boolean calledExternally =
             method.getAccessesToSelf().stream()
                 .anyMatch(access -> !access.getOriginOwner().equals(method.getOwner()));
