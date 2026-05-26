@@ -1,6 +1,7 @@
 package com.example.short_link.link.webhook.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
+import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -29,6 +30,10 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
 
   @Column(name = "link_id", nullable = false)
   private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(nullable = false, length = 2048)
   private String url;
@@ -98,13 +103,13 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
   @Column(name = "spike_last_fired_at")
   private Instant spikeLastFiredAt;
 
-  public LinkWebhookEntity(Long linkId, String url, String secret, String name) {
+  public LinkWebhookEntity(LinkId linkId, String url, String secret, String name) {
     this(linkId, url, secret, name, WebhookFormat.GENERIC);
   }
 
   public LinkWebhookEntity(
-      Long linkId, String url, String secret, String name, WebhookFormat format) {
-    this.linkId = linkId;
+      LinkId linkId, String url, String secret, String name, WebhookFormat format) {
+    this.linkId = linkId == null ? null : linkId.value();
     this.url = url;
     this.secret = secret;
     this.name = name;

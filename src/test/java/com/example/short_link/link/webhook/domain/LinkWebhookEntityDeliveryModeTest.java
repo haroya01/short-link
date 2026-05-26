@@ -3,6 +3,7 @@ package com.example.short_link.link.webhook.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.link.domain.LinkId;
 import java.time.Instant;
 import java.time.LocalDate;
 import org.junit.jupiter.api.Test;
@@ -10,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class LinkWebhookEntityDeliveryModeTest {
 
   private LinkWebhookEntity hook() {
-    return new LinkWebhookEntity(1L, "https://example.com/hook", "secret", "n");
+    return new LinkWebhookEntity(new LinkId(1L), "https://example.com/hook", "secret", "n");
   }
 
   @Test

@@ -2,6 +2,7 @@ package com.example.short_link.campaign.domain;
 
 import com.example.short_link.campaign.domain.repository.*;
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -29,6 +30,10 @@ public class CampaignBatchEntity extends BaseTimeEntity {
   @Column(name = "link_id", nullable = false)
   private Long linkId;
 
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
+
   @Column(nullable = false, length = 255)
   private String name;
 
@@ -47,14 +52,14 @@ public class CampaignBatchEntity extends BaseTimeEntity {
 
   public CampaignBatchEntity(
       Long campaignId,
-      Long linkId,
+      LinkId linkId,
       String name,
       String distributorName,
       String areaLabel,
       int quantity,
       String memo) {
     this.campaignId = campaignId;
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
     this.name = name;
     this.distributorName = distributorName;
     this.areaLabel = areaLabel;

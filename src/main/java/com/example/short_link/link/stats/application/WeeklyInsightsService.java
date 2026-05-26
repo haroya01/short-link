@@ -74,7 +74,7 @@ public class WeeklyInsightsService {
     if (link == null) return null;
     List<UtmSourceClickRow> utm =
         clickRanges.findTopUtmSourcesByLinkIdAndRange(
-            link.getId(), from, to, PageRequest.ofSize(1));
+            link.linkId().value(), from, to, PageRequest.ofSize(1));
     String topSource = utm.isEmpty() ? null : utm.get(0).getSource();
     return new WeeklyInsights.TopLink(
         link.getShortCode(), link.getOriginalUrl(), best.getCount(), topSource);

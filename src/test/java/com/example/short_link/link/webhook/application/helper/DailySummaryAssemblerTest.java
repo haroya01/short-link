@@ -10,6 +10,7 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
@@ -78,7 +79,7 @@ class DailySummaryAssemblerTest {
     when(ranges.countBotByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(12L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.totalClicks()).isEqualTo(142);
   }
@@ -89,7 +90,7 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(130L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.humanClicks()).isEqualTo(130);
   }
@@ -100,7 +101,7 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(88L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.uniqueVisitors()).isEqualTo(88);
   }
@@ -113,14 +114,14 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.topChannel()).isEqualTo("twitter");
   }
 
   @Test
   void topChannelNullWhenNoRows() {
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.topChannel()).isNull();
   }
@@ -133,7 +134,7 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.topCountry()).isEqualTo("KR");
   }
@@ -146,7 +147,7 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.topDevice()).isEqualTo("Mobile");
   }
@@ -160,14 +161,14 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1))), eq("Asia/Seoul")))
         .thenReturn(Optional.of(row));
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.peakHour()).isEqualTo(21);
   }
 
   @Test
   void peakHourZeroWhenNoRows() {
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.peakHour()).isZero();
   }
@@ -181,7 +182,7 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day.minusDays(1))), eq(dayStart(day))))
         .thenReturn(100L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.vsYesterday()).isCloseTo(0.20, within(1e-9));
   }
@@ -192,7 +193,7 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(50L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.vsYesterday()).isNull();
   }
@@ -206,7 +207,7 @@ class DailySummaryAssemblerTest {
             eq(1L), eq(dayStart(day.minusDays(7))), eq(dayStart(day))))
         .thenReturn(700L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.vs7DayAvg()).isCloseTo(-0.30, within(1e-9));
   }

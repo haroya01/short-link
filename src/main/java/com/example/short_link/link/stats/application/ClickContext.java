@@ -1,11 +1,13 @@
 package com.example.short_link.link.stats.application;
 
+import com.example.short_link.link.domain.LinkId;
+
 /**
  * Inputs needed to record one click. {@code sourceChannel} and {@code destinationId} are optional
  * and default to {@code null} via {@link #of}.
  */
 public record ClickContext(
-    Long linkId,
+    LinkId linkId,
     String originalUrl,
     String referrer,
     String userAgent,
@@ -15,7 +17,7 @@ public record ClickContext(
     Long destinationId) {
 
   public static ClickContext of(
-      Long linkId,
+      LinkId linkId,
       String originalUrl,
       String referrer,
       String userAgent,

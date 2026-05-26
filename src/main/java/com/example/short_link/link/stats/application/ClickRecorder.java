@@ -81,7 +81,11 @@ public class ClickRecorder {
               .regionName(geo.region())
               .cityName(geo.city())
               .language(LanguageExtractor.extract(ctx.acceptLanguage()))
-              .visitorHash(VisitorHasher.hash(ctx.linkId(), ctx.clientIp(), ctx.userAgent()))
+              .visitorHash(
+                  VisitorHasher.hash(
+                      ctx.linkId() == null ? null : ctx.linkId().value(),
+                      ctx.clientIp(),
+                      ctx.userAgent()))
               .sourceChannel(SourceChannelNormalizer.normalize(ctx.sourceChannel()))
               .destinationId(ctx.destinationId())
               .asn(asnInfo.asn())

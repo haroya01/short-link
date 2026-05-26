@@ -2,7 +2,6 @@ package com.example.short_link.link.webhook.scheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -12,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.webhook.application.helper.DailySummaryAssembler;
@@ -40,7 +40,8 @@ class DailyWebhookSummaryJobTest {
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
   private LinkWebhookEntity hookWithSummary(int hour) {
-    LinkWebhookEntity hook = new LinkWebhookEntity(1L, "https://example.com/h", "secret", "n");
+    LinkWebhookEntity hook =
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/h", "secret", "n");
     hook.changeDeliveryMode(WebhookDeliveryMode.DAILY_SUMMARY, hour, null, null);
     return hook;
   }
@@ -89,7 +90,7 @@ class DailyWebhookSummaryJobTest {
     UserEntity owner = userInSeoul();
     when(users.findById(7L)).thenReturn(Optional.of(owner));
     when(assembler.assemble(
-            eq(1L), eq(new ShortCode("abc")), any(LocalDate.class), any(ZoneId.class)))
+            eq(new LinkId(1L)), eq(new ShortCode("abc")), any(LocalDate.class), any(ZoneId.class)))
         .thenReturn(stubPayload());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
@@ -105,7 +106,7 @@ class DailyWebhookSummaryJobTest {
     UserEntity owner = userInSeoul();
     when(users.findById(7L)).thenReturn(Optional.of(owner));
     when(assembler.assemble(
-            anyLong(), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
+            any(LinkId.class), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
         .thenReturn(stubPayload());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
@@ -149,7 +150,7 @@ class DailyWebhookSummaryJobTest {
     UserEntity owner = userInSeoul();
     when(users.findById(7L)).thenReturn(Optional.of(owner));
     when(assembler.assemble(
-            anyLong(), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
+            any(LinkId.class), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
         .thenReturn(stubPayload());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 9, 5, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
@@ -188,14 +189,20 @@ class DailyWebhookSummaryJobTest {
     UserEntity owner = userInSeoul();
     when(users.findById(7L)).thenReturn(Optional.of(owner));
     when(assembler.assemble(
-            eq(1L), eq(new ShortCode("abc")), eq(LocalDate.of(2026, 5, 24)), any(ZoneId.class)))
+            eq(new LinkId(1L)),
+            eq(new ShortCode("abc")),
+            eq(LocalDate.of(2026, 5, 24)),
+            any(ZoneId.class)))
         .thenReturn(stubPayload());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
     verify(assembler, times(1))
         .assemble(
-            eq(1L), eq(new ShortCode("abc")), eq(LocalDate.of(2026, 5, 24)), any(ZoneId.class));
+            eq(new LinkId(1L)),
+            eq(new ShortCode("abc")),
+            eq(LocalDate.of(2026, 5, 24)),
+            any(ZoneId.class));
   }
 
   @Test
@@ -207,14 +214,17 @@ class DailyWebhookSummaryJobTest {
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     when(users.findById(7L)).thenReturn(Optional.of(owner));
     when(assembler.assemble(
-            anyLong(), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
+            any(LinkId.class), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
         .thenReturn(stubPayload());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
     verify(assembler, times(1))
         .assemble(
-            eq(1L), eq(new ShortCode("abc")), any(LocalDate.class), eq(ZoneId.of("Asia/Seoul")));
+            eq(new LinkId(1L)),
+            eq(new ShortCode("abc")),
+            any(LocalDate.class),
+            eq(ZoneId.of("Asia/Seoul")));
   }
 
   @Test

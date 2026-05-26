@@ -1,5 +1,6 @@
 package com.example.short_link.tag.domain;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.*;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -27,8 +28,12 @@ public class LinkTagEntity {
   @Column(name = "tag_id")
   private Long tagId;
 
-  public LinkTagEntity(Long linkId, Long tagId) {
-    this.linkId = linkId;
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
+
+  public LinkTagEntity(LinkId linkId, Long tagId) {
+    this.linkId = linkId == null ? null : linkId.value();
     this.tagId = tagId;
   }
 
@@ -38,8 +43,8 @@ public class LinkTagEntity {
 
     public LinkTagId() {}
 
-    public LinkTagId(Long linkId, Long tagId) {
-      this.linkId = linkId;
+    public LinkTagId(LinkId linkId, Long tagId) {
+      this.linkId = linkId == null ? null : linkId.value();
       this.tagId = tagId;
     }
 

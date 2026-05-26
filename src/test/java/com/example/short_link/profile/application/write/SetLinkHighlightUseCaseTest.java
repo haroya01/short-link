@@ -72,6 +72,7 @@ class SetLinkHighlightUseCaseTest {
   @Test
   void disable() {
     LinkEntity target = new LinkEntity("https://t", "abc", 7L, null);
+    TestEntities.withId(target, 1L);
     target.setProfileHighlighted(true);
     when(linkRepository.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(target));
     useCase.execute(new SetLinkHighlightCommand(7L, new ShortCode("abc"), false));

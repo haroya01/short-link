@@ -35,7 +35,7 @@ class UserDataExportServiceTest {
             new LinkEntity("https://example.com/exp", "exp0001", user.getId(), null));
     clickEventRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .deviceClass("mobile")
             .countryCode("KR")
             .bot(false)

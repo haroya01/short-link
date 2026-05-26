@@ -133,7 +133,7 @@ public class CampaignBatchService {
         batchRepository.save(
             new CampaignBatchEntity(
                 campaign.getId(),
-                link.getId(),
+                link.linkId(),
                 row.name(),
                 blankToNull(row.distributorName()),
                 blankToNull(row.areaLabel()),

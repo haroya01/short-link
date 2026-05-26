@@ -36,7 +36,7 @@ public class LinkProtectionService {
     LinkAccessControlEntity access =
         accessControlRepository
             .findById(link.getId())
-            .orElseGet(() -> new LinkAccessControlEntity(link.getId()));
+            .orElseGet(() -> new LinkAccessControlEntity(link.linkId()));
     if (password != null) {
       String hash = password.isBlank() ? null : encoder.encode(password);
       link.setPasswordHash(hash);

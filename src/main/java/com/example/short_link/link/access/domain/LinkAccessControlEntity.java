@@ -1,6 +1,7 @@
 package com.example.short_link.link.access.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -22,14 +23,18 @@ public class LinkAccessControlEntity extends BaseTimeEntity {
   @Column(name = "link_id")
   private Long linkId;
 
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
+
   @Column(name = "password_hash", length = 60)
   private String passwordHash;
 
   @Column(name = "max_views")
   private Integer maxViews;
 
-  public LinkAccessControlEntity(Long linkId) {
-    this.linkId = linkId;
+  public LinkAccessControlEntity(LinkId linkId) {
+    this.linkId = linkId == null ? null : linkId.value();
   }
 
   public void changePasswordHash(String hash) {

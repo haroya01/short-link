@@ -38,7 +38,7 @@ public class LinkTagQueryService {
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     List<Long> tagIds =
-        linkTagRepository.findAllByLinkId(link.getId()).stream()
+        linkTagRepository.findAllByLinkId(link.linkId().value()).stream()
             .map(LinkTagEntity::getTagId)
             .toList();
     if (tagIds.isEmpty()) return List.of();

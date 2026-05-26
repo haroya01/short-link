@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.application.helper;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
@@ -24,38 +25,41 @@ public class DailySummaryAssembler {
   private final ClickAlertReadRepository clickAlerts;
 
   public DailySummaryPayload assemble(
-      Long linkId, ShortCode shortCode, LocalDate localDay, ZoneId tz) {
+      LinkId linkId, ShortCode shortCode, LocalDate localDay, ZoneId tz) {
     Instant windowStart = localDay.atStartOfDay(tz).toInstant();
     Instant windowEnd = localDay.plusDays(1).atStartOfDay(tz).toInstant();
     Instant prevStart = localDay.minusDays(1).atStartOfDay(tz).toInstant();
     Instant sevenDayStart = localDay.minusDays(7).atStartOfDay(tz).toInstant();
 
-    long human = clickRanges.countHumanByLinkIdAndRange(linkId, windowStart, windowEnd);
-    long bot = clickRanges.countBotByLinkIdAndRange(linkId, windowStart, windowEnd);
-    long unique = clickRanges.countUniqueVisitorsByLinkIdAndRange(linkId, windowStart, windowEnd);
+    long human = clickRanges.countHumanByLinkIdAndRange(linkId.value(), windowStart, windowEnd);
+    long bot = clickRanges.countBotByLinkIdAndRange(linkId.value(), windowStart, windowEnd);
+    long unique =
+        clickRanges.countUniqueVisitorsByLinkIdAndRange(linkId.value(), windowStart, windowEnd);
     long total = human + bot;
 
-    long prevHuman = clickRanges.countHumanByLinkIdAndRange(linkId, prevStart, windowStart);
-    long sevenDayHuman = clickRanges.countHumanByLinkIdAndRange(linkId, sevenDayStart, windowStart);
+    long prevHuman = clickRanges.countHumanByLinkIdAndRange(linkId.value(), prevStart, windowStart);
+    long sevenDayHuman =
+        clickRanges.countHumanByLinkIdAndRange(linkId.value(), sevenDayStart, windowStart);
 
     String topChannel =
         clickAlerts
-            .findTopChannelByLinkIdAndRange(linkId, windowStart, windowEnd)
+            .findTopChannelByLinkIdAndRange(linkId.value(), windowStart, windowEnd)
             .map(r -> r.getSource())
             .orElse(null);
     String topCountry =
         clickAlerts
-            .findTopCountryByLinkIdAndRange(linkId, windowStart, windowEnd)
+            .findTopCountryByLinkIdAndRange(linkId.value(), windowStart, windowEnd)
             .map(r -> r.getCountry())
             .orElse(null);
     String topDevice =
         clickAlerts
-            .findTopDeviceByLinkIdAndRange(linkId, windowStart, windowEnd)
+            .findTopDeviceByLinkIdAndRange(linkId.value(), windowStart, windowEnd)
             .map(r -> r.getDevice())
             .orElse(null);
 
     var peakRow =
-        clickAlerts.findPeakHourByLinkIdAndRange(linkId, windowStart, windowEnd, tz.getId());
+        clickAlerts.findPeakHourByLinkIdAndRange(
+            linkId.value(), windowStart, windowEnd, tz.getId());
     int peakHour = peakRow.map(r -> r.getHour()).orElse(0);
     long peakHourClicks = peakRow.map(r -> r.getCount()).orElse(0L);
 

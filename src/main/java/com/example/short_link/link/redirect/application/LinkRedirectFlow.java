@@ -87,7 +87,7 @@ public class LinkRedirectFlow {
 
   private void enforceViewLimit(LinkEntity entity) {
     if (entity.getMaxViews() == null) return;
-    int updated = incrementViewCount.execute(new IncrementViewCountCommand(entity.getId()));
+    int updated = incrementViewCount.execute(new IncrementViewCountCommand(entity.linkId()));
     if (updated == 0) {
       throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode());
     }
