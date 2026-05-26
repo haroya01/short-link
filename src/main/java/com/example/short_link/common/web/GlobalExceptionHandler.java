@@ -56,9 +56,9 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * The catch-all {@code Exception} handler below would otherwise win ordering and override
-   * PowRequired's intended 401 to 500 — declaring an explicit handler keeps the status and stable
-   * error code so the frontend can clear an expired token and re-shorten with a fresh PoW.
+   * Explicit handler beats the catch-all {@code Exception} handler below — without this,
+   * PowRequiredException's 401 would be remapped to 500 and the frontend would lose the signal to
+   * clear the expired token and re-shorten with a fresh PoW.
    */
   @ExceptionHandler(PowRequiredException.class)
   public ProblemDetail handlePowRequired(PowRequiredException e, HttpServletRequest req) {
