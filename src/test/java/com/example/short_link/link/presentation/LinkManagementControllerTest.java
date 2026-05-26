@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
@@ -202,7 +203,7 @@ class LinkManagementControllerTest {
     mvc.perform(delete("/api/v1/links/del0001").header("Authorization", "Bearer " + token))
         .andExpect(status().isNoContent());
 
-    assertThat(linkRepository.findByShortCode("del0001")).isEmpty();
+    assertThat(linkRepository.findByShortCode(new ShortCode("del0001"))).isEmpty();
   }
 
   @Test
@@ -214,7 +215,7 @@ class LinkManagementControllerTest {
 
     mvc.perform(delete("/api/v1/links/del0002").header("Authorization", "Bearer " + attackerToken))
         .andExpect(status().isForbidden());
-    assertThat(linkRepository.findByShortCode("del0002")).isPresent();
+    assertThat(linkRepository.findByShortCode(new ShortCode("del0002"))).isPresent();
   }
 
   @Test

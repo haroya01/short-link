@@ -1,5 +1,6 @@
 package com.example.short_link.campaign.application.dto;
 
+import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -21,7 +22,7 @@ public record CampaignStatsResponse(
       String distributor,
       String area,
       int quantity,
-      String shortCode,
+      ShortCode shortCode,
       long clicks) {}
 
   /**

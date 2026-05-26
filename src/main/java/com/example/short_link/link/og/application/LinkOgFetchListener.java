@@ -3,6 +3,7 @@ package com.example.short_link.link.og.application;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
@@ -43,7 +44,7 @@ public class LinkOgFetchListener {
   }
 
   @Transactional
-  public void fetchAndStore(String shortCode, String originalUrl) {
+  public void fetchAndStore(ShortCode shortCode, String originalUrl) {
     OgMetadata og = scraper.fetch(originalUrl);
     LinkEntity entity = repository.findByShortCode(shortCode).orElse(null);
     if (entity == null) {

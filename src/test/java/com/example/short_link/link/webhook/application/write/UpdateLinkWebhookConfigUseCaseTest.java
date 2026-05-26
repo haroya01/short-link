@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ class UpdateLinkWebhookConfigUseCaseTest {
 
   private LinkWebhookEntity stubHook() {
     LinkWebhookEntity hook = new LinkWebhookEntity(1L, "https://example.com/h", "secret", "n");
-    when(ownership.ownedHook(7L, "abcde", 99L)).thenReturn(hook);
+    when(ownership.ownedHook(7L, new ShortCode("abcde"), 99L)).thenReturn(hook);
     return hook;
   }
 
@@ -27,7 +28,19 @@ class UpdateLinkWebhookConfigUseCaseTest {
     var summary =
         useCase.execute(
             new UpdateLinkWebhookConfigCommand(
-                7L, "abcde", 99L, null, 30, null, null, null, null, null, null, null, null));
+                7L,
+                new ShortCode("abcde"),
+                99L,
+                null,
+                30,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null));
 
     assertThat(summary.sampleRate()).isEqualTo(30);
   }
@@ -40,7 +53,7 @@ class UpdateLinkWebhookConfigUseCaseTest {
         useCase.execute(
             new UpdateLinkWebhookConfigCommand(
                 7L,
-                "abcde",
+                new ShortCode("abcde"),
                 99L,
                 null,
                 null,
@@ -64,7 +77,7 @@ class UpdateLinkWebhookConfigUseCaseTest {
         useCase.execute(
             new UpdateLinkWebhookConfigCommand(
                 7L,
-                "abcde",
+                new ShortCode("abcde"),
                 99L,
                 null,
                 null,
@@ -88,7 +101,7 @@ class UpdateLinkWebhookConfigUseCaseTest {
         useCase.execute(
             new UpdateLinkWebhookConfigCommand(
                 7L,
-                "abcde",
+                new ShortCode("abcde"),
                 99L,
                 null,
                 null,
@@ -111,7 +124,19 @@ class UpdateLinkWebhookConfigUseCaseTest {
     var summary =
         useCase.execute(
             new UpdateLinkWebhookConfigCommand(
-                7L, "abcde", 99L, true, null, null, null, null, null, null, null, null, null));
+                7L,
+                new ShortCode("abcde"),
+                99L,
+                true,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null));
 
     assertThat(summary.deliveryMode()).isEqualTo(WebhookDeliveryMode.PER_EVENT);
   }

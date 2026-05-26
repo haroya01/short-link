@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.link.application.dto.BulkImportResult;
 import com.example.short_link.link.application.dto.BulkImportRow;
 import com.example.short_link.link.application.write.ImportLinksFromCsvUseCase;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -65,7 +66,8 @@ class BulkImportControllerTest {
                 1,
                 1,
                 List.of(
-                    new BulkImportRow("https://example.com", null, null, "ok00001", null),
+                    new BulkImportRow(
+                        "https://example.com", null, null, new ShortCode("ok00001"), null),
                     new BulkImportRow("https://bad,com", null, null, null, "url contains comma"))));
     MockMultipartFile file =
         new MockMultipartFile(

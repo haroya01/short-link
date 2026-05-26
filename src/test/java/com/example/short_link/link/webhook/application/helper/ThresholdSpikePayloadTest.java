@@ -2,12 +2,13 @@ package com.example.short_link.link.webhook.application.helper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.ShortCode;
 import org.junit.jupiter.api.Test;
 
 class ThresholdSpikePayloadTest {
 
   private ThresholdSpikePayload sample() {
-    return new ThresholdSpikePayload("abc12345", "10m", 87L, 50, "t.co");
+    return new ThresholdSpikePayload(new ShortCode("abc12345"), "10m", 87L, 50, "t.co");
   }
 
   @Test
@@ -37,7 +38,7 @@ class ThresholdSpikePayloadTest {
 
   @Test
   void topReferrerCanBeNull() {
-    var p = new ThresholdSpikePayload("x", "10m", 60L, 50, null);
+    var p = new ThresholdSpikePayload(new ShortCode("xxx"), "10m", 60L, 50, null);
     assertThat(p.toJsonMap()).containsEntry("topReferrer", null);
   }
 }

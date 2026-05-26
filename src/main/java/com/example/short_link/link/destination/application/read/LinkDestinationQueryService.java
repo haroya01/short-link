@@ -4,6 +4,7 @@ import com.example.short_link.link.destination.application.dto.DestinationSummar
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -20,7 +21,7 @@ public class LinkDestinationQueryService {
   private final LinkRepository linkRepository;
   private final LinkDestinationRepository repository;
 
-  public List<DestinationSummary> list(Long userId, String shortCode) {
+  public List<DestinationSummary> list(Long userId, ShortCode shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)

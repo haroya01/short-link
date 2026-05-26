@@ -1,5 +1,6 @@
 package com.example.short_link.link.og.presentation;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.og.application.OgOverrideService;
 import com.example.short_link.link.og.application.dto.OgOverrideResult;
 import com.example.short_link.link.og.presentation.request.OgOverrideRequest;
@@ -23,7 +24,7 @@ public class OgOverrideController {
   @PatchMapping("/{shortCode}/og")
   public OgOverrideResponse update(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @Valid @RequestBody OgOverrideRequest request) {
     OgOverrideResult r =
         service.update(

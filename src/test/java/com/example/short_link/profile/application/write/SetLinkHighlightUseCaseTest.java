@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
@@ -38,16 +39,18 @@ class SetLinkHighlightUseCaseTest {
 
   @Test
   void throwsWhenLinkMissing() {
-    when(linkRepository.findByShortCode("missing")).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> useCase.execute(new SetLinkHighlightCommand(7L, "missing", true)))
+    when(linkRepository.findByShortCode(new ShortCode("missing"))).thenReturn(Optional.empty());
+    assertThatThrownBy(
+            () -> useCase.execute(new SetLinkHighlightCommand(7L, new ShortCode("missing"), true)))
         .isInstanceOf(LinkException.class);
   }
 
   @Test
   void throwsWhenNotOwner() {
     LinkEntity link = new LinkEntity("https://x", "abc", 99L, null);
-    when(linkRepository.findByShortCode("abc")).thenReturn(Optional.of(link));
-    assertThatThrownBy(() -> useCase.execute(new SetLinkHighlightCommand(7L, "abc", true)))
+    when(linkRepository.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(link));
+    assertThatThrownBy(
+            () -> useCase.execute(new SetLinkHighlightCommand(7L, new ShortCode("abc"), true)))
         .isInstanceOf(LinkException.class);
   }
 
@@ -58,10 +61,10 @@ class SetLinkHighlightUseCaseTest {
     LinkEntity existing = new LinkEntity("https://e", "xyz", 7L, null);
     TestEntities.withId(existing, 2L);
     existing.setProfileHighlighted(true);
-    when(linkRepository.findByShortCode("abc")).thenReturn(Optional.of(target));
+    when(linkRepository.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(target));
     when(linkRepository.findAllByUserIdAndProfileHighlightedIsTrue(7L))
         .thenReturn(List.of(existing));
-    useCase.execute(new SetLinkHighlightCommand(7L, "abc", true));
+    useCase.execute(new SetLinkHighlightCommand(7L, new ShortCode("abc"), true));
     assertThat(target.isProfileHighlighted()).isTrue();
     assertThat(existing.isProfileHighlighted()).isFalse();
   }
@@ -70,8 +73,8 @@ class SetLinkHighlightUseCaseTest {
   void disable() {
     LinkEntity target = new LinkEntity("https://t", "abc", 7L, null);
     target.setProfileHighlighted(true);
-    when(linkRepository.findByShortCode("abc")).thenReturn(Optional.of(target));
-    useCase.execute(new SetLinkHighlightCommand(7L, "abc", false));
+    when(linkRepository.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(target));
+    useCase.execute(new SetLinkHighlightCommand(7L, new ShortCode("abc"), false));
     assertThat(target.isProfileHighlighted()).isFalse();
   }
 

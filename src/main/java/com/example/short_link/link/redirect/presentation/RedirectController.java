@@ -6,6 +6,7 @@ import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkPreviewCrawlerDetector;
@@ -53,7 +54,7 @@ public class RedirectController {
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestParam(value = "src", required = false) String src,
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
@@ -82,7 +83,7 @@ public class RedirectController {
   }
 
   private ResponseEntity<?> handleRedirect(
-      String shortCode,
+      ShortCode shortCode,
       String src,
       String referrer,
       String userAgent,
@@ -136,7 +137,7 @@ public class RedirectController {
   }
 
   private ResponseEntity<?> handlePreview(
-      String shortCode,
+      ShortCode shortCode,
       CachedLink link,
       String referrer,
       String userAgent,

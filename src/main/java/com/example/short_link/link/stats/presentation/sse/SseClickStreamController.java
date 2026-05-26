@@ -3,6 +3,7 @@ package com.example.short_link.link.stats.presentation.sse;
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.application.JwtTokenService;
@@ -57,7 +58,7 @@ public class SseClickStreamController {
 
   @GetMapping("/{shortCode}/stream")
   public SseEmitter stream(
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestParam(value = "token", required = false) String token,
       @RequestParam(value = "claimToken", required = false) String claimToken,
       HttpServletResponse response) {

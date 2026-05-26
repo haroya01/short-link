@@ -53,7 +53,7 @@ public class BulkImportController {
           .append(',')
           .append(escape(row.expiresAt()))
           .append(',')
-          .append(escape(row.shortCode()))
+          .append(escape(row.shortCode() == null ? null : row.shortCode().value()))
           .append(',')
           .append(row.shortCode() == null ? "" : escape(urlBuilder.build(row.shortCode())))
           .append(',')

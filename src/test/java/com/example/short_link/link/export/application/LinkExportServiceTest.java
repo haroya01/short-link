@@ -3,6 +3,7 @@ package com.example.short_link.link.export.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
@@ -45,7 +46,7 @@ class LinkExportServiceTest {
               .build());
     }
 
-    String csv = service.exportEventsCsv(owner.getId(), "csvbat1");
+    String csv = service.exportEventsCsv(owner.getId(), new ShortCode("csvbat1"));
 
     long dataRows = csv.lines().count() - 1;
     assertThat(dataRows).isEqualTo(3);
@@ -76,7 +77,7 @@ class LinkExportServiceTest {
         new String[] {
           "daily", "hourly", "country", "city", "device", "os", "browser", "referrer", "channel"
         }) {
-      String csv = service.exportStatsCsv(owner.getId(), "csvdim1", dim);
+      String csv = service.exportStatsCsv(owner.getId(), new ShortCode("csvdim1"), dim);
       assertThat(csv).as("dimension %s", dim).isNotEmpty();
     }
   }
@@ -88,10 +89,10 @@ class LinkExportServiceTest {
     linkRepository.save(new LinkEntity("https://example.com", "csvno1", owner.getId(), null));
 
     org.assertj.core.api.Assertions.assertThatThrownBy(
-            () -> service.exportEventsCsv(attacker.getId(), "csvno1"))
+            () -> service.exportEventsCsv(attacker.getId(), new ShortCode("csvno1")))
         .isInstanceOf(LinkException.class);
     org.assertj.core.api.Assertions.assertThatThrownBy(
-            () -> service.exportStatsCsv(attacker.getId(), "csvno1", "daily"))
+            () -> service.exportStatsCsv(attacker.getId(), new ShortCode("csvno1"), "daily"))
         .isInstanceOf(LinkException.class);
   }
 
@@ -100,7 +101,7 @@ class LinkExportServiceTest {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-csv404"));
 
     org.assertj.core.api.Assertions.assertThatThrownBy(
-            () -> service.exportEventsCsv(user.getId(), "missing"))
+            () -> service.exportEventsCsv(user.getId(), new ShortCode("missing")))
         .isInstanceOf(LinkException.class);
   }
 }

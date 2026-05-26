@@ -64,7 +64,7 @@ public class CampaignStatsService {
               bwl.batch().getDistributorName(),
               bwl.batch().getAreaLabel(),
               bwl.batch().getQuantity(),
-              bwl.link().getShortCode().value(),
+              bwl.link().getShortCode(),
               clicks));
     }
 

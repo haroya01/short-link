@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
@@ -46,7 +47,7 @@ class UserDeletionServiceTest {
 
     deletionService.hardDelete(user.getId());
     assertThat(userRepository.findById(user.getId())).isEmpty();
-    assertThat(linkRepository.findByShortCode("del0001")).isEmpty();
+    assertThat(linkRepository.findByShortCode(new ShortCode("del0001"))).isEmpty();
     assertThat(clickEventRepository.findById(click.getId())).isEmpty();
   }
 
@@ -59,8 +60,8 @@ class UserDeletionServiceTest {
 
     deletionService.hardDelete(user.getId());
 
-    assertThat(linkRepository.findByShortCode("del0002")).isEmpty();
-    assertThat(linkRepository.findByShortCode("anon0001")).isPresent();
+    assertThat(linkRepository.findByShortCode(new ShortCode("del0002"))).isEmpty();
+    assertThat(linkRepository.findByShortCode(new ShortCode("anon0001"))).isPresent();
   }
 
   @Test

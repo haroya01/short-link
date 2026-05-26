@@ -4,6 +4,7 @@ import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.classifier.application.ReferrerChannelClassifier;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -34,7 +35,7 @@ public class LinkExportService {
   private int eventHardCap;
 
   @Transactional(readOnly = true)
-  public String exportEventsCsv(Long userId, String shortCode) {
+  public String exportEventsCsv(Long userId, ShortCode shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
@@ -95,7 +96,7 @@ public class LinkExportService {
   }
 
   @Transactional(readOnly = true)
-  public String exportStatsCsv(Long userId, String shortCode, String dimension) {
+  public String exportStatsCsv(Long userId, ShortCode shortCode, String dimension) {
     LinkStats stats = statsService.stats(userId, shortCode);
     StringBuilder sb = new StringBuilder(8 * 1024);
     String dim = dimension == null ? "daily" : dimension.toLowerCase();

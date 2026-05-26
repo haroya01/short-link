@@ -1,6 +1,7 @@
 package com.example.short_link.link.domain.repository;
 
 import com.example.short_link.link.domain.*;
+import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;

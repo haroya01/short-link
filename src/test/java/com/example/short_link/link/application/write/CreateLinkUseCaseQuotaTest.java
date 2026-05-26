@@ -91,7 +91,7 @@ class LinkCreationServiceQuotaTest {
     LinkCreated created =
         svc.execute(CreateLinkCommand.of("https://example.com", null, null, null));
 
-    assertThat(created.shortCode()).isEqualTo("anon123");
+    assertThat(created.shortCode().value()).isEqualTo("anon123");
     verify(repo, never()).countByUserId(any());
   }
 
@@ -124,7 +124,7 @@ class LinkCreationServiceQuotaTest {
     LinkCreated created =
         svc.execute(CreateLinkCommand.of("https://example.com/x", 99L, null, null));
 
-    assertThat(created.shortCode()).isEqualTo("exist01");
+    assertThat(created.shortCode().value()).isEqualTo("exist01");
     verify(repo, never()).save(any(LinkEntity.class));
     verify(repo, never()).countByUserId(any());
   }
@@ -195,7 +195,7 @@ class LinkCreationServiceQuotaTest {
 
     LinkCreated created =
         svc.execute(CreateLinkCommand.of("https://example.com/x", 99L, null, null));
-    assertThat(created.shortCode()).isEqualTo("newcode");
+    assertThat(created.shortCode().value()).isEqualTo("newcode");
   }
 
   private static com.example.short_link.admin.application.read.BlockedDomainQueryService

@@ -22,6 +22,7 @@ public class DeleteLinkUseCase {
   public void execute(DeleteLinkCommand command) {
     LinkEntity link = ownership.requireOwned(command.userId(), command.shortCode());
     repository.delete(link);
-    auditLogService.record(AuditAction.LINK_DELETED, "link", command.shortCode(), command.userId());
+    auditLogService.record(
+        AuditAction.LINK_DELETED, "link", command.shortCode().value(), command.userId());
   }
 }

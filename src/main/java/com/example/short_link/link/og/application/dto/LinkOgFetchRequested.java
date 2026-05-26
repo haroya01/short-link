@@ -1,3 +1,5 @@
 package com.example.short_link.link.og.application.dto;
 
-public record LinkOgFetchRequested(String shortCode, String originalUrl) {}
+import com.example.short_link.link.domain.ShortCode;
+
+public record LinkOgFetchRequested(ShortCode shortCode, String originalUrl) {}

@@ -3,6 +3,7 @@ package com.example.short_link.link.access.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -27,9 +28,9 @@ class LinkProtectionServiceTest {
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "pw00001", user.getId(), null));
 
-    service.update(user.getId(), "pw00001", "secret123", null);
+    service.update(user.getId(), new ShortCode("pw00001"), "secret123", null);
 
-    LinkEntity reloaded = linkRepository.findByShortCode("pw00001").orElseThrow();
+    LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("pw00001")).orElseThrow();
     assertThat(reloaded.hasPassword()).isTrue();
     assertThat(service.checkPassword(reloaded, "secret123")).isTrue();
     assertThat(service.checkPassword(reloaded, "wrong")).isFalse();
@@ -40,9 +41,9 @@ class LinkProtectionServiceTest {
     UserEntity user = userRepository.save(new UserEntity("p2@example.com", "google", "g-p2"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "pw00002", user.getId(), null));
-    service.update(user.getId(), "pw00002", "x", null);
-    service.update(user.getId(), "pw00002", "", null);
-    LinkEntity reloaded = linkRepository.findByShortCode("pw00002").orElseThrow();
+    service.update(user.getId(), new ShortCode("pw00002"), "x", null);
+    service.update(user.getId(), new ShortCode("pw00002"), "", null);
+    LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("pw00002")).orElseThrow();
     assertThat(reloaded.hasPassword()).isFalse();
   }
 
@@ -51,7 +52,7 @@ class LinkProtectionServiceTest {
     UserEntity user = userRepository.save(new UserEntity("v@example.com", "google", "g-v"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "vw00001", user.getId(), null));
-    service.update(user.getId(), "vw00001", null, 2);
+    service.update(user.getId(), new ShortCode("vw00001"), null, 2);
 
     int first = linkRepository.incrementViewCountIfBelowLimit(link.getId());
     int second = linkRepository.incrementViewCountIfBelowLimit(link.getId());

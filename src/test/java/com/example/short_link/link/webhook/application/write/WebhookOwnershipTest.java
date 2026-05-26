@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -45,16 +46,16 @@ class WebhookOwnershipTest {
   @Test
   void ownedLinkReturnsWhenOwnerMatches() {
     LinkEntity l = link(1L, 7L);
-    when(links.findByShortCode("abc")).thenReturn(Optional.of(l));
+    when(links.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(l));
 
-    assertThat(ownership.ownedLink(7L, "abc")).isSameAs(l);
+    assertThat(ownership.ownedLink(7L, new ShortCode("abc"))).isSameAs(l);
   }
 
   @Test
   void ownedLinkThrowsNotFoundWhenMissing() {
-    when(links.findByShortCode("abc")).thenReturn(Optional.empty());
+    when(links.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> ownership.ownedLink(7L, "abc"))
+    assertThatThrownBy(() -> ownership.ownedLink(7L, new ShortCode("abc")))
         .isInstanceOfSatisfying(
             LinkException.class,
             e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.LINK_NOT_FOUND));
@@ -62,9 +63,9 @@ class WebhookOwnershipTest {
 
   @Test
   void ownedLinkThrowsNotOwnedWhenDifferentOwner() {
-    when(links.findByShortCode("abc")).thenReturn(Optional.of(link(1L, 7L)));
+    when(links.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(link(1L, 7L)));
 
-    assertThatThrownBy(() -> ownership.ownedLink(99L, "abc"))
+    assertThatThrownBy(() -> ownership.ownedLink(99L, new ShortCode("abc")))
         .isInstanceOfSatisfying(
             LinkException.class,
             e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.LINK_NOT_OWNED));
@@ -74,19 +75,19 @@ class WebhookOwnershipTest {
   void ownedHookReturnsWhenLinkAndHookMatch() {
     LinkEntity l = link(1L, 7L);
     LinkWebhookEntity h = hookFor(1L);
-    when(links.findByShortCode("abc")).thenReturn(Optional.of(l));
+    when(links.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(l));
     when(hooks.findById(99L)).thenReturn(Optional.of(h));
 
-    assertThat(ownership.ownedHook(7L, "abc", 99L)).isSameAs(h);
+    assertThat(ownership.ownedHook(7L, new ShortCode("abc"), 99L)).isSameAs(h);
   }
 
   @Test
   void ownedHookThrowsWhenHookMissing() {
     LinkEntity l = link(1L, 7L);
-    when(links.findByShortCode("abc")).thenReturn(Optional.of(l));
+    when(links.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(l));
     when(hooks.findById(99L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> ownership.ownedHook(7L, "abc", 99L))
+    assertThatThrownBy(() -> ownership.ownedHook(7L, new ShortCode("abc"), 99L))
         .isInstanceOfSatisfying(
             WebhookException.class,
             e -> assertThat(e.errorCode()).isEqualTo(WebhookErrorCode.WEBHOOK_NOT_FOUND));
@@ -96,10 +97,10 @@ class WebhookOwnershipTest {
   void ownedHookThrowsWhenHookBelongsToDifferentLink() {
     LinkEntity l = link(1L, 7L);
     LinkWebhookEntity hOfOtherLink = hookFor(999L);
-    when(links.findByShortCode("abc")).thenReturn(Optional.of(l));
+    when(links.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(l));
     when(hooks.findById(99L)).thenReturn(Optional.of(hOfOtherLink));
 
-    assertThatThrownBy(() -> ownership.ownedHook(7L, "abc", 99L))
+    assertThatThrownBy(() -> ownership.ownedHook(7L, new ShortCode("abc"), 99L))
         .isInstanceOfSatisfying(
             WebhookException.class,
             e -> assertThat(e.errorCode()).isEqualTo(WebhookErrorCode.WEBHOOK_NOT_FOUND));

@@ -5,6 +5,7 @@ import com.example.short_link.link.access.application.LinkProtectionService;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkRedirectFlow;
@@ -39,7 +40,7 @@ public class PasswordUnlockController {
       value = "/{shortCode:[0-9A-Za-z]{3,16}}",
       consumes = "application/x-www-form-urlencoded")
   public ResponseEntity<?> unlock(
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestParam("password") String password,
       @RequestParam(value = "src", required = false) String src,
       @RequestHeader(value = "Referer", required = false) String referrer,

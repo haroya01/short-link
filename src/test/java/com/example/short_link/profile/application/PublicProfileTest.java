@@ -2,6 +2,7 @@ package com.example.short_link.profile.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.profile.application.PublicProfile.ProfileEntry;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -11,9 +12,10 @@ class PublicProfileTest {
   @Test
   void linkEntryCarriesShortCodeAndUrlsAndCount() {
     ProfileEntry e =
-        ProfileEntry.link("abc", "https://k.url/abc", "https://x.com", "title", "img", 12L, true);
+        ProfileEntry.link(
+            new ShortCode("abc"), "https://k.url/abc", "https://x.com", "title", "img", 12L, true);
     assertThat(e.kind()).isEqualTo("LINK");
-    assertThat(e.shortCode()).isEqualTo("abc");
+    assertThat(e.shortCode().value()).isEqualTo("abc");
     assertThat(e.shortUrl()).isEqualTo("https://k.url/abc");
     assertThat(e.originalUrl()).isEqualTo("https://x.com");
     assertThat(e.ogTitle()).isEqualTo("title");

@@ -2,11 +2,12 @@ package com.example.short_link.link.presentation.response;
 
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.MyLink;
+import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.List;
 
 public record MyLinkResponse(
-    String shortCode,
+    ShortCode shortCode,
     String shortUrl,
     String originalUrl,
     Instant createdAt,
