@@ -1,4 +1,4 @@
-package com.example.short_link.user.domain;
+package com.example.short_link.user.application.write;
 
 import com.example.short_link.user.domain.repository.*;
 import java.time.Duration;
