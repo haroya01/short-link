@@ -28,7 +28,7 @@ class BatchPolicyApplier {
     List<CampaignBatchEntity> batches =
         batchRepository.findByCampaignIdOrderByCreatedAtAsc(c.getId());
     for (CampaignBatchEntity batch : batches) {
-      LinkEntity link = linkRepository.findById(batch.getLinkId().value()).orElse(null);
+      LinkEntity link = linkRepository.findById(batch.getLinkId()).orElse(null);
       if (link == null) continue;
       switch (c.getPostEndAction()) {
         case KEEP:

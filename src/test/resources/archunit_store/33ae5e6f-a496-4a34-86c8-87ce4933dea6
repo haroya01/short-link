@@ -235,7 +235,7 @@ Cycle detected: Slice admin -> \
     - Field <com.example.short_link.profile.application.PublicProfile$ProfileEntry.shortCode> has type <com.example.short_link.link.domain.ShortCode> in (PublicProfile.java:0)\
     - Field <com.example.short_link.profile.application.read.ProfileQueryService.clickRepository> has type <com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository> in (ProfileQueryService.java:0)\
     - Field <com.example.short_link.profile.application.read.ProfileQueryService.linkRepository> has type <com.example.short_link.link.domain.repository.LinkRepository> in (ProfileQueryService.java:0)\
-    (129 further dependencies have been omitted...)\
+    (128 further dependencies have been omitted...)\
   4. Dependencies of Slice link\
     - Constructor <com.example.short_link.link.application.write.CreateLinkUseCase.<init>(com.example.short_link.link.domain.repository.LinkRepository, com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository, com.example.short_link.link.access.domain.repository.LinkAccessControlRepository, com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository, com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository, com.example.short_link.link.application.ShortCodeGenerator, io.micrometer.core.instrument.MeterRegistry, com.example.short_link.link.safety.application.UrlSafetyChecker, org.springframework.context.ApplicationEventPublisher, com.example.short_link.common.audit.AuditLogService, com.example.short_link.admin.application.read.BlockedDomainQueryService, org.springframework.transaction.PlatformTransactionManager, long)> has parameter of type <com.example.short_link.admin.application.read.BlockedDomainQueryService> in (CreateLinkUseCase.java:0)\
     - Field <com.example.short_link.link.application.write.CreateLinkUseCase.blockedDomainQuery> has type <com.example.short_link.admin.application.read.BlockedDomainQueryService> in (CreateLinkUseCase.java:0)\
@@ -466,8 +466,8 @@ Cycle detected: Slice common -> \
     - Method <com.example.short_link.link.stats.application.WeeklyInsightsService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (WeeklyInsightsService.java:95)\
     - Method <com.example.short_link.link.stats.application.WeeklyInsightsService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (WeeklyInsightsService.java:96)\
     - Method <com.example.short_link.link.webhook.scheduler.DailyWebhookSummaryJob.tryDeliverFor(com.example.short_link.link.webhook.domain.LinkWebhookEntity)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (DailyWebhookSummaryJob.java:96)\
-    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (LinkStatsQueryService.java:386)\
-    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (LinkStatsQueryService.java:386)\
+    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (LinkStatsQueryService.java:389)\
+    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (LinkStatsQueryService.java:389)\
   3. Dependencies of Slice user\
     - Class <com.example.short_link.user.domain.UserEntity> extends class <com.example.short_link.common.jpa.BaseCreatedEntity> in (UserEntity.java:0)\
     - Class <com.example.short_link.user.domain.UserTwoFactorEntity> extends class <com.example.short_link.common.jpa.BaseTimeEntity> in (UserTwoFactorEntity.java:0)\
@@ -524,8 +524,8 @@ Cycle detected: Slice common -> \
     - Method <com.example.short_link.link.stats.application.WeeklyInsightsService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (WeeklyInsightsService.java:95)\
     - Method <com.example.short_link.link.stats.application.WeeklyInsightsService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (WeeklyInsightsService.java:96)\
     - Method <com.example.short_link.link.webhook.scheduler.DailyWebhookSummaryJob.tryDeliverFor(com.example.short_link.link.webhook.domain.LinkWebhookEntity)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (DailyWebhookSummaryJob.java:96)\
-    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (LinkStatsQueryService.java:386)\
-    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (LinkStatsQueryService.java:386)\
+    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (LinkStatsQueryService.java:389)\
+    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (LinkStatsQueryService.java:389)\
   3. Dependencies of Slice user\
     - Constructor <com.example.short_link.user.application.write.avatar.AvatarService.<init>(com.example.short_link.user.domain.repository.UserRepository, com.example.short_link.common.storage.s3.AvatarProperties, com.example.short_link.common.storage.ObjectStorage, com.example.short_link.profile.application.ProfileCacheEviction)> has parameter of type <com.example.short_link.profile.application.ProfileCacheEviction> in (AvatarService.java:0)\
     - Constructor <com.example.short_link.user.application.write.avatar.BannerService.<init>(com.example.short_link.user.domain.repository.UserRepository, com.example.short_link.common.storage.s3.AvatarProperties, com.example.short_link.common.storage.ObjectStorage, com.example.short_link.profile.application.ProfileCacheEviction)> has parameter of type <com.example.short_link.profile.application.ProfileCacheEviction> in (BannerService.java:0)\
@@ -599,7 +599,7 @@ Cycle detected: Slice link -> \
     - Field <com.example.short_link.profile.application.PublicProfile$ProfileEntry.shortCode> has type <com.example.short_link.link.domain.ShortCode> in (PublicProfile.java:0)\
     - Field <com.example.short_link.profile.application.read.ProfileQueryService.clickRepository> has type <com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository> in (ProfileQueryService.java:0)\
     - Field <com.example.short_link.profile.application.read.ProfileQueryService.linkRepository> has type <com.example.short_link.link.domain.repository.LinkRepository> in (ProfileQueryService.java:0)\
-    (129 further dependencies have been omitted...)
+    (128 further dependencies have been omitted...)
 Cycle detected: Slice link -> \
                 Slice profile -> \
                 Slice user -> \
@@ -680,13 +680,13 @@ Cycle detected: Slice link -> \
     - Method <com.example.short_link.tag.application.read.LinkTagQueryService.tagNamesFor(java.lang.Long, com.example.short_link.link.domain.ShortCode)> has parameter of type <com.example.short_link.link.domain.ShortCode> in (LinkTagQueryService.java:0)\
     - Method <com.example.short_link.tag.application.write.ReplaceLinkTagsUseCase.execute(java.lang.Long, com.example.short_link.link.domain.ShortCode, java.util.List)> has parameter of type <com.example.short_link.link.domain.ShortCode> in (ReplaceLinkTagsUseCase.java:0)\
     - Method <com.example.short_link.tag.domain.LinkTagEntity.linkId()> has return type <com.example.short_link.link.domain.LinkId> in (LinkTagEntity.java:0)\
-    - Method <com.example.short_link.tag.domain.repository.LinkTagRepository.findAllByLinkId(com.example.short_link.link.domain.LinkId)> has parameter of type <com.example.short_link.link.domain.LinkId> in (LinkTagRepository.java:0)\
     - Method <com.example.short_link.tag.presentation.LinkTagController.replace(java.lang.Long, com.example.short_link.link.domain.ShortCode, com.example.short_link.tag.presentation.request.LinkTagsRequest)> has parameter of type <com.example.short_link.link.domain.ShortCode> in (LinkTagController.java:0)\
     - Method <com.example.short_link.tag.presentation.LinkTagController.tags(java.lang.Long, com.example.short_link.link.domain.ShortCode)> has parameter of type <com.example.short_link.link.domain.ShortCode> in (LinkTagController.java:0)\
     - Method <com.example.short_link.tag.presentation.response.LinkTagsResponse.shortCode()> has return type <com.example.short_link.link.domain.ShortCode> in (LinkTagsResponse.java:0)\
     - Method <com.example.short_link.tag.domain.LinkTagEntity.linkId()> calls constructor <com.example.short_link.link.domain.LinkId.<init>(java.lang.Long)> in (LinkTagEntity.java:32)\
     - Constructor <com.example.short_link.tag.domain.LinkTagEntity.<init>(com.example.short_link.link.domain.LinkId, java.lang.Long)> calls method <com.example.short_link.link.domain.LinkId.value()> in (LinkTagEntity.java:36)\
     - Method <com.example.short_link.tag.application.read.LinkTagQueryService.tagNamesFor(java.lang.Long, com.example.short_link.link.domain.ShortCode)> calls method <com.example.short_link.link.domain.repository.LinkRepository.findByShortCode(com.example.short_link.link.domain.ShortCode)> in (LinkTagQueryService.java:37)\
+    - Method <com.example.short_link.tag.application.read.LinkTagQueryService.tagNamesFor(java.lang.Long, com.example.short_link.link.domain.ShortCode)> calls constructor <com.example.short_link.link.exception.LinkException.<init>(com.example.short_link.link.exception.LinkErrorCode, [Ljava.lang.Object;)> in (LinkTagQueryService.java:38)\
     (14 further dependencies have been omitted...)
 Cycle detected: Slice link -> \
                 Slice user -> \
@@ -710,8 +710,8 @@ Cycle detected: Slice link -> \
     - Method <com.example.short_link.link.stats.application.WeeklyInsightsService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (WeeklyInsightsService.java:95)\
     - Method <com.example.short_link.link.stats.application.WeeklyInsightsService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (WeeklyInsightsService.java:96)\
     - Method <com.example.short_link.link.webhook.scheduler.DailyWebhookSummaryJob.tryDeliverFor(com.example.short_link.link.webhook.domain.LinkWebhookEntity)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (DailyWebhookSummaryJob.java:96)\
-    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (LinkStatsQueryService.java:386)\
-    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (LinkStatsQueryService.java:386)\
+    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (LinkStatsQueryService.java:389)\
+    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (LinkStatsQueryService.java:389)\
   2. Dependencies of Slice user\
     - Constructor <com.example.short_link.user.application.read.UserDataExportService.<init>(com.example.short_link.user.domain.repository.UserRepository, com.example.short_link.link.domain.repository.LinkRepository, com.example.short_link.link.stats.domain.repository.ClickEventRepository)> has parameter of type <com.example.short_link.link.domain.repository.LinkRepository> in (UserDataExportService.java:0)\
     - Constructor <com.example.short_link.user.application.read.UserDataExportService.<init>(com.example.short_link.user.domain.repository.UserRepository, com.example.short_link.link.domain.repository.LinkRepository, com.example.short_link.link.stats.domain.repository.ClickEventRepository)> has parameter of type <com.example.short_link.link.stats.domain.repository.ClickEventRepository> in (UserDataExportService.java:0)\
@@ -757,8 +757,8 @@ Cycle detected: Slice link -> \
     - Method <com.example.short_link.link.stats.application.WeeklyInsightsService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (WeeklyInsightsService.java:95)\
     - Method <com.example.short_link.link.stats.application.WeeklyInsightsService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (WeeklyInsightsService.java:96)\
     - Method <com.example.short_link.link.webhook.scheduler.DailyWebhookSummaryJob.tryDeliverFor(com.example.short_link.link.webhook.domain.LinkWebhookEntity)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (DailyWebhookSummaryJob.java:96)\
-    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (LinkStatsQueryService.java:386)\
-    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (LinkStatsQueryService.java:386)\
+    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.UserEntity.getTimezone()> in (LinkStatsQueryService.java:389)\
+    - Method <com.example.short_link.link.stats.application.read.LinkStatsQueryService.ownerZone(java.lang.Long)> calls method <com.example.short_link.user.domain.repository.UserRepository.findById(java.lang.Object)> in (LinkStatsQueryService.java:389)\
   2. Dependencies of Slice user\
     - Constructor <com.example.short_link.user.application.write.avatar.AvatarService.<init>(com.example.short_link.user.domain.repository.UserRepository, com.example.short_link.common.storage.s3.AvatarProperties, com.example.short_link.common.storage.ObjectStorage, com.example.short_link.profile.application.ProfileCacheEviction)> has parameter of type <com.example.short_link.profile.application.ProfileCacheEviction> in (AvatarService.java:0)\
     - Constructor <com.example.short_link.user.application.write.avatar.BannerService.<init>(com.example.short_link.user.domain.repository.UserRepository, com.example.short_link.common.storage.s3.AvatarProperties, com.example.short_link.common.storage.ObjectStorage, com.example.short_link.profile.application.ProfileCacheEviction)> has parameter of type <com.example.short_link.profile.application.ProfileCacheEviction> in (BannerService.java:0)\
@@ -789,7 +789,7 @@ Cycle detected: Slice link -> \
     - Field <com.example.short_link.profile.application.PublicProfile$ProfileEntry.shortCode> has type <com.example.short_link.link.domain.ShortCode> in (PublicProfile.java:0)\
     - Field <com.example.short_link.profile.application.read.ProfileQueryService.clickRepository> has type <com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository> in (ProfileQueryService.java:0)\
     - Field <com.example.short_link.profile.application.read.ProfileQueryService.linkRepository> has type <com.example.short_link.link.domain.repository.LinkRepository> in (ProfileQueryService.java:0)\
-    (129 further dependencies have been omitted...)
+    (128 further dependencies have been omitted...)
 Cycle detected: Slice profile -> \
                 Slice user -> \
                 Slice profile\

@@ -34,7 +34,7 @@ public class RegisterLinkWebhookUseCase {
     if (!PublicHttpUrlGuard.isPublic(cmd.url())) {
       throw new WebhookException(WebhookErrorCode.INVALID_WEBHOOK_URL);
     }
-    if (repository.countByLinkId(link.linkId()) >= MAX_PER_LINK) {
+    if (repository.countByLinkId(link.linkId().value()) >= MAX_PER_LINK) {
       throw new WebhookException(WebhookErrorCode.TOO_MANY_WEBHOOKS, MAX_PER_LINK);
     }
     String secret = generateSecret();

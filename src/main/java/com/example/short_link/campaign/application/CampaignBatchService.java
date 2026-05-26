@@ -114,7 +114,7 @@ public class CampaignBatchService {
   private BatchWithLink pairWithLink(CampaignBatchEntity batch) {
     LinkEntity link =
         linkRepository
-            .findById(batch.getLinkId().value())
+            .findById(batch.getLinkId())
             .orElseThrow(() -> new IllegalStateException("orphan batch — link missing"));
     return new BatchWithLink(batch, link);
   }

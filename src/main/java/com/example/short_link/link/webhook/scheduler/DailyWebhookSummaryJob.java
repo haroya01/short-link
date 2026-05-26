@@ -88,7 +88,7 @@ public class DailyWebhookSummaryJob {
   void tryDeliverFor(LinkWebhookEntity hook) {
     Integer hourOfDay = hook.getSummaryHourOfDay();
     if (hourOfDay == null) return;
-    LinkEntity link = links.findById(hook.getLinkId().value()).orElse(null);
+    LinkEntity link = links.findById(hook.getLinkId()).orElse(null);
     if (link == null) return;
     if (link.getUserId() == null) return;
     UserEntity owner = users.findById(link.getUserId()).orElse(null);
@@ -101,7 +101,7 @@ public class DailyWebhookSummaryJob {
     LocalDate yesterday = today.minusDays(1);
 
     DailySummaryPayload payload =
-        assembler.assemble(hook.getLinkId(), link.getShortCode(), yesterday, tz);
+        assembler.assemble(hook.linkId(), link.getShortCode(), yesterday, tz);
     String body = jsonMapper.writeValueAsString(payload.toJsonMap());
     dispatcher.deliver(hook, body, "daily_summary");
     hook.markSummarySent(today);

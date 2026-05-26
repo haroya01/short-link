@@ -67,9 +67,9 @@ class LinkWebhookDispatcherTest {
 
   @Test
   void noHooksReturnsEarly() {
-    when(repository.findAllByLinkIdAndEnabledTrue(new LinkId(1L))).thenReturn(List.of());
+    when(repository.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of());
     dispatcher.onClickRecorded(event(false, "google.com", "google"));
-    verify(repository).findAllByLinkIdAndEnabledTrue(new LinkId(1L));
+    verify(repository).findAllByLinkIdAndEnabledTrue(1L);
   }
 
   @Test

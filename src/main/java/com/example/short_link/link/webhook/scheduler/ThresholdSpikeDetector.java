@@ -87,7 +87,7 @@ public class ThresholdSpikeDetector {
             WebhookDeliveryMode.THRESHOLD_SPIKE, WebhookDeliveryMode.BOTH);
     if (candidates.isEmpty()) return;
     for (LinkWebhookEntity hook : candidates) {
-      if (!hook.getLinkId().equals(event.linkId())) continue;
+      if (!hook.getLinkId().equals(event.linkId().value())) continue;
       tryFire(hook);
     }
   }
@@ -99,13 +99,13 @@ public class ThresholdSpikeDetector {
     Instant now = clock.instant();
     if (inCooldown(hook, now, windowMinutes)) return;
     Instant since = now.minus(Duration.ofMinutes(windowMinutes));
-    long count = clickTotals.countSinceByLinkId(hook.getLinkId().value(), since);
+    long count = clickTotals.countSinceByLinkId(hook.getLinkId(), since);
     if (count < threshold) return;
-    LinkEntity link = links.findById(hook.getLinkId().value()).orElse(null);
+    LinkEntity link = links.findById(hook.getLinkId()).orElse(null);
     if (link == null) return;
     String topReferrer =
         clickAlerts
-            .findTopReferrerHostByLinkIdSince(hook.getLinkId().value(), since)
+            .findTopReferrerHostByLinkIdSince(hook.getLinkId(), since)
             .map(r -> r.getHost())
             .orElse(null);
     ThresholdSpikePayload payload =

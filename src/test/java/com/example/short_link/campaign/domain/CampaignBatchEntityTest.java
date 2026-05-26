@@ -30,6 +30,6 @@ class CampaignBatchEntityTest {
     batch.editMetadata("Renamed", "C", "North", 200, "memo");
 
     assertThat(batch.getCampaignId()).isEqualTo(10L);
-    assertThat(batch.getLinkId()).isEqualTo(new LinkId(100L));
+    assertThat(batch.getLinkId()).isEqualTo(100L);
   }
 }

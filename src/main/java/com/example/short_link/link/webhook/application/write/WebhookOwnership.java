@@ -39,7 +39,7 @@ class WebhookOwnership {
         repository
             .findById(webhookId)
             .orElseThrow(() -> new WebhookException(WebhookErrorCode.WEBHOOK_NOT_FOUND));
-    if (!hook.getLinkId().equals(link.linkId()))
+    if (!hook.getLinkId().equals(link.getId()))
       throw new WebhookException(WebhookErrorCode.WEBHOOK_NOT_FOUND);
     return hook;
   }

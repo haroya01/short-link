@@ -152,7 +152,7 @@ public class LinkStatsQueryService {
   }
 
   private Totals computeTotals(LinkId linkId, Instant linkCreatedAt) {
-    long total = clickRepository.countByLinkId(linkId);
+    long total = clickRepository.countByLinkId(linkId.value());
     long human = clickTotals.countHumanByLinkId(linkId.value());
     long bot = clickTotals.countBotByLinkId(linkId.value());
     long unique = clickTotals.countUniqueVisitorsByLinkId(linkId.value());
@@ -310,7 +310,7 @@ public class LinkStatsQueryService {
     if (rows.isEmpty()) return List.of();
     var byId = new HashMap<Long, LinkDestinationEntity>();
     destinationRepository
-        .findAllByLinkIdOrderByIdAsc(link.linkId())
+        .findAllByLinkIdOrderByIdAsc(link.linkId().value())
         .forEach(d -> byId.put(d.getId(), d));
     if (byId.isEmpty() && rows.size() == 1 && rows.get(0).getDestinationId() == null) {
       return List.of();

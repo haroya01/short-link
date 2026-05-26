@@ -41,7 +41,7 @@ public class AddDestinationUseCase {
     if (!isValidUrl(url)) {
       throw new DestinationException(DestinationErrorCode.INVALID_DESTINATION_URL);
     }
-    if (repository.countByLinkId(link.linkId()) >= MAX_PER_LINK) {
+    if (repository.countByLinkId(link.linkId().value()) >= MAX_PER_LINK) {
       throw new DestinationException(DestinationErrorCode.TOO_MANY_DESTINATIONS, MAX_PER_LINK);
     }
     int w = clampWeight(weight);

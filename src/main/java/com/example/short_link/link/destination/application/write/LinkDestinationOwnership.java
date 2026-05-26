@@ -35,7 +35,7 @@ class LinkDestinationOwnership {
             .findById(destinationId)
             .orElseThrow(
                 () -> new DestinationException(DestinationErrorCode.DESTINATION_NOT_FOUND));
-    if (!dest.getLinkId().equals(link.linkId())) {
+    if (!dest.getLinkId().equals(link.getId())) {
       throw new DestinationException(DestinationErrorCode.DESTINATION_NOT_FOUND);
     }
     return dest;

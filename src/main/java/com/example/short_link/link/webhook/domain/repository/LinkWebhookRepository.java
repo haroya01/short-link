@@ -1,6 +1,5 @@
 package com.example.short_link.link.webhook.domain.repository;
 
-import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import java.util.List;
@@ -10,11 +9,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface LinkWebhookRepository extends JpaRepository<LinkWebhookEntity, Long> {
 
-  List<LinkWebhookEntity> findAllByLinkIdOrderByIdAsc(LinkId linkId);
+  List<LinkWebhookEntity> findAllByLinkIdOrderByIdAsc(Long linkId);
 
-  List<LinkWebhookEntity> findAllByLinkIdAndEnabledTrue(LinkId linkId);
+  List<LinkWebhookEntity> findAllByLinkIdAndEnabledTrue(Long linkId);
 
-  long countByLinkId(LinkId linkId);
+  long countByLinkId(Long linkId);
 
   /**
    * Sweeps all enabled hooks subscribed to a delivery mode — the scheduler then filters in-memory

@@ -36,7 +36,7 @@ public class LinkLookupQueryService {
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     List<CachedLink.Variant> variants =
-        destinationRepository.findAllByLinkIdOrderByIdAsc(link.linkId()).stream()
+        destinationRepository.findAllByLinkIdOrderByIdAsc(link.linkId().value()).stream()
             .map(LinkLookupQueryService::toVariant)
             .toList();
     return new CachedLink(

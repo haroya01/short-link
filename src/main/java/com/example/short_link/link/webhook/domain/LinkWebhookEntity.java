@@ -29,7 +29,11 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
   private Long id;
 
   @Column(name = "link_id", nullable = false)
-  private LinkId linkId;
+  private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(nullable = false, length = 2048)
   private String url;
@@ -105,7 +109,7 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
 
   public LinkWebhookEntity(
       LinkId linkId, String url, String secret, String name, WebhookFormat format) {
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
     this.url = url;
     this.secret = secret;
     this.name = name;

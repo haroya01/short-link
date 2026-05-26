@@ -95,8 +95,7 @@ class AddDestinationUseCaseTest {
   void executeThrowsWhenDestinationCountAtLimit() {
     LinkEntity link = withId(new LinkEntity("https://x.com", "abc1234", 42L, null), 1L);
     when(ownership.ownedLink(42L, new ShortCode("abc1234"))).thenReturn(link);
-    when(repository.countByLinkId(new LinkId(1L)))
-        .thenReturn((long) AddDestinationUseCase.MAX_PER_LINK);
+    when(repository.countByLinkId(1L)).thenReturn((long) AddDestinationUseCase.MAX_PER_LINK);
 
     assertThatThrownBy(
             () ->
@@ -116,7 +115,7 @@ class AddDestinationUseCaseTest {
   void executeSavesAndReturnsSummary() {
     LinkEntity link = withId(new LinkEntity("https://x.com", "abc1234", 42L, null), 1L);
     when(ownership.ownedLink(42L, new ShortCode("abc1234"))).thenReturn(link);
-    when(repository.countByLinkId(new LinkId(1L))).thenReturn(0L);
+    when(repository.countByLinkId(1L)).thenReturn(0L);
     LinkDestinationEntity saved =
         withId(
             new LinkDestinationEntity(

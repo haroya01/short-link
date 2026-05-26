@@ -1,6 +1,5 @@
 package com.example.short_link.link.stats.domain.repository;
 
-import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.util.Collection;
 import java.util.List;
@@ -20,7 +19,7 @@ import org.springframework.data.repository.query.Param;
  */
 public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Long> {
 
-  long countByLinkId(LinkId linkId);
+  long countByLinkId(Long linkId);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM ClickEventEntity c WHERE c.linkId IN :linkIds")

@@ -26,7 +26,11 @@ public class ClickEventEntity {
   private Long id;
 
   @Column(name = "link_id", nullable = false)
-  private LinkId linkId;
+  private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(name = "clicked_at", nullable = false, updatable = false)
   private Instant clickedAt;
@@ -134,7 +138,7 @@ public class ClickEventEntity {
       Long destinationId,
       Integer asn,
       String asnOrg) {
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
     this.clickedAt = clickedAt;
     this.referrer = referrer;
     this.referrerHost = referrerHost;

@@ -28,7 +28,11 @@ public class CampaignBatchEntity extends BaseTimeEntity {
 
   /** 이 batch 가 대표하는 단축 링크. Batch:Link = 1:1 (DB 에서 UNIQUE). */
   @Column(name = "link_id", nullable = false)
-  private LinkId linkId;
+  private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(nullable = false, length = 255)
   private String name;
@@ -55,7 +59,7 @@ public class CampaignBatchEntity extends BaseTimeEntity {
       int quantity,
       String memo) {
     this.campaignId = campaignId;
-    this.linkId = linkId;
+    this.linkId = linkId == null ? null : linkId.value();
     this.name = name;
     this.distributorName = distributorName;
     this.areaLabel = areaLabel;

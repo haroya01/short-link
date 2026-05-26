@@ -1,6 +1,5 @@
 package com.example.short_link.tag.domain.repository;
 
-import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.tag.domain.LinkTagEntity;
 import java.util.Collection;
 import java.util.List;
@@ -11,7 +10,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface LinkTagRepository extends JpaRepository<LinkTagEntity, LinkTagEntity.LinkTagId> {
 
-  List<LinkTagEntity> findAllByLinkId(LinkId linkId);
+  List<LinkTagEntity> findAllByLinkId(Long linkId);
 
   List<LinkTagEntity> findAllByLinkIdIn(Collection<Long> linkIds);
 

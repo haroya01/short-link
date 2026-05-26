@@ -108,7 +108,8 @@ public class LinkWebhookDispatcher {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onClickRecorded(ClickRecordedEvent event) {
-    List<LinkWebhookEntity> hooks = repository.findAllByLinkIdAndEnabledTrue(event.linkId());
+    List<LinkWebhookEntity> hooks =
+        repository.findAllByLinkIdAndEnabledTrue(event.linkId().value());
     if (hooks.isEmpty()) {
       log.debug("webhook: no enabled hooks for linkId={}", event.linkId());
       return;
@@ -152,7 +153,7 @@ public class LinkWebhookDispatcher {
       }
       if (drained.isEmpty()) continue;
       Map<String, Object> body =
-          WebhookPayloadAdapter.buildBatch(hook.getFormat(), hook.getLinkId().value(), drained);
+          WebhookPayloadAdapter.buildBatch(hook.getFormat(), hook.getLinkId(), drained);
       deliver(hook, jsonMapper.writeValueAsString(body), "batch");
     }
   }

@@ -13,7 +13,7 @@ class LinkDestinationEntityTest {
   void shortConstructorClampsWeightAndDefaultsEnabled() {
     LinkDestinationEntity d =
         new LinkDestinationEntity(new LinkId(7L), "https://x", 0, "var-a", "kr");
-    assertThat(d.getLinkId()).isEqualTo(new LinkId(7L));
+    assertThat(d.getLinkId()).isEqualTo(7L);
     assertThat(d.getUrl()).isEqualTo("https://x");
     assertThat(d.getWeight()).isEqualTo(1);
     assertThat(d.getLabel()).isEqualTo("var-a");

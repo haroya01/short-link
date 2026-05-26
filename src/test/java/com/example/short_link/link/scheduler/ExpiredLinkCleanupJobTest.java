@@ -51,7 +51,7 @@ class ExpiredLinkCleanupJobTest {
     assertThat(linkRepository.findByShortCode(new ShortCode("expired1"))).isEmpty();
     assertThat(linkRepository.findByShortCode(new ShortCode("recent01"))).isPresent();
     assertThat(linkRepository.findByShortCode(new ShortCode("active01"))).isPresent();
-    assertThat(clickEventRepository.countByLinkId(expiredLink.linkId())).isZero();
+    assertThat(clickEventRepository.countByLinkId(expiredLink.linkId().value())).isZero();
   }
 
   @Test
