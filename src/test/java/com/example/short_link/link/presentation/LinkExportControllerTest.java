@@ -40,7 +40,7 @@ class LinkExportControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "csv001", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.4")
             .deviceClass("desktop")
@@ -74,7 +74,7 @@ class LinkExportControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "csv002", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.4")
             .deviceClass("mobile")

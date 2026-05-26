@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.application.dto.WebhookSummary;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
@@ -15,7 +16,8 @@ class ToggleLinkWebhookUseCaseTest {
   private final ToggleLinkWebhookUseCase useCase = new ToggleLinkWebhookUseCase(ownership);
 
   private LinkWebhookEntity hook() {
-    LinkWebhookEntity h = new LinkWebhookEntity(1L, "https://example.com/h", "secret", "n");
+    LinkWebhookEntity h =
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/h", "secret", "n");
     when(ownership.ownedHook(7L, new ShortCode("abcde"), 99L)).thenReturn(h);
     return h;
   }

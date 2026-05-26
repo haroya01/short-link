@@ -3,13 +3,14 @@ package com.example.short_link.campaign.presentation.response;
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 
 public record CampaignBatchResponse(
     Long id,
     Long campaignId,
-    Long linkId,
+    LinkId linkId,
     ShortCode shortCode,
     String shortUrl,
     String destinationUrl,
@@ -25,7 +26,7 @@ public record CampaignBatchResponse(
     return new CampaignBatchResponse(
         batch.getId(),
         batch.getCampaignId(),
-        link.getId(),
+        link.linkId(),
         link.getShortCode(),
         urlBuilder.build(link.getShortCode()),
         link.getOriginalUrl(),

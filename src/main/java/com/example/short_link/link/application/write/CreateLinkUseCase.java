@@ -169,10 +169,10 @@ public class CreateLinkUseCase {
     LinkEntity entity = new LinkEntity(url, code, userId, expiresAt);
     attachClaimTokenIfAnonymous(entity, authenticated);
     LinkEntity saved = repository.save(entity);
-    ogMetadataRepository.save(new LinkOgMetadataEntity(saved.getId()));
-    accessControlRepository.save(new LinkAccessControlEntity(saved.getId()));
-    profileBindingRepository.save(new LinkProfileBindingEntity(saved.getId()));
-    expirationPolicyRepository.save(new LinkExpirationPolicyEntity(saved.getId()));
+    ogMetadataRepository.save(new LinkOgMetadataEntity(saved.linkId()));
+    accessControlRepository.save(new LinkAccessControlEntity(saved.linkId()));
+    profileBindingRepository.save(new LinkProfileBindingEntity(saved.linkId()));
+    expirationPolicyRepository.save(new LinkExpirationPolicyEntity(saved.linkId()));
     return saved;
   }
 

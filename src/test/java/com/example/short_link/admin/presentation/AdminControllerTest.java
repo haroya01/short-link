@@ -104,7 +104,7 @@ class AdminControllerTest {
     // outcome breakdown reads from.
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.1")
             .deviceClass("desktop")
@@ -282,7 +282,7 @@ class AdminControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "adov001", admin.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.1")
             .deviceClass("desktop")

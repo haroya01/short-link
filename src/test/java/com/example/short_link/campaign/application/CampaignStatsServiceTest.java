@@ -7,6 +7,7 @@ import com.example.short_link.campaign.application.dto.CampaignBatchCreateReques
 import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -43,7 +44,7 @@ class CampaignStatsServiceTest {
         .getId();
   }
 
-  private void recordClick(Long linkId, Instant at, boolean bot) {
+  private void recordClick(LinkId linkId, Instant at, boolean bot) {
     ClickEventEntity evt = ClickEventEntity.builder().linkId(linkId).clickedAt(at).bot(bot).build();
     clickRepository.save(evt);
   }
@@ -63,9 +64,9 @@ class CampaignStatsServiceTest {
             owner,
             new CampaignBatchCreateRequest("east", "A", "East", 100, null, null));
 
-    recordClick(batch.link().getId(), start.plusSeconds(60), false);
-    recordClick(batch.link().getId(), start.plusSeconds(120), false);
-    recordClick(batch.link().getId(), start.plusSeconds(180), true); // bot — 제외
+    recordClick(batch.link().linkId(), start.plusSeconds(60), false);
+    recordClick(batch.link().linkId(), start.plusSeconds(120), false);
+    recordClick(batch.link().linkId(), start.plusSeconds(180), true); // bot — 제외
 
     CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
 
@@ -90,8 +91,8 @@ class CampaignStatsServiceTest {
             new CampaignBatchCreateRequest("east", null, null, 100, null, null));
 
     Instant testScan = start.minusSeconds(60);
-    recordClick(batch.link().getId(), testScan, false);
-    recordClick(batch.link().getId(), testScan.plusSeconds(30), false);
+    recordClick(batch.link().linkId(), testScan, false);
+    recordClick(batch.link().linkId(), testScan.plusSeconds(30), false);
 
     CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
 
@@ -125,9 +126,9 @@ class CampaignStatsServiceTest {
             owner,
             new CampaignBatchCreateRequest("b1", "B", "South", 1000, null, null));
 
-    for (int i = 0; i < 50; i++) recordClick(a1.link().getId(), start.plusSeconds(60 + i), false);
-    for (int i = 0; i < 70; i++) recordClick(a2.link().getId(), start.plusSeconds(60 + i), false);
-    for (int i = 0; i < 30; i++) recordClick(b1.link().getId(), start.plusSeconds(60 + i), false);
+    for (int i = 0; i < 50; i++) recordClick(a1.link().linkId(), start.plusSeconds(60 + i), false);
+    for (int i = 0; i < 70; i++) recordClick(a2.link().linkId(), start.plusSeconds(60 + i), false);
+    for (int i = 0; i < 30; i++) recordClick(b1.link().linkId(), start.plusSeconds(60 + i), false);
 
     CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
 

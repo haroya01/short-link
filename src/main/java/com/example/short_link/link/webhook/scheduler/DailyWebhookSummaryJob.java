@@ -101,7 +101,7 @@ public class DailyWebhookSummaryJob {
     LocalDate yesterday = today.minusDays(1);
 
     DailySummaryPayload payload =
-        assembler.assemble(hook.getLinkId(), link.getShortCode(), yesterday, tz);
+        assembler.assemble(hook.linkId(), link.getShortCode(), yesterday, tz);
     String body = jsonMapper.writeValueAsString(payload.toJsonMap());
     dispatcher.deliver(hook, body, "daily_summary");
     hook.markSummarySent(today);

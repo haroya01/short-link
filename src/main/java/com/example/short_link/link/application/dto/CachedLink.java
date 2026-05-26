@@ -1,12 +1,13 @@
 package com.example.short_link.link.application.dto;
 
+import com.example.short_link.link.domain.LinkId;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 
 public record CachedLink(
-    Long linkId,
+    LinkId linkId,
     Long userId,
     String originalUrl,
     Instant expiresAt,
@@ -17,7 +18,7 @@ public record CachedLink(
     List<Variant> variants) {
 
   public CachedLink(
-      Long linkId,
+      LinkId linkId,
       String originalUrl,
       Instant expiresAt,
       String ogTitle,
@@ -27,7 +28,7 @@ public record CachedLink(
   }
 
   public CachedLink(
-      Long linkId,
+      LinkId linkId,
       String originalUrl,
       Instant expiresAt,
       String ogTitle,
@@ -38,7 +39,7 @@ public record CachedLink(
   }
 
   public CachedLink(
-      Long linkId,
+      LinkId linkId,
       Long userId,
       String originalUrl,
       Instant expiresAt,

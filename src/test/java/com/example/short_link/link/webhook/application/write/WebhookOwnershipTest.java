@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
@@ -40,7 +41,7 @@ class WebhookOwnershipTest {
   }
 
   private LinkWebhookEntity hookFor(Long linkId) {
-    return new LinkWebhookEntity(linkId, "https://example.com/h", "secret", "n");
+    return new LinkWebhookEntity(new LinkId(linkId), "https://example.com/h", "secret", "n");
   }
 
   @Test

@@ -34,7 +34,7 @@ public class RegisterLinkWebhookUseCase {
     if (!PublicHttpUrlGuard.isPublic(cmd.url())) {
       throw new WebhookException(WebhookErrorCode.INVALID_WEBHOOK_URL);
     }
-    if (repository.countByLinkId(link.getId()) >= MAX_PER_LINK) {
+    if (repository.countByLinkId(link.linkId().value()) >= MAX_PER_LINK) {
       throw new WebhookException(WebhookErrorCode.TOO_MANY_WEBHOOKS, MAX_PER_LINK);
     }
     String secret = generateSecret();
@@ -42,7 +42,7 @@ public class RegisterLinkWebhookUseCase {
     String sanitizedName = sanitizeName(cmd.name());
     LinkWebhookEntity saved =
         repository.save(
-            new LinkWebhookEntity(link.getId(), cmd.url(), secret, sanitizedName, format));
+            new LinkWebhookEntity(link.linkId(), cmd.url(), secret, sanitizedName, format));
     meterRegistry
         .counter("link.webhook.registered", "format", format.name().toLowerCase())
         .increment();

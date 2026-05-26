@@ -41,8 +41,8 @@ class ReorderProfileUseCaseTest {
 
   @Test
   void assignsOrdersInGivenSequenceSkippingUnknown() {
-    LinkEntity l1 = new LinkEntity("https://a", "a1", 7L, null);
-    LinkEntity l2 = new LinkEntity("https://b", "b2", 7L, null);
+    LinkEntity l1 = new LinkEntity("https://a", "abc001", 7L, null);
+    LinkEntity l2 = new LinkEntity("https://b", "abc002", 7L, null);
     ProfileBlockEntity b1 = new ProfileBlockEntity(7L, ProfileBlockType.TEXT, "t", 99);
     TestEntities.withId(b1, 11L);
     when(linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(7L))
@@ -50,9 +50,9 @@ class ReorderProfileUseCaseTest {
     when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L)).thenReturn(List.of(b1));
 
     List<ReorderItem> items = new ArrayList<>();
-    items.add(new ReorderItem("LINK", "a1"));
+    items.add(new ReorderItem("LINK", "abc001"));
     items.add(new ReorderItem("BLOCK", "11"));
-    items.add(new ReorderItem("LINK", "b2"));
+    items.add(new ReorderItem("LINK", "abc002"));
     items.add(new ReorderItem("UNKNOWN", "x"));
     items.add(null);
     items.add(new ReorderItem(null, "x"));

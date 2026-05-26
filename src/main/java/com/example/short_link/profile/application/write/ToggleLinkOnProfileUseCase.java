@@ -32,7 +32,7 @@ public class ToggleLinkOnProfileUseCase {
     LinkProfileBindingEntity binding =
         profileBindingRepository
             .findById(link.getId())
-            .orElseGet(() -> new LinkProfileBindingEntity(link.getId()));
+            .orElseGet(() -> new LinkProfileBindingEntity(link.linkId()));
     Integer next = cmd.show() ? profileOrdering.nextOrder(cmd.userId()) : null;
     link.setProfileOrder(next);
     binding.changeProfileOrder(next);

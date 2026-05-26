@@ -1,6 +1,7 @@
 package com.example.short_link.link.og.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -20,6 +21,10 @@ public class LinkOgMetadataEntity extends BaseTimeEntity {
   @Id
   @Column(name = "link_id")
   private Long linkId;
+
+  public LinkId linkId() {
+    return linkId == null ? null : new LinkId(linkId);
+  }
 
   @Column(name = "og_title", length = 300)
   private String ogTitle;
@@ -48,8 +53,8 @@ public class LinkOgMetadataEntity extends BaseTimeEntity {
   @Column(name = "og_image_override", length = 1024)
   private String ogImageOverride;
 
-  public LinkOgMetadataEntity(Long linkId) {
-    this.linkId = linkId;
+  public LinkOgMetadataEntity(LinkId linkId) {
+    this.linkId = linkId == null ? null : linkId.value();
   }
 
   public void applyFetched(String title, String description, String image, Instant fetchedAt) {

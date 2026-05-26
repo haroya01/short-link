@@ -248,7 +248,7 @@ class LinkWebhookIntegrationTest {
     LinkWebhookEntity hook =
         webhookRepository.save(
             new LinkWebhookEntity(
-                link.getId(),
+                link.linkId(),
                 "https://discord.com/api/webhooks/1/abc",
                 "secret-rd1",
                 "discord",
@@ -278,7 +278,7 @@ class LinkWebhookIntegrationTest {
     LinkWebhookEntity hook =
         webhookRepository.save(
             new LinkWebhookEntity(
-                link.getId(),
+                link.linkId(),
                 "https://hook.example.com/in",
                 "secret-rd2",
                 null,

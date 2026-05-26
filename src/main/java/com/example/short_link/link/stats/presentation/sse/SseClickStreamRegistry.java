@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.presentation.sse;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.domain.LinkId;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
 import java.util.Iterator;
@@ -31,10 +32,10 @@ public class SseClickStreamRegistry {
   /** Per-emitter limit so a runaway loop on a single link can't push unbounded messages. */
   private static final int MAX_STREAMS_PER_LINK = 16;
 
-  private final Map<Long, List<SseEmitter>> emittersByLinkId = new ConcurrentHashMap<>();
+  private final Map<LinkId, List<SseEmitter>> emittersByLinkId = new ConcurrentHashMap<>();
   private final MeterRegistry meterRegistry;
 
-  public boolean register(Long linkId, SseEmitter emitter) {
+  public boolean register(LinkId linkId, SseEmitter emitter) {
     List<SseEmitter> bucket =
         emittersByLinkId.computeIfAbsent(linkId, k -> new CopyOnWriteArrayList<>());
     if (bucket.size() >= MAX_STREAMS_PER_LINK) {
@@ -57,7 +58,7 @@ public class SseClickStreamRegistry {
     return true;
   }
 
-  void remove(Long linkId, SseEmitter emitter) {
+  void remove(LinkId linkId, SseEmitter emitter) {
     List<SseEmitter> bucket = emittersByLinkId.get(linkId);
     if (bucket == null) return;
     bucket.remove(emitter);
@@ -65,7 +66,7 @@ public class SseClickStreamRegistry {
     meterRegistry.counter("sse.click_stream.closed").increment();
   }
 
-  public int activeStreams(Long linkId) {
+  public int activeStreams(LinkId linkId) {
     List<SseEmitter> bucket = emittersByLinkId.get(linkId);
     return bucket == null ? 0 : bucket.size();
   }

@@ -11,6 +11,7 @@ import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
@@ -116,7 +117,10 @@ class AddDestinationUseCaseTest {
     when(ownership.ownedLink(42L, new ShortCode("abc1234"))).thenReturn(link);
     when(repository.countByLinkId(1L)).thenReturn(0L);
     LinkDestinationEntity saved =
-        withId(new LinkDestinationEntity(1L, "https://dest.com", 50, null, null, null, null), 99L);
+        withId(
+            new LinkDestinationEntity(
+                new LinkId(1L), "https://dest.com", 50, null, null, null, null),
+            99L);
     when(repository.save(any(LinkDestinationEntity.class))).thenReturn(saved);
 
     DestinationSummary result =

@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
-import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
@@ -55,13 +55,14 @@ class LinkWebhookDispatcherTest {
 
   private LinkWebhookEntity hook(WebhookFormat format) {
     LinkWebhookEntity h =
-        new LinkWebhookEntity(1L, "https://example.com/hook", "secret", "test", format);
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/hook", "secret", "test", format);
     TestEntities.withId(h, 99L);
     return h;
   }
 
   private ClickRecordedEvent event(boolean bot, String channel, String utm) {
-    return new ClickRecordedEvent(1L, Instant.now(), "KR", "Desktop", channel, bot, utm);
+    return new ClickRecordedEvent(
+        new LinkId(1L), Instant.now(), "KR", "Desktop", channel, bot, utm);
   }
 
   @Test
@@ -74,7 +75,8 @@ class LinkWebhookDispatcherTest {
   @Test
   void deliverBlocksWhenUrlNotPublic() {
     LinkWebhookEntity h =
-        new LinkWebhookEntity(1L, "http://localhost/hook", "secret", "n", WebhookFormat.GENERIC);
+        new LinkWebhookEntity(
+            new LinkId(1L), "http://localhost/hook", "secret", "n", WebhookFormat.GENERIC);
     TestEntities.withId(h, 99L);
     dispatcher.deliver(h, "{\"a\":1}", "click");
     assertThat(meterRegistry.counter("webhook.delivery", "result", "blocked").count())
@@ -123,8 +125,7 @@ class LinkWebhookDispatcherTest {
   void shouldDeliverConsultsQuotaWhenSet() throws Exception {
     LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
     h.updateConfig(null, null, null, 100, null, null);
-    when(redis.execute(any(RedisScript.class), anyList(), eq(new ShortCode("86400"))))
-        .thenReturn(101L);
+    when(redis.execute(any(RedisScript.class), anyList(), eq("86400"))).thenReturn(101L);
     assertThat(callShouldDeliver(h, event(false, "x", null))).isFalse();
     assertThat(meterRegistry.counter("webhook.delivery", "result", "skipped_quota").count())
         .isEqualTo(1.0);
@@ -134,8 +135,7 @@ class LinkWebhookDispatcherTest {
   void shouldDeliverPassesQuotaWhenUnderLimit() throws Exception {
     LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
     h.updateConfig(null, null, null, 100, null, null);
-    when(redis.execute(any(RedisScript.class), anyList(), eq(new ShortCode("86400"))))
-        .thenReturn(5L);
+    when(redis.execute(any(RedisScript.class), anyList(), eq("86400"))).thenReturn(5L);
     assertThat(callShouldDeliver(h, event(false, "x", null))).isTrue();
   }
 
@@ -189,7 +189,8 @@ class LinkWebhookDispatcherTest {
   @Test
   void deliverFailsToSignWhenSecretInvalid() {
     LinkWebhookEntity h =
-        new LinkWebhookEntity(1L, "https://example.com/hook", null, "n", WebhookFormat.GENERIC);
+        new LinkWebhookEntity(
+            new LinkId(1L), "https://example.com/hook", null, "n", WebhookFormat.GENERIC);
     TestEntities.withId(h, 99L);
     dispatcher.deliver(h, "{\"a\":1}", "click");
     assertThat(meterRegistry.counter("webhook.delivery", "result", "sign_error").count())

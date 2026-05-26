@@ -15,6 +15,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
@@ -54,7 +55,8 @@ class ThresholdSpikeDetectorTest {
   }
 
   private LinkWebhookEntity hookWithSpike(int threshold, int windowMinutes) {
-    LinkWebhookEntity hook = new LinkWebhookEntity(1L, "https://example.com/h", "secret", "n");
+    LinkWebhookEntity hook =
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/h", "secret", "n");
     hook.changeDeliveryMode(WebhookDeliveryMode.THRESHOLD_SPIKE, null, threshold, windowMinutes);
     return hook;
   }
@@ -64,7 +66,7 @@ class ThresholdSpikeDetectorTest {
   }
 
   private ClickRecordedEvent click() {
-    return new ClickRecordedEvent(1L, now, "KR", "Mobile", "twitter", false, null);
+    return new ClickRecordedEvent(new LinkId(1L), now, "KR", "Mobile", "twitter", false, null);
   }
 
   @Test
@@ -95,7 +97,8 @@ class ThresholdSpikeDetectorTest {
     LinkWebhookEntity hook = hookWithSpike(1, 10);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
 
-    detector.onClickRecorded(new ClickRecordedEvent(1L, now, "KR", "Mobile", null, true, null));
+    detector.onClickRecorded(
+        new ClickRecordedEvent(new LinkId(1L), now, "KR", "Mobile", null, true, null));
 
     verify(dispatcher, never()).deliver(any(), anyString(), anyString());
   }
@@ -139,7 +142,7 @@ class ThresholdSpikeDetectorTest {
   @Test
   void skipsHooksForDifferentLink() {
     LinkWebhookEntity otherLinkHook =
-        new LinkWebhookEntity(999L, "https://example.com/h2", "secret", "other");
+        new LinkWebhookEntity(new LinkId(999L), "https://example.com/h2", "secret", "other");
     otherLinkHook.changeDeliveryMode(WebhookDeliveryMode.THRESHOLD_SPIKE, null, 1, 10);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(otherLinkHook));
 

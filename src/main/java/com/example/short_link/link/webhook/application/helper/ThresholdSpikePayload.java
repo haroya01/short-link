@@ -15,7 +15,7 @@ public record ThresholdSpikePayload(
   public Map<String, Object> toJsonMap() {
     Map<String, Object> root = new LinkedHashMap<>();
     root.put("type", "spike_alert");
-    root.put("shortCode", shortCode);
+    root.put("shortCode", shortCode.value());
     root.put("window", window);
     root.put("clicks", clicks);
     root.put("threshold", threshold);

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.exception.DestinationException;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import org.junit.jupiter.api.Test;
 
@@ -17,7 +18,8 @@ class UpdateDestinationUseCaseTest {
 
   private LinkDestinationEntity dest() {
     LinkDestinationEntity d =
-        new LinkDestinationEntity(1L, "https://old.example.com", 1, null, null, null, null);
+        new LinkDestinationEntity(
+            new LinkId(1L), "https://old.example.com", 1, null, null, null, null);
     when(ownership.ownedDestination(7L, new ShortCode("abc"), 99L)).thenReturn(d);
     return d;
   }

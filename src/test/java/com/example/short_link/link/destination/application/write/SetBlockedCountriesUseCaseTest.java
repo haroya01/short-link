@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
@@ -58,7 +59,7 @@ class SetBlockedCountriesUseCaseTest {
   @Test
   void executeSavesExistingPolicyWhenPresent() {
     link();
-    LinkExpirationPolicyEntity existing = new LinkExpirationPolicyEntity(1L);
+    LinkExpirationPolicyEntity existing = new LinkExpirationPolicyEntity(new LinkId(1L));
     when(policies.findById(1L)).thenReturn(Optional.of(existing));
 
     useCase.execute(7L, new ShortCode("abc"), "KR,JP");

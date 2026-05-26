@@ -32,7 +32,7 @@ class ExpiredLinkCleanupJobTest {
     LinkEntity expiredLink = new LinkEntity("https://example.com/old", "expired1", null, longAgo);
     expiredLink = linkRepository.save(expiredLink);
     clickEventRepository.save(
-        ClickEventEntity.builder().linkId(expiredLink.getId()).bot(false).build());
+        ClickEventEntity.builder().linkId(expiredLink.linkId()).bot(false).build());
 
     LinkEntity recentExpiredLink =
         linkRepository.save(
@@ -51,7 +51,7 @@ class ExpiredLinkCleanupJobTest {
     assertThat(linkRepository.findByShortCode(new ShortCode("expired1"))).isEmpty();
     assertThat(linkRepository.findByShortCode(new ShortCode("recent01"))).isPresent();
     assertThat(linkRepository.findByShortCode(new ShortCode("active01"))).isPresent();
-    assertThat(clickEventRepository.countByLinkId(expiredLink.getId())).isZero();
+    assertThat(clickEventRepository.countByLinkId(expiredLink.linkId().value())).isZero();
   }
 
   @Test

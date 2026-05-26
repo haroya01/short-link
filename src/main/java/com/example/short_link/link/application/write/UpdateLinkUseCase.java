@@ -45,7 +45,7 @@ public class UpdateLinkUseCase {
       LinkExpirationPolicyEntity policy =
           expirationPolicyRepository
               .findById(link.getId())
-              .orElseGet(() -> new LinkExpirationPolicyEntity(link.getId()));
+              .orElseGet(() -> new LinkExpirationPolicyEntity(link.linkId()));
       policy.changeExpiredMessage(link.getExpiredMessage());
       expirationPolicyRepository.save(policy);
     }
@@ -53,7 +53,7 @@ public class UpdateLinkUseCase {
       LinkOgMetadataEntity ogMeta =
           ogMetadataRepository
               .findById(link.getId())
-              .orElseGet(() -> new LinkOgMetadataEntity(link.getId()));
+              .orElseGet(() -> new LinkOgMetadataEntity(link.linkId()));
       ogMeta.resetForNewUrl();
       ogMetadataRepository.save(ogMeta);
       events.publishEvent(new LinkOgFetchRequested(link.getShortCode(), link.getOriginalUrl()));

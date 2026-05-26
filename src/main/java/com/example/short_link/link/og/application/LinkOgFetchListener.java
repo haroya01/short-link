@@ -54,7 +54,7 @@ public class LinkOgFetchListener {
     LinkOgMetadataEntity ogMeta =
         ogMetadataRepository
             .findById(entity.getId())
-            .orElseGet(() -> new LinkOgMetadataEntity(entity.getId()));
+            .orElseGet(() -> new LinkOgMetadataEntity(entity.linkId()));
     if (og.hasAny()) {
       entity.applyOgMetadata(og.title(), og.description(), og.image(), now);
       ogMeta.applyFetched(og.title(), og.description(), og.image(), now);
@@ -73,7 +73,7 @@ public class LinkOgFetchListener {
     }
     Cache cache = cacheManager.getCache("link");
     if (cache != null) {
-      cache.evict(shortCode);
+      cache.evict(shortCode.value());
     }
   }
 }

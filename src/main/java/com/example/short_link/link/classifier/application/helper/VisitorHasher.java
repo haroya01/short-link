@@ -10,7 +10,7 @@ public final class VisitorHasher {
 
   public static String hash(Long linkId, String clientIp, String userAgent) {
     String input =
-        (linkId == null ? "" : linkId.toString())
+        (linkId == null ? "" : String.valueOf(linkId))
             + "|"
             + (clientIp == null ? "" : clientIp)
             + "|"

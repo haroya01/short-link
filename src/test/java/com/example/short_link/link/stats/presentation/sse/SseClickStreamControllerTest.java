@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.support.TestEntities;
@@ -76,7 +77,7 @@ class SseClickStreamControllerTest {
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
-    when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(false);
+    when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(false);
     SseEmitter out = controller.stream(new ShortCode("abc"), "tok", null, response);
     verify(response).setStatus(429);
     assertThat(out).isNotNull();
@@ -89,7 +90,7 @@ class SseClickStreamControllerTest {
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
-    when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(true);
+    when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(true);
     SseEmitter out = controller.stream(new ShortCode("abc"), "tok", null, response);
     assertThat(out).isNotNull();
     assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);
@@ -115,7 +116,7 @@ class SseClickStreamControllerTest {
     link.setClaimToken("ctok");
     TestEntities.withId(link, 1L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
-    when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(true);
+    when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(true);
 
     SseEmitter out = controller.stream(new ShortCode("abc"), null, "ctok", response);
 
@@ -167,7 +168,7 @@ class SseClickStreamControllerTest {
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
-    when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(true);
+    when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(true);
 
     SseEmitter out = controller.stream(new ShortCode("abc"), "tok", "ignored-claim", response);
 

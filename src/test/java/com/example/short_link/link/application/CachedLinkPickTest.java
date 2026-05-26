@@ -3,6 +3,7 @@ package com.example.short_link.link.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.application.dto.CachedLink;
+import com.example.short_link.link.domain.LinkId;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
@@ -13,7 +14,7 @@ class CachedLinkPickTest {
 
   @Test
   void noVariantsReturnsOriginal() {
-    CachedLink link = new CachedLink(1L, "https://control", null, null, null, null);
+    CachedLink link = new CachedLink(new LinkId(1L), "https://control", null, null, null, null);
     var picked = link.pick();
     assertThat(picked.url()).isEqualTo("https://control");
     assertThat(picked.destinationId()).isNull();
@@ -23,7 +24,7 @@ class CachedLinkPickTest {
   void allDisabledFallsBackToOriginal() {
     CachedLink link =
         new CachedLink(
-            1L,
+            new LinkId(1L),
             "https://control",
             null,
             null,
@@ -40,7 +41,7 @@ class CachedLinkPickTest {
   void weightedDistributionConvergesToConfiguredRatio() {
     CachedLink link =
         new CachedLink(
-            1L,
+            new LinkId(1L),
             "https://control",
             null,
             null,
@@ -67,7 +68,7 @@ class CachedLinkPickTest {
     // weight clamps to >=1 normally, but defensive test: if all weights are 0 somehow
     CachedLink link =
         new CachedLink(
-            1L,
+            new LinkId(1L),
             "https://control",
             Instant.now().plusSeconds(60),
             null,
@@ -81,7 +82,7 @@ class CachedLinkPickTest {
   void countryMatchTakesPrecedenceOverAgnostic() {
     CachedLink link =
         new CachedLink(
-            1L,
+            new LinkId(1L),
             "https://control",
             null,
             null,
@@ -104,7 +105,7 @@ class CachedLinkPickTest {
   void allCountryTaggedAndNoneMatchFallsBackToOriginal() {
     CachedLink link =
         new CachedLink(
-            1L,
+            new LinkId(1L),
             "https://control",
             null,
             null,
@@ -121,7 +122,7 @@ class CachedLinkPickTest {
   void countryCodeMatchIsCaseInsensitive() {
     CachedLink link =
         new CachedLink(
-            1L,
+            new LinkId(1L),
             "https://control",
             null,
             null,

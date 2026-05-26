@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.og.application.OgCardImageRenderer;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
@@ -40,7 +41,8 @@ class OgCardControllerTest {
   @Test
   void servesPngWithCacheHeaders() throws Exception {
     CachedLink cached =
-        new CachedLink(1L, 7L, "https://example.com", null, null, null, null, null, List.of());
+        new CachedLink(
+            new LinkId(1L), 7L, "https://example.com", null, null, null, null, null, List.of());
     when(lookup.findActiveLink(eq(new ShortCode("abc1234")))).thenReturn(cached);
     when(clickRepository.countHumanByLinkId(eq(1L))).thenReturn(42L);
     byte[] png = new byte[] {(byte) 0x89, 'P', 'N', 'G'};

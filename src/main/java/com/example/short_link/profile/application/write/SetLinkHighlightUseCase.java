@@ -1,6 +1,7 @@
 package com.example.short_link.profile.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -36,22 +37,22 @@ public class SetLinkHighlightUseCase {
           linkRepository.findAllByUserIdAndProfileHighlightedIsTrue(cmd.userId())) {
         if (!other.getId().equals(link.getId())) {
           other.setProfileHighlighted(false);
-          mirrorHighlight(other.getId(), false);
+          mirrorHighlight(other.linkId(), false);
         }
       }
       link.setProfileHighlighted(true);
-      mirrorHighlight(link.getId(), true);
+      mirrorHighlight(link.linkId(), true);
     } else {
       link.setProfileHighlighted(false);
-      mirrorHighlight(link.getId(), false);
+      mirrorHighlight(link.linkId(), false);
     }
     cacheEviction.evictByUserId(cmd.userId());
   }
 
-  private void mirrorHighlight(Long linkId, boolean highlighted) {
+  private void mirrorHighlight(LinkId linkId, boolean highlighted) {
     LinkProfileBindingEntity binding =
         profileBindingRepository
-            .findById(linkId)
+            .findById(linkId.value())
             .orElseGet(() -> new LinkProfileBindingEntity(linkId));
     binding.changeProfileHighlighted(highlighted);
     profileBindingRepository.save(binding);
