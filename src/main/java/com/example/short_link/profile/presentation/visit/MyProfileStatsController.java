@@ -3,6 +3,7 @@ package com.example.short_link.profile.presentation.visit;
 import com.example.short_link.profile.application.visit.ProfileStats;
 import com.example.short_link.profile.application.visit.ProfileStatsService;
 import com.example.short_link.profile.application.visit.ProfileVisitSummary;
+import com.example.short_link.profile.application.write.UpdateStatsVisibilityUseCase;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MyProfileStatsController {
 
   private final ProfileStatsService stats;
+  private final UpdateStatsVisibilityUseCase updateVisibility;
 
   @GetMapping("/stats")
   @PreAuthorize("isAuthenticated()")
@@ -42,6 +44,6 @@ public class MyProfileStatsController {
   @PreAuthorize("isAuthenticated()")
   public StatsVisibilityResponse setVisibility(
       @AuthenticationPrincipal Long userId, @RequestBody StatsVisibilityRequest body) {
-    return new StatsVisibilityResponse(stats.updateStatsPublic(userId, body.isPublic()));
+    return new StatsVisibilityResponse(updateVisibility.execute(userId, body.isPublic()));
   }
 }
