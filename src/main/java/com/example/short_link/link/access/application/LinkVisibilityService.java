@@ -1,6 +1,7 @@
 package com.example.short_link.link.access.application;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -17,7 +18,7 @@ public class LinkVisibilityService {
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
-  public boolean setStatsPublic(Long userId, String shortCode, boolean isPublic) {
+  public boolean setStatsPublic(Long userId, ShortCode shortCode, boolean isPublic) {
     LinkEntity link =
         repository
             .findByShortCode(shortCode)

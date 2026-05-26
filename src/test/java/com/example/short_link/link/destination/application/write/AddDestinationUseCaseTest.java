@@ -11,6 +11,7 @@ import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import org.junit.jupiter.api.Test;
 
@@ -80,35 +81,47 @@ class AddDestinationUseCaseTest {
   @Test
   void executeThrowsWhenUrlInvalid() {
     LinkEntity link = withId(new LinkEntity("https://x.com", "abc1234", 42L, null), 1L);
-    when(ownership.ownedLink(42L, "abc1234")).thenReturn(link);
+    when(ownership.ownedLink(42L, new ShortCode("abc1234"))).thenReturn(link);
 
     assertThatThrownBy(
-            () -> useCase.execute(42L, "abc1234", "ftp://x.com", null, null, null, null, null))
+            () ->
+                useCase.execute(
+                    42L, new ShortCode("abc1234"), "ftp://x.com", null, null, null, null, null))
         .isInstanceOf(DestinationException.class);
   }
 
   @Test
   void executeThrowsWhenDestinationCountAtLimit() {
     LinkEntity link = withId(new LinkEntity("https://x.com", "abc1234", 42L, null), 1L);
-    when(ownership.ownedLink(42L, "abc1234")).thenReturn(link);
+    when(ownership.ownedLink(42L, new ShortCode("abc1234"))).thenReturn(link);
     when(repository.countByLinkId(1L)).thenReturn((long) AddDestinationUseCase.MAX_PER_LINK);
 
     assertThatThrownBy(
-            () -> useCase.execute(42L, "abc1234", "https://dest.com", null, null, null, null, null))
+            () ->
+                useCase.execute(
+                    42L,
+                    new ShortCode("abc1234"),
+                    "https://dest.com",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null))
         .isInstanceOf(DestinationException.class);
   }
 
   @Test
   void executeSavesAndReturnsSummary() {
     LinkEntity link = withId(new LinkEntity("https://x.com", "abc1234", 42L, null), 1L);
-    when(ownership.ownedLink(42L, "abc1234")).thenReturn(link);
+    when(ownership.ownedLink(42L, new ShortCode("abc1234"))).thenReturn(link);
     when(repository.countByLinkId(1L)).thenReturn(0L);
     LinkDestinationEntity saved =
         withId(new LinkDestinationEntity(1L, "https://dest.com", 50, null, null, null, null), 99L);
     when(repository.save(any(LinkDestinationEntity.class))).thenReturn(saved);
 
     DestinationSummary result =
-        useCase.execute(42L, "abc1234", "https://dest.com", 50, null, null, null, null);
+        useCase.execute(
+            42L, new ShortCode("abc1234"), "https://dest.com", 50, null, null, null, null);
 
     assertThat(result.id()).isEqualTo(99L);
   }

@@ -1,5 +1,6 @@
 package com.example.short_link.link.redirect.application.helper;
 
+import com.example.short_link.link.domain.ShortCode;
 import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -25,7 +26,7 @@ public final class LinkHtmlRenderer {
   }
 
   public static ResponseEntity<byte[]> passwordPromptResponse(
-      HttpStatus status, String shortCode, boolean failed) {
+      HttpStatus status, ShortCode shortCode, boolean failed) {
     return htmlResponse(status, passwordPrompt(shortCode, failed));
   }
 
@@ -61,7 +62,7 @@ public final class LinkHtmlRenderer {
         + "</div></body></html>";
   }
 
-  static String passwordPrompt(String shortCode, boolean failed) {
+  static String passwordPrompt(ShortCode shortCode, boolean failed) {
     String error =
         failed
             ? "<p style=\"color:#b91c1c;text-align:center;font-size:13px;margin:8px 0 0\">Invalid password.</p>"

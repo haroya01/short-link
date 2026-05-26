@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
@@ -31,9 +32,9 @@ class OgOverrideServiceTest {
         linkRepository.save(new LinkEntity("https://example.com", "ogtest1", user.getId(), null));
     link.applyOgMetadata("Scraped", "Scraped desc", "https://example.com/img.png", Instant.now());
 
-    service.update(user.getId(), "ogtest1", "Override title", null, null);
+    service.update(user.getId(), new ShortCode("ogtest1"), "Override title", null, null);
 
-    LinkEntity reloaded = linkRepository.findByShortCode("ogtest1").orElseThrow();
+    LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("ogtest1")).orElseThrow();
     assertThat(reloaded.getEffectiveOgTitle()).isEqualTo("Override title");
     assertThat(reloaded.getEffectiveOgDescription()).isEqualTo("Scraped desc");
     assertThat(reloaded.getEffectiveOgImage()).isEqualTo("https://example.com/img.png");
@@ -47,9 +48,9 @@ class OgOverrideServiceTest {
     link.applyOgMetadata("S", "Sd", "Si", Instant.now());
     link.changeOgOverride("manual", null, null);
 
-    service.update(user.getId(), "ogtest2", "  ", null, null);
+    service.update(user.getId(), new ShortCode("ogtest2"), "  ", null, null);
 
-    LinkEntity reloaded = linkRepository.findByShortCode("ogtest2").orElseThrow();
+    LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("ogtest2")).orElseThrow();
     assertThat(reloaded.getOgTitleOverride()).isNull();
     assertThat(reloaded.getEffectiveOgTitle()).isEqualTo("S");
   }
@@ -60,7 +61,8 @@ class OgOverrideServiceTest {
     UserEntity other = userRepository.save(new UserEntity("x@example.com", "google", "g-x"));
     linkRepository.save(new LinkEntity("https://example.com", "ogtest3", owner.getId(), null));
 
-    assertThatThrownBy(() -> service.update(other.getId(), "ogtest3", "x", null, null))
+    assertThatThrownBy(
+            () -> service.update(other.getId(), new ShortCode("ogtest3"), "x", null, null))
         .isInstanceOf(LinkException.class);
   }
 }

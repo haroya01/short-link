@@ -1,6 +1,7 @@
 package com.example.short_link.link.destination.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ public class SetBlockedCountriesUseCase {
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")
-  public LinkEntity execute(Long userId, String shortCode, String csv) {
+  public LinkEntity execute(Long userId, ShortCode shortCode, String csv) {
     LinkEntity link = ownership.ownedLink(userId, shortCode);
     link.setBlockedCountries(csv);
     LinkExpirationPolicyEntity policy =

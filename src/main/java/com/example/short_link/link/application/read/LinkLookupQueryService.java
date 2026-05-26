@@ -4,6 +4,7 @@ import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -28,7 +29,7 @@ public class LinkLookupQueryService {
 
   @Cacheable("link")
   @Transactional(readOnly = true)
-  private CachedLink loadByShortCode(String shortCode) {
+  private CachedLink loadByShortCode(ShortCode shortCode) {
     LinkEntity link =
         repository
             .findByShortCode(shortCode)
@@ -62,7 +63,7 @@ public class LinkLookupQueryService {
 
   /** SSE / OG card 등 entity 가 직접 필요한 controller 용. 못 찾으면 empty. */
   @Transactional(readOnly = true)
-  public Optional<LinkEntity> findEntity(String shortCode) {
+  public Optional<LinkEntity> findEntity(ShortCode shortCode) {
     return repository.findByShortCode(shortCode);
   }
 
@@ -72,7 +73,7 @@ public class LinkLookupQueryService {
     return clickTotalsRepository.countHumanByLinkId(linkId);
   }
 
-  public CachedLink findActiveLink(String shortCode) {
+  public CachedLink findActiveLink(ShortCode shortCode) {
     CachedLink cached;
     try {
       cached = loadByShortCode(shortCode);

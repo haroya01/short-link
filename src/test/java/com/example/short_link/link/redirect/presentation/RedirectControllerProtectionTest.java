@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,7 +30,7 @@ class RedirectControllerProtectionTest {
   @Test
   void passwordProtectedLinkShowsPromptOnGet() throws Exception {
     LinkEntity link = repository.save(new LinkEntity("https://example.com", "pwd0001"));
-    LinkEntity reloaded = repository.findByShortCode("pwd0001").orElseThrow();
+    LinkEntity reloaded = repository.findByShortCode(new ShortCode("pwd0001")).orElseThrow();
     reloaded.setPasswordHash("$2a$10$dummyhashvalueforbcrypt000000000000000000000000000000");
     repository.save(reloaded);
 
@@ -42,7 +43,7 @@ class RedirectControllerProtectionTest {
   @Test
   void unlockWithWrongPasswordReprompts() throws Exception {
     repository.save(new LinkEntity("https://example.com", "pwd0002"));
-    LinkEntity stored = repository.findByShortCode("pwd0002").orElseThrow();
+    LinkEntity stored = repository.findByShortCode(new ShortCode("pwd0002")).orElseThrow();
     stored.setPasswordHash("$2a$10$nKaXIa.8E2GfzG6dF2lzYOXa0lI6w0aiK8q5BWlBgEd9j3KMRPj7m");
     repository.save(stored);
 
@@ -56,7 +57,7 @@ class RedirectControllerProtectionTest {
   @Test
   void expiredLinkWithCustomMessageReturnsHtml410() throws Exception {
     repository.save(new LinkEntity("https://example.com", "exp0001"));
-    LinkEntity stored = repository.findByShortCode("exp0001").orElseThrow();
+    LinkEntity stored = repository.findByShortCode(new ShortCode("exp0001")).orElseThrow();
     stored.changeExpiresAt(java.time.Instant.now().minusSeconds(60));
     stored.updateExpiredMessage("Sale ended. <script>alert('xss')</script>");
     repository.save(stored);

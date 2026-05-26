@@ -1,12 +1,14 @@
 package com.example.short_link.link.application.write;
 
-public record DeleteLinkCommand(Long userId, String shortCode) {
+import com.example.short_link.link.domain.ShortCode;
+
+public record DeleteLinkCommand(Long userId, ShortCode shortCode) {
 
   public DeleteLinkCommand {
     if (userId == null) {
       throw new IllegalArgumentException("userId required");
     }
-    if (shortCode == null || shortCode.isBlank()) {
+    if (shortCode == null) {
       throw new IllegalArgumentException("shortCode required");
     }
   }

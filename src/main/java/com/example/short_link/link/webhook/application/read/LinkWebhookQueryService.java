@@ -1,6 +1,7 @@
 package com.example.short_link.link.webhook.application.read;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -19,7 +20,7 @@ public class LinkWebhookQueryService {
   private final LinkRepository linkRepository;
   private final LinkWebhookRepository repository;
 
-  public List<WebhookSummary> list(Long userId, String shortCode) {
+  public List<WebhookSummary> list(Long userId, ShortCode shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)

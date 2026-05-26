@@ -4,6 +4,7 @@ import com.example.short_link.link.access.application.LinkProtectionService;
 import com.example.short_link.link.access.application.dto.LinkProtectionResult;
 import com.example.short_link.link.access.presentation.request.LinkProtectionRequest;
 import com.example.short_link.link.access.presentation.response.LinkProtectionResponse;
+import com.example.short_link.link.domain.ShortCode;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -23,7 +24,7 @@ public class LinkProtectionController {
   @PatchMapping("/{shortCode}/protection")
   public LinkProtectionResponse update(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @Valid @RequestBody LinkProtectionRequest request) {
     return toResponse(service.update(userId, shortCode, request.password(), request.maxViews()));
   }

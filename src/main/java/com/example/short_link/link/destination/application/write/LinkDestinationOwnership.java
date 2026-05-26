@@ -5,6 +5,7 @@ import com.example.short_link.link.destination.domain.repository.LinkDestination
 import com.example.short_link.link.destination.exception.DestinationErrorCode;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -18,7 +19,7 @@ class LinkDestinationOwnership {
   private final LinkRepository linkRepository;
   private final LinkDestinationRepository repository;
 
-  LinkEntity ownedLink(Long userId, String shortCode) {
+  LinkEntity ownedLink(Long userId, ShortCode shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
@@ -27,7 +28,7 @@ class LinkDestinationOwnership {
     return link;
   }
 
-  LinkDestinationEntity ownedDestination(Long userId, String shortCode, Long destinationId) {
+  LinkDestinationEntity ownedDestination(Long userId, ShortCode shortCode, Long destinationId) {
     LinkEntity link = ownedLink(userId, shortCode);
     LinkDestinationEntity dest =
         repository

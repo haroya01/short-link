@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.application.helper;
 
+import com.example.short_link.link.domain.ShortCode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -8,7 +9,7 @@ import java.util.Map;
  * pretty-print the JSON show fields in the same order across days.
  */
 public record DailySummaryPayload(
-    String shortCode,
+    ShortCode shortCode,
     String windowStartLocal,
     String windowEndLocal,
     long totalClicks,

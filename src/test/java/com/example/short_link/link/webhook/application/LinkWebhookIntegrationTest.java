@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.webhook.application.dto.IssuedWebhook;
@@ -46,7 +47,8 @@ class LinkWebhookIntegrationTest {
   @Autowired private UserRepository userRepository;
 
   private IssuedWebhook register(Long userId, String shortCode, String url, String name) {
-    return registerUseCase.execute(new RegisterLinkWebhookCommand(userId, shortCode, url, name));
+    return registerUseCase.execute(
+        new RegisterLinkWebhookCommand(userId, new ShortCode(shortCode), url, name));
   }
 
   @Test
@@ -58,12 +60,13 @@ class LinkWebhookIntegrationTest {
     assertThat(issued.secret()).isNotBlank();
     assertThat(issued.id()).isNotNull();
 
-    var list = query.list(user.getId(), "wh11111");
+    var list = query.list(user.getId(), new ShortCode("wh11111"));
     assertThat(list).hasSize(1);
     assertThat(list.get(0).enabled()).isTrue();
 
-    deleteUseCase.execute(new DeleteLinkWebhookCommand(user.getId(), "wh11111", issued.id()));
-    assertThat(query.list(user.getId(), "wh11111")).isEmpty();
+    deleteUseCase.execute(
+        new DeleteLinkWebhookCommand(user.getId(), new ShortCode("wh11111"), issued.id()));
+    assertThat(query.list(user.getId(), new ShortCode("wh11111"))).isEmpty();
   }
 
   @Test
@@ -107,7 +110,8 @@ class LinkWebhookIntegrationTest {
     assertThatThrownBy(
             () ->
                 deleteUseCase.execute(
-                    new DeleteLinkWebhookCommand(other.getId(), "wh55555", issued.id())))
+                    new DeleteLinkWebhookCommand(
+                        other.getId(), new ShortCode("wh55555"), issued.id())))
         .isInstanceOf(LinkException.class);
   }
 
@@ -119,11 +123,13 @@ class LinkWebhookIntegrationTest {
 
     var disabled =
         toggleUseCase.execute(
-            new ToggleLinkWebhookCommand(user.getId(), "wh66666", issued.id(), false));
+            new ToggleLinkWebhookCommand(
+                user.getId(), new ShortCode("wh66666"), issued.id(), false));
     assertThat(disabled.enabled()).isFalse();
     var enabled =
         toggleUseCase.execute(
-            new ToggleLinkWebhookCommand(user.getId(), "wh66666", issued.id(), true));
+            new ToggleLinkWebhookCommand(
+                user.getId(), new ShortCode("wh66666"), issued.id(), true));
     assertThat(enabled.enabled()).isTrue();
   }
 
@@ -132,7 +138,7 @@ class LinkWebhookIntegrationTest {
     UserEntity user = userRepository.save(new UserEntity("wh7@local.test", "google", "g-wh7"));
     linkRepository.save(new LinkEntity("https://example.com/wh7", "wh77777", user.getId(), null));
     var issued = register(user.getId(), "wh77777", "https://example.com/hook", null);
-    var summary = query.list(user.getId(), "wh77777").get(0);
+    var summary = query.list(user.getId(), new ShortCode("wh77777")).get(0);
 
     assertThat(summary.id()).isEqualTo(issued.id());
     assertThat(summary.includeBots()).isFalse();
@@ -153,7 +159,7 @@ class LinkWebhookIntegrationTest {
         updateConfigUseCase.execute(
             new UpdateLinkWebhookConfigCommand(
                 user.getId(),
-                "wh88888",
+                new ShortCode("wh88888"),
                 issued.id(),
                 true,
                 25,
@@ -185,7 +191,7 @@ class LinkWebhookIntegrationTest {
                 updateConfigUseCase.execute(
                     new UpdateLinkWebhookConfigCommand(
                         user.getId(),
-                        "wh99999",
+                        new ShortCode("wh99999"),
                         issued.id(),
                         null,
                         0,
@@ -204,7 +210,7 @@ class LinkWebhookIntegrationTest {
                 updateConfigUseCase.execute(
                     new UpdateLinkWebhookConfigCommand(
                         user.getId(),
-                        "wh99999",
+                        new ShortCode("wh99999"),
                         issued.id(),
                         null,
                         101,
@@ -228,7 +234,7 @@ class LinkWebhookIntegrationTest {
         register(user.getId(), "wh12000", "https://discord.com/api/webhooks/123/abc-secret", null);
     assertThat(issued.format()).isEqualTo(WebhookFormat.DISCORD);
 
-    var summary = query.list(user.getId(), "wh12000").get(0);
+    var summary = query.list(user.getId(), new ShortCode("wh12000")).get(0);
     assertThat(summary.format()).isEqualTo(WebhookFormat.DISCORD);
   }
 

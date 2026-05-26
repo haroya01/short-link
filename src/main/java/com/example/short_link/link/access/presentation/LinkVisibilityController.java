@@ -3,6 +3,7 @@ package com.example.short_link.link.access.presentation;
 import com.example.short_link.link.access.application.LinkVisibilityService;
 import com.example.short_link.link.access.presentation.request.LinkVisibilityRequest;
 import com.example.short_link.link.access.presentation.response.LinkVisibilityResponse;
+import com.example.short_link.link.domain.ShortCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -21,7 +22,7 @@ public class LinkVisibilityController {
   @PatchMapping("/{shortCode}/visibility")
   public LinkVisibilityResponse update(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestBody LinkVisibilityRequest request) {
     boolean nowPublic = service.setStatsPublic(userId, shortCode, request.statsPublic());
     return new LinkVisibilityResponse(shortCode, nowPublic);

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.exception.DestinationException;
+import com.example.short_link.link.domain.ShortCode;
 import org.junit.jupiter.api.Test;
 
 class UpdateDestinationUseCaseTest {
@@ -17,7 +18,7 @@ class UpdateDestinationUseCaseTest {
   private LinkDestinationEntity dest() {
     LinkDestinationEntity d =
         new LinkDestinationEntity(1L, "https://old.example.com", 1, null, null, null, null);
-    when(ownership.ownedDestination(7L, "abc", 99L)).thenReturn(d);
+    when(ownership.ownedDestination(7L, new ShortCode("abc"), 99L)).thenReturn(d);
     return d;
   }
 
@@ -25,7 +26,17 @@ class UpdateDestinationUseCaseTest {
   void executeUpdatesUrl() {
     LinkDestinationEntity d = dest();
 
-    useCase.execute(7L, "abc", 99L, "https://new.example.com", null, null, null, null, null, null);
+    useCase.execute(
+        7L,
+        new ShortCode("abc"),
+        99L,
+        "https://new.example.com",
+        null,
+        null,
+        null,
+        null,
+        null,
+        null);
 
     assertThat(d.getUrl()).isEqualTo("https://new.example.com");
   }
@@ -34,7 +45,7 @@ class UpdateDestinationUseCaseTest {
   void executeClampsWeightToValidRange() {
     LinkDestinationEntity d = dest();
 
-    useCase.execute(7L, "abc", 99L, null, 999, null, null, null, null, null);
+    useCase.execute(7L, new ShortCode("abc"), 99L, null, 999, null, null, null, null, null);
 
     assertThat(d.getWeight()).isLessThanOrEqualTo(100);
   }
@@ -46,7 +57,16 @@ class UpdateDestinationUseCaseTest {
     assertThatThrownBy(
             () ->
                 useCase.execute(
-                    7L, "abc", 99L, "javascript:alert(1)", null, null, null, null, null, null))
+                    7L,
+                    new ShortCode("abc"),
+                    99L,
+                    "javascript:alert(1)",
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null))
         .isInstanceOf(DestinationException.class);
   }
 
@@ -54,7 +74,7 @@ class UpdateDestinationUseCaseTest {
   void executeTogglesEnabled() {
     LinkDestinationEntity d = dest();
 
-    useCase.execute(7L, "abc", 99L, null, null, null, false, null, null, null);
+    useCase.execute(7L, new ShortCode("abc"), 99L, null, null, null, false, null, null, null);
 
     assertThat(d.isEnabled()).isFalse();
   }
@@ -65,7 +85,16 @@ class UpdateDestinationUseCaseTest {
 
     var out =
         useCase.execute(
-            7L, "abc", 99L, "https://new.example.com", null, null, null, null, null, null);
+            7L,
+            new ShortCode("abc"),
+            99L,
+            "https://new.example.com",
+            null,
+            null,
+            null,
+            null,
+            null,
+            null);
 
     assertThat(out.url()).isEqualTo("https://new.example.com");
   }

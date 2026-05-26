@@ -1,5 +1,6 @@
 package com.example.short_link.profile.presentation;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.profile.application.write.SetLinkHighlightCommand;
 import com.example.short_link.profile.application.write.SetLinkHighlightUseCase;
 import com.example.short_link.profile.application.write.ToggleLinkOnProfileCommand;
@@ -27,7 +28,7 @@ public class LinkProfileToggleController {
   @PutMapping
   public LinkProfileToggleResponse toggle(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestBody LinkProfileToggleRequest request) {
     toggleLinkOnProfile.execute(new ToggleLinkOnProfileCommand(userId, shortCode, request.show()));
     return new LinkProfileToggleResponse(request.show());
@@ -36,7 +37,7 @@ public class LinkProfileToggleController {
   @PutMapping("/highlight")
   public LinkProfileHighlightResponse setHighlight(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestBody LinkProfileHighlightRequest request) {
     setLinkHighlight.execute(new SetLinkHighlightCommand(userId, shortCode, request.highlighted()));
     return new LinkProfileHighlightResponse(request.highlighted());

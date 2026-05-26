@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.application.dto.WebhookSummary;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import org.junit.jupiter.api.Test;
@@ -15,7 +16,7 @@ class ToggleLinkWebhookUseCaseTest {
 
   private LinkWebhookEntity hook() {
     LinkWebhookEntity h = new LinkWebhookEntity(1L, "https://example.com/h", "secret", "n");
-    when(ownership.ownedHook(7L, "abcde", 99L)).thenReturn(h);
+    when(ownership.ownedHook(7L, new ShortCode("abcde"), 99L)).thenReturn(h);
     return h;
   }
 
@@ -24,7 +25,8 @@ class ToggleLinkWebhookUseCaseTest {
     LinkWebhookEntity h = hook();
     h.disable();
 
-    WebhookSummary out = useCase.execute(new ToggleLinkWebhookCommand(7L, "abcde", 99L, true));
+    WebhookSummary out =
+        useCase.execute(new ToggleLinkWebhookCommand(7L, new ShortCode("abcde"), 99L, true));
 
     assertThat(out.enabled()).isTrue();
   }
@@ -33,7 +35,8 @@ class ToggleLinkWebhookUseCaseTest {
   void enableFalseDisablesHook() {
     hook();
 
-    WebhookSummary out = useCase.execute(new ToggleLinkWebhookCommand(7L, "abcde", 99L, false));
+    WebhookSummary out =
+        useCase.execute(new ToggleLinkWebhookCommand(7L, new ShortCode("abcde"), 99L, false));
 
     assertThat(out.enabled()).isFalse();
   }
@@ -44,7 +47,7 @@ class ToggleLinkWebhookUseCaseTest {
     h.recordFailure(500, "boom");
     h.recordFailure(500, "boom");
 
-    useCase.execute(new ToggleLinkWebhookCommand(7L, "abcde", 99L, true));
+    useCase.execute(new ToggleLinkWebhookCommand(7L, new ShortCode("abcde"), 99L, true));
 
     assertThat(h.getConsecutiveFailures()).isZero();
   }

@@ -6,6 +6,7 @@ import com.example.short_link.link.classifier.application.ReferrerChannelClassif
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -60,7 +61,7 @@ public class LinkStatsQueryService {
   private final LinkDestinationRepository destinationRepository;
   private final LinkAccessGuard accessGuard;
 
-  public LinkStats stats(Long userId, String shortCode) {
+  public LinkStats stats(Long userId, ShortCode shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
@@ -70,7 +71,7 @@ public class LinkStatsQueryService {
     return computeStats(link, ownerZone(zoneOwnerId));
   }
 
-  public LinkStats publicStats(String shortCode) {
+  public LinkStats publicStats(ShortCode shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
@@ -108,7 +109,7 @@ public class LinkStatsQueryService {
             time.daily);
 
     return new LinkStats(
-        link.getShortCode().value(),
+        link.getShortCode(),
         reportZone.getId(),
         totals.total,
         totals.human,

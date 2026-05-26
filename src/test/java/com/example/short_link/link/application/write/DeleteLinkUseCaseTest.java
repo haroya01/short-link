@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import org.junit.jupiter.api.Test;
@@ -26,9 +27,9 @@ class DeleteLinkUseCaseTest {
   @Test
   void executeDeletesLinkOwnedByUser() {
     LinkEntity link = new LinkEntity("https://x.com", "abc1234", 42L, null);
-    when(ownership.requireOwned(42L, "abc1234")).thenReturn(link);
+    when(ownership.requireOwned(42L, new ShortCode("abc1234"))).thenReturn(link);
 
-    useCase.execute(new DeleteLinkCommand(42L, "abc1234"));
+    useCase.execute(new DeleteLinkCommand(42L, new ShortCode("abc1234")));
 
     verify(repository).delete(link);
   }
@@ -36,9 +37,9 @@ class DeleteLinkUseCaseTest {
   @Test
   void executeRecordsAuditLog() {
     LinkEntity link = new LinkEntity("https://x.com", "abc1234", 42L, null);
-    when(ownership.requireOwned(42L, "abc1234")).thenReturn(link);
+    when(ownership.requireOwned(42L, new ShortCode("abc1234"))).thenReturn(link);
 
-    useCase.execute(new DeleteLinkCommand(42L, "abc1234"));
+    useCase.execute(new DeleteLinkCommand(42L, new ShortCode("abc1234")));
 
     verify(auditLogService)
         .record(eq(AuditAction.LINK_DELETED), eq("link"), eq("abc1234"), eq(42L));
@@ -48,7 +49,7 @@ class DeleteLinkUseCaseTest {
   void executePropagatesOwnershipFailure() {
     when(ownership.requireOwned(any(), any())).thenThrow(LinkException.class);
 
-    assertThatThrownBy(() -> useCase.execute(new DeleteLinkCommand(42L, "nope0001")))
+    assertThatThrownBy(() -> useCase.execute(new DeleteLinkCommand(42L, new ShortCode("nope0001"))))
         .isInstanceOf(LinkException.class);
     verify(repository, never()).delete(any(LinkEntity.class));
   }
