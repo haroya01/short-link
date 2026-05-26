@@ -1,9 +1,10 @@
-package com.example.short_link.common.config;
+package com.example.short_link.user.config;
 
 import static org.springframework.http.HttpMethod.GET;
 import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.security.web.util.matcher.RegexRequestMatcher.regexMatcher;
 
+import com.example.short_link.common.config.RateLimitProperties;
 import com.example.short_link.common.web.RateLimitFilter;
 import com.example.short_link.user.presentation.security.ApiKeyAuthenticationFilter;
 import com.example.short_link.user.presentation.security.JsonAuthenticationEntryPoint;

@@ -57,7 +57,6 @@ public class CampaignRecommendationService {
     int totalQuantity = batches.stream().mapToInt(BatchStats::quantity).sum();
     int totalClicks = (int) batches.stream().mapToLong(BatchStats::clicks).sum();
 
-    // Insufficient guards
     if (batches.size() < MIN_BATCH_COUNT) {
       return new CampaignRecommendationResponse(
           true,

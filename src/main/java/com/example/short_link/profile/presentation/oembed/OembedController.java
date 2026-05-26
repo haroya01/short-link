@@ -1,6 +1,6 @@
 package com.example.short_link.profile.presentation.oembed;
 
-import com.example.short_link.profile.application.oembed.OembedResponse;
+import com.example.short_link.profile.application.oembed.OembedMetadata;
 import com.example.short_link.profile.application.oembed.OembedService;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -21,7 +21,7 @@ public class OembedController {
   private final OembedService service;
 
   @GetMapping
-  public OembedResponse oembed(@RequestParam("url") @NotBlank @URL @Size(max = 2048) String url) {
+  public OembedMetadata oembed(@RequestParam("url") @NotBlank @URL @Size(max = 2048) String url) {
     return service.fetch(url);
   }
 }
