@@ -20,12 +20,6 @@ public enum LinkErrorCode {
       HttpStatus.INTERNAL_SERVER_ERROR,
       "Failed to generate unique short code after multiple attempts"),
   MALICIOUS_URL(HttpStatus.BAD_REQUEST, "malicious url rejected (sha256_prefix=%s)"),
-  TAG_NOT_FOUND(HttpStatus.NOT_FOUND, "tag not found: %s"),
-  DUPLICATE_TAG_NAME(HttpStatus.CONFLICT, "tag already exists: %s"),
-  INVALID_WEBHOOK_URL(
-      HttpStatus.BAD_REQUEST, "webhook url must be public http(s) and resolve to a non-private IP"),
-  TOO_MANY_WEBHOOKS(HttpStatus.CONFLICT, "too many webhooks for this link (max %d)", "limit"),
-  WEBHOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "webhook not found"),
   BULK_IMPORT_TOO_LARGE(
       HttpStatus.PAYLOAD_TOO_LARGE, "bulk import too large: %d rows (limit %d)", "rows", "limit"),
   INVALID_CURSOR(HttpStatus.BAD_REQUEST, "Invalid cursor"),

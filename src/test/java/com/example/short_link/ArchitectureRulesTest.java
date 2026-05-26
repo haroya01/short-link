@@ -66,7 +66,7 @@ class ArchitectureRulesTest {
 
   @Test
   void unmatchedRequestsAreNotPermittedByDefault() throws IOException {
-    String securityConfig = Files.readString(MAIN.resolve("common/config/SecurityConfig.java"));
+    String securityConfig = Files.readString(MAIN.resolve("user/config/SecurityConfig.java"));
 
     assertThat(securityConfig).doesNotContainPattern("(?s)\\.anyRequest\\(\\)\\s*\\.permitAll\\(");
   }
@@ -84,7 +84,7 @@ class ArchitectureRulesTest {
                       || relative.contains("/presentation/response/")) {
                     return false;
                   }
-                  // sub-feature folder (e.g., /presentation/oembed/OembedResponse.java) is also OK.
+                  // sub-feature folder (e.g., /presentation/email/MyEmailLeadResponse.java) is OK.
                   // Violation = file directly under /presentation/ (matches
                   // /presentation/Foo.java).
                   return relative.matches(".*/presentation/[A-Z][A-Za-z0-9]*\\.java$");
