@@ -99,13 +99,13 @@ public class ThresholdSpikeDetector {
     Instant now = clock.instant();
     if (inCooldown(hook, now, windowMinutes)) return;
     Instant since = now.minus(Duration.ofMinutes(windowMinutes));
-    long count = clickTotals.countSinceByLinkId(hook.getLinkId(), since);
+    long count = clickTotals.countSinceByLinkId(hook.getLinkId().value(), since);
     if (count < threshold) return;
     LinkEntity link = links.findById(hook.getLinkId().value()).orElse(null);
     if (link == null) return;
     String topReferrer =
         clickAlerts
-            .findTopReferrerHostByLinkIdSince(hook.getLinkId(), since)
+            .findTopReferrerHostByLinkIdSince(hook.getLinkId().value(), since)
             .map(r -> r.getHost())
             .orElse(null);
     ThresholdSpikePayload payload =

@@ -15,6 +15,6 @@ public class IncrementViewCountUseCase {
   private final LinkRepository repository;
 
   public int execute(IncrementViewCountCommand command) {
-    return repository.incrementViewCountIfBelowLimit(command.linkId());
+    return repository.incrementViewCountIfBelowLimit(command.linkId().value());
   }
 }

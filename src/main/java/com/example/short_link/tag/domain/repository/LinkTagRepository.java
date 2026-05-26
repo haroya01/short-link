@@ -17,7 +17,7 @@ public interface LinkTagRepository extends JpaRepository<LinkTagEntity, LinkTagE
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM LinkTagEntity lt WHERE lt.linkId = :linkId")
-  int deleteByLinkId(@Param("linkId") LinkId linkId);
+  int deleteByLinkId(@Param("linkId") Long linkId);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM LinkTagEntity lt WHERE lt.tagId = :tagId")

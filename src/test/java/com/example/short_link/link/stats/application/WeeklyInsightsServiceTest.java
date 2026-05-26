@@ -77,7 +77,7 @@ class WeeklyInsightsServiceTest {
     UtmSourceClickRow source = mock(UtmSourceClickRow.class);
     when(source.getSource()).thenReturn("twitter");
     when(clickRepository.findTopUtmSourcesByLinkIdAndRange(
-            any(LinkId.class), any(), any(), any(Pageable.class)))
+            anyLong(), any(), any(), any(Pageable.class)))
         .thenReturn(List.of(source));
     UserEntity user = new UserEntity("u@x", "google", "g-1");
     user.changeTimezone("Asia/Seoul");

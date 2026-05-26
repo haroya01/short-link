@@ -1,6 +1,5 @@
 package com.example.short_link.link.stats.domain.repository;
 
-import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClicksByLinkRow;
@@ -28,7 +27,7 @@ public interface ClickTimeReadRepository extends Repository<ClickEventEntity, Lo
           + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
           + "ORDER BY day")
   List<DailyClickRow> findDailyClicks(
-      @Param("linkId") LinkId linkId, @Param("from") Instant from, @Param("tz") String timezone);
+      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("tz") String timezone);
 
   @Query(
       "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
@@ -36,7 +35,7 @@ public interface ClickTimeReadRepository extends Repository<ClickEventEntity, Lo
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
           + "ORDER BY hour")
-  List<HourClickRow> findHourlyClicks(@Param("linkId") LinkId linkId, @Param("tz") String timezone);
+  List<HourClickRow> findHourlyClicks(@Param("linkId") Long linkId, @Param("tz") String timezone);
 
   @Query(
       "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
@@ -45,7 +44,7 @@ public interface ClickTimeReadRepository extends Repository<ClickEventEntity, Lo
           + "GROUP BY FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
           + "ORDER BY dow")
   List<DayOfWeekClickRow> findDayOfWeekClicks(
-      @Param("linkId") LinkId linkId, @Param("tz") String timezone);
+      @Param("linkId") Long linkId, @Param("tz") String timezone);
 
   @Query(
       "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
@@ -53,7 +52,7 @@ public interface ClickTimeReadRepository extends Repository<ClickEventEntity, Lo
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY dow, hour ORDER BY dow, hour")
-  List<HeatmapRow> findHeatmap(@Param("linkId") LinkId linkId, @Param("tz") String timezone);
+  List<HeatmapRow> findHeatmap(@Param("linkId") Long linkId, @Param("tz") String timezone);
 
   /**
    * Campaign-aggregate variant — sums across a campaign's batch links since {@code

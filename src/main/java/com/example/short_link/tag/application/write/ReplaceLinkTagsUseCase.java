@@ -48,7 +48,7 @@ public class ReplaceLinkTagsUseCase {
           "too many tags (max " + TagSanitizer.MAX_TAGS_PER_LINK + ")");
     }
 
-    linkTagRepository.deleteByLinkId(link.linkId());
+    linkTagRepository.deleteByLinkId(link.linkId().value());
     if (normalized.isEmpty()) return List.of();
 
     Map<String, TagEntity> existing = new HashMap<>();

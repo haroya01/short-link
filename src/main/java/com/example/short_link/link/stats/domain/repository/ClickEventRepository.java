@@ -32,9 +32,8 @@ public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Lo
       "SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.id < :cursorId "
           + "ORDER BY c.id DESC")
   List<ClickEventEntity> findEventsByLinkIdBefore(
-      @Param("linkId") LinkId linkId, @Param("cursorId") Long cursorId, Pageable pageable);
+      @Param("linkId") Long linkId, @Param("cursorId") Long cursorId, Pageable pageable);
 
   @Query("SELECT c FROM ClickEventEntity c WHERE c.linkId = :linkId ORDER BY c.id DESC")
-  List<ClickEventEntity> findEventsByLinkIdLatest(
-      @Param("linkId") LinkId linkId, Pageable pageable);
+  List<ClickEventEntity> findEventsByLinkIdLatest(@Param("linkId") Long linkId, Pageable pageable);
 }

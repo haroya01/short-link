@@ -44,7 +44,7 @@ class OgCardControllerTest {
         new CachedLink(
             new LinkId(1L), 7L, "https://example.com", null, null, null, null, null, List.of());
     when(lookup.findActiveLink(eq(new ShortCode("abc1234")))).thenReturn(cached);
-    when(clickRepository.countHumanByLinkId(eq(new LinkId(1L)))).thenReturn(42L);
+    when(clickRepository.countHumanByLinkId(eq(1L))).thenReturn(42L);
     byte[] png = new byte[] {(byte) 0x89, 'P', 'N', 'G'};
     when(renderer.render(any(), anyLong())).thenReturn(png);
 

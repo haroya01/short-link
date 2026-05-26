@@ -1,7 +1,6 @@
 package com.example.short_link.link.domain.repository;
 
 import com.example.short_link.link.domain.*;
-import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.Collection;
@@ -60,7 +59,7 @@ public interface LinkRepository
   @Query(
       "UPDATE LinkEntity l SET l.viewCount = l.viewCount + 1 "
           + "WHERE l.id = :linkId AND (l.maxViews IS NULL OR l.viewCount < l.maxViews)")
-  int incrementViewCountIfBelowLimit(@Param("linkId") LinkId linkId);
+  int incrementViewCountIfBelowLimit(@Param("linkId") Long linkId);
 
   @org.springframework.data.jpa.repository.Modifying(
       clearAutomatically = true,

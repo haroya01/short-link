@@ -16,14 +16,14 @@ class IncrementViewCountUseCaseTest {
 
   @Test
   void executeReturnsRowsUpdatedFromRepository() {
-    when(repository.incrementViewCountIfBelowLimit(new LinkId(7L))).thenReturn(1);
+    when(repository.incrementViewCountIfBelowLimit(7L)).thenReturn(1);
 
     assertThat(useCase.execute(new IncrementViewCountCommand(new LinkId(7L)))).isEqualTo(1);
   }
 
   @Test
   void executeReturnsZeroWhenLimitReached() {
-    when(repository.incrementViewCountIfBelowLimit(new LinkId(7L))).thenReturn(0);
+    when(repository.incrementViewCountIfBelowLimit(7L)).thenReturn(0);
 
     assertThat(useCase.execute(new IncrementViewCountCommand(new LinkId(7L)))).isZero();
   }

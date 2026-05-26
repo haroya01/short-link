@@ -1,6 +1,5 @@
 package com.example.short_link.link.stats.domain.repository;
 
-import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.AsnClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BotClickRow;
@@ -37,7 +36,7 @@ public interface ClickDimensionReadRepository extends Repository<ClickEventEntit
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.referrer IS NOT NULL "
           + "GROUP BY c.referrer ORDER BY count DESC")
-  List<ReferrerClickRow> findReferrerClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<ReferrerClickRow> findReferrerClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.referrerHost AS host, COUNT(c) AS count "
@@ -45,60 +44,59 @@ public interface ClickDimensionReadRepository extends Repository<ClickEventEntit
           + "AND c.referrerHost IS NOT NULL "
           + "GROUP BY c.referrerHost ORDER BY count DESC")
   List<ReferrerHostClickRow> findReferrerHostClicks(
-      @Param("linkId") LinkId linkId, Pageable pageable);
+      @Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.deviceClass AS device, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY c.deviceClass ORDER BY count DESC")
-  List<DeviceClickRow> findDeviceClicks(@Param("linkId") LinkId linkId);
+  List<DeviceClickRow> findDeviceClicks(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT c.osName AS os, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY c.osName ORDER BY count DESC")
-  List<OsClickRow> findOsClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<OsClickRow> findOsClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.browserName AS browser, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY c.browserName ORDER BY count DESC")
-  List<BrowserClickRow> findBrowserClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<BrowserClickRow> findBrowserClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.botName AS bot, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = true "
           + "GROUP BY c.botName ORDER BY count DESC")
-  List<BotClickRow> findBotClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<BotClickRow> findBotClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.utmCampaign AS campaign, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.utmCampaign IS NOT NULL "
           + "GROUP BY c.utmCampaign ORDER BY count DESC")
-  List<UtmCampaignClickRow> findUtmCampaignClicks(
-      @Param("linkId") LinkId linkId, Pageable pageable);
+  List<UtmCampaignClickRow> findUtmCampaignClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.utmSource AS source, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.utmSource IS NOT NULL "
           + "GROUP BY c.utmSource ORDER BY count DESC")
-  List<UtmSourceClickRow> findUtmSourceClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<UtmSourceClickRow> findUtmSourceClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.utmMedium AS medium, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.utmMedium IS NOT NULL "
           + "GROUP BY c.utmMedium ORDER BY count DESC")
-  List<UtmMediumClickRow> findUtmMediumClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<UtmMediumClickRow> findUtmMediumClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.utmContent AS content, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.utmContent IS NOT NULL "
           + "GROUP BY c.utmContent ORDER BY count DESC")
-  List<UtmContentClickRow> findUtmContentClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<UtmContentClickRow> findUtmContentClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.sourceChannel AS source, COUNT(c) AS count "
@@ -106,45 +104,45 @@ public interface ClickDimensionReadRepository extends Repository<ClickEventEntit
           + "AND c.sourceChannel IS NOT NULL "
           + "GROUP BY c.sourceChannel ORDER BY count DESC")
   List<SourceChannelClickRow> findSourceChannelClicks(
-      @Param("linkId") LinkId linkId, Pageable pageable);
+      @Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.destinationId AS destinationId, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY c.destinationId ORDER BY count DESC")
-  List<DestinationClickRow> findDestinationClicks(@Param("linkId") LinkId linkId);
+  List<DestinationClickRow> findDestinationClicks(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT c.countryCode AS country, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY c.countryCode ORDER BY count DESC")
-  List<CountryClickRow> findCountryClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<CountryClickRow> findCountryClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.regionName AS region, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.regionName IS NOT NULL "
           + "GROUP BY c.regionName ORDER BY count DESC")
-  List<RegionClickRow> findRegionClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<RegionClickRow> findRegionClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.cityName AS city, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.cityName IS NOT NULL "
           + "GROUP BY c.cityName ORDER BY count DESC")
-  List<CityClickRow> findCityClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<CityClickRow> findCityClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.language AS language, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.language IS NOT NULL "
           + "GROUP BY c.language ORDER BY count DESC")
-  List<LanguageClickRow> findLanguageClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<LanguageClickRow> findLanguageClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.asn AS asn, c.asnOrg AS organization, COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId "
           + "AND c.asnOrg IS NOT NULL "
           + "GROUP BY c.asn, c.asnOrg ORDER BY count DESC")
-  List<AsnClickRow> findAsnClicks(@Param("linkId") LinkId linkId, Pageable pageable);
+  List<AsnClickRow> findAsnClicks(@Param("linkId") Long linkId, Pageable pageable);
 }

@@ -71,7 +71,7 @@ public class LinkLookupQueryService {
   /** OG card 의 click count 배지용. bot 제외 휴먼 클릭만. */
   @Transactional(readOnly = true)
   public long countHumanClicks(LinkId linkId) {
-    return clickTotalsRepository.countHumanByLinkId(linkId);
+    return clickTotalsRepository.countHumanByLinkId(linkId.value());
   }
 
   public CachedLink findActiveLink(ShortCode shortCode) {

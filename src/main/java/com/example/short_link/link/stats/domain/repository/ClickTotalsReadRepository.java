@@ -1,6 +1,5 @@
 package com.example.short_link.link.stats.domain.repository;
 
-import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
 import java.time.Instant;
@@ -17,15 +16,15 @@ import org.springframework.data.repository.query.Param;
 public interface ClickTotalsReadRepository extends Repository<ClickEventEntity, Long> {
 
   @Query("SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false")
-  long countHumanByLinkId(@Param("linkId") LinkId linkId);
+  long countHumanByLinkId(@Param("linkId") Long linkId);
 
   @Query("SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = true")
-  long countBotByLinkId(@Param("linkId") LinkId linkId);
+  long countBotByLinkId(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT COUNT(c) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = false AND c.referrer IS NULL")
-  long countDirectByLinkId(@Param("linkId") LinkId linkId);
+  long countDirectByLinkId(@Param("linkId") Long linkId);
 
   /**
    * Clicks attributed to "this link was clicked from the owner's public profile page". Every LINK
@@ -38,22 +37,22 @@ public interface ClickTotalsReadRepository extends Repository<ClickEventEntity, 
       "SELECT COUNT(c) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.sourceChannel LIKE 'profile-%'")
-  long countProfileChannelByLinkId(@Param("linkId") LinkId linkId);
+  long countProfileChannelByLinkId(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT COUNT(DISTINCT c.visitorHash) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = false AND c.visitorHash IS NOT NULL")
-  long countUniqueVisitorsByLinkId(@Param("linkId") LinkId linkId);
+  long countUniqueVisitorsByLinkId(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT MIN(c.clickedAt) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = false")
-  Instant findFirstClickAt(@Param("linkId") LinkId linkId);
+  Instant findFirstClickAt(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT MAX(c.clickedAt) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = false")
-  Instant findLastClickAt(@Param("linkId") LinkId linkId);
+  Instant findLastClickAt(@Param("linkId") Long linkId);
 
   /**
    * OG preview hits are persisted with bot=true and a "preview:..." prefixed bot_name (set by
@@ -63,17 +62,17 @@ public interface ClickTotalsReadRepository extends Repository<ClickEventEntity, 
   @Query(
       "SELECT COUNT(c) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = true AND c.botName LIKE 'preview:%'")
-  long countPreviewByLinkId(@Param("linkId") LinkId linkId);
+  long countPreviewByLinkId(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT COUNT(c) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.bot = false AND c.clickedAt >= :since")
-  long countSinceByLinkId(@Param("linkId") LinkId linkId, @Param("since") Instant since);
+  long countSinceByLinkId(@Param("linkId") Long linkId, @Param("since") Instant since);
 
   @Query(
       "SELECT COUNT(c) FROM ClickEventEntity c "
           + "WHERE c.linkId = :linkId AND c.botName LIKE 'datacenter:%'")
-  long countDatacenterClicks(@Param("linkId") LinkId linkId);
+  long countDatacenterClicks(@Param("linkId") Long linkId);
 
   @Query(
       "SELECT c.linkId AS linkId, COUNT(c) AS count FROM ClickEventEntity c "
