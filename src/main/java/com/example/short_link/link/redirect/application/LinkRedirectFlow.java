@@ -11,6 +11,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.helper.LinkRedirectSupport;
+import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
@@ -72,14 +73,15 @@ public class LinkRedirectFlow {
     CachedLink.Picked picked =
         link.pick(clientCountry, LinkRedirectSupport.normalizeOs(ua.osName()), ua.deviceClass());
     clickRecorder.record(
-        link.linkId(),
-        picked.url(),
-        referrer,
-        userAgent,
-        LinkRedirectSupport.clientIp(req),
-        acceptLanguage,
-        src,
-        picked.destinationId());
+        ClickContext.of(
+                link.linkId(),
+                picked.url(),
+                referrer,
+                userAgent,
+                LinkRedirectSupport.clientIp(req),
+                acceptLanguage)
+            .withSourceChannel(src)
+            .withDestination(picked.destinationId()));
     return new RedirectOutcome.Redirect(picked);
   }
 
