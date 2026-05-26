@@ -79,11 +79,75 @@ public class LinkStatsQueryService {
     Long linkId = link.getId();
     String reportTz = currentOffset(reportZone);
 
+    Totals totals = computeTotals(linkId, link.getCreatedAt());
+    LinkStats.Velocity velocity = computeVelocity(linkId);
+    TimeBuckets time = computeTimeBuckets(linkId, reportTz);
+    ChannelBreakdowns channels = computeChannelBreakdowns(linkId);
+    DeviceBreakdowns devices = computeDeviceBreakdowns(linkId);
+    UtmBreakdowns utm = computeUtmBreakdowns(linkId);
+    GeoBreakdowns geo = computeGeoBreakdowns(linkId);
+    List<LinkStats.DestinationClick> destinations = computeDestinationClicks(link);
+    LinkStats.ReturnRate returnRate = computeReturnRate(linkId);
+    LinkStats.Lifecycle lifecycle = computeLifecycle(linkId);
+
+    List<LinkStats.Insight> insights =
+        insightsCalculator.compute(
+            totals.total,
+            totals.bot,
+            time.heatmap,
+            channels.channels,
+            geo.countries,
+            returnRate,
+            lifecycle,
+            time.daily);
+
+    return new LinkStats(
+        link.getShortCode(),
+        reportZone.getId(),
+        totals.total,
+        totals.human,
+        totals.bot,
+        totals.unique,
+        totals.previewClicks,
+        totals.profileClicks,
+        totals.firstClickAt,
+        totals.lastClickAt,
+        totals.timeToFirstClickMinutes,
+        time.peakHour,
+        velocity,
+        returnRate,
+        lifecycle,
+        time.daily,
+        time.hourly,
+        time.dayOfWeek,
+        time.heatmap,
+        channels.referrers,
+        channels.referrerHosts,
+        channels.channels,
+        devices.devices,
+        devices.os,
+        devices.browsers,
+        devices.botBreakdown,
+        utm.campaigns,
+        utm.sources,
+        utm.mediums,
+        utm.contents,
+        utm.sourceChannels,
+        destinations,
+        geo.countries,
+        geo.regions,
+        geo.cities,
+        geo.languages,
+        geo.asns,
+        geo.datacenterClicks,
+        insights);
+  }
+
+  private Totals computeTotals(Long linkId, Instant linkCreatedAt) {
     long total = clickRepository.countByLinkId(linkId);
     long human = clickReadRepository.countHumanByLinkId(linkId);
     long bot = clickReadRepository.countBotByLinkId(linkId);
     long unique = clickReadRepository.countUniqueVisitorsByLinkId(linkId);
-
     Instant firstClickAt = clickReadRepository.findFirstClickAt(linkId);
     Instant lastClickAt = clickReadRepository.findLastClickAt(linkId);
     long previewClicks = clickReadRepository.countPreviewByLinkId(linkId);
@@ -91,21 +155,36 @@ public class LinkStatsQueryService {
     Long timeToFirstClickMinutes =
         firstClickAt == null
             ? null
-            : Math.max(0, Duration.between(link.getCreatedAt(), firstClickAt).toMinutes());
+            : Math.max(0, Duration.between(linkCreatedAt, firstClickAt).toMinutes());
+    return new Totals(
+        total,
+        human,
+        bot,
+        unique,
+        previewClicks,
+        profileClicks,
+        firstClickAt,
+        lastClickAt,
+        timeToFirstClickMinutes);
+  }
 
+  private LinkStats.Velocity computeVelocity(Long linkId) {
     Instant now = Instant.now();
     long currentHour =
         clickReadRepository.countSinceByLinkId(linkId, now.minus(Duration.ofHours(1)));
     long last24h = clickReadRepository.countSinceByLinkId(linkId, now.minus(BASELINE_WINDOW));
     double baseline = last24h / 24.0;
     double ratio = baseline > 0 ? currentHour / baseline : 0.0;
-    LinkStats.Velocity velocity = new LinkStats.Velocity(currentHour, baseline, ratio);
+    return new LinkStats.Velocity(currentHour, baseline, ratio);
+  }
 
+  private TimeBuckets computeTimeBuckets(Long linkId, String reportTz) {
     List<LinkStats.DailyClick> daily =
-        clickReadRepository.findDailyClicks(linkId, now.minus(DAILY_WINDOW), reportTz).stream()
+        clickReadRepository
+            .findDailyClicks(linkId, Instant.now().minus(DAILY_WINDOW), reportTz)
+            .stream()
             .map(r -> new LinkStats.DailyClick(r.getDay(), r.getCount()))
             .toList();
-
     List<LinkStats.HourClick> hourly =
         clickReadRepository.findHourlyClicks(linkId, reportTz).stream()
             .map(r -> new LinkStats.HourClick(r.getHour(), r.getCount()))
@@ -115,160 +194,107 @@ public class LinkStatsQueryService {
             .max((a, b) -> Long.compare(a.count(), b.count()))
             .map(LinkStats.HourClick::hour)
             .orElse(null);
-
     List<LinkStats.DayOfWeekClick> dayOfWeek =
         clickReadRepository.findDayOfWeekClicks(linkId, reportTz).stream()
             .map(r -> new LinkStats.DayOfWeekClick(mapDayOfWeek(r.getDow()), r.getCount()))
             .toList();
-
     List<LinkStats.HeatmapCell> heatmap =
         clickReadRepository.findHeatmap(linkId, reportTz).stream()
             .map(
                 r -> new LinkStats.HeatmapCell(mapDayOfWeek(r.getDow()), r.getHour(), r.getCount()))
             .toList();
+    return new TimeBuckets(daily, hourly, peakHour, dayOfWeek, heatmap);
+  }
 
+  private ChannelBreakdowns computeChannelBreakdowns(Long linkId) {
     List<LinkStats.ReferrerClick> referrers =
         clickReadRepository.findReferrerClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.ReferrerClick(r.getReferrer(), r.getCount()))
             .toList();
-
     List<LinkStats.ReferrerHostClick> referrerHosts =
         clickReadRepository.findReferrerHostClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.ReferrerHostClick(r.getHost(), r.getCount()))
             .toList();
-
     Map<String, Long> channelTotals = new HashMap<>();
     referrers.forEach(
         r -> channelTotals.merge(channelClassifier.classify(r.referrer()), r.count(), Long::sum));
     long direct = clickReadRepository.countDirectByLinkId(linkId);
-    if (direct > 0) {
-      channelTotals.merge("direct", direct, Long::sum);
-    }
+    if (direct > 0) channelTotals.merge("direct", direct, Long::sum);
     List<LinkStats.ChannelClick> channels =
         channelTotals.entrySet().stream()
             .map(e -> new LinkStats.ChannelClick(e.getKey(), e.getValue()))
             .sorted((a, b) -> Long.compare(b.count(), a.count()))
             .toList();
+    return new ChannelBreakdowns(referrers, referrerHosts, channels);
+  }
 
+  private DeviceBreakdowns computeDeviceBreakdowns(Long linkId) {
     List<LinkStats.DeviceClick> devices =
         clickReadRepository.findDeviceClicks(linkId).stream()
             .map(r -> new LinkStats.DeviceClick(orUnknown(r.getDevice()), r.getCount()))
             .toList();
-
     List<LinkStats.OsClick> os =
         clickReadRepository.findOsClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.OsClick(orUnknown(r.getOs()), r.getCount()))
             .toList();
-
     List<LinkStats.BrowserClick> browsers =
         clickReadRepository.findBrowserClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.BrowserClick(orUnknown(r.getBrowser()), r.getCount()))
             .toList();
-
     List<LinkStats.BotClick> botBreakdown =
         clickReadRepository.findBotClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.BotClick(orUnknown(r.getBot()), r.getCount()))
             .toList();
+    return new DeviceBreakdowns(devices, os, browsers, botBreakdown);
+  }
 
+  private UtmBreakdowns computeUtmBreakdowns(Long linkId) {
     List<LinkStats.UtmCampaignClick> campaigns =
         clickReadRepository.findUtmCampaignClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmCampaignClick(r.getCampaign(), r.getCount()))
             .toList();
-
-    List<LinkStats.UtmSourceClick> utmSources =
+    List<LinkStats.UtmSourceClick> sources =
         clickReadRepository.findUtmSourceClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmSourceClick(r.getSource(), r.getCount()))
             .toList();
-
-    List<LinkStats.UtmMediumClick> utmMediums =
+    List<LinkStats.UtmMediumClick> mediums =
         clickReadRepository.findUtmMediumClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmMediumClick(r.getMedium(), r.getCount()))
             .toList();
-
-    List<LinkStats.UtmContentClick> utmContents =
+    List<LinkStats.UtmContentClick> contents =
         clickReadRepository.findUtmContentClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmContentClick(r.getContent(), r.getCount()))
             .toList();
-
     List<LinkStats.SourceChannelClick> sourceChannels =
         clickReadRepository.findSourceChannelClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.SourceChannelClick(r.getSource(), r.getCount()))
             .toList();
+    return new UtmBreakdowns(campaigns, sources, mediums, contents, sourceChannels);
+  }
 
-    List<LinkStats.DestinationClick> destinations = computeDestinationClicks(link);
-
+  private GeoBreakdowns computeGeoBreakdowns(Long linkId) {
     List<LinkStats.CountryClick> countries =
         clickReadRepository.findCountryClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
             .toList();
-
     List<LinkStats.RegionClick> regions =
         clickReadRepository.findRegionClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.RegionClick(r.getRegion(), r.getCount()))
             .toList();
-
     List<LinkStats.CityClick> cities =
         clickReadRepository.findCityClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.CityClick(r.getCity(), r.getCount()))
             .toList();
-
     List<LinkStats.LanguageClick> languages =
         clickReadRepository.findLanguageClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.LanguageClick(r.getLanguage(), r.getCount()))
             .toList();
-
     List<LinkStats.AsnClick> asns =
         clickReadRepository.findAsnClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.AsnClick(r.getAsn(), r.getOrganization(), r.getCount()))
             .toList();
     long datacenterClicks = clickReadRepository.countDatacenterClicks(linkId);
-
-    LinkStats.ReturnRate returnRate = computeReturnRate(linkId);
-    LinkStats.Lifecycle lifecycle = computeLifecycle(linkId);
-    List<LinkStats.Insight> insights =
-        insightsCalculator.compute(
-            total, bot, heatmap, channels, countries, returnRate, lifecycle, daily);
-
-    return new LinkStats(
-        link.getShortCode(),
-        reportZone.getId(),
-        total,
-        human,
-        bot,
-        unique,
-        previewClicks,
-        profileClicks,
-        firstClickAt,
-        lastClickAt,
-        timeToFirstClickMinutes,
-        peakHour,
-        velocity,
-        returnRate,
-        lifecycle,
-        daily,
-        hourly,
-        dayOfWeek,
-        heatmap,
-        referrers,
-        referrerHosts,
-        channels,
-        devices,
-        os,
-        browsers,
-        botBreakdown,
-        campaigns,
-        utmSources,
-        utmMediums,
-        utmContents,
-        sourceChannels,
-        destinations,
-        countries,
-        regions,
-        cities,
-        languages,
-        asns,
-        datacenterClicks,
-        insights);
+    return new GeoBreakdowns(countries, regions, cities, languages, asns, datacenterClicks);
   }
 
   private List<LinkStats.DestinationClick> computeDestinationClicks(LinkEntity link) {
@@ -368,4 +394,48 @@ public class LinkStatsQueryService {
     ZoneOffset offset = zone.getRules().getOffset(Instant.now());
     return offset.getId().equals("Z") ? "+00:00" : offset.getId();
   }
+
+  private record Totals(
+      long total,
+      long human,
+      long bot,
+      long unique,
+      long previewClicks,
+      long profileClicks,
+      Instant firstClickAt,
+      Instant lastClickAt,
+      Long timeToFirstClickMinutes) {}
+
+  private record TimeBuckets(
+      List<LinkStats.DailyClick> daily,
+      List<LinkStats.HourClick> hourly,
+      Integer peakHour,
+      List<LinkStats.DayOfWeekClick> dayOfWeek,
+      List<LinkStats.HeatmapCell> heatmap) {}
+
+  private record ChannelBreakdowns(
+      List<LinkStats.ReferrerClick> referrers,
+      List<LinkStats.ReferrerHostClick> referrerHosts,
+      List<LinkStats.ChannelClick> channels) {}
+
+  private record DeviceBreakdowns(
+      List<LinkStats.DeviceClick> devices,
+      List<LinkStats.OsClick> os,
+      List<LinkStats.BrowserClick> browsers,
+      List<LinkStats.BotClick> botBreakdown) {}
+
+  private record UtmBreakdowns(
+      List<LinkStats.UtmCampaignClick> campaigns,
+      List<LinkStats.UtmSourceClick> sources,
+      List<LinkStats.UtmMediumClick> mediums,
+      List<LinkStats.UtmContentClick> contents,
+      List<LinkStats.SourceChannelClick> sourceChannels) {}
+
+  private record GeoBreakdowns(
+      List<LinkStats.CountryClick> countries,
+      List<LinkStats.RegionClick> regions,
+      List<LinkStats.CityClick> cities,
+      List<LinkStats.LanguageClick> languages,
+      List<LinkStats.AsnClick> asns,
+      long datacenterClicks) {}
 }
