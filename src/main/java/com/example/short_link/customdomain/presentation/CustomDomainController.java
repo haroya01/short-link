@@ -1,7 +1,10 @@
 package com.example.short_link.customdomain.presentation;
 
-import com.example.short_link.customdomain.application.CustomDomainService;
-import com.example.short_link.customdomain.application.CustomDomainService.DomainSummary;
+import com.example.short_link.customdomain.application.dto.DomainSummary;
+import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
+import com.example.short_link.customdomain.application.write.DeleteCustomDomainUseCase;
+import com.example.short_link.customdomain.application.write.RegisterCustomDomainUseCase;
+import com.example.short_link.customdomain.application.write.VerifyCustomDomainUseCase;
 import com.example.short_link.customdomain.presentation.request.CustomDomainRegisterRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -21,28 +24,31 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class CustomDomainController {
 
-  private final CustomDomainService service;
+  private final CustomDomainQueryService queryService;
+  private final RegisterCustomDomainUseCase register;
+  private final VerifyCustomDomainUseCase verify;
+  private final DeleteCustomDomainUseCase delete;
 
   @GetMapping
   public List<DomainSummary> list(@AuthenticationPrincipal Long userId) {
-    return service.list(userId);
+    return queryService.list(userId);
   }
 
   @PostMapping
   public ResponseEntity<DomainSummary> register(
       @AuthenticationPrincipal Long userId, @RequestBody CustomDomainRegisterRequest request) {
-    DomainSummary saved = service.register(userId, request.domain());
+    DomainSummary saved = register.execute(userId, request.domain());
     return ResponseEntity.status(HttpStatus.CREATED).body(saved);
   }
 
   @PostMapping("/{id}/verify")
   public DomainSummary verify(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return service.verify(userId, id);
+    return verify.execute(userId, id);
   }
 
   @DeleteMapping("/{id}")
   public ResponseEntity<Void> delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    service.delete(userId, id);
+    delete.execute(userId, id);
     return ResponseEntity.noContent().build();
   }
 }
