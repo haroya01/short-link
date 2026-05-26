@@ -11,6 +11,8 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
+import com.example.short_link.link.webhook.exception.WebhookErrorCode;
+import com.example.short_link.link.webhook.exception.WebhookException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
@@ -86,8 +88,8 @@ class WebhookOwnershipTest {
 
     assertThatThrownBy(() -> ownership.ownedHook(7L, "abc", 99L))
         .isInstanceOfSatisfying(
-            LinkException.class,
-            e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.WEBHOOK_NOT_FOUND));
+            WebhookException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(WebhookErrorCode.WEBHOOK_NOT_FOUND));
   }
 
   @Test
@@ -99,7 +101,7 @@ class WebhookOwnershipTest {
 
     assertThatThrownBy(() -> ownership.ownedHook(7L, "abc", 99L))
         .isInstanceOfSatisfying(
-            LinkException.class,
-            e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.WEBHOOK_NOT_FOUND));
+            WebhookException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(WebhookErrorCode.WEBHOOK_NOT_FOUND));
   }
 }

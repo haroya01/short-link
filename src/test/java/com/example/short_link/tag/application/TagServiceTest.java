@@ -5,8 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.tag.application.TagService.TagSummary;
+import com.example.short_link.tag.exception.TagException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -49,7 +49,7 @@ class TagServiceTest {
     UserEntity user = userRepository.save(new UserEntity("tag2@example.com", "google", "g-tag2"));
     tagService.create(user.getId(), "shared", null);
     assertThatThrownBy(() -> tagService.create(user.getId(), "shared", null))
-        .isInstanceOf(LinkException.class);
+        .isInstanceOf(TagException.class);
   }
 
   @Test

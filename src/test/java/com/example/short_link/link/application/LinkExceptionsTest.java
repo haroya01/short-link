@@ -9,12 +9,6 @@ import org.junit.jupiter.api.Test;
 class LinkExceptionsTest {
 
   @Test
-  void duplicateTagNameCarriesName() {
-    LinkException ex = new LinkException(LinkErrorCode.DUPLICATE_TAG_NAME, "blog");
-    assertThat(ex).hasMessageContaining("blog");
-  }
-
-  @Test
   void linkViewLimitExceededCarriesShortCode() {
     LinkException ex = new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, "abc");
     assertThat(ex).hasMessageContaining("abc");
@@ -24,13 +18,6 @@ class LinkExceptionsTest {
   void customDomainNotVerifiedCarriesDomain() {
     LinkException ex = new LinkException(LinkErrorCode.CUSTOM_DOMAIN_NOT_VERIFIED, "example.com");
     assertThat(ex).hasMessageContaining("example.com");
-  }
-
-  @Test
-  void tooManyWebhooksCarriesLimit() {
-    LinkException ex = new LinkException(LinkErrorCode.TOO_MANY_WEBHOOKS, 5);
-    assertThat(ex.properties().get("limit")).isEqualTo(5);
-    assertThat(ex).hasMessageContaining("5");
   }
 
   @Test
@@ -57,12 +44,6 @@ class LinkExceptionsTest {
   void linkExpiredCarriesCode() {
     LinkException ex = new LinkException(LinkErrorCode.LINK_EXPIRED, "abc");
     assertThat(ex).hasMessageContaining("abc");
-  }
-
-  @Test
-  void invalidWebhookUrlMessage() {
-    LinkException ex = new LinkException(LinkErrorCode.INVALID_WEBHOOK_URL);
-    assertThat(ex).hasMessageContaining("webhook url");
   }
 
   @Test

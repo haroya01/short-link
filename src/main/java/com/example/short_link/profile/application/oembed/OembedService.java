@@ -33,14 +33,14 @@ public class OembedService {
    * transient outage.
    */
   @Cacheable(value = CACHE, key = "#url")
-  public OembedResponse fetch(String url) {
+  public OembedMetadata fetch(String url) {
     EmbedProvider provider =
         EmbedProvider.resolve(url)
             .orElseThrow(() -> new ProfileException(ProfileErrorCode.OEMBED_NOT_APPLICABLE));
     return fetchFromProvider(provider, url);
   }
 
-  private OembedResponse fetchFromProvider(EmbedProvider provider, String url) {
+  private OembedMetadata fetchFromProvider(EmbedProvider provider, String url) {
     try {
       Map<String, Object> body =
           restClient
@@ -52,8 +52,8 @@ public class OembedService {
               .retrieve()
               .onStatus(HttpStatusCode::isError, (req, res) -> {})
               .body(JSON_MAP);
-      if (body == null) return OembedResponse.empty(provider.id());
-      return new OembedResponse(
+      if (body == null) return OembedMetadata.empty(provider.id());
+      return new OembedMetadata(
           provider.id(),
           asString(body.get("type")),
           asString(body.get("title")),
@@ -64,7 +64,7 @@ public class OembedService {
           asInt(body.get("height")));
     } catch (RuntimeException ex) {
       log.debug("oembed fetch failed [{}] {}: {}", provider.id(), url, ex.getMessage());
-      return OembedResponse.empty(provider.id());
+      return OembedMetadata.empty(provider.id());
     }
   }
 
