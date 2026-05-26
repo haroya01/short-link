@@ -3,12 +3,12 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
-import com.example.short_link.campaign.application.dto.CampaignUpdateRequest;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
 import com.example.short_link.campaign.exception.CampaignException;
+import com.example.short_link.campaign.presentation.request.CampaignCreateRequest;
+import com.example.short_link.campaign.presentation.request.CampaignUpdateRequest;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
 import java.util.List;
@@ -59,7 +59,7 @@ class CampaignServiceTest {
             null,
             null);
 
-    CampaignEntity created = createUseCase.execute(100L, req);
+    CampaignEntity created = createUseCase.execute(req.toCommand(100L));
 
     assertThat(created.getId()).isNotNull();
     assertThat(created.getStatus()).isEqualTo(CampaignStatus.ACTIVE);
@@ -77,7 +77,7 @@ class CampaignServiceTest {
             null,
             null);
 
-    CampaignEntity created = createUseCase.execute(100L, req);
+    CampaignEntity created = createUseCase.execute(req.toCommand(100L));
 
     assertThat(created.getStatus()).isEqualTo(CampaignStatus.DRAFT);
     assertThat(created.getPostEndAction()).isEqualTo(CampaignPostEndAction.KEEP);
@@ -89,7 +89,7 @@ class CampaignServiceTest {
     CampaignCreateRequest req =
         new CampaignCreateRequest("bad", start, start, null, null, null, null);
 
-    assertThatThrownBy(() -> createUseCase.execute(100L, req))
+    assertThatThrownBy(() -> createUseCase.execute(req.toCommand(100L)))
         .isInstanceOf(CampaignException.class);
   }
 
@@ -105,7 +105,7 @@ class CampaignServiceTest {
             "  ",
             null);
 
-    assertThatThrownBy(() -> createUseCase.execute(100L, req))
+    assertThatThrownBy(() -> createUseCase.execute(req.toCommand(100L)))
         .isInstanceOf(CampaignException.class);
   }
 
@@ -113,9 +113,9 @@ class CampaignServiceTest {
   void detailFailsForOtherOwnerWith404Semantic() {
     CampaignEntity created =
         createUseCase.execute(
-            200L,
             new CampaignCreateRequest(
-                "mine", null, Instant.now().plusSeconds(3600), null, null, null, null));
+                    "mine", null, Instant.now().plusSeconds(3600), null, null, null, null)
+                .toCommand(200L));
 
     assertThatThrownBy(() -> query.detail(created.getId(), 999L))
         .isInstanceOf(CampaignException.class);
@@ -126,23 +126,22 @@ class CampaignServiceTest {
   void updatePolicyChangesFieldsAndKeepsImmutableStartsAt() {
     CampaignEntity created =
         createUseCase.execute(
-            300L,
             new CampaignCreateRequest(
-                "orig", null, Instant.now().plusSeconds(3600), null, null, null, null));
+                    "orig", null, Instant.now().plusSeconds(3600), null, null, null, null)
+                .toCommand(300L));
     Instant originalStart = created.getStartsAt();
 
     Instant newEnd = Instant.now().plusSeconds(7200);
     CampaignEntity updated =
         updateUseCase.execute(
-            created.getId(),
-            300L,
             new CampaignUpdateRequest(
-                "renamed",
-                newEnd,
-                "https://new.example.com",
-                CampaignPostEndAction.REDIRECT,
-                "https://post.example.com",
-                null));
+                    "renamed",
+                    newEnd,
+                    "https://new.example.com",
+                    CampaignPostEndAction.REDIRECT,
+                    "https://post.example.com",
+                    null)
+                .toCommand(created.getId(), 300L));
 
     assertThat(updated.getName()).isEqualTo("renamed");
     assertThat(updated.getEndsAt()).isEqualTo(newEnd);
@@ -154,17 +153,16 @@ class CampaignServiceTest {
   void archiveBlocksFurtherPolicyUpdates() {
     CampaignEntity created =
         createUseCase.execute(
-            400L,
             new CampaignCreateRequest(
-                "arch", null, Instant.now().plusSeconds(3600), null, null, null, null));
+                    "arch", null, Instant.now().plusSeconds(3600), null, null, null, null)
+                .toCommand(400L));
     archiveUseCase.execute(created.getId(), 400L);
 
     assertThatThrownBy(
             () ->
                 updateUseCase.execute(
-                    created.getId(),
-                    400L,
-                    new CampaignUpdateRequest("x", null, null, null, null, null)))
+                    new CampaignUpdateRequest("x", null, null, null, null, null)
+                        .toCommand(created.getId(), 400L)))
         .isInstanceOf(CampaignException.class);
   }
 
@@ -173,14 +171,14 @@ class CampaignServiceTest {
     Instant now = Instant.now();
     CampaignEntity future =
         createUseCase.execute(
-            500L,
             new CampaignCreateRequest(
-                "future", now.plusSeconds(60), now.plusSeconds(3600), null, null, null, null));
+                    "future", now.plusSeconds(60), now.plusSeconds(3600), null, null, null, null)
+                .toCommand(500L));
     CampaignEntity past =
         createUseCase.execute(
-            500L,
             new CampaignCreateRequest(
-                "past", now.minusSeconds(120), now.plusSeconds(3600), null, null, null, null));
+                    "past", now.minusSeconds(120), now.plusSeconds(3600), null, null, null, null)
+                .toCommand(500L));
 
     int activated = activateUseCase.execute(now);
 

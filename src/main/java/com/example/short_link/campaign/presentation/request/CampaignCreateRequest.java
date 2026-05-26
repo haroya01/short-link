@@ -1,5 +1,6 @@
-package com.example.short_link.campaign.application.dto;
+package com.example.short_link.campaign.presentation.request;
 
+import com.example.short_link.campaign.application.write.CreateCampaignCommand;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -19,4 +20,17 @@ public record CampaignCreateRequest(
     @URL @Size(max = 2048) String defaultDestinationUrl,
     CampaignPostEndAction postEndAction,
     @URL @Size(max = 2048) String postEndDestinationUrl,
-    @Size(max = 500) String postEndMessage) {}
+    @Size(max = 500) String postEndMessage) {
+
+  public CreateCampaignCommand toCommand(Long ownerId) {
+    return new CreateCampaignCommand(
+        ownerId,
+        name,
+        startsAt,
+        endsAt,
+        defaultDestinationUrl,
+        postEndAction,
+        postEndDestinationUrl,
+        postEndMessage);
+  }
+}
