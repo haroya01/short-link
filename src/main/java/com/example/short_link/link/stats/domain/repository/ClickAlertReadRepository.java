@@ -1,5 +1,6 @@
 package com.example.short_link.link.stats.domain.repository;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CountryClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DeviceClickRow;
@@ -27,7 +28,7 @@ public interface ClickAlertReadRepository extends Repository<ClickEventEntity, L
               + "GROUP BY source_channel ORDER BY count DESC LIMIT 1",
       nativeQuery = true)
   Optional<SourceChannelClickRow> findTopChannelByLinkIdAndRange(
-      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+      @Param("linkId") LinkId linkId, @Param("from") Instant from, @Param("to") Instant to);
 
   @Query(
       value =
@@ -37,7 +38,7 @@ public interface ClickAlertReadRepository extends Repository<ClickEventEntity, L
               + "GROUP BY country_code ORDER BY count DESC LIMIT 1",
       nativeQuery = true)
   Optional<CountryClickRow> findTopCountryByLinkIdAndRange(
-      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+      @Param("linkId") LinkId linkId, @Param("from") Instant from, @Param("to") Instant to);
 
   @Query(
       value =
@@ -47,7 +48,7 @@ public interface ClickAlertReadRepository extends Repository<ClickEventEntity, L
               + "GROUP BY device_class ORDER BY count DESC LIMIT 1",
       nativeQuery = true)
   Optional<DeviceClickRow> findTopDeviceByLinkIdAndRange(
-      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("to") Instant to);
+      @Param("linkId") LinkId linkId, @Param("from") Instant from, @Param("to") Instant to);
 
   @Query(
       value =
@@ -59,7 +60,7 @@ public interface ClickAlertReadRepository extends Repository<ClickEventEntity, L
               + "ORDER BY count DESC LIMIT 1",
       nativeQuery = true)
   Optional<HourClickRow> findPeakHourByLinkIdAndRange(
-      @Param("linkId") Long linkId,
+      @Param("linkId") LinkId linkId,
       @Param("from") Instant from,
       @Param("to") Instant to,
       @Param("tz") String tz);
@@ -75,5 +76,5 @@ public interface ClickAlertReadRepository extends Repository<ClickEventEntity, L
               + "GROUP BY referrer_host ORDER BY count DESC LIMIT 1",
       nativeQuery = true)
   Optional<ReferrerHostClickRow> findTopReferrerHostByLinkIdSince(
-      @Param("linkId") Long linkId, @Param("since") Instant since);
+      @Param("linkId") LinkId linkId, @Param("since") Instant since);
 }

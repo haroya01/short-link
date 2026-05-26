@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.application.helper;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
@@ -24,7 +25,7 @@ public class DailySummaryAssembler {
   private final ClickAlertReadRepository clickAlerts;
 
   public DailySummaryPayload assemble(
-      Long linkId, ShortCode shortCode, LocalDate localDay, ZoneId tz) {
+      LinkId linkId, ShortCode shortCode, LocalDate localDay, ZoneId tz) {
     Instant windowStart = localDay.atStartOfDay(tz).toInstant();
     Instant windowEnd = localDay.plusDays(1).atStartOfDay(tz).toInstant();
     Instant prevStart = localDay.minusDays(1).atStartOfDay(tz).toInstant();

@@ -101,7 +101,7 @@ public class ThresholdSpikeDetector {
     Instant since = now.minus(Duration.ofMinutes(windowMinutes));
     long count = clickTotals.countSinceByLinkId(hook.getLinkId(), since);
     if (count < threshold) return;
-    LinkEntity link = links.findById(hook.getLinkId()).orElse(null);
+    LinkEntity link = links.findById(hook.getLinkId().value()).orElse(null);
     if (link == null) return;
     String topReferrer =
         clickAlerts

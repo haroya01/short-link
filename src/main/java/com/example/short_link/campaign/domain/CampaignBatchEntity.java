@@ -2,6 +2,7 @@ package com.example.short_link.campaign.domain;
 
 import com.example.short_link.campaign.domain.repository.*;
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -27,7 +28,7 @@ public class CampaignBatchEntity extends BaseTimeEntity {
 
   /** 이 batch 가 대표하는 단축 링크. Batch:Link = 1:1 (DB 에서 UNIQUE). */
   @Column(name = "link_id", nullable = false)
-  private Long linkId;
+  private LinkId linkId;
 
   @Column(nullable = false, length = 255)
   private String name;
@@ -47,7 +48,7 @@ public class CampaignBatchEntity extends BaseTimeEntity {
 
   public CampaignBatchEntity(
       Long campaignId,
-      Long linkId,
+      LinkId linkId,
       String name,
       String distributorName,
       String areaLabel,

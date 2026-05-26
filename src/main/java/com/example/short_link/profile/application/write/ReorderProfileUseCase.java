@@ -53,7 +53,7 @@ public class ReorderProfileUseCase {
             LinkProfileBindingEntity binding =
                 profileBindingRepository
                     .findById(link.getId())
-                    .orElseGet(() -> new LinkProfileBindingEntity(link.getId()));
+                    .orElseGet(() -> new LinkProfileBindingEntity(link.linkId()));
             binding.changeProfileOrder(next);
             profileBindingRepository.save(binding);
           }

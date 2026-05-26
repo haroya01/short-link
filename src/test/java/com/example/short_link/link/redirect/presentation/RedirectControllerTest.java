@@ -71,7 +71,7 @@ class RedirectControllerTest {
                 .header("User-Agent", "Mozilla/5.0 (iPhone)"))
         .andExpect(status().isFound());
 
-    assertThat(clickEventRepository.countByLinkId(link.getId())).isEqualTo(1);
+    assertThat(clickEventRepository.countByLinkId(link.linkId())).isEqualTo(1);
   }
 
   @Test
@@ -113,9 +113,9 @@ class RedirectControllerTest {
 
     // Preview hits now persist as bot click_event rows so per-link stats can split \"social
     // preview\" out of generic bot traffic. They must NOT count toward human clicks.
-    assertThat(clickEventRepository.countByLinkId(link.getId())).isEqualTo(1);
-    assertThat(clickRepository.countHumanByLinkId(link.getId())).isZero();
-    assertThat(clickRepository.countBotByLinkId(link.getId())).isEqualTo(1);
+    assertThat(clickEventRepository.countByLinkId(link.linkId())).isEqualTo(1);
+    assertThat(clickRepository.countHumanByLinkId(link.linkId())).isZero();
+    assertThat(clickRepository.countBotByLinkId(link.linkId())).isEqualTo(1);
   }
 
   @Test

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import org.junit.jupiter.api.Test;
 
@@ -19,7 +20,7 @@ class DeleteDestinationUseCaseTest {
   @Test
   void executeDeletesOwnedDestination() {
     LinkDestinationEntity dest =
-        new LinkDestinationEntity(1L, "https://dest.com", 50, null, null, null, null);
+        new LinkDestinationEntity(new LinkId(1L), "https://dest.com", 50, null, null, null, null);
     when(ownership.ownedDestination(42L, new ShortCode("abc1234"), 99L)).thenReturn(dest);
 
     useCase.execute(42L, new ShortCode("abc1234"), 99L);

@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
@@ -66,7 +67,7 @@ class WeeklyInsightsServiceTest {
         .thenReturn(80L)
         .thenReturn(40L);
     LinkClickCount top = mock(LinkClickCount.class);
-    when(top.getLinkId()).thenReturn(1L);
+    when(top.getLinkId()).thenReturn(new LinkId(1L));
     when(top.getCount()).thenReturn(50L);
     when(clickRepository.findTopLinksByUserIdAndRange(anyLong(), any(), any(), any(Pageable.class)))
         .thenReturn(List.of(top));
@@ -76,7 +77,7 @@ class WeeklyInsightsServiceTest {
     UtmSourceClickRow source = mock(UtmSourceClickRow.class);
     when(source.getSource()).thenReturn("twitter");
     when(clickRepository.findTopUtmSourcesByLinkIdAndRange(
-            anyLong(), any(), any(), any(Pageable.class)))
+            any(LinkId.class), any(), any(), any(Pageable.class)))
         .thenReturn(List.of(source));
     UserEntity user = new UserEntity("u@x", "google", "g-1");
     user.changeTimezone("Asia/Seoul");
@@ -95,7 +96,7 @@ class WeeklyInsightsServiceTest {
     assertThat(out.deltaPercent()).isEqualTo(1.0);
     assertThat(out.humanRatio()).isEqualTo(0.8);
     assertThat(out.topLink()).isNotNull();
-    assertThat(out.topLink().shortCode()).isEqualTo("abc");
+    assertThat(out.topLink().shortCode().value()).isEqualTo("abc");
     assertThat(out.topLink().clicks()).isEqualTo(50L);
     assertThat(out.topLink().topUtmSource()).isEqualTo("twitter");
     assertThat(out.peak()).isNotNull();
@@ -109,7 +110,7 @@ class WeeklyInsightsServiceTest {
     when(clickRepository.countByUserIdAndRange(anyLong(), any(), any())).thenReturn(5L);
     when(clickRepository.countHumanByUserIdAndRange(anyLong(), any(), any())).thenReturn(5L);
     LinkClickCount top = mock(LinkClickCount.class);
-    when(top.getLinkId()).thenReturn(99L);
+    when(top.getLinkId()).thenReturn(new LinkId(99L));
     when(clickRepository.findTopLinksByUserIdAndRange(anyLong(), any(), any(), any(Pageable.class)))
         .thenReturn(List.of(top));
     when(linkRepository.findById(99L)).thenReturn(Optional.empty());

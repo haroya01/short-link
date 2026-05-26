@@ -28,7 +28,7 @@ class BatchPolicyApplier {
     List<CampaignBatchEntity> batches =
         batchRepository.findByCampaignIdOrderByCreatedAtAsc(c.getId());
     for (CampaignBatchEntity batch : batches) {
-      LinkEntity link = linkRepository.findById(batch.getLinkId()).orElse(null);
+      LinkEntity link = linkRepository.findById(batch.getLinkId().value()).orElse(null);
       if (link == null) continue;
       switch (c.getPostEndAction()) {
         case KEEP:
@@ -49,7 +49,7 @@ class BatchPolicyApplier {
     LinkExpirationPolicyEntity policy =
         expirationPolicyRepository
             .findById(link.getId())
-            .orElseGet(() -> new LinkExpirationPolicyEntity(link.getId()));
+            .orElseGet(() -> new LinkExpirationPolicyEntity(link.linkId()));
     policy.changeExpiredMessage(link.getExpiredMessage());
     policy.changeExpiredRedirectUrl(link.getExpiredRedirectUrl());
     expirationPolicyRepository.save(policy);

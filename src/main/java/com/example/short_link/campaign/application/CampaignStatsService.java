@@ -125,7 +125,7 @@ public class CampaignStatsService {
   private static Map<Long, Long> toMap(List<LinkClickCount> rows) {
     Map<Long, Long> out = new HashMap<>();
     for (LinkClickCount row : rows) {
-      out.put(row.getLinkId(), row.getCount());
+      out.put(row.getLinkId().value(), row.getCount());
     }
     return out;
   }

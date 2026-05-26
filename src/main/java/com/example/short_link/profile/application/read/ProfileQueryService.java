@@ -87,7 +87,7 @@ public class ProfileQueryService {
     if (!links.isEmpty()) {
       List<Long> ids = links.stream().map(LinkEntity::getId).toList();
       for (LinkClickCount row : clickRepository.countsByLinkIds(ids)) {
-        counts.put(row.getLinkId(), row.getCount());
+        counts.put(row.getLinkId().value(), row.getCount());
       }
     }
     List<PublicProfile.ProfileEntry> out = new ArrayList<>(links.size() + blocks.size());

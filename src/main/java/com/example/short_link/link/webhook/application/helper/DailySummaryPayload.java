@@ -27,7 +27,7 @@ public record DailySummaryPayload(
   public Map<String, Object> toJsonMap() {
     Map<String, Object> root = new LinkedHashMap<>();
     root.put("type", "daily_summary");
-    root.put("shortCode", shortCode);
+    root.put("shortCode", shortCode.value());
     root.put("windowStart", windowStartLocal);
     root.put("windowEnd", windowEndLocal);
 

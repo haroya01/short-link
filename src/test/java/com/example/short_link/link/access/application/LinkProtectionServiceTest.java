@@ -54,9 +54,9 @@ class LinkProtectionServiceTest {
         linkRepository.save(new LinkEntity("https://example.com", "vw00001", user.getId(), null));
     service.update(user.getId(), new ShortCode("vw00001"), null, 2);
 
-    int first = linkRepository.incrementViewCountIfBelowLimit(link.getId());
-    int second = linkRepository.incrementViewCountIfBelowLimit(link.getId());
-    int third = linkRepository.incrementViewCountIfBelowLimit(link.getId());
+    int first = linkRepository.incrementViewCountIfBelowLimit(link.linkId());
+    int second = linkRepository.incrementViewCountIfBelowLimit(link.linkId());
+    int third = linkRepository.incrementViewCountIfBelowLimit(link.linkId());
     assertThat(first).isEqualTo(1);
     assertThat(second).isEqualTo(1);
     assertThat(third).isZero();

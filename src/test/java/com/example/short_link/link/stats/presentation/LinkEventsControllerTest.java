@@ -38,7 +38,7 @@ class LinkEventsControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "evt001", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.4")
             .deviceClass("desktop")
@@ -95,7 +95,7 @@ class LinkEventsControllerTest {
     for (int i = 0; i < 5; i++) {
       clickRepository.save(
           ClickEventEntity.builder()
-              .linkId(link.getId())
+              .linkId(link.linkId())
               .userAgent("ua")
               .clientIp("1.2.3." + i)
               .deviceClass("desktop")

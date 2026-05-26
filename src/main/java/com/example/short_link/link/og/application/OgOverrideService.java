@@ -42,7 +42,7 @@ public class OgOverrideService {
     LinkOgMetadataEntity ogMeta =
         ogMetadataRepository
             .findById(link.getId())
-            .orElseGet(() -> new LinkOgMetadataEntity(link.getId()));
+            .orElseGet(() -> new LinkOgMetadataEntity(link.linkId()));
     ogMeta.changeOverride(title, description, image);
     ogMetadataRepository.save(ogMeta);
     cacheEviction.evictByUserId(userId);

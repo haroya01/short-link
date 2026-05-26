@@ -70,11 +70,11 @@ public class WeeklyInsightsService {
         clickRanges.findTopLinksByUserIdAndRange(userId, from, to, PageRequest.ofSize(1));
     if (top.isEmpty()) return null;
     LinkClickCount best = top.get(0);
-    LinkEntity link = linkRepository.findById(best.getLinkId()).orElse(null);
+    LinkEntity link = linkRepository.findById(best.getLinkId().value()).orElse(null);
     if (link == null) return null;
     List<UtmSourceClickRow> utm =
         clickRanges.findTopUtmSourcesByLinkIdAndRange(
-            link.getId(), from, to, PageRequest.ofSize(1));
+            link.linkId(), from, to, PageRequest.ofSize(1));
     String topSource = utm.isEmpty() ? null : utm.get(0).getSource();
     return new WeeklyInsights.TopLink(
         link.getShortCode(), link.getOriginalUrl(), best.getCount(), topSource);

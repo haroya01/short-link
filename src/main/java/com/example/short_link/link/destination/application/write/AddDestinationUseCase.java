@@ -41,14 +41,14 @@ public class AddDestinationUseCase {
     if (!isValidUrl(url)) {
       throw new DestinationException(DestinationErrorCode.INVALID_DESTINATION_URL);
     }
-    if (repository.countByLinkId(link.getId()) >= MAX_PER_LINK) {
+    if (repository.countByLinkId(link.linkId()) >= MAX_PER_LINK) {
       throw new DestinationException(DestinationErrorCode.TOO_MANY_DESTINATIONS, MAX_PER_LINK);
     }
     int w = clampWeight(weight);
     LinkDestinationEntity saved =
         repository.save(
             new LinkDestinationEntity(
-                link.getId(), url.trim(), w, sanitizeLabel(label), countryCode, deviceClass, os));
+                link.linkId(), url.trim(), w, sanitizeLabel(label), countryCode, deviceClass, os));
     meterRegistry.counter("link.destination.added").increment();
     return toSummary(saved);
   }

@@ -38,7 +38,7 @@ public class LinkTagQueryService {
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     List<Long> tagIds =
-        linkTagRepository.findAllByLinkId(link.getId()).stream()
+        linkTagRepository.findAllByLinkId(link.linkId()).stream()
             .map(LinkTagEntity::getTagId)
             .toList();
     if (tagIds.isEmpty()) return List.of();
@@ -58,7 +58,8 @@ public class LinkTagQueryService {
     }
     Map<Long, List<String>> out = new HashMap<>();
     for (LinkTagEntity j : joins) {
-      out.computeIfAbsent(j.getLinkId(), k -> new ArrayList<>()).add(tagNames.get(j.getTagId()));
+      out.computeIfAbsent(j.getLinkId().value(), k -> new ArrayList<>())
+          .add(tagNames.get(j.getTagId()));
     }
     out.values().forEach(Collections::sort);
     return out;

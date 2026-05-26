@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import org.junit.jupiter.api.Test;
 
@@ -15,16 +16,16 @@ class IncrementViewCountUseCaseTest {
 
   @Test
   void executeReturnsRowsUpdatedFromRepository() {
-    when(repository.incrementViewCountIfBelowLimit(7L)).thenReturn(1);
+    when(repository.incrementViewCountIfBelowLimit(new LinkId(7L))).thenReturn(1);
 
-    assertThat(useCase.execute(new IncrementViewCountCommand(7L))).isEqualTo(1);
+    assertThat(useCase.execute(new IncrementViewCountCommand(new LinkId(7L)))).isEqualTo(1);
   }
 
   @Test
   void executeReturnsZeroWhenLimitReached() {
-    when(repository.incrementViewCountIfBelowLimit(7L)).thenReturn(0);
+    when(repository.incrementViewCountIfBelowLimit(new LinkId(7L))).thenReturn(0);
 
-    assertThat(useCase.execute(new IncrementViewCountCommand(7L))).isZero();
+    assertThat(useCase.execute(new IncrementViewCountCommand(new LinkId(7L)))).isZero();
   }
 
   @Test

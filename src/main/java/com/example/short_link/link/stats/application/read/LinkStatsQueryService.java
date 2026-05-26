@@ -6,6 +6,7 @@ import com.example.short_link.link.classifier.application.ReferrerChannelClassif
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
@@ -83,7 +84,7 @@ public class LinkStatsQueryService {
   }
 
   private LinkStats computeStats(LinkEntity link, ZoneId reportZone) {
-    Long linkId = link.getId();
+    LinkId linkId = link.linkId();
     String reportTz = currentOffset(reportZone);
 
     Totals totals = computeTotals(linkId, link.getCreatedAt());
@@ -150,7 +151,7 @@ public class LinkStatsQueryService {
         insights);
   }
 
-  private Totals computeTotals(Long linkId, Instant linkCreatedAt) {
+  private Totals computeTotals(LinkId linkId, Instant linkCreatedAt) {
     long total = clickRepository.countByLinkId(linkId);
     long human = clickTotals.countHumanByLinkId(linkId);
     long bot = clickTotals.countBotByLinkId(linkId);
@@ -175,7 +176,7 @@ public class LinkStatsQueryService {
         timeToFirstClickMinutes);
   }
 
-  private LinkStats.Velocity computeVelocity(Long linkId) {
+  private LinkStats.Velocity computeVelocity(LinkId linkId) {
     Instant now = Instant.now();
     long currentHour = clickTotals.countSinceByLinkId(linkId, now.minus(Duration.ofHours(1)));
     long last24h = clickTotals.countSinceByLinkId(linkId, now.minus(BASELINE_WINDOW));
@@ -184,7 +185,7 @@ public class LinkStatsQueryService {
     return new LinkStats.Velocity(currentHour, baseline, ratio);
   }
 
-  private TimeBuckets computeTimeBuckets(Long linkId, String reportTz) {
+  private TimeBuckets computeTimeBuckets(LinkId linkId, String reportTz) {
     List<LinkStats.DailyClick> daily =
         clickTime.findDailyClicks(linkId, Instant.now().minus(DAILY_WINDOW), reportTz).stream()
             .map(r -> new LinkStats.DailyClick(r.getDay(), r.getCount()))
@@ -210,7 +211,7 @@ public class LinkStatsQueryService {
     return new TimeBuckets(daily, hourly, peakHour, dayOfWeek, heatmap);
   }
 
-  private ChannelBreakdowns computeChannelBreakdowns(Long linkId) {
+  private ChannelBreakdowns computeChannelBreakdowns(LinkId linkId) {
     List<LinkStats.ReferrerClick> referrers =
         clickDimensions.findReferrerClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.ReferrerClick(r.getReferrer(), r.getCount()))
@@ -232,7 +233,7 @@ public class LinkStatsQueryService {
     return new ChannelBreakdowns(referrers, referrerHosts, channels);
   }
 
-  private DeviceBreakdowns computeDeviceBreakdowns(Long linkId) {
+  private DeviceBreakdowns computeDeviceBreakdowns(LinkId linkId) {
     List<LinkStats.DeviceClick> devices =
         clickDimensions.findDeviceClicks(linkId).stream()
             .map(r -> new LinkStats.DeviceClick(orUnknown(r.getDevice()), r.getCount()))
@@ -252,7 +253,7 @@ public class LinkStatsQueryService {
     return new DeviceBreakdowns(devices, os, browsers, botBreakdown);
   }
 
-  private UtmBreakdowns computeUtmBreakdowns(Long linkId) {
+  private UtmBreakdowns computeUtmBreakdowns(LinkId linkId) {
     List<LinkStats.UtmCampaignClick> campaigns =
         clickDimensions.findUtmCampaignClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.UtmCampaignClick(r.getCampaign(), r.getCount()))
@@ -276,7 +277,7 @@ public class LinkStatsQueryService {
     return new UtmBreakdowns(campaigns, sources, mediums, contents, sourceChannels);
   }
 
-  private GeoBreakdowns computeGeoBreakdowns(Long linkId) {
+  private GeoBreakdowns computeGeoBreakdowns(LinkId linkId) {
     List<LinkStats.CountryClick> countries =
         clickDimensions.findCountryClicks(linkId, TOP_50).stream()
             .map(r -> new LinkStats.CountryClick(orUnknown(r.getCountry()), r.getCount()))
@@ -302,11 +303,11 @@ public class LinkStatsQueryService {
   }
 
   private List<LinkStats.DestinationClick> computeDestinationClicks(LinkEntity link) {
-    var rows = clickDimensions.findDestinationClicks(link.getId());
+    var rows = clickDimensions.findDestinationClicks(link.linkId());
     if (rows.isEmpty()) return List.of();
     var byId = new HashMap<Long, LinkDestinationEntity>();
     destinationRepository
-        .findAllByLinkIdOrderByIdAsc(link.getId())
+        .findAllByLinkIdOrderByIdAsc(link.linkId())
         .forEach(d -> byId.put(d.getId(), d));
     if (byId.isEmpty() && rows.size() == 1 && rows.get(0).getDestinationId() == null) {
       return List.of();
@@ -330,7 +331,7 @@ public class LinkStatsQueryService {
         .toList();
   }
 
-  private LinkStats.ReturnRate computeReturnRate(Long linkId) {
+  private LinkStats.ReturnRate computeReturnRate(LinkId linkId) {
     var row = clickLifecycle.findReturnRate(linkId);
     long newCount = row == null || row.getNewCount() == null ? 0 : row.getNewCount();
     long returningCount =
@@ -340,7 +341,7 @@ public class LinkStatsQueryService {
     return new LinkStats.ReturnRate(newCount, returningCount, ratio);
   }
 
-  private LinkStats.Lifecycle computeLifecycle(Long linkId) {
+  private LinkStats.Lifecycle computeLifecycle(LinkId linkId) {
     List<LinkStats.DayClick> days =
         clickLifecycle.findLifecycleClicks(linkId, LIFECYCLE_MAX_DAY).stream()
             .map(r -> new LinkStats.DayClick(r.getDay(), r.getCount()))

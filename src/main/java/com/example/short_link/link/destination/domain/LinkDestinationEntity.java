@@ -1,6 +1,7 @@
 package com.example.short_link.link.destination.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.*;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -35,7 +36,7 @@ public class LinkDestinationEntity extends BaseCreatedEntity {
   private Long id;
 
   @Column(name = "link_id", nullable = false)
-  private Long linkId;
+  private LinkId linkId;
 
   @Column(nullable = false, length = 2048)
   private String url;
@@ -68,12 +69,12 @@ public class LinkDestinationEntity extends BaseCreatedEntity {
   private String os;
 
   public LinkDestinationEntity(
-      Long linkId, String url, int weight, String label, String countryCode) {
+      LinkId linkId, String url, int weight, String label, String countryCode) {
     this(linkId, url, weight, label, countryCode, null, null);
   }
 
   public LinkDestinationEntity(
-      Long linkId,
+      LinkId linkId,
       String url,
       int weight,
       String label,

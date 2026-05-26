@@ -88,7 +88,7 @@ public class DailyWebhookSummaryJob {
   void tryDeliverFor(LinkWebhookEntity hook) {
     Integer hourOfDay = hook.getSummaryHourOfDay();
     if (hourOfDay == null) return;
-    LinkEntity link = links.findById(hook.getLinkId()).orElse(null);
+    LinkEntity link = links.findById(hook.getLinkId().value()).orElse(null);
     if (link == null) return;
     if (link.getUserId() == null) return;
     UserEntity owner = users.findById(link.getUserId()).orElse(null);

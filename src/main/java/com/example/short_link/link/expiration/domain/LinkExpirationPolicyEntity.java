@@ -1,6 +1,7 @@
 package com.example.short_link.link.expiration.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -18,7 +19,7 @@ public class LinkExpirationPolicyEntity extends BaseTimeEntity {
 
   @Id
   @Column(name = "link_id")
-  private Long linkId;
+  private LinkId linkId;
 
   @Column(name = "blocked_countries", length = 255)
   private String blockedCountries;
@@ -29,7 +30,7 @@ public class LinkExpirationPolicyEntity extends BaseTimeEntity {
   @Column(name = "expired_redirect_url", length = 2048)
   private String expiredRedirectUrl;
 
-  public LinkExpirationPolicyEntity(Long linkId) {
+  public LinkExpirationPolicyEntity(LinkId linkId) {
     this.linkId = linkId;
   }
 

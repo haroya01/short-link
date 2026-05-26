@@ -44,10 +44,10 @@ public class LinkEventsService {
 
     List<ClickEventEntity> rows;
     if (cursor == null || cursor.isBlank()) {
-      rows = clickRepository.findEventsByLinkIdLatest(link.getId(), req);
+      rows = clickRepository.findEventsByLinkIdLatest(link.linkId(), req);
     } else {
       long cursorId = Cursor.decode(cursor);
-      rows = clickRepository.findEventsByLinkIdBefore(link.getId(), cursorId, req);
+      rows = clickRepository.findEventsByLinkIdBefore(link.linkId(), cursorId, req);
     }
 
     List<LinkEventView> items = rows.stream().map(this::toResponse).toList();

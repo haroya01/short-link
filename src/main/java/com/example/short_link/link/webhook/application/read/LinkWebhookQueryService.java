@@ -26,7 +26,7 @@ public class LinkWebhookQueryService {
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     if (!link.isOwnedBy(userId)) throw new LinkException(LinkErrorCode.LINK_NOT_OWNED, shortCode);
-    return repository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
+    return repository.findAllByLinkIdOrderByIdAsc(link.linkId()).stream()
         .map(WebhookSummary::from)
         .toList();
   }

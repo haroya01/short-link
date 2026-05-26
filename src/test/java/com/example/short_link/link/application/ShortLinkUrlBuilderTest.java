@@ -25,6 +25,6 @@ class ShortLinkUrlBuilderTest {
   @Test
   void supportsCustomDomainBase() {
     ShortLinkUrlBuilder builder = new ShortLinkUrlBuilder("https://go.example.com");
-    assertThat(builder.build(new ShortCode("aaa"))).isEqualTo("https://go.example.com/a");
+    assertThat(builder.build(new ShortCode("aaa"))).isEqualTo("https://go.example.com/aaa");
   }
 }

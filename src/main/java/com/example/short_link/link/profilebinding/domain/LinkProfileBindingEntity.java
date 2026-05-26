@@ -1,6 +1,7 @@
 package com.example.short_link.link.profilebinding.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -18,7 +19,7 @@ public class LinkProfileBindingEntity extends BaseTimeEntity {
 
   @Id
   @Column(name = "link_id")
-  private Long linkId;
+  private LinkId linkId;
 
   @Column(name = "profile_order")
   private Integer profileOrder;
@@ -26,7 +27,7 @@ public class LinkProfileBindingEntity extends BaseTimeEntity {
   @Column(name = "profile_highlighted", nullable = false)
   private boolean profileHighlighted = false;
 
-  public LinkProfileBindingEntity(Long linkId) {
+  public LinkProfileBindingEntity(LinkId linkId) {
     this.linkId = linkId;
   }
 

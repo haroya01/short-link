@@ -3,13 +3,13 @@ package com.example.short_link.link.webhook.application.helper;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
@@ -35,34 +35,39 @@ class DailySummaryAssemblerTest {
   @BeforeEach
   void defaults() {
     lenient()
-        .when(ranges.countHumanByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
+        .when(
+            ranges.countHumanByLinkIdAndRange(
+                any(LinkId.class), any(Instant.class), any(Instant.class)))
         .thenReturn(0L);
     lenient()
-        .when(ranges.countBotByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
+        .when(
+            ranges.countBotByLinkIdAndRange(
+                any(LinkId.class), any(Instant.class), any(Instant.class)))
         .thenReturn(0L);
     lenient()
         .when(
             ranges.countUniqueVisitorsByLinkIdAndRange(
-                anyLong(), any(Instant.class), any(Instant.class)))
+                any(LinkId.class), any(Instant.class), any(Instant.class)))
         .thenReturn(0L);
     lenient()
         .when(
             alerts.findTopChannelByLinkIdAndRange(
-                anyLong(), any(Instant.class), any(Instant.class)))
+                any(LinkId.class), any(Instant.class), any(Instant.class)))
         .thenReturn(Optional.empty());
     lenient()
         .when(
             alerts.findTopCountryByLinkIdAndRange(
-                anyLong(), any(Instant.class), any(Instant.class)))
+                any(LinkId.class), any(Instant.class), any(Instant.class)))
         .thenReturn(Optional.empty());
     lenient()
         .when(
-            alerts.findTopDeviceByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
+            alerts.findTopDeviceByLinkIdAndRange(
+                any(LinkId.class), any(Instant.class), any(Instant.class)))
         .thenReturn(Optional.empty());
     lenient()
         .when(
             alerts.findPeakHourByLinkIdAndRange(
-                anyLong(), any(Instant.class), any(Instant.class), anyString()))
+                any(LinkId.class), any(Instant.class), any(Instant.class), anyString()))
         .thenReturn(Optional.empty());
   }
 
@@ -73,12 +78,13 @@ class DailySummaryAssemblerTest {
   @Test
   void totalIsHumanPlusBot() {
     when(ranges.countHumanByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(130L);
-    when(ranges.countBotByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+    when(ranges.countBotByLinkIdAndRange(
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(12L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.totalClicks()).isEqualTo(142);
   }
@@ -86,10 +92,10 @@ class DailySummaryAssemblerTest {
   @Test
   void humanCountFlowsThrough() {
     when(ranges.countHumanByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(130L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.humanClicks()).isEqualTo(130);
   }
@@ -97,10 +103,10 @@ class DailySummaryAssemblerTest {
   @Test
   void uniqueVisitorsFlowsThrough() {
     when(ranges.countUniqueVisitorsByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(88L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.uniqueVisitors()).isEqualTo(88);
   }
@@ -110,17 +116,17 @@ class DailySummaryAssemblerTest {
     SourceChannelClickRow row = mock(SourceChannelClickRow.class);
     when(row.getSource()).thenReturn("twitter");
     when(alerts.findTopChannelByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.topChannel()).isEqualTo("twitter");
   }
 
   @Test
   void topChannelNullWhenNoRows() {
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.topChannel()).isNull();
   }
@@ -130,10 +136,10 @@ class DailySummaryAssemblerTest {
     CountryClickRow row = mock(CountryClickRow.class);
     when(row.getCountry()).thenReturn("KR");
     when(alerts.findTopCountryByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.topCountry()).isEqualTo("KR");
   }
@@ -143,10 +149,10 @@ class DailySummaryAssemblerTest {
     DeviceClickRow row = mock(DeviceClickRow.class);
     when(row.getDevice()).thenReturn("Mobile");
     when(alerts.findTopDeviceByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.topDevice()).isEqualTo("Mobile");
   }
@@ -157,17 +163,17 @@ class DailySummaryAssemblerTest {
     when(row.getHour()).thenReturn(21);
     when(row.getCount()).thenReturn(24L);
     when(alerts.findPeakHourByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1))), eq("Asia/Seoul")))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1))), eq("Asia/Seoul")))
         .thenReturn(Optional.of(row));
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.peakHour()).isEqualTo(21);
   }
 
   @Test
   void peakHourZeroWhenNoRows() {
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.peakHour()).isZero();
   }
@@ -175,13 +181,13 @@ class DailySummaryAssemblerTest {
   @Test
   void vsYesterdayPositiveWhenGrew() {
     when(ranges.countHumanByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(120L);
     when(ranges.countHumanByLinkIdAndRange(
-            eq(1L), eq(dayStart(day.minusDays(1))), eq(dayStart(day))))
+            eq(new LinkId(1L)), eq(dayStart(day.minusDays(1))), eq(dayStart(day))))
         .thenReturn(100L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.vsYesterday()).isCloseTo(0.20, within(1e-9));
   }
@@ -189,10 +195,10 @@ class DailySummaryAssemblerTest {
   @Test
   void vsYesterdayNullWhenYesterdayZero() {
     when(ranges.countHumanByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(50L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.vsYesterday()).isNull();
   }
@@ -200,13 +206,13 @@ class DailySummaryAssemblerTest {
   @Test
   void vs7DayAvgComparesAgainstAverage() {
     when(ranges.countHumanByLinkIdAndRange(
-            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+            eq(new LinkId(1L)), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(70L);
     when(ranges.countHumanByLinkIdAndRange(
-            eq(1L), eq(dayStart(day.minusDays(7))), eq(dayStart(day))))
+            eq(new LinkId(1L)), eq(dayStart(day.minusDays(7))), eq(dayStart(day))))
         .thenReturn(700L);
 
-    DailySummaryPayload p = assembler.assemble(1L, new ShortCode("abc"), day, tz);
+    DailySummaryPayload p = assembler.assemble(new LinkId(1L), new ShortCode("abc"), day, tz);
 
     assertThat(p.vs7DayAvg()).isCloseTo(-0.30, within(1e-9));
   }

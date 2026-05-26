@@ -2,6 +2,7 @@ package com.example.short_link.link.webhook.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.*;
 import org.junit.jupiter.api.Test;
 
@@ -10,7 +11,7 @@ class LinkWebhookEntityTest {
   @Test
   void recordSuccessResetsConsecutiveFailures() {
     LinkWebhookEntity hook =
-        new LinkWebhookEntity(1L, "https://example.com/hook", "secret", "name");
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/hook", "secret", "name");
     hook.recordFailure(500, "boom");
     hook.recordFailure(500, "boom");
     assertThat(hook.getConsecutiveFailures()).isEqualTo(2);
@@ -22,7 +23,7 @@ class LinkWebhookEntityTest {
   @Test
   void fiveConsecutiveFailuresAutoDisableHook() {
     LinkWebhookEntity hook =
-        new LinkWebhookEntity(1L, "https://example.com/hook", "secret", "name");
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/hook", "secret", "name");
     for (int i = 0; i < LinkWebhookEntity.AUTO_DISABLE_FAILURE_THRESHOLD; i++) {
       hook.recordFailure(500, "boom");
     }
@@ -33,7 +34,7 @@ class LinkWebhookEntityTest {
   @Test
   void manualEnableClearsAutoDisableReasonAndCounter() {
     LinkWebhookEntity hook =
-        new LinkWebhookEntity(1L, "https://example.com/hook", "secret", "name");
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/hook", "secret", "name");
     for (int i = 0; i < LinkWebhookEntity.AUTO_DISABLE_FAILURE_THRESHOLD; i++) {
       hook.recordFailure(500, "boom");
     }
@@ -46,7 +47,7 @@ class LinkWebhookEntityTest {
   @Test
   void updateConfigClampsSampleRateAndZeroQuota() {
     LinkWebhookEntity hook =
-        new LinkWebhookEntity(1L, "https://example.com/hook", "secret", "name");
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/hook", "secret", "name");
     hook.updateConfig(true, 200, true, 0, "twitter.com", "instagram");
     assertThat(hook.isIncludeBots()).isTrue();
     assertThat(hook.getSampleRate()).isEqualTo(100);

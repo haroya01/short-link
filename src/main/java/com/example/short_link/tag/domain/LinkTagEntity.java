@@ -1,5 +1,6 @@
 package com.example.short_link.tag.domain;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.*;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -21,24 +22,24 @@ public class LinkTagEntity {
 
   @Id
   @Column(name = "link_id")
-  private Long linkId;
+  private LinkId linkId;
 
   @Id
   @Column(name = "tag_id")
   private Long tagId;
 
-  public LinkTagEntity(Long linkId, Long tagId) {
+  public LinkTagEntity(LinkId linkId, Long tagId) {
     this.linkId = linkId;
     this.tagId = tagId;
   }
 
   public static class LinkTagId implements Serializable {
-    private Long linkId;
+    private LinkId linkId;
     private Long tagId;
 
     public LinkTagId() {}
 
-    public LinkTagId(Long linkId, Long tagId) {
+    public LinkTagId(LinkId linkId, Long tagId) {
       this.linkId = linkId;
       this.tagId = tagId;
     }

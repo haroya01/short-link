@@ -42,11 +42,11 @@ class CampaignBatchRepositoryTest {
     CampaignBatchEntity first =
         batchRepository.save(
             new CampaignBatchEntity(
-                campaign.getId(), newLink("ba0001").getId(), "first", "A", "East", 100, null));
+                campaign.getId(), newLink("ba0001").linkId(), "first", "A", "East", 100, null));
     CampaignBatchEntity second =
         batchRepository.save(
             new CampaignBatchEntity(
-                campaign.getId(), newLink("ba0002").getId(), "second", "B", "West", 200, null));
+                campaign.getId(), newLink("ba0002").linkId(), "second", "B", "West", 200, null));
 
     List<CampaignBatchEntity> found =
         batchRepository.findByCampaignIdOrderByCreatedAtAsc(campaign.getId());
@@ -61,10 +61,10 @@ class CampaignBatchRepositoryTest {
     CampaignEntity campaign = newCampaign();
     batchRepository.save(
         new CampaignBatchEntity(
-            campaign.getId(), newLink("cnt001").getId(), "n1", null, null, 50, null));
+            campaign.getId(), newLink("cnt001").linkId(), "n1", null, null, 50, null));
     batchRepository.save(
         new CampaignBatchEntity(
-            campaign.getId(), newLink("cnt002").getId(), "n2", null, null, 50, null));
+            campaign.getId(), newLink("cnt002").linkId(), "n2", null, null, 50, null));
 
     assertThat(batchRepository.countByCampaignId(campaign.getId())).isEqualTo(2L);
   }
@@ -74,13 +74,13 @@ class CampaignBatchRepositoryTest {
     CampaignEntity campaign = newCampaign();
     LinkEntity link = newLink("dup001");
     batchRepository.save(
-        new CampaignBatchEntity(campaign.getId(), link.getId(), "a", null, null, 10, null));
+        new CampaignBatchEntity(campaign.getId(), link.linkId(), "a", null, null, 10, null));
 
     org.junit.jupiter.api.Assertions.assertThrows(
         DataIntegrityViolationException.class,
         () ->
             batchRepository.saveAndFlush(
                 new CampaignBatchEntity(
-                    campaign.getId(), link.getId(), "b", null, null, 10, null)));
+                    campaign.getId(), link.linkId(), "b", null, null, 10, null)));
   }
 }

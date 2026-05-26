@@ -1,5 +1,6 @@
 package com.example.short_link.link.stats.domain.repository.projection;
 
+import com.example.short_link.link.domain.LinkId;
 import java.time.LocalDate;
 
 /**
@@ -24,7 +25,7 @@ public final class ClickProjections {
   }
 
   public interface LinkClickCount {
-    Long getLinkId();
+    LinkId getLinkId();
 
     Long getCount();
   }
@@ -36,7 +37,7 @@ public final class ClickProjections {
   }
 
   public interface DailyClicksByLinkRow {
-    Long getLinkId();
+    LinkId getLinkId();
 
     LocalDate getDay();
 

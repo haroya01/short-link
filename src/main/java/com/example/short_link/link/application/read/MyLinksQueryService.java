@@ -55,7 +55,9 @@ public class MyLinksQueryService {
     }
     List<Long> ids = links.stream().map(LinkEntity::getId).toList();
     Map<Long, Long> counts = new HashMap<>();
-    clickTotals.countsByLinkIds(ids).forEach(row -> counts.put(row.getLinkId(), row.getCount()));
+    clickTotals
+        .countsByLinkIds(ids)
+        .forEach(row -> counts.put(row.getLinkId().value(), row.getCount()));
     Map<Long, List<String>> tagsByLinkId = linkTagService.tagNamesByLinkIds(ids);
     Map<Long, List<Long>> sparkByLinkId = sparklineByLinkIds(ids);
     List<MyLink> items =
@@ -91,7 +93,7 @@ public class MyLinksQueryService {
     for (var row : clickTime.findDailyClicksByLinkIdsSince(ids, from)) {
       long offset = ChronoUnit.DAYS.between(row.getDay(), today);
       if (offset < 0 || offset >= 7) continue;
-      long[] bucket = byLink.computeIfAbsent(row.getLinkId(), k -> new long[7]);
+      long[] bucket = byLink.computeIfAbsent(row.getLinkId().value(), k -> new long[7]);
       bucket[6 - (int) offset] = row.getCount();
     }
     Map<Long, List<Long>> out = new HashMap<>();

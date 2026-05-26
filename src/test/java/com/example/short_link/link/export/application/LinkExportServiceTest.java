@@ -37,7 +37,7 @@ class LinkExportServiceTest {
     for (int i = 0; i < 5; i++) {
       clickRepository.save(
           ClickEventEntity.builder()
-              .linkId(link.getId())
+              .linkId(link.linkId())
               .userAgent("ua")
               .clientIp("1.2.3." + i)
               .deviceClass("desktop")
@@ -60,7 +60,7 @@ class LinkExportServiceTest {
         linkRepository.save(new LinkEntity("https://example.com", "csvdim1", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.1")
             .deviceClass("mobile")

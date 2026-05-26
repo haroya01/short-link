@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
@@ -18,7 +19,8 @@ class DeleteLinkWebhookUseCaseTest {
 
   @Test
   void executeDeletesTheResolvedHook() {
-    LinkWebhookEntity hook = new LinkWebhookEntity(1L, "https://example.com/h", "secret", "n");
+    LinkWebhookEntity hook =
+        new LinkWebhookEntity(new LinkId(1L), "https://example.com/h", "secret", "n");
     when(ownership.ownedHook(7L, new ShortCode("abcde"), 99L)).thenReturn(hook);
 
     useCase.execute(new DeleteLinkWebhookCommand(7L, new ShortCode("abcde"), 99L));

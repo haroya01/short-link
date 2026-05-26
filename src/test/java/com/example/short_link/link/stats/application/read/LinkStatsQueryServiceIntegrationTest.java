@@ -37,7 +37,7 @@ class LinkStatsQueryServiceIntegrationTest {
         linkRepository.save(new LinkEntity("https://example.com", "st0001", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.4")
             .deviceClass("desktop")
@@ -45,7 +45,7 @@ class LinkStatsQueryServiceIntegrationTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("crawler")
             .clientIp("1.2.3.5")
             .deviceClass("bot")

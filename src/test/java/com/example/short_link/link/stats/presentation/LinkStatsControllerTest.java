@@ -5,6 +5,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
@@ -31,7 +32,7 @@ class LinkStatsControllerTest {
   @Autowired private UserRepository userRepository;
   @Autowired private JwtTokenService jwt;
 
-  private static ClickEventEntity humanClick(Long linkId, String device) {
+  private static ClickEventEntity humanClick(LinkId linkId, String device) {
     return ClickEventEntity.builder()
         .linkId(linkId)
         .userAgent("ua")
@@ -47,7 +48,7 @@ class LinkStatsControllerTest {
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "stats01", owner.getId(), null));
     for (int i = 0; i < 3; i++) {
-      clickRepository.save(humanClick(link.getId(), "desktop"));
+      clickRepository.save(humanClick(link.linkId(), "desktop"));
     }
     String token = jwt.createAccessToken(owner.getId(), "USER");
 
@@ -64,11 +65,11 @@ class LinkStatsControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-bot"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "statbot", owner.getId(), null));
-    clickRepository.save(humanClick(link.getId(), "desktop"));
-    clickRepository.save(humanClick(link.getId(), "mobile"));
+    clickRepository.save(humanClick(link.linkId(), "desktop"));
+    clickRepository.save(humanClick(link.linkId(), "mobile"));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("Googlebot")
             .clientIp("1.2.3.4")
             .deviceClass("bot")
@@ -90,9 +91,9 @@ class LinkStatsControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-s2"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "stats02", owner.getId(), null));
-    clickRepository.save(humanClick(link.getId(), "mobile"));
-    clickRepository.save(humanClick(link.getId(), "tablet"));
-    clickRepository.save(humanClick(link.getId(), "desktop"));
+    clickRepository.save(humanClick(link.linkId(), "mobile"));
+    clickRepository.save(humanClick(link.linkId(), "tablet"));
+    clickRepository.save(humanClick(link.linkId(), "desktop"));
     String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/stats02/stats").header("Authorization", "Bearer " + token))
@@ -109,7 +110,7 @@ class LinkStatsControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "statosb", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.4")
             .deviceClass("mobile")
@@ -119,7 +120,7 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.2.3.5")
             .deviceClass("desktop")
@@ -144,7 +145,7 @@ class LinkStatsControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "stats03", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .referrer("https://www.instagram.com/p/abc")
             .userAgent("ua")
             .clientIp("1.1.1.1")
@@ -153,7 +154,7 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .referrer("https://www.instagram.com/p/abc")
             .userAgent("ua")
             .clientIp("1.1.1.2")
@@ -162,14 +163,14 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .referrer("https://www.youtube.com/watch")
             .userAgent("ua")
             .clientIp("1.1.1.3")
             .deviceClass("desktop")
             .bot(false)
             .build());
-    clickRepository.save(humanClick(link.getId(), "desktop"));
+    clickRepository.save(humanClick(link.linkId(), "desktop"));
     String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/links/stats03/stats").header("Authorization", "Bearer " + token))
@@ -193,7 +194,7 @@ class LinkStatsControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "statutm", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.1")
             .utmCampaign("spring_sale")
@@ -202,7 +203,7 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.2")
             .utmCampaign("spring_sale")
@@ -211,7 +212,7 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.3")
             .utmCampaign("launch")
@@ -233,7 +234,7 @@ class LinkStatsControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "statcty", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.1")
             .deviceClass("desktop")
@@ -242,7 +243,7 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.2")
             .deviceClass("mobile")
@@ -251,7 +252,7 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.3")
             .deviceClass("desktop")
@@ -274,7 +275,7 @@ class LinkStatsControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "statadv", owner.getId(), null));
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.1")
             .deviceClass("desktop")
@@ -289,7 +290,7 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("1.1.1.2")
             .deviceClass("mobile")
@@ -304,7 +305,7 @@ class LinkStatsControllerTest {
             .build());
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("Googlebot/2.1")
             .clientIp("1.1.1.3")
             .deviceClass("bot")
@@ -369,7 +370,7 @@ class LinkStatsControllerTest {
     for (int i = 0; i < 3; i++) {
       clickRepository.save(
           ClickEventEntity.builder()
-              .linkId(link.getId())
+              .linkId(link.linkId())
               .userAgent("ua")
               .clientIp("1.1.1." + i)
               .deviceClass("desktop")
@@ -379,7 +380,7 @@ class LinkStatsControllerTest {
     }
     clickRepository.save(
         ClickEventEntity.builder()
-            .linkId(link.getId())
+            .linkId(link.linkId())
             .userAgent("ua")
             .clientIp("2.2.2.2")
             .deviceClass("mobile")

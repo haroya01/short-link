@@ -152,7 +152,7 @@ public class LinkWebhookDispatcher {
       }
       if (drained.isEmpty()) continue;
       Map<String, Object> body =
-          WebhookPayloadAdapter.buildBatch(hook.getFormat(), hook.getLinkId(), drained);
+          WebhookPayloadAdapter.buildBatch(hook.getFormat(), hook.getLinkId().value(), drained);
       deliver(hook, jsonMapper.writeValueAsString(body), "batch");
     }
   }

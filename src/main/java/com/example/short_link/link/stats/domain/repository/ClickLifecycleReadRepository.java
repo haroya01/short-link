@@ -1,5 +1,6 @@
 package com.example.short_link.link.stats.domain.repository;
 
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReturnRateRow;
@@ -22,7 +23,7 @@ public interface ClickLifecycleReadRepository extends Repository<ClickEventEntit
               + "WHERE link_id = :linkId AND visitor_hash IS NOT NULL AND is_bot = 0 "
               + "GROUP BY visitor_hash) t",
       nativeQuery = true)
-  ReturnRateRow findReturnRate(@Param("linkId") Long linkId);
+  ReturnRateRow findReturnRate(@Param("linkId") LinkId linkId);
 
   @Query(
       value =
@@ -32,5 +33,6 @@ public interface ClickLifecycleReadRepository extends Repository<ClickEventEntit
               + "AND TIMESTAMPDIFF(DAY, l.created_at, c.clicked_at) BETWEEN 0 AND :maxDay "
               + "GROUP BY day ORDER BY day",
       nativeQuery = true)
-  List<DayClickRow> findLifecycleClicks(@Param("linkId") Long linkId, @Param("maxDay") int maxDay);
+  List<DayClickRow> findLifecycleClicks(
+      @Param("linkId") LinkId linkId, @Param("maxDay") int maxDay);
 }

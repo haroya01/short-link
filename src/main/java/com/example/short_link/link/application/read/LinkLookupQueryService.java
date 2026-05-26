@@ -4,6 +4,7 @@ import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
@@ -35,11 +36,11 @@ public class LinkLookupQueryService {
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     List<CachedLink.Variant> variants =
-        destinationRepository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
+        destinationRepository.findAllByLinkIdOrderByIdAsc(link.linkId()).stream()
             .map(LinkLookupQueryService::toVariant)
             .toList();
     return new CachedLink(
-        link.getId(),
+        link.linkId(),
         link.getUserId(),
         link.getOriginalUrl(),
         link.getExpiresAt(),
@@ -69,7 +70,7 @@ public class LinkLookupQueryService {
 
   /** OG card 의 click count 배지용. bot 제외 휴먼 클릭만. */
   @Transactional(readOnly = true)
-  public long countHumanClicks(Long linkId) {
+  public long countHumanClicks(LinkId linkId) {
     return clickTotalsRepository.countHumanByLinkId(linkId);
   }
 

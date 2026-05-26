@@ -10,6 +10,7 @@ import com.tngtech.archunit.lang.ArchCondition;
 import com.tngtech.archunit.lang.ArchRule;
 import com.tngtech.archunit.lang.ConditionEvents;
 import com.tngtech.archunit.lang.SimpleConditionEvent;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -75,6 +76,8 @@ public class RepositoryUnusedMethodTest {
           .areNotAnnotatedWith(TransactionalEventListener.class)
           .and()
           .areNotAnnotatedWith(Async.class)
+          .and()
+          .areNotAnnotatedWith(Cacheable.class)
           // EmailLeadService.submit(4-arg) is an internal helper exposed for the existing extended
           // test suite. Production goes through submitPublic(3-arg). Narrowing to private is a
           // separate cleanup once those tests migrate to the public entry point.
