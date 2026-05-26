@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
+import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
@@ -63,7 +64,7 @@ class LinkDestinationOwnershipTest {
     when(repository.findById(99L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> ownership.ownedDestination(42L, "abc1234", 99L))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(DestinationException.class);
   }
 
   @Test
@@ -75,7 +76,7 @@ class LinkDestinationOwnershipTest {
     when(repository.findById(99L)).thenReturn(Optional.of(dest));
 
     assertThatThrownBy(() -> ownership.ownedDestination(42L, "abc1234", 99L))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(DestinationException.class);
   }
 
   private static <T> T setId(T entity, Long id) throws Exception {

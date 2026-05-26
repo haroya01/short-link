@@ -8,6 +8,7 @@ import com.example.short_link.link.destination.application.read.LinkDestinationQ
 import com.example.short_link.link.destination.application.write.AddDestinationUseCase;
 import com.example.short_link.link.destination.application.write.DeleteDestinationUseCase;
 import com.example.short_link.link.destination.application.write.UpdateDestinationUseCase;
+import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
@@ -73,7 +74,7 @@ class LinkDestinationServiceTest {
             () ->
                 addUseCase.execute(
                     user.getId(), "ab22222", "https://example.com/v9", 10, "v9", null, null, null))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(DestinationException.class);
   }
 
   @Test
@@ -85,7 +86,7 @@ class LinkDestinationServiceTest {
             () ->
                 addUseCase.execute(
                     user.getId(), "ab33333", "javascript:alert(1)", 50, null, null, null, null))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(DestinationException.class);
   }
 
   @Test
