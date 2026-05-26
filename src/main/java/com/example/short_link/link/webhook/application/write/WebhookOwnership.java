@@ -6,6 +6,8 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
+import com.example.short_link.link.webhook.exception.WebhookErrorCode;
+import com.example.short_link.link.webhook.exception.WebhookException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -35,9 +37,9 @@ class WebhookOwnership {
     LinkWebhookEntity hook =
         repository
             .findById(webhookId)
-            .orElseThrow(() -> new LinkException(LinkErrorCode.WEBHOOK_NOT_FOUND));
+            .orElseThrow(() -> new WebhookException(WebhookErrorCode.WEBHOOK_NOT_FOUND));
     if (!hook.getLinkId().equals(link.getId()))
-      throw new LinkException(LinkErrorCode.WEBHOOK_NOT_FOUND);
+      throw new WebhookException(WebhookErrorCode.WEBHOOK_NOT_FOUND);
     return hook;
   }
 }

@@ -18,8 +18,8 @@ import com.example.short_link.link.expiration.domain.repository.LinkExpirationPo
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
-import com.example.short_link.link.profile_binding.domain.LinkProfileBindingEntity;
-import com.example.short_link.link.profile_binding.domain.repository.LinkProfileBindingRepository;
+import com.example.short_link.link.profilebinding.domain.LinkProfileBindingEntity;
+import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;

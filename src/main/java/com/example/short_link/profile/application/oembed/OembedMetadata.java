@@ -6,7 +6,7 @@ package com.example.short_link.profile.application.oembed;
  * snippet passed through as-is — safe because the provider is whitelisted in {@link EmbedProvider}
  * and the response is cached, so the trust boundary is the provider, not the user-supplied URL.
  */
-public record OembedResponse(
+public record OembedMetadata(
     String provider,
     String type,
     String title,
@@ -16,7 +16,7 @@ public record OembedResponse(
     Integer width,
     Integer height) {
 
-  public static OembedResponse empty(String provider) {
-    return new OembedResponse(provider, null, null, null, null, null, null, null);
+  public static OembedMetadata empty(String provider) {
+    return new OembedMetadata(provider, null, null, null, null, null, null, null);
   }
 }

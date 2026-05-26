@@ -32,7 +32,7 @@ class OembedServiceTest {
                 MediaType.APPLICATION_JSON));
     OembedService service = new OembedService(builder.build());
 
-    OembedResponse out = service.fetch("https://youtu.be/abc123");
+    OembedMetadata out = service.fetch("https://youtu.be/abc123");
 
     assertThat(out).isNotNull();
     assertThat(out.provider()).isEqualTo("youtube");
@@ -67,7 +67,7 @@ class OembedServiceTest {
     server.expect(method(HttpMethod.GET)).andRespond(withServerError());
     OembedService service = new OembedService(builder.build());
 
-    OembedResponse out = service.fetch("https://vimeo.com/12345");
+    OembedMetadata out = service.fetch("https://vimeo.com/12345");
 
     assertThat(out).isNotNull();
     assertThat(out.provider()).isEqualTo("vimeo");

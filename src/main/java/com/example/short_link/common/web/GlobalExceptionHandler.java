@@ -56,16 +56,13 @@ public class GlobalExceptionHandler {
   }
 
   /**
-   * PoW gate fires when an anonymous request reaches the link-create endpoint without the
-   * proof-of-work headers. The exception already carries {@code @ResponseStatus(UNAUTHORIZED)} but
-   * the catch-all {@code Exception} handler below wins ordering and overrides it to 500 — declaring
-   * an explicit handler restores the intended 401 and gives the frontend a stable error code
-   * ({@code POW_REQUIRED}) so it can clear an expired token and re-shorten on the anonymous path
-   * with a fresh PoW token.
+   * The catch-all {@code Exception} handler below would otherwise win ordering and override
+   * PowRequired's intended 401 to 500 — declaring an explicit handler keeps the status and stable
+   * error code so the frontend can clear an expired token and re-shorten with a fresh PoW.
    */
   @ExceptionHandler(PowRequiredException.class)
   public ProblemDetail handlePowRequired(PowRequiredException e, HttpServletRequest req) {
-    return ProblemDetails.of(HttpStatus.UNAUTHORIZED, e.getMessage(), "POW_REQUIRED", req);
+    return ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
   }
 
   @ExceptionHandler(NoResourceFoundException.class)

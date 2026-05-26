@@ -8,16 +8,10 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
 /**
- * Targeted invalidation for the {@code public-profile} cache. The 11 write paths that previously
- * used {@code @CacheEvict(allEntries = true)} all flushed every user's cached profile on a single
- * user's mutation — a quiet O(N) bill on every avatar upload / block edit. Cache key is the
- * normalized username (see ProfileQueryService); evicting the one key preserves the rest.
- *
- * <p>This wave migrates AvatarService / BannerService (4 sites, user already loaded). OgOverride +
- * 6 profile/write use cases (UpdateBlock, CreateBlock, DeleteBlock, ReorderProfile,
- * SetLinkHighlight, ToggleLinkOnProfile, UpdateProfile) follow in a separate wave — each has a
- * different load pattern (link.userId / cmd.userId / block.userId / user load) so mechanical
- * migration isn't safe in bulk.
+ * Targeted invalidation for the {@code public-profile} cache. Write paths previously used
+ * {@code @CacheEvict(allEntries = true)}, flushing every user's cached profile on a single user's
+ * mutation — a quiet O(N) bill on every avatar upload / block edit. Cache key is the normalized
+ * username (see ProfileQueryService); evicting the one key preserves the rest.
  */
 @Service
 @RequiredArgsConstructor

@@ -48,8 +48,6 @@ public final class WebhookPayloadAdapter {
     };
   }
 
-  // -- Discord --------------------------------------------------------------------------------
-
   private static Map<String, Object> discordClick(Map<String, Object> click) {
     String description = clickSummaryLine(click);
     Map<String, Object> embed = new LinkedHashMap<>();
@@ -97,8 +95,6 @@ public final class WebhookPayloadAdapter {
     fields.add(Map.of("name", name, "value", value, "inline", true));
   }
 
-  // -- Slack ----------------------------------------------------------------------------------
-
   private static Map<String, Object> slackClick(Map<String, Object> click) {
     String summary =
         "kurl click: link #" + str(click.get("linkId")) + " — " + clickSummaryLine(click);
@@ -138,8 +134,6 @@ public final class WebhookPayloadAdapter {
     String summary = "kurl batch: " + events.size() + " click(s) for link #" + linkId;
     return Map.of("username", SENDER_NAME, "text", summary);
   }
-
-  // -- helpers --------------------------------------------------------------------------------
 
   private static String clickSummaryLine(Map<String, Object> click) {
     List<String> parts = new ArrayList<>();

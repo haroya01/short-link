@@ -2,12 +2,12 @@ package com.example.short_link.link.webhook.application.write;
 
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.link.domain.LinkEntity;
-import com.example.short_link.link.exception.LinkErrorCode;
-import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.webhook.application.dto.IssuedWebhook;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
+import com.example.short_link.link.webhook.exception.WebhookErrorCode;
+import com.example.short_link.link.webhook.exception.WebhookException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;
 import lombok.RequiredArgsConstructor;
@@ -32,11 +32,10 @@ public class RegisterLinkWebhookUseCase {
   public IssuedWebhook execute(RegisterLinkWebhookCommand cmd) {
     LinkEntity link = ownership.ownedLink(cmd.userId(), cmd.shortCode());
     if (!PublicHttpUrlGuard.isPublic(cmd.url())) {
-      throw new LinkException(LinkErrorCode.INVALID_WEBHOOK_URL);
+      throw new WebhookException(WebhookErrorCode.INVALID_WEBHOOK_URL);
     }
     if (repository.countByLinkId(link.getId()) >= MAX_PER_LINK) {
-      throw new LinkException(LinkErrorCode.TOO_MANY_WEBHOOKS, MAX_PER_LINK)
-          .with("limit", MAX_PER_LINK);
+      throw new WebhookException(WebhookErrorCode.TOO_MANY_WEBHOOKS, MAX_PER_LINK);
     }
     String secret = generateSecret();
     WebhookFormat format = WebhookFormat.detect(cmd.url());
