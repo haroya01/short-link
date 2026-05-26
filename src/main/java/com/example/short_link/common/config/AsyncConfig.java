@@ -28,11 +28,11 @@ public class AsyncConfig {
   }
 
   /**
-   * Dedicated pool for outgoing webhook POSTs. Click-rate spikes (e.g., one link goes viral) shared
-   * the default pool with OG-fetch / preview scrape, and the DiscardOldest policy would silently
-   * drop click webhooks before they fired. Here we give webhooks their own headroom and fall back
-   * to CallerRuns under saturation — the click thread will block for the HTTP timeout (5s) which is
-   * acceptable backpressure compared to dropping events the user explicitly opted into.
+   * Dedicated pool for outgoing webhook POSTs. Click-rate spikes (e.g., one link goes viral)
+   * previously shared the default pool with OG-fetch / preview scrape, and the DiscardOldest policy
+   * silently dropped click webhooks before they fired. Isolated pool + CallerRunsPolicy on
+   * saturation — the click thread blocks for the HTTP timeout (5s), which is acceptable
+   * backpressure compared to losing events the user explicitly subscribed to.
    */
   @Bean(name = "webhookExecutor")
   public Executor webhookExecutor() {
