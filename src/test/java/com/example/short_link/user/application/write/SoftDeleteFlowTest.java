@@ -1,4 +1,4 @@
-package com.example.short_link.user.application;
+package com.example.short_link.user.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

@@ -1,5 +1,6 @@
-package com.example.short_link.user.application;
+package com.example.short_link.user.application.write;
 
+import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.dto.ParsedRefresh;
 import com.example.short_link.user.application.twofactor.TwoFactorService;

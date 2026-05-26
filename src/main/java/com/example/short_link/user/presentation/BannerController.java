@@ -1,6 +1,6 @@
 package com.example.short_link.user.presentation;
 
-import com.example.short_link.user.application.avatar.BannerService;
+import com.example.short_link.user.application.write.avatar.BannerService;
 import com.example.short_link.user.presentation.request.BannerCommitRequest;
 import com.example.short_link.user.presentation.request.BannerPresignRequest;
 import lombok.RequiredArgsConstructor;
