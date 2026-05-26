@@ -46,7 +46,7 @@ public class OgOverrideService {
     ogMetadataRepository.save(ogMeta);
     cacheEviction.evictByUserId(userId);
     return new OgOverrideResult(
-        link.getShortCode(),
+        link.getShortCode().value(),
         link.getOgTitleOverride(),
         link.getOgDescriptionOverride(),
         link.getOgImageOverride());

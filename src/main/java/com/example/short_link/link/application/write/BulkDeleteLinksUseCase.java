@@ -35,11 +35,11 @@ public class BulkDeleteLinksUseCase {
     repository.deleteAll(owned);
     Cache cache = cacheManager.getCache("link");
     for (LinkEntity link : owned) {
-      if (cache != null) cache.evict(link.getShortCode());
+      if (cache != null) cache.evict(link.getShortCode().value());
       auditLogService.record(
           AuditAction.LINK_DELETED,
           "link",
-          link.getShortCode(),
+          link.getShortCode().value(),
           command.userId(),
           Map.of("bulk", true));
     }

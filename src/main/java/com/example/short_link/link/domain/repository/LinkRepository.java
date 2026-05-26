@@ -13,7 +13,11 @@ import org.springframework.data.repository.query.Param;
 
 public interface LinkRepository
     extends JpaRepository<LinkEntity, Long>, JpaSpecificationExecutor<LinkEntity> {
-  Optional<LinkEntity> findByShortCode(String shortCode);
+  Optional<LinkEntity> findByShortCode(ShortCode shortCode);
+
+  default Optional<LinkEntity> findByShortCode(String shortCode) {
+    return findByShortCode(new ShortCode(shortCode));
+  }
 
   List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 

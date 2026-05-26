@@ -75,7 +75,7 @@ public class ExpiredLinkCleanupJob {
     var cache = cacheManager.getCache("link");
     if (cache == null) return;
     for (LinkEntity link : batch) {
-      cache.evict(link.getShortCode());
+      cache.evict(link.getShortCode().value());
     }
   }
 }

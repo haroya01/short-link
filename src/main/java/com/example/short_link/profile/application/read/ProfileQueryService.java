@@ -100,8 +100,8 @@ public class ProfileQueryService {
       if (takeLink) {
         out.add(
             PublicProfile.ProfileEntry.link(
-                l.getShortCode(),
-                urlBuilder.build(l.getShortCode()),
+                l.getShortCode().value(),
+                urlBuilder.build(l.getShortCode().value()),
                 l.getOriginalUrl(),
                 l.getEffectiveOgTitle(),
                 l.getEffectiveOgImage(),

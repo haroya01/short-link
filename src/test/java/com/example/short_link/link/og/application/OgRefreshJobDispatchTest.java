@@ -67,9 +67,9 @@ class OgRefreshJobDispatchTest {
     when(lock.tryAcquire(eq("kurl:og-fetch:refresh"), any(Duration.class))).thenReturn(true);
     LinkEntity a = Mockito.mock(LinkEntity.class);
     LinkEntity b = Mockito.mock(LinkEntity.class);
-    when(a.getShortCode()).thenReturn("a000001");
+    when(a.getShortCode().value()).thenReturn("a000001");
     when(a.getOriginalUrl()).thenReturn("https://a.example");
-    when(b.getShortCode()).thenReturn("b000001");
+    when(b.getShortCode().value()).thenReturn("b000001");
     when(b.getOriginalUrl()).thenReturn("https://b.example");
     when(linkRepository.findStaleOgCandidates(any(), any(Pageable.class)))
         .thenReturn(List.of(a, b));
@@ -86,9 +86,9 @@ class OgRefreshJobDispatchTest {
     when(lock.tryAcquire(eq("kurl:og-fetch:refresh"), any(Duration.class))).thenReturn(true);
     LinkEntity a = Mockito.mock(LinkEntity.class);
     LinkEntity b = Mockito.mock(LinkEntity.class);
-    when(a.getShortCode()).thenReturn("a000001");
+    when(a.getShortCode().value()).thenReturn("a000001");
     when(a.getOriginalUrl()).thenReturn("https://a.example");
-    when(b.getShortCode()).thenReturn("b000001");
+    when(b.getShortCode().value()).thenReturn("b000001");
     when(b.getOriginalUrl()).thenReturn("https://b.example");
     when(linkRepository.findStaleOgCandidates(any(), any(Pageable.class)))
         .thenReturn(List.of(a, b));
