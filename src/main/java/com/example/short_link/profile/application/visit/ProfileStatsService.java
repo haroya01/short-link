@@ -64,17 +64,6 @@ public class ProfileStatsService {
     return owner.isStatsPublic();
   }
 
-  @Transactional
-  public boolean updateStatsPublic(Long ownerUserId, boolean statsPublic) {
-    UserEntity owner =
-        userRepository
-            .findById(ownerUserId)
-            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
-    owner.updateStatsPublic(statsPublic);
-    userRepository.save(owner);
-    return owner.isStatsPublic();
-  }
-
   @Transactional(readOnly = true)
   public ProfileVisitSummary summaryForOwner(Long ownerUserId) {
     Instant now = Instant.now();
