@@ -3,6 +3,7 @@ package com.example.short_link.admin.application.read;
 import com.example.short_link.admin.application.helper.BlockedDomainNormalizer;
 import com.example.short_link.admin.domain.BlockedDomainEntity;
 import com.example.short_link.admin.domain.repository.BlockedDomainRepository;
+import com.example.short_link.common.security.BlockedDomainChecker;
 import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -17,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Service
 @RequiredArgsConstructor
-public class BlockedDomainQueryService {
+public class BlockedDomainQueryService implements BlockedDomainChecker {
 
   private final BlockedDomainRepository repository;
 
