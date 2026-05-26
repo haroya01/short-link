@@ -63,7 +63,7 @@ public class MyLinksQueryService {
             .map(
                 link ->
                     new MyLink(
-                        link.getShortCode().value(),
+                        link.getShortCode(),
                         link.getOriginalUrl(),
                         link.getCreatedAt(),
                         link.getExpiresAt(),

@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.application.dto.IssuedWebhook;
 import com.example.short_link.link.webhook.application.dto.WebhookSummary;
 import com.example.short_link.link.webhook.application.read.LinkWebhookQueryService;
@@ -89,7 +90,8 @@ class LinkWebhookControllerTest {
   void listReturnsWebhooks() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("w@x.com", "google", "g-wh"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(queryService.list(eq(user.getId()), eq("abc1234"))).thenReturn(List.of(summary()));
+    when(queryService.list(eq(user.getId()), eq(new ShortCode("abc1234"))))
+        .thenReturn(List.of(summary()));
 
     mvc.perform(get("/api/v1/links/abc1234/webhooks").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())

@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.presentation;
 
 import com.example.short_link.link.application.dto.LinkStats;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,7 +17,7 @@ public class PublicLinkStatsController {
   private final LinkStatsQueryService service;
 
   @GetMapping("/{shortCode}/public-stats")
-  public LinkStats publicStats(@PathVariable String shortCode) {
+  public LinkStats publicStats(@PathVariable ShortCode shortCode) {
     return service.publicStats(shortCode);
   }
 }

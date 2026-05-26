@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.tag.application.dto.TagSummary;
 import com.example.short_link.tag.application.read.LinkTagQueryService;
@@ -68,17 +69,19 @@ class TagServiceTest {
     linkRepository.save(new LinkEntity("https://example.com", "tagged01", user.getId(), null));
 
     List<String> applied =
-        replaceLinkTags.execute(user.getId(), "tagged01", List.of("alpha", "beta", "alpha"));
+        replaceLinkTags.execute(
+            user.getId(), new ShortCode("tagged01"), List.of("alpha", "beta", "alpha"));
     assertThat(applied).containsExactly("alpha", "beta");
 
-    List<String> reloaded = linkTagQuery.tagNamesFor(user.getId(), "tagged01");
+    List<String> reloaded = linkTagQuery.tagNamesFor(user.getId(), new ShortCode("tagged01"));
     assertThat(reloaded).containsExactly("alpha", "beta");
 
     List<TagSummary> tags = tagQuery.list(user.getId());
     assertThat(tags).extracting(TagSummary::name).containsExactly("alpha", "beta");
     assertThat(tags).extracting(TagSummary::linkCount).containsExactly(1L, 1L);
 
-    replaceLinkTags.execute(user.getId(), "tagged01", List.of("alpha"));
-    assertThat(linkTagQuery.tagNamesFor(user.getId(), "tagged01")).containsExactly("alpha");
+    replaceLinkTags.execute(user.getId(), new ShortCode("tagged01"), List.of("alpha"));
+    assertThat(linkTagQuery.tagNamesFor(user.getId(), new ShortCode("tagged01")))
+        .containsExactly("alpha");
   }
 }

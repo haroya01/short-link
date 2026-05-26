@@ -1,5 +1,6 @@
 package com.example.short_link.link.export.presentation;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.export.application.LinkExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -23,7 +24,7 @@ public class LinkExportController {
 
   @GetMapping("/{shortCode}/events.csv")
   public ResponseEntity<String> eventsCsv(
-      @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
+      @AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
     String body = service.exportEventsCsv(userId, shortCode);
     return ResponseEntity.ok()
         .contentType(CSV_UTF8)
@@ -36,7 +37,7 @@ public class LinkExportController {
   @GetMapping("/{shortCode}/stats.csv")
   public ResponseEntity<String> statsCsv(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestParam(required = false, defaultValue = "daily") String dimension) {
     String body = service.exportStatsCsv(userId, shortCode, dimension);
     return ResponseEntity.ok()

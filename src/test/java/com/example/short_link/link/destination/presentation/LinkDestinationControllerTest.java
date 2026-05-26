@@ -21,6 +21,7 @@ import com.example.short_link.link.destination.application.write.DeleteDestinati
 import com.example.short_link.link.destination.application.write.SetBlockedCountriesUseCase;
 import com.example.short_link.link.destination.application.write.UpdateDestinationUseCase;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -68,7 +69,7 @@ class LinkDestinationControllerTest {
   void listReturnsDestinations() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("d@x.com", "google", "g-dst"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    when(query.list(eq(user.getId()), eq("abc1234"))).thenReturn(List.of(sample()));
+    when(query.list(eq(user.getId()), eq(new ShortCode("abc1234")))).thenReturn(List.of(sample()));
 
     mvc.perform(
             get("/api/v1/links/abc1234/destinations").header("Authorization", "Bearer " + token))
@@ -81,7 +82,14 @@ class LinkDestinationControllerTest {
     UserEntity user = userRepository.save(new UserEntity("a@x.com", "google", "g-add"));
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(addUseCase.execute(
-            eq(user.getId()), eq("abc1234"), anyString(), any(), any(), any(), any(), any()))
+            eq(user.getId()),
+            eq(new ShortCode("abc1234")),
+            anyString(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any()))
         .thenReturn(sample());
 
     mvc.perform(
@@ -99,7 +107,7 @@ class LinkDestinationControllerTest {
     String token = jwt.createAccessToken(user.getId(), "USER");
     when(updateUseCase.execute(
             eq(user.getId()),
-            eq("abc1234"),
+            eq(new ShortCode("abc1234")),
             eq(1L),
             any(),
             any(),
@@ -122,7 +130,7 @@ class LinkDestinationControllerTest {
   void deleteReturns204() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("d2@x.com", "google", "g-ddel"));
     String token = jwt.createAccessToken(user.getId(), "USER");
-    doNothing().when(deleteUseCase).execute(anyLong(), anyString(), anyLong());
+    doNothing().when(deleteUseCase).execute(anyLong(), any(ShortCode.class), anyLong());
 
     mvc.perform(
             delete("/api/v1/links/abc1234/destinations/1")
@@ -136,7 +144,8 @@ class LinkDestinationControllerTest {
     String token = jwt.createAccessToken(user.getId(), "USER");
     LinkEntity link = Mockito.mock(LinkEntity.class);
     when(link.getBlockedCountries()).thenReturn("KP,IR");
-    when(setBlockedUseCase.execute(eq(user.getId()), eq("abc1234"), eq("KP,IR"))).thenReturn(link);
+    when(setBlockedUseCase.execute(eq(user.getId()), eq(new ShortCode("abc1234")), eq("KP,IR")))
+        .thenReturn(link);
 
     mvc.perform(
             put("/api/v1/links/abc1234/blocked-countries")

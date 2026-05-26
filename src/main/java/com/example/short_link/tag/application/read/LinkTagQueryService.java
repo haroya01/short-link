@@ -2,6 +2,7 @@ package com.example.short_link.tag.application.read;
 
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -30,7 +31,7 @@ public class LinkTagQueryService {
   private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)
-  public List<String> tagNamesFor(Long userId, String shortCode) {
+  public List<String> tagNamesFor(Long userId, ShortCode shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)

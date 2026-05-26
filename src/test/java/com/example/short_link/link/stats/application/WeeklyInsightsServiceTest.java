@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
@@ -122,8 +123,9 @@ class WeeklyInsightsServiceTest {
 
   @Test
   void recordExposeFields() {
-    WeeklyInsights.TopLink tl = new WeeklyInsights.TopLink("abc", "https://x", 10L, "twitter");
-    assertThat(tl.shortCode()).isEqualTo("abc");
+    WeeklyInsights.TopLink tl =
+        new WeeklyInsights.TopLink(new ShortCode("abc"), "https://x", 10L, "twitter");
+    assertThat(tl.shortCode().value()).isEqualTo("abc");
     assertThat(tl.originalUrl()).isEqualTo("https://x");
     assertThat(tl.clicks()).isEqualTo(10L);
     assertThat(tl.topUtmSource()).isEqualTo("twitter");

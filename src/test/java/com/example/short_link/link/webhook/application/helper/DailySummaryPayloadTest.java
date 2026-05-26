@@ -2,6 +2,7 @@ package com.example.short_link.link.webhook.application.helper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.ShortCode;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
@@ -9,7 +10,7 @@ class DailySummaryPayloadTest {
 
   private DailySummaryPayload sample() {
     return new DailySummaryPayload(
-        "abc12345",
+        new ShortCode("abc12345"),
         "2026-05-25T00:00",
         "2026-05-25T23:59:59",
         142L,
@@ -73,7 +74,8 @@ class DailySummaryPayloadTest {
   @Test
   void deltaAllowsNullVs7DayAvg() {
     DailySummaryPayload p =
-        new DailySummaryPayload("x", "a", "b", 1L, 1L, 0L, 1L, null, null, null, 0, 0L, null, null);
+        new DailySummaryPayload(
+            new ShortCode("xxx"), "a", "b", 1L, 1L, 0L, 1L, null, null, null, 0, 0L, null, null);
     @SuppressWarnings("unchecked")
     Map<String, Object> delta = (Map<String, Object>) p.toJsonMap().get("delta");
     assertThat(delta).containsEntry("vs7DayAvg", null);

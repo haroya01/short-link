@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.access.application.LinkAccessGuard;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.JwtTokenService;
@@ -45,15 +46,15 @@ class SseClickStreamControllerTest {
   @Test
   void invalidTokenReturns401EmitterAndCompletes() {
     when(jwt.parseAccessToken("bad")).thenThrow(new RuntimeException("nope"));
-    SseEmitter emitter = controller.stream("abc", "bad", null, response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), "bad", null, response);
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
   }
 
   @Test
   void missingLinkThrowsLinkNotFound() {
-    when(lookup.findEntity("abc")).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> controller.stream("abc", "tok", null, response))
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> controller.stream(new ShortCode("abc"), "tok", null, response))
         .isInstanceOf(LinkException.class);
   }
 
@@ -62,9 +63,9 @@ class SseClickStreamControllerTest {
     LinkEntity link = new LinkEntity("https://x", "abc", 99L, null);
     TestEntities.withId(link, 1L);
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
-    when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(false);
-    assertThatThrownBy(() -> controller.stream("abc", "tok", null, response))
+    assertThatThrownBy(() -> controller.stream(new ShortCode("abc"), "tok", null, response))
         .isInstanceOf(LinkException.class);
   }
 
@@ -73,10 +74,10 @@ class SseClickStreamControllerTest {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
     TestEntities.withId(link, 1L);
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
-    when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
     when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(false);
-    SseEmitter out = controller.stream("abc", "tok", null, response);
+    SseEmitter out = controller.stream(new ShortCode("abc"), "tok", null, response);
     verify(response).setStatus(429);
     assertThat(out).isNotNull();
   }
@@ -86,24 +87,24 @@ class SseClickStreamControllerTest {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
     TestEntities.withId(link, 1L);
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
-    when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
     when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(true);
-    SseEmitter out = controller.stream("abc", "tok", null, response);
+    SseEmitter out = controller.stream(new ShortCode("abc"), "tok", null, response);
     assertThat(out).isNotNull();
     assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);
   }
 
   @Test
   void noTokenAndNoClaimReturns401() {
-    SseEmitter emitter = controller.stream("abc", null, null, response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, null, response);
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
   }
 
   @Test
   void blankParamsTreatedAsMissing() {
-    SseEmitter emitter = controller.stream("abc", "  ", "", response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), "  ", "", response);
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
   }
@@ -113,10 +114,10 @@ class SseClickStreamControllerTest {
     LinkEntity link = new LinkEntity("https://x", "abc", null, null);
     link.setClaimToken("ctok");
     TestEntities.withId(link, 1L);
-    when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(true);
 
-    SseEmitter out = controller.stream("abc", null, "ctok", response);
+    SseEmitter out = controller.stream(new ShortCode("abc"), null, "ctok", response);
 
     assertThat(out).isNotNull();
     assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);
@@ -127,9 +128,9 @@ class SseClickStreamControllerTest {
     LinkEntity link = new LinkEntity("https://x", "abc", null, null);
     link.setClaimToken("real-ctok");
     TestEntities.withId(link, 1L);
-    when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
 
-    SseEmitter emitter = controller.stream("abc", null, "wrong-ctok", response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, "wrong-ctok", response);
 
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
@@ -139,9 +140,9 @@ class SseClickStreamControllerTest {
   void claimTokenOnClaimedLinkReturns401() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
     TestEntities.withId(link, 1L);
-    when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
 
-    SseEmitter emitter = controller.stream("abc", null, "ctok", response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, "ctok", response);
 
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
@@ -151,9 +152,9 @@ class SseClickStreamControllerTest {
   void claimTokenWhenStoredIsNullReturns401() {
     LinkEntity link = new LinkEntity("https://x", "abc", null, null);
     TestEntities.withId(link, 1L);
-    when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
 
-    SseEmitter emitter = controller.stream("abc", null, "anything", response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, "anything", response);
 
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
@@ -164,11 +165,11 @@ class SseClickStreamControllerTest {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
     TestEntities.withId(link, 1L);
     when(jwt.parseAccessToken("tok")).thenReturn(7L);
-    when(lookup.findEntity("abc")).thenReturn(Optional.of(link));
+    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
     when(registry.register(eq(1L), any(SseEmitter.class))).thenReturn(true);
 
-    SseEmitter out = controller.stream("abc", "tok", "ignored-claim", response);
+    SseEmitter out = controller.stream(new ShortCode("abc"), "tok", "ignored-claim", response);
 
     assertThat(out).isNotNull();
     assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);

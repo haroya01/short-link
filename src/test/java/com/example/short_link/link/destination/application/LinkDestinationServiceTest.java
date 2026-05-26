@@ -10,6 +10,7 @@ import com.example.short_link.link.destination.application.write.DeleteDestinati
 import com.example.short_link.link.destination.application.write.UpdateDestinationUseCase;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
@@ -43,22 +44,38 @@ class LinkDestinationServiceTest {
 
     DestinationSummary v1 =
         addUseCase.execute(
-            user.getId(), "ab11111", "https://example.com/A", 50, "variant-A", null, null, null);
+            user.getId(),
+            new ShortCode("ab11111"),
+            "https://example.com/A",
+            50,
+            "variant-A",
+            null,
+            null,
+            null);
     assertThat(v1.weight()).isEqualTo(50);
     assertThat(v1.label()).isEqualTo("variant-A");
     assertThat(v1.enabled()).isTrue();
 
-    var list = query.list(user.getId(), "ab11111");
+    var list = query.list(user.getId(), new ShortCode("ab11111"));
     assertThat(list).hasSize(1);
 
     var updated =
         updateUseCase.execute(
-            user.getId(), "ab11111", v1.id(), null, 70, null, false, null, null, null);
+            user.getId(),
+            new ShortCode("ab11111"),
+            v1.id(),
+            null,
+            70,
+            null,
+            false,
+            null,
+            null,
+            null);
     assertThat(updated.weight()).isEqualTo(70);
     assertThat(updated.enabled()).isFalse();
 
-    deleteUseCase.execute(user.getId(), "ab11111", v1.id());
-    assertThat(query.list(user.getId(), "ab11111")).isEmpty();
+    deleteUseCase.execute(user.getId(), new ShortCode("ab11111"), v1.id());
+    assertThat(query.list(user.getId(), new ShortCode("ab11111"))).isEmpty();
   }
 
   @Test
@@ -68,12 +85,26 @@ class LinkDestinationServiceTest {
 
     for (int i = 0; i < AddDestinationUseCase.MAX_PER_LINK; i++) {
       addUseCase.execute(
-          user.getId(), "ab22222", "https://example.com/v" + i, 10, "v" + i, null, null, null);
+          user.getId(),
+          new ShortCode("ab22222"),
+          "https://example.com/v" + i,
+          10,
+          "v" + i,
+          null,
+          null,
+          null);
     }
     assertThatThrownBy(
             () ->
                 addUseCase.execute(
-                    user.getId(), "ab22222", "https://example.com/v9", 10, "v9", null, null, null))
+                    user.getId(),
+                    new ShortCode("ab22222"),
+                    "https://example.com/v9",
+                    10,
+                    "v9",
+                    null,
+                    null,
+                    null))
         .isInstanceOf(DestinationException.class);
   }
 
@@ -85,7 +116,14 @@ class LinkDestinationServiceTest {
     assertThatThrownBy(
             () ->
                 addUseCase.execute(
-                    user.getId(), "ab33333", "javascript:alert(1)", 50, null, null, null, null))
+                    user.getId(),
+                    new ShortCode("ab33333"),
+                    "javascript:alert(1)",
+                    50,
+                    null,
+                    null,
+                    null,
+                    null))
         .isInstanceOf(DestinationException.class);
   }
 
@@ -96,12 +134,26 @@ class LinkDestinationServiceTest {
 
     var huge =
         addUseCase.execute(
-            user.getId(), "ab44444", "https://example.com/v", 999, null, null, null, null);
+            user.getId(),
+            new ShortCode("ab44444"),
+            "https://example.com/v",
+            999,
+            null,
+            null,
+            null,
+            null);
     assertThat(huge.weight()).isEqualTo(AddDestinationUseCase.MAX_WEIGHT);
 
     var tiny =
         addUseCase.execute(
-            user.getId(), "ab44444", "https://example.com/w", 0, null, null, null, null);
+            user.getId(),
+            new ShortCode("ab44444"),
+            "https://example.com/w",
+            0,
+            null,
+            null,
+            null,
+            null);
     assertThat(tiny.weight()).isEqualTo(AddDestinationUseCase.MIN_WEIGHT);
   }
 
@@ -113,11 +165,19 @@ class LinkDestinationServiceTest {
     linkRepository.save(new LinkEntity("https://example.com/c", "ab55555", owner.getId(), null));
     var v =
         addUseCase.execute(
-            owner.getId(), "ab55555", "https://example.com/v", 50, null, null, null, null);
+            owner.getId(),
+            new ShortCode("ab55555"),
+            "https://example.com/v",
+            50,
+            null,
+            null,
+            null,
+            null);
 
-    assertThatThrownBy(() -> query.list(stranger.getId(), "ab55555"))
+    assertThatThrownBy(() -> query.list(stranger.getId(), new ShortCode("ab55555")))
         .isInstanceOf(LinkException.class);
-    assertThatThrownBy(() -> deleteUseCase.execute(stranger.getId(), "ab55555", v.id()))
+    assertThatThrownBy(
+            () -> deleteUseCase.execute(stranger.getId(), new ShortCode("ab55555"), v.id()))
         .isInstanceOf(LinkException.class);
   }
 }

@@ -10,6 +10,7 @@ import com.example.short_link.link.destination.presentation.request.LinkDestinat
 import com.example.short_link.link.destination.presentation.request.LinkDestinationBlockedCountriesRequest;
 import com.example.short_link.link.destination.presentation.request.LinkDestinationUpdateRequest;
 import com.example.short_link.link.destination.presentation.response.LinkDestinationBlockedCountriesResponse;
+import com.example.short_link.link.domain.ShortCode;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -38,14 +39,14 @@ public class LinkDestinationController {
 
   @GetMapping("/{shortCode}/destinations")
   public List<DestinationSummary> list(
-      @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
+      @AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
     return query.list(userId, shortCode);
   }
 
   @PostMapping("/{shortCode}/destinations")
   public ResponseEntity<DestinationSummary> add(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestBody LinkDestinationAddRequest request) {
     DestinationSummary added =
         addUseCase.execute(
@@ -63,7 +64,7 @@ public class LinkDestinationController {
   @PatchMapping("/{shortCode}/destinations/{id}")
   public DestinationSummary update(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @PathVariable Long id,
       @RequestBody LinkDestinationUpdateRequest request) {
     return updateUseCase.execute(
@@ -81,7 +82,9 @@ public class LinkDestinationController {
 
   @DeleteMapping("/{shortCode}/destinations/{id}")
   public ResponseEntity<Void> delete(
-      @AuthenticationPrincipal Long userId, @PathVariable String shortCode, @PathVariable Long id) {
+      @AuthenticationPrincipal Long userId,
+      @PathVariable ShortCode shortCode,
+      @PathVariable Long id) {
     deleteUseCase.execute(userId, shortCode, id);
     return ResponseEntity.noContent().build();
   }
@@ -89,7 +92,7 @@ public class LinkDestinationController {
   @PutMapping("/{shortCode}/blocked-countries")
   public LinkDestinationBlockedCountriesResponse setBlocked(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestBody LinkDestinationBlockedCountriesRequest request) {
     var link = setBlockedUseCase.execute(userId, shortCode, request.codes());
     return new LinkDestinationBlockedCountriesResponse(link.getBlockedCountries());

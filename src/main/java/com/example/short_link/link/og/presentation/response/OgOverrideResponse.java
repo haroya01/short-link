@@ -1,4 +1,6 @@
 package com.example.short_link.link.og.presentation.response;
 
+import com.example.short_link.link.domain.ShortCode;
+
 public record OgOverrideResponse(
-    String shortCode, String ogTitle, String ogDescription, String ogImage) {}
+    ShortCode shortCode, String ogTitle, String ogDescription, String ogImage) {}

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
@@ -35,9 +36,10 @@ class LinkManagementUseCasesTest {
 
     MyLink result =
         updateLink.execute(
-            new UpdateLinkCommand(user.getId(), "lmu0001", "https://new.com", null, null, null));
+            new UpdateLinkCommand(
+                user.getId(), new ShortCode("lmu0001"), "https://new.com", null, null, null));
 
-    assertThat(result.shortCode()).isEqualTo("lmu0001");
+    assertThat(result.shortCode().value()).isEqualTo("lmu0001");
     assertThat(result.originalUrl()).isEqualTo("https://new.com");
   }
 
@@ -49,9 +51,9 @@ class LinkManagementUseCasesTest {
     Instant future = Instant.now().plusSeconds(3600);
     updateLink.execute(
         new UpdateLinkCommand(
-            user.getId(), "lmu0002", null, future, "personal note", "Sale ended"));
+            user.getId(), new ShortCode("lmu0002"), null, future, "personal note", "Sale ended"));
 
-    LinkEntity reloaded = linkRepository.findByShortCode("lmu0002").orElseThrow();
+    LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("lmu0002")).orElseThrow();
     assertThat(reloaded.getExpiresAt()).isEqualTo(future);
     assertThat(reloaded.getExpiredMessage()).isEqualTo("Sale ended");
   }
@@ -63,7 +65,12 @@ class LinkManagementUseCasesTest {
             () ->
                 updateLink.execute(
                     new UpdateLinkCommand(
-                        user.getId(), "nope9999", "https://x.com", null, null, null)))
+                        user.getId(),
+                        new ShortCode("nope9999"),
+                        "https://x.com",
+                        null,
+                        null,
+                        null)))
         .isInstanceOf(LinkException.class);
   }
 
@@ -77,7 +84,12 @@ class LinkManagementUseCasesTest {
             () ->
                 updateLink.execute(
                     new UpdateLinkCommand(
-                        attacker.getId(), "lmu0003", "https://hax.com", null, null, null)))
+                        attacker.getId(),
+                        new ShortCode("lmu0003"),
+                        "https://hax.com",
+                        null,
+                        null,
+                        null)))
         .isInstanceOf(LinkException.class);
   }
 
@@ -86,9 +98,9 @@ class LinkManagementUseCasesTest {
     UserEntity user = userRepository.save(new UserEntity("d@x.com", "google", "g-lmd"));
     linkRepository.save(new LinkEntity("https://x.com", "lmd0001", user.getId(), null));
 
-    deleteLink.execute(new DeleteLinkCommand(user.getId(), "lmd0001"));
+    deleteLink.execute(new DeleteLinkCommand(user.getId(), new ShortCode("lmd0001")));
 
-    assertThat(linkRepository.findByShortCode("lmd0001")).isEmpty();
+    assertThat(linkRepository.findByShortCode(new ShortCode("lmd0001"))).isEmpty();
   }
 
   @Test
@@ -97,7 +109,10 @@ class LinkManagementUseCasesTest {
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-lmda"));
     linkRepository.save(new LinkEntity("https://x.com", "lmd0002", owner.getId(), null));
 
-    assertThatThrownBy(() -> deleteLink.execute(new DeleteLinkCommand(attacker.getId(), "lmd0002")))
+    assertThatThrownBy(
+            () ->
+                deleteLink.execute(
+                    new DeleteLinkCommand(attacker.getId(), new ShortCode("lmd0002"))))
         .isInstanceOf(LinkException.class);
   }
 
@@ -115,9 +130,9 @@ class LinkManagementUseCasesTest {
                 me.getId(), List.of("bulk0001", "bulk0002", "bulk0003", "nope")));
 
     assertThat(removed).isEqualTo(2);
-    assertThat(linkRepository.findByShortCode("bulk0001")).isEmpty();
-    assertThat(linkRepository.findByShortCode("bulk0002")).isEmpty();
-    assertThat(linkRepository.findByShortCode("bulk0003")).isPresent();
+    assertThat(linkRepository.findByShortCode(new ShortCode("bulk0001"))).isEmpty();
+    assertThat(linkRepository.findByShortCode(new ShortCode("bulk0002"))).isEmpty();
+    assertThat(linkRepository.findByShortCode(new ShortCode("bulk0003"))).isPresent();
   }
 
   @Test
@@ -136,6 +151,6 @@ class LinkManagementUseCasesTest {
         bulkDeleteLinks.execute(BulkDeleteLinksCommand.of(me.getId(), List.of("bulk0010")));
 
     assertThat(removed).isZero();
-    assertThat(linkRepository.findByShortCode("bulk0010")).isPresent();
+    assertThat(linkRepository.findByShortCode(new ShortCode("bulk0010"))).isPresent();
   }
 }

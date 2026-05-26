@@ -6,6 +6,7 @@ import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.application.dto.MyLinksQuery;
 import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.tag.application.write.ReplaceLinkTagsUseCase;
 import com.example.short_link.user.domain.UserEntity;
@@ -45,7 +46,9 @@ class MyLinksFilterTest {
         service.myLinks(
             user.getId(), MyLinksQuery.of(50, null, null, null, "example.com", null, null, null));
 
-    assertThat(result.items()).extracting(MyLink::shortCode).containsOnly("fc00001", "fc00002");
+    assertThat(result.items())
+        .extracting(r -> r.shortCode().value())
+        .containsOnly("fc00001", "fc00002");
   }
 
   @Test
@@ -56,16 +59,16 @@ class MyLinksFilterTest {
     save(user, "https://example.com/expired", "fc00012", Instant.now().minus(Duration.ofDays(1)));
 
     assertThat(filterExpiry(user.getId(), "NEVER"))
-        .extracting(MyLink::shortCode)
+        .extracting(r -> r.shortCode().value())
         .containsOnly("fc00010");
     assertThat(filterExpiry(user.getId(), "ACTIVE"))
-        .extracting(MyLink::shortCode)
+        .extracting(r -> r.shortCode().value())
         .containsOnly("fc00010", "fc00011");
     assertThat(filterExpiry(user.getId(), "EXPIRED"))
-        .extracting(MyLink::shortCode)
+        .extracting(r -> r.shortCode().value())
         .containsOnly("fc00012");
     assertThat(filterExpiry(user.getId(), "HAS_EXPIRY"))
-        .extracting(MyLink::shortCode)
+        .extracting(r -> r.shortCode().value())
         .containsOnly("fc00011", "fc00012");
   }
 
@@ -82,19 +85,19 @@ class MyLinksFilterTest {
         service.myLinks(
             user.getId(),
             MyLinksQuery.of(50, null, null, null, null, null, null, futureCutoff.toString()));
-    assertThat(inWindow.items()).extracting(MyLink::shortCode).contains("fc00020");
+    assertThat(inWindow.items()).extracting(r -> r.shortCode().value()).contains("fc00020");
 
     MyLinksResult excluded =
         service.myLinks(
             user.getId(),
             MyLinksQuery.of(50, null, null, null, null, null, futureCutoff.toString(), null));
-    assertThat(excluded.items()).extracting(MyLink::shortCode).doesNotContain("fc00020");
+    assertThat(excluded.items()).extracting(r -> r.shortCode().value()).doesNotContain("fc00020");
 
     MyLinksResult afterPast =
         service.myLinks(
             user.getId(),
             MyLinksQuery.of(50, null, null, null, null, null, pastCutoff.toString(), null));
-    assertThat(afterPast.items()).extracting(MyLink::shortCode).contains("fc00020");
+    assertThat(afterPast.items()).extracting(r -> r.shortCode().value()).contains("fc00020");
   }
 
   @Test
@@ -104,16 +107,16 @@ class MyLinksFilterTest {
     save(user, "https://news.example.com/b", "fc00031", null);
     save(user, "https://other.example.com/c", "fc00032", null);
 
-    linkTagService.execute(user.getId(), "fc00030", List.of("work"));
-    linkTagService.execute(user.getId(), "fc00031", List.of("home"));
-    linkTagService.execute(user.getId(), "fc00032", List.of("work"));
+    linkTagService.execute(user.getId(), new ShortCode("fc00030"), List.of("work"));
+    linkTagService.execute(user.getId(), new ShortCode("fc00031"), List.of("home"));
+    linkTagService.execute(user.getId(), new ShortCode("fc00032"), List.of("work"));
 
     MyLinksResult result =
         service.myLinks(
             user.getId(),
             MyLinksQuery.of(50, null, null, "work", "news.example.com", null, null, null));
 
-    assertThat(result.items()).extracting(MyLink::shortCode).containsOnly("fc00030");
+    assertThat(result.items()).extracting(r -> r.shortCode().value()).containsOnly("fc00030");
   }
 
   @Test
@@ -127,7 +130,7 @@ class MyLinksFilterTest {
         service.myLinks(
             owner.getId(), MyLinksQuery.of(50, null, null, null, null, null, null, null));
 
-    assertThat(result.items()).extracting(MyLink::shortCode).containsExactly("fc00040");
+    assertThat(result.items()).extracting(r -> r.shortCode().value()).containsExactly("fc00040");
   }
 
   private List<MyLink> filterExpiry(Long userId, String value) {
@@ -169,7 +172,7 @@ class MyLinksFilterTest {
     java.util.Set<String> all = new java.util.HashSet<>();
     for (var p : List.of(page1, page2, page3)) {
       for (MyLink it : p.items()) {
-        assertThat(all.add(it.shortCode()))
+        assertThat(all.add(it.shortCode().value()))
             .as("duplicate %s across pages", it.shortCode())
             .isTrue();
       }

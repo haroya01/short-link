@@ -110,7 +110,7 @@ public class ThresholdSpikeDetector {
             .orElse(null);
     ThresholdSpikePayload payload =
         new ThresholdSpikePayload(
-            link.getShortCode().value(), windowMinutes + "m", count, threshold, topReferrer);
+            link.getShortCode(), windowMinutes + "m", count, threshold, topReferrer);
     String body = jsonMapper.writeValueAsString(payload.toJsonMap());
     dispatcher.deliver(hook, body, "spike_alert");
     hook.markSpikeFired(now);

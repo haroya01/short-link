@@ -4,6 +4,7 @@ import com.example.short_link.link.destination.application.dto.DestinationSummar
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.exception.DestinationErrorCode;
 import com.example.short_link.link.destination.exception.DestinationException;
+import com.example.short_link.link.domain.ShortCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -19,7 +20,7 @@ public class UpdateDestinationUseCase {
   @CacheEvict(value = "link", key = "#shortCode")
   public DestinationSummary execute(
       Long userId,
-      String shortCode,
+      ShortCode shortCode,
       Long destinationId,
       String url,
       Integer weight,

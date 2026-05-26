@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -30,7 +31,7 @@ class LinkOgFetchListenerTest {
 
     LinkRepository repository = mock(LinkRepository.class);
     LinkEntity entity = link("abc1234", "https://example.com/x");
-    when(repository.findByShortCode("abc1234")).thenReturn(Optional.of(entity));
+    when(repository.findByShortCode(new ShortCode("abc1234"))).thenReturn(Optional.of(entity));
     when(repository.save(any(LinkEntity.class))).thenAnswer(i -> i.getArgument(0));
 
     Cache cache = mock(Cache.class);
@@ -46,7 +47,7 @@ class LinkOgFetchListenerTest {
             cacheManager,
             new OgFetchProperties(3, 30, true));
 
-    listener.fetchAndStore("abc1234", "https://example.com/x");
+    listener.fetchAndStore(new ShortCode("abc1234"), "https://example.com/x");
 
     assertThat(entity.getOgTitle()).isEqualTo("Title");
     assertThat(entity.getOgDescription()).isEqualTo("Desc");
@@ -63,7 +64,7 @@ class LinkOgFetchListenerTest {
 
     LinkRepository repository = mock(LinkRepository.class);
     LinkEntity entity = link("zzz1234", "https://example.com/none");
-    when(repository.findByShortCode("zzz1234")).thenReturn(Optional.of(entity));
+    when(repository.findByShortCode(new ShortCode("zzz1234"))).thenReturn(Optional.of(entity));
     when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
 
     LinkOgFetchListener listener =
@@ -75,7 +76,7 @@ class LinkOgFetchListenerTest {
             new NoOpCacheManager(),
             new OgFetchProperties(1, 30, true));
 
-    listener.fetchAndStore("zzz1234", "https://example.com/none");
+    listener.fetchAndStore(new ShortCode("zzz1234"), "https://example.com/none");
 
     assertThat(entity.getOgFetchStatus()).isEqualTo("ERROR");
     assertThat(entity.getOgFetchedAt()).isNotNull();
@@ -88,7 +89,7 @@ class LinkOgFetchListenerTest {
     when(scraper.fetch(any())).thenReturn(new OgMetadata("t", "d", "i"));
 
     LinkRepository repository = mock(LinkRepository.class);
-    when(repository.findByShortCode("gone1234")).thenReturn(Optional.empty());
+    when(repository.findByShortCode(new ShortCode("gone1234"))).thenReturn(Optional.empty());
 
     LinkOgFetchListener listener =
         new LinkOgFetchListener(
@@ -99,9 +100,9 @@ class LinkOgFetchListenerTest {
             new NoOpCacheManager(),
             new OgFetchProperties(3, 30, true));
 
-    listener.fetchAndStore("gone1234", "https://example.com/x");
+    listener.fetchAndStore(new ShortCode("gone1234"), "https://example.com/x");
 
-    verify(repository).findByShortCode("gone1234");
+    verify(repository).findByShortCode(new ShortCode("gone1234"));
   }
 
   private static LinkEntity link(String shortCode, String url) {

@@ -6,6 +6,7 @@ import com.example.short_link.link.destination.domain.repository.LinkDestination
 import com.example.short_link.link.destination.exception.DestinationErrorCode;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -29,7 +30,7 @@ public class AddDestinationUseCase {
   @CacheEvict(value = "link", key = "#shortCode")
   public DestinationSummary execute(
       Long userId,
-      String shortCode,
+      ShortCode shortCode,
       String url,
       Integer weight,
       String label,

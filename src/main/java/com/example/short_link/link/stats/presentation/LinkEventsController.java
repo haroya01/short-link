@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.presentation;
 
 import com.example.short_link.link.application.dto.LinkEventsResult;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.presentation.response.LinkEventResponse;
 import com.example.short_link.link.presentation.response.LinkEventsPage;
 import com.example.short_link.link.stats.application.LinkEventsService;
@@ -22,7 +23,7 @@ public class LinkEventsController {
   @GetMapping("/{shortCode}/events")
   public LinkEventsPage events(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @RequestParam(required = false) String cursor,
       @RequestParam(required = false) Integer limit) {
     return toResponse(service.events(userId, shortCode, cursor, limit));

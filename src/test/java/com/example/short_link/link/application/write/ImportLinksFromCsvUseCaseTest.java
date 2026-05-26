@@ -42,7 +42,8 @@ class ImportLinksFromCsvUseCaseTest {
 
     assertThat(result.ok()).isEqualTo(3);
     assertThat(result.failed()).isZero();
-    assertThat(result.rows()).allSatisfy(r -> assertThat(r.shortCode()).matches("[0-9A-Za-z]{7}"));
+    assertThat(result.rows())
+        .allSatisfy(r -> assertThat(r.shortCode().value()).matches("[0-9A-Za-z]{7}"));
   }
 
   @Test

@@ -1,6 +1,7 @@
 package com.example.short_link.link.webhook.application.write;
 
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -23,7 +24,7 @@ class WebhookOwnership {
   private final LinkRepository linkRepository;
   private final LinkWebhookRepository repository;
 
-  LinkEntity ownedLink(Long userId, String shortCode) {
+  LinkEntity ownedLink(Long userId, ShortCode shortCode) {
     LinkEntity link =
         linkRepository
             .findByShortCode(shortCode)
@@ -32,7 +33,7 @@ class WebhookOwnership {
     return link;
   }
 
-  LinkWebhookEntity ownedHook(Long userId, String shortCode, Long webhookId) {
+  LinkWebhookEntity ownedHook(Long userId, ShortCode shortCode, Long webhookId) {
     LinkEntity link = ownedLink(userId, shortCode);
     LinkWebhookEntity hook =
         repository

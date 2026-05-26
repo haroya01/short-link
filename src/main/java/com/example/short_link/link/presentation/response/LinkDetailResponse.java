@@ -1,10 +1,11 @@
 package com.example.short_link.link.presentation.response;
 
+import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.List;
 
 public record LinkDetailResponse(
-    String shortCode,
+    ShortCode shortCode,
     String originalUrl,
     Instant expiresAt,
     String ogTitle,

@@ -8,6 +8,7 @@ import com.example.short_link.link.application.write.DeleteLinkCommand;
 import com.example.short_link.link.application.write.DeleteLinkUseCase;
 import com.example.short_link.link.application.write.UpdateLinkCommand;
 import com.example.short_link.link.application.write.UpdateLinkUseCase;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.presentation.request.BulkDeleteRequest;
 import com.example.short_link.link.presentation.request.UpdateLinkRequest;
 import com.example.short_link.link.presentation.response.BulkDeleteResponse;
@@ -37,7 +38,7 @@ public class LinkManagementController {
   @PatchMapping("/{shortCode}")
   public MyLinkResponse update(
       @AuthenticationPrincipal Long userId,
-      @PathVariable String shortCode,
+      @PathVariable ShortCode shortCode,
       @Valid @RequestBody UpdateLinkRequest request) {
     MyLink updated =
         updateLink.execute(
@@ -53,7 +54,7 @@ public class LinkManagementController {
 
   @DeleteMapping("/{shortCode}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void delete(@AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
+  public void delete(@AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
     deleteLink.execute(new DeleteLinkCommand(userId, shortCode));
   }
 

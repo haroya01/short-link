@@ -2,6 +2,7 @@ package com.example.short_link.link.presentation;
 
 import com.example.short_link.link.application.dto.LinkDetailView;
 import com.example.short_link.link.application.read.LinkDetailQueryService;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.presentation.response.LinkDetailResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -19,7 +20,7 @@ public class LinkDetailController {
 
   @GetMapping("/{shortCode}/detail")
   public LinkDetailResponse detail(
-      @AuthenticationPrincipal Long userId, @PathVariable String shortCode) {
+      @AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
     LinkDetailView v = service.detail(userId, shortCode);
     return new LinkDetailResponse(
         v.shortCode(),
