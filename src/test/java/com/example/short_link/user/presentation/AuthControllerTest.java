@@ -6,8 +6,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.domain.RefreshToken;
-import com.example.short_link.user.domain.RefreshTokenStore;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.servlet.http.Cookie;

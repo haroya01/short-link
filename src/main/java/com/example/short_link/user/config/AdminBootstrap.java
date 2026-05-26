@@ -1,4 +1,4 @@
-package com.example.short_link.user.domain;
+package com.example.short_link.user.config;
 
 import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;

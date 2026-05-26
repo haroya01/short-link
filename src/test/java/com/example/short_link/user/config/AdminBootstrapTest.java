@@ -1,8 +1,7 @@
-package com.example.short_link.user.application;
+package com.example.short_link.user.config;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.user.domain.AdminBootstrap;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
