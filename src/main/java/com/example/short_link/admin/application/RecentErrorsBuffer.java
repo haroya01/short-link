@@ -22,11 +22,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Logback appender shim that mirrors ERROR/WARN events into an in-memory ring buffer so the admin
- * UI can show them. Captures the rich context the operator needs to triage without shell access:
- * exception class + cause chain, truncated stack trace, MDC fields populated by {@code MdcFilter}
- * (requestId/userId/method/uri/clientIp) and any {@code task} key set by the scheduled-task wrapper
- * so a recurring failure points back to the specific job that produced it.
+ * Logback appender shim that mirrors ERROR/WARN events into an in-memory ring buffer for the admin
+ * UI. Captures exception class + cause chain, truncated stack trace, MDC fields populated by {@code
+ * MdcFilter} (requestId/userId/method/uri/clientIp), and the {@code task} key set by the
+ * scheduled-task wrapper so a recurring failure points back to the specific job that produced it.
  */
 @Component
 public class RecentErrorsBuffer {
