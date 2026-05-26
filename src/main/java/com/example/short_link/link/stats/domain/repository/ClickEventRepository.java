@@ -10,15 +10,12 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 /**
- * Click-event persistence + entity-returning reads. Analytics / projection queries live in {@link
- * ClickEventReadRepository} — splitting the surface so the write side stays a CRUD-shaped JPA
- * repository while the read side advertises its aggregate nature.
- *
- * <p>Inherits from {@link ClickEventReadRepository} so existing callers that injected {@code
- * ClickEventRepository} keep compiling — new callers should depend on the narrower {@link
- * ClickEventReadRepository} when they only need the projections, which is most of them. Migrating
- * existing callers to the narrower interface is a follow-up cleanup; this PR just splits the
- * surface so the next reader can tell which side they're using.
+ * Click-event persistence + entity-returning CRUD reads. Analytics / projection queries are split
+ * across narrower sibling interfaces in this package — {@code ClickTotalsReadRepository}, {@code
+ * ClickTimeReadRepository}, {@code ClickDimensionReadRepository}, {@code
+ * ClickLifecycleReadRepository}, {@code ClickRangeReadRepository}, {@code
+ * ClickAlertReadRepository}. Each application service injects only the slices it needs so the
+ * caller signature advertises its actual read surface.
  */
 public interface ClickEventRepository extends JpaRepository<ClickEventEntity, Long> {
 

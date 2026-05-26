@@ -16,7 +16,8 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
@@ -33,7 +34,8 @@ class ThresholdSpikeDetectorTest {
 
   private final LinkWebhookRepository hooks = mock(LinkWebhookRepository.class);
   private final LinkRepository links = mock(LinkRepository.class);
-  private final ClickEventReadRepository clicks = mock(ClickEventReadRepository.class);
+  private final ClickTotalsReadRepository clickTotals = mock(ClickTotalsReadRepository.class);
+  private final ClickAlertReadRepository clickAlerts = mock(ClickAlertReadRepository.class);
   private final LinkWebhookDispatcher dispatcher = mock(LinkWebhookDispatcher.class);
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
@@ -41,12 +43,13 @@ class ThresholdSpikeDetectorTest {
   private final Clock fixed = Clock.fixed(now, ZoneOffset.UTC);
 
   private final ThresholdSpikeDetector detector =
-      new ThresholdSpikeDetector(hooks, links, clicks, dispatcher, jsonMapper, fixed);
+      new ThresholdSpikeDetector(
+          hooks, links, clickTotals, clickAlerts, dispatcher, jsonMapper, fixed);
 
   @BeforeEach
   void defaults() {
     lenient()
-        .when(clicks.findTopReferrerHostByLinkIdSince(anyLong(), any(Instant.class)))
+        .when(clickAlerts.findTopReferrerHostByLinkIdSince(anyLong(), any(Instant.class)))
         .thenReturn(Optional.empty());
   }
 
@@ -69,7 +72,7 @@ class ThresholdSpikeDetectorTest {
     LinkWebhookEntity hook = hookWithSpike(50, 10);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    when(clicks.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
+    when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
 
     detector.onClickRecorded(click());
 
@@ -80,7 +83,7 @@ class ThresholdSpikeDetectorTest {
   void doesNotFireBelowThreshold() {
     LinkWebhookEntity hook = hookWithSpike(50, 10);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
-    when(clicks.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(49L);
+    when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(49L);
 
     detector.onClickRecorded(click());
 
@@ -114,7 +117,7 @@ class ThresholdSpikeDetectorTest {
     hook.markSpikeFired(now.minusSeconds(11 * 60));
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    when(clicks.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
+    when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
 
     detector.onClickRecorded(click());
 
@@ -126,7 +129,7 @@ class ThresholdSpikeDetectorTest {
     LinkWebhookEntity hook = hookWithSpike(50, 10);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    when(clicks.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
+    when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(50L);
 
     detector.onClickRecorded(click());
 
@@ -150,7 +153,7 @@ class ThresholdSpikeDetectorTest {
     LinkWebhookEntity hook = hookWithSpike(50, 10);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    when(clicks.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(60L);
+    when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(60L);
 
     detector.onClickRecorded(click());
 
@@ -172,7 +175,7 @@ class ThresholdSpikeDetectorTest {
     LinkWebhookEntity hook = hookWithSpike(50, 10);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.empty());
-    when(clicks.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(60L);
+    when(clickTotals.countSinceByLinkId(eq(1L), any(Instant.class))).thenReturn(60L);
 
     detector.onClickRecorded(click());
 

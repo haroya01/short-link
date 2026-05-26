@@ -3,7 +3,8 @@ package com.example.short_link.link.webhook.scheduler;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.link.webhook.application.helper.ThresholdSpikePayload;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
@@ -42,7 +43,8 @@ public class ThresholdSpikeDetector {
 
   private final LinkWebhookRepository hooks;
   private final LinkRepository links;
-  private final ClickEventReadRepository clicks;
+  private final ClickTotalsReadRepository clickTotals;
+  private final ClickAlertReadRepository clickAlerts;
   private final LinkWebhookDispatcher dispatcher;
   private final JsonMapper jsonMapper;
   private final Clock clock;
@@ -51,22 +53,25 @@ public class ThresholdSpikeDetector {
   public ThresholdSpikeDetector(
       LinkWebhookRepository hooks,
       LinkRepository links,
-      ClickEventReadRepository clicks,
+      ClickTotalsReadRepository clickTotals,
+      ClickAlertReadRepository clickAlerts,
       LinkWebhookDispatcher dispatcher,
       JsonMapper jsonMapper) {
-    this(hooks, links, clicks, dispatcher, jsonMapper, Clock.systemUTC());
+    this(hooks, links, clickTotals, clickAlerts, dispatcher, jsonMapper, Clock.systemUTC());
   }
 
   ThresholdSpikeDetector(
       LinkWebhookRepository hooks,
       LinkRepository links,
-      ClickEventReadRepository clicks,
+      ClickTotalsReadRepository clickTotals,
+      ClickAlertReadRepository clickAlerts,
       LinkWebhookDispatcher dispatcher,
       JsonMapper jsonMapper,
       Clock clock) {
     this.hooks = hooks;
     this.links = links;
-    this.clicks = clicks;
+    this.clickTotals = clickTotals;
+    this.clickAlerts = clickAlerts;
     this.dispatcher = dispatcher;
     this.jsonMapper = jsonMapper;
     this.clock = clock;
@@ -94,12 +99,12 @@ public class ThresholdSpikeDetector {
     Instant now = clock.instant();
     if (inCooldown(hook, now, windowMinutes)) return;
     Instant since = now.minus(Duration.ofMinutes(windowMinutes));
-    long count = clicks.countSinceByLinkId(hook.getLinkId(), since);
+    long count = clickTotals.countSinceByLinkId(hook.getLinkId(), since);
     if (count < threshold) return;
     LinkEntity link = links.findById(hook.getLinkId()).orElse(null);
     if (link == null) return;
     String topReferrer =
-        clicks
+        clickAlerts
             .findTopReferrerHostByLinkIdSince(hook.getLinkId(), since)
             .map(r -> r.getHost())
             .orElse(null);

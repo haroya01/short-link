@@ -9,8 +9,9 @@ import com.example.short_link.campaign.application.dto.CampaignStatsResponse.Gro
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse.HeatmapCell;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse.HourBucket;
 import com.example.short_link.campaign.domain.CampaignEntity;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.LinkClickCount;
+import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -31,7 +32,8 @@ public class CampaignStatsService {
 
   private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
   private final CampaignBatchService batchService;
-  private final ClickEventReadRepository clickEventRepository;
+  private final ClickTotalsReadRepository clickTotals;
+  private final ClickTimeReadRepository clickTime;
 
   @Transactional(readOnly = true)
   public CampaignStatsResponse statsFor(Long campaignId, Long ownerId) {
@@ -46,9 +48,9 @@ public class CampaignStatsService {
     List<Long> linkIds = batches.stream().map(b -> b.link().getId()).toList();
 
     Map<Long, Long> clicksByLink =
-        toMap(clickEventRepository.countsByLinkIdsSince(linkIds, campaign.getStartsAt()));
+        toMap(clickTotals.countsByLinkIdsSince(linkIds, campaign.getStartsAt()));
     Map<Long, Long> testByLink =
-        toMap(clickEventRepository.countsByLinkIdsBefore(linkIds, campaign.getStartsAt()));
+        toMap(clickTotals.countsByLinkIdsBefore(linkIds, campaign.getStartsAt()));
 
     List<BatchStats> byBatch = new ArrayList<>(batches.size());
     long totalClicks = 0;
@@ -72,19 +74,19 @@ public class CampaignStatsService {
     List<GroupStats> byArea = groupBy(byBatch, BatchStats::area);
 
     List<HourBucket> byHour =
-        clickEventRepository
+        clickTime
             .findHourlyClicksByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
             .stream()
             .map(r -> new HourBucket(r.getHour(), r.getCount()))
             .toList();
     List<DayBucket> byDay =
-        clickEventRepository
+        clickTime
             .findDailyClicksByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
             .stream()
             .map(r -> new DayBucket(r.getDay(), r.getCount()))
             .toList();
     List<HeatmapCell> heatmap =
-        clickEventRepository
+        clickTime
             .findHeatmapByLinkIdsSince(linkIds, campaign.getStartsAt(), DEFAULT_TIMEZONE)
             .stream()
             .map(r -> new HeatmapCell(r.getDow(), r.getHour(), r.getCount()))
@@ -94,7 +96,7 @@ public class CampaignStatsService {
         totalClicks,
         testScans,
         testScans > 0
-            ? clickEventRepository.findLastClickBeforeByLinkIds(linkIds, campaign.getStartsAt())
+            ? clickTotals.findLastClickBeforeByLinkIds(linkIds, campaign.getStartsAt())
             : null,
         byBatch,
         byDistributor,

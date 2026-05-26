@@ -4,10 +4,10 @@ import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.HeatmapRow;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.LinkClickCount;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.UtmSourceClickRow;
+import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
@@ -30,7 +30,7 @@ public class WeeklyInsightsService {
   private static final Duration WINDOW = Duration.ofDays(7);
   private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
 
-  private final ClickEventReadRepository clickRepository;
+  private final ClickRangeReadRepository clickRanges;
   private final LinkRepository linkRepository;
   private final UserRepository userRepository;
 
@@ -40,9 +40,9 @@ public class WeeklyInsightsService {
     Instant from = now.minus(WINDOW);
     Instant prevFrom = from.minus(WINDOW);
 
-    long totalClicks = clickRepository.countByUserIdAndRange(userId, from, now);
-    long humanClicks = clickRepository.countHumanByUserIdAndRange(userId, from, now);
-    long previousHumanClicks = clickRepository.countHumanByUserIdAndRange(userId, prevFrom, from);
+    long totalClicks = clickRanges.countByUserIdAndRange(userId, from, now);
+    long humanClicks = clickRanges.countHumanByUserIdAndRange(userId, from, now);
+    long previousHumanClicks = clickRanges.countHumanByUserIdAndRange(userId, prevFrom, from);
 
     Double deltaPercent =
         previousHumanClicks == 0
@@ -67,13 +67,13 @@ public class WeeklyInsightsService {
 
   private WeeklyInsights.TopLink resolveTopLink(Long userId, Instant from, Instant to) {
     List<LinkClickCount> top =
-        clickRepository.findTopLinksByUserIdAndRange(userId, from, to, PageRequest.ofSize(1));
+        clickRanges.findTopLinksByUserIdAndRange(userId, from, to, PageRequest.ofSize(1));
     if (top.isEmpty()) return null;
     LinkClickCount best = top.get(0);
     LinkEntity link = linkRepository.findById(best.getLinkId()).orElse(null);
     if (link == null) return null;
     List<UtmSourceClickRow> utm =
-        clickRepository.findTopUtmSourcesByLinkIdAndRange(
+        clickRanges.findTopUtmSourcesByLinkIdAndRange(
             link.getId(), from, to, PageRequest.ofSize(1));
     String topSource = utm.isEmpty() ? null : utm.get(0).getSource();
     return new WeeklyInsights.TopLink(
@@ -84,7 +84,7 @@ public class WeeklyInsightsService {
     ZoneId zone = ownerZone(userId);
     String tz = LinkStatsQueryService.currentOffset(zone);
     List<HeatmapRow> rows =
-        clickRepository.findHeatmapByUserIdAndRange(userId, from, to, tz, PageRequest.ofSize(1));
+        clickRanges.findHeatmapByUserIdAndRange(userId, from, to, tz, PageRequest.ofSize(1));
     if (rows.isEmpty()) return null;
     HeatmapRow best = rows.get(0);
     return new WeeklyInsights.Peak(best.getDow(), best.getHour(), best.getCount());

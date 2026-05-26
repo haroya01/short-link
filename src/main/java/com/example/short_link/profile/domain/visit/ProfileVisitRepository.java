@@ -1,6 +1,6 @@
 package com.example.short_link.profile.domain.visit;
 
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
@@ -41,7 +41,7 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
           + "AND p.visitedAt >= :from "
           + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', p.visitedAt, '+00:00', :tz)) "
           + "ORDER BY day")
-  List<ClickEventReadRepository.DailyClickRow> findDailyVisits(
+  List<ClickProjections.DailyClickRow> findDailyVisits(
       @Param("uid") Long uid, @Param("from") Instant from, @Param("tz") String tz);
 
   @Query(
@@ -50,7 +50,7 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', p.visitedAt, '+00:00', :tz)) "
           + "ORDER BY hour")
-  List<ClickEventReadRepository.HourClickRow> findHourlyVisits(
+  List<ClickProjections.HourClickRow> findHourlyVisits(
       @Param("uid") Long uid, @Param("tz") String tz);
 
   @Query(
@@ -59,27 +59,26 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
           + "COUNT(p) AS count "
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "GROUP BY dow, hour ORDER BY dow, hour")
-  List<ClickEventReadRepository.HeatmapRow> findHeatmap(
-      @Param("uid") Long uid, @Param("tz") String tz);
+  List<ClickProjections.HeatmapRow> findHeatmap(@Param("uid") Long uid, @Param("tz") String tz);
 
   @Query(
       "SELECT p.countryCode AS country, COUNT(p) AS count "
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "GROUP BY p.countryCode ORDER BY count DESC")
-  List<ClickEventReadRepository.CountryClickRow> findCountryVisits(
+  List<ClickProjections.CountryClickRow> findCountryVisits(
       @Param("uid") Long uid, Pageable pageable);
 
   @Query(
       "SELECT p.deviceClass AS device, COUNT(p) AS count "
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "GROUP BY p.deviceClass ORDER BY count DESC")
-  List<ClickEventReadRepository.DeviceClickRow> findDeviceVisits(@Param("uid") Long uid);
+  List<ClickProjections.DeviceClickRow> findDeviceVisits(@Param("uid") Long uid);
 
   @Query(
       "SELECT p.browserName AS browser, COUNT(p) AS count "
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "GROUP BY p.browserName ORDER BY count DESC")
-  List<ClickEventReadRepository.BrowserClickRow> findBrowserVisits(
+  List<ClickProjections.BrowserClickRow> findBrowserVisits(
       @Param("uid") Long uid, Pageable pageable);
 
   @Query(
@@ -87,7 +86,7 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "AND p.referrerHost IS NOT NULL "
           + "GROUP BY p.referrerHost ORDER BY count DESC")
-  List<ClickEventReadRepository.ReferrerHostClickRow> findReferrerHostVisits(
+  List<ClickProjections.ReferrerHostClickRow> findReferrerHostVisits(
       @Param("uid") Long uid, Pageable pageable);
 
   @Query(
@@ -95,7 +94,7 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "AND p.sourceChannel IS NOT NULL "
           + "GROUP BY p.sourceChannel ORDER BY count DESC")
-  List<ClickEventReadRepository.SourceChannelClickRow> findSourceChannelVisits(
+  List<ClickProjections.SourceChannelClickRow> findSourceChannelVisits(
       @Param("uid") Long uid, Pageable pageable);
 
   @Query(
@@ -103,7 +102,7 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "AND p.utmCampaign IS NOT NULL "
           + "GROUP BY p.utmCampaign ORDER BY count DESC")
-  List<ClickEventReadRepository.UtmCampaignClickRow> findUtmCampaignVisits(
+  List<ClickProjections.UtmCampaignClickRow> findUtmCampaignVisits(
       @Param("uid") Long uid, Pageable pageable);
 
   @Query(
@@ -111,6 +110,6 @@ public interface ProfileVisitRepository extends JpaRepository<ProfileVisitEntity
           + "FROM ProfileVisitEntity p WHERE p.profileUserId = :uid AND p.bot = false "
           + "AND p.utmSource IS NOT NULL "
           + "GROUP BY p.utmSource ORDER BY count DESC")
-  List<ClickEventReadRepository.UtmSourceClickRow> findUtmSourceVisits(
+  List<ClickProjections.UtmSourceClickRow> findUtmSourceVisits(
       @Param("uid") Long uid, Pageable pageable);
 }
