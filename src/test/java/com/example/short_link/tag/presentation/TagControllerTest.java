@@ -7,8 +7,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.tag.application.TagService;
-import com.example.short_link.tag.application.TagService.TagSummary;
+import com.example.short_link.tag.application.dto.TagSummary;
+import com.example.short_link.tag.application.write.CreateTagUseCase;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -30,7 +30,7 @@ class TagControllerTest {
   @Autowired private MockMvc mvc;
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
-  @Autowired private TagService tagService;
+  @Autowired private CreateTagUseCase createTag;
 
   @Test
   void anonymousListIs401() throws Exception {
@@ -41,8 +41,8 @@ class TagControllerTest {
   void listReturnsOwnerTagsOnly() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("t@x.com", "google", "g-tagL"));
     UserEntity other = userRepository.save(new UserEntity("o@x.com", "google", "g-tagO"));
-    tagService.create(owner.getId(), "mine", "#aabbcc");
-    tagService.create(other.getId(), "theirs", "#112233");
+    createTag.execute(owner.getId(), "mine", "#aabbcc");
+    createTag.execute(other.getId(), "theirs", "#112233");
     String token = jwt.createAccessToken(owner.getId(), "USER");
 
     mvc.perform(get("/api/v1/tags").header("Authorization", "Bearer " + token))
@@ -81,7 +81,7 @@ class TagControllerTest {
   @Test
   void updateTag() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-tagU"));
-    TagSummary tag = tagService.create(user.getId(), "old", "#000000");
+    TagSummary tag = createTag.execute(user.getId(), "old", "#000000");
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
@@ -97,7 +97,7 @@ class TagControllerTest {
   void updateOthersTagReturns404() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-tagOw"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-tagAt"));
-    TagSummary tag = tagService.create(owner.getId(), "owners", "#aaaaaa");
+    TagSummary tag = createTag.execute(owner.getId(), "owners", "#aaaaaa");
     String attackerToken = jwt.createAccessToken(attacker.getId(), "USER");
 
     mvc.perform(
@@ -111,7 +111,7 @@ class TagControllerTest {
   @Test
   void deleteTag() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("d@x.com", "google", "g-tagD"));
-    TagSummary tag = tagService.create(user.getId(), "doomed", "#cccccc");
+    TagSummary tag = createTag.execute(user.getId(), "doomed", "#cccccc");
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(delete("/api/v1/tags/" + tag.id()).header("Authorization", "Bearer " + token))
@@ -122,7 +122,7 @@ class TagControllerTest {
   void deleteOthersTagReturns404() throws Exception {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-tagDo"));
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-tagDa"));
-    TagSummary tag = tagService.create(owner.getId(), "owners", "#aaaaaa");
+    TagSummary tag = createTag.execute(owner.getId(), "owners", "#aaaaaa");
     String attackerToken = jwt.createAccessToken(attacker.getId(), "USER");
 
     mvc.perform(

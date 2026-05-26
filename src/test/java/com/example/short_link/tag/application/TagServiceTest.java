@@ -5,7 +5,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.tag.application.TagService.TagSummary;
+import com.example.short_link.tag.application.dto.TagSummary;
+import com.example.short_link.tag.application.read.LinkTagQueryService;
+import com.example.short_link.tag.application.read.TagQueryService;
+import com.example.short_link.tag.application.write.CreateTagUseCase;
+import com.example.short_link.tag.application.write.DeleteTagUseCase;
+import com.example.short_link.tag.application.write.ReplaceLinkTagsUseCase;
+import com.example.short_link.tag.application.write.UpdateTagUseCase;
 import com.example.short_link.tag.exception.TagException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -21,8 +27,12 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class TagServiceTest {
 
-  @Autowired private TagService tagService;
-  @Autowired private LinkTagService linkTagService;
+  @Autowired private CreateTagUseCase createTag;
+  @Autowired private UpdateTagUseCase updateTag;
+  @Autowired private DeleteTagUseCase deleteTag;
+  @Autowired private TagQueryService tagQuery;
+  @Autowired private ReplaceLinkTagsUseCase replaceLinkTags;
+  @Autowired private LinkTagQueryService linkTagQuery;
   @Autowired private UserRepository userRepository;
   @Autowired private LinkRepository linkRepository;
 
@@ -30,46 +40,45 @@ class TagServiceTest {
   void createListUpdateDelete() {
     UserEntity user = userRepository.save(new UserEntity("tag1@example.com", "google", "g-tag1"));
 
-    TagSummary work = tagService.create(user.getId(), "work", "#0066cc");
-    TagSummary personal = tagService.create(user.getId(), "personal", null);
+    TagSummary work = createTag.execute(user.getId(), "work", "#0066cc");
+    TagSummary personal = createTag.execute(user.getId(), "personal", null);
 
-    List<TagSummary> listed = tagService.list(user.getId());
+    List<TagSummary> listed = tagQuery.list(user.getId());
     assertThat(listed).extracting(TagSummary::name).containsExactly("personal", "work");
 
-    TagSummary renamed = tagService.update(user.getId(), work.id(), "office", "#ff0000");
+    TagSummary renamed = updateTag.execute(user.getId(), work.id(), "office", "#ff0000");
     assertThat(renamed.name()).isEqualTo("office");
     assertThat(renamed.color()).isEqualTo("#ff0000");
 
-    tagService.delete(user.getId(), personal.id());
-    assertThat(tagService.list(user.getId())).hasSize(1);
+    deleteTag.execute(user.getId(), personal.id());
+    assertThat(tagQuery.list(user.getId())).hasSize(1);
   }
 
   @Test
   void duplicateNameRejected() {
     UserEntity user = userRepository.save(new UserEntity("tag2@example.com", "google", "g-tag2"));
-    tagService.create(user.getId(), "shared", null);
-    assertThatThrownBy(() -> tagService.create(user.getId(), "shared", null))
+    createTag.execute(user.getId(), "shared", null);
+    assertThatThrownBy(() -> createTag.execute(user.getId(), "shared", null))
         .isInstanceOf(TagException.class);
   }
 
   @Test
   void replaceTagsAutoCreatesAndCounts() {
     UserEntity user = userRepository.save(new UserEntity("tag3@example.com", "google", "g-tag3"));
-    LinkEntity link =
-        linkRepository.save(new LinkEntity("https://example.com", "tagged01", user.getId(), null));
+    linkRepository.save(new LinkEntity("https://example.com", "tagged01", user.getId(), null));
 
     List<String> applied =
-        linkTagService.replaceTags(user.getId(), "tagged01", List.of("alpha", "beta", "alpha"));
+        replaceLinkTags.execute(user.getId(), "tagged01", List.of("alpha", "beta", "alpha"));
     assertThat(applied).containsExactly("alpha", "beta");
 
-    List<String> reloaded = linkTagService.tagNamesFor(user.getId(), "tagged01");
+    List<String> reloaded = linkTagQuery.tagNamesFor(user.getId(), "tagged01");
     assertThat(reloaded).containsExactly("alpha", "beta");
 
-    List<TagSummary> tags = tagService.list(user.getId());
+    List<TagSummary> tags = tagQuery.list(user.getId());
     assertThat(tags).extracting(TagSummary::name).containsExactly("alpha", "beta");
     assertThat(tags).extracting(TagSummary::linkCount).containsExactly(1L, 1L);
 
-    linkTagService.replaceTags(user.getId(), "tagged01", List.of("alpha"));
-    assertThat(linkTagService.tagNamesFor(user.getId(), "tagged01")).containsExactly("alpha");
+    replaceLinkTags.execute(user.getId(), "tagged01", List.of("alpha"));
+    assertThat(linkTagQuery.tagNamesFor(user.getId(), "tagged01")).containsExactly("alpha");
   }
 }

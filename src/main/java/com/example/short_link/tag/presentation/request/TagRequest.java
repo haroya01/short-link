@@ -1,4 +1,4 @@
-package com.example.short_link.link.presentation.request;
+package com.example.short_link.tag.presentation.request;
 
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;

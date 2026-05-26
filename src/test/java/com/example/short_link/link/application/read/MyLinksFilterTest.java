@@ -7,7 +7,7 @@ import com.example.short_link.link.application.dto.MyLinksQuery;
 import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.tag.application.LinkTagService;
+import com.example.short_link.tag.application.write.ReplaceLinkTagsUseCase;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
@@ -32,7 +32,7 @@ class MyLinksFilterTest {
   @Autowired private MyLinksQueryService service;
   @Autowired private LinkRepository linkRepository;
   @Autowired private UserRepository userRepository;
-  @Autowired private LinkTagService linkTagService;
+  @Autowired private ReplaceLinkTagsUseCase linkTagService;
 
   @Test
   void filtersByDomainSubstring() {
@@ -104,9 +104,9 @@ class MyLinksFilterTest {
     save(user, "https://news.example.com/b", "fc00031", null);
     save(user, "https://other.example.com/c", "fc00032", null);
 
-    linkTagService.replaceTags(user.getId(), "fc00030", List.of("work"));
-    linkTagService.replaceTags(user.getId(), "fc00031", List.of("home"));
-    linkTagService.replaceTags(user.getId(), "fc00032", List.of("work"));
+    linkTagService.execute(user.getId(), "fc00030", List.of("work"));
+    linkTagService.execute(user.getId(), "fc00031", List.of("home"));
+    linkTagService.execute(user.getId(), "fc00032", List.of("work"));
 
     MyLinksResult result =
         service.myLinks(

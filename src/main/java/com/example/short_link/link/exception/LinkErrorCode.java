@@ -23,10 +23,7 @@ public enum LinkErrorCode {
   BULK_IMPORT_TOO_LARGE(
       HttpStatus.PAYLOAD_TOO_LARGE, "bulk import too large: %d rows (limit %d)", "rows", "limit"),
   INVALID_CURSOR(HttpStatus.BAD_REQUEST, "Invalid cursor"),
-  INVALID_EXPORT_DIMENSION(HttpStatus.BAD_REQUEST, "Invalid export dimension: %s"),
-  CUSTOM_DOMAIN_NOT_FOUND(HttpStatus.NOT_FOUND, "custom domain not found"),
-  CUSTOM_DOMAIN_NOT_VERIFIED(
-      HttpStatus.UNPROCESSABLE_ENTITY, "DNS TXT record for %s did not match expected token");
+  INVALID_EXPORT_DIMENSION(HttpStatus.BAD_REQUEST, "Invalid export dimension: %s");
 
   private final HttpStatus status;
   private final String template;
