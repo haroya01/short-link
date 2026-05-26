@@ -27,7 +27,7 @@ public class LinkDetailQueryService {
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     return new LinkDetailView(
-        link.getShortCode(),
+        link.getShortCode().value(),
         link.getOriginalUrl(),
         link.getExpiresAt(),
         link.getOgTitle(),

@@ -46,7 +46,7 @@ class LinkProtectionControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "prt0001", user.getId(), null));
 
     mvc.perform(
-            patch("/api/v1/links/" + link.getShortCode() + "/protection")
+            patch("/api/v1/links/" + link.getShortCode().value() + "/protection")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"password\":\"hunter2\",\"maxViews\":10}"))
@@ -64,7 +64,7 @@ class LinkProtectionControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "prt0002", owner.getId(), null));
 
     mvc.perform(
-            patch("/api/v1/links/" + link.getShortCode() + "/protection")
+            patch("/api/v1/links/" + link.getShortCode().value() + "/protection")
                 .header("Authorization", "Bearer " + attackerToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"password\":\"hack\"}"))
@@ -79,7 +79,7 @@ class LinkProtectionControllerTest {
         linkRepository.save(new LinkEntity("https://example.com", "prt0003", user.getId(), null));
 
     mvc.perform(
-            patch("/api/v1/links/" + link.getShortCode() + "/protection")
+            patch("/api/v1/links/" + link.getShortCode().value() + "/protection")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"maxViews\":0}"))

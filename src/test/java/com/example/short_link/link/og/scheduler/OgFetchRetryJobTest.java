@@ -54,7 +54,7 @@ class OgFetchRetryJobTest {
   void processesCandidates() {
     when(lock.tryAcquire(eq("kurl:og-fetch:retry"), any(Duration.class))).thenReturn(true);
     LinkEntity a = Mockito.mock(LinkEntity.class);
-    when(a.getShortCode()).thenReturn("r000001");
+    when(a.getShortCode().value()).thenReturn("r000001");
     when(a.getOriginalUrl()).thenReturn("https://r.example");
     when(linkRepository.findOgRetryCandidates(eq(3), any(), any(Pageable.class)))
         .thenReturn(List.of(a));
@@ -70,9 +70,9 @@ class OgFetchRetryJobTest {
     when(lock.tryAcquire(eq("kurl:og-fetch:retry"), any(Duration.class))).thenReturn(true);
     LinkEntity a = Mockito.mock(LinkEntity.class);
     LinkEntity b = Mockito.mock(LinkEntity.class);
-    when(a.getShortCode()).thenReturn("a000001");
+    when(a.getShortCode().value()).thenReturn("a000001");
     when(a.getOriginalUrl()).thenReturn("https://a.example");
-    when(b.getShortCode()).thenReturn("b000001");
+    when(b.getShortCode().value()).thenReturn("b000001");
     when(b.getOriginalUrl()).thenReturn("https://b.example");
     when(linkRepository.findOgRetryCandidates(anyInt(), any(), any(Pageable.class)))
         .thenReturn(List.of(a, b));

@@ -28,7 +28,7 @@ public class LinkEntity extends BaseCreatedEntity {
   private String originalUrl;
 
   @Column(name = "short_code", nullable = false, length = 16, unique = true)
-  private String shortCode;
+  private ShortCode shortCode;
 
   @Column(name = "user_id")
   private Long userId;
@@ -116,10 +116,18 @@ public class LinkEntity extends BaseCreatedEntity {
   private String expiredRedirectUrl;
 
   public LinkEntity(String originalUrl, String shortCode) {
+    this(originalUrl, new ShortCode(shortCode), null, null);
+  }
+
+  public LinkEntity(String originalUrl, ShortCode shortCode) {
     this(originalUrl, shortCode, null, null);
   }
 
   public LinkEntity(String originalUrl, String shortCode, Long userId, Instant expiresAt) {
+    this(originalUrl, new ShortCode(shortCode), userId, expiresAt);
+  }
+
+  public LinkEntity(String originalUrl, ShortCode shortCode, Long userId, Instant expiresAt) {
     this.originalUrl = originalUrl;
     this.shortCode = shortCode;
     this.userId = userId;

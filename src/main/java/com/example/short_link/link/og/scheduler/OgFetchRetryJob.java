@@ -48,9 +48,9 @@ public class OgFetchRetryJob {
       log.info("og fetch retry: {} candidates", candidates.size());
       for (LinkEntity link : candidates) {
         try {
-          listener.fetchAndStore(link.getShortCode(), link.getOriginalUrl());
+          listener.fetchAndStore(link.getShortCode().value(), link.getOriginalUrl());
         } catch (RuntimeException e) {
-          log.warn("og fetch retry failed for {}", link.getShortCode(), e);
+          log.warn("og fetch retry failed for {}", link.getShortCode().value(), e);
         }
       }
       meterRegistry.counter("short_link.og_fetch.retry").increment(candidates.size());

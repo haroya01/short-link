@@ -49,9 +49,9 @@ public class OgRefreshJob {
       log.info("og refresh: {} stale candidates", candidates.size());
       for (LinkEntity link : candidates) {
         try {
-          listener.fetchAndStore(link.getShortCode(), link.getOriginalUrl());
+          listener.fetchAndStore(link.getShortCode().value(), link.getOriginalUrl());
         } catch (RuntimeException e) {
-          log.warn("og refresh failed for {}", link.getShortCode(), e);
+          log.warn("og refresh failed for {}", link.getShortCode().value(), e);
         }
       }
       meterRegistry.counter("short_link.og_fetch.refresh").increment(candidates.size());

@@ -108,7 +108,7 @@ public class LinkStatsQueryService {
             time.daily);
 
     return new LinkStats(
-        link.getShortCode(),
+        link.getShortCode().value(),
         reportZone.getId(),
         totals.total,
         totals.human,

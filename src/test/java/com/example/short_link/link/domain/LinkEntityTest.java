@@ -12,7 +12,7 @@ class LinkEntityTest {
   void shortConstructorLeavesUserAndExpiryNull() {
     LinkEntity link = new LinkEntity("https://x.com", "abc");
     assertThat(link.getOriginalUrl()).isEqualTo("https://x.com");
-    assertThat(link.getShortCode()).isEqualTo("abc");
+    assertThat(link.getShortCode().value()).isEqualTo("abc");
     assertThat(link.getUserId()).isNull();
     assertThat(link.getExpiresAt()).isNull();
     assertThat(link.getOgFetchStatus()).isEqualTo("PENDING");
