@@ -2,6 +2,10 @@ package com.example.short_link.admin.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.admin.application.helper.BlockedDomainNormalizer;
+import com.example.short_link.admin.application.read.BlockedDomainQueryService;
+import com.example.short_link.admin.application.write.BlockDomainUseCase;
+import com.example.short_link.admin.application.write.UnblockDomainUseCase;
 import com.example.short_link.admin.domain.repository.BlockedDomainRepository;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -14,43 +18,45 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class BlockedDomainServiceTest {
 
-  @Autowired private BlockedDomainService service;
+  @Autowired private BlockDomainUseCase blockDomain;
+  @Autowired private UnblockDomainUseCase unblockDomain;
+  @Autowired private BlockedDomainQueryService queryService;
   @Autowired private BlockedDomainRepository repository;
 
   @Test
   void normalizesAndStores() {
-    service.block("https://www.bad.example.com/path", "abuse", 1L);
+    blockDomain.execute("https://www.bad.example.com/path", "abuse", 1L);
     assertThat(repository.findByDomain("bad.example.com")).isPresent();
     assertThat(repository.findByDomain("www.bad.example.com")).isEmpty();
   }
 
   @Test
   void detectsBlockedHost() {
-    service.block("blocked.test", "spam", 1L);
-    assertThat(service.isBlocked("https://blocked.test/foo")).isTrue();
-    assertThat(service.isBlocked("https://allowed.example.com/")).isFalse();
+    blockDomain.execute("blocked.test", "spam", 1L);
+    assertThat(queryService.isBlocked("https://blocked.test/foo")).isTrue();
+    assertThat(queryService.isBlocked("https://allowed.example.com/")).isFalse();
   }
 
   @Test
   void detectsBlockedSubdomain() {
-    service.block("badco.test", "spam", 1L);
-    assertThat(service.isBlocked("https://www.badco.test/")).isTrue();
-    assertThat(service.isBlocked("https://promo.subdomain.badco.test/")).isTrue();
+    blockDomain.execute("badco.test", "spam", 1L);
+    assertThat(queryService.isBlocked("https://www.badco.test/")).isTrue();
+    assertThat(queryService.isBlocked("https://promo.subdomain.badco.test/")).isTrue();
   }
 
   @Test
   void unblockRemoves() {
-    service.block("toremove.test", null, 1L);
-    assertThat(service.isBlocked("https://toremove.test/")).isTrue();
-    assertThat(service.unblock("toremove.test")).isTrue();
+    blockDomain.execute("toremove.test", null, 1L);
+    assertThat(queryService.isBlocked("https://toremove.test/")).isTrue();
+    assertThat(unblockDomain.execute("toremove.test")).isTrue();
   }
 
   @Test
   void normalizeStripsScheme() {
-    assertThat(BlockedDomainService.normalize("https://www.example.com/path"))
+    assertThat(BlockedDomainNormalizer.normalize("https://www.example.com/path"))
         .isEqualTo("example.com");
-    assertThat(BlockedDomainService.normalize("EXAMPLE.com")).isEqualTo("example.com");
-    assertThat(BlockedDomainService.normalize("  ")).isNull();
-    assertThat(BlockedDomainService.normalize(null)).isNull();
+    assertThat(BlockedDomainNormalizer.normalize("EXAMPLE.com")).isEqualTo("example.com");
+    assertThat(BlockedDomainNormalizer.normalize("  ")).isNull();
+    assertThat(BlockedDomainNormalizer.normalize(null)).isNull();
   }
 }

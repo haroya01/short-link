@@ -3,6 +3,8 @@ package com.example.short_link.link.destination.application.write;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
+import com.example.short_link.link.destination.exception.DestinationErrorCode;
+import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.Locale;
@@ -35,10 +37,11 @@ public class AddDestinationUseCase {
       String deviceClass,
       String os) {
     LinkEntity link = ownership.ownedLink(userId, shortCode);
-    if (!isValidUrl(url)) throw new IllegalArgumentException("destination url must be http(s)");
+    if (!isValidUrl(url)) {
+      throw new DestinationException(DestinationErrorCode.INVALID_DESTINATION_URL);
+    }
     if (repository.countByLinkId(link.getId()) >= MAX_PER_LINK) {
-      throw new IllegalArgumentException(
-          "too many destinations for this link (max " + MAX_PER_LINK + ")");
+      throw new DestinationException(DestinationErrorCode.TOO_MANY_DESTINATIONS, MAX_PER_LINK);
     }
     int w = clampWeight(weight);
     LinkDestinationEntity saved =

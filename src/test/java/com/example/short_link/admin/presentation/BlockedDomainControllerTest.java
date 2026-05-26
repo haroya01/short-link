@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.admin.application.BlockedDomainService;
+import com.example.short_link.admin.application.write.BlockDomainUseCase;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -28,7 +28,7 @@ class BlockedDomainControllerTest {
   @Autowired private MockMvc mvc;
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
-  @Autowired private BlockedDomainService service;
+  @Autowired private BlockDomainUseCase blockDomain;
 
   @Test
   void anonymousIsRejected() throws Exception {
@@ -79,7 +79,7 @@ class BlockedDomainControllerTest {
     admin.promoteToAdmin();
     userRepository.save(admin);
     String token = jwt.createAccessToken(admin.getId(), "ADMIN");
-    service.block("removeme.example.com", "test", admin.getId());
+    blockDomain.execute("removeme.example.com", "test", admin.getId());
 
     mvc.perform(
             delete("/api/v1/admin/blocked-domains/removeme.example.com")
