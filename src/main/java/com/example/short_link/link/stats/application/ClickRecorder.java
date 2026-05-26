@@ -39,57 +39,8 @@ public class ClickRecorder {
   private final ApplicationEventPublisher events;
 
   @Transactional
-  public void record(
-      Long linkId,
-      String originalUrl,
-      String referrer,
-      String userAgent,
-      String clientIp,
-      String acceptLanguage) {
-    record(linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, null, null, null);
-  }
-
-  @Transactional
-  public void record(
-      Long linkId,
-      String originalUrl,
-      String referrer,
-      String userAgent,
-      String clientIp,
-      String acceptLanguage,
-      String sourceChannel) {
-    record(
-        linkId,
-        originalUrl,
-        referrer,
-        userAgent,
-        clientIp,
-        acceptLanguage,
-        sourceChannel,
-        null,
-        null);
-  }
-
-  @Transactional
-  public void record(
-      Long linkId,
-      String originalUrl,
-      String referrer,
-      String userAgent,
-      String clientIp,
-      String acceptLanguage,
-      String sourceChannel,
-      Long destinationId) {
-    record(
-        linkId,
-        originalUrl,
-        referrer,
-        userAgent,
-        clientIp,
-        acceptLanguage,
-        sourceChannel,
-        null,
-        destinationId);
+  public void record(ClickContext ctx) {
+    save(ctx, null);
   }
 
   /**
@@ -98,65 +49,24 @@ public class ClickRecorder {
    * UI can show "social preview" volume separate from real clicks.
    */
   @Transactional
-  public void recordPreview(
-      Long linkId,
-      String originalUrl,
-      String referrer,
-      String userAgent,
-      String clientIp,
-      String acceptLanguage,
-      String sourceChannel,
-      String crawlerLabel) {
-    record(
-        linkId,
-        originalUrl,
-        referrer,
-        userAgent,
-        clientIp,
-        acceptLanguage,
-        sourceChannel,
-        PREVIEW_BOT_NAME_PREFIX + crawlerLabel,
-        null);
+  public void recordPreview(ClickContext ctx, String crawlerLabel) {
+    save(ctx, PREVIEW_BOT_NAME_PREFIX + crawlerLabel);
   }
 
-  @Transactional
-  public void record(
-      Long linkId,
-      String originalUrl,
-      String referrer,
-      String userAgent,
-      String clientIp,
-      String acceptLanguage,
-      String sourceChannel,
-      String forcedBotName,
-      Long destinationId) {
+  private void save(ClickContext ctx, String forcedBotName) {
     try {
-      UtmParams utm = UtmExtractor.extract(originalUrl);
-      UserAgentInfo ua = userAgentClassifier.classify(userAgent);
-      GeoLocation geo = geoIpResolver.resolve(clientIp);
-      AsnResolver.AsnInfo asnInfo = asnResolver.resolve(clientIp);
-      boolean uaBot = ua.bot();
-      String botName = ua.botName();
-      if (forcedBotName != null) {
-        uaBot = true;
-        botName = forcedBotName;
-      } else if (!uaBot && botHeuristic.isSuspectBurst(clientIp)) {
-        uaBot = true;
-        botName = BotHeuristic.SUSPECT_LABEL;
-      } else if (!uaBot && asnInfo.datacenter()) {
-        // Datacenter ASN with non-bot UA → almost always a scraper/headless. Mark it so stats
-        // don't conflate cloud egress with real eyeball traffic.
-        uaBot = true;
-        botName =
-            "datacenter:" + (asnInfo.organization() == null ? "unknown" : asnInfo.organization());
-      }
+      UtmParams utm = UtmExtractor.extract(ctx.originalUrl());
+      UserAgentInfo ua = userAgentClassifier.classify(ctx.userAgent());
+      GeoLocation geo = geoIpResolver.resolve(ctx.clientIp());
+      AsnResolver.AsnInfo asnInfo = asnResolver.resolve(ctx.clientIp());
+      BotClassification bot = classifyBot(ua, asnInfo, ctx.clientIp(), forcedBotName);
       ClickEventEntity event =
           ClickEventEntity.builder()
-              .linkId(linkId)
-              .referrer(ReferrerNormalizer.normalize(referrer))
-              .referrerHost(ReferrerNormalizer.hostOf(referrer))
-              .userAgent(userAgent)
-              .clientIp(IpMasker.mask(clientIp))
+              .linkId(ctx.linkId())
+              .referrer(ReferrerNormalizer.normalize(ctx.referrer()))
+              .referrerHost(ReferrerNormalizer.hostOf(ctx.referrer()))
+              .userAgent(ctx.userAgent())
+              .clientIp(IpMasker.mask(ctx.clientIp()))
               .utmSource(utm.source())
               .utmMedium(utm.medium())
               .utmCampaign(utm.campaign())
@@ -165,30 +75,48 @@ public class ClickRecorder {
               .deviceClass(ua.deviceClass())
               .osName(ua.osName())
               .browserName(ua.browserName())
-              .bot(uaBot)
-              .botName(botName)
+              .bot(bot.isBot())
+              .botName(bot.botName())
               .countryCode(geo.countryCode())
               .regionName(geo.region())
               .cityName(geo.city())
-              .language(LanguageExtractor.extract(acceptLanguage))
-              .visitorHash(VisitorHasher.hash(linkId, clientIp, userAgent))
-              .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))
-              .destinationId(destinationId)
+              .language(LanguageExtractor.extract(ctx.acceptLanguage()))
+              .visitorHash(VisitorHasher.hash(ctx.linkId(), ctx.clientIp(), ctx.userAgent()))
+              .sourceChannel(SourceChannelNormalizer.normalize(ctx.sourceChannel()))
+              .destinationId(ctx.destinationId())
               .asn(asnInfo.asn())
               .asnOrg(asnInfo.organization())
               .build();
       ClickEventEntity saved = repository.save(event);
       events.publishEvent(
           new ClickRecordedEvent(
-              linkId,
+              ctx.linkId(),
               saved.getClickedAt() != null ? saved.getClickedAt() : Instant.now(),
               geo.countryCode(),
               ua.deviceClass(),
-              ReferrerNormalizer.hostOf(referrer),
-              uaBot,
+              ReferrerNormalizer.hostOf(ctx.referrer()),
+              bot.isBot(),
               utm.source()));
     } catch (RuntimeException e) {
-      log.warn("failed to record click for linkId={}", linkId, e);
+      log.warn("failed to record click for linkId={}", ctx.linkId(), e);
     }
   }
+
+  private BotClassification classifyBot(
+      UserAgentInfo ua, AsnResolver.AsnInfo asnInfo, String clientIp, String forcedBotName) {
+    if (forcedBotName != null) return new BotClassification(true, forcedBotName);
+    if (ua.bot()) return new BotClassification(true, ua.botName());
+    if (botHeuristic.isSuspectBurst(clientIp)) {
+      return new BotClassification(true, BotHeuristic.SUSPECT_LABEL);
+    }
+    if (asnInfo.datacenter()) {
+      // Datacenter ASN with non-bot UA → almost always a scraper/headless. Mark it so stats
+      // don't conflate cloud egress with real eyeball traffic.
+      String org = asnInfo.organization() == null ? "unknown" : asnInfo.organization();
+      return new BotClassification(true, "datacenter:" + org);
+    }
+    return new BotClassification(false, null);
+  }
+
+  private record BotClassification(boolean isBot, String botName) {}
 }

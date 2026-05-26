@@ -14,6 +14,7 @@ import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.application.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.application.helper.LinkRedirectSupport;
+import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -145,13 +146,14 @@ public class RedirectController {
       HttpServletRequest req) {
     meterRegistry.counter("short_link.preview").increment();
     clickRecorder.recordPreview(
-        link.linkId(),
-        link.originalUrl(),
-        referrer,
-        userAgent,
-        LinkRedirectSupport.clientIp(req),
-        acceptLanguage,
-        src,
+        ClickContext.of(
+                link.linkId(),
+                link.originalUrl(),
+                referrer,
+                userAgent,
+                LinkRedirectSupport.clientIp(req),
+                acceptLanguage)
+            .withSourceChannel(src),
         crawlerLabel);
     LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
     if (entity == null) {
