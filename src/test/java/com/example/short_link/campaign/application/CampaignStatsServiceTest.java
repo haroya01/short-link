@@ -8,7 +8,6 @@ import com.example.short_link.campaign.application.dto.CampaignCreateRequest;
 import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -36,7 +35,6 @@ class CampaignStatsServiceTest {
   private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveCampaign;
 
   @Autowired private ClickEventRepository clickRepository;
-  private ClickEventReadRepository clickEventRepository;
   @Autowired private UserRepository userRepository;
 
   private Long newOwner(String suffix) {

@@ -10,11 +10,12 @@ import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.CountryClickRow;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.DeviceClickRow;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.HourClickRow;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository.SourceChannelClickRow;
+import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickRangeReadRepository;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CountryClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DeviceClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.SourceChannelClickRow;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -24,38 +25,42 @@ import org.junit.jupiter.api.Test;
 
 class DailySummaryAssemblerTest {
 
-  private final ClickEventReadRepository repo = mock(ClickEventReadRepository.class);
-  private final DailySummaryAssembler assembler = new DailySummaryAssembler(repo);
+  private final ClickRangeReadRepository ranges = mock(ClickRangeReadRepository.class);
+  private final ClickAlertReadRepository alerts = mock(ClickAlertReadRepository.class);
+  private final DailySummaryAssembler assembler = new DailySummaryAssembler(ranges, alerts);
   private final ZoneId tz = ZoneId.of("Asia/Seoul");
   private final LocalDate day = LocalDate.of(2026, 5, 25);
 
   @BeforeEach
   void defaults() {
     lenient()
-        .when(repo.countHumanByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
+        .when(ranges.countHumanByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
         .thenReturn(0L);
     lenient()
-        .when(repo.countBotByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
+        .when(ranges.countBotByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
         .thenReturn(0L);
     lenient()
         .when(
-            repo.countUniqueVisitorsByLinkIdAndRange(
+            ranges.countUniqueVisitorsByLinkIdAndRange(
                 anyLong(), any(Instant.class), any(Instant.class)))
         .thenReturn(0L);
     lenient()
         .when(
-            repo.findTopChannelByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
+            alerts.findTopChannelByLinkIdAndRange(
+                anyLong(), any(Instant.class), any(Instant.class)))
         .thenReturn(Optional.empty());
     lenient()
         .when(
-            repo.findTopCountryByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
-        .thenReturn(Optional.empty());
-    lenient()
-        .when(repo.findTopDeviceByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
+            alerts.findTopCountryByLinkIdAndRange(
+                anyLong(), any(Instant.class), any(Instant.class)))
         .thenReturn(Optional.empty());
     lenient()
         .when(
-            repo.findPeakHourByLinkIdAndRange(
+            alerts.findTopDeviceByLinkIdAndRange(anyLong(), any(Instant.class), any(Instant.class)))
+        .thenReturn(Optional.empty());
+    lenient()
+        .when(
+            alerts.findPeakHourByLinkIdAndRange(
                 anyLong(), any(Instant.class), any(Instant.class), anyString()))
         .thenReturn(Optional.empty());
   }
@@ -66,9 +71,10 @@ class DailySummaryAssemblerTest {
 
   @Test
   void totalIsHumanPlusBot() {
-    when(repo.countHumanByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+    when(ranges.countHumanByLinkIdAndRange(
+            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(130L);
-    when(repo.countBotByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+    when(ranges.countBotByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(12L);
 
     DailySummaryPayload p = assembler.assemble(1L, "abc", day, tz);
@@ -78,7 +84,8 @@ class DailySummaryAssemblerTest {
 
   @Test
   void humanCountFlowsThrough() {
-    when(repo.countHumanByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+    when(ranges.countHumanByLinkIdAndRange(
+            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(130L);
 
     DailySummaryPayload p = assembler.assemble(1L, "abc", day, tz);
@@ -88,7 +95,7 @@ class DailySummaryAssemblerTest {
 
   @Test
   void uniqueVisitorsFlowsThrough() {
-    when(repo.countUniqueVisitorsByLinkIdAndRange(
+    when(ranges.countUniqueVisitorsByLinkIdAndRange(
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(88L);
 
@@ -101,7 +108,7 @@ class DailySummaryAssemblerTest {
   void topChannelComesFromFirstRow() {
     SourceChannelClickRow row = mock(SourceChannelClickRow.class);
     when(row.getSource()).thenReturn("twitter");
-    when(repo.findTopChannelByLinkIdAndRange(
+    when(alerts.findTopChannelByLinkIdAndRange(
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
@@ -121,7 +128,7 @@ class DailySummaryAssemblerTest {
   void topCountryComesFromFirstRow() {
     CountryClickRow row = mock(CountryClickRow.class);
     when(row.getCountry()).thenReturn("KR");
-    when(repo.findTopCountryByLinkIdAndRange(
+    when(alerts.findTopCountryByLinkIdAndRange(
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
@@ -134,7 +141,7 @@ class DailySummaryAssemblerTest {
   void topDeviceComesFromFirstRow() {
     DeviceClickRow row = mock(DeviceClickRow.class);
     when(row.getDevice()).thenReturn("Mobile");
-    when(repo.findTopDeviceByLinkIdAndRange(
+    when(alerts.findTopDeviceByLinkIdAndRange(
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(Optional.of(row));
 
@@ -148,7 +155,7 @@ class DailySummaryAssemblerTest {
     HourClickRow row = mock(HourClickRow.class);
     when(row.getHour()).thenReturn(21);
     when(row.getCount()).thenReturn(24L);
-    when(repo.findPeakHourByLinkIdAndRange(
+    when(alerts.findPeakHourByLinkIdAndRange(
             eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1))), eq("Asia/Seoul")))
         .thenReturn(Optional.of(row));
 
@@ -166,9 +173,11 @@ class DailySummaryAssemblerTest {
 
   @Test
   void vsYesterdayPositiveWhenGrew() {
-    when(repo.countHumanByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+    when(ranges.countHumanByLinkIdAndRange(
+            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(120L);
-    when(repo.countHumanByLinkIdAndRange(eq(1L), eq(dayStart(day.minusDays(1))), eq(dayStart(day))))
+    when(ranges.countHumanByLinkIdAndRange(
+            eq(1L), eq(dayStart(day.minusDays(1))), eq(dayStart(day))))
         .thenReturn(100L);
 
     DailySummaryPayload p = assembler.assemble(1L, "abc", day, tz);
@@ -178,7 +187,8 @@ class DailySummaryAssemblerTest {
 
   @Test
   void vsYesterdayNullWhenYesterdayZero() {
-    when(repo.countHumanByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+    when(ranges.countHumanByLinkIdAndRange(
+            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(50L);
 
     DailySummaryPayload p = assembler.assemble(1L, "abc", day, tz);
@@ -188,9 +198,11 @@ class DailySummaryAssemblerTest {
 
   @Test
   void vs7DayAvgComparesAgainstAverage() {
-    when(repo.countHumanByLinkIdAndRange(eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
+    when(ranges.countHumanByLinkIdAndRange(
+            eq(1L), eq(dayStart(day)), eq(dayStart(day.plusDays(1)))))
         .thenReturn(70L);
-    when(repo.countHumanByLinkIdAndRange(eq(1L), eq(dayStart(day.minusDays(7))), eq(dayStart(day))))
+    when(ranges.countHumanByLinkIdAndRange(
+            eq(1L), eq(dayStart(day.minusDays(7))), eq(dayStart(day))))
         .thenReturn(700L);
 
     DailySummaryPayload p = assembler.assemble(1L, "abc", day, tz);

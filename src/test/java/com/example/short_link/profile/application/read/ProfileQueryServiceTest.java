@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
+import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
@@ -35,7 +35,7 @@ class ProfileQueryServiceTest {
 
   @Mock private UserRepository userRepository;
   @Mock private LinkRepository linkRepository;
-  @Mock private ClickEventReadRepository clickRepository;
+  @Mock private ClickTotalsReadRepository clickRepository;
   @Mock private UsernameHistoryRepository usernameHistoryRepository;
   @Mock private ProfileBlockRepository profileBlockRepository;
   @Mock private ShortLinkUrlBuilder urlBuilder;

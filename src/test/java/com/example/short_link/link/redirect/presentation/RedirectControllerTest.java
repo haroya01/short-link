@@ -9,8 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickEventReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
@@ -30,7 +30,7 @@ class RedirectControllerTest {
   @Autowired private MockMvc mvc;
   @Autowired private LinkRepository repository;
   @Autowired private ClickEventRepository clickEventRepository;
-  @Autowired private ClickEventReadRepository clickRepository;
+  @Autowired private ClickTotalsReadRepository clickRepository;
 
   @Test
   void redirectsToOriginalUrl() throws Exception {
