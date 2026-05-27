@@ -10,17 +10,14 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.admin.application.read.BlockedDomainQueryService;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.common.security.BlockedDomainChecker;
-import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
-import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
-import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -51,11 +48,7 @@ class LinkCreationServiceCollisionTest {
                 (BlockedDomainChecker) blockedDomain,
                 safetyChecker,
                 (MeterRegistry) new SimpleMeterRegistry()),
-            new LinkSidecarPersister(
-                mock(LinkOgMetadataRepository.class),
-                mock(LinkAccessControlRepository.class),
-                mock(LinkProfileBindingRepository.class),
-                mock(LinkExpirationPolicyRepository.class)),
+            new LinkSidecarPersister(mock(EntityManager.class)),
             noopTransactionManager(),
             200L);
 

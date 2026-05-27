@@ -15,8 +15,6 @@ public class WebhookExceptionHandler {
 
   @ExceptionHandler(WebhookException.class)
   public ProblemDetail handle(WebhookException e, HttpServletRequest req) {
-    ProblemDetail body = ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
-    e.properties().forEach(body::setProperty);
-    return body;
+    return ProblemDetails.of(e, req);
   }
 }

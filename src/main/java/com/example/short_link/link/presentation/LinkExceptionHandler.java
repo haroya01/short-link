@@ -28,8 +28,6 @@ public class LinkExceptionHandler {
     if (e.errorCode() == LinkErrorCode.SHORT_CODE_EXHAUSTED) {
       log.error("short code generation exhausted", e);
     }
-    ProblemDetail body = ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
-    e.properties().forEach(body::setProperty);
-    return body;
+    return ProblemDetails.of(e, req);
   }
 }

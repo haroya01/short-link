@@ -2,7 +2,6 @@ package com.example.short_link.link.redirect.application;
 
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.dto.UserAgentInfo;
-import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.application.write.IncrementViewCountCommand;
 import com.example.short_link.link.application.write.IncrementViewCountUseCase;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
@@ -20,17 +19,15 @@ import org.springframework.stereotype.Service;
 
 /**
  * Shared decision pipeline behind {@code GET /{shortCode}} and {@code POST /{shortCode}} (password
- * unlock). Both controllers hand off the loaded link + the (already-password-checked) entity here,
- * and the flow runs the four checks that don't depend on the entry point — view limit, country
- * block, destination pick, click recording — returning a {@link RedirectOutcome} for the
- * presentation layer to render. Lifts the duplicated check chain out of the two controllers and
- * keeps the entry-point-specific bits (preview detection / password prompt) where they belong.
+ * unlock). Controllers hand off the loaded cache DTO, plus the entity only when the password-unlock
+ * path already needed it. The flow runs the four checks that don't depend on the entry point — view
+ * limit, country block, destination pick, click recording — returning a {@link RedirectOutcome} for
+ * the presentation layer to render.
  */
 @Service
 @RequiredArgsConstructor
 public class LinkRedirectFlow {
 
-  private final LinkLookupQueryService lookup;
   private final IncrementViewCountUseCase incrementViewCount;
   private final ClickRecorder clickRecorder;
   private final GeoIpResolver geoIpResolver;
@@ -53,11 +50,21 @@ public class LinkRedirectFlow {
       HttpServletRequest req) {
     if (entity != null) {
       try {
-        enforceViewLimit(entity);
+        enforceViewLimit(link, entity);
       } catch (LinkException e) {
         if (e.errorCode() == LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED
             && entity.getExpiredMessage() != null) {
           return new RedirectOutcome.ExpiredWithMessage(entity.getExpiredMessage());
+        }
+        throw e;
+      }
+    } else {
+      try {
+        enforceViewLimit(link, null);
+      } catch (LinkException e) {
+        if (e.errorCode() == LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED
+            && link.expiredMessage() != null) {
+          return new RedirectOutcome.ExpiredWithMessage(link.expiredMessage());
         }
         throw e;
       }
@@ -85,11 +92,16 @@ public class LinkRedirectFlow {
     return new RedirectOutcome.Redirect(picked);
   }
 
-  private void enforceViewLimit(LinkEntity entity) {
-    if (entity.getMaxViews() == null) return;
-    int updated = incrementViewCount.execute(new IncrementViewCountCommand(entity.linkId()));
+  private void enforceViewLimit(CachedLink link, LinkEntity entity) {
+    Integer maxViews = entity == null ? link.maxViews() : entity.getMaxViews();
+    if (maxViews == null) return;
+    int updated = incrementViewCount.execute(new IncrementViewCountCommand(link.linkId()));
     if (updated == 0) {
-      throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode());
+      Object code =
+          entity != null
+              ? entity.getShortCode()
+              : link.shortCode() == null ? link.linkId() : link.shortCode();
+      throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, code);
     }
   }
 }

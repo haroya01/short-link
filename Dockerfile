@@ -2,7 +2,7 @@
 # emulation, so Gradle / annotation processing / Spotless finish in ~3 min instead of stalling
 # 20-30 min under arm64 emulation. The resulting JAR is arch-neutral and gets copied into the
 # arm64 runtime stage below, which only has to run COPY + apt-get (tiny under emulation).
-FROM --platform=$BUILDPLATFORM gradle:8.10-jdk17 AS build
+FROM --platform=$BUILDPLATFORM gradle:8.10-jdk21 AS build
 WORKDIR /workspace
 
 # Copy build descriptors first so the slow Gradle dependency layer can cache by itself —
@@ -23,7 +23,7 @@ RUN if [ -n "${MAXMIND_LICENSE_KEY:-}" ]; then \
     fi \
     && ./gradlew bootJar -x test -x spotlessCheck --no-daemon
 
-FROM eclipse-temurin:17-jre AS runtime
+FROM eclipse-temurin:21-jre AS runtime
 WORKDIR /app
 
 RUN apt-get update \

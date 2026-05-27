@@ -1,6 +1,7 @@
 package com.example.short_link.link.application.dto;
 
 import com.example.short_link.link.domain.LinkId;
+import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
@@ -8,6 +9,7 @@ import java.util.concurrent.ThreadLocalRandom;
 
 public record CachedLink(
     LinkId linkId,
+    ShortCode shortCode,
     Long userId,
     String originalUrl,
     Instant expiresAt,
@@ -15,7 +17,14 @@ public record CachedLink(
     String ogDescription,
     String ogImage,
     String blockedCountries,
+    boolean passwordRequired,
+    Integer maxViews,
+    String expiredMessage,
     List<Variant> variants) {
+
+  public CachedLink {
+    variants = variants == null ? List.of() : List.copyOf(variants);
+  }
 
   public CachedLink(
       LinkId linkId,
@@ -24,7 +33,20 @@ public record CachedLink(
       String ogTitle,
       String ogDescription,
       String ogImage) {
-    this(linkId, null, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, null, List.of());
+    this(
+        linkId,
+        null,
+        null,
+        originalUrl,
+        expiresAt,
+        ogTitle,
+        ogDescription,
+        ogImage,
+        null,
+        false,
+        null,
+        null,
+        List.of());
   }
 
   public CachedLink(
@@ -35,7 +57,20 @@ public record CachedLink(
       String ogDescription,
       String ogImage,
       List<Variant> variants) {
-    this(linkId, null, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, null, variants);
+    this(
+        linkId,
+        null,
+        null,
+        originalUrl,
+        expiresAt,
+        ogTitle,
+        ogDescription,
+        ogImage,
+        null,
+        false,
+        null,
+        null,
+        variants);
   }
 
   public CachedLink(
@@ -47,7 +82,46 @@ public record CachedLink(
       String ogDescription,
       String ogImage,
       List<Variant> variants) {
-    this(linkId, userId, originalUrl, expiresAt, ogTitle, ogDescription, ogImage, null, variants);
+    this(
+        linkId,
+        null,
+        userId,
+        originalUrl,
+        expiresAt,
+        ogTitle,
+        ogDescription,
+        ogImage,
+        null,
+        false,
+        null,
+        null,
+        variants);
+  }
+
+  public CachedLink(
+      LinkId linkId,
+      Long userId,
+      String originalUrl,
+      Instant expiresAt,
+      String ogTitle,
+      String ogDescription,
+      String ogImage,
+      String blockedCountries,
+      List<Variant> variants) {
+    this(
+        linkId,
+        null,
+        userId,
+        originalUrl,
+        expiresAt,
+        ogTitle,
+        ogDescription,
+        ogImage,
+        blockedCountries,
+        false,
+        null,
+        null,
+        variants);
   }
 
   public boolean isExpired(Instant now) {
