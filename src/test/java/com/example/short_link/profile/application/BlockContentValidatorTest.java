@@ -75,4 +75,126 @@ class BlockContentValidatorTest {
     assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.CONTACT_CARD, huge))
         .isInstanceOf(ProfileException.class);
   }
+
+  @Test
+  void textNormalizesTrimmedBody() {
+    String normalized = BlockContentValidator.validate(ProfileBlockType.TEXT, "  hi  ");
+    assertThat(normalized).isNotBlank();
+  }
+
+  @Test
+  void textRejectsNull() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.TEXT, null))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void imageAcceptsPlainHttpUrl() {
+    assertThat(BlockContentValidator.validate(ProfileBlockType.IMAGE, "http://cdn.example/x.png"))
+        .isEqualTo("http://cdn.example/x.png");
+  }
+
+  @Test
+  void imageRejectsUrlWithoutHost() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.IMAGE, "https:///x"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void imageRejectsSchemelessUrl() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.IMAGE, "cdn.example"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void embedAcceptsKnownProvider() {
+    assertThat(
+            BlockContentValidator.validate(
+                ProfileBlockType.EMBED, "https://www.youtube.com/watch?v=abc"))
+        .contains("youtube");
+  }
+
+  @Test
+  void embedRejectsOver2048Chars() {
+    String huge = "https://www.youtube.com/watch?v=" + "a".repeat(2048);
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.EMBED, huge))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void emailFormRejectsBlank() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.EMAIL_FORM, "  "))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void contactCardRejectsBlank() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.CONTACT_CARD, ""))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void galleryRejectsOver2048Chars() {
+    String huge = "{" + "x".repeat(2049) + "}";
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.GALLERY, huge))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void galleryRejectsBlank() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.GALLERY, ""))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void productCardRejectsOver16384Chars() {
+    String huge = "x".repeat(16385);
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.PRODUCT_CARD, huge))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void productCardRejectsBlank() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.PRODUCT_CARD, ""))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void bookingRejectsOver2048Chars() {
+    String huge = "x".repeat(2049);
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.BOOKING, huge))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void bookingRejectsBlank() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.BOOKING, ""))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void eventRejectsOver2048Chars() {
+    String huge = "x".repeat(2049);
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.EVENT, huge))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void eventRejectsBlank() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.EVENT, ""))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void placeRejectsOver2048Chars() {
+    String huge = "x".repeat(2049);
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.PLACE, huge))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void placeRejectsBlank() {
+    assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.PLACE, ""))
+        .isInstanceOf(ProfileException.class);
+  }
 }

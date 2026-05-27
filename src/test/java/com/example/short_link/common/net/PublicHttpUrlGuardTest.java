@@ -75,4 +75,36 @@ class PublicHttpUrlGuardTest {
     assertThat(resolved.get().addresses()).isNotEmpty();
     assertThat(resolved.get().uri().getHost()).isEqualTo("www.google.com");
   }
+
+  @Test
+  void rejectsBlankAndNullVariants() {
+    assertThat(PublicHttpUrlGuard.resolve(null)).isEmpty();
+    assertThat(PublicHttpUrlGuard.resolve("   ")).isEmpty();
+  }
+
+  @Test
+  void rejectsSchemelessUrl() {
+    assertThat(PublicHttpUrlGuard.resolve("example.com/path")).isEmpty();
+  }
+
+  @Test
+  void rejectsHostlessUrl() {
+    assertThat(PublicHttpUrlGuard.resolve("https:///path")).isEmpty();
+  }
+
+  @Test
+  void rejectsUnknownHostname() {
+    assertThat(PublicHttpUrlGuard.resolve("https://this-host-should-not-resolve.invalid/"))
+        .isEmpty();
+  }
+
+  @Test
+  void rejectsIpv6Loopback() {
+    assertThat(PublicHttpUrlGuard.isPublic("http://[::1]/")).isFalse();
+  }
+
+  @Test
+  void rejectsMulticast() {
+    assertThat(PublicHttpUrlGuard.isPublic("http://224.0.0.1/")).isFalse();
+  }
 }
