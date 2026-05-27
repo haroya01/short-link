@@ -3,7 +3,7 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
+import com.example.short_link.campaign.application.dto.CampaignStatsView;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.presentation.request.CampaignCreateRequest;
@@ -68,7 +68,7 @@ class CampaignStatsServiceTest {
     recordClick(batch.link().linkId(), start.plusSeconds(120), false);
     recordClick(batch.link().linkId(), start.plusSeconds(180), true); // bot — 제외
 
-    CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
+    CampaignStatsView stats = statsService.statsFor(campaign.getId(), owner);
 
     assertThat(stats.totalClicks()).isEqualTo(2L);
     assertThat(stats.byBatch()).hasSize(1);
@@ -94,7 +94,7 @@ class CampaignStatsServiceTest {
     recordClick(batch.link().linkId(), testScan, false);
     recordClick(batch.link().linkId(), testScan.plusSeconds(30), false);
 
-    CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
+    CampaignStatsView stats = statsService.statsFor(campaign.getId(), owner);
 
     assertThat(stats.totalClicks()).isZero();
     assertThat(stats.testScans()).isEqualTo(2L);
@@ -130,10 +130,10 @@ class CampaignStatsServiceTest {
     for (int i = 0; i < 70; i++) recordClick(a2.link().linkId(), start.plusSeconds(60 + i), false);
     for (int i = 0; i < 30; i++) recordClick(b1.link().linkId(), start.plusSeconds(60 + i), false);
 
-    CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
+    CampaignStatsView stats = statsService.statsFor(campaign.getId(), owner);
 
     assertThat(stats.byDistributor()).hasSize(2);
-    CampaignStatsResponse.GroupStats top = stats.byDistributor().get(0);
+    CampaignStatsView.GroupStats top = stats.byDistributor().get(0);
     assertThat(top.key()).isEqualTo("A");
     assertThat(top.clicks()).isEqualTo(120L);
     assertThat(top.totalQuantity()).isEqualTo(1000);
@@ -150,7 +150,7 @@ class CampaignStatsServiceTest {
                     "C", start, start.plusSeconds(3600), "https://example.com/d", null, null, null)
                 .toCommand(owner));
 
-    CampaignStatsResponse stats = statsService.statsFor(campaign.getId(), owner);
+    CampaignStatsView stats = statsService.statsFor(campaign.getId(), owner);
 
     assertThat(stats.totalClicks()).isZero();
     assertThat(stats.byBatch()).isEmpty();

@@ -4,9 +4,14 @@ import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
 
-public interface CustomDomainRepository extends JpaRepository<CustomDomainEntity, Long> {
+public interface CustomDomainRepository {
+
+  Optional<CustomDomainEntity> findById(Long id);
+
+  CustomDomainEntity save(CustomDomainEntity domain);
+
+  void delete(CustomDomainEntity domain);
 
   List<CustomDomainEntity> findAllByUserIdOrderByIdAsc(Long userId);
 

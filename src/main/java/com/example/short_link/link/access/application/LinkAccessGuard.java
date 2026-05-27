@@ -1,13 +1,11 @@
 package com.example.short_link.link.access.application;
 
+import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Centralised "can this user read this link?" decision. Owner can always read; ADMIN can read any
@@ -19,13 +17,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class LinkAccessGuard {
 
-  private final UserRepository userRepository;
+  private final UserAccessLookup users;
 
-  @Transactional(readOnly = true)
   public boolean canView(Long userId, LinkEntity link) {
     if (userId == null) return false;
     if (link.isOwnedBy(userId)) return true;
-    return userRepository.findById(userId).map(UserEntity::isAdmin).orElse(false);
+    return users.isAdmin(userId);
   }
 
   public void requireView(Long userId, LinkEntity link) {

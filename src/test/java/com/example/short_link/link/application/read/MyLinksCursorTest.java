@@ -16,6 +16,17 @@ class MyLinksCursorTest {
     MyLinksCursor out = MyLinksCursor.decode(in.encode());
     assertThat(out.createdAt()).isEqualTo(t);
     assertThat(out.id()).isEqualTo(4242L);
+    assertThat(out.sortValue()).isNull();
+  }
+
+  @Test
+  void roundTripsComputedSortValue() {
+    Instant t = Instant.parse("2026-05-13T08:14:32.123456Z");
+    MyLinksCursor in = new MyLinksCursor(t, 4242L, 17L);
+    MyLinksCursor out = MyLinksCursor.decode(in.encode());
+    assertThat(out.createdAt()).isEqualTo(t);
+    assertThat(out.id()).isEqualTo(4242L);
+    assertThat(out.sortValue()).isEqualTo(17L);
   }
 
   @Test

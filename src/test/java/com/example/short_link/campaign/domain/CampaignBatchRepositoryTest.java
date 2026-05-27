@@ -3,6 +3,7 @@ package com.example.short_link.campaign.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.campaign.domain.repository.*;
+import com.example.short_link.campaign.infrastructure.persistence.JpaCampaignBatchRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import io.queryaudit.junit5.QueryAudit;
@@ -21,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 @QueryAudit
 class CampaignBatchRepositoryTest {
 
-  @Autowired private CampaignBatchRepository batchRepository;
+  @Autowired private JpaCampaignBatchRepository batchRepository;
   @Autowired private CampaignRepository campaignRepository;
   @Autowired private LinkRepository linkRepository;
 

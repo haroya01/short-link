@@ -1,9 +1,9 @@
 package com.example.short_link.user.application.write.avatar;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.s3.AvatarProperties;
-import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -31,7 +31,7 @@ public class AvatarService {
   private final UserRepository userRepository;
   private final AvatarProperties props;
   private final ObjectStorage objectStorage;
-  private final ProfileCacheEviction cacheEviction;
+  private final ProfileCacheInvalidator cacheEviction;
 
   public PresignResult presignUpload(Long userId, String contentType) {
     require(props.isConfigured(), () -> new UserException(UserErrorCode.USER_NOT_FOUND));

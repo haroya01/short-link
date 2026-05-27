@@ -36,37 +36,28 @@ class BotHeuristicTest {
 
   @Test
   void disabledWhenThresholdIsZeroOrNegative() {
-    BotHeuristic zero = new BotHeuristic(redis, 0L);
+    BotHeuristic zero = new BotHeuristic((key, ttl) -> 10L, 0L);
     assertThat(zero.isSuspectBurst("9.9.9.9")).isFalse();
 
-    BotHeuristic negative = new BotHeuristic(redis, -1L);
+    BotHeuristic negative = new BotHeuristic((key, ttl) -> 10L, -1L);
     assertThat(negative.isSuspectBurst("9.9.9.9")).isFalse();
   }
 
   @Test
-  void redisExceptionFailsOpen() {
-    StringRedisTemplate template = org.mockito.Mockito.mock(StringRedisTemplate.class);
-    @SuppressWarnings("unchecked")
-    org.springframework.data.redis.core.ValueOperations<String, String> ops =
-        org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
-    org.mockito.Mockito.when(template.opsForValue()).thenReturn(ops);
-    org.mockito.Mockito.when(ops.increment(org.mockito.ArgumentMatchers.anyString()))
-        .thenThrow(new RuntimeException("redis down"));
-    BotHeuristic h = new BotHeuristic(template, 5L);
+  void counterExceptionFailsOpen() {
+    BotHeuristic h =
+        new BotHeuristic(
+            (key, ttl) -> {
+              throw new RuntimeException("redis down");
+            },
+            5L);
 
     assertThat(h.isSuspectBurst("1.2.3.4")).isFalse();
   }
 
   @Test
-  void redisReturnsNullCountIsNotSuspect() {
-    StringRedisTemplate template = org.mockito.Mockito.mock(StringRedisTemplate.class);
-    @SuppressWarnings("unchecked")
-    org.springframework.data.redis.core.ValueOperations<String, String> ops =
-        org.mockito.Mockito.mock(org.springframework.data.redis.core.ValueOperations.class);
-    org.mockito.Mockito.when(template.opsForValue()).thenReturn(ops);
-    org.mockito.Mockito.when(ops.increment(org.mockito.ArgumentMatchers.anyString()))
-        .thenReturn(null);
-    BotHeuristic h = new BotHeuristic(template, 5L);
+  void nullCountIsNotSuspect() {
+    BotHeuristic h = new BotHeuristic((key, ttl) -> null, 5L);
 
     assertThat(h.isSuspectBurst("1.2.3.4")).isFalse();
   }

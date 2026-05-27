@@ -3,6 +3,7 @@ package com.example.short_link.profile.application.visit;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +34,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
-import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
@@ -41,12 +41,13 @@ class ProfileStatsServiceTest {
 
   @Mock private UserRepository userRepository;
   @Mock private ProfileVisitRepository visits;
+  @Mock private ProfileVisitBreakdownReader breakdowns;
 
   private ProfileStatsService service;
 
   @BeforeEach
   void setUp() {
-    service = new ProfileStatsService(userRepository, visits);
+    service = new ProfileStatsService(userRepository, visits, breakdowns);
   }
 
   private UserEntity user(long id, String tz, boolean publicStats) {
@@ -181,13 +182,13 @@ class ProfileStatsServiceTest {
     CountryClickRow nullCountry = country(null, 3L);
     DeviceClickRow nullDevice = device(null, 3L);
     BrowserClickRow nullBrowser = browser(null, 3L);
-    when(visits.findCountryVisits(anyLong(), any(Pageable.class))).thenReturn(List.of(nullCountry));
+    when(breakdowns.topCountries(anyLong(), anyInt())).thenReturn(List.of(nullCountry));
     when(visits.findDeviceVisits(anyLong())).thenReturn(List.of(nullDevice));
-    when(visits.findBrowserVisits(anyLong(), any(Pageable.class))).thenReturn(List.of(nullBrowser));
-    when(visits.findReferrerHostVisits(anyLong(), any(Pageable.class))).thenReturn(List.of());
-    when(visits.findSourceChannelVisits(anyLong(), any(Pageable.class))).thenReturn(List.of());
-    when(visits.findUtmCampaignVisits(anyLong(), any(Pageable.class))).thenReturn(List.of());
-    when(visits.findUtmSourceVisits(anyLong(), any(Pageable.class))).thenReturn(List.of());
+    when(breakdowns.topBrowsers(anyLong(), anyInt())).thenReturn(List.of(nullBrowser));
+    when(breakdowns.topReferrerHosts(anyLong(), anyInt())).thenReturn(List.of());
+    when(breakdowns.topSourceChannels(anyLong(), anyInt())).thenReturn(List.of());
+    when(breakdowns.topUtmCampaigns(anyLong(), anyInt())).thenReturn(List.of());
+    when(breakdowns.topUtmSources(anyLong(), anyInt())).thenReturn(List.of());
     when(userRepository.findById(1L)).thenReturn(Optional.of(u));
 
     ProfileStats out = service.statsForOwner(1L);
@@ -220,16 +221,13 @@ class ProfileStatsServiceTest {
     when(visits.findLastVisitAt(uid)).thenReturn(Instant.parse("2024-01-02T00:00:00Z"));
     when(visits.findDailyVisits(anyLong(), any(Instant.class), any())).thenReturn(List.of(daily));
     when(visits.findHeatmap(anyLong(), any())).thenReturn(List.of(heat));
-    when(visits.findCountryVisits(anyLong(), any(Pageable.class))).thenReturn(List.of(country));
+    when(breakdowns.topCountries(anyLong(), anyInt())).thenReturn(List.of(country));
     when(visits.findDeviceVisits(anyLong())).thenReturn(List.of(device));
-    when(visits.findBrowserVisits(anyLong(), any(Pageable.class))).thenReturn(List.of(browser));
-    when(visits.findReferrerHostVisits(anyLong(), any(Pageable.class)))
-        .thenReturn(List.of(refHost));
-    when(visits.findSourceChannelVisits(anyLong(), any(Pageable.class)))
-        .thenReturn(List.of(srcChannel));
-    when(visits.findUtmCampaignVisits(anyLong(), any(Pageable.class)))
-        .thenReturn(List.of(utmCampaign));
-    when(visits.findUtmSourceVisits(anyLong(), any(Pageable.class))).thenReturn(List.of(utmSource));
+    when(breakdowns.topBrowsers(anyLong(), anyInt())).thenReturn(List.of(browser));
+    when(breakdowns.topReferrerHosts(anyLong(), anyInt())).thenReturn(List.of(refHost));
+    when(breakdowns.topSourceChannels(anyLong(), anyInt())).thenReturn(List.of(srcChannel));
+    when(breakdowns.topUtmCampaigns(anyLong(), anyInt())).thenReturn(List.of(utmCampaign));
+    when(breakdowns.topUtmSources(anyLong(), anyInt())).thenReturn(List.of(utmSource));
   }
 
   private static HourClickRow hourRow(int hour, long count) {

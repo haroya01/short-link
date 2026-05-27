@@ -1,6 +1,5 @@
 package com.example.short_link.link.presentation;
 
-import com.example.short_link.link.application.dto.LinkDetailView;
 import com.example.short_link.link.application.read.LinkDetailQueryService;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.presentation.response.LinkDetailResponse;
@@ -21,23 +20,6 @@ public class LinkDetailController {
   @GetMapping("/{shortCode}/detail")
   public LinkDetailResponse detail(
       @AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
-    LinkDetailView v = service.detail(userId, shortCode);
-    return new LinkDetailResponse(
-        v.shortCode(),
-        v.originalUrl(),
-        v.expiresAt(),
-        v.ogTitle(),
-        v.ogDescription(),
-        v.ogImage(),
-        v.ogTitleOverride(),
-        v.ogDescriptionOverride(),
-        v.ogImageOverride(),
-        v.passwordProtected(),
-        v.maxViews(),
-        v.viewCount(),
-        v.statsPublic(),
-        v.tags(),
-        v.note(),
-        v.expiredMessage());
+    return LinkDetailResponse.from(service.detail(userId, shortCode));
   }
 }

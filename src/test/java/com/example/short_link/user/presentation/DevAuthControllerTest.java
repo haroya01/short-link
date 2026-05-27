@@ -1,58 +1,86 @@
 package com.example.short_link.user.presentation;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.testsupport.KurlWebMvcTest;
+import com.example.short_link.user.application.dto.IssuedTokens;
+import com.example.short_link.user.application.write.AuthService;
+import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
+import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
-@AutoConfigureMockMvc
+@KurlWebMvcTest(controllers = DevAuthController.class)
 @ActiveProfiles("test")
-@Transactional
 class DevAuthControllerTest {
 
   @Autowired private MockMvc mvc;
-  @Autowired private UserRepository userRepository;
+
+  @MockitoBean private AuthService authService;
+  @MockitoBean private RefreshCookieWriter refreshCookieWriter;
 
   @Test
-  void issuesTokensAndCreatesUserOnFirstCall() throws Exception {
-    long before = userRepository.count();
+  void issuesTokensAndRefreshCookie() throws Exception {
+    when(authService.loginWithOAuth("dev@local.test", "dev", "dev:dev@local.test"))
+        .thenReturn(new LoginResult.Tokens(new IssuedTokens("access-token", "refresh-token")));
+    doAnswer(
+            invocation -> {
+              HttpServletResponse response = invocation.getArgument(0);
+              response.addHeader("Set-Cookie", "refresh_token=refresh-token; Path=/api/v1/auth");
+              return null;
+            })
+        .when(refreshCookieWriter)
+        .set(any(HttpServletResponse.class), eq("refresh-token"));
+
     mvc.perform(
             post("/api/v1/auth/dev-login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"dev@local.test\"}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.accessToken").isString())
+        .andExpect(jsonPath("$.accessToken").value("access-token"))
         .andExpect(cookie().exists("refresh_token"));
-    long after = userRepository.count();
-    assertThat(after).isEqualTo(before + 1);
+
+    verify(refreshCookieWriter).set(any(HttpServletResponse.class), eq("refresh-token"));
   }
 
   @Test
-  void reusesExistingDevUser() throws Exception {
+  void delegatesToDevOauthIdentity() throws Exception {
+    when(authService.loginWithOAuth("dev2@local.test", "dev", "dev:dev2@local.test"))
+        .thenReturn(new LoginResult.Tokens(new IssuedTokens("access-token", "refresh-token")));
+
     mvc.perform(
             post("/api/v1/auth/dev-login")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"email\":\"dev2@local.test\"}"))
         .andExpect(status().isOk());
-    long beforeSecond = userRepository.count();
+
+    verify(authService).loginWithOAuth("dev2@local.test", "dev", "dev:dev2@local.test");
+  }
+
+  @Test
+  void twoFactorChallengeReturnsAccepted() throws Exception {
+    when(authService.loginWithOAuth("mfa@local.test", "dev", "dev:mfa@local.test"))
+        .thenReturn(new LoginResult.TwoFactorRequired("challenge-token"));
+
     mvc.perform(
             post("/api/v1/auth/dev-login")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"email\":\"dev2@local.test\"}"))
-        .andExpect(status().isOk());
-    assertThat(userRepository.count()).isEqualTo(beforeSecond);
+                .content("{\"email\":\"mfa@local.test\"}"))
+        .andExpect(status().isAccepted())
+        .andExpect(jsonPath("$.challenge").value("challenge-token"));
   }
 
   @Test

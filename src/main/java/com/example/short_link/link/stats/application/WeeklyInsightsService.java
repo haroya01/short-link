@@ -1,5 +1,6 @@
 package com.example.short_link.link.stats.application;
 
+import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -8,31 +9,26 @@ import com.example.short_link.link.stats.domain.repository.ClickRangeReadReposit
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
-import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Per-user "last 7 days" rollup that powers the dashboard insight card. We expose totals, the
- * single best-performing link with its top UTM source, and the peak day-of-week/hour bucket — all
- * in the user's stored timezone so the headline ("화 21시") matches what they see elsewhere.
- */
 @Service
 @RequiredArgsConstructor
 public class WeeklyInsightsService {
 
   private static final Duration WINDOW = Duration.ofDays(7);
   private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
+  private static final int TOP_ONE = 1;
 
   private final ClickRangeReadRepository clickRanges;
+  private final ClickRangeTopReader clickRangeTops;
   private final LinkRepository linkRepository;
-  private final UserRepository userRepository;
+  private final UserAccessLookup users;
 
   @Transactional(readOnly = true)
   public WeeklyInsights compute(Long userId) {
@@ -66,15 +62,13 @@ public class WeeklyInsightsService {
   }
 
   private WeeklyInsights.TopLink resolveTopLink(Long userId, Instant from, Instant to) {
-    List<LinkClickCount> top =
-        clickRanges.findTopLinksByUserIdAndRange(userId, from, to, PageRequest.ofSize(1));
+    List<LinkClickCount> top = clickRangeTops.topLinksByUser(userId, from, to, TOP_ONE);
     if (top.isEmpty()) return null;
     LinkClickCount best = top.get(0);
     LinkEntity link = linkRepository.findById(best.getLinkId()).orElse(null);
     if (link == null) return null;
     List<UtmSourceClickRow> utm =
-        clickRanges.findTopUtmSourcesByLinkIdAndRange(
-            link.linkId().value(), from, to, PageRequest.ofSize(1));
+        clickRangeTops.topUtmSourcesByLink(link.linkId().value(), from, to, TOP_ONE);
     String topSource = utm.isEmpty() ? null : utm.get(0).getSource();
     return new WeeklyInsights.TopLink(
         link.getShortCode(), link.getOriginalUrl(), best.getCount(), topSource);
@@ -83,17 +77,13 @@ public class WeeklyInsightsService {
   private WeeklyInsights.Peak resolvePeak(Long userId, Instant from, Instant to) {
     ZoneId zone = ownerZone(userId);
     String tz = LinkStatsQueryService.currentOffset(zone);
-    List<HeatmapRow> rows =
-        clickRanges.findHeatmapByUserIdAndRange(userId, from, to, tz, PageRequest.ofSize(1));
+    List<HeatmapRow> rows = clickRangeTops.topHeatmapByUser(userId, from, to, tz, TOP_ONE);
     if (rows.isEmpty()) return null;
     HeatmapRow best = rows.get(0);
     return new WeeklyInsights.Peak(best.getDow(), best.getHour(), best.getCount());
   }
 
   private ZoneId ownerZone(Long userId) {
-    return userRepository
-        .findById(userId)
-        .map(u -> LinkStatsQueryService.safeZone(u.getTimezone()))
-        .orElse(DEFAULT_ZONE);
+    return users.timezone(userId).map(LinkStatsQueryService::safeZone).orElse(DEFAULT_ZONE);
   }
 }

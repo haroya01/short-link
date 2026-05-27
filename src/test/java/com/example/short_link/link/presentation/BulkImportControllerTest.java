@@ -7,35 +7,29 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.BulkImportResult;
 import com.example.short_link.link.application.dto.BulkImportRow;
 import com.example.short_link.link.application.write.ImportLinksFromCsvUseCase;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.user.application.JwtTokenService;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.testsupport.KurlWebMvcTest;
+import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.mock.web.MockMultipartFile;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Transactional
+@KurlWebMvcTest(controllers = BulkImportController.class)
 class BulkImportControllerTest {
 
   @Autowired private MockMvc mvc;
-  @Autowired private JwtTokenService jwt;
-  @Autowired private UserRepository userRepository;
 
   @MockitoBean private ImportLinksFromCsvUseCase useCase;
+  @MockitoBean private ShortLinkUrlBuilder urlBuilder;
+
+  private static final long USER_ID = 7L;
 
   @Test
   void anonymousIs401() throws Exception {
@@ -46,20 +40,19 @@ class BulkImportControllerTest {
 
   @Test
   void emptyFileReturns400() throws Exception {
-    UserEntity user = userRepository.save(new UserEntity("e@x.com", "google", "g-be"));
-    String token = jwt.createAccessToken(user.getId(), "USER");
     MockMultipartFile file = new MockMultipartFile("file", "empty.csv", "text/csv", new byte[0]);
 
     mvc.perform(
-            multipart("/api/v1/links/bulk").file(file).header("Authorization", "Bearer " + token))
+            multipart("/api/v1/links/bulk")
+                .file(file)
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isBadRequest())
         .andExpect(content().string("empty file"));
   }
 
   @Test
   void importSucceedsAndReturnsCsvWithHeaders() throws Exception {
-    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-bu"));
-    String token = jwt.createAccessToken(user.getId(), "USER");
+    when(urlBuilder.build(new ShortCode("ok00001"))).thenReturn("http://localhost:8080/ok00001");
     when(useCase.execute(any()))
         .thenReturn(
             new BulkImportResult(
@@ -77,7 +70,9 @@ class BulkImportControllerTest {
             "url\nhttps://example.com\nhttps://bad,com\n".getBytes());
 
     mvc.perform(
-            multipart("/api/v1/links/bulk").file(file).header("Authorization", "Bearer " + token))
+            multipart("/api/v1/links/bulk")
+                .file(file)
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(header().string("X-Bulk-Ok", "1"))
         .andExpect(header().string("X-Bulk-Failed", "1"))

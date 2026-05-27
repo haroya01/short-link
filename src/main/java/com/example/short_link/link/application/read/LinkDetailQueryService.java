@@ -7,7 +7,6 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.tag.application.read.LinkTagQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkDetailQueryService {
 
   private final LinkRepository repository;
-  private final LinkTagQueryService linkTagService;
+  private final LinkTagLookup linkTagService;
   private final LinkAccessGuard accessGuard;
 
   @Transactional(readOnly = true)

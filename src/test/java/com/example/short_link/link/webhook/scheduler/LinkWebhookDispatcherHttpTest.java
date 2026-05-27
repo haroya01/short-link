@@ -12,7 +12,6 @@ import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
-import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
@@ -24,8 +23,6 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import tools.jackson.databind.json.JsonMapper;
 
 class LinkWebhookDispatcherHttpTest {
 
@@ -56,24 +53,50 @@ class LinkWebhookDispatcherHttpTest {
         .isEqualTo(1.0);
   }
 
+  @Test
+  void blocksWhenUrlNotPublic() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    WebhookHttpDeliveryClient client =
+        new WebhookHttpDeliveryClient(registry, mock(HttpFetcher.class));
+    LinkWebhookEntity hook =
+        new LinkWebhookEntity(
+            new LinkId(1L), "http://localhost/hook", "secret", "n", WebhookFormat.GENERIC);
+    TestEntities.withId(hook, 99L);
+
+    client.deliver(hook, "{\"a\":1}", "click");
+
+    assertThat(registry.counter("webhook.delivery", "result", "blocked").count()).isEqualTo(1.0);
+    assertThat(hook.getLastError()).contains("public host");
+  }
+
+  @Test
+  void failsToSignWhenSecretInvalid() {
+    SimpleMeterRegistry registry = new SimpleMeterRegistry();
+    WebhookHttpDeliveryClient client =
+        new WebhookHttpDeliveryClient(registry, mock(HttpFetcher.class));
+    LinkWebhookEntity hook =
+        new LinkWebhookEntity(
+            new LinkId(1L), "https://example.com/hook", null, "n", WebhookFormat.GENERIC);
+    TestEntities.withId(hook, 99L);
+
+    client.deliver(hook, "{\"a\":1}", "click");
+
+    assertThat(registry.counter("webhook.delivery", "result", "sign_error").count()).isEqualTo(1.0);
+    assertThat(hook.getLastError()).contains("signature failed");
+  }
+
   private record Probe(LinkWebhookEntity hook, SimpleMeterRegistry registry) {}
 
   private static Probe run(HttpFetcher fetcher) {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    LinkWebhookDispatcher dispatcher =
-        new LinkWebhookDispatcher(
-            mock(LinkWebhookRepository.class),
-            JsonMapper.builder().build(),
-            registry,
-            mock(StringRedisTemplate.class),
-            fetcher);
+    WebhookHttpDeliveryClient client = new WebhookHttpDeliveryClient(registry, fetcher);
     LinkWebhookEntity hook =
         new LinkWebhookEntity(new LinkId(1L), URL, "secret", "test", WebhookFormat.GENERIC);
     TestEntities.withId(hook, 99L);
     try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
       Resolved resolved = new Resolved(URI.create(URL), List.<InetAddress>of());
       guard.when(() -> PublicHttpUrlGuard.resolve(URL)).thenReturn(Optional.of(resolved));
-      dispatcher.deliver(hook, "{\"a\":1}", "click");
+      client.deliver(hook, "{\"a\":1}", "click");
     }
     return new Probe(hook, registry);
   }

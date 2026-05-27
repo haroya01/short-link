@@ -12,10 +12,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Mark exactly one of the user's featured links as the "hero". Setting it on a new link
- * automatically clears any previous highlight — there's only ever one big card.
- */
 @Service
 @RequiredArgsConstructor
 public class SetLinkHighlightUseCase {

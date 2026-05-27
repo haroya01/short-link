@@ -39,6 +39,7 @@ public class ProfileQueryService {
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
   private final ShortLinkUrlBuilder urlBuilder;
+  private final PublicHandleReader publicHandles;
   private final String publicProfileBaseUrl;
 
   public ProfileQueryService(
@@ -48,6 +49,7 @@ public class ProfileQueryService {
       UsernameHistoryRepository usernameHistoryRepository,
       ProfileBlockRepository profileBlockRepository,
       ShortLinkUrlBuilder urlBuilder,
+      PublicHandleReader publicHandles,
       @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
           String publicProfileBaseUrl) {
     this.userRepository = userRepository;
@@ -56,6 +58,7 @@ public class ProfileQueryService {
     this.usernameHistoryRepository = usernameHistoryRepository;
     this.profileBlockRepository = profileBlockRepository;
     this.urlBuilder = urlBuilder;
+    this.publicHandles = publicHandles;
     this.publicProfileBaseUrl = publicProfileBaseUrl;
   }
 
@@ -138,19 +141,9 @@ public class ProfileQueryService {
         out);
   }
 
-  /**
-   * sitemap 용 paginated 공개 handle 목록 (login 무관 anonymous 노출 안전). page 는 0-based, size 는 caller 가
-   * 1∼1000 범위 보장.
-   */
   public PublicHandlesPage publicHandlesPage(int page, int size) {
     long total = userRepository.countByUsernameIsNotNullAndDeletedAtIsNull();
-    List<String> handles =
-        userRepository
-            .findAllByUsernameIsNotNullAndDeletedAtIsNullOrderByCreatedAtAsc(
-                org.springframework.data.domain.PageRequest.of(page, size))
-            .stream()
-            .map(UserEntity::getUsername)
-            .toList();
+    List<String> handles = publicHandles.findPage(page, size);
     return new PublicHandlesPage(handles, total);
   }
 

@@ -9,12 +9,11 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.export.application.helper.CsvWriter;
+import com.example.short_link.link.stats.application.LinkClickEventReader;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class LinkExportService {
 
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
+  private final LinkClickEventReader clickEvents;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkStatsQueryService statsService;
   private final LinkAccessGuard accessGuard;
@@ -59,13 +58,12 @@ public class LinkExportService {
 
     int written = 0;
     Long cursorId = null;
-    PageRequest req = PageRequest.ofSize(eventBatch);
     while (written < eventHardCap) {
       List<ClickEventEntity> rows;
       if (cursorId == null) {
-        rows = clickRepository.findEventsByLinkIdLatest(link.linkId().value(), req);
+        rows = clickEvents.latest(link.linkId().value(), eventBatch);
       } else {
-        rows = clickRepository.findEventsByLinkIdBefore(link.linkId().value(), cursorId, req);
+        rows = clickEvents.before(link.linkId().value(), cursorId, eventBatch);
       }
       if (rows.isEmpty()) break;
       for (ClickEventEntity c : rows) {

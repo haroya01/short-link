@@ -7,7 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
-import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
+import com.example.short_link.customdomain.infrastructure.persistence.JpaCustomDomainRepository;
 import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
@@ -33,7 +33,7 @@ class CustomDomainRoutingE2ETest {
 
   @Autowired private MockMvc mvc;
   @Autowired private UserRepository userRepository;
-  @Autowired private CustomDomainRepository customDomainRepository;
+  @Autowired private JpaCustomDomainRepository customDomainRepository;
   @Autowired private JwtTokenService jwt;
   @Autowired private CacheManager cacheManager;
 

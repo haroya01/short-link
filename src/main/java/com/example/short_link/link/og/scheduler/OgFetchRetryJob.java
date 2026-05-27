@@ -11,15 +11,9 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Picks up links whose initial OG fetch failed (status = {@code PENDING} or {@code RETRYABLE}) and
- * retries them — bounded by {@code max-attempts}. Runs slightly after the cleanup job to avoid
- * fighting for DB.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -43,8 +37,7 @@ public class OgFetchRetryJob {
     try {
       Instant before = Instant.now().minus(Duration.ofHours(1));
       List<LinkEntity> candidates =
-          linkRepository.findOgRetryCandidates(
-              ogFetch.maxAttempts(), before, PageRequest.of(0, BATCH_SIZE));
+          linkRepository.findOgRetryCandidates(ogFetch.maxAttempts(), before, BATCH_SIZE);
       log.info("og fetch retry: {} candidates", candidates.size());
       for (LinkEntity link : candidates) {
         try {

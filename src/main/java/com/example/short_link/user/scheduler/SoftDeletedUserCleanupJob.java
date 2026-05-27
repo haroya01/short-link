@@ -14,11 +14,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Hard-deletes users whose {@code deleted_at} is older than the configured grace window. Runs
- * daily, fenced by a Redis lock so a single instance does the sweep when multiple are deployed.
- * Each user's links / click_events / api_keys / link_tags cascade away via existing FK constraints.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor

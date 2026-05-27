@@ -1,10 +1,10 @@
 package com.example.short_link.campaign.application;
 
-import com.example.short_link.campaign.application.dto.CampaignRecommendationResponse;
-import com.example.short_link.campaign.application.dto.CampaignRecommendationResponse.BatchRecommendation;
-import com.example.short_link.campaign.application.dto.CampaignRecommendationResponse.RecommendationVerdict;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse.BatchStats;
+import com.example.short_link.campaign.application.dto.CampaignRecommendationView;
+import com.example.short_link.campaign.application.dto.CampaignRecommendationView.BatchRecommendation;
+import com.example.short_link.campaign.application.dto.CampaignRecommendationView.RecommendationVerdict;
+import com.example.short_link.campaign.application.dto.CampaignStatsView;
+import com.example.short_link.campaign.application.dto.CampaignStatsView.BatchStats;
 import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -50,15 +50,15 @@ public class CampaignRecommendationService {
   private final CampaignStatsService statsService;
 
   @Transactional(readOnly = true)
-  public CampaignRecommendationResponse recommend(Long campaignId, Long ownerId) {
-    CampaignStatsResponse stats = statsService.statsFor(campaignId, ownerId);
+  public CampaignRecommendationView recommend(Long campaignId, Long ownerId) {
+    CampaignStatsView stats = statsService.statsFor(campaignId, ownerId);
     List<BatchStats> batches = stats.byBatch();
 
     int totalQuantity = batches.stream().mapToInt(BatchStats::quantity).sum();
     int totalClicks = (int) batches.stream().mapToLong(BatchStats::clicks).sum();
 
     if (batches.size() < MIN_BATCH_COUNT) {
-      return new CampaignRecommendationResponse(
+      return new CampaignRecommendationView(
           true,
           "재할당 대상이 부족합니다 — 배포 묶음을 2개 이상 만든 뒤 다시 확인하세요.",
           totalQuantity,
@@ -67,7 +67,7 @@ public class CampaignRecommendationService {
           List.of());
     }
     if (totalClicks < MIN_TOTAL_CLICKS) {
-      return new CampaignRecommendationResponse(
+      return new CampaignRecommendationView(
           true,
           "데이터가 적습니다 — 총 클릭 10회 이상 누적되면 추천을 보여드립니다.",
           totalQuantity,
@@ -150,7 +150,6 @@ public class CampaignRecommendationService {
               verdicts[i]));
     }
 
-    return new CampaignRecommendationResponse(
-        false, null, totalQuantity, totalClicks, avgRate, recs);
+    return new CampaignRecommendationView(false, null, totalQuantity, totalClicks, avgRate, recs);
   }
 }

@@ -21,8 +21,8 @@ import com.example.short_link.link.webhook.application.write.UpdateLinkWebhookCo
 import com.example.short_link.link.webhook.application.write.UpdateLinkWebhookConfigUseCase;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
-import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import com.example.short_link.link.webhook.exception.WebhookException;
+import com.example.short_link.link.webhook.infrastructure.persistence.JpaLinkWebhookRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ class LinkWebhookIntegrationTest {
   @Autowired private DeleteLinkWebhookUseCase deleteUseCase;
   @Autowired private ReDetectWebhookFormatsUseCase reDetectUseCase;
   @Autowired private LinkRepository linkRepository;
-  @Autowired private LinkWebhookRepository webhookRepository;
+  @Autowired private JpaLinkWebhookRepository webhookRepository;
   @Autowired private UserRepository userRepository;
 
   private IssuedWebhook register(Long userId, String shortCode, String url, String name) {

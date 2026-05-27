@@ -1,7 +1,7 @@
 package com.example.short_link.campaign.presentation;
 
 import com.example.short_link.campaign.application.CampaignStatsService;
-import com.example.short_link.campaign.application.dto.CampaignStatsCompareResponse;
+import com.example.short_link.campaign.application.dto.CampaignStatsCompareView;
 import com.example.short_link.campaign.presentation.request.CampaignStatsCompareRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ public class CampaignStatsCompareController {
   private final CampaignStatsService service;
 
   @PostMapping
-  public CampaignStatsCompareResponse compare(
+  public CampaignStatsCompareView compare(
       @AuthenticationPrincipal Long userId,
       @Valid @RequestBody CampaignStatsCompareRequest request) {
     return service.compare(request.campaignIds(), userId);

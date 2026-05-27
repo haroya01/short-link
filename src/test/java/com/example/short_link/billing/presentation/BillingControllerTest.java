@@ -17,31 +17,23 @@ import com.example.short_link.billing.application.write.StartCheckoutUseCase;
 import com.example.short_link.billing.application.write.SubscriptionWebhookCommand;
 import com.example.short_link.billing.exception.BillingErrorCode;
 import com.example.short_link.billing.exception.BillingException;
-import com.example.short_link.user.application.JwtTokenService;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.testsupport.KurlWebMvcTest;
+import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
 
-@SpringBootTest
-@AutoConfigureMockMvc
-@ActiveProfiles("test")
-@Transactional
+@KurlWebMvcTest(controllers = BillingController.class)
 class BillingControllerTest {
 
   @Autowired private MockMvc mvc;
-  @Autowired private JwtTokenService jwt;
-  @Autowired private UserRepository userRepository;
 
   @MockitoBean private StartCheckoutUseCase startCheckout;
   @MockitoBean private IssuePortalSessionUseCase issuePortalSession;
   @MockitoBean private HandleSubscriptionWebhookUseCase handleWebhook;
+
+  private static final long USER_ID = 7L;
 
   @Test
   void anonymousCheckoutIs401() throws Exception {
@@ -50,48 +42,46 @@ class BillingControllerTest {
 
   @Test
   void checkoutReturnsUrl() throws Exception {
-    UserEntity user = userRepository.save(new UserEntity("c@x.com", "google", "g-co"));
-    String token = jwt.createAccessToken(user.getId(), "USER");
-    when(startCheckout.execute(new StartCheckoutCommand(user.getId())))
+    when(startCheckout.execute(new StartCheckoutCommand(USER_ID)))
         .thenReturn("https://checkout.stripe.com/c/x");
 
-    mvc.perform(post("/api/v1/billing/checkout").header("Authorization", "Bearer " + token))
+    mvc.perform(
+            post("/api/v1/billing/checkout")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.url").value("https://checkout.stripe.com/c/x"));
   }
 
   @Test
   void checkoutWhenNotConfiguredReturns503() throws Exception {
-    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-503"));
-    String token = jwt.createAccessToken(user.getId(), "USER");
     when(startCheckout.execute(any(StartCheckoutCommand.class)))
         .thenThrow(new BillingException(BillingErrorCode.BILLING_NOT_CONFIGURED));
 
-    mvc.perform(post("/api/v1/billing/checkout").header("Authorization", "Bearer " + token))
+    mvc.perform(
+            post("/api/v1/billing/checkout")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isServiceUnavailable())
         .andExpect(jsonPath("$.code").value("BILLING_NOT_CONFIGURED"));
   }
 
   @Test
   void portalReturnsUrl() throws Exception {
-    UserEntity user = userRepository.save(new UserEntity("p@x.com", "google", "g-po"));
-    String token = jwt.createAccessToken(user.getId(), "USER");
-    when(issuePortalSession.execute(new IssuePortalSessionCommand(user.getId())))
+    when(issuePortalSession.execute(new IssuePortalSessionCommand(USER_ID)))
         .thenReturn("https://billing.stripe.com/p/x");
 
-    mvc.perform(post("/api/v1/billing/portal").header("Authorization", "Bearer " + token))
+    mvc.perform(
+            post("/api/v1/billing/portal").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.url").value("https://billing.stripe.com/p/x"));
   }
 
   @Test
   void portalWhenNotEnrolledReturns409() throws Exception {
-    UserEntity user = userRepository.save(new UserEntity("e@x.com", "google", "g-409"));
-    String token = jwt.createAccessToken(user.getId(), "USER");
     when(issuePortalSession.execute(any(IssuePortalSessionCommand.class)))
         .thenThrow(new BillingException(BillingErrorCode.BILLING_NOT_ENROLLED));
 
-    mvc.perform(post("/api/v1/billing/portal").header("Authorization", "Bearer " + token))
+    mvc.perform(
+            post("/api/v1/billing/portal").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isConflict())
         .andExpect(jsonPath("$.code").value("BILLING_NOT_ENROLLED"));
   }

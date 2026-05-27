@@ -16,6 +16,9 @@ class ReservedShortCodesTest {
     assertThat(ReservedShortCodes.isReserved("auth")).isTrue();
     assertThat(ReservedShortCodes.isReserved("demo")).isTrue();
     assertThat(ReservedShortCodes.isReserved("showcase")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("monitoring")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("learn")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("campaigns")).isTrue();
   }
 
   @Test
@@ -29,6 +32,7 @@ class ReservedShortCodesTest {
   @Test
   void blocksOperationalPaths() {
     assertThat(ReservedShortCodes.isReserved("favicon")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("icon")).isTrue();
     assertThat(ReservedShortCodes.isReserved("robots")).isTrue();
     assertThat(ReservedShortCodes.isReserved("sitemap")).isTrue();
   }

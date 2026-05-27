@@ -2,6 +2,7 @@ package com.example.short_link.common.observability;
 
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.scheduling.annotation.SchedulingConfigurer;
@@ -19,6 +20,11 @@ import org.springframework.util.ErrorHandler;
  */
 @Configuration
 @Slf4j
+@ConditionalOnProperty(
+    prefix = "short-link.scheduling",
+    name = "enabled",
+    havingValue = "true",
+    matchIfMissing = true)
 public class ScheduledTaskErrorHandler implements SchedulingConfigurer {
 
   private static final String APP_PACKAGE = "com.example.short_link";

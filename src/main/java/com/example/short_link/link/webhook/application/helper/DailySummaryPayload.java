@@ -4,10 +4,6 @@ import com.example.short_link.link.domain.ShortCode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Generic kurl daily-summary payload shape. Keep ordering stable (LinkedHashMap) so receivers that
- * pretty-print the JSON show fields in the same order across days.
- */
 public record DailySummaryPayload(
     ShortCode shortCode,
     String windowStartLocal,
