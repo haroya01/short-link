@@ -167,4 +167,39 @@ class LinkWebhookDispatcherTest {
     dispatcher.flushBatches();
     assertThat(batchBuffer.size(99L)).isZero();
   }
+
+  @Test
+  void onClickRecordedEnqueuesIntoBatchBufferWhenHookBatchEnabled() {
+    LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
+    h.updateConfig(null, null, true, null, null, null);
+    when(repository.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of(h));
+
+    dispatcher.onClickRecorded(event(false, "google.com", "google"));
+
+    assertThat(batchBuffer.size(99L)).isEqualTo(1);
+    verify(deliveryClient, never()).deliver(any(), any(), any());
+  }
+
+  @Test
+  void onClickRecordedDeliversInstantlyWhenBatchDisabled() {
+    LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
+    when(repository.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of(h));
+
+    dispatcher.onClickRecorded(event(false, "google.com", "google"));
+
+    verify(deliveryClient).deliver(eq(h), any(), eq("click"));
+  }
+
+  @Test
+  void flushBatchesDrainsAndDeliversWhenBatchEnabled() {
+    LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
+    h.updateConfig(null, null, true, null, null, null);
+    batchBuffer.enqueue(99L, Map.of("type", "click"));
+    when(repository.findById(99L)).thenReturn(Optional.of(h));
+
+    dispatcher.flushBatches();
+
+    verify(deliveryClient).deliver(eq(h), any(), eq("batch"));
+    assertThat(batchBuffer.size(99L)).isZero();
+  }
 }
