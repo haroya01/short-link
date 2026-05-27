@@ -101,6 +101,27 @@ class LinkPreviewRendererTest {
     assertThat(html).contains("/og.png?c=0");
   }
 
+  @Test
+  void blankDestinationImageFallsBackToGeneratedCard() {
+    LinkEntity link = link("https://example.com/x");
+    link.applyOgMetadata("T", "D", "   ", Instant.now());
+
+    String html = renderer.render(link, "https://kurl.me/xyz", 12L);
+
+    // Blank image (whitespace) is treated identically to null — substitute the generated card.
+    assertThat(html).contains("https://kurl.me/xyz/og.png?c=12");
+  }
+
+  @Test
+  void blankDescriptionFallsBackToDefault() {
+    LinkEntity link = link("https://example.com/x");
+    link.applyOgMetadata("T", "  ", "https://img", Instant.now());
+
+    String html = renderer.render(link, "https://kurl.me/xyz", 0L);
+
+    assertThat(html).contains("Shortened with kurl");
+  }
+
   private static LinkEntity link(String originalUrl) {
     LinkEntity entity = new LinkEntity(originalUrl, "abcdefg");
     setField(entity, "id", 1L);

@@ -197,4 +197,61 @@ class BlockContentValidatorTest {
     assertThatThrownBy(() -> BlockContentValidator.validate(ProfileBlockType.PLACE, ""))
         .isInstanceOf(ProfileException.class);
   }
+
+  @Test
+  void emailFormHappyPath() {
+    String result =
+        BlockContentValidator.validate(
+            ProfileBlockType.EMAIL_FORM, "{\"title\":\"뉴스레터\",\"successMessage\":\"감사합니다\"}");
+    assertThat(result).isNotBlank();
+  }
+
+  @Test
+  void contactCardHappyPath() {
+    String result =
+        BlockContentValidator.validate(
+            ProfileBlockType.CONTACT_CARD, "{\"name\":\"홍길동\",\"phone\":\"010-1234-5678\"}");
+    assertThat(result).isNotBlank();
+  }
+
+  @Test
+  void galleryHappyPath() {
+    String result =
+        BlockContentValidator.validate(
+            ProfileBlockType.GALLERY, "{\"images\":[\"https://example.com/x.jpg\"]}");
+    assertThat(result).contains("x.jpg");
+  }
+
+  @Test
+  void bookingHappyPath() {
+    String result =
+        BlockContentValidator.validate(
+            ProfileBlockType.BOOKING, "{\"url\":\"https://calendly.com/me\"}");
+    assertThat(result).contains("calendly.com");
+  }
+
+  @Test
+  void placeHappyPath() {
+    String result =
+        BlockContentValidator.validate(
+            ProfileBlockType.PLACE,
+            "{\"name\":\"카페\",\"address\":\"서울\",\"lat\":37.5,\"lng\":127.0}");
+    assertThat(result).contains("\"name\":\"카페\"");
+  }
+
+  @Test
+  void productCardHappyPath() {
+    String result =
+        BlockContentValidator.validate(
+            ProfileBlockType.PRODUCT_CARD, "{\"items\":[{\"name\":\"빵\"}]}");
+    assertThat(result).contains("\"name\":\"빵\"");
+  }
+
+  @Test
+  void eventHappyPath() {
+    String result =
+        BlockContentValidator.validate(
+            ProfileBlockType.EVENT, "{\"title\":\"행사\",\"startsAt\":\"2026-01-01T00:00:00Z\"}");
+    assertThat(result).contains("\"title\":\"행사\"");
+  }
 }
