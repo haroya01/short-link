@@ -13,6 +13,16 @@ import org.junit.jupiter.api.Test;
 class ArchitectureRulesTest {
 
   private static final Path MAIN = Path.of("src/main/java/com/example/short_link");
+  private static final Path TEST = Path.of("src/test/java/com/example/short_link");
+
+  /**
+   * Ratchet for migrating ControllerTest classes from {@code @SpringBootTest} to
+   * {@code @WebMvcTest}. Slice tests boot only the MVC layer + the controller's declared
+   * dependencies (~50ms vs ~3-5s for a full {@code @SpringBootTest}). A new {@code @SpringBootTest}
+   * ControllerTest pushes the count past baseline and fails the build — migrate an existing one to
+   * balance, or raise the baseline only with a deliberate decision.
+   */
+  private static final int SPRING_BOOT_CONTROLLER_TEST_BASELINE = 44;
 
   private static final Pattern FEATURE_PRESENTATION_IMPORT =
       Pattern.compile(
@@ -106,6 +116,26 @@ class ArchitectureRulesTest {
             .toList();
 
     assertThat(violations).isEmpty();
+  }
+
+  @Test
+  void newControllerTestsShouldUseWebMvcTestNotSpringBootTest() throws IOException {
+    long springBootControllerTests;
+    try (Stream<Path> tests = Files.walk(TEST)) {
+      springBootControllerTests =
+          tests
+              .filter(path -> path.getFileName().toString().endsWith("ControllerTest.java"))
+              .filter(path -> read(path).contains("@SpringBootTest"))
+              .count();
+    }
+
+    assertThat(springBootControllerTests)
+        .as(
+            "Baseline %d — new ControllerTest must use @WebMvcTest. Migrate an existing one "
+                + "to drop below baseline, or update SPRING_BOOT_CONTROLLER_TEST_BASELINE if "
+                + "the new test legitimately needs the full ApplicationContext.",
+            SPRING_BOOT_CONTROLLER_TEST_BASELINE)
+        .isLessThanOrEqualTo(SPRING_BOOT_CONTROLLER_TEST_BASELINE);
   }
 
   private static Stream<Path> javaSources() throws IOException {
