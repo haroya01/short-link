@@ -1,4 +1,4 @@
-package com.example.short_link.common.web;
+package com.example.short_link.link.web;
 
 import com.example.short_link.link.domain.ShortCode;
 import org.springframework.context.annotation.Configuration;
