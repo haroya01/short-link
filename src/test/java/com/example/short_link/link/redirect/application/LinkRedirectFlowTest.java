@@ -168,6 +168,53 @@ class LinkRedirectFlowTest {
   }
 
   @Test
+  void viewLimitHitWithEntityExpiredMessageReturnsExpiredOutcome() {
+    stubBasics();
+    CachedLink link = basicLink("https://example.com/dst");
+    com.example.short_link.link.domain.LinkEntity entity =
+        org.mockito.Mockito.mock(com.example.short_link.link.domain.LinkEntity.class);
+    when(entity.getMaxViews()).thenReturn(3);
+    when(entity.getExpiredMessage()).thenReturn("Sold out");
+    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(0);
+
+    RedirectOutcome outcome = flow.execute(link, entity, null, null, null, null, req());
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.ExpiredWithMessage.class);
+    assertThat(((RedirectOutcome.ExpiredWithMessage) outcome).message()).isEqualTo("Sold out");
+  }
+
+  @Test
+  void viewLimitWithEntityButNoExpiredMessageThrows() {
+    stubBasics();
+    CachedLink link = basicLink("https://example.com/dst");
+    com.example.short_link.link.domain.LinkEntity entity =
+        org.mockito.Mockito.mock(com.example.short_link.link.domain.LinkEntity.class);
+    when(entity.getMaxViews()).thenReturn(3);
+    when(entity.getExpiredMessage()).thenReturn(null);
+    when(entity.getShortCode())
+        .thenReturn(new com.example.short_link.link.domain.ShortCode("abc1"));
+    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(0);
+
+    assertThatThrownBy(() -> flow.execute(link, entity, null, null, null, null, req()))
+        .isInstanceOf(LinkException.class);
+  }
+
+  @Test
+  void viewLimitOkWithEntityPathProceedsToRedirect() {
+    stubBasics();
+    CachedLink link = basicLink("https://example.com/dst");
+    com.example.short_link.link.domain.LinkEntity entity =
+        org.mockito.Mockito.mock(com.example.short_link.link.domain.LinkEntity.class);
+    when(entity.getMaxViews()).thenReturn(3);
+    when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(1);
+
+    RedirectOutcome outcome = flow.execute(link, entity, null, null, null, null, req());
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
+    verify(clickRecorder).record(any());
+  }
+
+  @Test
   void osNormalizationFlowsThroughToVariantSelection() {
     when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation(null, null, null));
     when(uaClassifier.classify(any()))

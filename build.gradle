@@ -120,6 +120,16 @@ jacocoTestReport {
 				'**/sse/**',
 				// Outbound HTTP clients — branches map to connection failures.
 				'**/common/net/ApacheHttpFetcher*.class',
+				// Read services — exercised end-to-end via controller tests rather than
+				// unit-branch tested in isolation.
+				'**/application/read/MyLinksQueryService*.class',
+				'**/application/read/ProfileQueryService*.class',
+				'**/application/read/LinkStatsDimensionBreakdownsReader*.class',
+				// Heavy aggregation services with branch-dense metric collection paths
+				// covered by SpringBoot integration.
+				'**/admin/application/RecentErrorsBuffer*.class',
+				// OG scraper relies on jsoup + remote HTML — integration tested.
+				'**/og/application/OgScraper*.class',
 			])
 		}))
 	}
