@@ -55,10 +55,16 @@ class PublicProfileVisitControllerTest {
 
     mvc.perform(
             post("/api/v1/public/profiles/visituser/visit")
+                .with(
+                    req -> {
+                      req.setRemoteAddr("203.0.113.1");
+                      return req;
+                    })
                 .header("Referer", "https://t.co/x")
                 .header("User-Agent", "Mozilla/5.0")
                 .header("Accept-Language", "ko-KR")
-                .header("X-Forwarded-For", "203.0.113.1, 10.0.0.1")
+                // Spoofed XFF must be ignored — only the servlet container's remoteAddr counts.
+                .header("X-Forwarded-For", "198.51.100.99")
                 .param("src", "x")
                 .param("utm_source", "twitter")
                 .param("utm_medium", "social"))
