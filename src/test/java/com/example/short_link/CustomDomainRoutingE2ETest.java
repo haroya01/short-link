@@ -1,5 +1,6 @@
 package com.example.short_link;
 
+import static com.example.short_link.support.TestCacheCleaner.clear;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -13,10 +14,12 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.lang.reflect.Field;
 import java.time.Instant;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,6 +35,12 @@ class CustomDomainRoutingE2ETest {
   @Autowired private UserRepository userRepository;
   @Autowired private CustomDomainRepository customDomainRepository;
   @Autowired private JwtTokenService jwt;
+  @Autowired private CacheManager cacheManager;
+
+  @BeforeEach
+  void clearLinkCache() {
+    clear(cacheManager, "link");
+  }
 
   @Test
   void customDomainHost_serves_ownerLink_andBlocksCrossUserCodes() throws Exception {

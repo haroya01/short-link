@@ -1,6 +1,7 @@
 package com.example.short_link.admin.domain.repository;
 
 import com.example.short_link.admin.domain.*;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -115,7 +116,7 @@ public interface AdminMetricsRepository extends JpaRepository<ClickEventEntity, 
           + "FROM LinkEntity l LEFT JOIN UserEntity u ON u.id = l.userId "
           + "WHERE l.shortCode IN :shortCodes")
   List<LinkMetricRow> linkMetricRowsByShortCodes(
-      @Param("shortCodes") Collection<String> shortCodes);
+      @Param("shortCodes") Collection<ShortCode> shortCodes);
 
   interface LinkMetricRow {
     String getShortCode();

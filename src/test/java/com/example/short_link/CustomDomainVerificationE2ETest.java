@@ -1,5 +1,6 @@
 package com.example.short_link;
 
+import static com.example.short_link.support.TestCacheCleaner.clear;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -21,6 +22,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -40,10 +42,12 @@ class CustomDomainVerificationE2ETest {
   @Autowired private UserRepository userRepository;
   @Autowired private JwtTokenService jwt;
   @Autowired private StubTxtResolver txtResolver;
+  @Autowired private CacheManager cacheManager;
 
   @BeforeEach
   void resetResolver() {
     txtResolver.clear();
+    clear(cacheManager, "link");
   }
 
   @Test

@@ -27,6 +27,8 @@ spring:
       password: local-dev
 
 short-link:
+  cache:
+    key-prefix: "test:${random.uuid}:"
   safe-browsing:
     enabled: false
   pow:
