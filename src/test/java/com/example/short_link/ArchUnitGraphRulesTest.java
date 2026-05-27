@@ -1,6 +1,7 @@
 package com.example.short_link;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.library.dependencies.SlicesRuleDefinition.slices;
 
@@ -138,4 +139,28 @@ class ArchUnitGraphRulesTest {
               .haveSimpleNameEndingWith("Controller")
               .should()
               .resideInAPackage("..presentation.."));
+
+  // 트랜잭션 경계는 application / infrastructure 만 갖는다. presentation 에 @Transactional 이
+  // 박히면 컨트롤러가 도메인 트랜잭션을 들고 가는 형태가 되고, domain 에 박히면 entity 가
+  // cross-cutting 책임을 떠안아 도메인 모델 순수성이 깨진다.
+  @ArchTest
+  static final ArchRule transactionalNotInPresentationOrDomain =
+      methods()
+          .that()
+          .areAnnotatedWith(org.springframework.transaction.annotation.Transactional.class)
+          .should()
+          .beDeclaredInClassesThat()
+          .resideOutsideOfPackages("..presentation..", "..domain..");
+
+  // Properties 는 immutable record + compact constructor — Phase 0 (PR #319) 컨벤션. class
+  // 로 신설되면 setter / mutable field 누설 위험이 생긴다.
+  @ArchTest
+  static final ArchRule propertiesAreRecords =
+      classes()
+          .that()
+          .haveSimpleNameEndingWith("Properties")
+          .and()
+          .resideInAPackage("com.example.short_link..")
+          .should()
+          .beRecords();
 }
