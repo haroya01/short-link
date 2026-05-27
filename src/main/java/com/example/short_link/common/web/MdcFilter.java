@@ -31,7 +31,7 @@ public class MdcFilter extends OncePerRequestFilter {
       requestId = UUID.randomUUID().toString();
     }
     MDC.put(MDC_REQUEST_ID, requestId);
-    MDC.put(MDC_CLIENT_IP, clientIp(req));
+    MDC.put(MDC_CLIENT_IP, ClientIp.of(req));
     MDC.put(MDC_METHOD, req.getMethod());
     MDC.put(MDC_URI, req.getRequestURI());
     res.setHeader(HEADER_REQUEST_ID, requestId);
@@ -40,13 +40,5 @@ public class MdcFilter extends OncePerRequestFilter {
     } finally {
       MDC.clear();
     }
-  }
-
-  private String clientIp(HttpServletRequest req) {
-    String forwarded = req.getHeader("X-Forwarded-For");
-    if (forwarded != null && !forwarded.isBlank()) {
-      return forwarded.split(",")[0].trim();
-    }
-    return req.getRemoteAddr();
   }
 }

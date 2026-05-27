@@ -73,7 +73,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
       identifier = "user:" + userId;
       limit = authenticatedLimit;
     } else {
-      identifier = "ip:" + clientIp(req);
+      identifier = "ip:" + ClientIp.of(req);
       limit = anonymousLimit;
     }
     String key = "rate:" + identifier;
@@ -89,14 +89,6 @@ public class RateLimitFilter extends OncePerRequestFilter {
       return;
     }
     chain.doFilter(req, res);
-  }
-
-  private String clientIp(HttpServletRequest req) {
-    String forwarded = req.getHeader("X-Forwarded-For");
-    if (forwarded != null && !forwarded.isBlank()) {
-      return forwarded.split(",")[0].trim();
-    }
-    return req.getRemoteAddr();
   }
 
   private void writeRateLimitResponse(HttpServletRequest req, HttpServletResponse res)

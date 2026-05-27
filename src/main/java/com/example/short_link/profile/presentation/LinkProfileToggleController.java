@@ -9,6 +9,7 @@ import com.example.short_link.profile.presentation.request.LinkProfileHighlightR
 import com.example.short_link.profile.presentation.request.LinkProfileToggleRequest;
 import com.example.short_link.profile.presentation.response.LinkProfileHighlightResponse;
 import com.example.short_link.profile.presentation.response.LinkProfileToggleResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -29,7 +30,7 @@ public class LinkProfileToggleController {
   public LinkProfileToggleResponse toggle(
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
-      @RequestBody LinkProfileToggleRequest request) {
+      @Valid @RequestBody LinkProfileToggleRequest request) {
     toggleLinkOnProfile.execute(new ToggleLinkOnProfileCommand(userId, shortCode, request.show()));
     return new LinkProfileToggleResponse(request.show());
   }
@@ -38,7 +39,7 @@ public class LinkProfileToggleController {
   public LinkProfileHighlightResponse setHighlight(
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
-      @RequestBody LinkProfileHighlightRequest request) {
+      @Valid @RequestBody LinkProfileHighlightRequest request) {
     setLinkHighlight.execute(new SetLinkHighlightCommand(userId, shortCode, request.highlighted()));
     return new LinkProfileHighlightResponse(request.highlighted());
   }

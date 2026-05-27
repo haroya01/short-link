@@ -6,6 +6,7 @@ import com.example.short_link.tag.application.write.CreateTagUseCase;
 import com.example.short_link.tag.application.write.DeleteTagUseCase;
 import com.example.short_link.tag.application.write.UpdateTagUseCase;
 import com.example.short_link.tag.presentation.request.TagRequest;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -37,7 +38,7 @@ public class TagController {
 
   @PostMapping
   public ResponseEntity<TagSummary> create(
-      @AuthenticationPrincipal Long userId, @RequestBody TagRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody TagRequest request) {
     TagSummary created = createTag.execute(userId, request.name(), request.color());
     return ResponseEntity.status(HttpStatus.CREATED).body(created);
   }
@@ -46,7 +47,7 @@ public class TagController {
   public TagSummary update(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
-      @RequestBody TagRequest request) {
+      @Valid @RequestBody TagRequest request) {
     return updateTag.execute(userId, id, request.name(), request.color());
   }
 

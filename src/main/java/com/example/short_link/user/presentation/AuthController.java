@@ -8,6 +8,7 @@ import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.request.TwoFactorVerifyRequest;
 import com.example.short_link.user.presentation.response.TokenResponse;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.CookieValue;
@@ -47,7 +48,7 @@ public class AuthController {
 
   @PostMapping("/2fa/verify")
   public TokenResponse verifyTwoFactor(
-      @RequestBody TwoFactorVerifyRequest request, HttpServletResponse res) {
+      @Valid @RequestBody TwoFactorVerifyRequest request, HttpServletResponse res) {
     return issueAndSetCookie(
         authService.completeTwoFactor(request.challenge(), request.code(), request.recovery()),
         res);

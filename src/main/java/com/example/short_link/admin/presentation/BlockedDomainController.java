@@ -6,6 +6,7 @@ import com.example.short_link.admin.application.write.UnblockDomainUseCase;
 import com.example.short_link.admin.domain.BlockedDomainEntity;
 import com.example.short_link.admin.presentation.request.BlockDomainRequest;
 import com.example.short_link.admin.presentation.response.BlockedDomainResponse;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -35,7 +36,7 @@ public class BlockedDomainController {
 
   @PostMapping
   public ResponseEntity<BlockedDomainResponse> block(
-      @AuthenticationPrincipal Long userId, @RequestBody BlockDomainRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody BlockDomainRequest request) {
     BlockedDomainEntity blocked = blockDomain.execute(request.domain(), request.reason(), userId);
     return ResponseEntity.status(HttpStatus.CREATED).body(BlockedDomainResponse.from(blocked));
   }
