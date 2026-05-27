@@ -1,5 +1,6 @@
 package com.example.short_link.link.redirect.presentation;
 
+import static com.example.short_link.support.TestCacheCleaner.clear;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -13,10 +14,12 @@ import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cache.CacheManager;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,12 @@ class RedirectControllerTest {
   @Autowired private LinkRepository repository;
   @Autowired private ClickEventRepository clickEventRepository;
   @Autowired private ClickTotalsReadRepository clickRepository;
+  @Autowired private CacheManager cacheManager;
+
+  @BeforeEach
+  void clearLinkCache() {
+    clear(cacheManager, "link");
+  }
 
   @Test
   void redirectsToOriginalUrl() throws Exception {

@@ -1,5 +1,6 @@
 package com.example.short_link;
 
+import static com.example.short_link.support.TestCacheCleaner.clear;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -14,10 +15,12 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import com.jayway.jsonpath.JsonPath;
 import java.time.Instant;
 import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cache.CacheManager;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
@@ -32,6 +35,12 @@ class LinkLifecycleE2ETest {
   @Autowired private MockMvc mvc;
   @Autowired private UserRepository userRepository;
   @Autowired private JwtTokenService jwt;
+  @Autowired private CacheManager cacheManager;
+
+  @BeforeEach
+  void clearLinkCache() {
+    clear(cacheManager, "link");
+  }
 
   @Test
   void updateInvalidatesCache_redirectFollowsNewUrl() throws Exception {
