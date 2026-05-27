@@ -2,25 +2,14 @@ package com.example.short_link.link.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
-import com.example.short_link.common.security.BlockedDomainChecker;
-import com.example.short_link.link.access.domain.LinkAccessControlEntity;
-import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.application.dto.LinkCreated;
-import com.example.short_link.link.application.helper.LinkUrlHasher;
 import com.example.short_link.link.application.helper.ReservedShortCodes;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
-import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
-import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
-import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
-import com.example.short_link.link.profilebinding.domain.LinkProfileBindingEntity;
-import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
-import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -42,69 +31,45 @@ public class CreateLinkUseCase {
   private static final SecureRandom CLAIM_RANDOM = new SecureRandom();
 
   private final LinkRepository repository;
-  private final LinkOgMetadataRepository ogMetadataRepository;
-  private final LinkAccessControlRepository accessControlRepository;
-  private final LinkProfileBindingRepository profileBindingRepository;
-  private final LinkExpirationPolicyRepository expirationPolicyRepository;
   private final ShortCodeGenerator generator;
   private final MeterRegistry meterRegistry;
-  private final UrlSafetyChecker urlSafetyChecker;
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
-  private final BlockedDomainChecker blockedDomainChecker;
+  private final CreateLinkValidator validator;
+  private final LinkSidecarPersister sidecarPersister;
   private final TransactionTemplate tx;
   private final long quotaPerUser;
 
   public CreateLinkUseCase(
       LinkRepository repository,
-      LinkOgMetadataRepository ogMetadataRepository,
-      LinkAccessControlRepository accessControlRepository,
-      LinkProfileBindingRepository profileBindingRepository,
-      LinkExpirationPolicyRepository expirationPolicyRepository,
       ShortCodeGenerator generator,
       MeterRegistry meterRegistry,
-      UrlSafetyChecker urlSafetyChecker,
       ApplicationEventPublisher events,
       AuditLogService auditLogService,
-      BlockedDomainChecker blockedDomainChecker,
+      CreateLinkValidator validator,
+      LinkSidecarPersister sidecarPersister,
       PlatformTransactionManager transactionManager,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
-    this.ogMetadataRepository = ogMetadataRepository;
-    this.accessControlRepository = accessControlRepository;
-    this.profileBindingRepository = profileBindingRepository;
-    this.expirationPolicyRepository = expirationPolicyRepository;
     this.generator = generator;
     this.meterRegistry = meterRegistry;
-    this.urlSafetyChecker = urlSafetyChecker;
     this.events = events;
     this.auditLogService = auditLogService;
-    this.blockedDomainChecker = blockedDomainChecker;
+    this.validator = validator;
+    this.sidecarPersister = sidecarPersister;
     this.tx = new TransactionTemplate(transactionManager);
     this.quotaPerUser = quotaPerUser;
   }
 
   public LinkCreated execute(CreateLinkCommand command) {
     String url = command.url();
-    // Pre-transaction validation: blocked-domain lookup is cheap and Safe Browsing is an outbound
-    // HTTP call. Both used to run inside the @Transactional boundary, which held a JDBC connection
-    // for the duration of the HTTP round trip — pool starvation under load. Run them first so the
-    // DB transaction only spans the actual persistence work.
-    if (blockedDomainChecker.isBlocked(url)) {
-      meterRegistry.counter("short_link.created", "result", "blocked_domain").increment();
-      throw new LinkException(LinkErrorCode.MALICIOUS_URL, LinkUrlHasher.sha256Prefix(url));
-    }
-    if (!urlSafetyChecker.isSafe(url)) {
-      throw new LinkException(LinkErrorCode.MALICIOUS_URL, LinkUrlHasher.sha256Prefix(url));
-    }
+    validator.validateUrl(url);
 
     boolean authenticated = command.userId() != null;
     String code = authenticated ? command.customCode() : null;
     Instant expiresAt = authenticated ? command.expiresAt() : Instant.now().plus(ANONYMOUS_TTL);
 
-    if (code != null && ReservedShortCodes.isReserved(code)) {
-      throw new LinkException(LinkErrorCode.RESERVED_SHORT_CODE, code);
-    }
+    validator.rejectIfReserved(code);
 
     return tx.execute(
         status ->
@@ -169,10 +134,7 @@ public class CreateLinkUseCase {
     LinkEntity entity = new LinkEntity(url, code, userId, expiresAt);
     attachClaimTokenIfAnonymous(entity, authenticated);
     LinkEntity saved = repository.save(entity);
-    ogMetadataRepository.save(new LinkOgMetadataEntity(saved.linkId()));
-    accessControlRepository.save(new LinkAccessControlEntity(saved.linkId()));
-    profileBindingRepository.save(new LinkProfileBindingEntity(saved.linkId()));
-    expirationPolicyRepository.save(new LinkExpirationPolicyEntity(saved.linkId()));
+    sidecarPersister.persistAll(saved);
     return saved;
   }
 

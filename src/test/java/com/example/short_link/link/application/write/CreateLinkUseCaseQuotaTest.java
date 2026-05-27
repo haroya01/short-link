@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.admin.application.read.BlockedDomainQueryService;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.application.ShortCodeGenerator;
 import com.example.short_link.link.application.dto.LinkCreated;
@@ -20,6 +21,7 @@ import com.example.short_link.link.expiration.domain.repository.LinkExpirationPo
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import java.time.Instant;
@@ -42,16 +44,19 @@ class LinkCreationServiceQuotaTest {
     CreateLinkUseCase svc =
         new CreateLinkUseCase(
             repo,
-            mock(LinkOgMetadataRepository.class),
-            mock(LinkAccessControlRepository.class),
-            mock(LinkProfileBindingRepository.class),
-            mock(LinkExpirationPolicyRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
-            safety,
             event -> {},
             mock(AuditLogService.class),
-            mockBlockedDomainService(),
+            new CreateLinkValidator(
+                (BlockedDomainChecker) mockBlockedDomainService(),
+                safety,
+                (MeterRegistry) new SimpleMeterRegistry()),
+            new LinkSidecarPersister(
+                mock(LinkOgMetadataRepository.class),
+                mock(LinkAccessControlRepository.class),
+                mock(LinkProfileBindingRepository.class),
+                mock(LinkExpirationPolicyRepository.class)),
             noopTx(),
             200L);
 
@@ -75,16 +80,19 @@ class LinkCreationServiceQuotaTest {
     CreateLinkUseCase svc =
         new CreateLinkUseCase(
             repo,
-            mock(LinkOgMetadataRepository.class),
-            mock(LinkAccessControlRepository.class),
-            mock(LinkProfileBindingRepository.class),
-            mock(LinkExpirationPolicyRepository.class),
             gen,
             new SimpleMeterRegistry(),
-            safety,
             event -> {},
             mock(AuditLogService.class),
-            mockBlockedDomainService(),
+            new CreateLinkValidator(
+                (BlockedDomainChecker) mockBlockedDomainService(),
+                safety,
+                (MeterRegistry) new SimpleMeterRegistry()),
+            new LinkSidecarPersister(
+                mock(LinkOgMetadataRepository.class),
+                mock(LinkAccessControlRepository.class),
+                mock(LinkProfileBindingRepository.class),
+                mock(LinkExpirationPolicyRepository.class)),
             noopTx(),
             200L);
 
@@ -108,16 +116,19 @@ class LinkCreationServiceQuotaTest {
     CreateLinkUseCase svc =
         new CreateLinkUseCase(
             repo,
-            mock(LinkOgMetadataRepository.class),
-            mock(LinkAccessControlRepository.class),
-            mock(LinkProfileBindingRepository.class),
-            mock(LinkExpirationPolicyRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
-            safety,
             event -> {},
             mock(AuditLogService.class),
-            mockBlockedDomainService(),
+            new CreateLinkValidator(
+                (BlockedDomainChecker) mockBlockedDomainService(),
+                safety,
+                (MeterRegistry) new SimpleMeterRegistry()),
+            new LinkSidecarPersister(
+                mock(LinkOgMetadataRepository.class),
+                mock(LinkAccessControlRepository.class),
+                mock(LinkProfileBindingRepository.class),
+                mock(LinkExpirationPolicyRepository.class)),
             noopTx(),
             200L);
 
@@ -138,16 +149,19 @@ class LinkCreationServiceQuotaTest {
     CreateLinkUseCase svc =
         new CreateLinkUseCase(
             repo,
-            mock(LinkOgMetadataRepository.class),
-            mock(LinkAccessControlRepository.class),
-            mock(LinkProfileBindingRepository.class),
-            mock(LinkExpirationPolicyRepository.class),
             mock(ShortCodeGenerator.class),
             new SimpleMeterRegistry(),
-            safety,
             event -> {},
             mock(AuditLogService.class),
-            mockBlockedDomainService(),
+            new CreateLinkValidator(
+                (BlockedDomainChecker) mockBlockedDomainService(),
+                safety,
+                (MeterRegistry) new SimpleMeterRegistry()),
+            new LinkSidecarPersister(
+                mock(LinkOgMetadataRepository.class),
+                mock(LinkAccessControlRepository.class),
+                mock(LinkProfileBindingRepository.class),
+                mock(LinkExpirationPolicyRepository.class)),
             noopTx(),
             200L);
 
@@ -180,16 +194,19 @@ class LinkCreationServiceQuotaTest {
     CreateLinkUseCase svc =
         new CreateLinkUseCase(
             repo,
-            mock(LinkOgMetadataRepository.class),
-            mock(LinkAccessControlRepository.class),
-            mock(LinkProfileBindingRepository.class),
-            mock(LinkExpirationPolicyRepository.class),
             gen,
             new SimpleMeterRegistry(),
-            safety,
             event -> {},
             mock(AuditLogService.class),
-            mockBlockedDomainService(),
+            new CreateLinkValidator(
+                (BlockedDomainChecker) mockBlockedDomainService(),
+                safety,
+                (MeterRegistry) new SimpleMeterRegistry()),
+            new LinkSidecarPersister(
+                mock(LinkOgMetadataRepository.class),
+                mock(LinkAccessControlRepository.class),
+                mock(LinkProfileBindingRepository.class),
+                mock(LinkExpirationPolicyRepository.class)),
             noopTx(),
             200L);
 
