@@ -2,6 +2,7 @@ package com.example.short_link.common.web;
 
 import static com.example.short_link.support.TestCacheCleaner.clear;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -19,6 +20,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -92,5 +94,55 @@ class RateLimitFilterTest {
 
     mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk());
+  }
+
+  // Per-endpoint rule (POST /api/v1/auth/2fa/verify, 5/min) trips on the 6th attempt regardless
+  // of the global anonymous bucket which is far higher.
+  @Test
+  void blocksTwoFactorVerifyAfterPerEndpointLimit() throws Exception {
+    redis
+        .opsForValue()
+        .set("rate:ep:POST:/api/v1/auth/2fa/verify:ip:127.0.0.1", "5", Duration.ofMinutes(1));
+
+    mvc.perform(
+            post("/api/v1/auth/2fa/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"challengeToken\":\"x\",\"code\":\"000000\"}"))
+        .andExpect(status().isTooManyRequests())
+        .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+  }
+
+  // Per-endpoint rule for refresh is looser (10/min). Verify the 11th attempt trips, not the 6th.
+  @Test
+  void blocksRefreshAfterTenAttempts() throws Exception {
+    redis
+        .opsForValue()
+        .set("rate:ep:POST:/api/v1/auth/refresh:ip:127.0.0.1", "10", Duration.ofMinutes(1));
+
+    mvc.perform(post("/api/v1/auth/refresh"))
+        .andExpect(status().isTooManyRequests())
+        .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+  }
+
+  // Sanity: per-endpoint bucket below limit does not block (the endpoint will reject for its own
+  // reasons — empty body, bad token — but not with 429).
+  @Test
+  void allowsTwoFactorVerifyBelowPerEndpointLimit() throws Exception {
+    redis
+        .opsForValue()
+        .set("rate:ep:POST:/api/v1/auth/2fa/verify:ip:127.0.0.1", "3", Duration.ofMinutes(1));
+
+    mvc.perform(
+            post("/api/v1/auth/2fa/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"challengeToken\":\"x\",\"code\":\"000000\"}"))
+        .andExpect(
+            result -> {
+              int s = result.getResponse().getStatus();
+              if (s == 429) {
+                throw new AssertionError(
+                    "expected non-429 (per-endpoint bucket below limit), got 429");
+              }
+            });
   }
 }
