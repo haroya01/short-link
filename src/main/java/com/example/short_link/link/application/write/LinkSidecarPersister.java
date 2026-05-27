@@ -1,14 +1,11 @@
 package com.example.short_link.link.application.write;
 
 import com.example.short_link.link.access.domain.LinkAccessControlEntity;
-import com.example.short_link.link.access.domain.repository.LinkAccessControlRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
-import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
-import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import com.example.short_link.link.profilebinding.domain.LinkProfileBindingEntity;
-import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -22,15 +19,12 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 class LinkSidecarPersister {
 
-  private final LinkOgMetadataRepository ogMetadataRepository;
-  private final LinkAccessControlRepository accessControlRepository;
-  private final LinkProfileBindingRepository profileBindingRepository;
-  private final LinkExpirationPolicyRepository expirationPolicyRepository;
+  private final EntityManager entityManager;
 
   void persistAll(LinkEntity saved) {
-    ogMetadataRepository.save(new LinkOgMetadataEntity(saved.linkId()));
-    accessControlRepository.save(new LinkAccessControlEntity(saved.linkId()));
-    profileBindingRepository.save(new LinkProfileBindingEntity(saved.linkId()));
-    expirationPolicyRepository.save(new LinkExpirationPolicyEntity(saved.linkId()));
+    entityManager.persist(new LinkOgMetadataEntity(saved.linkId()));
+    entityManager.persist(new LinkAccessControlEntity(saved.linkId()));
+    entityManager.persist(new LinkProfileBindingEntity(saved.linkId()));
+    entityManager.persist(new LinkExpirationPolicyEntity(saved.linkId()));
   }
 }

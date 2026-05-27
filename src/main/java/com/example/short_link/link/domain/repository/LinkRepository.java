@@ -16,6 +16,32 @@ public interface LinkRepository
     extends JpaRepository<LinkEntity, Long>, JpaSpecificationExecutor<LinkEntity> {
   Optional<LinkEntity> findByShortCode(ShortCode shortCode);
 
+  @Query(
+      """
+      SELECT
+        l.id AS id,
+        l.shortCode AS shortCode,
+        l.userId AS userId,
+        l.originalUrl AS originalUrl,
+        l.expiresAt AS expiresAt,
+        COALESCE(og.ogTitle, l.ogTitle) AS ogTitle,
+        COALESCE(og.ogDescription, l.ogDescription) AS ogDescription,
+        COALESCE(og.ogImage, l.ogImage) AS ogImage,
+        COALESCE(policy.blockedCountries, l.blockedCountries) AS blockedCountries,
+        CASE
+          WHEN COALESCE(acl.passwordHash, l.passwordHash) IS NULL THEN false
+          ELSE true
+        END AS passwordRequired,
+        COALESCE(acl.maxViews, l.maxViews) AS maxViews,
+        COALESCE(policy.expiredMessage, l.expiredMessage) AS expiredMessage
+      FROM LinkEntity l
+      LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
+      LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
+      LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
+      WHERE l.shortCode = :shortCode
+      """)
+  Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);
+
   default Optional<LinkEntity> findByShortCode(String shortCode) {
     return findByShortCode(new ShortCode(shortCode));
   }
@@ -67,4 +93,31 @@ public interface LinkRepository
   @org.springframework.data.jpa.repository.Query(
       "DELETE FROM LinkEntity l WHERE l.userId = :userId")
   int deleteByUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
+
+  interface CachedLinkRow {
+
+    Long getId();
+
+    ShortCode getShortCode();
+
+    Long getUserId();
+
+    String getOriginalUrl();
+
+    Instant getExpiresAt();
+
+    String getOgTitle();
+
+    String getOgDescription();
+
+    String getOgImage();
+
+    String getBlockedCountries();
+
+    Boolean getPasswordRequired();
+
+    Integer getMaxViews();
+
+    String getExpiredMessage();
+  }
 }
