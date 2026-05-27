@@ -1,5 +1,6 @@
 package com.example.short_link.common.web.response;
 
+import com.example.short_link.common.exception.DomainException;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;
@@ -25,6 +26,13 @@ public final class ProblemDetails {
     if (requestId != null) {
       p.setProperty("requestId", requestId);
     }
+    return p;
+  }
+
+  public static ProblemDetail of(DomainException exception, HttpServletRequest req) {
+    String detail = exception instanceof Throwable t ? t.getMessage() : exception.code();
+    ProblemDetail p = of(exception.status(), detail, exception.code(), req);
+    exception.properties().forEach(p::setProperty);
     return p;
   }
 }

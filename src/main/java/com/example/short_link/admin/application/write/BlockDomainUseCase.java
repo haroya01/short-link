@@ -1,10 +1,10 @@
 package com.example.short_link.admin.application.write;
 
 import com.example.short_link.admin.application.helper.BlockedDomainNormalizer;
+import com.example.short_link.admin.application.read.BlockedDomainCache;
 import com.example.short_link.admin.domain.BlockedDomainEntity;
 import com.example.short_link.admin.domain.repository.BlockedDomainRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,16 +13,20 @@ import org.springframework.transaction.annotation.Transactional;
 public class BlockDomainUseCase {
 
   private final BlockedDomainRepository repository;
+  private final BlockedDomainCache blockedDomainCache;
 
   @Transactional
-  @CacheEvict(value = "blocked-domains", allEntries = true)
   public BlockedDomainEntity execute(String rawDomain, String reason, Long actorUserId) {
     String normalized = BlockedDomainNormalizer.normalize(rawDomain);
     if (normalized == null) {
       throw new IllegalArgumentException("invalid domain");
     }
-    return repository
-        .findByDomain(normalized)
-        .orElseGet(() -> repository.save(new BlockedDomainEntity(normalized, reason, actorUserId)));
+    BlockedDomainEntity blockedDomain =
+        repository
+            .findByDomain(normalized)
+            .orElseGet(
+                () -> repository.save(new BlockedDomainEntity(normalized, reason, actorUserId)));
+    blockedDomainCache.evictAfterCommit();
+    return blockedDomain;
   }
 }

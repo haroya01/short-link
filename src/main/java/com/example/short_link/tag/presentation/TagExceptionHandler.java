@@ -15,8 +15,6 @@ public class TagExceptionHandler {
 
   @ExceptionHandler(TagException.class)
   public ProblemDetail handle(TagException e, HttpServletRequest req) {
-    ProblemDetail body = ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
-    e.properties().forEach(body::setProperty);
-    return body;
+    return ProblemDetails.of(e, req);
   }
 }

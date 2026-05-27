@@ -21,8 +21,6 @@ public class BillingExceptionHandler {
     if (e.errorCode() == BillingErrorCode.BILLING_GATEWAY_ERROR) {
       log.warn("billing gateway error", e);
     }
-    ProblemDetail body = ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
-    e.properties().forEach(body::setProperty);
-    return body;
+    return ProblemDetails.of(e, req);
   }
 }
