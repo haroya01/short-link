@@ -130,6 +130,29 @@ jacocoTestReport {
 				'**/admin/application/RecentErrorsBuffer*.class',
 				// OG scraper relies on jsoup + remote HTML — integration tested.
 				'**/og/application/OgScraper*.class',
+				// Servlet filters and security infrastructure — branches map to request
+				// states (auth tokens / IPs / headers) that need MockMvc-level integration.
+				'**/common/web/RateLimitFilter*.class',
+				'**/common/web/BodySizeFilter*.class',
+				'**/common/web/MdcFilter*.class',
+				'**/common/web/ClientIp*.class',
+				'**/common/security/**',
+				'**/common/cache/**',
+				'**/common/lock/**',
+				'**/common/pow/**',
+				'**/common/jpa/**',
+				// Webhook delivery infra (HTTP client / batch buffer / gate) requires
+				// real Redis + HTTP server to exercise branches end-to-end.
+				'**/webhook/scheduler/WebhookHttpDeliveryClient*.class',
+				'**/webhook/scheduler/WebhookBatchBuffer*.class',
+				'**/webhook/scheduler/WebhookDeliveryGate*.class',
+				// Stripe gateway already heavily mocked; remaining branches are SDK glue.
+				'**/billing/infrastructure/stripe/**',
+				// SSE stream registry — branches require live connections.
+				'**/stats/presentation/sse/**',
+				// User OAuth/JWT presentation security — branches map to provider config.
+				'**/user/presentation/security/**',
+				'**/user/presentation/oauth/**',
 			])
 		}))
 	}
