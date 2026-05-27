@@ -2,6 +2,7 @@ package com.example.short_link.common.config;
 
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.CachingConfigurer;
 import org.springframework.cache.interceptor.CacheErrorHandler;
@@ -17,9 +18,11 @@ import org.springframework.data.redis.serializer.StringRedisSerializer;
 public class CacheConfig implements CachingConfigurer {
 
   @Bean
-  public RedisCacheConfiguration cacheConfiguration() {
+  public RedisCacheConfiguration cacheConfiguration(
+      @Value("${short-link.cache.key-prefix:}") String keyPrefix) {
     return RedisCacheConfiguration.defaultCacheConfig()
         .entryTtl(Duration.ofHours(24))
+        .computePrefixWith(cacheName -> keyPrefix + cacheName + "::")
         .serializeKeysWith(
             RedisSerializationContext.SerializationPair.fromSerializer(new StringRedisSerializer()))
         .serializeValuesWith(

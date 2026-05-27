@@ -97,6 +97,6 @@ class ImportLinksFromCsvUseCaseTest {
                 user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
 
     assertThat(result.ok()).isEqualTo(2);
-    assertThat(result.rows().get(1).shortCode()).isEqualTo("nh2code");
+    assertThat(result.rows().get(1).shortCode().value()).isEqualTo("nh2code");
   }
 }
