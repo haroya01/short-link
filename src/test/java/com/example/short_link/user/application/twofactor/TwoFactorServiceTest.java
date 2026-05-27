@@ -166,6 +166,36 @@ class TwoFactorServiceTest {
   }
 
   @Test
+  void disableRejectsWhenBothTotpAndRecoveryFail() {
+    UserEntity user = userRepository.save(new UserEntity("tfdf@local.test", "google", "g-tfdf"));
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    service.confirm(user.getId(), code);
+
+    assertThatThrownBy(() -> service.disable(user.getId(), "NEVER-MATCHES"))
+        .isInstanceOf(UserException.class);
+  }
+
+  @Test
+  void startRotatesSecretWhenPendingRowExists() {
+    UserEntity user = userRepository.save(new UserEntity("tfrot@local.test", "google", "g-tfrot"));
+    TwoFactorService.SetupChallenge first = service.start(user.getId());
+    TwoFactorService.SetupChallenge second = service.start(user.getId());
+
+    assertThat(second.secret()).isNotEqualTo(first.secret());
+  }
+
+  @Test
+  void verifyReturnsFalseForInvalidCode() {
+    UserEntity user = userRepository.save(new UserEntity("tfvi@local.test", "google", "g-tfvi"));
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    service.confirm(user.getId(), code);
+
+    assertThat(service.verify(user.getId(), "000000")).isFalse();
+  }
+
+  @Test
   void regenerateRequiresEnabledAndValidCode() {
     UserEntity user = userRepository.save(new UserEntity("tfg@local.test", "google", "g-tfg"));
     assertThatThrownBy(() -> service.regenerateRecoveryCodes(user.getId(), "000000"))
