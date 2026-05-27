@@ -5,6 +5,7 @@ import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.common.observability.RequestMetricEntity;
 import com.example.short_link.common.observability.RequestMetricRepository;
+import com.example.short_link.link.domain.ShortCode;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -53,7 +54,8 @@ public class AdminLinkMetricsQueryService {
     }
     if (byShortCode.isEmpty()) return List.of();
 
-    List<LinkMetricRow> rows = metricsRepository.linkMetricRowsByShortCodes(byShortCode.keySet());
+    List<LinkMetricRow> rows =
+        metricsRepository.linkMetricRowsByShortCodes(toValidShortCodes(byShortCode.keySet()));
     Map<String, LinkMetricRow> rowByCode = new HashMap<>(rows.size());
     for (LinkMetricRow row : rows) {
       rowByCode.put(row.getShortCode(), row);
@@ -132,6 +134,19 @@ public class AdminLinkMetricsQueryService {
 
   private static long nullToZero(Long v) {
     return v == null ? 0L : v;
+  }
+
+  private static List<ShortCode> toValidShortCodes(Iterable<String> rawCodes) {
+    List<ShortCode> codes = new ArrayList<>();
+    for (String raw : rawCodes) {
+      try {
+        codes.add(new ShortCode(raw));
+      } catch (IllegalArgumentException ignored) {
+        // Request metrics may contain legacy/unknown route labels; keep their aggregate row, but
+        // skip DB enrichment because LinkEntity.shortCode is a typed ShortCode value.
+      }
+    }
+    return codes;
   }
 
   private record Aggregate(

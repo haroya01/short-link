@@ -1,5 +1,6 @@
 package com.example.short_link.common.web;
 
+import static com.example.short_link.support.TestCacheCleaner.clear;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -11,10 +12,12 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
 import java.util.Set;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.cache.CacheManager;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
@@ -38,6 +41,13 @@ class RateLimitFilterTest {
   @Autowired private StringRedisTemplate redis;
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
+  @Autowired private CacheManager cacheManager;
+
+  @BeforeEach
+  void resetState() {
+    clear(cacheManager, "link");
+    cleanup();
+  }
 
   @AfterEach
   void cleanup() {
