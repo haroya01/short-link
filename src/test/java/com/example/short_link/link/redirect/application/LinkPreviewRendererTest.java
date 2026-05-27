@@ -71,6 +71,36 @@ class LinkPreviewRendererTest {
         .contains("<meta http-equiv=\"refresh\" content=\"0;url=https://example.com/x\">");
   }
 
+  @Test
+  void blankOgTitleFallsBackToOriginalUrlInTitleTag() {
+    LinkEntity link = link("https://example.com/route");
+    link.applyOgMetadata("   ", null, null, Instant.now());
+
+    String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
+
+    assertThat(html).contains("<title>https://example.com/route</title>");
+  }
+
+  @Test
+  void escapesQuoteAndApostrophe() {
+    LinkEntity link = link("https://example.com");
+    link.applyOgMetadata("She said \"hi\" — it's me", null, null, Instant.now());
+
+    String html = renderer.render(link, "https://kurl.me/abcdefg", 0L);
+
+    assertThat(html).contains("&quot;");
+    assertThat(html).contains("&#39;");
+  }
+
+  @Test
+  void negativeClickCountIsClampedToZero() {
+    LinkEntity link = link("https://example.com/x");
+
+    String html = renderer.render(link, "https://kurl.me/abc", -42L);
+
+    assertThat(html).contains("/og.png?c=0");
+  }
+
   private static LinkEntity link(String originalUrl) {
     LinkEntity entity = new LinkEntity(originalUrl, "abcdefg");
     setField(entity, "id", 1L);

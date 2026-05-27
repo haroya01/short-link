@@ -189,6 +189,59 @@ class MyLinksControllerTest {
         .andExpect(status().isUnauthorized());
   }
 
+  @Test
+  void sortsByClickCountAscendingMovesZeroFirst() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("sasc@x.com", "google", "g-sasc"));
+    LinkEntity high =
+        linkRepository.save(
+            new LinkEntity("https://example.com/h", "asc0001", owner.getId(), null));
+    LinkEntity low =
+        linkRepository.save(
+            new LinkEntity("https://example.com/l", "asc0002", owner.getId(), null));
+    click(high, 5);
+    click(low, 1);
+    String token = jwt.createAccessToken(owner.getId(), "USER");
+
+    mvc.perform(
+            get("/api/v1/links/me")
+                .header("Authorization", "Bearer " + token)
+                .param("sort", "clickCount")
+                .param("dir", "asc"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].shortCode").value("asc0002"))
+        .andExpect(jsonPath("$.items[1].shortCode").value("asc0001"));
+  }
+
+  @Test
+  void emptyResultByClickCountSort() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("emp@x.com", "google", "g-emp"));
+    String token = jwt.createAccessToken(owner.getId(), "USER");
+
+    mvc.perform(
+            get("/api/v1/links/me")
+                .header("Authorization", "Bearer " + token)
+                .param("sort", "clickCount"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(0))
+        .andExpect(jsonPath("$.hasMore").value(false))
+        .andExpect(jsonPath("$.nextCursor").doesNotExist());
+  }
+
+  @Test
+  void sortsByCreatedAtAscendingDir() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("ca@x.com", "google", "g-ca"));
+    LinkEntity early =
+        linkRepository.save(
+            new LinkEntity("https://example.com/e", "cae0001", owner.getId(), null));
+    linkRepository.save(new LinkEntity("https://example.com/l", "cal0001", owner.getId(), null));
+    String token = jwt.createAccessToken(owner.getId(), "USER");
+
+    mvc.perform(
+            get("/api/v1/links/me").header("Authorization", "Bearer " + token).param("dir", "asc"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].shortCode").value(early.getShortCode().value()));
+  }
+
   private void click(LinkEntity link, int count) {
     for (int i = 0; i < count; i++) {
       clickRepository.save(
