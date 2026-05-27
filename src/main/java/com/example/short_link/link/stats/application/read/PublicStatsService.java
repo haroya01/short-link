@@ -1,4 +1,4 @@
-package com.example.short_link.common.application;
+package com.example.short_link.link.stats.application.read;
 
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
