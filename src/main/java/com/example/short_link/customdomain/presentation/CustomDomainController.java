@@ -6,6 +6,7 @@ import com.example.short_link.customdomain.application.write.DeleteCustomDomainU
 import com.example.short_link.customdomain.application.write.RegisterCustomDomainUseCase;
 import com.example.short_link.customdomain.application.write.VerifyCustomDomainUseCase;
 import com.example.short_link.customdomain.presentation.request.CustomDomainRegisterRequest;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,7 +37,8 @@ public class CustomDomainController {
 
   @PostMapping
   public ResponseEntity<DomainSummary> register(
-      @AuthenticationPrincipal Long userId, @RequestBody CustomDomainRegisterRequest request) {
+      @AuthenticationPrincipal Long userId,
+      @Valid @RequestBody CustomDomainRegisterRequest request) {
     DomainSummary saved = register.execute(userId, request.domain());
     return ResponseEntity.status(HttpStatus.CREATED).body(saved);
   }

@@ -3,6 +3,7 @@ package com.example.short_link.profile.presentation;
 import com.example.short_link.profile.application.image.ProfileImageService;
 import com.example.short_link.profile.presentation.request.ProfileImageCommitRequest;
 import com.example.short_link.profile.presentation.request.ProfileImagePresignRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -26,13 +27,14 @@ public class ProfileImageController {
 
   @PostMapping("/presigned-url")
   public ProfileImageService.PresignResult presign(
-      @AuthenticationPrincipal Long userId, @RequestBody ProfileImagePresignRequest request) {
+      @AuthenticationPrincipal Long userId,
+      @Valid @RequestBody ProfileImagePresignRequest request) {
     return service.presignUpload(userId, request.contentType());
   }
 
   @PutMapping
   public ProfileImageService.CommitResult commit(
-      @AuthenticationPrincipal Long userId, @RequestBody ProfileImageCommitRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody ProfileImageCommitRequest request) {
     return service.commitUpload(userId, request.key());
   }
 }

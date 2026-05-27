@@ -4,6 +4,7 @@ import com.example.short_link.user.application.write.ApiKeyService;
 import com.example.short_link.user.application.write.ApiKeyService.ApiKeySummary;
 import com.example.short_link.user.application.write.ApiKeyService.IssuedApiKey;
 import com.example.short_link.user.presentation.request.ApiKeyCreateRequest;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,7 @@ public class ApiKeyController {
 
   @PostMapping
   public ResponseEntity<IssuedApiKey> issue(
-      @AuthenticationPrincipal Long userId, @RequestBody ApiKeyCreateRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody ApiKeyCreateRequest request) {
     IssuedApiKey issued = service.issue(userId, request.name());
     return ResponseEntity.status(HttpStatus.CREATED).body(issued);
   }
