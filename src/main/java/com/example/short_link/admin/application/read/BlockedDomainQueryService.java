@@ -5,22 +5,21 @@ import com.example.short_link.admin.domain.BlockedDomainEntity;
 import com.example.short_link.admin.domain.repository.BlockedDomainRepository;
 import com.example.short_link.common.security.BlockedDomainChecker;
 import java.util.List;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Read-side of the operator-managed block list. {@link #isBlocked(String)} is called per
- * link-create so the {@code blocked-domains} cache fronts the {@code SELECT *} that backs the full
- * set — write paths evict the cache on block / unblock.
+ * link-create so the {@code blocked-domains} cache fronts the domain-name set — write paths evict
+ * the cache on block / unblock.
  */
 @Service
 @RequiredArgsConstructor
 public class BlockedDomainQueryService implements BlockedDomainChecker {
 
   private final BlockedDomainRepository repository;
+  private final BlockedDomainCache blockedDomainCache;
 
   @Transactional(readOnly = true)
   public List<BlockedDomainEntity> list() {
@@ -33,7 +32,7 @@ public class BlockedDomainQueryService implements BlockedDomainChecker {
   public boolean isBlocked(String url) {
     String host = BlockedDomainNormalizer.hostOf(url);
     if (host == null) return false;
-    Set<String> blocked = currentBlockedSet();
+    var blocked = blockedDomainCache.currentBlockedSet();
     if (blocked.isEmpty()) return false;
     String walk = host;
     while (walk != null && !walk.isEmpty()) {
@@ -43,10 +42,5 @@ public class BlockedDomainQueryService implements BlockedDomainChecker {
       walk = walk.substring(dot + 1);
     }
     return false;
-  }
-
-  @Cacheable("blocked-domains")
-  public Set<String> currentBlockedSet() {
-    return Set.copyOf(repository.findAll().stream().map(BlockedDomainEntity::getDomain).toList());
   }
 }

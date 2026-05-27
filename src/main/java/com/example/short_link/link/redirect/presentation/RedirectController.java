@@ -112,11 +112,10 @@ public class RedirectController {
       return handlePreview(
           shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req);
     }
-    LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
-    if (entity != null && entity.hasPassword()) {
+    if (link.passwordRequired()) {
       return LinkHtmlRenderer.passwordPromptResponse(HttpStatus.OK, shortCode, false);
     }
-    return render(flow.execute(link, entity, referrer, userAgent, acceptLanguage, src, req));
+    return render(flow.execute(link, null, referrer, userAgent, acceptLanguage, src, req));
   }
 
   private ResponseEntity<?> render(RedirectOutcome outcome) {

@@ -3,7 +3,7 @@ package com.example.short_link.link.application.read;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
-import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
@@ -30,16 +30,17 @@ public class CachedLinkLoader {
   @Cacheable("link")
   @Transactional(readOnly = true)
   public CachedLink loadByShortCode(ShortCode shortCode) {
-    LinkEntity link =
+    LinkRepository.CachedLinkRow link =
         repository
-            .findByShortCode(shortCode)
+            .findCachedLinkRowByShortCode(shortCode)
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     List<CachedLink.Variant> variants =
-        destinationRepository.findAllByLinkIdOrderByIdAsc(link.linkId().value()).stream()
+        destinationRepository.findAllByLinkIdOrderByIdAsc(link.getId()).stream()
             .map(CachedLinkLoader::toVariant)
             .toList();
     return new CachedLink(
-        link.linkId(),
+        new LinkId(link.getId()),
+        link.getShortCode(),
         link.getUserId(),
         link.getOriginalUrl(),
         link.getExpiresAt(),
@@ -47,6 +48,9 @@ public class CachedLinkLoader {
         link.getOgDescription(),
         link.getOgImage(),
         link.getBlockedCountries(),
+        Boolean.TRUE.equals(link.getPasswordRequired()),
+        link.getMaxViews(),
+        link.getExpiredMessage(),
         variants);
   }
 

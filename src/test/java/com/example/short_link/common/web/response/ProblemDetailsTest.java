@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -48,5 +50,20 @@ class ProblemDetailsTest {
   void requestIdOmittedWhenMdcEmpty() {
     ProblemDetail p = ProblemDetails.of(HttpStatus.BAD_REQUEST, "x", "X", req);
     assertThat(p.getProperties()).doesNotContainKey("requestId");
+  }
+
+  @Test
+  void domainExceptionPropertiesAreCopied() {
+    LinkException ex =
+        new LinkException(LinkErrorCode.LINK_QUOTA_EXCEEDED, 200L).with("remaining", 0);
+
+    ProblemDetail p = ProblemDetails.of(ex, req);
+
+    assertThat(p.getStatus()).isEqualTo(409);
+    assertThat(p.getDetail()).isEqualTo("link quota exceeded (limit=200)");
+    assertThat(p.getProperties())
+        .containsEntry("code", "LINK_QUOTA_EXCEEDED")
+        .containsEntry("limit", 200L)
+        .containsEntry("remaining", 0);
   }
 }
