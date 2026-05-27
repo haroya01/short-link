@@ -4,6 +4,7 @@ import com.example.short_link.profile.application.visit.ProfileStats;
 import com.example.short_link.profile.application.visit.ProfileStatsService;
 import com.example.short_link.profile.application.visit.ProfileVisitSummary;
 import com.example.short_link.profile.application.write.UpdateStatsVisibilityUseCase;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -43,7 +44,7 @@ public class MyProfileStatsController {
   @PatchMapping("/stats/visibility")
   @PreAuthorize("isAuthenticated()")
   public StatsVisibilityResponse setVisibility(
-      @AuthenticationPrincipal Long userId, @RequestBody StatsVisibilityRequest body) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody StatsVisibilityRequest body) {
     return new StatsVisibilityResponse(updateVisibility.execute(userId, body.isPublic()));
   }
 }

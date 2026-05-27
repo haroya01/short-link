@@ -15,6 +15,7 @@ import com.example.short_link.link.webhook.application.write.UpdateLinkWebhookCo
 import com.example.short_link.link.webhook.presentation.request.LinkWebhookConfigRequest;
 import com.example.short_link.link.webhook.presentation.request.LinkWebhookRegisterRequest;
 import com.example.short_link.link.webhook.presentation.request.LinkWebhookToggleRequest;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -51,7 +52,7 @@ public class LinkWebhookController {
   public ResponseEntity<IssuedWebhook> register(
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
-      @RequestBody LinkWebhookRegisterRequest request) {
+      @Valid @RequestBody LinkWebhookRegisterRequest request) {
     IssuedWebhook issued =
         registerUseCase.execute(
             new RegisterLinkWebhookCommand(userId, shortCode, request.url(), request.name()));
@@ -63,7 +64,7 @@ public class LinkWebhookController {
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
       @PathVariable Long id,
-      @RequestBody LinkWebhookToggleRequest request) {
+      @Valid @RequestBody LinkWebhookToggleRequest request) {
     return toggleUseCase.execute(
         new ToggleLinkWebhookCommand(userId, shortCode, id, request.enabled()));
   }
@@ -73,7 +74,7 @@ public class LinkWebhookController {
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
       @PathVariable Long id,
-      @RequestBody LinkWebhookConfigRequest request) {
+      @Valid @RequestBody LinkWebhookConfigRequest request) {
     return updateConfigUseCase.execute(
         new UpdateLinkWebhookConfigCommand(
             userId,

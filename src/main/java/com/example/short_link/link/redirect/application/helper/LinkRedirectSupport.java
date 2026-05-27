@@ -1,25 +1,22 @@
 package com.example.short_link.link.redirect.application.helper;
 
+import com.example.short_link.common.web.ClientIp;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Stateless support for the redirect / password-unlock flow — picks the client IP behind
- * X-Forwarded-For, normalizes the OS label, and maps a final response status to the metric outcome
- * label. Lifted out of {@code RedirectController} so the same helpers can serve {@code
- * PasswordUnlockController} without duplicating the logic.
+ * Stateless support for the redirect / password-unlock flow — picks the client IP, normalizes the
+ * OS label, and maps a final response status to the metric outcome label. Lifted out of {@code
+ * RedirectController} so the same helpers can serve {@code PasswordUnlockController} without
+ * duplicating the logic.
  */
 public final class LinkRedirectSupport {
 
   private LinkRedirectSupport() {}
 
   public static String clientIp(HttpServletRequest req) {
-    String forwarded = req.getHeader("X-Forwarded-For");
-    if (forwarded != null && !forwarded.isBlank()) {
-      return forwarded.split(",")[0].trim();
-    }
-    return req.getRemoteAddr();
+    return ClientIp.of(req);
   }
 
   public static String normalizeOs(String osName) {

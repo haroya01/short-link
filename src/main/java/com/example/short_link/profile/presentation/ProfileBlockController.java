@@ -11,6 +11,7 @@ import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.presentation.request.ProfileBlockCreateRequest;
 import com.example.short_link.profile.presentation.request.ProfileBlockUpdateRequest;
 import com.example.short_link.profile.presentation.response.ProfileBlockResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -32,7 +33,7 @@ public class ProfileBlockController {
 
   @PostMapping
   public ProfileBlockResponse create(
-      @AuthenticationPrincipal Long userId, @RequestBody ProfileBlockCreateRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody ProfileBlockCreateRequest request) {
     ProfileBlockType type = ProfileBlockType.valueOf(request.type().toUpperCase());
     ProfileBlockEntity block =
         createBlock.execute(new CreateBlockCommand(userId, type, request.content()));
@@ -43,7 +44,7 @@ public class ProfileBlockController {
   public ProfileBlockResponse update(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
-      @RequestBody ProfileBlockUpdateRequest request) {
+      @Valid @RequestBody ProfileBlockUpdateRequest request) {
     ProfileBlockEntity block =
         updateBlock.execute(new UpdateBlockCommand(userId, id, request.content()));
     return ProfileBlockResponse.from(block);

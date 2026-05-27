@@ -2,6 +2,7 @@ package com.example.short_link.profile.presentation.email;
 
 import com.example.short_link.profile.application.email.EmailLeadService;
 import com.example.short_link.profile.domain.email.EmailLeadEntity;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -65,7 +66,7 @@ public class MyEmailLeadController {
   public MyEmailLeadResponse patch(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
-      @RequestBody MyEmailLeadPatchRequest request) {
+      @Valid @RequestBody MyEmailLeadPatchRequest request) {
     return MyEmailLeadResponse.of(service.setOptedOut(userId, id, request.optedOut()));
   }
 

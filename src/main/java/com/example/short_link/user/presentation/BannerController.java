@@ -3,6 +3,7 @@ package com.example.short_link.user.presentation;
 import com.example.short_link.user.application.write.avatar.BannerService;
 import com.example.short_link.user.presentation.request.BannerCommitRequest;
 import com.example.short_link.user.presentation.request.BannerPresignRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,13 +22,13 @@ public class BannerController {
 
   @PostMapping("/presigned-url")
   public BannerService.PresignResult presign(
-      @AuthenticationPrincipal Long userId, @RequestBody BannerPresignRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody BannerPresignRequest request) {
     return service.presignUpload(userId, request.contentType());
   }
 
   @PutMapping
   public BannerService.CommitResult commit(
-      @AuthenticationPrincipal Long userId, @RequestBody BannerCommitRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody BannerCommitRequest request) {
     return service.commitUpload(userId, request.key());
   }
 
