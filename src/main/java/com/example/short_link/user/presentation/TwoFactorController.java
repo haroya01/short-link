@@ -5,6 +5,7 @@ import com.example.short_link.user.presentation.request.TwoFactorCodeRequest;
 import com.example.short_link.user.presentation.response.TwoFactorConfirmResponse;
 import com.example.short_link.user.presentation.response.TwoFactorSetupResponse;
 import com.example.short_link.user.presentation.response.TwoFactorStatusResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,19 +33,19 @@ public class TwoFactorController {
 
   @PostMapping("/confirm")
   public TwoFactorConfirmResponse confirm(
-      @AuthenticationPrincipal Long userId, @RequestBody TwoFactorCodeRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody TwoFactorCodeRequest request) {
     return TwoFactorConfirmResponse.of(service.confirm(userId, request.code()));
   }
 
   @PostMapping("/disable")
   public void disable(
-      @AuthenticationPrincipal Long userId, @RequestBody TwoFactorCodeRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody TwoFactorCodeRequest request) {
     service.disable(userId, request.code());
   }
 
   @PostMapping("/recovery-codes/regenerate")
   public TwoFactorConfirmResponse regenerate(
-      @AuthenticationPrincipal Long userId, @RequestBody TwoFactorCodeRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody TwoFactorCodeRequest request) {
     return TwoFactorConfirmResponse.of(service.regenerateRecoveryCodes(userId, request.code()));
   }
 }

@@ -1,5 +1,6 @@
 package com.example.short_link.profile.presentation.visit;
 
+import com.example.short_link.common.web.ClientIp;
 import com.example.short_link.profile.application.visit.ProfileVisitRecorder;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -41,7 +42,7 @@ public class PublicProfileVisitController {
         username,
         referrer,
         userAgent,
-        clientIp(req),
+        ClientIp.of(req),
         acceptLanguage,
         src,
         utmSource,
@@ -50,11 +51,5 @@ public class PublicProfileVisitController {
         utmTerm,
         utmContent);
     return ResponseEntity.noContent().build();
-  }
-
-  private static String clientIp(HttpServletRequest req) {
-    String forwarded = req.getHeader("X-Forwarded-For");
-    if (forwarded != null && !forwarded.isBlank()) return forwarded.split(",")[0].trim();
-    return req.getRemoteAddr();
   }
 }

@@ -8,6 +8,7 @@ import com.example.short_link.profile.application.write.UpdateProfileCommand;
 import com.example.short_link.profile.application.write.UpdateProfileUseCase;
 import com.example.short_link.profile.presentation.request.MyProfileReorderRequest;
 import com.example.short_link.profile.presentation.request.MyProfileUpdateRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,7 +33,7 @@ public class MyProfileController {
 
   @PutMapping
   public MyProfile update(
-      @AuthenticationPrincipal Long userId, @RequestBody MyProfileUpdateRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody MyProfileUpdateRequest request) {
     return updateProfile.execute(
         new UpdateProfileCommand(
             userId, request.username(), request.bio(), request.theme(), request.socials()));
@@ -40,7 +41,7 @@ public class MyProfileController {
 
   @PutMapping("/order")
   public MyProfile reorder(
-      @AuthenticationPrincipal Long userId, @RequestBody MyProfileReorderRequest request) {
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody MyProfileReorderRequest request) {
     reorderProfile.execute(new ReorderProfileCommand(userId, request.items()));
     return queryService.myProfile(userId);
   }

@@ -11,6 +11,7 @@ import com.example.short_link.link.destination.presentation.request.LinkDestinat
 import com.example.short_link.link.destination.presentation.request.LinkDestinationUpdateRequest;
 import com.example.short_link.link.destination.presentation.response.LinkDestinationBlockedCountriesResponse;
 import com.example.short_link.link.domain.ShortCode;
+import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -47,7 +48,7 @@ public class LinkDestinationController {
   public ResponseEntity<DestinationSummary> add(
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
-      @RequestBody LinkDestinationAddRequest request) {
+      @Valid @RequestBody LinkDestinationAddRequest request) {
     DestinationSummary added =
         addUseCase.execute(
             userId,
@@ -66,7 +67,7 @@ public class LinkDestinationController {
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
       @PathVariable Long id,
-      @RequestBody LinkDestinationUpdateRequest request) {
+      @Valid @RequestBody LinkDestinationUpdateRequest request) {
     return updateUseCase.execute(
         userId,
         shortCode,
@@ -93,7 +94,7 @@ public class LinkDestinationController {
   public LinkDestinationBlockedCountriesResponse setBlocked(
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
-      @RequestBody LinkDestinationBlockedCountriesRequest request) {
+      @Valid @RequestBody LinkDestinationBlockedCountriesRequest request) {
     var link = setBlockedUseCase.execute(userId, shortCode, request.codes());
     return new LinkDestinationBlockedCountriesResponse(link.getBlockedCountries());
   }
