@@ -68,7 +68,7 @@ class PublicPostControllerTest {
         new PublicPostDetail(
             new PublicAuthorView("john", "Bio", "https://cdn/avatar.png"),
             new PublicPostListItem("first-post", "First", "Excerpt", null, "ko", NOW),
-            List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0)));
+            List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)));
     when(publicPostQueryService.findPublicPost("john", "first-post")).thenReturn(detail);
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/first-post"))

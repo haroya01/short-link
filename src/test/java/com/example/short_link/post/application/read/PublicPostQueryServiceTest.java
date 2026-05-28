@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.cta.domain.CtaEntity;
+import com.example.short_link.cta.domain.CtaPurpose;
+import com.example.short_link.cta.domain.CtaStyle;
+import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -30,12 +34,15 @@ class PublicPostQueryServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private PostRepository postRepository;
   @Mock private PostBlockRepository postBlockRepository;
+  @Mock private CtaRepository ctaRepository;
 
   private PublicPostQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new PublicPostQueryService(userRepository, postRepository, postBlockRepository);
+    service =
+        new PublicPostQueryService(
+            userRepository, postRepository, postBlockRepository, ctaRepository);
   }
 
   private UserEntity authorWithUsername(String username) {
@@ -148,6 +155,99 @@ class PublicPostQueryServiceTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_GONE);
+  }
+
+  @Test
+  void findHydratesCtaBlocks() {
+    UserEntity author = authorWithUsername("john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    PostBlockEntity ctaBlock =
+        new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(List.of(ctaBlock));
+    CtaEntity cta =
+        new CtaEntity(
+            author.getId(),
+            "30 min consult",
+            "https://cal.com/me",
+            CtaStyle.PRIMARY,
+            CtaPurpose.BOOKING);
+    when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
+
+    PublicPostDetail detail = service.findPublicPost("john", "p");
+
+    assertThat(detail.blocks()).hasSize(1);
+    PublicPostBlockView block = detail.blocks().get(0);
+    assertThat(block.type()).isEqualTo("CTA_REF");
+    assertThat(block.cta()).isNotNull();
+    assertThat(block.cta().label()).isEqualTo("30 min consult");
+    assertThat(block.cta().url()).isEqualTo("https://cal.com/me");
+    assertThat(block.cta().style()).isEqualTo("PRIMARY");
+    assertThat(block.cta().purpose()).isEqualTo("BOOKING");
+    assertThat(block.cta().deleted()).isFalse();
+  }
+
+  @Test
+  void findHandlesDeletedCta() {
+    UserEntity author = authorWithUsername("john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    PostBlockEntity ctaBlock =
+        new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(List.of(ctaBlock));
+    CtaEntity cta =
+        new CtaEntity(author.getId(), "Gone", "https://x", CtaStyle.PRIMARY, CtaPurpose.CUSTOM);
+    cta.softDelete();
+    when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
+
+    PublicPostDetail detail = service.findPublicPost("john", "p");
+
+    assertThat(detail.blocks().get(0).cta()).isNotNull();
+    assertThat(detail.blocks().get(0).cta().deleted()).isTrue();
+  }
+
+  @Test
+  void findHandlesMissingCtaGracefully() {
+    UserEntity author = authorWithUsername("john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    PostBlockEntity ctaBlock =
+        new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":99}", 0);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(List.of(ctaBlock));
+    when(ctaRepository.findById(99L)).thenReturn(Optional.empty());
+
+    PublicPostDetail detail = service.findPublicPost("john", "p");
+
+    // CTA lookup 실패 — block 은 존재하지만 cta = null. UI placeholder 분기 책임.
+    assertThat(detail.blocks()).hasSize(1);
+    assertThat(detail.blocks().get(0).cta()).isNull();
+  }
+
+  @Test
+  void findHandlesMalformedCtaContent() {
+    UserEntity author = authorWithUsername("john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    PostBlockEntity ctaBlock =
+        new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "not-json", 0);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(List.of(ctaBlock));
+
+    PublicPostDetail detail = service.findPublicPost("john", "p");
+
+    assertThat(detail.blocks()).hasSize(1);
+    assertThat(detail.blocks().get(0).cta()).isNull();
   }
 
   @Test
