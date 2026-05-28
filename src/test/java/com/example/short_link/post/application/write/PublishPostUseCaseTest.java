@@ -2,6 +2,7 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
@@ -18,16 +19,17 @@ class PublishPostUseCaseTest {
 
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
+  @Mock private PostRevisionCapture postRevisionCapture;
 
   private PublishPostUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new PublishPostUseCase(postOwnership, postRepository);
+    useCase = new PublishPostUseCase(postOwnership, postRepository, postRevisionCapture);
   }
 
   @Test
-  void publishesDraft() {
+  void publishesDraftAndCapturesRevision() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -36,5 +38,6 @@ class PublishPostUseCaseTest {
 
     assertThat(result.getStatus()).isEqualTo(PostStatus.PUBLISHED);
     assertThat(result.getPublishedAt()).isNotNull();
+    verify(postRevisionCapture).capture(result);
   }
 }

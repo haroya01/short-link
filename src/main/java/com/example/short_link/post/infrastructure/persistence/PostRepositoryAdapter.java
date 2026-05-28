@@ -24,6 +24,11 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public void delete(PostEntity post) {
+    jpa.delete(post);
+  }
+
+  @Override
   public boolean existsByUserIdAndSlug(Long userId, String slug) {
     return jpa.existsByUserIdAndSlug(userId, slug);
   }

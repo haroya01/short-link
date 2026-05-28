@@ -2,6 +2,7 @@ package com.example.short_link.post.presentation;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -11,17 +12,22 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.post.application.read.PostBlockView;
 import com.example.short_link.post.application.read.PostQueryService;
+import com.example.short_link.post.application.read.PostRevisionView;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.application.write.BackToDraftPostCommand;
 import com.example.short_link.post.application.write.BackToDraftPostUseCase;
 import com.example.short_link.post.application.write.CreatePostCommand;
 import com.example.short_link.post.application.write.CreatePostUseCase;
+import com.example.short_link.post.application.write.DeletePostCommand;
+import com.example.short_link.post.application.write.DeletePostUseCase;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
 import com.example.short_link.post.application.write.ReplacePostBlocksUseCase;
 import com.example.short_link.post.application.write.RepublishPostCommand;
 import com.example.short_link.post.application.write.RepublishPostUseCase;
+import com.example.short_link.post.application.write.RestorePostRevisionCommand;
+import com.example.short_link.post.application.write.RestorePostRevisionUseCase;
 import com.example.short_link.post.application.write.SchedulePostCommand;
 import com.example.short_link.post.application.write.SchedulePostUseCase;
 import com.example.short_link.post.application.write.UnpublishPostCommand;
@@ -31,6 +37,7 @@ import com.example.short_link.post.application.write.UpdatePostMetadataUseCase;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostRevisionEntity;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.testsupport.KurlWebMvcTest;
@@ -59,6 +66,8 @@ class PostControllerTest {
   @MockitoBean private RepublishPostUseCase republishPost;
   @MockitoBean private BackToDraftPostUseCase backToDraftPost;
   @MockitoBean private ReplacePostBlocksUseCase replacePostBlocks;
+  @MockitoBean private RestorePostRevisionUseCase restorePostRevision;
+  @MockitoBean private DeletePostUseCase deletePost;
   @MockitoBean private PostQueryService postQueryService;
 
   private static final long USER_ID = 7L;
@@ -307,5 +316,58 @@ class PostControllerTest {
   @Test
   void anonymousBlockListIs401() throws Exception {
     mvc.perform(get("/api/v1/posts/42/blocks")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void listRevisionsReturnsViews() throws Exception {
+    PostRevisionView v1 = PostRevisionView.from(new PostRevisionEntity(42L, 2, "Title v2", "{}"));
+    PostRevisionView v0 = PostRevisionView.from(new PostRevisionEntity(42L, 1, "Title v1", "{}"));
+    when(postQueryService.listRevisions(USER_ID, 42L)).thenReturn(List.of(v1, v0));
+
+    mvc.perform(
+            get("/api/v1/posts/42/revisions")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].versionNumber").value(2))
+        .andExpect(jsonPath("$[1].versionNumber").value(1));
+  }
+
+  @Test
+  void restoreRevisionReturnsView() throws Exception {
+    PostEntity restored = new PostEntity(USER_ID, "my-post", "Restored Title", "ko");
+    when(restorePostRevision.execute(any(RestorePostRevisionCommand.class))).thenReturn(restored);
+
+    mvc.perform(
+            post("/api/v1/posts/42/revisions/2/restore")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.title").value("Restored Title"));
+  }
+
+  @Test
+  void restoreNotFoundReturns404() throws Exception {
+    when(restorePostRevision.execute(any(RestorePostRevisionCommand.class)))
+        .thenThrow(
+            new com.example.short_link.post.exception.PostException(
+                PostErrorCode.REVISION_NOT_FOUND, 99));
+
+    mvc.perform(
+            post("/api/v1/posts/42/revisions/99/restore")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("REVISION_NOT_FOUND"));
+  }
+
+  @Test
+  void deletePostReturns204() throws Exception {
+    mvc.perform(delete("/api/v1/posts/42").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isNoContent());
+
+    org.mockito.Mockito.verify(deletePost).execute(any(DeletePostCommand.class));
+  }
+
+  @Test
+  void anonymousDeleteIs401() throws Exception {
+    mvc.perform(delete("/api/v1/posts/42")).andExpect(status().isUnauthorized());
   }
 }
