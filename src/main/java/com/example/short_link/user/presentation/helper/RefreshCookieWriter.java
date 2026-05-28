@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 @Component
 public class RefreshCookieWriter {
@@ -15,35 +16,40 @@ public class RefreshCookieWriter {
   private static final String COOKIE_PATH = "/api/v1/auth";
 
   private final boolean secure;
+  private final String domain;
+  private final String sameSite;
   private final Duration maxAge;
 
   public RefreshCookieWriter(
-      @Value("${short-link.cookie.secure}") boolean secure, JwtProperties jwt) {
+      @Value("${short-link.cookie.secure}") boolean secure,
+      @Value("${short-link.cookie.domain:}") String domain,
+      @Value("${short-link.cookie.same-site:Strict}") String sameSite,
+      JwtProperties jwt) {
     this.secure = secure;
+    this.domain = domain;
+    this.sameSite = sameSite;
     this.maxAge = jwt.refreshTtl();
   }
 
   public void set(HttpServletResponse res, String token) {
-    ResponseCookie cookie =
-        ResponseCookie.from(COOKIE_NAME, token)
-            .httpOnly(true)
-            .secure(secure)
-            .sameSite("Strict")
-            .path(COOKIE_PATH)
-            .maxAge(maxAge)
-            .build();
-    res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+    res.addHeader(HttpHeaders.SET_COOKIE, build(token, maxAge).toString());
   }
 
   public void clear(HttpServletResponse res) {
-    ResponseCookie cookie =
-        ResponseCookie.from(COOKIE_NAME, "")
+    res.addHeader(HttpHeaders.SET_COOKIE, build("", Duration.ZERO).toString());
+  }
+
+  private ResponseCookie build(String value, Duration ttl) {
+    ResponseCookie.ResponseCookieBuilder builder =
+        ResponseCookie.from(COOKIE_NAME, value)
             .httpOnly(true)
             .secure(secure)
-            .sameSite("Strict")
+            .sameSite(sameSite)
             .path(COOKIE_PATH)
-            .maxAge(0)
-            .build();
-    res.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
+            .maxAge(ttl);
+    if (StringUtils.hasText(domain)) {
+      builder.domain(domain);
+    }
+    return builder.build();
   }
 }
