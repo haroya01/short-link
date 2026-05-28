@@ -27,6 +27,8 @@ public interface LinkRepository {
     return findByShortCode(new ShortCode(shortCode));
   }
 
+  List<LinkEntity> findAllByShortCodeInAndUserId(Collection<ShortCode> shortCodes, Long userId);
+
   List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
   List<LinkEntity> findMyLinksCreatedAtPage(

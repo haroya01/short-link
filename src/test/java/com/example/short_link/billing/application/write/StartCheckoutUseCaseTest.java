@@ -2,6 +2,8 @@ package com.example.short_link.billing.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.billing.application.StripeProperties;
@@ -15,8 +17,18 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.SimpleTransactionStatus;
 
 class StartCheckoutUseCaseTest {
+
+  private static PlatformTransactionManager noopTxManager() {
+    PlatformTransactionManager m = mock(PlatformTransactionManager.class);
+    TransactionStatus status = new SimpleTransactionStatus();
+    when(m.getTransaction(any())).thenReturn(status);
+    return m;
+  }
 
   private static final StripeProperties CONFIGURED =
       new StripeProperties(
@@ -43,7 +55,8 @@ class StartCheckoutUseCaseTest {
             UNCONFIGURED,
             Mockito.mock(SubscriptionGateway.class),
             Mockito.mock(UserRepository.class),
-            new SimpleMeterRegistry());
+            new SimpleMeterRegistry(),
+            noopTxManager());
     assertThatThrownBy(() -> useCase.execute(new StartCheckoutCommand(1L)))
         .isInstanceOf(BillingException.class);
   }
@@ -54,7 +67,11 @@ class StartCheckoutUseCaseTest {
     when(users.findById(1L)).thenReturn(Optional.empty());
     StartCheckoutUseCase useCase =
         new StartCheckoutUseCase(
-            CONFIGURED, Mockito.mock(SubscriptionGateway.class), users, new SimpleMeterRegistry());
+            CONFIGURED,
+            Mockito.mock(SubscriptionGateway.class),
+            users,
+            new SimpleMeterRegistry(),
+            noopTxManager());
     assertThatThrownBy(() -> useCase.execute(new StartCheckoutCommand(1L)))
         .isInstanceOf(UserException.class);
   }
@@ -73,7 +90,8 @@ class StartCheckoutUseCaseTest {
         .thenReturn(new CheckoutInitiation("https://checkout.stripe.com/c/x", null));
 
     StartCheckoutUseCase useCase =
-        new StartCheckoutUseCase(CONFIGURED, gateway, users, new SimpleMeterRegistry());
+        new StartCheckoutUseCase(
+            CONFIGURED, gateway, users, new SimpleMeterRegistry(), noopTxManager());
     String url = useCase.execute(new StartCheckoutCommand(1L));
 
     assertThat(url).isEqualTo("https://checkout.stripe.com/c/x");
@@ -93,7 +111,8 @@ class StartCheckoutUseCaseTest {
         .thenReturn(new CheckoutInitiation("https://checkout.stripe.com/c/new", "cus_new"));
 
     StartCheckoutUseCase useCase =
-        new StartCheckoutUseCase(CONFIGURED, gateway, users, new SimpleMeterRegistry());
+        new StartCheckoutUseCase(
+            CONFIGURED, gateway, users, new SimpleMeterRegistry(), noopTxManager());
     String url = useCase.execute(new StartCheckoutCommand(2L));
 
     assertThat(url).isEqualTo("https://checkout.stripe.com/c/new");
