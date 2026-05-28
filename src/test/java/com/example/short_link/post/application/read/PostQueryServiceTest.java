@@ -4,7 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.write.PostOwnership;
+import com.example.short_link.post.domain.PostBlockEntity;
+import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -20,12 +24,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class PostQueryServiceTest {
 
   @Mock private PostRepository postRepository;
+  @Mock private PostBlockRepository postBlockRepository;
+  @Mock private PostOwnership postOwnership;
 
   private PostQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new PostQueryService(postRepository);
+    service = new PostQueryService(postRepository, postBlockRepository, postOwnership);
   }
 
   @Test
@@ -79,5 +85,31 @@ class PostQueryServiceTest {
     when(postRepository.findAllByUserIdOrderByCreatedAtDesc(7L)).thenReturn(List.of());
 
     assertThat(service.listMyPosts(7L)).isEmpty();
+  }
+
+  @Test
+  void listBlocksReturnsViewsInOrder() {
+    PostBlockEntity b1 = new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0);
+    PostBlockEntity b2 = new PostBlockEntity(42L, PostBlockType.IMAGE, "{\"url\":\"x\"}", 1);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(42L)).thenReturn(List.of(b1, b2));
+
+    List<PostBlockView> views = service.listBlocks(7L, 42L);
+
+    assertThat(views).hasSize(2);
+    assertThat(views.get(0).type()).isEqualTo("PARAGRAPH");
+    assertThat(views.get(0).content()).isEqualTo("Hello");
+    assertThat(views.get(1).type()).isEqualTo("IMAGE");
+    assertThat(views.get(1).blockOrder()).isEqualTo(1);
+  }
+
+  @Test
+  void listBlocksEnforcesOwnership() {
+    when(postOwnership.requireOwned(7L, 42L))
+        .thenThrow(new PostException(PostErrorCode.PERMISSION_DENIED));
+
+    assertThatThrownBy(() -> service.listBlocks(7L, 42L))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.PERMISSION_DENIED);
   }
 }

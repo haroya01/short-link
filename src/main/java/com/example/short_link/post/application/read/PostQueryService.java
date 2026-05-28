@@ -1,6 +1,8 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.write.PostOwnership;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -15,6 +17,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostQueryService {
 
   private final PostRepository postRepository;
+  private final PostBlockRepository postBlockRepository;
+  private final PostOwnership postOwnership;
 
   public PostView findOwnPost(Long userId, Long postId) {
     PostEntity post =
@@ -30,6 +34,13 @@ public class PostQueryService {
   public List<PostView> listMyPosts(Long userId) {
     return postRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
         .map(PostView::from)
+        .toList();
+  }
+
+  public List<PostBlockView> listBlocks(Long userId, Long postId) {
+    postOwnership.requireOwned(userId, postId);
+    return postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(postId).stream()
+        .map(PostBlockView::from)
         .toList();
   }
 }
