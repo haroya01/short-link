@@ -26,7 +26,7 @@ class ArchitectureRulesTest {
 
   private static final Pattern FEATURE_PRESENTATION_IMPORT =
       Pattern.compile(
-          "^import com\\.example\\.short_link\\.(admin|billing|campaign|cta|link|post|profile|user)\\.presentation\\.",
+          "^import com\\.example\\.short_link\\.(abuse|admin|billing|campaign|cta|link|post|profile|user)\\.presentation\\.",
           Pattern.MULTILINE);
 
   private static final Pattern REPOSITORY_IMPORT =
