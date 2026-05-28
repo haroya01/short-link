@@ -14,7 +14,7 @@ import org.springframework.test.context.ActiveProfiles;
 class AuditLogServiceTest {
 
   @Autowired private AuditLogService auditLogService;
-  @Autowired private AuditLogRepository auditLogRepository;
+  @Autowired private AuditLogJpaRepository auditLogRepository;
 
   @Test
   void persistsAuditRowWithMetadata() {

@@ -3,8 +3,8 @@ package com.example.short_link.common.audit.scheduler;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.audit.AuditLogEntity;
+import com.example.short_link.common.audit.AuditLogJpaRepository;
 import com.example.short_link.common.audit.AuditLogProperties;
-import com.example.short_link.common.audit.AuditLogRepository;
 import java.time.Duration;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 class AuditLogCleanupJobTest {
 
   @Autowired private AuditLogCleanupJob job;
-  @Autowired private AuditLogRepository repository;
+  @Autowired private AuditLogJpaRepository repository;
 
   @Test
   void deletesRowsBeyondRetention() {

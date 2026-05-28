@@ -1,7 +1,7 @@
 package com.example.short_link.common.audit.scheduler;
 
+import com.example.short_link.common.audit.AuditLogJpaRepository;
 import com.example.short_link.common.audit.AuditLogProperties;
-import com.example.short_link.common.audit.AuditLogRepository;
 import com.example.short_link.common.lock.RedisDistributedLock;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
@@ -24,7 +24,7 @@ public class AuditLogCleanupJob {
 
   private static final String LOCK_KEY = "kurl:cleanup:audit-log";
 
-  private final AuditLogRepository repository;
+  private final AuditLogJpaRepository repository;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
   private final AuditLogProperties auditLog;
