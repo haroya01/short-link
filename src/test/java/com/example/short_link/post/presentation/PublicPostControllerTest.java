@@ -41,14 +41,16 @@ class PublicPostControllerTest {
         new PublicPostListView(
             new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
             List.of(
-                new PublicPostListItem(1L, "post-1", "Post 1", "Excerpt", null, "ko", NOW),
-                new PublicPostListItem(2L, "post-2", "Post 2", null, null, "ja", NOW)));
+                new PublicPostListItem(
+                    1L, "post-1", "Post 1", "Excerpt", null, "ko", List.of("spring", "jpa"), NOW),
+                new PublicPostListItem(2L, "post-2", "Post 2", null, null, "ja", List.of(), NOW)));
     when(publicPostQueryService.listPublicPosts("john")).thenReturn(response);
 
     mvc.perform(get("/api/v1/public/profiles/john/posts"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.author.username").value("john"))
         .andExpect(jsonPath("$.posts[0].slug").value("post-1"))
+        .andExpect(jsonPath("$.posts[0].tags[0]").value("spring"))
         .andExpect(jsonPath("$.posts[1].slug").value("post-2"));
   }
 
@@ -67,7 +69,8 @@ class PublicPostControllerTest {
     PublicPostDetail detail =
         new PublicPostDetail(
             new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
-            new PublicPostListItem(10L, "first-post", "First", "Excerpt", null, "ko", NOW),
+            new PublicPostListItem(
+                10L, "first-post", "First", "Excerpt", null, "ko", List.of(), NOW),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)));
     when(publicPostQueryService.findPublicPost("john", "first-post")).thenReturn(detail);
 
