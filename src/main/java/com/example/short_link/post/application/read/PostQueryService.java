@@ -4,6 +4,7 @@ import com.example.short_link.post.application.write.PostOwnership;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostRevisionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
@@ -18,6 +19,7 @@ public class PostQueryService {
 
   private final PostRepository postRepository;
   private final PostBlockRepository postBlockRepository;
+  private final PostRevisionRepository postRevisionRepository;
   private final PostOwnership postOwnership;
 
   public PostView findOwnPost(Long userId, Long postId) {
@@ -41,6 +43,13 @@ public class PostQueryService {
     postOwnership.requireOwned(userId, postId);
     return postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(postId).stream()
         .map(PostBlockView::from)
+        .toList();
+  }
+
+  public List<PostRevisionView> listRevisions(Long userId, Long postId) {
+    postOwnership.requireOwned(userId, postId);
+    return postRevisionRepository.findAllByPostIdOrderByVersionNumberDesc(postId).stream()
+        .map(PostRevisionView::from)
         .toList();
   }
 }

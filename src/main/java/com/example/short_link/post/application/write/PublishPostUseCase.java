@@ -12,11 +12,14 @@ public class PublishPostUseCase {
 
   private final PostOwnership postOwnership;
   private final PostRepository postRepository;
+  private final PostRevisionCapture postRevisionCapture;
 
   @Transactional
   public PostEntity execute(PublishPostCommand cmd) {
     PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
     post.publish();
-    return postRepository.save(post);
+    PostEntity saved = postRepository.save(post);
+    postRevisionCapture.capture(saved);
+    return saved;
   }
 }
