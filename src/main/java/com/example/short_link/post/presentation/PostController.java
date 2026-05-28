@@ -96,7 +96,8 @@ public class PostController {
                 request.excerpt(),
                 request.ogImageUrl(),
                 request.ogImageKey(),
-                request.languageTag())));
+                request.languageTag(),
+                request.tags())));
   }
 
   @PostMapping("/{id}/publish")

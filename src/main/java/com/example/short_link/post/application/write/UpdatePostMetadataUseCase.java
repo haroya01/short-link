@@ -42,6 +42,9 @@ public class UpdatePostMetadataUseCase {
     if (cmd.languageTag() != null && !cmd.languageTag().isBlank()) {
       post.updateLanguageTag(cmd.languageTag());
     }
+    if (cmd.tags() != null) {
+      post.updateTags(cmd.tags());
+    }
 
     return postRepository.save(post);
   }
