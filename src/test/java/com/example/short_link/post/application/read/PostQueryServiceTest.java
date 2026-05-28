@@ -8,8 +8,10 @@ import com.example.short_link.post.application.write.PostOwnership;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostRevisionEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostRevisionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
@@ -25,13 +27,16 @@ class PostQueryServiceTest {
 
   @Mock private PostRepository postRepository;
   @Mock private PostBlockRepository postBlockRepository;
+  @Mock private PostRevisionRepository postRevisionRepository;
   @Mock private PostOwnership postOwnership;
 
   private PostQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new PostQueryService(postRepository, postBlockRepository, postOwnership);
+    service =
+        new PostQueryService(
+            postRepository, postBlockRepository, postRevisionRepository, postOwnership);
   }
 
   @Test
@@ -111,5 +116,20 @@ class PostQueryServiceTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.PERMISSION_DENIED);
+  }
+
+  @Test
+  void listRevisionsReturnsViews() {
+    PostRevisionEntity r1 = new PostRevisionEntity(42L, 2, "Title v2", "{}");
+    PostRevisionEntity r0 = new PostRevisionEntity(42L, 1, "Title v1", "{}");
+    when(postRevisionRepository.findAllByPostIdOrderByVersionNumberDesc(42L))
+        .thenReturn(List.of(r1, r0));
+
+    List<PostRevisionView> views = service.listRevisions(7L, 42L);
+
+    assertThat(views).hasSize(2);
+    assertThat(views.get(0).versionNumber()).isEqualTo(2);
+    assertThat(views.get(0).titleSnapshot()).isEqualTo("Title v2");
+    assertThat(views.get(1).versionNumber()).isEqualTo(1);
   }
 }

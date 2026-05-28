@@ -10,6 +10,8 @@ public interface PostRepository {
 
   PostEntity save(PostEntity post);
 
+  void delete(PostEntity post);
+
   boolean existsByUserIdAndSlug(Long userId, String slug);
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
