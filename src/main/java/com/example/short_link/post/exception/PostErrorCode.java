@@ -13,7 +13,10 @@ public enum PostErrorCode {
   REPUBLISH_NOT_UNPUBLISHED(HttpStatus.CONFLICT, "only unpublished posts can be republished"),
   BACK_TO_DRAFT_NOT_SCHEDULED(HttpStatus.CONFLICT, "only scheduled posts can return to draft"),
   REVISION_NOT_FOUND(HttpStatus.NOT_FOUND, "revision not found: %s"),
-  POST_GONE(HttpStatus.GONE, "post is no longer available: %s");
+  POST_GONE(HttpStatus.GONE, "post is no longer available: %s"),
+  SERIES_NOT_FOUND(HttpStatus.NOT_FOUND, "series not found: %s"),
+  SERIES_SLUG_CONFLICT(HttpStatus.CONFLICT, "series slug already used: %s"),
+  SERIES_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "series permission denied");
 
   private final HttpStatus status;
   private final String template;
