@@ -91,6 +91,13 @@ public class PostEntity extends BaseTimeEntity {
   @BatchSize(size = 50)
   private List<String> tags = new ArrayList<>();
 
+  /** Optional series membership. seriesOrder is the 0-based position within the series. */
+  @Column(name = "series_id")
+  private Long seriesId;
+
+  @Column(name = "series_order")
+  private Integer seriesOrder;
+
   public PostEntity(Long userId, String slug, String title, String languageTag) {
     this.userId = userId;
     this.slug = slug;
@@ -210,6 +217,16 @@ public class PostEntity extends BaseTimeEntity {
   public void updateTags(List<String> raw) {
     this.tags.clear();
     this.tags.addAll(normalizeTags(raw));
+  }
+
+  public void assignToSeries(Long seriesId, int order) {
+    this.seriesId = seriesId;
+    this.seriesOrder = order;
+  }
+
+  public void clearSeries() {
+    this.seriesId = null;
+    this.seriesOrder = null;
   }
 
   public static List<String> normalizeTags(List<String> raw) {

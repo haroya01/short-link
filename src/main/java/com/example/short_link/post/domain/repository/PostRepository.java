@@ -20,4 +20,9 @@ public interface PostRepository {
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
+
+  List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
+
+  List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
+      Long seriesId, PostStatus status);
 }
