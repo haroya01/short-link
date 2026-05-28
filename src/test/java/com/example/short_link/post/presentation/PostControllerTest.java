@@ -5,9 +5,11 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.read.PostBlockView;
 import com.example.short_link.post.application.read.PostQueryService;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.application.write.BackToDraftPostCommand;
@@ -16,6 +18,8 @@ import com.example.short_link.post.application.write.CreatePostCommand;
 import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
+import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
+import com.example.short_link.post.application.write.ReplacePostBlocksUseCase;
 import com.example.short_link.post.application.write.RepublishPostCommand;
 import com.example.short_link.post.application.write.RepublishPostUseCase;
 import com.example.short_link.post.application.write.SchedulePostCommand;
@@ -24,6 +28,8 @@ import com.example.short_link.post.application.write.UnpublishPostCommand;
 import com.example.short_link.post.application.write.UnpublishPostUseCase;
 import com.example.short_link.post.application.write.UpdatePostMetadataCommand;
 import com.example.short_link.post.application.write.UpdatePostMetadataUseCase;
+import com.example.short_link.post.domain.PostBlockEntity;
+import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -52,6 +58,7 @@ class PostControllerTest {
   @MockitoBean private UnpublishPostUseCase unpublishPost;
   @MockitoBean private RepublishPostUseCase republishPost;
   @MockitoBean private BackToDraftPostUseCase backToDraftPost;
+  @MockitoBean private ReplacePostBlocksUseCase replacePostBlocks;
   @MockitoBean private PostQueryService postQueryService;
 
   private static final long USER_ID = 7L;
@@ -247,5 +254,58 @@ class PostControllerTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("DRAFT"));
+  }
+
+  @Test
+  void listBlocksReturnsBlocks() throws Exception {
+    PostBlockView b1 =
+        PostBlockView.from(new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0));
+    PostBlockView b2 =
+        PostBlockView.from(new PostBlockEntity(42L, PostBlockType.IMAGE, "{\"url\":\"x\"}", 1));
+    when(postQueryService.listBlocks(USER_ID, 42L)).thenReturn(List.of(b1, b2));
+
+    mvc.perform(
+            get("/api/v1/posts/42/blocks").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].type").value("PARAGRAPH"))
+        .andExpect(jsonPath("$[1].type").value("IMAGE"));
+  }
+
+  @Test
+  void replaceBlocksAcceptsList() throws Exception {
+    PostBlockEntity saved1 = new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0);
+    PostBlockEntity saved2 = new PostBlockEntity(42L, PostBlockType.DIVIDER, null, 1);
+    when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class)))
+        .thenReturn(List.of(saved1, saved2));
+
+    mvc.perform(
+            put("/api/v1/posts/42/blocks")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"blocks\":["
+                        + "{\"type\":\"PARAGRAPH\",\"content\":\"Hello\"},"
+                        + "{\"type\":\"DIVIDER\"}"
+                        + "]}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].type").value("PARAGRAPH"))
+        .andExpect(jsonPath("$[1].type").value("DIVIDER"));
+  }
+
+  @Test
+  void replaceBlocksAcceptsEmpty() throws Exception {
+    when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class))).thenReturn(List.of());
+
+    mvc.perform(
+            put("/api/v1/posts/42/blocks")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"blocks\":[]}"))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void anonymousBlockListIs401() throws Exception {
+    mvc.perform(get("/api/v1/posts/42/blocks")).andExpect(status().isUnauthorized());
   }
 }
