@@ -143,7 +143,10 @@ public class SecurityConfig {
                     .requestMatchers(GET, "/api/v1/public/**")
                     .permitAll()
                     .requestMatchers(
-                        POST, "/api/v1/public/email-leads", "/api/v1/public/profiles/*/visit")
+                        POST,
+                        "/api/v1/public/email-leads",
+                        "/api/v1/public/profiles/*/visit",
+                        "/api/v1/public/abuse-reports")
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/links/*/public-stats", "/api/v1/links/*/stream")
                     .permitAll()
