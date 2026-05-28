@@ -39,10 +39,10 @@ class PublicPostControllerTest {
   void listPublicPostsNoAuthRequired() throws Exception {
     PublicPostListView response =
         new PublicPostListView(
-            new PublicAuthorView("john", "Bio", "https://cdn/avatar.png"),
+            new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
             List.of(
-                new PublicPostListItem("post-1", "Post 1", "Excerpt", null, "ko", NOW),
-                new PublicPostListItem("post-2", "Post 2", null, null, "ja", NOW)));
+                new PublicPostListItem(1L, "post-1", "Post 1", "Excerpt", null, "ko", NOW),
+                new PublicPostListItem(2L, "post-2", "Post 2", null, null, "ja", NOW)));
     when(publicPostQueryService.listPublicPosts("john")).thenReturn(response);
 
     mvc.perform(get("/api/v1/public/profiles/john/posts"))
@@ -66,8 +66,8 @@ class PublicPostControllerTest {
   void findPublicPostReturnsDetail() throws Exception {
     PublicPostDetail detail =
         new PublicPostDetail(
-            new PublicAuthorView("john", "Bio", "https://cdn/avatar.png"),
-            new PublicPostListItem("first-post", "First", "Excerpt", null, "ko", NOW),
+            new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
+            new PublicPostListItem(10L, "first-post", "First", "Excerpt", null, "ko", NOW),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)));
     when(publicPostQueryService.findPublicPost("john", "first-post")).thenReturn(detail);
 
