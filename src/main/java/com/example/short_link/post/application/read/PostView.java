@@ -1,9 +1,9 @@
-package com.example.short_link.post.presentation.response;
+package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.PostEntity;
 import java.time.Instant;
 
-public record PostResponse(
+public record PostView(
     Long id,
     String slug,
     String title,
@@ -17,8 +17,8 @@ public record PostResponse(
     Instant createdAt,
     Instant updatedAt) {
 
-  public static PostResponse from(PostEntity post) {
-    return new PostResponse(
+  public static PostView from(PostEntity post) {
+    return new PostView(
         post.getId(),
         post.getSlug(),
         post.getTitle(),
