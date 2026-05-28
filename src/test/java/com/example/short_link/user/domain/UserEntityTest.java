@@ -8,6 +8,7 @@ import com.example.short_link.user.domain.UserEntity.Tier;
 import com.example.short_link.user.domain.repository.*;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class UserEntityTest {
 
@@ -72,6 +73,19 @@ class UserEntityTest {
     u.applySubscription("sub", "active", null);
     u.applySubscription("sub", "canceled", null);
     assertThat(u.isPro()).isFalse();
+  }
+
+  @Test
+  void stripeRestoredAfterLoadWhenAllColumnsNull() {
+    // Hibernate maps an @Embedded to null when every column under it is null — every
+    // stripe getter would NPE without the lifecycle hook rehydrating the binding.
+    UserEntity u = newUser();
+    ReflectionTestUtils.setField(u, "stripe", null);
+    u.restoreStripeAfterLoad();
+    assertThat(u.getStripeCustomerId()).isNull();
+    assertThat(u.getStripeSubscriptionId()).isNull();
+    assertThat(u.getSubscriptionStatus()).isNull();
+    assertThat(u.getSubscriptionCurrentPeriodEnd()).isNull();
   }
 
   @Test
