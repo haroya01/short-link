@@ -12,7 +12,6 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.support.TestEntities;
-import java.lang.reflect.Field;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -77,15 +76,5 @@ class SetLinkHighlightUseCaseTest {
     when(linkRepository.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(target));
     useCase.execute(new SetLinkHighlightCommand(7L, new ShortCode("abc"), false));
     assertThat(target.isProfileHighlighted()).isFalse();
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = target.getClass().getDeclaredField(name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
   }
 }

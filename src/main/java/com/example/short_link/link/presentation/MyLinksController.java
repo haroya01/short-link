@@ -4,7 +4,6 @@ import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.MyLinksQuery;
 import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.application.read.MyLinksQueryService;
-import com.example.short_link.link.presentation.response.MyLinkResponse;
 import com.example.short_link.link.presentation.response.MyLinksPage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -31,13 +30,13 @@ public class MyLinksController {
       @RequestParam(required = false) String domain,
       @RequestParam(required = false) String expiry,
       @RequestParam(required = false) String createdAfter,
-      @RequestParam(required = false) String createdBefore) {
+      @RequestParam(required = false) String createdBefore,
+      @RequestParam(required = false) String sort,
+      @RequestParam(required = false) String dir) {
     MyLinksQuery query =
-        MyLinksQuery.of(size, after, q, tag, domain, expiry, createdAfter, createdBefore);
+        MyLinksQuery.of(
+            size, after, q, tag, domain, expiry, createdAfter, createdBefore, sort, dir);
     MyLinksResult result = service.myLinks(userId, query);
-    return new MyLinksPage(
-        result.items().stream().map(my -> MyLinkResponse.from(my, urlBuilder)).toList(),
-        result.nextCursor(),
-        result.hasMore());
+    return MyLinksPage.from(result, urlBuilder);
   }
 }

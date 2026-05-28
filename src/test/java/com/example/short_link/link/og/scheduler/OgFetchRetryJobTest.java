@@ -21,7 +21,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.data.domain.Pageable;
 
 class OgFetchRetryJobTest {
 
@@ -48,7 +47,7 @@ class OgFetchRetryJobTest {
   void lockHeldSkips() {
     when(lock.tryAcquire(eq("kurl:og-fetch:retry"), any(Duration.class))).thenReturn(false);
     job.runDaily();
-    verify(linkRepository, never()).findOgRetryCandidates(anyInt(), any(), any());
+    verify(linkRepository, never()).findOgRetryCandidates(anyInt(), any(), anyInt());
   }
 
   @Test
@@ -57,8 +56,7 @@ class OgFetchRetryJobTest {
     LinkEntity a = Mockito.mock(LinkEntity.class);
     when(a.getShortCode()).thenReturn(new ShortCode("r000001"));
     when(a.getOriginalUrl()).thenReturn("https://r.example");
-    when(linkRepository.findOgRetryCandidates(eq(3), any(), any(Pageable.class)))
-        .thenReturn(List.of(a));
+    when(linkRepository.findOgRetryCandidates(eq(3), any(), anyInt())).thenReturn(List.of(a));
 
     job.runDaily();
 
@@ -75,8 +73,7 @@ class OgFetchRetryJobTest {
     when(a.getOriginalUrl()).thenReturn("https://a.example");
     when(b.getShortCode()).thenReturn(new ShortCode("b000001"));
     when(b.getOriginalUrl()).thenReturn("https://b.example");
-    when(linkRepository.findOgRetryCandidates(anyInt(), any(), any(Pageable.class)))
-        .thenReturn(List.of(a, b));
+    when(linkRepository.findOgRetryCandidates(anyInt(), any(), anyInt())).thenReturn(List.of(a, b));
     Mockito.doThrow(new RuntimeException("boom"))
         .when(listener)
         .fetchAndStore(eq(new ShortCode("a000001")), anyString());

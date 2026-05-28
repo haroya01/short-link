@@ -2,6 +2,8 @@ package com.example.short_link.link.classifier.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.File;
+import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
@@ -18,13 +20,13 @@ class GeoIpResolverTest {
   @Autowired private GeoIpResolver resolver;
 
   static boolean realDatabasePresent() {
-    java.io.File f = new java.io.File("src/main/resources/geoip/GeoLite2-City.mmdb");
+    File f = new File("src/main/resources/geoip/GeoLite2-City.mmdb");
     return f.exists() && f.length() >= REAL_MMDB_MIN_BYTES;
   }
 
   @BeforeEach
   void requireRealDatabase() {
-    org.junit.jupiter.api.Assumptions.assumeTrue(
+    Assumptions.assumeTrue(
         realDatabasePresent(),
         "real GeoLite2-City.mmdb not present (likely MaxMind unavailable in CI); skipping IP-resolution checks");
   }
@@ -32,38 +34,38 @@ class GeoIpResolverTest {
   @Test
   @EnabledIf("realDatabasePresent")
   void resolvesKoreanIpToKr() {
-    assertThat(resolver.resolveCountry("211.115.106.1")).isEqualTo("KR");
+    assertThat(resolver.resolve("211.115.106.1").countryCode()).isEqualTo("KR");
   }
 
   @Test
   @EnabledIf("realDatabasePresent")
   void resolvesUsIpToUs() {
-    assertThat(resolver.resolveCountry("8.8.8.8")).isEqualTo("US");
+    assertThat(resolver.resolve("8.8.8.8").countryCode()).isEqualTo("US");
   }
 
   @Test
   @EnabledIf("realDatabasePresent")
   void resolvesJapaneseIpToJp() {
-    assertThat(resolver.resolveCountry("210.155.141.200")).isEqualTo("JP");
+    assertThat(resolver.resolve("210.155.141.200").countryCode()).isEqualTo("JP");
   }
 
   @Test
   void returnsNullForNullIp() {
-    assertThat(resolver.resolveCountry(null)).isNull();
+    assertThat(resolver.resolve(null).countryCode()).isNull();
   }
 
   @Test
   void returnsNullForBlankIp() {
-    assertThat(resolver.resolveCountry("   ")).isNull();
+    assertThat(resolver.resolve("   ").countryCode()).isNull();
   }
 
   @Test
   void returnsNullForPrivateIp() {
-    assertThat(resolver.resolveCountry("127.0.0.1")).isNull();
+    assertThat(resolver.resolve("127.0.0.1").countryCode()).isNull();
   }
 
   @Test
   void returnsNullForInvalidIp() {
-    assertThat(resolver.resolveCountry("not-an-ip")).isNull();
+    assertThat(resolver.resolve("not-an-ip").countryCode()).isNull();
   }
 }

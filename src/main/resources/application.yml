@@ -1,6 +1,8 @@
 spring:
   application:
     name: short-link
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
   cache:
     type: redis
   jpa:
@@ -21,12 +23,23 @@ spring:
 
 server:
   port: 8080
+  shutdown: graceful
   tomcat:
     max-http-form-post-size: 16KB
     max-swallow-size: 16KB
   max-http-request-header-size: 8KB
 
 management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: never
+  health:
+    livenessstate:
+      enabled: true
+    readinessstate:
+      enabled: true
   endpoints:
     web:
       exposure:

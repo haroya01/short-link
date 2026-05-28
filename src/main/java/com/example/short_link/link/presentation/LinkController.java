@@ -44,6 +44,6 @@ public class LinkController {
             CreateLinkCommand.of(request.url(), userId, request.customCode(), request.expiresAt()));
     String shortUrl = urlBuilder.build(created.shortCode());
     return ResponseEntity.created(URI.create(shortUrl))
-        .body(new CreateLinkResponse(created.shortCode(), shortUrl, created.claimToken()));
+        .body(CreateLinkResponse.from(created, shortUrl));
   }
 }

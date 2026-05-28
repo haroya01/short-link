@@ -78,6 +78,41 @@ class WebhookPayloadAdapterTest {
   }
 
   @Test
+  void discordIncludesBotFieldWhenTrue() {
+    Map<String, Object> botClick =
+        Map.of(
+            "linkId", 1L,
+            "occurredAt", "2026-01-01T00:00:00Z",
+            "countryCode", "KR",
+            "deviceClass", "mobile",
+            "channel", "x",
+            "utmSource", "y",
+            "bot", true);
+    Map<String, Object> body = WebhookPayloadAdapter.buildClick(WebhookFormat.DISCORD, botClick);
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> embeds = (List<Map<String, Object>>) body.get("embeds");
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> fields = (List<Map<String, Object>>) embeds.get(0).get("fields");
+    assertThat(fields).extracting(f -> f.get("name")).contains("Bot");
+  }
+
+  @Test
+  void discordEmptyBatchSaysNoEvents() {
+    Map<String, Object> body =
+        WebhookPayloadAdapter.buildBatch(WebhookFormat.DISCORD, 42L, List.of());
+    @SuppressWarnings("unchecked")
+    List<Map<String, Object>> embeds = (List<Map<String, Object>>) body.get("embeds");
+    assertThat(embeds.get(0).get("description").toString()).contains("(no events)");
+  }
+
+  @Test
+  void slackEmptyBatchStillBuildsText() {
+    Map<String, Object> body =
+        WebhookPayloadAdapter.buildBatch(WebhookFormat.SLACK, 42L, List.of());
+    assertThat(body.get("text").toString()).contains("link #42");
+  }
+
+  @Test
   void skipsBlankFields() {
     Map<String, Object> sparse =
         Map.of(

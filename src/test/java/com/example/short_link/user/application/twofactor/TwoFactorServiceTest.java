@@ -88,6 +88,128 @@ class TwoFactorServiceTest {
   }
 
   @Test
+  void statusReturnsDisabledForUserWithoutRecord() {
+    UserEntity user = userRepository.save(new UserEntity("tfn@local.test", "google", "g-tfn"));
+    TwoFactorService.Status status = service.status(user.getId());
+    assertThat(status.enabled()).isFalse();
+    assertThat(status.lastUsedAt()).isNull();
+  }
+
+  @Test
+  void statusReportsEnabledWithLastUsedAfterVerify() {
+    UserEntity user = userRepository.save(new UserEntity("tfs@local.test", "google", "g-tfs"));
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    service.confirm(user.getId(), code);
+    String verifyCode =
+        TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    assertThat(service.verify(user.getId(), verifyCode)).isTrue();
+
+    TwoFactorService.Status status = service.status(user.getId());
+    assertThat(status.enabled()).isTrue();
+    assertThat(status.lastUsedAt()).isNotNull();
+  }
+
+  @Test
+  void confirmRejectsWhenAlreadyEnabled() {
+    UserEntity user = userRepository.save(new UserEntity("tfa@local.test", "google", "g-tfa"));
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    service.confirm(user.getId(), code);
+    String code2 = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+
+    assertThatThrownBy(() -> service.confirm(user.getId(), code2))
+        .isInstanceOf(UserException.class);
+  }
+
+  @Test
+  void confirmRejectsWhenSetupNotStarted() {
+    UserEntity user = userRepository.save(new UserEntity("tfx@local.test", "google", "g-tfx"));
+    assertThatThrownBy(() -> service.confirm(user.getId(), "123456"))
+        .isInstanceOf(UserException.class);
+  }
+
+  @Test
+  void verifyReturnsFalseWhenNotEnabled() {
+    UserEntity user = userRepository.save(new UserEntity("tfv@local.test", "google", "g-tfv"));
+    assertThat(service.verify(user.getId(), "123456")).isFalse();
+  }
+
+  @Test
+  void verifyRecoveryReturnsFalseForBlankCode() {
+    UserEntity user = userRepository.save(new UserEntity("tfb@local.test", "google", "g-tfb"));
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    service.confirm(user.getId(), code);
+
+    assertThat(service.verifyRecovery(user.getId(), "   ")).isFalse();
+    assertThat(service.verifyRecovery(user.getId(), null)).isFalse();
+    assertThat(service.verifyRecovery(user.getId(), "NOT-A-REAL-CODE")).isFalse();
+  }
+
+  @Test
+  void disableThrowsWhenNotEnabled() {
+    UserEntity user = userRepository.save(new UserEntity("tfd@local.test", "google", "g-tfd"));
+    assertThatThrownBy(() -> service.disable(user.getId(), "123456"))
+        .isInstanceOf(UserException.class);
+  }
+
+  @Test
+  void disableAcceptsRecoveryCodeAsAlternative() {
+    UserEntity user = userRepository.save(new UserEntity("tfr@local.test", "google", "g-tfr"));
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    List<String> recovery = service.confirm(user.getId(), code);
+
+    service.disable(user.getId(), recovery.get(0));
+    assertThat(service.isEnabled(user.getId())).isFalse();
+  }
+
+  @Test
+  void disableRejectsWhenBothTotpAndRecoveryFail() {
+    UserEntity user = userRepository.save(new UserEntity("tfdf@local.test", "google", "g-tfdf"));
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    service.confirm(user.getId(), code);
+
+    assertThatThrownBy(() -> service.disable(user.getId(), "NEVER-MATCHES"))
+        .isInstanceOf(UserException.class);
+  }
+
+  @Test
+  void startRotatesSecretWhenPendingRowExists() {
+    UserEntity user = userRepository.save(new UserEntity("tfrot@local.test", "google", "g-tfrot"));
+    TwoFactorService.SetupChallenge first = service.start(user.getId());
+    TwoFactorService.SetupChallenge second = service.start(user.getId());
+
+    assertThat(second.secret()).isNotEqualTo(first.secret());
+  }
+
+  @Test
+  void verifyReturnsFalseForInvalidCode() {
+    UserEntity user = userRepository.save(new UserEntity("tfvi@local.test", "google", "g-tfvi"));
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    service.confirm(user.getId(), code);
+
+    assertThat(service.verify(user.getId(), "000000")).isFalse();
+  }
+
+  @Test
+  void regenerateRequiresEnabledAndValidCode() {
+    UserEntity user = userRepository.save(new UserEntity("tfg@local.test", "google", "g-tfg"));
+    assertThatThrownBy(() -> service.regenerateRecoveryCodes(user.getId(), "000000"))
+        .isInstanceOf(UserException.class);
+
+    TwoFactorService.SetupChallenge challenge = service.start(user.getId());
+    String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
+    service.confirm(user.getId(), code);
+
+    assertThatThrownBy(() -> service.regenerateRecoveryCodes(user.getId(), "000000"))
+        .isInstanceOf(UserException.class);
+  }
+
+  @Test
   void regenerateRecoveryCodesReplacesOldOnes() {
     UserEntity user = userRepository.save(new UserEntity("tf6@local.test", "google", "g-tf6"));
     TwoFactorService.SetupChallenge challenge = service.start(user.getId());

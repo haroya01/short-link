@@ -5,19 +5,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.admin.application.dto.AdminActiveUsers;
 import com.example.short_link.admin.application.dto.AdminCohort;
 import com.example.short_link.admin.application.dto.AdminLifecycle;
+import com.example.short_link.admin.config.AdminCacheConfig;
+import com.example.short_link.common.cache.PolymorphicJsonRedisSerializer;
 import java.util.List;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
 
-/**
- * Locks in the @class typing policy that lets the admin-overview cache survive a deserialize
- * round-trip with record return types. NON_FINAL typing skipped these records and they came back as
- * LinkedHashMap, which surfaced in prod as a Cacheable cast failure.
- */
 class AdminCacheConfigTest {
 
-  private final GenericJackson2JsonRedisSerializer serializer =
-      new GenericJackson2JsonRedisSerializer(AdminCacheConfig.buildOverviewObjectMapper());
+  private final PolymorphicJsonRedisSerializer serializer =
+      new PolymorphicJsonRedisSerializer(AdminCacheConfig.buildOverviewObjectMapper());
 
   @Test
   void serializedCohortCarriesAtClassOnRecord() {

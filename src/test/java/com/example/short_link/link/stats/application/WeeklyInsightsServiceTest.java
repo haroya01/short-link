@@ -2,10 +2,13 @@ package com.example.short_link.link.stats.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.link.application.dto.WeeklyInsights;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
@@ -15,8 +18,6 @@ import com.example.short_link.link.stats.domain.repository.projection.ClickProje
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LinkClickCount;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
 import com.example.short_link.support.TestEntities;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,30 +25,29 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class WeeklyInsightsServiceTest {
 
   @Mock private ClickRangeReadRepository clickRepository;
+  @Mock private ClickRangeTopReader clickRangeTops;
   @Mock private LinkRepository linkRepository;
-  @Mock private UserRepository userRepository;
+  @Mock private UserAccessLookup users;
 
   private WeeklyInsightsService service;
 
   @BeforeEach
   void setUp() {
-    service = new WeeklyInsightsService(clickRepository, linkRepository, userRepository);
+    service = new WeeklyInsightsService(clickRepository, clickRangeTops, linkRepository, users);
   }
 
   @Test
   void emptyWeekReturnsNullsForDerivedMetrics() {
     when(clickRepository.countByUserIdAndRange(anyLong(), any(), any())).thenReturn(0L);
     when(clickRepository.countHumanByUserIdAndRange(anyLong(), any(), any())).thenReturn(0L);
-    when(clickRepository.findTopLinksByUserIdAndRange(anyLong(), any(), any(), any()))
-        .thenReturn(List.of());
-    when(userRepository.findById(7L)).thenReturn(Optional.empty());
-    when(clickRepository.findHeatmapByUserIdAndRange(anyLong(), any(), any(), any(), any()))
+    when(clickRangeTops.topLinksByUser(anyLong(), any(), any(), anyInt())).thenReturn(List.of());
+    when(users.timezone(7L)).thenReturn(Optional.empty());
+    when(clickRangeTops.topHeatmapByUser(anyLong(), any(), any(), anyString(), anyInt()))
         .thenReturn(List.of());
 
     WeeklyInsights out = service.compute(7L);
@@ -68,24 +68,20 @@ class WeeklyInsightsServiceTest {
     LinkClickCount top = mock(LinkClickCount.class);
     when(top.getLinkId()).thenReturn(1L);
     when(top.getCount()).thenReturn(50L);
-    when(clickRepository.findTopLinksByUserIdAndRange(anyLong(), any(), any(), any(Pageable.class)))
-        .thenReturn(List.of(top));
+    when(clickRangeTops.topLinksByUser(anyLong(), any(), any(), anyInt())).thenReturn(List.of(top));
     LinkEntity link = new LinkEntity("https://example.com", "abc", 7L, null);
     TestEntities.withId(link, 1L);
     when(linkRepository.findById(1L)).thenReturn(Optional.of(link));
     UtmSourceClickRow source = mock(UtmSourceClickRow.class);
     when(source.getSource()).thenReturn("twitter");
-    when(clickRepository.findTopUtmSourcesByLinkIdAndRange(
-            anyLong(), any(), any(), any(Pageable.class)))
+    when(clickRangeTops.topUtmSourcesByLink(anyLong(), any(), any(), anyInt()))
         .thenReturn(List.of(source));
-    UserEntity user = new UserEntity("u@x", "google", "g-1");
-    user.changeTimezone("Asia/Seoul");
-    when(userRepository.findById(7L)).thenReturn(Optional.of(user));
+    when(users.timezone(7L)).thenReturn(Optional.of("Asia/Seoul"));
     HeatmapRow peak = mock(HeatmapRow.class);
     when(peak.getDow()).thenReturn(2);
     when(peak.getHour()).thenReturn(21);
     when(peak.getCount()).thenReturn(12L);
-    when(clickRepository.findHeatmapByUserIdAndRange(anyLong(), any(), any(), any(), any()))
+    when(clickRangeTops.topHeatmapByUser(anyLong(), any(), any(), anyString(), anyInt()))
         .thenReturn(List.of(peak));
 
     WeeklyInsights out = service.compute(7L);
@@ -110,11 +106,10 @@ class WeeklyInsightsServiceTest {
     when(clickRepository.countHumanByUserIdAndRange(anyLong(), any(), any())).thenReturn(5L);
     LinkClickCount top = mock(LinkClickCount.class);
     when(top.getLinkId()).thenReturn(99L);
-    when(clickRepository.findTopLinksByUserIdAndRange(anyLong(), any(), any(), any(Pageable.class)))
-        .thenReturn(List.of(top));
+    when(clickRangeTops.topLinksByUser(anyLong(), any(), any(), anyInt())).thenReturn(List.of(top));
     when(linkRepository.findById(99L)).thenReturn(Optional.empty());
-    when(userRepository.findById(7L)).thenReturn(Optional.empty());
-    when(clickRepository.findHeatmapByUserIdAndRange(anyLong(), any(), any(), any(), any()))
+    when(users.timezone(7L)).thenReturn(Optional.empty());
+    when(clickRangeTops.topHeatmapByUser(anyLong(), any(), any(), anyString(), anyInt()))
         .thenReturn(List.of());
 
     WeeklyInsights out = service.compute(7L);

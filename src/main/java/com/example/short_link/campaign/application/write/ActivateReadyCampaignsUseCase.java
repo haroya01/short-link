@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 스케줄러 진입점 — DRAFT 중 startsAt 이 도래한 것을 ACTIVE 로 전환. */
 @Service
 @RequiredArgsConstructor
 public class ActivateReadyCampaignsUseCase {

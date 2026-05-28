@@ -40,6 +40,7 @@ class ProfileQueryServiceTest {
   @Mock private UsernameHistoryRepository usernameHistoryRepository;
   @Mock private ProfileBlockRepository profileBlockRepository;
   @Mock private ShortLinkUrlBuilder urlBuilder;
+  @Mock private PublicHandleReader publicHandles;
 
   private ProfileQueryService service;
 
@@ -53,6 +54,7 @@ class ProfileQueryServiceTest {
             usernameHistoryRepository,
             profileBlockRepository,
             urlBuilder,
+            publicHandles,
             "https://kurl.app/u/");
   }
 

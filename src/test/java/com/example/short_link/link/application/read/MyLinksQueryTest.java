@@ -5,7 +5,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.application.dto.MyLinksCursor;
 import com.example.short_link.link.application.dto.MyLinksQuery;
-import com.example.short_link.link.application.helper.LinkFilters.ExpiryFilter;
+import com.example.short_link.link.application.dto.MyLinksQuery.SortDir;
+import com.example.short_link.link.application.dto.MyLinksQuery.SortKey;
+import com.example.short_link.link.domain.LinkExpiryFilter;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +19,8 @@ class MyLinksQueryTest {
     assertThat(q.size()).isEqualTo(MyLinksQuery.DEFAULT_SIZE);
     assertThat(q.after()).isNull();
     assertThat(q.q()).isNull();
+    assertThat(q.sort()).isEqualTo(SortKey.CREATED_AT);
+    assertThat(q.dir()).isEqualTo(SortDir.DESC);
   }
 
   @Test
@@ -42,7 +46,7 @@ class MyLinksQueryTest {
   @Test
   void parsesExpiryEnumCaseInsensitively() {
     MyLinksQuery q = MyLinksQuery.of(null, null, null, null, null, "expired", null, null);
-    assertThat(q.expiry()).isEqualTo(ExpiryFilter.EXPIRED);
+    assertThat(q.expiry()).isEqualTo(LinkExpiryFilter.EXPIRED);
   }
 
   @Test
@@ -63,6 +67,21 @@ class MyLinksQueryTest {
     MyLinksQuery q =
         MyLinksQuery.of(null, null, null, null, null, null, "2026-01-01T00:00:00Z", null);
     assertThat(q.createdAfter()).isNotNull();
+  }
+
+  @Test
+  void parsesSortAndDirection() {
+    MyLinksQuery q =
+        MyLinksQuery.of(null, null, null, null, null, null, null, null, "clickCount", "asc");
+    assertThat(q.sort()).isEqualTo(SortKey.CLICK_COUNT);
+    assertThat(q.dir()).isEqualTo(SortDir.ASC);
+  }
+
+  @Test
+  void rejectsUnknownSort() {
+    assertThatThrownBy(
+            () -> MyLinksQuery.of(null, null, null, null, null, null, null, null, "url", null))
+        .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test

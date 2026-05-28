@@ -10,6 +10,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
@@ -19,8 +20,6 @@ import com.example.short_link.link.webhook.application.helper.DailySummaryPayloa
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -34,7 +33,7 @@ class DailyWebhookSummaryJobTest {
 
   private final LinkWebhookRepository hooks = mock(LinkWebhookRepository.class);
   private final LinkRepository links = mock(LinkRepository.class);
-  private final UserRepository users = mock(UserRepository.class);
+  private final UserAccessLookup users = mock(UserAccessLookup.class);
   private final DailySummaryAssembler assembler = mock(DailySummaryAssembler.class);
   private final LinkWebhookDispatcher dispatcher = mock(LinkWebhookDispatcher.class);
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
@@ -62,10 +61,8 @@ class DailyWebhookSummaryJobTest {
     }
   }
 
-  private UserEntity userInSeoul() {
-    UserEntity u = mock(UserEntity.class);
-    when(u.getTimezone()).thenReturn("Asia/Seoul");
-    return u;
+  private void ownerInSeoul() {
+    when(users.timezone(7L)).thenReturn(Optional.of("Asia/Seoul"));
   }
 
   private Clock clockAt(ZonedDateTime t) {
@@ -87,8 +84,7 @@ class DailyWebhookSummaryJobTest {
     LinkWebhookEntity hook = hookWithSummary(9);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    UserEntity owner = userInSeoul();
-    when(users.findById(7L)).thenReturn(Optional.of(owner));
+    ownerInSeoul();
     when(assembler.assemble(
             eq(new LinkId(1L)), eq(new ShortCode("abc")), any(LocalDate.class), any(ZoneId.class)))
         .thenReturn(stubPayload());
@@ -103,8 +99,7 @@ class DailyWebhookSummaryJobTest {
     LinkWebhookEntity hook = hookWithSummary(9);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    UserEntity owner = userInSeoul();
-    when(users.findById(7L)).thenReturn(Optional.of(owner));
+    ownerInSeoul();
     when(assembler.assemble(
             any(LinkId.class), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
         .thenReturn(stubPayload());
@@ -119,8 +114,7 @@ class DailyWebhookSummaryJobTest {
     LinkWebhookEntity hook = hookWithSummary(9);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    UserEntity owner = userInSeoul();
-    when(users.findById(7L)).thenReturn(Optional.of(owner));
+    ownerInSeoul();
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 8, 59, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
@@ -133,8 +127,7 @@ class DailyWebhookSummaryJobTest {
     hook.markSummarySent(LocalDate.of(2026, 5, 25));
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    UserEntity owner = userInSeoul();
-    when(users.findById(7L)).thenReturn(Optional.of(owner));
+    ownerInSeoul();
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 14, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
@@ -147,8 +140,7 @@ class DailyWebhookSummaryJobTest {
     hook.markSummarySent(LocalDate.of(2026, 5, 24));
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    UserEntity owner = userInSeoul();
-    when(users.findById(7L)).thenReturn(Optional.of(owner));
+    ownerInSeoul();
     when(assembler.assemble(
             any(LinkId.class), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
         .thenReturn(stubPayload());
@@ -163,7 +155,7 @@ class DailyWebhookSummaryJobTest {
     LinkWebhookEntity hook = hookWithSummary(9);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    when(users.findById(7L)).thenReturn(Optional.empty());
+    when(users.timezone(7L)).thenReturn(Optional.empty());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
@@ -186,8 +178,7 @@ class DailyWebhookSummaryJobTest {
     LinkWebhookEntity hook = hookWithSummary(9);
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    UserEntity owner = userInSeoul();
-    when(users.findById(7L)).thenReturn(Optional.of(owner));
+    ownerInSeoul();
     when(assembler.assemble(
             eq(new LinkId(1L)),
             eq(new ShortCode("abc")),
@@ -208,11 +199,9 @@ class DailyWebhookSummaryJobTest {
   @Test
   void falsyTimezoneFallsBackToSeoul() {
     LinkWebhookEntity hook = hookWithSummary(9);
-    UserEntity owner = mock(UserEntity.class);
-    when(owner.getTimezone()).thenReturn("Not/A/Real/Zone");
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
-    when(users.findById(7L)).thenReturn(Optional.of(owner));
+    when(users.timezone(7L)).thenReturn(Optional.of("Not/A/Real/Zone"));
     when(assembler.assemble(
             any(LinkId.class), any(ShortCode.class), any(LocalDate.class), any(ZoneId.class)))
         .thenReturn(stubPayload());

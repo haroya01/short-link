@@ -68,6 +68,10 @@ describe("routeFor", () => {
       expect(routeFor("/profile/leads")).toBe("frontend");
       expect(routeFor("/demo")).toBe("frontend");
       expect(routeFor("/showcase")).toBe("frontend");
+      expect(routeFor("/campaigns")).toBe("frontend");
+      expect(routeFor("/campaigns/new")).toBe("frontend");
+      expect(routeFor("/qr-campaigns")).toBe("frontend");
+      expect(routeFor("/visual-fixtures/mobile")).toBe("frontend");
     });
 
     it("/monitoring → frontend (Sentry tunnel route to bypass ad-blockers)", () => {
@@ -108,6 +112,10 @@ describe("routeFor", () => {
 
     it("'about' (5 alnum) — frontend takes priority", () => {
       expect(routeFor("/about")).toBe("frontend");
+    });
+
+    it("'campaigns' (9 alnum) — frontend takes priority", () => {
+      expect(routeFor("/campaigns")).toBe("frontend");
     });
   });
 

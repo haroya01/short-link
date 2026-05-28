@@ -1,6 +1,7 @@
 package com.example.short_link.campaign.application;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
+import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.application.write.CampaignBatchBulkCommand;
 import com.example.short_link.campaign.application.write.CampaignBatchCreateCommand;
 import com.example.short_link.campaign.application.write.CampaignBatchUpdateCommand;
@@ -28,7 +29,7 @@ public class CampaignBatchService {
   private final CampaignBatchRepository batchRepository;
   private final LinkRepository linkRepository;
   private final CreateLinkUseCase linkCreationService;
-  private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
+  private final CampaignQueryService campaignQuery;
 
   @Transactional
   public BatchWithLink create(Long campaignId, Long ownerId, CampaignBatchCreateCommand command) {

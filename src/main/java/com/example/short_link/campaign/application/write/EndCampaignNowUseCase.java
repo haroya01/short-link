@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 수동 종료 — 운영자가 endsAt 전에 또는 후에 명시적으로 종료. ARCHIVED 거부, ENDED 멱등 (정책 재적용 효과). */
 @Service
 @RequiredArgsConstructor
 public class EndCampaignNowUseCase {

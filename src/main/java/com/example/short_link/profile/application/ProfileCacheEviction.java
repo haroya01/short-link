@@ -1,5 +1,6 @@
 package com.example.short_link.profile.application;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,13 +16,14 @@ import org.springframework.stereotype.Service;
  */
 @Service
 @RequiredArgsConstructor
-public class ProfileCacheEviction {
+public class ProfileCacheEviction implements ProfileCacheInvalidator {
 
   static final String CACHE_NAME = "public-profile";
 
   private final CacheManager cacheManager;
   private final UserRepository userRepository;
 
+  @Override
   public void evictByUsername(String username) {
     if (username == null || username.isBlank()) return;
     Cache cache = cacheManager.getCache(CACHE_NAME);
@@ -29,6 +31,7 @@ public class ProfileCacheEviction {
     cache.evict(username.trim().toLowerCase());
   }
 
+  @Override
   public void evictByUserId(Long userId) {
     if (userId == null) return;
     userRepository.findById(userId).map(UserEntity::getUsername).ifPresent(this::evictByUsername);

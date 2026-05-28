@@ -1,13 +1,14 @@
 package com.example.short_link.campaign.application;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
-import com.example.short_link.campaign.application.dto.CampaignStatsCompareResponse;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse.BatchStats;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse.DayBucket;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse.GroupStats;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse.HeatmapCell;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse.HourBucket;
+import com.example.short_link.campaign.application.dto.CampaignStatsCompareView;
+import com.example.short_link.campaign.application.dto.CampaignStatsView;
+import com.example.short_link.campaign.application.dto.CampaignStatsView.BatchStats;
+import com.example.short_link.campaign.application.dto.CampaignStatsView.DayBucket;
+import com.example.short_link.campaign.application.dto.CampaignStatsView.GroupStats;
+import com.example.short_link.campaign.application.dto.CampaignStatsView.HeatmapCell;
+import com.example.short_link.campaign.application.dto.CampaignStatsView.HourBucket;
+import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
@@ -17,6 +18,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,18 +32,18 @@ public class CampaignStatsService {
   // 시 여기에 주입하면 됨.
   private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
 
-  private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
+  private final CampaignQueryService campaignQuery;
   private final CampaignBatchService batchService;
   private final ClickTotalsReadRepository clickTotals;
   private final ClickTimeReadRepository clickTime;
 
   @Transactional(readOnly = true)
-  public CampaignStatsResponse statsFor(Long campaignId, Long ownerId) {
+  public CampaignStatsView statsFor(Long campaignId, Long ownerId) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
     List<BatchWithLink> batches = batchService.list(campaignId, ownerId);
 
     if (batches.isEmpty()) {
-      return new CampaignStatsResponse(
+      return new CampaignStatsView(
           0L, 0L, null, List.of(), List.of(), List.of(), List.of(), List.of(), List.of());
     }
 
@@ -92,7 +94,7 @@ public class CampaignStatsService {
             .map(r -> new HeatmapCell(r.getDow(), r.getHour(), r.getCount()))
             .toList();
 
-    return new CampaignStatsResponse(
+    return new CampaignStatsView(
         totalClicks,
         testScans,
         testScans > 0
@@ -111,15 +113,14 @@ public class CampaignStatsService {
    * 위해 detail() 을 통과시킨다.
    */
   @Transactional(readOnly = true)
-  public CampaignStatsCompareResponse compare(List<Long> campaignIds, Long ownerId) {
-    List<CampaignStatsCompareResponse.CampaignWithStats> result =
-        new ArrayList<>(campaignIds.size());
+  public CampaignStatsCompareView compare(List<Long> campaignIds, Long ownerId) {
+    List<CampaignStatsCompareView.CampaignWithStats> result = new ArrayList<>(campaignIds.size());
     for (Long id : campaignIds) {
       CampaignEntity c = campaignQuery.detail(id, ownerId);
-      CampaignStatsResponse stats = statsFor(id, ownerId);
-      result.add(new CampaignStatsCompareResponse.CampaignWithStats(id, c.getName(), stats));
+      CampaignStatsView stats = statsFor(id, ownerId);
+      result.add(new CampaignStatsCompareView.CampaignWithStats(id, c.getName(), stats));
     }
-    return new CampaignStatsCompareResponse(result);
+    return new CampaignStatsCompareView(result);
   }
 
   private static Map<Long, Long> toMap(List<LinkClickCount> rows) {
@@ -131,7 +132,7 @@ public class CampaignStatsService {
   }
 
   private static List<GroupStats> groupBy(
-      List<BatchStats> batches, java.util.function.Function<BatchStats, String> keyFn) {
+      List<BatchStats> batches, Function<BatchStats, String> keyFn) {
     Map<String, long[]> agg = new HashMap<>();
     for (BatchStats b : batches) {
       String key = keyFn.apply(b);

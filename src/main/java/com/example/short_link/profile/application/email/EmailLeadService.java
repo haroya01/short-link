@@ -16,23 +16,15 @@ import java.util.HexFormat;
 import java.util.List;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class EmailLeadService {
 
-  // RFC 5321 caps the local-part at 64 and total at 254; this regex matches the common form and
-  // we trust the cap for length, not for "deliverable" — that's the sender's job.
   private static final Pattern EMAIL =
       Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
-  /**
-   * Caps per-block submissions inside a short window so a single bot can't fill the owner's
-   * dashboard. Combined with the per-IP throttle this should keep things sane without rejecting
-   * legit "first 100 signups in 5min during a launch" traffic.
-   */
   private static final int BLOCK_WINDOW_MAX = 200;
 
   private static final Duration BLOCK_WINDOW = Duration.ofMinutes(5);
@@ -42,16 +34,18 @@ public class EmailLeadService {
 
   private final EmailLeadRepository repository;
   private final ProfileBlockRepository blockRepository;
+  private final EmailLeadPageReader pageReader;
 
-  /** Optional salt so leaked DB hashes can\u0027t be reversed by a generic rainbow table. */
   private final String ipHashSalt;
 
   public EmailLeadService(
       EmailLeadRepository repository,
       ProfileBlockRepository blockRepository,
+      EmailLeadPageReader pageReader,
       @Value("${short-link.email-lead.ip-hash-salt:}") String ipHashSalt) {
     this.repository = repository;
     this.blockRepository = blockRepository;
+    this.pageReader = pageReader;
     this.ipHashSalt = ipHashSalt;
   }
 
@@ -80,8 +74,6 @@ public class EmailLeadService {
       throw new ProfileException(ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "ip window exhausted");
     }
     if (repository.existsByBlockIdAndEmail(block.getId(), normalizedEmail)) {
-      // Idempotent for the visitor — return a synthetic OK without writing again. The owner
-      // doesn't get a duplicate, the visitor doesn't get a "you already signed up" error wall.
       return new EmailLeadEntity(ownerUserId, block.getId(), normalizedEmail, ipHash);
     }
     return repository.save(
@@ -103,16 +95,14 @@ public class EmailLeadService {
   public List<EmailLeadEntity> list(Long userId, int page, int size) {
     int safeSize = Math.min(Math.max(size, 1), PAGE_SIZE_MAX);
     int safePage = Math.max(page, 0);
-    return repository.findAllByUserIdOrderBySubmittedAtDesc(
-        userId, PageRequest.of(safePage, safeSize));
+    return pageReader.findByUser(userId, safePage, safeSize);
   }
 
   @Transactional(readOnly = true)
   public List<EmailLeadEntity> listActive(Long userId, int page, int size) {
     int safeSize = Math.min(Math.max(size, 1), PAGE_SIZE_MAX);
     int safePage = Math.max(page, 0);
-    return repository.findAllByUserIdAndOptedOutFalseOrderBySubmittedAtDesc(
-        userId, PageRequest.of(safePage, safeSize));
+    return pageReader.findActiveByUser(userId, safePage, safeSize);
   }
 
   @Transactional(readOnly = true)

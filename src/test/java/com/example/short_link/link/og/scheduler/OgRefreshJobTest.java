@@ -10,7 +10,6 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -43,7 +42,7 @@ class OgRefreshJobTest {
     linkRepository.save(retryable);
 
     Instant cutoff = now.minus(Duration.ofDays(30));
-    List<LinkEntity> stale30 = linkRepository.findStaleOgCandidates(cutoff, PageRequest.of(0, 10));
+    List<LinkEntity> stale30 = linkRepository.findStaleOgCandidates(cutoff, 10);
 
     assertThat(stale30).extracting(l -> l.getShortCode().value()).containsExactly("rfsh001");
   }

@@ -59,6 +59,36 @@ class GalleryTest {
   }
 
   @Test
+  void rejectsBlankInput() {
+    assertThatThrownBy(() -> Gallery.normalize("  ")).isInstanceOf(ProfileException.class);
+    assertThatThrownBy(() -> Gallery.normalize(null)).isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void rejectsMissingImagesField() {
+    assertThatThrownBy(() -> Gallery.normalize("{}")).isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void rejectsOverlongUrl() {
+    String huge = "https://example.com/" + "x".repeat(260);
+    assertThatThrownBy(() -> Gallery.normalize("{\"images\":[\"" + huge + "\"]}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void rejectsHostlessUrl() {
+    assertThatThrownBy(() -> Gallery.normalize("{\"images\":[\"https:///x.jpg\"]}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void rejectsSchemelessUrl() {
+    assertThatThrownBy(() -> Gallery.normalize("{\"images\":[\"example.com/x.jpg\"]}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
   void ignoresUnknownFields() {
     // Forward compat — same class of bug as ContactCard logoFocalX/Y hotfix (PR #256). A frontend
     // sending v2 fields (captions[], aspectRatio) before backend deploy shouldn't 400 the save.

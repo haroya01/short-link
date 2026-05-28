@@ -22,7 +22,7 @@ class ArchitectureRulesTest {
    * ControllerTest pushes the count past baseline and fails the build — migrate an existing one to
    * balance, or raise the baseline only with a deliberate decision.
    */
-  private static final int SPRING_BOOT_CONTROLLER_TEST_BASELINE = 44;
+  private static final int SPRING_BOOT_CONTROLLER_TEST_BASELINE = 36;
 
   private static final Pattern FEATURE_PRESENTATION_IMPORT =
       Pattern.compile(
@@ -99,6 +99,18 @@ class ArchitectureRulesTest {
                   // /presentation/Foo.java).
                   return relative.matches(".*/presentation/[A-Z][A-Za-z0-9]*\\.java$");
                 })
+            .map(ArchitectureRulesTest::relative)
+            .toList();
+
+    assertThat(violations).isEmpty();
+  }
+
+  @Test
+  void applicationDtosDoNotUsePresentationSuffixes() throws IOException {
+    List<String> violations =
+        javaSources()
+            .filter(path -> relative(path).contains("/application/"))
+            .filter(path -> PRESENTATION_DTO_FILE.matcher(path.getFileName().toString()).matches())
             .map(ArchitectureRulesTest::relative)
             .toList();
 

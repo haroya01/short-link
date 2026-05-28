@@ -9,15 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Admin bulk operation — re-runs {@link WebhookFormat#detect} on every persisted hook and
- * reactivates rows that (a) were auto-disabled and (b) flipped to a non-GENERIC format. Mirrors
- * what {@code V54} did at migration time so ops can recover without another migration when a new
- * receiver format is added in code.
- *
- * <p>Rows that stay on {@code GENERIC} are not reactivated — their failures weren't a payload-shape
- * mismatch we just fixed, so flipping them on would re-trigger the auto-disable.
- */
 @Service
 @RequiredArgsConstructor
 public class ReDetectWebhookFormatsUseCase {

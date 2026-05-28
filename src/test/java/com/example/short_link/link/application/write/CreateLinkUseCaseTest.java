@@ -12,6 +12,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -101,8 +102,7 @@ class LinkCreationServiceTest {
   @Test
   void acceptsRequestedExpiresAtForAuthenticatedUser() {
     UserEntity user = userRepository.save(new UserEntity("test@example.com", "google", "g-4"));
-    Instant requested =
-        Instant.now().plus(Duration.ofDays(30)).truncatedTo(java.time.temporal.ChronoUnit.SECONDS);
+    Instant requested = Instant.now().plus(Duration.ofDays(30)).truncatedTo(ChronoUnit.SECONDS);
 
     LinkCreated created =
         service.execute(CreateLinkCommand.of("https://example.com", user.getId(), null, requested));

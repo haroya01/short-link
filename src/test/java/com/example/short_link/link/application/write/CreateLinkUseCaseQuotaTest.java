@@ -192,8 +192,7 @@ class LinkCreationServiceQuotaTest {
     assertThat(created.shortCode().value()).isEqualTo("newcode");
   }
 
-  private static com.example.short_link.admin.application.read.BlockedDomainQueryService
-      mockBlockedDomainService() {
+  private static BlockedDomainQueryService mockBlockedDomainService() {
     var m = mock(BlockedDomainQueryService.class);
     when(m.isBlocked(any())).thenReturn(false);
     return m;

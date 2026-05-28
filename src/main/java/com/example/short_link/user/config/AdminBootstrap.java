@@ -35,7 +35,7 @@ public class AdminBootstrap {
               if (!user.isAdmin()) {
                 user.promoteToAdmin();
                 userRepository.save(user);
-                log.info("promoted {} to ADMIN role", user.getEmail());
+                log.info("promoted userId={} to ADMIN role", user.getId());
               }
             });
   }

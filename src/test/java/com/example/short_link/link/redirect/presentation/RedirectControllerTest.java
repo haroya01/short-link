@@ -14,6 +14,7 @@ import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -116,9 +117,9 @@ class RedirectControllerTest {
     mvc.perform(get("/kakopvw").header("User-Agent", "kakaotalk-scrap/1.0"))
         .andExpect(status().isOk())
         .andExpect(header().string("Content-Type", "text/html;charset=utf-8"))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("og:title")))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("Article title")))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("og:image")));
+        .andExpect(content().string(Matchers.containsString("og:title")))
+        .andExpect(content().string(Matchers.containsString("Article title")))
+        .andExpect(content().string(Matchers.containsString("og:image")));
 
     // Preview hits now persist as bot click_event rows so per-link stats can split \"social
     // preview\" out of generic bot traffic. They must NOT count toward human clicks.
@@ -135,7 +136,7 @@ class RedirectControllerTest {
             get("/slkpvw1")
                 .header("User-Agent", "Slackbot-LinkExpanding 1.0 (+https://api.slack.com/robots)"))
         .andExpect(status().isOk())
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("twitter:card")));
+        .andExpect(content().string(Matchers.containsString("twitter:card")));
   }
 
   @Test

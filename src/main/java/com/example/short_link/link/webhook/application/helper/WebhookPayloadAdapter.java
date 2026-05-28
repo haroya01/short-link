@@ -8,26 +8,12 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Builds the receiver-specific request body from a generic kurl click payload (or batch). Both
- * managed receivers reject anything that doesn't fit their shape:
- *
- * <ul>
- *   <li>Discord requires {@code content} and/or {@code embeds} — a bare kurl JSON returns 400 with
- *       "Cannot send an empty message" and trips our auto-disable after 5 in a row.
- *   <li>Slack requires {@code text} or {@code blocks} — same failure mode.
- * </ul>
- *
- * Kept stateless and free of Spring wiring so it can be unit-tested without context bootstrap.
- */
 public final class WebhookPayloadAdapter {
 
   private WebhookPayloadAdapter() {}
 
-  /** Discord embed accent color — picked to match the kurl brand green (#059669). */
   private static final int DISCORD_BRAND_COLOR = 0x059669;
 
-  /** Slack/Discord display name on incoming messages. */
   private static final String SENDER_NAME = "kurl";
 
   public static Map<String, Object> buildClick(WebhookFormat format, Map<String, Object> click) {

@@ -12,11 +12,6 @@ import com.example.short_link.link.webhook.exception.WebhookException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Ownership guard for link-scoped webhook operations. Every write use case checks both the link and
- * the hook belong to the caller before mutating — owner-scoped contract from the original
- * LinkWebhookService.
- */
 @Component
 @RequiredArgsConstructor
 class WebhookOwnership {

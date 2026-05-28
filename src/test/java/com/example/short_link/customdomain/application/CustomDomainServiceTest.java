@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.net.TxtResolver;
 import com.example.short_link.customdomain.application.dto.DomainSummary;
 import com.example.short_link.customdomain.application.helper.CustomDomainPolicy;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
@@ -19,7 +20,6 @@ import com.example.short_link.customdomain.application.write.VerifyCustomDomainU
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
 import com.example.short_link.customdomain.exception.CustomDomainException;
-import com.example.short_link.link.classifier.application.helper.TxtResolver;
 import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;

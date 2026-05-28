@@ -36,13 +36,49 @@ async function proxy(request: Request, origin: string): Promise<Response> {
   const headers = new Headers(request.headers);
   headers.set("x-forwarded-host", url.host);
   headers.set("x-forwarded-proto", url.protocol.replace(":", ""));
-  const response = await fetch(target, {
-    method: request.method,
-    headers,
-    body: request.body,
-    redirect: "manual",
-  });
+  let response: Response;
+  try {
+    response = await fetch(target, {
+      method: request.method,
+      headers,
+      body: request.body,
+      redirect: "manual",
+    });
+  } catch (err) {
+    // Upstream origin unreachable (DNS, TCP, TLS, connect timeout). Without this catch the Worker
+    // bubbles its own 1101 / 1042 page — a Cloudflare-branded mystery surface that breaks both
+    // short-link redirects (user clicked a link, gets opaque error) and frontend error boundaries
+    // (no JSON to parse). Fail closed with a deterministic 503 so downstream UX is predictable.
+    return upstreamUnavailableResponse(url);
+  }
   return rewriteHostnameHeaders(response, new URL(origin).host, url.host);
+}
+
+function upstreamUnavailableResponse(url: URL): Response {
+  const status = 503;
+  const isApi = url.pathname.startsWith("/api/");
+  const headers = new Headers({
+    "cache-control": "no-store",
+    "retry-after": "30",
+  });
+  if (isApi) {
+    headers.set("content-type", "application/problem+json");
+    const body = JSON.stringify({
+      type: "about:blank",
+      title: "Service Unavailable",
+      status,
+      detail: "upstream origin unreachable",
+      instance: url.pathname,
+    });
+    return new Response(body, { status, headers });
+  }
+  headers.set("content-type", "text/html; charset=utf-8");
+  const body =
+    '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+    "<title>503 — Service Unavailable</title></head><body>" +
+    "<h1>503</h1><p>The service is temporarily unavailable. " +
+    "Please retry in a few moments.</p></body></html>";
+  return new Response(body, { status, headers });
 }
 
 /**

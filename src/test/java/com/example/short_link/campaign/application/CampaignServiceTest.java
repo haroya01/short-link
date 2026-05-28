@@ -3,6 +3,13 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.campaign.application.read.CampaignQueryService;
+import com.example.short_link.campaign.application.write.ActivateReadyCampaignsUseCase;
+import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
+import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
+import com.example.short_link.campaign.application.write.EndCampaignNowUseCase;
+import com.example.short_link.campaign.application.write.ReapplyCampaignPolicyUseCase;
+import com.example.short_link.campaign.application.write.UpdateCampaignPolicyUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
@@ -24,28 +31,19 @@ import org.springframework.transaction.annotation.Transactional;
 @QueryAudit
 class CampaignServiceTest {
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.CreateCampaignUseCase createUseCase;
+  @Autowired private CreateCampaignUseCase createUseCase;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.UpdateCampaignPolicyUseCase
-      updateUseCase;
+  @Autowired private UpdateCampaignPolicyUseCase updateUseCase;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveUseCase;
+  @Autowired private ArchiveCampaignUseCase archiveUseCase;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.ActivateReadyCampaignsUseCase
-      activateUseCase;
+  @Autowired private ActivateReadyCampaignsUseCase activateUseCase;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.EndCampaignNowUseCase endNowUseCase;
+  @Autowired private EndCampaignNowUseCase endNowUseCase;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.ReapplyCampaignPolicyUseCase
-      reapplyUseCase;
+  @Autowired private ReapplyCampaignPolicyUseCase reapplyUseCase;
 
-  @Autowired private com.example.short_link.campaign.application.read.CampaignQueryService query;
+  @Autowired private CampaignQueryService query;
 
   @Test
   void createsCampaignAndActivatesImmediatelyWhenStartIsPast() {

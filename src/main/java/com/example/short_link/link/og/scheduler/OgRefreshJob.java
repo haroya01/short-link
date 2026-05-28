@@ -11,16 +11,9 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Re-scrapes OG metadata for links whose previous fetch succeeded but is now older than {@code
- * stale-after-days}. Source pages can swap titles/descriptions/images over time; without this job
- * the preview cards would drift further from the real page each year. Distinct from {@link
- * OgFetchRetryJob} which only handles links that never fetched successfully.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -44,8 +37,7 @@ public class OgRefreshJob {
     }
     try {
       Instant before = Instant.now().minus(Duration.ofDays(ogFetch.staleAfterDays()));
-      List<LinkEntity> candidates =
-          linkRepository.findStaleOgCandidates(before, PageRequest.of(0, BATCH_SIZE));
+      List<LinkEntity> candidates = linkRepository.findStaleOgCandidates(before, BATCH_SIZE);
       log.info("og refresh: {} stale candidates", candidates.size());
       for (LinkEntity link : candidates) {
         try {

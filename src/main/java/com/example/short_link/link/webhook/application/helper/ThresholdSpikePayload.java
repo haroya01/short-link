@@ -4,11 +4,6 @@ import com.example.short_link.link.domain.ShortCode;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-/**
- * Generic kurl spike-alert payload shape. Fired when click volume in the rolling window crosses the
- * per-hook threshold. {@code window} is a human-readable string ("10m", "1h") to keep the
- * receiver's templating simple.
- */
 public record ThresholdSpikePayload(
     ShortCode shortCode, String window, long clicks, int threshold, String topReferrer) {
 

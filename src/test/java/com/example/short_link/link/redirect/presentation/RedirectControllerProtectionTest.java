@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import java.time.Instant;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -37,7 +39,7 @@ class RedirectControllerProtectionTest {
     mvc.perform(get("/pwd0001"))
         .andExpect(status().isOk())
         .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("password")));
+        .andExpect(content().string(Matchers.containsString("password")));
   }
 
   @Test
@@ -58,7 +60,7 @@ class RedirectControllerProtectionTest {
   void expiredLinkWithCustomMessageReturnsHtml410() throws Exception {
     repository.save(new LinkEntity("https://example.com", "exp0001"));
     LinkEntity stored = repository.findByShortCode(new ShortCode("exp0001")).orElseThrow();
-    stored.changeExpiresAt(java.time.Instant.now().minusSeconds(60));
+    stored.changeExpiresAt(Instant.now().minusSeconds(60));
     stored.updateExpiredMessage("Sale ended. <script>alert('xss')</script>");
     repository.save(stored);
 

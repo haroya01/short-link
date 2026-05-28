@@ -24,6 +24,7 @@ import com.example.short_link.link.webhook.application.write.ToggleLinkWebhookCo
 import com.example.short_link.link.webhook.application.write.ToggleLinkWebhookUseCase;
 import com.example.short_link.link.webhook.application.write.UpdateLinkWebhookConfigCommand;
 import com.example.short_link.link.webhook.application.write.UpdateLinkWebhookConfigUseCase;
+import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
@@ -75,7 +76,7 @@ class LinkWebhookControllerTest {
         null,
         null,
         WebhookFormat.GENERIC,
-        com.example.short_link.link.webhook.domain.WebhookDeliveryMode.PER_EVENT,
+        WebhookDeliveryMode.PER_EVENT,
         null,
         null,
         null);

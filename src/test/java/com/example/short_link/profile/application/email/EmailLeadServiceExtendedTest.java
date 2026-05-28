@@ -3,6 +3,7 @@ package com.example.short_link.profile.application.email;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -24,19 +25,20 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.data.domain.PageRequest;
 
 class EmailLeadServiceExtendedTest {
 
   private EmailLeadRepository repository;
   private ProfileBlockRepository blockRepository;
+  private EmailLeadPageReader pageReader;
   private EmailLeadService service;
 
   @BeforeEach
   void setUp() {
     repository = mock(EmailLeadRepository.class);
     blockRepository = mock(ProfileBlockRepository.class);
-    service = new EmailLeadService(repository, blockRepository, "salt");
+    pageReader = mock(EmailLeadPageReader.class);
+    service = new EmailLeadService(repository, blockRepository, pageReader, "salt");
   }
 
   private ProfileBlockEntity emailBlock(long blockId, long ownerId) {
@@ -135,17 +137,14 @@ class EmailLeadServiceExtendedTest {
 
   @Test
   void listClampsPageAndSize() {
-    when(repository.findAllByUserIdOrderBySubmittedAtDesc(eq(7L), any(PageRequest.class)))
-        .thenReturn(List.of());
+    when(pageReader.findByUser(eq(7L), anyInt(), anyInt())).thenReturn(List.of());
     service.list(7L, -1, -5);
     service.list(7L, 0, 99999);
   }
 
   @Test
   void listActiveClampsPageAndSize() {
-    when(repository.findAllByUserIdAndOptedOutFalseOrderBySubmittedAtDesc(
-            eq(7L), any(PageRequest.class)))
-        .thenReturn(List.of());
+    when(pageReader.findActiveByUser(eq(7L), anyInt(), anyInt())).thenReturn(List.of());
     service.listActive(7L, -1, -5);
     service.listActive(7L, 0, 99999);
   }

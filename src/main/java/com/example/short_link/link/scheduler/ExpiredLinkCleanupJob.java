@@ -16,11 +16,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Removes long-expired links and their click events. A {@code grace} window past expiry keeps
- * recently-expired rows around so users can recover stats briefly. Fenced by a Redis lock so a
- * single task runs the job per cycle when multiple instances are deployed.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor

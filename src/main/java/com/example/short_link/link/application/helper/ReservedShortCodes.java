@@ -28,6 +28,9 @@ public final class ReservedShortCodes {
           "profile",
           "demo",
           "showcase",
+          "monitoring",
+          "learn",
+          "campaigns",
           // api / ops
           "api",
           "v1",
@@ -43,6 +46,7 @@ public final class ReservedShortCodes {
           "robots",
           "sitemap",
           "favicon",
+          "icon",
           "manifest",
           "graphql",
           // marketing / generic

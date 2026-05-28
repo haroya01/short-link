@@ -9,6 +9,7 @@ import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.distribution.HistogramSnapshot;
 import io.micrometer.core.instrument.distribution.ValueAtPercentile;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -51,7 +52,7 @@ public class AdminHealthService {
       HistogramSnapshot snap = t.takeSnapshot();
       total += snap.count();
       for (ValueAtPercentile v : snap.percentileValues()) {
-        double ms = v.value(java.util.concurrent.TimeUnit.MILLISECONDS);
+        double ms = v.value(TimeUnit.MILLISECONDS);
         if (closeTo(v.percentile(), 0.5)) p50 = Math.max(p50, ms);
         else if (closeTo(v.percentile(), 0.95)) p95 = Math.max(p95, ms);
         else if (closeTo(v.percentile(), 0.99)) p99 = Math.max(p99, ms);
@@ -92,7 +93,7 @@ public class AdminHealthService {
       HistogramSnapshot snap = t.takeSnapshot();
       count += snap.count();
       for (ValueAtPercentile v : snap.percentileValues()) {
-        double ms = v.value(java.util.concurrent.TimeUnit.MILLISECONDS);
+        double ms = v.value(TimeUnit.MILLISECONDS);
         if (closeTo(v.percentile(), 0.5)) p50 = Math.max(p50, ms);
         else if (closeTo(v.percentile(), 0.95)) p95 = Math.max(p95, ms);
         else if (closeTo(v.percentile(), 0.99)) p99 = Math.max(p99, ms);
