@@ -49,4 +49,15 @@ class PostRepositoryAdapter implements PostRepository {
       Long userId, PostStatus status) {
     return jpa.findAllByUserIdAndStatusOrderByPublishedAtDesc(userId, status);
   }
+
+  @Override
+  public List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId) {
+    return jpa.findAllBySeriesIdOrderBySeriesOrderAsc(seriesId);
+  }
+
+  @Override
+  public List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
+      Long seriesId, PostStatus status) {
+    return jpa.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, status);
+  }
 }

@@ -16,6 +16,8 @@ public record PostView(
     String ogImageUrl,
     long viewCount,
     List<String> tags,
+    Long seriesId,
+    Integer seriesOrder,
     Instant createdAt,
     Instant updatedAt) {
 
@@ -32,6 +34,8 @@ public record PostView(
         post.getOgImageUrl(),
         post.getViewCount(),
         List.copyOf(post.getTags()),
+        post.getSeriesId(),
+        post.getSeriesOrder(),
         post.getCreatedAt(),
         post.getUpdatedAt());
   }
