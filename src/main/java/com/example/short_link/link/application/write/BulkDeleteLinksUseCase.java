@@ -3,6 +3,7 @@ package com.example.short_link.link.application.write;
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +26,8 @@ public class BulkDeleteLinksUseCase {
     if (command.shortCodes().isEmpty()) return 0;
     List<LinkEntity> owned =
         repository.findAllByShortCodeInAndUserId(
-            command.shortCodes().stream().distinct().toList(), command.userId());
+            command.shortCodes().stream().distinct().map(ShortCode::new).toList(),
+            command.userId());
     if (owned.isEmpty()) return 0;
     repository.deleteAll(owned);
     Cache cache = cacheManager.getCache("link");
