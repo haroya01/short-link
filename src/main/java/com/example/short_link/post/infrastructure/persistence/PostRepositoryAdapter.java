@@ -1,6 +1,7 @@
 package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +17,11 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public Optional<PostEntity> findById(Long id) {
     return jpa.findById(id);
+  }
+
+  @Override
+  public Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug) {
+    return jpa.findByUserIdAndSlug(userId, slug);
   }
 
   @Override
@@ -36,5 +42,11 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId) {
     return jpa.findAllByUserIdOrderByCreatedAtDesc(userId);
+  }
+
+  @Override
+  public List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(
+      Long userId, PostStatus status) {
+    return jpa.findAllByUserIdAndStatusOrderByPublishedAtDesc(userId, status);
   }
 }
