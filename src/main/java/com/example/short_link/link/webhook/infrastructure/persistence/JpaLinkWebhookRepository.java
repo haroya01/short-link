@@ -3,11 +3,15 @@ package com.example.short_link.link.webhook.infrastructure.persistence;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import java.util.List;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface JpaLinkWebhookRepository extends JpaRepository<LinkWebhookEntity, Long> {
+
+  @Query("SELECT h FROM LinkWebhookEntity h WHERE h.id > :afterId ORDER BY h.id ASC")
+  List<LinkWebhookEntity> findChunkOrderedById(@Param("afterId") Long afterId, Pageable pageable);
 
   List<LinkWebhookEntity> findAllByLinkIdOrderByIdAsc(Long linkId);
 

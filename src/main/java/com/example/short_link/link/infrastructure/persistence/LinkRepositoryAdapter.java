@@ -51,6 +51,12 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<LinkEntity> findAllByShortCodeInAndUserId(
+      Collection<ShortCode> shortCodes, Long userId) {
+    return jpa.findAllByShortCodeInAndUserId(shortCodes, userId);
+  }
+
+  @Override
   public Optional<CachedLinkRow> findCachedLinkRowByShortCode(ShortCode shortCode) {
     return jpa.findCachedLinkRowByShortCode(shortCode);
   }
