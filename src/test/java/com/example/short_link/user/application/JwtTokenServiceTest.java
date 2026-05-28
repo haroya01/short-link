@@ -6,6 +6,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.user.application.dto.ParsedRefresh;
 import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.domain.RefreshToken;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,7 +34,9 @@ class JwtTokenServiceTest {
     String refresh = service.createRefreshToken(42L).token();
 
     assertThatThrownBy(() -> service.parseAccessToken(refresh))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);
   }
 
   @Test
@@ -50,7 +54,9 @@ class JwtTokenServiceTest {
     String access = service.createAccessToken(42L, "USER");
 
     assertThatThrownBy(() -> service.parseRefreshToken(access))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);
   }
 
   @Test
@@ -65,7 +71,9 @@ class JwtTokenServiceTest {
     String stream = service.createStreamToken(42L, "abc123");
 
     assertThatThrownBy(() -> service.parseStreamToken(stream, "other"))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);
   }
 
   @Test
@@ -73,6 +81,8 @@ class JwtTokenServiceTest {
     String access = service.createAccessToken(42L, "USER");
 
     assertThatThrownBy(() -> service.parseStreamToken(access, "abc123"))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);
   }
 }
