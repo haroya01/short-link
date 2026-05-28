@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 class RequestMetricsRecorderTest {
 
-  private final RequestMetricRepository repository = mock(RequestMetricRepository.class);
+  private final RequestMetricJpaRepository repository = mock(RequestMetricJpaRepository.class);
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private final RequestMetricsRecorder recorder = new RequestMetricsRecorder(repository, registry);
 

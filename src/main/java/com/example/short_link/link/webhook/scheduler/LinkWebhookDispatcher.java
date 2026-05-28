@@ -32,6 +32,7 @@ public class LinkWebhookDispatcher {
   private final WebhookDeliveryGate deliveryGate;
   private final WebhookBatchBuffer batchBuffer;
   private final WebhookHttpDeliveryClient deliveryClient;
+  private final WebhookBatchDeliverer batchDeliverer;
 
   /**
    * Fires only after the click row is committed. A plain {@link
@@ -67,25 +68,14 @@ public class LinkWebhookDispatcher {
   }
 
   /**
-   * Runs every 5 seconds to flush per-webhook batch queues. Drains up to 50 events per hook per
-   * tick; anything beyond that waits for the next tick, and the buffer enforces a hard per-hook
-   * queue cap.
+   * Runs every 5 seconds to fan out per-webhook batch flushes. Each hook is delivered in its own
+   * {@code REQUIRES_NEW} transaction inside {@link WebhookBatchDeliverer} so a 5s HTTP read timeout
+   * on one receiver doesn't stall the rest of the loop's record-state writes.
    */
   @Scheduled(fixedDelay = 5000)
-  @Transactional
   public void flushBatches() {
     for (Long hookId : batchBuffer.hookIds()) {
-      if (batchBuffer.isEmpty(hookId)) continue;
-      LinkWebhookEntity hook = repository.findById(hookId).orElse(null);
-      if (hook == null || !hook.isEnabled() || !hook.isBatchEnabled()) {
-        batchBuffer.clear(hookId);
-        continue;
-      }
-      List<Map<String, Object>> drained = batchBuffer.drain(hookId);
-      if (drained.isEmpty()) continue;
-      Map<String, Object> body =
-          WebhookPayloadAdapter.buildBatch(hook.getFormat(), hook.getLinkId(), drained);
-      deliver(hook, jsonMapper.writeValueAsString(body), "batch");
+      batchDeliverer.deliverOne(hookId);
     }
   }
 

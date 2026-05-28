@@ -23,9 +23,7 @@ public interface LinkRepository {
 
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(ShortCode shortCode);
 
-  default Optional<LinkEntity> findByShortCode(String shortCode) {
-    return findByShortCode(new ShortCode(shortCode));
-  }
+  List<LinkEntity> findAllByShortCodeInAndUserId(Collection<ShortCode> shortCodes, Long userId);
 
   List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 

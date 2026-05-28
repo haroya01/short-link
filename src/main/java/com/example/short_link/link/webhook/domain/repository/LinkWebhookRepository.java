@@ -13,7 +13,7 @@ public interface LinkWebhookRepository {
 
   void delete(LinkWebhookEntity webhook);
 
-  List<LinkWebhookEntity> findAll();
+  List<LinkWebhookEntity> findChunkOrderedById(Long afterId, int limit);
 
   List<LinkWebhookEntity> findAllByLinkIdOrderByIdAsc(Long linkId);
 

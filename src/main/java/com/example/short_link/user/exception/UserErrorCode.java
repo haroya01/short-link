@@ -9,7 +9,8 @@ public enum UserErrorCode {
   INVALID_AVATAR(HttpStatus.BAD_REQUEST, "%s"),
   AVATAR_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "avatar upload not configured"),
   INVALID_TOTP(HttpStatus.UNAUTHORIZED, "invalid TOTP or recovery code"),
-  TWO_FACTOR_STATE(HttpStatus.CONFLICT, "%s");
+  TWO_FACTOR_STATE(HttpStatus.CONFLICT, "%s"),
+  INVALID_TOKEN_TYPE(HttpStatus.UNAUTHORIZED, "%s");
 
   private final HttpStatus status;
   private final String template;

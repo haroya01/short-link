@@ -4,7 +4,7 @@ import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricRepository;
+import com.example.short_link.common.observability.RequestMetricJpaRepository;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Clock;
 import java.time.Duration;
@@ -25,18 +25,19 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class AdminLinkMetricsQueryService {
 
-  private final RequestMetricRepository requestMetricRepository;
+  private final RequestMetricJpaRepository requestMetricRepository;
   private final AdminMetricsRepository metricsRepository;
   private final Clock clock;
 
   @Autowired
   public AdminLinkMetricsQueryService(
-      RequestMetricRepository requestMetricRepository, AdminMetricsRepository metricsRepository) {
+      RequestMetricJpaRepository requestMetricRepository,
+      AdminMetricsRepository metricsRepository) {
     this(requestMetricRepository, metricsRepository, Clock.systemUTC());
   }
 
   AdminLinkMetricsQueryService(
-      RequestMetricRepository requestMetricRepository,
+      RequestMetricJpaRepository requestMetricRepository,
       AdminMetricsRepository metricsRepository,
       Clock clock) {
     this.requestMetricRepository = requestMetricRepository;

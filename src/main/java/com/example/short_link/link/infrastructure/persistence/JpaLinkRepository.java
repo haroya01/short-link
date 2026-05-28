@@ -19,6 +19,8 @@ public interface JpaLinkRepository
 
   Optional<LinkEntity> findByShortCode(ShortCode shortCode);
 
+  List<LinkEntity> findAllByShortCodeInAndUserId(Collection<ShortCode> shortCodes, Long userId);
+
   @Query(
       """
       SELECT
