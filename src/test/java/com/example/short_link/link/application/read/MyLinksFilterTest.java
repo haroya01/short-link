@@ -13,7 +13,9 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -169,7 +171,7 @@ class MyLinksFilterTest {
     assertThat(page3.nextCursor()).isNull();
 
     // Union of page contents should equal full set with no duplicates.
-    java.util.Set<String> all = new java.util.HashSet<>();
+    Set<String> all = new HashSet<>();
     for (var p : List.of(page1, page2, page3)) {
       for (MyLink it : p.items()) {
         assertThat(all.add(it.shortCode().value()))

@@ -9,6 +9,7 @@ import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.junit.AnalyzeClasses;
 import com.tngtech.archunit.junit.ArchTest;
 import com.tngtech.archunit.lang.ArchRule;
+import org.springframework.transaction.annotation.Transactional;
 
 @AnalyzeClasses(
     packages = "com.example.short_link",
@@ -139,7 +140,7 @@ class ArchUnitGraphRulesTest {
   static final ArchRule transactionalNotInPresentationOrDomain =
       methods()
           .that()
-          .areAnnotatedWith(org.springframework.transaction.annotation.Transactional.class)
+          .areAnnotatedWith(Transactional.class)
           .should()
           .beDeclaredInClassesThat()
           .resideOutsideOfPackages("..presentation..", "..domain..");

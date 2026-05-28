@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
 import com.example.short_link.campaign.application.dto.CampaignStatsView;
+import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
+import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.presentation.request.CampaignCreateRequest;
@@ -29,11 +31,9 @@ class CampaignStatsServiceTest {
   @Autowired private CampaignStatsService statsService;
   @Autowired private CampaignBatchService batchService;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.CreateCampaignUseCase createCampaign;
+  @Autowired private CreateCampaignUseCase createCampaign;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveCampaign;
+  @Autowired private ArchiveCampaignUseCase archiveCampaign;
 
   @Autowired private ClickEventRepository clickRepository;
   @Autowired private UserRepository userRepository;

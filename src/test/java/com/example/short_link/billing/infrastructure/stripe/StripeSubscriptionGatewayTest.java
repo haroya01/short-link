@@ -1,5 +1,6 @@
 package com.example.short_link.billing.infrastructure.stripe;
 
+import static com.stripe.model.billingportal.Session.create;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,11 +19,10 @@ import com.stripe.model.Customer;
 import com.stripe.model.Event;
 import com.stripe.model.EventDataObjectDeserializer;
 import com.stripe.model.Subscription;
-import com.stripe.model.billingportal.Session;
+import com.stripe.model.checkout.Session;
 import com.stripe.net.Webhook;
 import com.stripe.param.CustomerCreateParams;
-import com.stripe.param.billingportal.SessionCreateParams;
-import com.stripe.param.checkout.SessionCreateParams.Mode;
+import com.stripe.param.checkout.SessionCreateParams;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
@@ -65,21 +65,15 @@ class StripeSubscriptionGatewayTest {
     StripeSubscriptionGateway gateway = new StripeSubscriptionGateway(props("sk_test", null));
     Customer customer = mock(Customer.class);
     when(customer.getId()).thenReturn("cus_new");
-    com.stripe.model.checkout.Session session = mock(com.stripe.model.checkout.Session.class);
+    Session session = mock(Session.class);
     when(session.getUrl()).thenReturn("https://checkout/abc");
 
     try (MockedStatic<Customer> customerStatic = mockStatic(Customer.class);
-        MockedStatic<com.stripe.model.checkout.Session> sessionStatic =
-            mockStatic(com.stripe.model.checkout.Session.class)) {
+        MockedStatic<Session> sessionStatic = mockStatic(Session.class)) {
       customerStatic
           .when(() -> Customer.create(any(CustomerCreateParams.class)))
           .thenReturn(customer);
-      sessionStatic
-          .when(
-              () ->
-                  com.stripe.model.checkout.Session.create(
-                      any(com.stripe.param.checkout.SessionCreateParams.class)))
-          .thenReturn(session);
+      sessionStatic.when(() -> Session.create(any(SessionCreateParams.class))).thenReturn(session);
 
       var initiation = gateway.initiateProCheckout(user(null));
 
@@ -91,17 +85,11 @@ class StripeSubscriptionGatewayTest {
   @Test
   void initiateProCheckoutReusesExistingCustomer() throws Exception {
     StripeSubscriptionGateway gateway = new StripeSubscriptionGateway(props("sk_test", null));
-    com.stripe.model.checkout.Session session = mock(com.stripe.model.checkout.Session.class);
+    Session session = mock(Session.class);
     when(session.getUrl()).thenReturn("https://checkout/xyz");
 
-    try (MockedStatic<com.stripe.model.checkout.Session> sessionStatic =
-        mockStatic(com.stripe.model.checkout.Session.class)) {
-      sessionStatic
-          .when(
-              () ->
-                  com.stripe.model.checkout.Session.create(
-                      any(com.stripe.param.checkout.SessionCreateParams.class)))
-          .thenReturn(session);
+    try (MockedStatic<Session> sessionStatic = mockStatic(Session.class)) {
+      sessionStatic.when(() -> Session.create(any(SessionCreateParams.class))).thenReturn(session);
 
       var initiation = gateway.initiateProCheckout(user("cus_existing"));
 
@@ -114,13 +102,9 @@ class StripeSubscriptionGatewayTest {
   void initiateProCheckoutWrapsStripeExceptionAsBilling() {
     StripeSubscriptionGateway gateway = new StripeSubscriptionGateway(props("sk_test", null));
 
-    try (MockedStatic<com.stripe.model.checkout.Session> sessionStatic =
-        mockStatic(com.stripe.model.checkout.Session.class)) {
+    try (MockedStatic<Session> sessionStatic = mockStatic(Session.class)) {
       sessionStatic
-          .when(
-              () ->
-                  com.stripe.model.checkout.Session.create(
-                      any(com.stripe.param.checkout.SessionCreateParams.class)))
+          .when(() -> Session.create(any(SessionCreateParams.class)))
           .thenThrow(new ApiException("boom", null, null, 500, null));
 
       assertThatThrownBy(() -> gateway.initiateProCheckout(user("cus_x")))
@@ -131,11 +115,13 @@ class StripeSubscriptionGatewayTest {
   @Test
   void issuePortalSessionReturnsUrl() throws Exception {
     StripeSubscriptionGateway gateway = new StripeSubscriptionGateway(props("sk_test", null));
-    Session portal = mock(Session.class);
+    var portal = mock(com.stripe.model.billingportal.Session.class);
     when(portal.getUrl()).thenReturn("https://portal/abc");
 
-    try (MockedStatic<Session> portalStatic = mockStatic(Session.class)) {
-      portalStatic.when(() -> Session.create(any(SessionCreateParams.class))).thenReturn(portal);
+    try (var portalStatic = mockStatic(com.stripe.model.billingportal.Session.class)) {
+      portalStatic
+          .when(() -> create((com.stripe.param.billingportal.SessionCreateParams) any()))
+          .thenReturn(portal);
 
       var url = gateway.issuePortalSession("cus_x");
 
@@ -147,9 +133,9 @@ class StripeSubscriptionGatewayTest {
   void issuePortalSessionWrapsStripeExceptionAsBilling() {
     StripeSubscriptionGateway gateway = new StripeSubscriptionGateway(props("sk_test", null));
 
-    try (MockedStatic<Session> portalStatic = mockStatic(Session.class)) {
+    try (var portalStatic = mockStatic(com.stripe.model.billingportal.Session.class)) {
       portalStatic
-          .when(() -> Session.create(any(SessionCreateParams.class)))
+          .when(() -> create((com.stripe.param.billingportal.SessionCreateParams) any()))
           .thenThrow(new ApiException("boom", null, null, 500, null));
 
       assertThatThrownBy(() -> gateway.issuePortalSession("cus_x"))
@@ -201,7 +187,7 @@ class StripeSubscriptionGatewayTest {
     Event event = mock(Event.class);
     when(event.getType()).thenReturn("checkout.session.completed");
     EventDataObjectDeserializer ded = mock(EventDataObjectDeserializer.class);
-    com.stripe.model.checkout.Session session = mock(com.stripe.model.checkout.Session.class);
+    Session session = mock(Session.class);
     when(session.getClientReferenceId()).thenReturn("42");
     when(session.getCustomer()).thenReturn("cus_42");
     when(event.getDataObjectDeserializer()).thenReturn(ded);
@@ -345,8 +331,4 @@ class StripeSubscriptionGatewayTest {
       assertThat(parsed).isInstanceOf(SubscriptionEvent.Ignored.class);
     }
   }
-
-  // Reference for unused-import suppression — kept to clarify the file's intent.
-  @SuppressWarnings("unused")
-  private static final Mode MODE_REF = Mode.SUBSCRIPTION;
 }

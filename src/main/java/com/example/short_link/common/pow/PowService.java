@@ -1,6 +1,7 @@
 package com.example.short_link.common.pow;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -85,7 +86,7 @@ public class PowService {
   private static String sha256Hex(String input) {
     try {
       MessageDigest md = MessageDigest.getInstance("SHA-256");
-      return HEX.formatHex(md.digest(input.getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+      return HEX.formatHex(md.digest(input.getBytes(StandardCharsets.UTF_8)));
     } catch (Exception e) {
       throw new IllegalStateException("SHA-256 unavailable", e);
     }

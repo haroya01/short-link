@@ -20,7 +20,6 @@ import org.springframework.stereotype.Component;
 public class SoftDeletedUserCleanupJob {
 
   private static final String LOCK_KEY = "kurl:cleanup:soft-deleted-users";
-  private static final int BATCH_SIZE = 200;
 
   private final UserRepository userRepository;
   private final UserDeletionService userDeletionService;

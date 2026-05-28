@@ -96,7 +96,7 @@ public class OgScraper {
   }
 
   static OgMetadata parseHtml(String html, String baseUrl) {
-    Document doc = org.jsoup.Jsoup.parse(html, baseUrl);
+    Document doc = Jsoup.parse(html, baseUrl);
     return parseDocument(doc, baseUrl);
   }
 

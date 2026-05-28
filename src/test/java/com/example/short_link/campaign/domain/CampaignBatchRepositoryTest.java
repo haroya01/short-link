@@ -9,6 +9,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import io.queryaudit.junit5.QueryAudit;
 import java.time.Instant;
 import java.util.List;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -77,7 +78,7 @@ class CampaignBatchRepositoryTest {
     batchRepository.save(
         new CampaignBatchEntity(campaign.getId(), link.linkId(), "a", null, null, 10, null));
 
-    org.junit.jupiter.api.Assertions.assertThrows(
+    Assertions.assertThrows(
         DataIntegrityViolationException.class,
         () ->
             batchRepository.saveAndFlush(

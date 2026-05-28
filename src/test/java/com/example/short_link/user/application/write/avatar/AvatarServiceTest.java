@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -99,7 +100,7 @@ class AvatarServiceTest {
   @Test
   void commitSwallowsDeleteFailureOnOversize() {
     when(objectStorage.objectSize("avatars/1/x.jpg")).thenReturn(Optional.of(9999L));
-    org.mockito.Mockito.doThrow(new ObjectStorageException("s3 boom", new RuntimeException()))
+    Mockito.doThrow(new ObjectStorageException("s3 boom", new RuntimeException()))
         .when(objectStorage)
         .delete("avatars/1/x.jpg");
     assertThatThrownBy(() -> service.commitUpload(1L, "avatars/1/x.jpg"))
@@ -135,7 +136,7 @@ class AvatarServiceTest {
     UserEntity user = new UserEntity("u@x", "google", "g-1");
     user.updateAvatar("https://old", "avatars/1/old.jpg");
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-    org.mockito.Mockito.doThrow(new ObjectStorageException("s3 boom", new RuntimeException()))
+    Mockito.doThrow(new ObjectStorageException("s3 boom", new RuntimeException()))
         .when(objectStorage)
         .delete("avatars/1/old.jpg");
     AvatarService.CommitResult r = service.commitUpload(1L, "avatars/1/new.jpg");

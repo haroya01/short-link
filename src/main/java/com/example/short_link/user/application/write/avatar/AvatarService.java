@@ -12,6 +12,7 @@ import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.function.Supplier;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -110,7 +111,7 @@ public class AvatarService {
   }
 
   private static <T extends RuntimeException> void require(
-      boolean condition, java.util.function.Supplier<T> exception) {
+      boolean condition, Supplier<T> exception) {
     if (!condition) throw exception.get();
   }
 

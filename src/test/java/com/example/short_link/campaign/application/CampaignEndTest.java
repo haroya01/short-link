@@ -4,6 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
+import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
+import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
+import com.example.short_link.campaign.application.write.EndCampaignNowUseCase;
+import com.example.short_link.campaign.application.write.EndDueCampaignsUseCase;
+import com.example.short_link.campaign.application.write.ReapplyCampaignPolicyUseCase;
+import com.example.short_link.campaign.application.write.UpdateCampaignPolicyUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import com.example.short_link.campaign.domain.CampaignStatus;
@@ -29,25 +35,17 @@ import org.springframework.transaction.annotation.Transactional;
 @QueryAudit
 class CampaignEndTest {
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.CreateCampaignUseCase createCampaign;
+  @Autowired private CreateCampaignUseCase createCampaign;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveCampaign;
+  @Autowired private ArchiveCampaignUseCase archiveCampaign;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.EndCampaignNowUseCase endNowUseCase;
+  @Autowired private EndCampaignNowUseCase endNowUseCase;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.EndDueCampaignsUseCase endDueUseCase;
+  @Autowired private EndDueCampaignsUseCase endDueUseCase;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.UpdateCampaignPolicyUseCase
-      updateUseCase;
+  @Autowired private UpdateCampaignPolicyUseCase updateUseCase;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.ReapplyCampaignPolicyUseCase
-      reapplyUseCase;
+  @Autowired private ReapplyCampaignPolicyUseCase reapplyUseCase;
 
   @Autowired private CampaignBatchService batchService;
   @Autowired private LinkRepository linkRepository;
@@ -160,7 +158,7 @@ class CampaignEndTest {
     Instant longPast = Instant.now().minusSeconds(60 * 60 * 24 * 14);
     CampaignEntity campaign =
         createCampaign.execute(
-            new com.example.short_link.campaign.presentation.request.CampaignCreateRequest(
+            new CampaignCreateRequest(
                     "C",
                     longPast,
                     longPast.plusSeconds(60 * 60),

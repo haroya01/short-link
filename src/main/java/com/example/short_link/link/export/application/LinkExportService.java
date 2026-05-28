@@ -14,6 +14,7 @@ import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,10 +28,10 @@ public class LinkExportService {
   private final LinkStatsQueryService statsService;
   private final LinkAccessGuard accessGuard;
 
-  @org.springframework.beans.factory.annotation.Value("${short-link.export.event-batch:1000}")
+  @Value("${short-link.export.event-batch:1000}")
   private int eventBatch;
 
-  @org.springframework.beans.factory.annotation.Value("${short-link.export.event-cap:50000}")
+  @Value("${short-link.export.event-cap:50000}")
   private int eventHardCap;
 
   @Transactional(readOnly = true)

@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -107,7 +108,7 @@ public class AdminLinkMetricsQueryService {
         lastAt = row.getOccurredAt();
       }
     }
-    java.util.Arrays.sort(latencies);
+    Arrays.sort(latencies);
     return new Aggregate(
         count,
         roundToMillis(percentile(latencies, 0.5)),

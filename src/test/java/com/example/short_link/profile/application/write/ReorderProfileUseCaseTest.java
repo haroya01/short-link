@@ -12,7 +12,6 @@ import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.support.TestEntities;
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,15 +63,5 @@ class ReorderProfileUseCaseTest {
     assertThat(l1.getProfileOrder()).isEqualTo(1);
     assertThat(b1.getProfileOrder()).isEqualTo(2);
     assertThat(l2.getProfileOrder()).isEqualTo(3);
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = target.getClass().getDeclaredField(name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
   }
 }

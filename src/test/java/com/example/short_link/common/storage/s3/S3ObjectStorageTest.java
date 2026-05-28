@@ -12,6 +12,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -88,7 +89,7 @@ class S3ObjectStorageTest {
 
   @Test
   void deleteWrapsSdkExceptionAsObjectStorage() {
-    org.mockito.Mockito.doThrow(S3Exception.builder().message("denied").build())
+    Mockito.doThrow(S3Exception.builder().message("denied").build())
         .when(s3)
         .deleteObject(any(DeleteObjectRequest.class));
 

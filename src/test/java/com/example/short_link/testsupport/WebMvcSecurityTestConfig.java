@@ -6,6 +6,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.security.authentication.TestingAuthenticationToken;
@@ -31,7 +32,7 @@ public class WebMvcSecurityTestConfig {
   WebMvcConfigurer authenticationPrincipalResolver() {
     return new WebMvcConfigurer() {
       @Override
-      public void addArgumentResolvers(java.util.List<HandlerMethodArgumentResolver> resolvers) {
+      public void addArgumentResolvers(List<HandlerMethodArgumentResolver> resolvers) {
         resolvers.add(new AuthenticationPrincipalArgumentResolver());
       }
     };

@@ -9,6 +9,7 @@ import com.example.short_link.admin.exception.AdminException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -123,11 +124,11 @@ public class AdminAnalyticsService {
     int week = yearweek % 100;
     LocalDate base = LocalDate.now().withYear(year);
     base =
-        base.with(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear(), week)
-            .with(java.time.temporal.WeekFields.ISO.dayOfWeek(), 1)
+        base.with(WeekFields.ISO.weekOfWeekBasedYear(), week)
+            .with(WeekFields.ISO.dayOfWeek(), 1)
             .plusWeeks(weeks);
-    int newYear = base.get(java.time.temporal.WeekFields.ISO.weekBasedYear());
-    int newWeek = base.get(java.time.temporal.WeekFields.ISO.weekOfWeekBasedYear());
+    int newYear = base.get(WeekFields.ISO.weekBasedYear());
+    int newWeek = base.get(WeekFields.ISO.weekOfWeekBasedYear());
     return newYear * 100 + newWeek;
   }
 

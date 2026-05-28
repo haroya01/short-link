@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -92,7 +93,7 @@ class BannerServiceTest {
   @Test
   void commitSwallowsOversizeDeleteFailure() {
     when(objectStorage.objectSize("banners/1/x.png")).thenReturn(Optional.of(9999L));
-    org.mockito.Mockito.doThrow(new ObjectStorageException("boom", new RuntimeException()))
+    Mockito.doThrow(new ObjectStorageException("boom", new RuntimeException()))
         .when(objectStorage)
         .delete("banners/1/x.png");
     assertThatThrownBy(() -> service.commitUpload(1L, "banners/1/x.png"))
@@ -125,7 +126,7 @@ class BannerServiceTest {
     UserEntity user = new UserEntity("u@x", "google", "g-1");
     user.updateBanner("https://old", "banners/1/old.png");
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-    org.mockito.Mockito.doThrow(new ObjectStorageException("boom", new RuntimeException()))
+    Mockito.doThrow(new ObjectStorageException("boom", new RuntimeException()))
         .when(objectStorage)
         .delete("banners/1/old.png");
     BannerService.CommitResult r = service.commitUpload(1L, "banners/1/new.png");

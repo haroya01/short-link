@@ -17,7 +17,6 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.HttpServletResponse;
-import java.lang.reflect.Field;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -242,15 +241,5 @@ class SseClickStreamControllerTest {
 
     assertThatThrownBy(() -> controller.issueStreamToken(new ShortCode("abc"), 7L))
         .isInstanceOf(LinkException.class);
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = target.getClass().getDeclaredField(name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
   }
 }

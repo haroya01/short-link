@@ -14,6 +14,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.lang.reflect.Field;
 import org.junit.jupiter.api.Test;
 
 class AddDestinationUseCaseTest {
@@ -132,7 +133,7 @@ class AddDestinationUseCaseTest {
 
   private static <T> T withId(T entity, Long id) {
     try {
-      java.lang.reflect.Field f = entity.getClass().getDeclaredField("id");
+      Field f = entity.getClass().getDeclaredField("id");
       f.setAccessible(true);
       f.set(entity, id);
     } catch (Exception e) {

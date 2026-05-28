@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkId;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.io.IOException;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -72,8 +73,8 @@ class SseClickStreamRegistryTest {
     }
 
     @Override
-    public void send(SseEventBuilder builder) throws java.io.IOException {
-      throw new java.io.IOException("connection closed");
+    public void send(SseEventBuilder builder) throws IOException {
+      throw new IOException("connection closed");
     }
   }
 }

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.application.dto.MyLinksCursor;
 import java.time.Instant;
+import java.util.Base64;
 import org.junit.jupiter.api.Test;
 
 class MyLinksCursorTest {
@@ -63,8 +64,7 @@ class MyLinksCursorTest {
   @Test
   void decodeBase64WithoutColonThrows() {
     // Wire shape is "<micros>:<id>" — base64 of something without the separator is malformed.
-    String noColon =
-        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString("123".getBytes());
+    String noColon = Base64.getUrlEncoder().withoutPadding().encodeToString("123".getBytes());
     assertThatThrownBy(() -> MyLinksCursor.decode(noColon))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("malformed");
@@ -72,24 +72,21 @@ class MyLinksCursorTest {
 
   @Test
   void decodeBase64WithTrailingColonThrows() {
-    String trailing =
-        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString("123:".getBytes());
+    String trailing = Base64.getUrlEncoder().withoutPadding().encodeToString("123:".getBytes());
     assertThatThrownBy(() -> MyLinksCursor.decode(trailing))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   void decodeBase64WithLeadingColonThrows() {
-    String leading =
-        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(":123".getBytes());
+    String leading = Base64.getUrlEncoder().withoutPadding().encodeToString(":123".getBytes());
     assertThatThrownBy(() -> MyLinksCursor.decode(leading))
         .isInstanceOf(IllegalArgumentException.class);
   }
 
   @Test
   void decodeBase64WithNonNumericFieldsThrows() {
-    String badNum =
-        java.util.Base64.getUrlEncoder().withoutPadding().encodeToString("abc:def".getBytes());
+    String badNum = Base64.getUrlEncoder().withoutPadding().encodeToString("abc:def".getBytes());
     assertThatThrownBy(() -> MyLinksCursor.decode(badNum))
         .isInstanceOf(IllegalArgumentException.class);
   }

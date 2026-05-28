@@ -15,6 +15,7 @@ import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -71,8 +72,8 @@ class MyEmailLeadControllerTest {
         .andExpect(status().isOk())
         .andExpect(
             header().string("Content-Disposition", "attachment; filename=\"email-leads.csv\""))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("email,block_id")))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("csv@example.com")));
+        .andExpect(content().string(Matchers.containsString("email,block_id")))
+        .andExpect(content().string(Matchers.containsString("csv@example.com")));
   }
 
   @Test
@@ -90,7 +91,7 @@ class MyEmailLeadControllerTest {
                 .param("includeOptedOut", "true")
                 .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("opt@example.com")));
+        .andExpect(content().string(Matchers.containsString("opt@example.com")));
   }
 
   @Test

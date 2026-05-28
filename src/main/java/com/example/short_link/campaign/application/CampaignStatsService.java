@@ -8,6 +8,7 @@ import com.example.short_link.campaign.application.dto.CampaignStatsView.DayBuck
 import com.example.short_link.campaign.application.dto.CampaignStatsView.GroupStats;
 import com.example.short_link.campaign.application.dto.CampaignStatsView.HeatmapCell;
 import com.example.short_link.campaign.application.dto.CampaignStatsView.HourBucket;
+import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
@@ -17,6 +18,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,7 +32,7 @@ public class CampaignStatsService {
   // 시 여기에 주입하면 됨.
   private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
 
-  private final com.example.short_link.campaign.application.read.CampaignQueryService campaignQuery;
+  private final CampaignQueryService campaignQuery;
   private final CampaignBatchService batchService;
   private final ClickTotalsReadRepository clickTotals;
   private final ClickTimeReadRepository clickTime;
@@ -130,7 +132,7 @@ public class CampaignStatsService {
   }
 
   private static List<GroupStats> groupBy(
-      List<BatchStats> batches, java.util.function.Function<BatchStats, String> keyFn) {
+      List<BatchStats> batches, Function<BatchStats, String> keyFn) {
     Map<String, long[]> agg = new HashMap<>();
     for (BatchStats b : batches) {
       String key = keyFn.apply(b);

@@ -14,8 +14,4 @@ public class GeoIpResolver {
   public GeoLocation resolve(String ip) {
     return geoLookup.lookupLocation(ip);
   }
-
-  public String resolveCountry(String ip) {
-    return resolve(ip).countryCode();
-  }
 }

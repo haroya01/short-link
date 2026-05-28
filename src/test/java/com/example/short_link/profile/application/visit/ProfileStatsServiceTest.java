@@ -22,7 +22,6 @@ import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
-import java.lang.reflect.Field;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -31,6 +30,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
@@ -231,21 +231,21 @@ class ProfileStatsServiceTest {
   }
 
   private static HourClickRow hourRow(int hour, long count) {
-    HourClickRow row = org.mockito.Mockito.mock(HourClickRow.class);
+    HourClickRow row = Mockito.mock(HourClickRow.class);
     when(row.getHour()).thenReturn(hour);
     when(row.getCount()).thenReturn(count);
     return row;
   }
 
   private static DailyClickRow mockDaily(LocalDate d, long count) {
-    DailyClickRow row = org.mockito.Mockito.mock(DailyClickRow.class);
+    DailyClickRow row = Mockito.mock(DailyClickRow.class);
     when(row.getDay()).thenReturn(d);
     when(row.getCount()).thenReturn(count);
     return row;
   }
 
   private static HeatmapRow heat(int dow, int hour, long count) {
-    HeatmapRow r = org.mockito.Mockito.mock(HeatmapRow.class);
+    HeatmapRow r = Mockito.mock(HeatmapRow.class);
     when(r.getDow()).thenReturn(dow);
     when(r.getHour()).thenReturn(hour);
     when(r.getCount()).thenReturn(count);
@@ -253,61 +253,51 @@ class ProfileStatsServiceTest {
   }
 
   private static CountryClickRow country(String name, long count) {
-    CountryClickRow r = org.mockito.Mockito.mock(CountryClickRow.class);
+    CountryClickRow r = Mockito.mock(CountryClickRow.class);
     when(r.getCountry()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
   private static DeviceClickRow device(String name, long count) {
-    DeviceClickRow r = org.mockito.Mockito.mock(DeviceClickRow.class);
+    DeviceClickRow r = Mockito.mock(DeviceClickRow.class);
     when(r.getDevice()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
   private static BrowserClickRow browser(String name, long count) {
-    BrowserClickRow r = org.mockito.Mockito.mock(BrowserClickRow.class);
+    BrowserClickRow r = Mockito.mock(BrowserClickRow.class);
     when(r.getBrowser()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
   private static ReferrerHostClickRow refHost(String name, long count) {
-    ReferrerHostClickRow r = org.mockito.Mockito.mock(ReferrerHostClickRow.class);
+    ReferrerHostClickRow r = Mockito.mock(ReferrerHostClickRow.class);
     when(r.getHost()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
   private static SourceChannelClickRow srcChannel(String name, long count) {
-    SourceChannelClickRow r = org.mockito.Mockito.mock(SourceChannelClickRow.class);
+    SourceChannelClickRow r = Mockito.mock(SourceChannelClickRow.class);
     when(r.getSource()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
   private static UtmCampaignClickRow utmCampaign(String name, long count) {
-    UtmCampaignClickRow r = org.mockito.Mockito.mock(UtmCampaignClickRow.class);
+    UtmCampaignClickRow r = Mockito.mock(UtmCampaignClickRow.class);
     when(r.getCampaign()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
   }
 
   private static UtmSourceClickRow utmSource(String name, long count) {
-    UtmSourceClickRow r = org.mockito.Mockito.mock(UtmSourceClickRow.class);
+    UtmSourceClickRow r = Mockito.mock(UtmSourceClickRow.class);
     when(r.getSource()).thenReturn(name);
     when(r.getCount()).thenReturn(count);
     return r;
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = target.getClass().getDeclaredField(name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
   }
 }

@@ -11,6 +11,7 @@ import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import com.jayway.jsonpath.JsonPath;
 import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -72,8 +73,7 @@ class MyLinksControllerTest {
             .andReturn()
             .getResponse()
             .getContentAsString();
-    String firstCursor =
-        com.jayway.jsonpath.JsonPath.read(firstResponse, "$.nextCursor").toString();
+    String firstCursor = JsonPath.read(firstResponse, "$.nextCursor").toString();
 
     String secondResponse =
         mvc.perform(
@@ -87,8 +87,7 @@ class MyLinksControllerTest {
             .andReturn()
             .getResponse()
             .getContentAsString();
-    String secondCursor =
-        com.jayway.jsonpath.JsonPath.read(secondResponse, "$.nextCursor").toString();
+    String secondCursor = JsonPath.read(secondResponse, "$.nextCursor").toString();
 
     mvc.perform(
             get("/api/v1/links/me")
@@ -159,7 +158,7 @@ class MyLinksControllerTest {
             .andReturn()
             .getResponse()
             .getContentAsString();
-    String cursor = com.jayway.jsonpath.JsonPath.read(firstResponse, "$.nextCursor").toString();
+    String cursor = JsonPath.read(firstResponse, "$.nextCursor").toString();
 
     mvc.perform(
             get("/api/v1/links/me")

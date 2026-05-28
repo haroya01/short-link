@@ -15,7 +15,9 @@ import com.example.short_link.link.application.write.IncrementViewCountCommand;
 import com.example.short_link.link.application.write.IncrementViewCountUseCase;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
+import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.application.ClickRecorder;
@@ -23,6 +25,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.mock.web.MockHttpServletRequest;
 
 class LinkRedirectFlowTest {
@@ -171,8 +174,7 @@ class LinkRedirectFlowTest {
   void viewLimitHitWithEntityExpiredMessageReturnsExpiredOutcome() {
     stubBasics();
     CachedLink link = basicLink("https://example.com/dst");
-    com.example.short_link.link.domain.LinkEntity entity =
-        org.mockito.Mockito.mock(com.example.short_link.link.domain.LinkEntity.class);
+    LinkEntity entity = Mockito.mock(LinkEntity.class);
     when(entity.getMaxViews()).thenReturn(3);
     when(entity.getExpiredMessage()).thenReturn("Sold out");
     when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(0);
@@ -187,12 +189,10 @@ class LinkRedirectFlowTest {
   void viewLimitWithEntityButNoExpiredMessageThrows() {
     stubBasics();
     CachedLink link = basicLink("https://example.com/dst");
-    com.example.short_link.link.domain.LinkEntity entity =
-        org.mockito.Mockito.mock(com.example.short_link.link.domain.LinkEntity.class);
+    LinkEntity entity = Mockito.mock(LinkEntity.class);
     when(entity.getMaxViews()).thenReturn(3);
     when(entity.getExpiredMessage()).thenReturn(null);
-    when(entity.getShortCode())
-        .thenReturn(new com.example.short_link.link.domain.ShortCode("abc1"));
+    when(entity.getShortCode()).thenReturn(new ShortCode("abc1"));
     when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(0);
 
     assertThatThrownBy(() -> flow.execute(link, entity, null, null, null, null, req()))
@@ -203,8 +203,7 @@ class LinkRedirectFlowTest {
   void viewLimitOkWithEntityPathProceedsToRedirect() {
     stubBasics();
     CachedLink link = basicLink("https://example.com/dst");
-    com.example.short_link.link.domain.LinkEntity entity =
-        org.mockito.Mockito.mock(com.example.short_link.link.domain.LinkEntity.class);
+    LinkEntity entity = Mockito.mock(LinkEntity.class);
     when(entity.getMaxViews()).thenReturn(3);
     when(incrementViewCount.execute(any(IncrementViewCountCommand.class))).thenReturn(1);
 

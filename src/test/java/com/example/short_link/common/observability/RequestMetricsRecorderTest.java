@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Instant;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class RequestMetricsRecorderTest {
@@ -55,7 +56,7 @@ class RequestMetricsRecorderTest {
   void flushFailureCountsButDoesNotRethrow() {
     when(repository.saveAll(anyIterable()))
         .thenThrow(new RuntimeException("DB down"))
-        .thenReturn(java.util.List.of());
+        .thenReturn(List.of());
 
     recorder.record(sample("GET /api/links", 500, "error", 3));
     recorder.flush(); // first call throws inside saveAll — must not propagate

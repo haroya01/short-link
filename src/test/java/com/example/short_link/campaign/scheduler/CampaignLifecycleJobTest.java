@@ -13,6 +13,7 @@ import com.example.short_link.campaign.application.write.EndDueCampaignsUseCase;
 import com.example.short_link.common.lock.RedisDistributedLock;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Duration;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 class CampaignLifecycleJobTest {
@@ -67,8 +68,8 @@ class CampaignLifecycleJobTest {
     var ended =
         meterRegistry.find("short_link.campaign.lifecycle").tag("transition", "active_to_ended");
     // counters may be lazy, retrieve directly
-    org.assertj.core.api.Assertions.assertThat(activated.counter().count()).isEqualTo(3.0);
-    org.assertj.core.api.Assertions.assertThat(ended.counter().count()).isEqualTo(2.0);
+    Assertions.assertThat(activated.counter().count()).isEqualTo(3.0);
+    Assertions.assertThat(ended.counter().count()).isEqualTo(2.0);
   }
 
   @Test
@@ -81,9 +82,7 @@ class CampaignLifecycleJobTest {
     job.tick();
 
     verify(lock).release("kurl:campaign:lifecycle");
-    org.assertj.core.api.Assertions.assertThat(
-            meterRegistry.find("short_link.campaign.lifecycle").counters())
-        .isEmpty();
+    Assertions.assertThat(meterRegistry.find("short_link.campaign.lifecycle").counters()).isEmpty();
   }
 
   @Test
@@ -92,8 +91,7 @@ class CampaignLifecycleJobTest {
     when(lock.tryAcquire(anyString(), any(Duration.class))).thenReturn(true);
     when(activate.execute(any())).thenThrow(new RuntimeException("boom"));
 
-    org.assertj.core.api.Assertions.assertThatThrownBy(job::tick)
-        .isInstanceOf(RuntimeException.class);
+    Assertions.assertThatThrownBy(job::tick).isInstanceOf(RuntimeException.class);
     verify(lock).release("kurl:campaign:lifecycle");
   }
 }

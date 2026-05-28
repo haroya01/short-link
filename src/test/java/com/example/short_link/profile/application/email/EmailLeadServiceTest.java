@@ -13,7 +13,6 @@ import com.example.short_link.profile.domain.email.EmailLeadRepository;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.support.TestEntities;
-import java.lang.reflect.Field;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -79,15 +78,5 @@ class EmailLeadServiceTest {
       TestEntities.setField(lead, "optedOut", true);
     }
     return lead;
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Field f = target.getClass().getDeclaredField(name);
-      f.setAccessible(true);
-      f.set(target, value);
-    } catch (ReflectiveOperationException ex) {
-      throw new RuntimeException(ex);
-    }
   }
 }

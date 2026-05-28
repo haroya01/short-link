@@ -3,6 +3,7 @@ package com.example.short_link.common.pow;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.util.HexFormat;
 import org.junit.jupiter.api.Test;
@@ -60,9 +61,7 @@ class PowServiceTest {
       try {
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         String h =
-            hex.formatHex(
-                md.digest(
-                    (challenge + ":" + nonce).getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+            hex.formatHex(md.digest((challenge + ":" + nonce).getBytes(StandardCharsets.UTF_8)));
         boolean ok = true;
         for (int z = 0; z < difficulty; z++) {
           if (h.charAt(z) != '0') {

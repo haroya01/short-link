@@ -15,6 +15,7 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.util.List;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mock.web.MockMultipartFile;
@@ -79,9 +80,9 @@ class BulkImportControllerTest {
         .andExpect(
             content()
                 .string(
-                    org.hamcrest.Matchers.containsString(
+                    Matchers.containsString(
                         "url,custom_code,expires_at,short_code,short_url,error")))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("https://example.com")))
-        .andExpect(content().string(org.hamcrest.Matchers.containsString("url contains comma")));
+        .andExpect(content().string(Matchers.containsString("https://example.com")))
+        .andExpect(content().string(Matchers.containsString("url contains comma")));
   }
 }
