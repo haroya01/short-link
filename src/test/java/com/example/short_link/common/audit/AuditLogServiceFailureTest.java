@@ -14,7 +14,7 @@ class AuditLogServiceFailureTest {
 
   @Test
   void noMetadataOverloadDelegatesToMapVariant() {
-    AuditLogRepository repo = Mockito.mock(AuditLogRepository.class);
+    AuditLogJpaRepository repo = Mockito.mock(AuditLogJpaRepository.class);
     SimpleMeterRegistry meters = new SimpleMeterRegistry();
     AuditLogService service = new AuditLogService(repo, meters);
 
@@ -26,7 +26,7 @@ class AuditLogServiceFailureTest {
 
   @Test
   void repositoryFailureIsSwallowed_metricIncrementsFailed() {
-    AuditLogRepository repo = Mockito.mock(AuditLogRepository.class);
+    AuditLogJpaRepository repo = Mockito.mock(AuditLogJpaRepository.class);
     SimpleMeterRegistry meters = new SimpleMeterRegistry();
     AuditLogService service = new AuditLogService(repo, meters);
     when(repo.save(any(AuditLogEntity.class))).thenThrow(new RuntimeException("db down"));
@@ -39,7 +39,7 @@ class AuditLogServiceFailureTest {
 
   @Test
   void emptyMetadataMapPersistsAsNull() {
-    AuditLogRepository repo = Mockito.mock(AuditLogRepository.class);
+    AuditLogJpaRepository repo = Mockito.mock(AuditLogJpaRepository.class);
     SimpleMeterRegistry meters = new SimpleMeterRegistry();
     AuditLogService service = new AuditLogService(repo, meters);
 

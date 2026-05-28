@@ -2,7 +2,7 @@ package com.example.short_link.admin.application.read;
 
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
 import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricRepository;
+import com.example.short_link.common.observability.RequestMetricJpaRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -31,15 +31,15 @@ public class AdminRouteMetricsService {
   /** Hard cap for lifetime aggregates — beyond this we'd be sorting hundreds of MB in heap. */
   private static final Duration LIFETIME_CAP = Duration.ofDays(7);
 
-  private final RequestMetricRepository repository;
+  private final RequestMetricJpaRepository repository;
   private final Clock clock;
 
   @Autowired
-  public AdminRouteMetricsService(RequestMetricRepository repository) {
+  public AdminRouteMetricsService(RequestMetricJpaRepository repository) {
     this(repository, Clock.systemUTC());
   }
 
-  AdminRouteMetricsService(RequestMetricRepository repository, Clock clock) {
+  AdminRouteMetricsService(RequestMetricJpaRepository repository, Clock clock) {
     this.repository = repository;
     this.clock = clock;
   }

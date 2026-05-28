@@ -27,11 +27,12 @@ public class RequestMetricsRecorder {
   static final int MAX_BATCH_PER_FLUSH = 500;
   static final int QUEUE_HARD_CAP = 50_000;
 
-  private final RequestMetricRepository repository;
+  private final RequestMetricJpaRepository repository;
   private final MeterRegistry meterRegistry;
   private final ConcurrentLinkedQueue<RequestMetric> queue = new ConcurrentLinkedQueue<>();
 
-  public RequestMetricsRecorder(RequestMetricRepository repository, MeterRegistry meterRegistry) {
+  public RequestMetricsRecorder(
+      RequestMetricJpaRepository repository, MeterRegistry meterRegistry) {
     this.repository = repository;
     this.meterRegistry = meterRegistry;
   }

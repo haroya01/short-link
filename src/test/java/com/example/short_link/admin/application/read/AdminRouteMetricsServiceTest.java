@@ -9,7 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
 import com.example.short_link.common.observability.RequestMetric;
 import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricRepository;
+import com.example.short_link.common.observability.RequestMetricJpaRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -23,7 +23,7 @@ class AdminRouteMetricsServiceTest {
 
   @Test
   void aggregatesPerMethodAndUriWithPercentilesAndErrorRate() {
-    RequestMetricRepository repo = mock(RequestMetricRepository.class);
+    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
     when(repo.findWindow(any(), any()))
         .thenReturn(
             List.of(
@@ -48,7 +48,7 @@ class AdminRouteMetricsServiceTest {
 
   @Test
   void emptyWindowReturnsEmpty() {
-    RequestMetricRepository repo = mock(RequestMetricRepository.class);
+    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
     when(repo.findWindow(any(), any())).thenReturn(List.of());
     AdminRouteMetricsService service = new AdminRouteMetricsService(repo, fixedClock);
 

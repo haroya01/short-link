@@ -19,7 +19,7 @@ class AdminRequestMetricsServiceTest {
 
   @Test
   void routesAggregatesPercentilesAndErrorRatePerRoute() {
-    RequestMetricRepository repo = mock(RequestMetricRepository.class);
+    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
     when(repo.findWindow(any(), any()))
         .thenReturn(
             List.of(
@@ -46,7 +46,7 @@ class AdminRequestMetricsServiceTest {
 
   @Test
   void outcomesGroupsByOutcomeForShortCode() {
-    RequestMetricRepository repo = mock(RequestMetricRepository.class);
+    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
     when(repo.findShortCodeWindow(any(), any(), any()))
         .thenReturn(
             List.of(
@@ -70,7 +70,7 @@ class AdminRequestMetricsServiceTest {
   @Test
   void outcomesRejectsBlankShortCode() {
     AdminRequestMetricsService service =
-        new AdminRequestMetricsService(mock(RequestMetricRepository.class), fixedClock);
+        new AdminRequestMetricsService(mock(RequestMetricJpaRepository.class), fixedClock);
     assertThatThrownBy(() -> service.outcomes("  ", AdminRequestMetricsService.Window.H1))
         .isInstanceOf(IllegalArgumentException.class);
     assertThatThrownBy(() -> service.outcomes(null, AdminRequestMetricsService.Window.H1))
@@ -79,7 +79,7 @@ class AdminRequestMetricsServiceTest {
 
   @Test
   void rawFiltersComposeAndRespectLimit() {
-    RequestMetricRepository repo = mock(RequestMetricRepository.class);
+    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
     when(repo.findWindow(any(), any()))
         .thenReturn(
             List.of(

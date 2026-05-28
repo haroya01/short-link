@@ -22,10 +22,10 @@ public class AuditLogService {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-  private final AuditLogRepository repository;
+  private final AuditLogJpaRepository repository;
   private final MeterRegistry meterRegistry;
 
-  public AuditLogService(AuditLogRepository repository, MeterRegistry meterRegistry) {
+  public AuditLogService(AuditLogJpaRepository repository, MeterRegistry meterRegistry) {
     this.repository = repository;
     this.meterRegistry = meterRegistry;
   }
