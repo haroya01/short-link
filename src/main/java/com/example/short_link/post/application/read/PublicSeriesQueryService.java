@@ -1,0 +1,70 @@
+package com.example.short_link.post.application.read;
+
+import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.post.exception.PostErrorCode;
+import com.example.short_link.post.exception.PostException;
+import com.example.short_link.profile.exception.ProfileErrorCode;
+import com.example.short_link.profile.exception.ProfileException;
+import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.List;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+/** Public, unauthenticated series read. Only PUBLISHED member posts are exposed. */
+@Service
+@RequiredArgsConstructor
+@Transactional(readOnly = true)
+public class PublicSeriesQueryService {
+
+  private final UserRepository userRepository;
+  private final SeriesRepository seriesRepository;
+  private final PostRepository postRepository;
+
+  public PublicSeriesListView listPublicSeries(String username) {
+    UserEntity author = resolveAuthor(username);
+    List<PublicSeriesListItem> series =
+        seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId()).stream()
+            .map(
+                s -> new PublicSeriesListItem(s.getSlug(), s.getTitle(), publishedCount(s.getId())))
+            .filter(s -> s.postCount() > 0)
+            .toList();
+    return new PublicSeriesListView(PublicAuthorView.from(author), series);
+  }
+
+  public PublicSeriesDetail findPublicSeries(String username, String slug) {
+    UserEntity author = resolveAuthor(username);
+    SeriesEntity series =
+        seriesRepository
+            .findByUserIdAndSlug(author.getId(), slug)
+            .orElseThrow(() -> new PostException(PostErrorCode.SERIES_NOT_FOUND, slug));
+    List<PublicPostListItem> posts =
+        postRepository
+            .findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(series.getId(), PostStatus.PUBLISHED)
+            .stream()
+            .map(PublicPostListItem::from)
+            .toList();
+    return new PublicSeriesDetail(
+        PublicAuthorView.from(author),
+        new PublicSeriesListItem(series.getSlug(), series.getTitle(), posts.size()),
+        posts);
+  }
+
+  private int publishedCount(Long seriesId) {
+    return postRepository
+        .findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, PostStatus.PUBLISHED)
+        .size();
+  }
+
+  private UserEntity resolveAuthor(String username) {
+    String normalized = username == null ? "" : username.trim().toLowerCase();
+    return userRepository
+        .findByUsername(normalized)
+        .filter(u -> !u.isDeleted())
+        .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, normalized));
+  }
+}

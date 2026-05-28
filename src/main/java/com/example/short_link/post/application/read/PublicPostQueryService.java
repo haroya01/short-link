@@ -6,8 +6,10 @@ import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileErrorCode;
@@ -41,6 +43,7 @@ public class PublicPostQueryService {
   private final UserRepository userRepository;
   private final PostRepository postRepository;
   private final PostBlockRepository postBlockRepository;
+  private final SeriesRepository seriesRepository;
   private final CtaRepository ctaRepository;
 
   public PublicPostListView listPublicPosts(String username) {
@@ -77,7 +80,34 @@ public class PublicPostQueryService {
     }
 
     return new PublicPostDetail(
-        PublicAuthorView.from(author), PublicPostListItem.from(post), blocks);
+        PublicAuthorView.from(author), PublicPostListItem.from(post), blocks, seriesNavFor(post));
+  }
+
+  /** Build the series nav for a published post, or null if it isn't in a series. */
+  private PublicPostSeriesNav seriesNavFor(PostEntity post) {
+    if (post.getSeriesId() == null) return null;
+    SeriesEntity series = seriesRepository.findById(post.getSeriesId()).orElse(null);
+    if (series == null) return null;
+    List<PostEntity> siblings =
+        postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
+            series.getId(), PostStatus.PUBLISHED);
+    int index = -1;
+    for (int i = 0; i < siblings.size(); i++) {
+      if (siblings.get(i).getId().equals(post.getId())) {
+        index = i;
+        break;
+      }
+    }
+    if (index < 0) return null; // post not published in its own series — defensive
+    PublicPostSeriesNav.NavLink prev = index > 0 ? navLink(siblings.get(index - 1)) : null;
+    PublicPostSeriesNav.NavLink next =
+        index < siblings.size() - 1 ? navLink(siblings.get(index + 1)) : null;
+    return new PublicPostSeriesNav(
+        series.getSlug(), series.getTitle(), index + 1, siblings.size(), prev, next);
+  }
+
+  private PublicPostSeriesNav.NavLink navLink(PostEntity post) {
+    return new PublicPostSeriesNav.NavLink(post.getSlug(), post.getTitle());
   }
 
   private Map<Long, CtaEntity> hydrateCtas(List<PostBlockEntity> entities) {

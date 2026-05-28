@@ -14,6 +14,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileErrorCode;
@@ -34,6 +35,7 @@ class PublicPostQueryServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private PostRepository postRepository;
   @Mock private PostBlockRepository postBlockRepository;
+  @Mock private SeriesRepository seriesRepository;
   @Mock private CtaRepository ctaRepository;
 
   private PublicPostQueryService service;
@@ -42,7 +44,7 @@ class PublicPostQueryServiceTest {
   void setUp() {
     service =
         new PublicPostQueryService(
-            userRepository, postRepository, postBlockRepository, ctaRepository);
+            userRepository, postRepository, postBlockRepository, seriesRepository, ctaRepository);
   }
 
   private UserEntity authorWithUsername(String username) {
