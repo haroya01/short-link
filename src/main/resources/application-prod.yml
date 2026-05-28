@@ -44,3 +44,5 @@ short-link:
     public-key: ${JWT_PUBLIC_KEY}
   cookie:
     secure: true
+    domain: ${COOKIE_DOMAIN:.kurl.me}
+    same-site: ${COOKIE_SAME_SITE:Lax}
