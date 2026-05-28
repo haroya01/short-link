@@ -9,12 +9,12 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.export.application.helper.CsvWriter;
+import com.example.short_link.link.export.application.properties.LinkExportProperties;
 import com.example.short_link.link.stats.application.LinkClickEventReader;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,12 +27,7 @@ public class LinkExportService {
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkStatsQueryService statsService;
   private final LinkAccessGuard accessGuard;
-
-  @Value("${short-link.export.event-batch:1000}")
-  private int eventBatch;
-
-  @Value("${short-link.export.event-cap:50000}")
-  private int eventHardCap;
+  private final LinkExportProperties exportProperties;
 
   @Transactional(readOnly = true)
   public String exportEventsCsv(Long userId, ShortCode shortCode) {
@@ -59,16 +54,16 @@ public class LinkExportService {
 
     int written = 0;
     Long cursorId = null;
-    while (written < eventHardCap) {
+    while (written < exportProperties.eventCap()) {
       List<ClickEventEntity> rows;
       if (cursorId == null) {
-        rows = clickEvents.latest(link.linkId().value(), eventBatch);
+        rows = clickEvents.latest(link.linkId().value(), exportProperties.eventBatch());
       } else {
-        rows = clickEvents.before(link.linkId().value(), cursorId, eventBatch);
+        rows = clickEvents.before(link.linkId().value(), cursorId, exportProperties.eventBatch());
       }
       if (rows.isEmpty()) break;
       for (ClickEventEntity c : rows) {
-        if (written >= eventHardCap) break;
+        if (written >= exportProperties.eventCap()) break;
         String channel =
             c.getReferrer() == null ? "direct" : channelClassifier.classify(c.getReferrer());
         CsvWriter.appendRow(
@@ -89,7 +84,7 @@ public class LinkExportService {
       }
       ClickEventEntity last = rows.get(rows.size() - 1);
       cursorId = last.getId();
-      if (rows.size() < eventBatch) break;
+      if (rows.size() < exportProperties.eventBatch()) break;
     }
     return sb.toString();
   }

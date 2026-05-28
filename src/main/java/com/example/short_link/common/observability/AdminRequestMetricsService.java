@@ -25,15 +25,15 @@ public class AdminRequestMetricsService {
 
   private static final int RAW_MAX_LIMIT = 500;
 
-  private final RequestMetricRepository repository;
+  private final RequestMetricJpaRepository repository;
   private final Clock clock;
 
   @Autowired
-  public AdminRequestMetricsService(RequestMetricRepository repository) {
+  public AdminRequestMetricsService(RequestMetricJpaRepository repository) {
     this(repository, Clock.systemUTC());
   }
 
-  AdminRequestMetricsService(RequestMetricRepository repository, Clock clock) {
+  AdminRequestMetricsService(RequestMetricJpaRepository repository, Clock clock) {
     this.repository = repository;
     this.clock = clock;
   }

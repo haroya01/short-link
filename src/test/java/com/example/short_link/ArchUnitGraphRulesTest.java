@@ -74,6 +74,42 @@ class ArchUnitGraphRulesTest {
           .dependOnClassesThat()
           .resideInAPackage("com.maxmind..");
 
+  @ArchTest
+  static final ArchRule jjwtSdkConfinedToUserApplication =
+      noClasses()
+          .that()
+          .resideOutsideOfPackage("..user.application..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("io.jsonwebtoken..");
+
+  @ArchTest
+  static final ArchRule jsoupSdkConfinedToOgScraper =
+      noClasses()
+          .that()
+          .resideOutsideOfPackage("..link.og.application..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("org.jsoup..");
+
+  @ArchTest
+  static final ArchRule yauaaSdkConfinedToUserAgentClassifier =
+      noClasses()
+          .that()
+          .resideOutsideOfPackages("..common.config..", "..link.classifier.application..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("nl.basjes..");
+
+  @ArchTest
+  static final ArchRule zxingSdkConfinedToQrPngEncoder =
+      noClasses()
+          .that()
+          .resideOutsideOfPackage("..campaign.application.helper..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("com.google.zxing..");
+
   // ─── Naming convention (strict) ───────────────────────────────────────
 
   @ArchTest

@@ -3,7 +3,8 @@ package com.example.short_link.admin.exception;
 import org.springframework.http.HttpStatus;
 
 public enum AdminErrorCode {
-  INVALID_ACTIVE_PERIOD(HttpStatus.BAD_REQUEST, "Invalid active-users period: %s");
+  INVALID_ACTIVE_PERIOD(HttpStatus.BAD_REQUEST, "Invalid active-users period: %s"),
+  INVALID_DOMAIN(HttpStatus.BAD_REQUEST, "invalid domain: %s");
 
   private final HttpStatus status;
   private final String template;

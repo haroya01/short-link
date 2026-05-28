@@ -17,13 +17,13 @@ import org.mockito.Mockito;
 
 class AuditLogCleanupJobDisabledTest {
 
-  private AuditLogRepository repository;
+  private AuditLogJpaRepository repository;
   private RedisDistributedLock lock;
   private AuditLogCleanupJob job;
 
   @BeforeEach
   void setUp() {
-    repository = Mockito.mock(AuditLogRepository.class);
+    repository = Mockito.mock(AuditLogJpaRepository.class);
     lock = Mockito.mock(RedisDistributedLock.class);
     job =
         new AuditLogCleanupJob(

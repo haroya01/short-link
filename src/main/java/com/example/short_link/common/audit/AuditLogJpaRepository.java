@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-public interface AuditLogRepository extends JpaRepository<AuditLogEntity, Long> {
+public interface AuditLogJpaRepository extends JpaRepository<AuditLogEntity, Long> {
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM AuditLogEntity a WHERE a.occurredAt < :cutoff")

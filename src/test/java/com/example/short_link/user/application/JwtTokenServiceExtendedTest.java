@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.application.dto.ParsedAccess;
 import com.example.short_link.user.application.properties.JwtProperties;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.security.GeneralSecurityException;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
@@ -40,7 +42,9 @@ class JwtTokenServiceExtendedTest {
     JwtTokenService svc = freshService();
     String refresh = svc.createRefreshToken(42L).token();
     assertThatThrownBy(() -> svc.parseAccessTokenDetailed(refresh))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);
   }
 
   @Test
@@ -55,7 +59,9 @@ class JwtTokenServiceExtendedTest {
     JwtTokenService svc = freshService();
     String access = svc.createAccessToken(42L, "USER");
     assertThatThrownBy(() -> svc.parseTwoFactorChallengeToken(access))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);
   }
 
   @Test

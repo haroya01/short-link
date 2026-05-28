@@ -6,7 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.common.observability.RequestMetric;
 import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricRepository;
+import com.example.short_link.common.observability.RequestMetricJpaRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
@@ -34,7 +34,7 @@ class AdminControllerTest {
   @Autowired private UserRepository userRepository;
   @Autowired private LinkRepository linkRepository;
   @Autowired private ClickEventRepository clickRepository;
-  @Autowired private RequestMetricRepository requestMetricRepository;
+  @Autowired private RequestMetricJpaRepository requestMetricRepository;
 
   @Test
   void anonymousReceives401OnAdminEndpoint() throws Exception {

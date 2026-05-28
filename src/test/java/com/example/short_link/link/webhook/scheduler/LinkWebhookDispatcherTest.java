@@ -40,6 +40,7 @@ class LinkWebhookDispatcherTest {
   private WebhookDeliveryGate deliveryGate;
   private WebhookBatchBuffer batchBuffer;
   private WebhookHttpDeliveryClient deliveryClient;
+  private WebhookBatchDeliverer batchDeliverer;
   private LinkWebhookDispatcher dispatcher;
 
   @BeforeEach
@@ -49,9 +50,10 @@ class LinkWebhookDispatcherTest {
     deliveryGate = new WebhookDeliveryGate(meterRegistry, redis);
     batchBuffer = new WebhookBatchBuffer(meterRegistry);
     deliveryClient = mock(WebhookHttpDeliveryClient.class);
+    batchDeliverer = new WebhookBatchDeliverer(repository, batchBuffer, deliveryClient, jsonMapper);
     dispatcher =
         new LinkWebhookDispatcher(
-            repository, jsonMapper, deliveryGate, batchBuffer, deliveryClient);
+            repository, jsonMapper, deliveryGate, batchBuffer, deliveryClient, batchDeliverer);
   }
 
   private LinkWebhookEntity hook(WebhookFormat format) {
