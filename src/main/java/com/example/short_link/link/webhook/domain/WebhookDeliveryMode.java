@@ -27,8 +27,4 @@ public enum WebhookDeliveryMode {
   public boolean sendsSpikeAlert() {
     return this == THRESHOLD_SPIKE || this == BOTH;
   }
-
-  public boolean sendsPerEvent() {
-    return this == PER_EVENT;
-  }
 }

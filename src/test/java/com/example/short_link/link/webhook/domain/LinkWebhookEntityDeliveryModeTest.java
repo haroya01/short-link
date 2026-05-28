@@ -181,14 +181,4 @@ class LinkWebhookEntityDeliveryModeTest {
   void sendsSpikeAlertTrueForBothMode() {
     assertThat(WebhookDeliveryMode.BOTH.sendsSpikeAlert()).isTrue();
   }
-
-  @Test
-  void sendsPerEventTrueOnlyForPerEvent() {
-    assertThat(WebhookDeliveryMode.PER_EVENT.sendsPerEvent()).isTrue();
-  }
-
-  @Test
-  void sendsPerEventFalseForDaily() {
-    assertThat(WebhookDeliveryMode.DAILY_SUMMARY.sendsPerEvent()).isFalse();
-  }
 }

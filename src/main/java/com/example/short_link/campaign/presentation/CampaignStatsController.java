@@ -1,7 +1,7 @@
 package com.example.short_link.campaign.presentation;
 
 import com.example.short_link.campaign.application.CampaignStatsService;
-import com.example.short_link.campaign.application.dto.CampaignStatsResponse;
+import com.example.short_link.campaign.application.dto.CampaignStatsView;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,7 +17,7 @@ public class CampaignStatsController {
   private final CampaignStatsService service;
 
   @GetMapping
-  public CampaignStatsResponse stats(
+  public CampaignStatsView stats(
       @AuthenticationPrincipal Long userId, @PathVariable Long campaignId) {
     return service.statsFor(campaignId, userId);
   }

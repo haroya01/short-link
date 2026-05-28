@@ -12,10 +12,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Applies the campaign's {@code postEndAction} (KEEP / EXPIRE / REDIRECT) to every batch link.
- * Shared by EndDue / EndCampaignNow / ReapplyPolicy use cases.
- */
 @Component
 @RequiredArgsConstructor
 class BatchPolicyApplier {

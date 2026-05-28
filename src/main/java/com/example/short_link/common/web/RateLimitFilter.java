@@ -28,6 +28,21 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   private static final Duration WINDOW = Duration.ofMinutes(1);
 
+  // Sensitive auth endpoints get a tighter per-IP bucket on top of the global limit. Brute-force
+  // against a 6-digit 2FA OTP would otherwise sit comfortably under the global anonymous cap
+  // (100/min) — that's too generous when the endpoint's only defense is the limit itself.
+  private record EndpointRule(String method, String path, long perMinute) {}
+
+  // dev-login 은 의도적 제외 — DevAuthController 자체가 dev profile 한정이라 prod 노출 없음.
+  // 테스트 fixture 가 dev-login 을 호출해 user 를 만드는 경로가 광범위해 endpoint rate 룰이
+  // 오히려 false-positive 만 만든다.
+  private static final List<EndpointRule> ENDPOINT_RULES =
+      List.of(
+          new EndpointRule("POST", "/api/v1/auth/2fa/verify", 5),
+          new EndpointRule("POST", "/api/v1/2fa/confirm", 5),
+          new EndpointRule("POST", "/api/v1/2fa/disable", 5),
+          new EndpointRule("POST", "/api/v1/auth/refresh", 10));
+
   private static final RedisScript<Long> INCR_AND_EXPIRE =
       new DefaultRedisScript<>(
           "local c = redis.call('INCR', KEYS[1]) "
@@ -66,6 +81,23 @@ public class RateLimitFilter extends OncePerRequestFilter {
       return;
     }
 
+    String method = req.getMethod();
+    String clientIp = ClientIp.of(req);
+
+    for (EndpointRule rule : ENDPOINT_RULES) {
+      if (rule.method().equals(method) && rule.path().equals(uri)) {
+        String epKey = "rate:ep:" + method + ":" + uri + ":ip:" + clientIp;
+        Long epCount =
+            redis.execute(INCR_AND_EXPIRE, List.of(epKey), String.valueOf(WINDOW.getSeconds()));
+        if (epCount != null && epCount > rule.perMinute()) {
+          meterRegistry.counter(METRIC_NAME, "scope", "endpoint", "path", uri).increment();
+          writeRateLimitResponse(req, res);
+          return;
+        }
+        break;
+      }
+    }
+
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
     String identifier;
     long limit;
@@ -73,7 +105,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
       identifier = "user:" + userId;
       limit = authenticatedLimit;
     } else {
-      identifier = "ip:" + ClientIp.of(req);
+      identifier = "ip:" + clientIp;
       limit = anonymousLimit;
     }
     String key = "rate:" + identifier;

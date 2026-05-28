@@ -3,6 +3,7 @@ package com.example.short_link.link.stats.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.application.dto.LinkStats;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class LinkStatsQueryServiceTest {
@@ -26,13 +27,13 @@ class LinkStatsQueryServiceTest {
 
   @Test
   void halfLifeNullWhenEmpty() {
-    assertThat(LinkStatsQueryService.halfLife(java.util.List.of())).isNull();
+    assertThat(LinkStatsQueryService.halfLife(List.of())).isNull();
   }
 
   @Test
   void halfLifeIsDayWhereCumulativeReachesHalf() {
     var days =
-        java.util.List.of(
+        List.of(
             new LinkStats.DayClick(0, 30L),
             new LinkStats.DayClick(1, 20L),
             new LinkStats.DayClick(2, 50L));
@@ -41,13 +42,13 @@ class LinkStatsQueryServiceTest {
 
   @Test
   void halfLifeFirstDayWhenItAlreadyReachesHalf() {
-    var days = java.util.List.of(new LinkStats.DayClick(0, 90L), new LinkStats.DayClick(7, 10L));
+    var days = List.of(new LinkStats.DayClick(0, 90L), new LinkStats.DayClick(7, 10L));
     assertThat(LinkStatsQueryService.halfLife(days)).isZero();
   }
 
   @Test
   void halfLifeNullWhenAllZero() {
-    var days = java.util.List.of(new LinkStats.DayClick(0, 0L));
+    var days = List.of(new LinkStats.DayClick(0, 0L));
     assertThat(LinkStatsQueryService.halfLife(days)).isNull();
   }
 }

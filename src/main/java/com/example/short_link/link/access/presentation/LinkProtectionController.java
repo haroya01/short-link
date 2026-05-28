@@ -1,7 +1,6 @@
 package com.example.short_link.link.access.presentation;
 
 import com.example.short_link.link.access.application.LinkProtectionService;
-import com.example.short_link.link.access.application.dto.LinkProtectionResult;
 import com.example.short_link.link.access.presentation.request.LinkProtectionRequest;
 import com.example.short_link.link.access.presentation.response.LinkProtectionResponse;
 import com.example.short_link.link.domain.ShortCode;
@@ -26,11 +25,7 @@ public class LinkProtectionController {
       @AuthenticationPrincipal Long userId,
       @PathVariable ShortCode shortCode,
       @Valid @RequestBody LinkProtectionRequest request) {
-    return toResponse(service.update(userId, shortCode, request.password(), request.maxViews()));
-  }
-
-  private static LinkProtectionResponse toResponse(LinkProtectionResult result) {
-    return new LinkProtectionResponse(
-        result.shortCode(), result.passwordProtected(), result.maxViews(), result.viewCount());
+    return LinkProtectionResponse.from(
+        service.update(userId, shortCode, request.password(), request.maxViews()));
   }
 }

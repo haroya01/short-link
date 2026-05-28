@@ -8,7 +8,7 @@ import com.example.short_link.admin.application.read.BlockedDomainQueryService;
 import com.example.short_link.admin.application.write.BlockDomainUseCase;
 import com.example.short_link.admin.application.write.UnblockDomainUseCase;
 import com.example.short_link.admin.domain.BlockedDomainEntity;
-import com.example.short_link.admin.domain.repository.BlockedDomainRepository;
+import com.example.short_link.admin.infrastructure.persistence.JpaBlockedDomainRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,7 +28,7 @@ class BlockedDomainServiceTest {
   @Autowired private UnblockDomainUseCase unblockDomain;
   @Autowired private BlockedDomainQueryService queryService;
   @Autowired private BlockedDomainCache blockedDomainCache;
-  @Autowired private BlockedDomainRepository repository;
+  @Autowired private JpaBlockedDomainRepository repository;
   @Autowired private PlatformTransactionManager transactionManager;
 
   @BeforeEach

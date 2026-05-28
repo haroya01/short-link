@@ -159,4 +159,21 @@ class SocialsTest {
     assertThat(list.get(0).channel()).isEqualTo("x");
     assertThat(list.get(0).url()).isEqualTo("https://x.com/me");
   }
+
+  @Test
+  void nullChannelOrUrlInsideEntryIsTreatedAsBlank() {
+    String out =
+        Socials.normalize(
+            "["
+                + "{\"channel\":null,\"url\":\"https://x.com/abc\"},"
+                + "{\"channel\":\"x\",\"url\":\"https://x.com/abc\"}"
+                + "]");
+    assertThat(out).contains("https://x.com/abc");
+  }
+
+  @Test
+  void nullEntryIsSkipped() {
+    String out = Socials.normalize("[null,{\"channel\":\"x\",\"url\":\"https://x.com/me\"}]");
+    assertThat(out).contains("\"channel\":\"x\"");
+  }
 }

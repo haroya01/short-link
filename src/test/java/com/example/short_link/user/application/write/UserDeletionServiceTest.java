@@ -8,9 +8,11 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
+import com.example.short_link.link.stats.infrastructure.persistence.JpaClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
+import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -26,6 +28,7 @@ class UserDeletionServiceTest {
   @Autowired private UserRepository userRepository;
   @Autowired private LinkRepository linkRepository;
   @Autowired private ClickEventRepository clickEventRepository;
+  @Autowired private JpaClickEventRepository jpaClickEventRepository;
   @Autowired private RefreshTokenStore refreshTokenStore;
 
   @Test
@@ -36,7 +39,7 @@ class UserDeletionServiceTest {
     ClickEventEntity click =
         clickEventRepository.save(
             ClickEventEntity.builder().linkId(link.linkId()).bot(false).build());
-    refreshTokenStore.save(user.getId(), "jti-1", java.time.Duration.ofMinutes(5));
+    refreshTokenStore.save(user.getId(), "jti-1", Duration.ofMinutes(5));
 
     // deleteAccount is a soft delete — it just flags the row and revokes refresh tokens.
     // hardDelete is what the scheduled cleanup eventually runs to actually purge data.
@@ -47,7 +50,7 @@ class UserDeletionServiceTest {
     deletionService.hardDelete(user.getId());
     assertThat(userRepository.findById(user.getId())).isEmpty();
     assertThat(linkRepository.findByShortCode(new ShortCode("del0001"))).isEmpty();
-    assertThat(clickEventRepository.findById(click.getId())).isEmpty();
+    assertThat(jpaClickEventRepository.findById(click.getId())).isEmpty();
   }
 
   @Test

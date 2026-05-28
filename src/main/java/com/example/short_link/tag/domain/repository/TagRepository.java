@@ -1,13 +1,19 @@
 package com.example.short_link.tag.domain.repository;
 
 import com.example.short_link.tag.domain.TagEntity;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
-public interface TagRepository extends JpaRepository<TagEntity, Long> {
+public interface TagRepository {
+
+  Optional<TagEntity> findById(Long id);
+
+  TagEntity save(TagEntity tag);
+
+  void delete(TagEntity tag);
+
+  List<TagEntity> findAllById(Collection<Long> ids);
 
   List<TagEntity> findAllByUserIdOrderByNameAsc(Long userId);
 
@@ -15,8 +21,5 @@ public interface TagRepository extends JpaRepository<TagEntity, Long> {
 
   List<TagEntity> findAllByUserIdAndNameIn(Long userId, List<String> names);
 
-  @Query(
-      "SELECT lt.tagId, COUNT(lt.linkId) FROM LinkTagEntity lt "
-          + "WHERE lt.tagId IN :tagIds GROUP BY lt.tagId")
-  List<Object[]> countLinksByTagIds(@Param("tagIds") List<Long> tagIds);
+  List<Object[]> countLinksByTagIds(List<Long> tagIds);
 }

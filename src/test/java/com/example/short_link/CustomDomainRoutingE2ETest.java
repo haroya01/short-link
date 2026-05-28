@@ -7,12 +7,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
-import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
+import com.example.short_link.customdomain.infrastructure.persistence.JpaCustomDomainRepository;
 import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
-import java.lang.reflect.Field;
 import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -33,7 +32,7 @@ class CustomDomainRoutingE2ETest {
 
   @Autowired private MockMvc mvc;
   @Autowired private UserRepository userRepository;
-  @Autowired private CustomDomainRepository customDomainRepository;
+  @Autowired private JpaCustomDomainRepository customDomainRepository;
   @Autowired private JwtTokenService jwt;
   @Autowired private CacheManager cacheManager;
 
@@ -119,24 +118,5 @@ class CustomDomainRoutingE2ETest {
     mvc.perform(get("/cd0pend2").header("Host", domain))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://other-pend.com"));
-  }
-
-  private static void writeField(Object target, String name, Object value) {
-    try {
-      Class<?> c = target.getClass();
-      while (c != null) {
-        try {
-          Field f = c.getDeclaredField(name);
-          f.setAccessible(true);
-          f.set(target, value);
-          return;
-        } catch (NoSuchFieldException ignored) {
-          c = c.getSuperclass();
-        }
-      }
-      throw new NoSuchFieldException(name);
-    } catch (Exception ex) {
-      throw new RuntimeException(ex);
-    }
   }
 }

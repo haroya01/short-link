@@ -130,4 +130,37 @@ class PlaceTest {
     assertThatThrownBy(() -> Place.normalize("not json")).isInstanceOf(ProfileException.class);
     assertThatThrownBy(() -> Place.normalize("")).isInstanceOf(ProfileException.class);
   }
+
+  @Test
+  void rejectsNullInput() {
+    assertThatThrownBy(() -> Place.normalize(null)).isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void coverUrlHostlessRejected() {
+    assertThatThrownBy(
+            () ->
+                Place.normalize(
+                    "{\"name\":\"x\",\"address\":\"서울\",\"lat\":37,\"lng\":127,"
+                        + "\"coverUrl\":\"https:///abc\"}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void coverUrlSchemelessRejected() {
+    assertThatThrownBy(
+            () ->
+                Place.normalize(
+                    "{\"name\":\"x\",\"address\":\"서울\",\"lat\":37,\"lng\":127,"
+                        + "\"coverUrl\":\"cdn.example/x\"}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void boundaryLatLngAccepted() {
+    String out = Place.normalize("{\"name\":\"x\",\"address\":\"a\",\"lat\":90,\"lng\":180}");
+    assertThat(out).contains("\"lat\":90");
+    out = Place.normalize("{\"name\":\"x\",\"address\":\"a\",\"lat\":-90,\"lng\":-180}");
+    assertThat(out).contains("\"lat\":-90");
+  }
 }

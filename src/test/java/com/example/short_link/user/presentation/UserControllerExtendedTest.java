@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -77,8 +78,7 @@ class UserControllerExtendedTest {
             header()
                 .string(
                     "Content-Disposition",
-                    org.hamcrest.Matchers.containsString(
-                        "attachment; filename=\"kurl-export-" + user.getId())));
+                    Matchers.containsString("attachment; filename=\"kurl-export-" + user.getId())));
   }
 
   @Test

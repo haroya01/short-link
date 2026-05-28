@@ -1,16 +1,15 @@
 package com.example.short_link.profile.domain.email;
 
 import java.time.Instant;
-import java.util.List;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
 
-public interface EmailLeadRepository extends JpaRepository<EmailLeadEntity, Long> {
+public interface EmailLeadRepository {
 
-  List<EmailLeadEntity> findAllByUserIdOrderBySubmittedAtDesc(Long userId, Pageable pageable);
+  Optional<EmailLeadEntity> findById(Long id);
 
-  List<EmailLeadEntity> findAllByUserIdAndOptedOutFalseOrderBySubmittedAtDesc(
-      Long userId, Pageable pageable);
+  EmailLeadEntity save(EmailLeadEntity lead);
+
+  void delete(EmailLeadEntity lead);
 
   long countByUserId(Long userId);
 

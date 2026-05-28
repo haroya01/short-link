@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * PRODUCT_CARD block payload — the vertical-agnostic "row of selling cards" used by bakery menus,
@@ -52,8 +53,7 @@ public final class ProductCardCarousel {
    * red, SOLD_OUT → grayscale overlay). An unknown value is dropped to null rather than rejected so
    * a frontend ahead of a backend deploy doesn't 400 every write.
    */
-  private static final java.util.Set<String> BADGE_IDS =
-      java.util.Set.of("NEW", "BEST", "LIMITED", "SOLD_OUT");
+  private static final Set<String> BADGE_IDS = Set.of("NEW", "BEST", "LIMITED", "SOLD_OUT");
 
   /**
    * Whitelisted layout ids. Controls how the block renders on the public profile — {@code carousel}
@@ -61,7 +61,7 @@ public final class ProductCardCarousel {
    * 5-8 items often benefit from {@code grid} because all items are visible without swiping.
    * Unknown values silently fall back to carousel so old clients work.
    */
-  private static final java.util.Set<String> LAYOUT_IDS = java.util.Set.of("carousel", "grid");
+  private static final Set<String> LAYOUT_IDS = Set.of("carousel", "grid");
 
   private static final int FOCAL_DEFAULT = 50;
   private static final int FOCAL_MIN = 0;

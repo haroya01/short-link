@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -74,7 +75,7 @@ public class AdminRouteMetricsService {
         if (row.getStatus() >= 500) error5xx++;
         statusDist.merge(String.valueOf(row.getStatus()), 1L, Long::sum);
       }
-      java.util.Arrays.sort(latencies);
+      Arrays.sort(latencies);
       RequestMetricEntity first = group.get(0);
       double errorRate = count == 0 ? 0.0 : (double) error5xx / (double) count;
       out.add(

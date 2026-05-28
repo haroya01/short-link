@@ -92,4 +92,41 @@ class BookingTest {
         .isEqualTo("kakao_channel");
     assertThat(Booking.Provider.resolve("https://other.example")).isEmpty();
   }
+
+  @Test
+  void resolveHandlesNullAndBlank() {
+    assertThat(Booking.Provider.resolve(null)).isEmpty();
+    assertThat(Booking.Provider.resolve("")).isEmpty();
+    assertThat(Booking.Provider.resolve("   ")).isEmpty();
+  }
+
+  @Test
+  void resolveHandlesSchemelessAndHostlessUrl() {
+    assertThat(Booking.Provider.resolve("calendly.com/me")).isEmpty();
+    assertThat(Booking.Provider.resolve("https:///path")).isEmpty();
+  }
+
+  @Test
+  void resolveHandlesMalformedUri() {
+    assertThat(Booking.Provider.resolve("ht!tp://bad uri")).isEmpty();
+  }
+
+  @Test
+  void resolveDetectsAllRemainingProviders() {
+    assertThat(Booking.Provider.resolve("https://calendar.app.google/abc"))
+        .map(Booking.Provider::id)
+        .contains("google_calendar");
+    assertThat(Booking.Provider.resolve("https://outlook.office.com/abc"))
+        .map(Booking.Provider::id)
+        .contains("microsoft_bookings");
+    assertThat(Booking.Provider.resolve("https://tidycal.com/x"))
+        .map(Booking.Provider::id)
+        .contains("tidycal");
+    assertThat(Booking.Provider.resolve("https://app.acuityscheduling.com/x"))
+        .map(Booking.Provider::id)
+        .contains("acuity");
+    assertThat(Booking.Provider.resolve("https://catchtable.co.kr/x"))
+        .map(Booking.Provider::id)
+        .contains("catchtable");
+  }
 }

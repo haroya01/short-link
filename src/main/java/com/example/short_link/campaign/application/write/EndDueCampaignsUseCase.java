@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 스케줄러 진입점 — ACTIVE 중 endsAt 이 도달한 것을 ENDED 로 전환 + postEndAction 일괄 적용. */
 @Service
 @RequiredArgsConstructor
 public class EndDueCampaignsUseCase {

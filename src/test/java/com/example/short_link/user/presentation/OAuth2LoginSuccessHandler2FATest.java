@@ -12,10 +12,12 @@ import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandl
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.util.Map;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
@@ -40,18 +42,15 @@ class OAuth2LoginSuccessHandler2FATest {
   @Test
   void redirectsTo2FAChallengeWhen2FARequired() throws Exception {
     DefaultOAuth2User principal =
-        new DefaultOAuth2User(
-            java.util.Set.of(), Map.of("email", "u@x.com", "sub", "g-2fa"), "sub");
-    OAuth2AuthenticationToken auth =
-        new OAuth2AuthenticationToken(principal, java.util.Set.of(), "google");
+        new DefaultOAuth2User(Set.of(), Map.of("email", "u@x.com", "sub", "g-2fa"), "sub");
+    OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(principal, Set.of(), "google");
     when(authService.loginWithOAuth("u@x.com", "google", "g-2fa"))
         .thenReturn(new LoginResult.TwoFactorRequired("challenge-token-value"));
 
     handler.onAuthenticationSuccess(req, res, auth);
 
     // Refresh cookie 는 2FA 통과 후에만 세팅 — challenge 단계에선 절대 안 됨
-    verify(refreshCookieWriter, never())
-        .set(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    verify(refreshCookieWriter, never()).set(ArgumentMatchers.any(), ArgumentMatchers.any());
 
     ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
     verify(res).sendRedirect(redirectCaptor.capture());

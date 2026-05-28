@@ -12,11 +12,6 @@ import java.time.ZoneId;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Builds a {@link DailySummaryPayload} for one link over one local-day window. Pure-ish (Spring
- * bean only to depend on the read repositories) so the unit test mocks them and verifies the
- * JSON-shape decisions (delta math, empty-top handling, etc.) without touching MySQL.
- */
 @Component
 @RequiredArgsConstructor
 public class DailySummaryAssembler {
@@ -80,10 +75,6 @@ public class DailySummaryAssembler {
         ratio(human, sevenDayHuman / 7.0));
   }
 
-  /**
-   * Delta as (current - baseline) / baseline. Returns {@code null} when the baseline is zero — JSON
-   * carries null instead of Infinity/NaN so dashboards don't have to special-case those.
-   */
   static Double ratio(long current, double baseline) {
     if (baseline == 0) return null;
     return (current - baseline) / baseline;

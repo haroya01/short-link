@@ -1,5 +1,6 @@
 package com.example.short_link.link.og.application;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -8,7 +9,6 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.og.application.dto.OgOverrideResult;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
-import com.example.short_link.profile.application.ProfileCacheEviction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class OgOverrideService {
 
   private final LinkRepository repository;
   private final LinkOgMetadataRepository ogMetadataRepository;
-  private final ProfileCacheEviction cacheEviction;
+  private final ProfileCacheInvalidator cacheEviction;
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")

@@ -3,6 +3,7 @@ package com.example.short_link.customdomain.application.helper;
 import com.example.short_link.customdomain.application.dto.DomainSummary;
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import java.time.Duration;
+import java.time.Instant;
 
 public final class CustomDomainPolicy {
 
@@ -36,7 +37,7 @@ public final class CustomDomainPolicy {
   }
 
   public static DomainSummary toSummary(CustomDomainEntity e) {
-    java.time.Instant autoUntil = e.isVerified() ? null : e.getCreatedAt().plus(AUTO_VERIFY_WINDOW);
+    Instant autoUntil = e.isVerified() ? null : e.getCreatedAt().plus(AUTO_VERIFY_WINDOW);
     return new DomainSummary(
         e.getId(),
         e.getDomain(),

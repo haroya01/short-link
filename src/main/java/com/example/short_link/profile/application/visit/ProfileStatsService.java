@@ -13,8 +13,6 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,10 +22,11 @@ public class ProfileStatsService {
 
   private static final Duration DAILY_WINDOW = Duration.ofDays(30);
   private static final ZoneId DEFAULT_ZONE = ZoneId.of("Asia/Seoul");
-  private static final Pageable TOP_50 = PageRequest.ofSize(50);
+  private static final int TOP_SIZE = 50;
 
   private final UserRepository userRepository;
   private final ProfileVisitRepository visits;
+  private final ProfileVisitBreakdownReader breakdowns;
 
   @Transactional(readOnly = true)
   public ProfileStats statsForOwner(Long ownerUserId) {
@@ -38,11 +37,6 @@ public class ProfileStatsService {
     return computeStats(owner);
   }
 
-  /**
-   * Public stats lookup by username. Throws {@link UserException} when the user doesn't exist OR
-   * when they haven't opted into public stats — collapsing the two into the same 404 so the
-   * existence of a profile that's opted out isn't leaked.
-   */
   @Transactional(readOnly = true)
   public ProfileStats publicStats(String username) {
     UserEntity user =
@@ -118,7 +112,7 @@ public class ProfileStatsService {
             .toList();
 
     List<ProfileStats.CountryVisit> countries =
-        visits.findCountryVisits(uid, TOP_50).stream()
+        breakdowns.topCountries(uid, TOP_SIZE).stream()
             .map(r -> new ProfileStats.CountryVisit(orUnknown(r.getCountry()), r.getCount()))
             .toList();
 
@@ -128,27 +122,27 @@ public class ProfileStatsService {
             .toList();
 
     List<ProfileStats.BrowserVisit> browsers =
-        visits.findBrowserVisits(uid, TOP_50).stream()
+        breakdowns.topBrowsers(uid, TOP_SIZE).stream()
             .map(r -> new ProfileStats.BrowserVisit(orUnknown(r.getBrowser()), r.getCount()))
             .toList();
 
     List<ProfileStats.ReferrerHostVisit> referrerHosts =
-        visits.findReferrerHostVisits(uid, TOP_50).stream()
+        breakdowns.topReferrerHosts(uid, TOP_SIZE).stream()
             .map(r -> new ProfileStats.ReferrerHostVisit(r.getHost(), r.getCount()))
             .toList();
 
     List<ProfileStats.SourceChannelVisit> channels =
-        visits.findSourceChannelVisits(uid, TOP_50).stream()
+        breakdowns.topSourceChannels(uid, TOP_SIZE).stream()
             .map(r -> new ProfileStats.SourceChannelVisit(r.getSource(), r.getCount()))
             .toList();
 
     List<ProfileStats.UtmCampaignVisit> utmCampaigns =
-        visits.findUtmCampaignVisits(uid, TOP_50).stream()
+        breakdowns.topUtmCampaigns(uid, TOP_SIZE).stream()
             .map(r -> new ProfileStats.UtmCampaignVisit(r.getCampaign(), r.getCount()))
             .toList();
 
     List<ProfileStats.UtmSourceVisit> utmSources =
-        visits.findUtmSourceVisits(uid, TOP_50).stream()
+        breakdowns.topUtmSources(uid, TOP_SIZE).stream()
             .map(r -> new ProfileStats.UtmSourceVisit(r.getSource(), r.getCount()))
             .toList();
 
@@ -173,7 +167,6 @@ public class ProfileStatsService {
         utmSources);
   }
 
-  /** MySQL's DAYOFWEEK returns 1=Sunday..7=Saturday; map to the same labels LinkStats uses. */
   private static String dayOfWeekName(int dow) {
     return switch (dow) {
       case 1 -> DayOfWeek.SUNDAY.name();
