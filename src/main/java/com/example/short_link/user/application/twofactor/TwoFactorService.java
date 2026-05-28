@@ -61,8 +61,10 @@ public class TwoFactorService {
   @Transactional
   public SetupChallenge start(Long userId) {
     UserEntity user =
-        userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("user"));
-    if (user.isDeleted()) throw new IllegalArgumentException("user deleted");
+        userRepository
+            .findById(userId)
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+    if (user.isDeleted()) throw new UserException(UserErrorCode.USER_NOT_FOUND);
 
     UserTwoFactorEntity row = repository.findById(userId).orElse(null);
     if (row != null && row.isEnabled()) {

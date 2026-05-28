@@ -4,6 +4,8 @@ import com.example.short_link.user.application.dto.ParsedAccess;
 import com.example.short_link.user.application.dto.ParsedRefresh;
 import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.domain.RefreshToken;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import java.security.GeneralSecurityException;
@@ -88,7 +90,7 @@ public class JwtTokenService {
   public Long parseAccessToken(String token) {
     Claims claims = parseClaims(token);
     if (!TYPE_ACCESS.equals(claims.get(CLAIM_TYPE))) {
-      throw new IllegalArgumentException("expected access token");
+      throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected access token");
     }
     return Long.valueOf(claims.getSubject());
   }
@@ -96,7 +98,7 @@ public class JwtTokenService {
   public ParsedAccess parseAccessTokenDetailed(String token) {
     Claims claims = parseClaims(token);
     if (!TYPE_ACCESS.equals(claims.get(CLAIM_TYPE))) {
-      throw new IllegalArgumentException("expected access token");
+      throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected access token");
     }
     String role = claims.get("role", String.class);
     return new ParsedAccess(Long.valueOf(claims.getSubject()), role == null ? "USER" : role);
@@ -105,7 +107,7 @@ public class JwtTokenService {
   public ParsedRefresh parseRefreshToken(String token) {
     Claims claims = parseClaims(token);
     if (!TYPE_REFRESH.equals(claims.get(CLAIM_TYPE))) {
-      throw new IllegalArgumentException("expected refresh token");
+      throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected refresh token");
     }
     return new ParsedRefresh(Long.valueOf(claims.getSubject()), claims.getId());
   }
@@ -130,7 +132,7 @@ public class JwtTokenService {
   public Long parseTwoFactorChallengeToken(String token) {
     Claims claims = parseClaims(token);
     if (!TYPE_TWOFA_CHALLENGE.equals(claims.get(CLAIM_TYPE))) {
-      throw new IllegalArgumentException("expected 2FA challenge token");
+      throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected 2FA challenge token");
     }
     return Long.valueOf(claims.getSubject());
   }
@@ -150,11 +152,11 @@ public class JwtTokenService {
   public Long parseStreamToken(String token, String shortCode) {
     Claims claims = parseClaims(token);
     if (!TYPE_STREAM.equals(claims.get(CLAIM_TYPE))) {
-      throw new IllegalArgumentException("expected stream token");
+      throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected stream token");
     }
     String tokenShortCode = claims.get(CLAIM_SHORT_CODE, String.class);
     if (!shortCode.equals(tokenShortCode)) {
-      throw new IllegalArgumentException("stream token short code mismatch");
+      throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "stream token short code mismatch");
     }
     return Long.valueOf(claims.getSubject());
   }
