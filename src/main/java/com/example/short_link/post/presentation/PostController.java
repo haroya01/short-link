@@ -1,5 +1,6 @@
 package com.example.short_link.post.presentation;
 
+import com.example.short_link.post.application.read.PostBlockView;
 import com.example.short_link.post.application.read.PostQueryService;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.application.write.BackToDraftPostCommand;
@@ -8,6 +9,8 @@ import com.example.short_link.post.application.write.CreatePostCommand;
 import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
+import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
+import com.example.short_link.post.application.write.ReplacePostBlocksUseCase;
 import com.example.short_link.post.application.write.RepublishPostCommand;
 import com.example.short_link.post.application.write.RepublishPostUseCase;
 import com.example.short_link.post.application.write.SchedulePostCommand;
@@ -16,7 +19,9 @@ import com.example.short_link.post.application.write.UnpublishPostCommand;
 import com.example.short_link.post.application.write.UnpublishPostUseCase;
 import com.example.short_link.post.application.write.UpdatePostMetadataCommand;
 import com.example.short_link.post.application.write.UpdatePostMetadataUseCase;
+import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.presentation.request.CreatePostRequest;
+import com.example.short_link.post.presentation.request.ReplaceBlocksRequest;
 import com.example.short_link.post.presentation.request.SchedulePostRequest;
 import com.example.short_link.post.presentation.request.UpdatePostRequest;
 import jakarta.validation.Valid;
@@ -28,6 +33,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -45,6 +51,7 @@ public class PostController {
   private final UnpublishPostUseCase unpublishPost;
   private final RepublishPostUseCase republishPost;
   private final BackToDraftPostUseCase backToDraftPost;
+  private final ReplacePostBlocksUseCase replacePostBlocks;
   private final PostQueryService postQueryService;
 
   @PostMapping
@@ -111,5 +118,28 @@ public class PostController {
   @PostMapping("/{id}/back-to-draft")
   public PostView backToDraft(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return PostView.from(backToDraftPost.execute(new BackToDraftPostCommand(userId, id)));
+  }
+
+  @GetMapping("/{id}/blocks")
+  public List<PostBlockView> listBlocks(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return postQueryService.listBlocks(userId, id);
+  }
+
+  @PutMapping("/{id}/blocks")
+  public List<PostBlockView> replaceBlocks(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @Valid @RequestBody ReplaceBlocksRequest request) {
+    List<ReplacePostBlocksCommand.BlockInput> inputs =
+        request.blocks().stream()
+            .map(
+                b ->
+                    new ReplacePostBlocksCommand.BlockInput(
+                        PostBlockType.valueOf(b.type().toUpperCase()), b.content()))
+            .toList();
+    return replacePostBlocks.execute(new ReplacePostBlocksCommand(userId, id, inputs)).stream()
+        .map(PostBlockView::from)
+        .toList();
   }
 }
