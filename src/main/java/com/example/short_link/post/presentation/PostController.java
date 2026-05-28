@@ -2,17 +2,22 @@ package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.read.PostBlockView;
 import com.example.short_link.post.application.read.PostQueryService;
+import com.example.short_link.post.application.read.PostRevisionView;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.application.write.BackToDraftPostCommand;
 import com.example.short_link.post.application.write.BackToDraftPostUseCase;
 import com.example.short_link.post.application.write.CreatePostCommand;
 import com.example.short_link.post.application.write.CreatePostUseCase;
+import com.example.short_link.post.application.write.DeletePostCommand;
+import com.example.short_link.post.application.write.DeletePostUseCase;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
 import com.example.short_link.post.application.write.ReplacePostBlocksUseCase;
 import com.example.short_link.post.application.write.RepublishPostCommand;
 import com.example.short_link.post.application.write.RepublishPostUseCase;
+import com.example.short_link.post.application.write.RestorePostRevisionCommand;
+import com.example.short_link.post.application.write.RestorePostRevisionUseCase;
 import com.example.short_link.post.application.write.SchedulePostCommand;
 import com.example.short_link.post.application.write.SchedulePostUseCase;
 import com.example.short_link.post.application.write.UnpublishPostCommand;
@@ -29,6 +34,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -52,6 +58,8 @@ public class PostController {
   private final RepublishPostUseCase republishPost;
   private final BackToDraftPostUseCase backToDraftPost;
   private final ReplacePostBlocksUseCase replacePostBlocks;
+  private final RestorePostRevisionUseCase restorePostRevision;
+  private final DeletePostUseCase deletePost;
   private final PostQueryService postQueryService;
 
   @PostMapping
@@ -141,5 +149,26 @@ public class PostController {
     return replacePostBlocks.execute(new ReplacePostBlocksCommand(userId, id, inputs)).stream()
         .map(PostBlockView::from)
         .toList();
+  }
+
+  @GetMapping("/{id}/revisions")
+  public List<PostRevisionView> listRevisions(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return postQueryService.listRevisions(userId, id);
+  }
+
+  @PostMapping("/{id}/revisions/{versionNumber}/restore")
+  public PostView restoreRevision(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @PathVariable Integer versionNumber) {
+    return PostView.from(
+        restorePostRevision.execute(new RestorePostRevisionCommand(userId, id, versionNumber)));
+  }
+
+  @DeleteMapping("/{id}")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    deletePost.execute(new DeletePostCommand(userId, id));
   }
 }
