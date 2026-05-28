@@ -117,7 +117,12 @@ public class SecurityConfig {
             auth ->
                 auth
                     // Infra: health probe, PoW challenge, OAuth callbacks.
-                    .requestMatchers(GET, "/actuator/health", "/api/v1/pow/challenge")
+                    .requestMatchers(
+                        GET,
+                        "/actuator/health",
+                        "/actuator/health/liveness",
+                        "/actuator/health/readiness",
+                        "/api/v1/pow/challenge")
                     .permitAll()
                     .requestMatchers("/oauth2/**", "/login/oauth2/**")
                     .permitAll()
