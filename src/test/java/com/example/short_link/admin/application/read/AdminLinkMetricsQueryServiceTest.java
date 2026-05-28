@@ -11,7 +11,7 @@ import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.common.observability.RequestMetric;
 import com.example.short_link.common.observability.RequestMetricEntity;
-import com.example.short_link.common.observability.RequestMetricRepository;
+import com.example.short_link.common.observability.RequestMetricJpaRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -25,7 +25,7 @@ class AdminLinkMetricsQueryServiceTest {
 
   @Test
   void groupsShortCodesAndJoinsDbMetadata() {
-    RequestMetricRepository requestRepo = mock(RequestMetricRepository.class);
+    RequestMetricJpaRepository requestRepo = mock(RequestMetricJpaRepository.class);
     when(requestRepo.findWindow(any(), any()))
         .thenReturn(
             List.of(
@@ -61,7 +61,7 @@ class AdminLinkMetricsQueryServiceTest {
 
   @Test
   void rowsWithoutShortCodeAreIgnored() {
-    RequestMetricRepository requestRepo = mock(RequestMetricRepository.class);
+    RequestMetricJpaRepository requestRepo = mock(RequestMetricJpaRepository.class);
     when(requestRepo.findWindow(any(), any()))
         .thenReturn(
             List.of(
@@ -81,7 +81,7 @@ class AdminLinkMetricsQueryServiceTest {
 
   @Test
   void emptySliceReturnsEmpty() {
-    RequestMetricRepository requestRepo = mock(RequestMetricRepository.class);
+    RequestMetricJpaRepository requestRepo = mock(RequestMetricJpaRepository.class);
     when(requestRepo.findWindow(any(), any())).thenReturn(List.of());
     AdminMetricsRepository metricsRepo = mock(AdminMetricsRepository.class);
     AdminLinkMetricsQueryService service =

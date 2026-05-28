@@ -4,6 +4,8 @@ import com.example.short_link.admin.application.helper.BlockedDomainNormalizer;
 import com.example.short_link.admin.application.read.BlockedDomainCache;
 import com.example.short_link.admin.domain.BlockedDomainEntity;
 import com.example.short_link.admin.domain.repository.BlockedDomainRepository;
+import com.example.short_link.admin.exception.AdminErrorCode;
+import com.example.short_link.admin.exception.AdminException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,7 +21,7 @@ public class BlockDomainUseCase {
   public BlockedDomainEntity execute(String rawDomain, String reason, Long actorUserId) {
     String normalized = BlockedDomainNormalizer.normalize(rawDomain);
     if (normalized == null) {
-      throw new IllegalArgumentException("invalid domain");
+      throw new AdminException(AdminErrorCode.INVALID_DOMAIN, rawDomain);
     }
     BlockedDomainEntity blockedDomain =
         repository

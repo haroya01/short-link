@@ -6,6 +6,7 @@ import com.example.short_link.link.webhook.domain.repository.LinkWebhookReposito
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -30,8 +31,8 @@ class LinkWebhookRepositoryAdapter implements LinkWebhookRepository {
   }
 
   @Override
-  public List<LinkWebhookEntity> findAll() {
-    return jpa.findAll();
+  public List<LinkWebhookEntity> findChunkOrderedById(Long afterId, int limit) {
+    return jpa.findChunkOrderedById(afterId, PageRequest.ofSize(limit));
   }
 
   @Override
