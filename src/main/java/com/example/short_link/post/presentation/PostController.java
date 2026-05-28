@@ -2,11 +2,22 @@ package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.read.PostQueryService;
 import com.example.short_link.post.application.read.PostView;
+import com.example.short_link.post.application.write.BackToDraftPostCommand;
+import com.example.short_link.post.application.write.BackToDraftPostUseCase;
 import com.example.short_link.post.application.write.CreatePostCommand;
 import com.example.short_link.post.application.write.CreatePostUseCase;
+import com.example.short_link.post.application.write.PublishPostCommand;
+import com.example.short_link.post.application.write.PublishPostUseCase;
+import com.example.short_link.post.application.write.RepublishPostCommand;
+import com.example.short_link.post.application.write.RepublishPostUseCase;
+import com.example.short_link.post.application.write.SchedulePostCommand;
+import com.example.short_link.post.application.write.SchedulePostUseCase;
+import com.example.short_link.post.application.write.UnpublishPostCommand;
+import com.example.short_link.post.application.write.UnpublishPostUseCase;
 import com.example.short_link.post.application.write.UpdatePostMetadataCommand;
 import com.example.short_link.post.application.write.UpdatePostMetadataUseCase;
 import com.example.short_link.post.presentation.request.CreatePostRequest;
+import com.example.short_link.post.presentation.request.SchedulePostRequest;
 import com.example.short_link.post.presentation.request.UpdatePostRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -29,6 +40,11 @@ public class PostController {
 
   private final CreatePostUseCase createPost;
   private final UpdatePostMetadataUseCase updatePostMetadata;
+  private final PublishPostUseCase publishPost;
+  private final SchedulePostUseCase schedulePost;
+  private final UnpublishPostUseCase unpublishPost;
+  private final RepublishPostUseCase republishPost;
+  private final BackToDraftPostUseCase backToDraftPost;
   private final PostQueryService postQueryService;
 
   @PostMapping
@@ -66,5 +82,34 @@ public class PostController {
                 request.ogImageUrl(),
                 request.ogImageKey(),
                 request.languageTag())));
+  }
+
+  @PostMapping("/{id}/publish")
+  public PostView publish(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return PostView.from(publishPost.execute(new PublishPostCommand(userId, id)));
+  }
+
+  @PostMapping("/{id}/schedule")
+  public PostView schedule(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @Valid @RequestBody SchedulePostRequest request) {
+    return PostView.from(
+        schedulePost.execute(new SchedulePostCommand(userId, id, request.scheduledAt())));
+  }
+
+  @PostMapping("/{id}/unpublish")
+  public PostView unpublish(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return PostView.from(unpublishPost.execute(new UnpublishPostCommand(userId, id)));
+  }
+
+  @PostMapping("/{id}/republish")
+  public PostView republish(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return PostView.from(republishPost.execute(new RepublishPostCommand(userId, id)));
+  }
+
+  @PostMapping("/{id}/back-to-draft")
+  public PostView backToDraft(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return PostView.from(backToDraftPost.execute(new BackToDraftPostCommand(userId, id)));
   }
 }
