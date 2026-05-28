@@ -3,6 +3,7 @@ package com.example.short_link.link.webhook.domain;
 import com.example.short_link.common.jpa.BaseCreatedEntity;
 import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -56,29 +57,13 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
   @Column(name = "last_error", length = 500)
   private String lastError;
 
-  @Column(name = "include_bots", nullable = false)
-  private boolean includeBots = false;
-
-  @Column(name = "sample_rate", nullable = false)
-  private int sampleRate = 100;
-
-  @Column(name = "batch_enabled", nullable = false)
-  private boolean batchEnabled = false;
-
-  @Column(name = "daily_quota")
-  private Integer dailyQuota;
+  @Embedded private WebhookFilter filter = new WebhookFilter();
 
   @Column(name = "consecutive_failures", nullable = false)
   private int consecutiveFailures = 0;
 
   @Column(name = "auto_disabled_reason", length = 200)
   private String autoDisabledReason;
-
-  @Column(name = "referrer_host_filter", length = 255)
-  private String referrerHostFilter;
-
-  @Column(name = "utm_source_filter", length = 100)
-  private String utmSourceFilter;
 
   @Enumerated(EnumType.STRING)
   @Column(name = "format", nullable = false, length = 16)
@@ -173,14 +158,34 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
       Integer dailyQuota,
       String referrerHostFilter,
       String utmSourceFilter) {
-    if (includeBots != null) this.includeBots = includeBots;
-    if (sampleRate != null) this.sampleRate = clamp(sampleRate, 1, 100);
-    if (batchEnabled != null) this.batchEnabled = batchEnabled;
-    if (dailyQuota != null) this.dailyQuota = dailyQuota <= 0 ? null : dailyQuota;
-    if (referrerHostFilter != null)
-      this.referrerHostFilter = referrerHostFilter.isBlank() ? null : referrerHostFilter.trim();
-    if (utmSourceFilter != null)
-      this.utmSourceFilter = utmSourceFilter.isBlank() ? null : utmSourceFilter.trim();
+    filter.update(
+        includeBots, sampleRate, batchEnabled, dailyQuota, referrerHostFilter, utmSourceFilter);
+  }
+
+  // Backward-compatible accessors. The filter VO holds the actual columns now, but every existing
+  // caller still goes through the entity surface.
+  public boolean isIncludeBots() {
+    return filter.isIncludeBots();
+  }
+
+  public int getSampleRate() {
+    return filter.getSampleRate();
+  }
+
+  public boolean isBatchEnabled() {
+    return filter.isBatchEnabled();
+  }
+
+  public Integer getDailyQuota() {
+    return filter.getDailyQuota();
+  }
+
+  public String getReferrerHostFilter() {
+    return filter.getReferrerHostFilter();
+  }
+
+  public String getUtmSourceFilter() {
+    return filter.getUtmSourceFilter();
   }
 
   /**
@@ -230,10 +235,6 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
 
   public void markSpikeFired(Instant at) {
     this.spikeLastFiredAt = at;
-  }
-
-  private static int clamp(int value, int min, int max) {
-    return Math.max(min, Math.min(max, value));
   }
 
   private static String truncate(String s, int max) {
