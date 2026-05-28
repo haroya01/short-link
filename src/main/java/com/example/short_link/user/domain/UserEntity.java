@@ -10,6 +10,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.PostLoad;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -103,6 +104,16 @@ public class UserEntity extends BaseCreatedEntity {
   private boolean statsPublic = false;
 
   @Embedded private StripeBinding stripe = new StripeBinding();
+
+  // Hibernate maps an @Embedded to null when every column on it is null — for users without any
+  // Stripe activity that breaks every downstream `stripe.xxx()` call with NPE. Restore the empty
+  // binding after load so callers can treat the field as always-present.
+  @PostLoad
+  void restoreStripeAfterLoad() {
+    if (stripe == null) {
+      stripe = new StripeBinding();
+    }
+  }
 
   public UserEntity(String email, String oauthProvider, String oauthId) {
     this.email = email;
