@@ -3,19 +3,28 @@ package com.example.short_link.post.domain;
 import com.example.short_link.common.jpa.BaseTimeEntity;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import jakarta.persistence.CollectionTable;
 import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.BatchSize;
 
 @Entity
 @Table(
@@ -66,6 +75,21 @@ public class PostEntity extends BaseTimeEntity {
 
   @Column(name = "view_count", nullable = false)
   private long viewCount = 0L;
+
+  public static final int MAX_TAGS = 20;
+  public static final int MAX_TAG_LENGTH = 40;
+
+  /**
+   * Freeform tags, owner-ordered. Stored in a side table as an ordered collection (velog-style
+   * tags). Normalization (trim / blank-drop / case-insensitive dedup / length + count caps) lives
+   * in {@link #updateTags} so the invariant holds regardless of caller.
+   */
+  @ElementCollection
+  @CollectionTable(name = "post_tag", joinColumns = @JoinColumn(name = "post_id"))
+  @OrderColumn(name = "ordinal")
+  @Column(name = "tag", length = MAX_TAG_LENGTH, nullable = false)
+  @BatchSize(size = 50)
+  private List<String> tags = new ArrayList<>();
 
   public PostEntity(Long userId, String slug, String title, String languageTag) {
     this.userId = userId;
@@ -176,5 +200,32 @@ public class PostEntity extends BaseTimeEntity {
 
   public void incrementViewCount() {
     this.viewCount++;
+  }
+
+  /**
+   * Replace all tags. Normalizes: trims, drops blanks, truncates each to {@link #MAX_TAG_LENGTH},
+   * de-duplicates case-insensitively (first occurrence's casing wins), and caps the list at {@link
+   * #MAX_TAGS}. An empty/blank input clears all tags.
+   */
+  public void updateTags(List<String> raw) {
+    this.tags.clear();
+    this.tags.addAll(normalizeTags(raw));
+  }
+
+  public static List<String> normalizeTags(List<String> raw) {
+    if (raw == null || raw.isEmpty()) return List.of();
+    Map<String, String> byLowercase = new LinkedHashMap<>();
+    for (String candidate : raw) {
+      if (candidate == null) continue;
+      String trimmed = candidate.trim();
+      if (trimmed.isEmpty()) continue;
+      if (trimmed.length() > MAX_TAG_LENGTH) {
+        trimmed = trimmed.substring(0, MAX_TAG_LENGTH).trim();
+      }
+      if (trimmed.isEmpty()) continue;
+      byLowercase.putIfAbsent(trimmed.toLowerCase(), trimmed);
+      if (byLowercase.size() >= MAX_TAGS) break;
+    }
+    return new ArrayList<>(byLowercase.values());
   }
 }

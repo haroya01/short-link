@@ -1,11 +1,12 @@
 package com.example.short_link.post.application.write;
 
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
  * PATCH 의미. 각 필드 null = 변경 안 함. 빈 문자열 = 의도적 clear (excerpt / ogImage 만). languageTag / title / slug
- * 는 빈 문자열 invalid.
+ * 는 빈 문자열 invalid. tags 는 null = 변경 안 함, 빈 리스트 = 전체 삭제 (정규화는 도메인 PostEntity.updateTags).
  */
 public record UpdatePostMetadataCommand(
     Long userId,
@@ -15,7 +16,8 @@ public record UpdatePostMetadataCommand(
     String excerpt,
     String ogImageUrl,
     String ogImageKey,
-    String languageTag) {
+    String languageTag,
+    List<String> tags) {
 
   private static final Pattern SLUG_PATTERN = Pattern.compile("^[a-z0-9]+(?:-[a-z0-9]+)*$");
   private static final Set<String> ALLOWED_LANGUAGES = Set.of("ko", "ja", "en");

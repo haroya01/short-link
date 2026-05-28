@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.PostEntity;
 import java.time.Instant;
+import java.util.List;
 
 public record PostView(
     Long id,
@@ -14,6 +15,7 @@ public record PostView(
     String excerpt,
     String ogImageUrl,
     long viewCount,
+    List<String> tags,
     Instant createdAt,
     Instant updatedAt) {
 
@@ -29,6 +31,7 @@ public record PostView(
         post.getExcerpt(),
         post.getOgImageUrl(),
         post.getViewCount(),
+        List.copyOf(post.getTags()),
         post.getCreatedAt(),
         post.getUpdatedAt());
   }
