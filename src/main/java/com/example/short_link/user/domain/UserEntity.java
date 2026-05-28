@@ -3,6 +3,7 @@ package com.example.short_link.user.domain;
 import com.example.short_link.common.jpa.BaseCreatedEntity;
 import com.example.short_link.user.domain.repository.*;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -101,17 +102,7 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "is_stats_public", nullable = false)
   private boolean statsPublic = false;
 
-  @Column(name = "stripe_customer_id", length = 64)
-  private String stripeCustomerId;
-
-  @Column(name = "stripe_subscription_id", length = 64)
-  private String stripeSubscriptionId;
-
-  @Column(name = "subscription_status", length = 32)
-  private String subscriptionStatus;
-
-  @Column(name = "subscription_current_period_end")
-  private Instant subscriptionCurrentPeriodEnd;
+  @Embedded private StripeBinding stripe = new StripeBinding();
 
   public UserEntity(String email, String oauthProvider, String oauthId) {
     this.email = email;
@@ -139,13 +130,11 @@ public class UserEntity extends BaseCreatedEntity {
   }
 
   public void linkStripeCustomer(String customerId) {
-    this.stripeCustomerId = customerId;
+    stripe.linkCustomer(customerId);
   }
 
   public void applySubscription(String subscriptionId, String status, Instant currentPeriodEnd) {
-    this.stripeSubscriptionId = subscriptionId;
-    this.subscriptionStatus = status;
-    this.subscriptionCurrentPeriodEnd = currentPeriodEnd;
+    stripe.applySubscription(subscriptionId, status, currentPeriodEnd);
     if ("active".equals(status) || "trialing".equals(status)) {
       this.tier = Tier.PRO;
     } else {
@@ -154,10 +143,25 @@ public class UserEntity extends BaseCreatedEntity {
   }
 
   public void clearSubscription() {
-    this.stripeSubscriptionId = null;
-    this.subscriptionStatus = null;
-    this.subscriptionCurrentPeriodEnd = null;
+    stripe.clearSubscription();
     this.tier = Tier.FREE;
+  }
+
+  // Backward-compatible accessors for the four columns now living on the embedded StripeBinding.
+  public String getStripeCustomerId() {
+    return stripe.getStripeCustomerId();
+  }
+
+  public String getStripeSubscriptionId() {
+    return stripe.getStripeSubscriptionId();
+  }
+
+  public String getSubscriptionStatus() {
+    return stripe.getSubscriptionStatus();
+  }
+
+  public Instant getSubscriptionCurrentPeriodEnd() {
+    return stripe.getSubscriptionCurrentPeriodEnd();
   }
 
   public void promoteToAdmin() {
