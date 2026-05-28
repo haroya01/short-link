@@ -5,10 +5,6 @@ import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Computes the next profile-feed slot for a new item (link toggle or block). Links and blocks share
- * a single profile_order space — total occupied count + 1.
- */
 @Component
 @RequiredArgsConstructor
 class ProfileOrdering {

@@ -1,6 +1,6 @@
 package com.example.short_link.link.classifier.application;
 
-import com.example.short_link.link.classifier.application.helper.TxtResolver;
+import com.example.short_link.common.net.TxtResolver;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;

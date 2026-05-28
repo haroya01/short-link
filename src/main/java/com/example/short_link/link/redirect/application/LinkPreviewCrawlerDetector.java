@@ -36,10 +36,6 @@ public class LinkPreviewCrawlerDetector {
           "googleplus",
           "googlebot");
 
-  public boolean isCrawler(String userAgent) {
-    return crawlerName(userAgent) != null;
-  }
-
   /**
    * Returns the matched crawler token (lowercase) so callers can attach it as a bot name when
    * persisting the preview hit — yauaa would otherwise drop it as "unknown" since most messenger

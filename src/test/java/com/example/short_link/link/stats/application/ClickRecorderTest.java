@@ -19,9 +19,11 @@ import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class ClickRecorderTest {
@@ -31,7 +33,7 @@ class ClickRecorderTest {
   @Mock private GeoIpResolver geoIpResolver;
   @Mock private AsnResolver asnResolver;
   @Mock private BotHeuristic botHeuristic;
-  @Mock private org.springframework.context.ApplicationEventPublisher events;
+  @Mock private ApplicationEventPublisher events;
   @InjectMocks private ClickRecorder recorder;
 
   @BeforeEach
@@ -57,8 +59,7 @@ class ClickRecorderTest {
   void normalizesReferrerBeforeSaving() {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
     when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
-    org.mockito.ArgumentCaptor<ClickEventEntity> captor =
-        org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
     when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
     recorder.record(ctx("https://www.youtube.com/watch?v=xyz&token=secret", "1.2.3.4", null));
@@ -71,8 +72,7 @@ class ClickRecorderTest {
   void storesMaskedIpNotRaw() {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
     when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
-    org.mockito.ArgumentCaptor<ClickEventEntity> captor =
-        org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
     when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
     recorder.record(ctx(null, "203.0.113.42", null));
@@ -86,8 +86,7 @@ class ClickRecorderTest {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
     when(geoIpResolver.resolve("8.8.8.8"))
         .thenReturn(new GeoLocation("US", "California", "Mountain View"));
-    org.mockito.ArgumentCaptor<ClickEventEntity> captor =
-        org.mockito.ArgumentCaptor.forClass(ClickEventEntity.class);
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
     when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
     recorder.record(ctx(null, "8.8.8.8", "ko-KR,ko;q=0.9"));

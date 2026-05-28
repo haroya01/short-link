@@ -2,6 +2,7 @@ package com.example.short_link.user.application.twofactor;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.security.SecureRandom;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,7 @@ class SecretCipherTest {
   @Test
   void aesModeRoundTrips() {
     byte[] key = new byte[32];
-    new java.security.SecureRandom().nextBytes(key);
+    new SecureRandom().nextBytes(key);
     SecretCipher cipher =
         new SecretCipher(
             new TwoFactorProperties(Base64.getEncoder().encodeToString(key), "kurl.me"));
@@ -36,7 +37,7 @@ class SecretCipherTest {
   @Test
   void aesProducesDistinctCiphertextEachCall() {
     byte[] key = new byte[32];
-    new java.security.SecureRandom().nextBytes(key);
+    new SecureRandom().nextBytes(key);
     SecretCipher cipher =
         new SecretCipher(
             new TwoFactorProperties(Base64.getEncoder().encodeToString(key), "kurl.me"));

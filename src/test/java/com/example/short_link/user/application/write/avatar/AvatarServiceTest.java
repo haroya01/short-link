@@ -9,10 +9,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
 import com.example.short_link.common.storage.s3.AvatarProperties;
-import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
@@ -22,6 +22,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
@@ -37,7 +38,8 @@ class AvatarServiceTest {
   void setUp() {
     props = new AvatarProperties("bucket", "ap-northeast-2", "https://cdn.example.com", 300, 1024);
     service =
-        new AvatarService(userRepository, props, objectStorage, mock(ProfileCacheEviction.class));
+        new AvatarService(
+            userRepository, props, objectStorage, mock(ProfileCacheInvalidator.class));
   }
 
   @Test
@@ -45,7 +47,7 @@ class AvatarServiceTest {
     AvatarProperties noBucket = new AvatarProperties("", "", null, 300, 1024);
     AvatarService svc =
         new AvatarService(
-            userRepository, noBucket, objectStorage, mock(ProfileCacheEviction.class));
+            userRepository, noBucket, objectStorage, mock(ProfileCacheInvalidator.class));
     assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg")).isInstanceOf(UserException.class);
   }
 
@@ -98,7 +100,7 @@ class AvatarServiceTest {
   @Test
   void commitSwallowsDeleteFailureOnOversize() {
     when(objectStorage.objectSize("avatars/1/x.jpg")).thenReturn(Optional.of(9999L));
-    org.mockito.Mockito.doThrow(new ObjectStorageException("s3 boom", new RuntimeException()))
+    Mockito.doThrow(new ObjectStorageException("s3 boom", new RuntimeException()))
         .when(objectStorage)
         .delete("avatars/1/x.jpg");
     assertThatThrownBy(() -> service.commitUpload(1L, "avatars/1/x.jpg"))
@@ -134,7 +136,7 @@ class AvatarServiceTest {
     UserEntity user = new UserEntity("u@x", "google", "g-1");
     user.updateAvatar("https://old", "avatars/1/old.jpg");
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
-    org.mockito.Mockito.doThrow(new ObjectStorageException("s3 boom", new RuntimeException()))
+    Mockito.doThrow(new ObjectStorageException("s3 boom", new RuntimeException()))
         .when(objectStorage)
         .delete("avatars/1/old.jpg");
     AvatarService.CommitResult r = service.commitUpload(1L, "avatars/1/new.jpg");
@@ -171,7 +173,8 @@ class AvatarServiceTest {
   void publicUrlFallsBackToStandardS3HostWhenCdnBlank() {
     AvatarProperties noCdn = new AvatarProperties("bucket", "ap-northeast-2", null, 300, 1024);
     AvatarService svc =
-        new AvatarService(userRepository, noCdn, objectStorage, mock(ProfileCacheEviction.class));
+        new AvatarService(
+            userRepository, noCdn, objectStorage, mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
         .thenReturn("https://s3/put");
     AvatarService.PresignResult r = svc.presignUpload(1L, "image/png");
@@ -183,7 +186,8 @@ class AvatarServiceTest {
     AvatarProperties slashed =
         new AvatarProperties("bucket", "ap-northeast-2", "https://cdn.example.com/", 300, 1024);
     AvatarService svc =
-        new AvatarService(userRepository, slashed, objectStorage, mock(ProfileCacheEviction.class));
+        new AvatarService(
+            userRepository, slashed, objectStorage, mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/webp"), any(Duration.class)))
         .thenReturn("https://s3/put");
     AvatarService.PresignResult r = svc.presignUpload(1L, "image/webp");

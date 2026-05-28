@@ -87,6 +87,64 @@ class ImportLinksFromCsvUseCaseTest {
   }
 
   @Test
+  void skipsBlankRowsBetweenContent() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("bulkb@example.com", "google", "g-bulkb"));
+    String csv =
+        """
+        url
+        https://example.com/a
+
+
+        https://example.com/b
+        """;
+
+    BulkImportResult result =
+        useCase.execute(
+            new ImportLinksFromCsvCommand(
+                user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
+
+    assertThat(result.ok()).isEqualTo(2);
+  }
+
+  @Test
+  void rejectsMalformedExpiresAt() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("bulke@example.com", "google", "g-bulke"));
+    String csv =
+        """
+        url,custom_code,expires_at
+        https://example.com/bad,,not-a-date
+        """;
+
+    BulkImportResult result =
+        useCase.execute(
+            new ImportLinksFromCsvCommand(
+                user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
+
+    assertThat(result.failed()).isEqualTo(1);
+    assertThat(result.rows().get(0).error()).contains("ISO-8601");
+  }
+
+  @Test
+  void rejectsBlankUrlAndUnknownScheme() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("bulks@example.com", "google", "g-bulks"));
+    String csv =
+        """
+        url
+
+        ftp://example.com/x
+        not-a-url
+        """;
+
+    BulkImportResult result =
+        useCase.execute(
+            new ImportLinksFromCsvCommand(
+                user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
+
+    assertThat(result.ok()).isZero();
+    assertThat(result.failed()).isEqualTo(2);
+  }
+
+  @Test
   void parsesHeaderlessCsv() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("bulk4@example.com", "google", "g-bulk4"));
     String csv = "https://example.com/no-header-1\nhttps://example.com/no-header-2,nh2code\n";

@@ -22,7 +22,7 @@ const FRONTEND_PATHS: RegExp[] = [
   /^\/(en|ko|ja)(\/|$)/,
   /^\/u\//,
   /^\/_next\//,
-  /^\/(login|signup|dashboard|stats|admin|settings|pricing|about|terms|privacy|auth|profile|demo|showcase|monitoring|learn)(\/|$)/,
+  /^\/(login|signup|dashboard|stats|admin|settings|pricing|about|terms|privacy|auth|profile|demo|showcase|monitoring|learn|campaigns|qr-campaigns|visual-fixtures)(\/|$)/,
   /^\/(favicon|icon|apple-touch-icon|manifest\.json|opengraph-image)/,
   /^\/(sitemap\.xml|robots\.txt)$/,
   /^\/$/,

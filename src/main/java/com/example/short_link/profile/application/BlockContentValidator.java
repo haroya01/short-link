@@ -12,6 +12,7 @@ import com.example.short_link.profile.domain.contact.ProductCardCarousel;
 import com.example.short_link.profile.domain.contact.TextBlockBody;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
+import java.net.URI;
 
 /** Throws {@link ProfileException} on bad input — controller turns it into HTTP 400. */
 public final class BlockContentValidator {
@@ -29,7 +30,7 @@ public final class BlockContentValidator {
         if (trimmed.length() > 2048)
           throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url too long");
         try {
-          java.net.URI uri = java.net.URI.create(trimmed);
+          URI uri = URI.create(trimmed);
           String scheme = uri.getScheme();
           if (scheme == null
               || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {

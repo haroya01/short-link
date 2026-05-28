@@ -11,12 +11,10 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
-import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +26,7 @@ public class LinkEventsService {
   private static final int MAX_LIMIT = 200;
 
   private final LinkRepository linkRepository;
-  private final ClickEventRepository clickRepository;
+  private final LinkClickEventReader clickEvents;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkAccessGuard accessGuard;
 
@@ -40,14 +38,13 @@ public class LinkEventsService {
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
     int pageSize = clampLimit(limit);
-    PageRequest req = PageRequest.ofSize(pageSize);
 
     List<ClickEventEntity> rows;
     if (cursor == null || cursor.isBlank()) {
-      rows = clickRepository.findEventsByLinkIdLatest(link.linkId().value(), req);
+      rows = clickEvents.latest(link.linkId().value(), pageSize);
     } else {
       long cursorId = Cursor.decode(cursor);
-      rows = clickRepository.findEventsByLinkIdBefore(link.linkId().value(), cursorId, req);
+      rows = clickEvents.before(link.linkId().value(), cursorId, pageSize);
     }
 
     List<LinkEventView> items = rows.stream().map(this::toResponse).toList();

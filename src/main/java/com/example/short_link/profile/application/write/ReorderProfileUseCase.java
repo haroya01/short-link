@@ -14,12 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Reorders the profile feed (links + text/divider blocks) to the exact sequence given. Items the
- * user doesn't own are silently skipped — defensive against the front sending stale tokens after a
- * delete. Items not in the list keep their existing profile_order (so a featured link not mentioned
- * stays where it is, off the profile).
- */
 @Service
 @RequiredArgsConstructor
 public class ReorderProfileUseCase {
@@ -63,7 +57,7 @@ public class ReorderProfileUseCase {
           if (block != null) block.setProfileOrder(order++);
         }
         default -> {
-          /* unknown kind — skip */
+          // Skip stale or unknown client items.
         }
       }
     }

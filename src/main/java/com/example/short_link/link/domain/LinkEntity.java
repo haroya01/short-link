@@ -1,7 +1,6 @@
 package com.example.short_link.link.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
-import com.example.short_link.link.domain.repository.*;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -63,7 +62,7 @@ public class LinkEntity extends BaseCreatedEntity {
   private Instant ogFetchedAt;
 
   @Column(name = "og_fetch_status", nullable = false, length = 20)
-  private String ogFetchStatus = "PENDING";
+  private String ogFetchStatus = OgFetchStatus.PENDING.value();
 
   @Column(name = "og_fetch_attempts", nullable = false)
   private int ogFetchAttempts = 0;
@@ -158,7 +157,7 @@ public class LinkEntity extends BaseCreatedEntity {
     this.ogDescription = null;
     this.ogImage = null;
     this.ogFetchedAt = null;
-    this.ogFetchStatus = "PENDING";
+    this.ogFetchStatus = OgFetchStatus.PENDING.value();
   }
 
   public void changeExpiresAt(Instant expiresAt) {
@@ -183,13 +182,7 @@ public class LinkEntity extends BaseCreatedEntity {
         (expiredRedirectUrl == null || expiredRedirectUrl.isBlank())
             ? null
             : expiredRedirectUrl.trim();
-    if (expiredMessage == null) {
-      this.expiredMessage = null;
-    } else {
-      String trimmed = expiredMessage.trim();
-      this.expiredMessage =
-          trimmed.isEmpty() ? null : trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
-    }
+    this.expiredMessage = LinkText.normalize(expiredMessage, LinkText.EXPIRED_MESSAGE_MAX_LENGTH);
   }
 
   public void applyOgMetadata(String title, String description, String image, Instant fetchedAt) {
@@ -197,13 +190,13 @@ public class LinkEntity extends BaseCreatedEntity {
     this.ogDescription = description;
     this.ogImage = image;
     this.ogFetchedAt = fetchedAt;
-    this.ogFetchStatus = "OK";
+    this.ogFetchStatus = OgFetchStatus.OK.value();
     this.ogFetchAttempts++;
   }
 
   public void markOgFetchFailed(Instant fetchedAt, boolean willRetry) {
     this.ogFetchedAt = fetchedAt;
-    this.ogFetchStatus = willRetry ? "RETRYABLE" : "ERROR";
+    this.ogFetchStatus = OgFetchStatus.failure(willRetry).value();
     this.ogFetchAttempts++;
   }
 
@@ -224,45 +217,19 @@ public class LinkEntity extends BaseCreatedEntity {
   }
 
   public void updateNote(String note) {
-    if (note == null) {
-      this.note = null;
-      return;
-    }
-    String trimmed = note.trim();
-    this.note =
-        trimmed.isEmpty() ? null : trimmed.length() > 280 ? trimmed.substring(0, 280) : trimmed;
+    this.note = LinkText.normalize(note, LinkText.NOTE_MAX_LENGTH);
   }
 
   public void updateExpiredMessage(String message) {
-    if (message == null) {
-      this.expiredMessage = null;
-      return;
-    }
-    String trimmed = message.trim();
-    this.expiredMessage =
-        trimmed.isEmpty() ? null : trimmed.length() > 500 ? trimmed.substring(0, 500) : trimmed;
+    this.expiredMessage = LinkText.normalize(message, LinkText.EXPIRED_MESSAGE_MAX_LENGTH);
   }
 
   public void setBlockedCountries(String csv) {
-    if (csv == null || csv.isBlank()) {
-      this.blockedCountries = null;
-      return;
-    }
-    java.util.LinkedHashSet<String> seen = new java.util.LinkedHashSet<>();
-    for (String raw : csv.split(",")) {
-      String code = raw.trim().toUpperCase();
-      if (code.length() == 2) seen.add(code);
-    }
-    this.blockedCountries = seen.isEmpty() ? null : String.join(",", seen);
+    this.blockedCountries = CountryBlocklist.normalize(csv);
   }
 
   public boolean isCountryBlocked(String countryCode) {
-    if (blockedCountries == null || countryCode == null) return false;
-    String upper = countryCode.toUpperCase();
-    for (String code : blockedCountries.split(",")) {
-      if (upper.equals(code.trim())) return true;
-    }
-    return false;
+    return CountryBlocklist.fromCsv(blockedCountries).contains(countryCode);
   }
 
   public void setClaimToken(String token) {
@@ -298,28 +265,20 @@ public class LinkEntity extends BaseCreatedEntity {
   }
 
   public void changeOgOverride(String title, String description, String image) {
-    this.ogTitleOverride = blankToNull(title);
-    this.ogDescriptionOverride = blankToNull(description);
-    this.ogImageOverride = blankToNull(image);
+    this.ogTitleOverride = LinkText.blankToNull(title);
+    this.ogDescriptionOverride = LinkText.blankToNull(description);
+    this.ogImageOverride = LinkText.blankToNull(image);
   }
 
   public String getEffectiveOgTitle() {
-    return notBlank(ogTitleOverride) ? ogTitleOverride : ogTitle;
+    return LinkText.firstNonBlank(ogTitleOverride, ogTitle);
   }
 
   public String getEffectiveOgDescription() {
-    return notBlank(ogDescriptionOverride) ? ogDescriptionOverride : ogDescription;
+    return LinkText.firstNonBlank(ogDescriptionOverride, ogDescription);
   }
 
   public String getEffectiveOgImage() {
-    return notBlank(ogImageOverride) ? ogImageOverride : ogImage;
-  }
-
-  private static boolean notBlank(String s) {
-    return s != null && !s.isBlank();
-  }
-
-  private static String blankToNull(String s) {
-    return s == null || s.isBlank() ? null : s.trim();
+    return LinkText.firstNonBlank(ogImageOverride, ogImage);
   }
 }

@@ -3,6 +3,10 @@ package com.example.short_link.campaign.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.campaign.application.dto.BatchWithLink;
+import com.example.short_link.campaign.application.dto.QrOptions;
+import com.example.short_link.campaign.application.helper.QrPngEncoder;
+import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
+import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
 import com.example.short_link.campaign.presentation.request.CampaignBatchUpdateRequest;
@@ -31,11 +35,9 @@ class CampaignBatchExportServiceTest {
   @Autowired private CampaignBatchExportService exportService;
   @Autowired private CampaignBatchService batchService;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.CreateCampaignUseCase createCampaign;
+  @Autowired private CreateCampaignUseCase createCampaign;
 
-  @Autowired
-  private com.example.short_link.campaign.application.write.ArchiveCampaignUseCase archiveCampaign;
+  @Autowired private ArchiveCampaignUseCase archiveCampaign;
 
   @Autowired private UserRepository userRepository;
 
@@ -104,9 +106,7 @@ class CampaignBatchExportServiceTest {
 
     byte[] zip =
         exportService.exportQrZip(
-            campaign.getId(),
-            owner,
-            com.example.short_link.campaign.application.dto.QrOptions.defaults());
+            campaign.getId(), owner, new QrOptions(512, QrPngEncoder.Ec.M, false));
 
     Set<String> entries = new HashSet<>();
     try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(zip))) {

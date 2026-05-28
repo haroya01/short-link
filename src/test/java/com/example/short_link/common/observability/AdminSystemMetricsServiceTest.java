@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.within;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Tags;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.Test;
 
 class AdminSystemMetricsServiceTest {
@@ -74,16 +75,16 @@ class AdminSystemMetricsServiceTest {
     // tuple, sample is the wall-clock latency.
     registry
         .timer("outbound.http", "client", "webhook", "result", "ok")
-        .record(50, java.util.concurrent.TimeUnit.MILLISECONDS);
+        .record(50, TimeUnit.MILLISECONDS);
     registry
         .timer("outbound.http", "client", "webhook", "result", "ok")
-        .record(150, java.util.concurrent.TimeUnit.MILLISECONDS);
+        .record(150, TimeUnit.MILLISECONDS);
     registry
         .timer("outbound.http", "client", "webhook", "result", "non_2xx")
-        .record(200, java.util.concurrent.TimeUnit.MILLISECONDS);
+        .record(200, TimeUnit.MILLISECONDS);
     registry
         .timer("outbound.http", "client", "og_fetch", "result", "ok")
-        .record(800, java.util.concurrent.TimeUnit.MILLISECONDS);
+        .record(800, TimeUnit.MILLISECONDS);
 
     var outbound = service.snapshot().outboundHttp();
 
@@ -107,16 +108,16 @@ class AdminSystemMetricsServiceTest {
   void scheduledTasksAggregatePerTask() {
     registry
         .timer("scheduled.task", "task", "OgRefreshJob.run", "result", "ok")
-        .record(120, java.util.concurrent.TimeUnit.MILLISECONDS);
+        .record(120, TimeUnit.MILLISECONDS);
     registry
         .timer("scheduled.task", "task", "OgRefreshJob.run", "result", "ok")
-        .record(80, java.util.concurrent.TimeUnit.MILLISECONDS);
+        .record(80, TimeUnit.MILLISECONDS);
     registry
         .timer("scheduled.task", "task", "OgRefreshJob.run", "result", "error")
-        .record(450, java.util.concurrent.TimeUnit.MILLISECONDS);
+        .record(450, TimeUnit.MILLISECONDS);
     registry
         .timer("scheduled.task", "task", "RequestMetricsRecorder.flush", "result", "ok")
-        .record(15, java.util.concurrent.TimeUnit.MILLISECONDS);
+        .record(15, TimeUnit.MILLISECONDS);
 
     var tasks = service.snapshot().scheduledTasks();
 

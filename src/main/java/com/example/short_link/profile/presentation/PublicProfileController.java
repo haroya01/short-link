@@ -2,9 +2,7 @@ package com.example.short_link.profile.presentation;
 
 import com.example.short_link.profile.application.PublicProfile;
 import com.example.short_link.profile.application.read.ProfileQueryService;
-import com.example.short_link.profile.presentation.response.PublicProfileHandleItem;
 import com.example.short_link.profile.presentation.response.PublicProfileListResponse;
-import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -26,20 +24,11 @@ public class PublicProfileController {
     return queryService.findByUsername(username);
   }
 
-  /**
-   * Paginated listing of public profile handles. Anonymous endpoint used by the frontend sitemap
-   * generator to enumerate /u/&lt;handle&gt; pages for Google to index. Returns just the handle —
-   * the per-profile content is fetched separately via the /{username} endpoint when each page is
-   * actually crawled, so this stays cheap at any user count.
-   */
   @GetMapping
   public PublicProfileListResponse list(
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "500") int size) {
     int safeSize = Math.min(Math.max(size, 1), LIST_MAX_PAGE_SIZE);
     int safePage = Math.max(page, 0);
-    ProfileQueryService.PublicHandlesPage p = queryService.publicHandlesPage(safePage, safeSize);
-    List<PublicProfileHandleItem> items =
-        p.handles().stream().map(PublicProfileHandleItem::new).toList();
-    return new PublicProfileListResponse(items, p.total());
+    return PublicProfileListResponse.from(queryService.publicHandlesPage(safePage, safeSize));
   }
 }

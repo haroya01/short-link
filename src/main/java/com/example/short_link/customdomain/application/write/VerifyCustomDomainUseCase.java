@@ -1,11 +1,11 @@
 package com.example.short_link.customdomain.application.write;
 
+import com.example.short_link.common.net.TxtResolver;
 import com.example.short_link.customdomain.application.dto.DomainSummary;
 import com.example.short_link.customdomain.application.helper.CustomDomainPolicy;
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import com.example.short_link.customdomain.exception.CustomDomainErrorCode;
 import com.example.short_link.customdomain.exception.CustomDomainException;
-import com.example.short_link.link.classifier.application.helper.TxtResolver;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

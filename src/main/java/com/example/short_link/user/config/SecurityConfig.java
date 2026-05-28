@@ -56,13 +56,32 @@ public class SecurityConfig {
 
   @Bean
   public CorsConfigurationSource corsConfigurationSource(
-      @Value("${short-link.cors.allowed-origins:http://localhost:3001}") String allowedOrigins) {
-    CorsConfiguration cors = new CorsConfiguration();
-    cors.setAllowedOriginPatterns(
+      @Value("${short-link.cors.allowed-origins:http://localhost:3001}") String allowedOrigins,
+      @Value("${spring.profiles.active:}") String activeProfile) {
+    List<String> origins =
         Arrays.stream(allowedOrigins.split(","))
             .map(String::trim)
             .filter(s -> !s.isEmpty())
-            .toList());
+            .toList();
+    boolean isProd =
+        Arrays.stream(activeProfile.split(","))
+            .map(String::trim)
+            .anyMatch("prod"::equalsIgnoreCase);
+    if (isProd) {
+      if (origins.isEmpty()) {
+        throw new IllegalStateException(
+            "short-link.cors.allowed-origins must be set in prod profile");
+      }
+      for (String origin : origins) {
+        if ("*".equals(origin) || origin.contains("localhost") || origin.contains("127.0.0.1")) {
+          throw new IllegalStateException(
+              "short-link.cors.allowed-origins must not contain wildcard or localhost in prod: "
+                  + origin);
+        }
+      }
+    }
+    CorsConfiguration cors = new CorsConfiguration();
+    cors.setAllowedOriginPatterns(origins);
     cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     cors.setAllowedHeaders(
         List.of("Authorization", "Content-Type", "X-Request-Id", "X-Pow-Challenge", "X-Pow-Nonce"));

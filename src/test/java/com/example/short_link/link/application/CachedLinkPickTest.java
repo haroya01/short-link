@@ -131,4 +131,93 @@ class CachedLinkPickTest {
             List.of(new CachedLink.Variant(10L, "https://kr", 50, true, "KR")));
     assertThat(link.pick("kr").url()).isEqualTo("https://kr");
   }
+
+  @Test
+  void osMatchSelectsMoreSpecificVariant() {
+    CachedLink link =
+        new CachedLink(
+            new LinkId(1L),
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            List.of(
+                new CachedLink.Variant(10L, "https://generic", 50, true, null),
+                new CachedLink.Variant(11L, "https://ios-app", 50, true, null, null, "ios")));
+    assertThat(link.pick(null, "iOS", null).url()).isEqualTo("https://ios-app");
+    assertThat(link.pick(null, "android", null).url()).isEqualTo("https://generic");
+  }
+
+  @Test
+  void deviceClassMatchSelectsMobileVariant() {
+    CachedLink link =
+        new CachedLink(
+            new LinkId(1L),
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            List.of(
+                new CachedLink.Variant(10L, "https://web", 50, true, null),
+                new CachedLink.Variant(11L, "https://mobile", 50, true, null, "mobile", null)));
+    assertThat(link.pick(null, null, "Mobile").url()).isEqualTo("https://mobile");
+    assertThat(link.pick(null, null, "desktop").url()).isEqualTo("https://web");
+  }
+
+  @Test
+  void mostSpecificMultiPredicateVariantWins() {
+    CachedLink link =
+        new CachedLink(
+            new LinkId(1L),
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            List.of(
+                new CachedLink.Variant(10L, "https://kr-only", 50, true, "KR"),
+                new CachedLink.Variant(11L, "https://kr-ios", 50, true, "KR", null, "ios")));
+    // KR + iOS visitor matches the more specific (KR+iOS) variant.
+    assertThat(link.pick("KR", "ios", null).url()).isEqualTo("https://kr-ios");
+    // KR but android still picks the KR-only variant.
+    assertThat(link.pick("KR", "android", null).url()).isEqualTo("https://kr-only");
+  }
+
+  @Test
+  void isExpiredHandlesNullAndPastAndFuture() {
+    CachedLink past =
+        new CachedLink(
+            new LinkId(1L), "https://x", Instant.parse("2020-01-01T00:00:00Z"), null, null, null);
+    CachedLink future =
+        new CachedLink(
+            new LinkId(1L), "https://x", Instant.parse("2099-01-01T00:00:00Z"), null, null, null);
+    CachedLink noExpiry = new CachedLink(new LinkId(1L), "https://x", null, null, null, null);
+
+    Instant now = Instant.parse("2026-05-28T00:00:00Z");
+    assertThat(past.isExpired(now)).isTrue();
+    assertThat(future.isExpired(now)).isFalse();
+    assertThat(noExpiry.isExpired(now)).isFalse();
+  }
+
+  @Test
+  void isBlockedForRecognizesCommaSeparatedList() {
+    CachedLink link =
+        new CachedLink(
+            new LinkId(1L), null, "https://x", null, null, null, null, "KR, JP , US", List.of());
+
+    assertThat(link.isBlockedFor("kr")).isTrue();
+    assertThat(link.isBlockedFor("JP")).isTrue();
+    assertThat(link.isBlockedFor("us")).isTrue();
+    assertThat(link.isBlockedFor("FR")).isFalse();
+    assertThat(link.isBlockedFor(null)).isFalse();
+  }
+
+  @Test
+  void isBlockedForReturnsFalseWhenNoListConfigured() {
+    CachedLink link =
+        new CachedLink(new LinkId(1L), "https://x", null, null, null, null, List.of());
+    assertThat(link.isBlockedFor("KR")).isFalse();
+  }
 }

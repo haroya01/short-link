@@ -1,52 +1,42 @@
 package com.example.short_link.link.domain.repository;
 
-import com.example.short_link.link.domain.*;
+import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 
-public interface LinkRepository
-    extends JpaRepository<LinkEntity, Long>, JpaSpecificationExecutor<LinkEntity> {
+public interface LinkRepository {
+
+  Optional<LinkEntity> findById(Long id);
+
+  LinkEntity save(LinkEntity link);
+
+  void delete(LinkEntity link);
+
+  void deleteAll(Collection<LinkEntity> links);
+
+  long count();
+
   Optional<LinkEntity> findByShortCode(ShortCode shortCode);
 
-  @Query(
-      """
-      SELECT
-        l.id AS id,
-        l.shortCode AS shortCode,
-        l.userId AS userId,
-        l.originalUrl AS originalUrl,
-        l.expiresAt AS expiresAt,
-        COALESCE(og.ogTitle, l.ogTitle) AS ogTitle,
-        COALESCE(og.ogDescription, l.ogDescription) AS ogDescription,
-        COALESCE(og.ogImage, l.ogImage) AS ogImage,
-        COALESCE(policy.blockedCountries, l.blockedCountries) AS blockedCountries,
-        CASE
-          WHEN COALESCE(acl.passwordHash, l.passwordHash) IS NULL THEN false
-          ELSE true
-        END AS passwordRequired,
-        COALESCE(acl.maxViews, l.maxViews) AS maxViews,
-        COALESCE(policy.expiredMessage, l.expiredMessage) AS expiredMessage
-      FROM LinkEntity l
-      LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
-      LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
-      LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
-      WHERE l.shortCode = :shortCode
-      """)
-  Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);
+  Optional<CachedLinkRow> findCachedLinkRowByShortCode(ShortCode shortCode);
 
   default Optional<LinkEntity> findByShortCode(String shortCode) {
     return findByShortCode(new ShortCode(shortCode));
   }
 
   List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+
+  List<LinkEntity> findMyLinksCreatedAtPage(
+      MyLinksSearchCriteria criteria,
+      Instant cursorCreatedAt,
+      Long cursorId,
+      boolean ascending,
+      int limit);
+
+  List<LinkEntity> findMyLinksCandidates(MyLinksSearchCriteria criteria);
 
   long countByCreatedAtAfter(Instant since);
 
@@ -56,20 +46,9 @@ public interface LinkRepository
 
   List<LinkEntity> findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(Instant when);
 
-  @Query(
-      "SELECT l FROM LinkEntity l "
-          + "WHERE l.ogFetchStatus IN ('PENDING','RETRYABLE') "
-          + "AND l.ogFetchAttempts < :maxAttempts "
-          + "AND (l.ogFetchedAt IS NULL OR l.ogFetchedAt < :before)")
-  List<LinkEntity> findOgRetryCandidates(
-      @Param("maxAttempts") int maxAttempts, @Param("before") Instant before, Pageable pageable);
+  List<LinkEntity> findOgRetryCandidates(int maxAttempts, Instant before, int limit);
 
-  @Query(
-      "SELECT l FROM LinkEntity l "
-          + "WHERE l.ogFetchStatus = 'OK' "
-          + "AND l.ogFetchedAt IS NOT NULL "
-          + "AND l.ogFetchedAt < :before")
-  List<LinkEntity> findStaleOgCandidates(@Param("before") Instant before, Pageable pageable);
+  List<LinkEntity> findStaleOgCandidates(Instant before, int limit);
 
   long countByUserId(Long userId);
 
@@ -81,18 +60,9 @@ public interface LinkRepository
 
   List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(Collection<String> claimTokens);
 
-  @org.springframework.data.jpa.repository.Modifying(clearAutomatically = true)
-  @Query(
-      "UPDATE LinkEntity l SET l.viewCount = l.viewCount + 1 "
-          + "WHERE l.id = :linkId AND (l.maxViews IS NULL OR l.viewCount < l.maxViews)")
-  int incrementViewCountIfBelowLimit(@Param("linkId") Long linkId);
+  int incrementViewCountIfBelowLimit(Long linkId);
 
-  @org.springframework.data.jpa.repository.Modifying(
-      clearAutomatically = true,
-      flushAutomatically = true)
-  @org.springframework.data.jpa.repository.Query(
-      "DELETE FROM LinkEntity l WHERE l.userId = :userId")
-  int deleteByUserId(@org.springframework.data.repository.query.Param("userId") Long userId);
+  int deleteByUserId(Long userId);
 
   interface CachedLinkRow {
 

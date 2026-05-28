@@ -7,10 +7,6 @@ import com.example.short_link.campaign.application.helper.QrPngEncoder;
  */
 public record QrOptions(int sizePx, QrPngEncoder.Ec ec, boolean includeLabel) {
 
-  public static QrOptions defaults() {
-    return new QrOptions(512, QrPngEncoder.Ec.M, false);
-  }
-
   public QrOptions {
     if (sizePx < 128 || sizePx > 4096) {
       throw new IllegalArgumentException("sizePx must be 128–4096");

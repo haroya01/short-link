@@ -1,7 +1,11 @@
 package com.example.short_link.link.expiration.domain.repository;
 
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
-import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
 
-public interface LinkExpirationPolicyRepository
-    extends JpaRepository<LinkExpirationPolicyEntity, Long> {}
+public interface LinkExpirationPolicyRepository {
+
+  Optional<LinkExpirationPolicyEntity> findById(Long id);
+
+  LinkExpirationPolicyEntity save(LinkExpirationPolicyEntity policy);
+}

@@ -240,4 +240,83 @@ class ProductCardCarouselTest {
         ProductCardCarousel.normalize("{\"items\":[{\"name\":\"x\",\"badge\":\"futureBadge\"}]}");
     assertThat(out).contains("\"badge\":null");
   }
+
+  @Test
+  void emptyItemsArrayRejected() {
+    assertThatThrownBy(() -> ProductCardCarousel.normalize("{\"items\":[]}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void overMaxItemsRejected() {
+    StringBuilder items = new StringBuilder("{\"items\":[");
+    for (int i = 0; i < 9; i++) {
+      if (i > 0) items.append(",");
+      items.append("{\"name\":\"i").append(i).append("\"}");
+    }
+    items.append("]}");
+    assertThatThrownBy(() -> ProductCardCarousel.normalize(items.toString()))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void itemMissingNameIsRejected() {
+    assertThatThrownBy(() -> ProductCardCarousel.normalize("{\"items\":[{\"price\":\"x\"}]}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void blankNameIsRejected() {
+    assertThatThrownBy(() -> ProductCardCarousel.normalize("{\"items\":[{\"name\":\"   \"}]}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void tooManyImagesPerItemRejected() {
+    StringBuilder items = new StringBuilder("{\"items\":[{\"name\":\"x\",\"images\":[");
+    for (int i = 0; i < 6; i++) {
+      if (i > 0) items.append(",");
+      items.append("{\"url\":\"https://img.example/").append(i).append(".jpg\"}");
+    }
+    items.append("]}]}");
+    assertThatThrownBy(() -> ProductCardCarousel.normalize(items.toString()))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void imageEntryWithBlankUrlIsSkipped() {
+    String out =
+        ProductCardCarousel.normalize(
+            "{\"items\":[{\"name\":\"x\","
+                + "\"images\":[{\"url\":\"   \"},{\"url\":\"https://img.example/a.jpg\"}]}]}");
+    assertThat(out).contains("a.jpg");
+  }
+
+  @Test
+  void ctaUrlValidationRejectsNonHttp() {
+    assertThatThrownBy(
+            () ->
+                ProductCardCarousel.normalize(
+                    "{\"items\":[{\"name\":\"x\",\"ctaUrl\":\"ftp://example.com\"}]}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void ctaUrlHostlessRejected() {
+    assertThatThrownBy(
+            () ->
+                ProductCardCarousel.normalize(
+                    "{\"items\":[{\"name\":\"x\",\"ctaUrl\":\"https:///path\"}]}"))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void focalPointClampedBelowZero() {
+    String out =
+        ProductCardCarousel.normalize(
+            "{\"items\":[{\"name\":\"x\","
+                + "\"images\":[{\"url\":\"https://img.example/a.jpg\",\"focalX\":-50,\"focalY\":1000}]}]}");
+    assertThat(out).contains("\"focalX\":0");
+    assertThat(out).contains("\"focalY\":100");
+  }
 }

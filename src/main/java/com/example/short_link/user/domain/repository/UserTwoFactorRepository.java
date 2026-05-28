@@ -1,6 +1,11 @@
 package com.example.short_link.user.domain.repository;
 
 import com.example.short_link.user.domain.*;
-import org.springframework.data.jpa.repository.JpaRepository;
+import java.util.Optional;
 
-public interface UserTwoFactorRepository extends JpaRepository<UserTwoFactorEntity, Long> {}
+public interface UserTwoFactorRepository {
+
+  Optional<UserTwoFactorEntity> findById(Long id);
+
+  UserTwoFactorEntity save(UserTwoFactorEntity twoFactor);
+}

@@ -100,24 +100,24 @@ public record Booking(String url, String title, String description, String ctaLa
     }
 
     public static Optional<Provider> resolve(String url) {
-      if (url == null || url.isBlank()) return java.util.Optional.empty();
+      if (url == null || url.isBlank()) return Optional.empty();
       URI uri;
       try {
         uri = URI.create(url.trim());
       } catch (IllegalArgumentException ex) {
-        return java.util.Optional.empty();
+        return Optional.empty();
       }
       String scheme = uri.getScheme();
-      if (scheme == null) return java.util.Optional.empty();
+      if (scheme == null) return Optional.empty();
       String s = scheme.toLowerCase(Locale.ROOT);
-      if (!s.equals("http") && !s.equals("https")) return java.util.Optional.empty();
+      if (!s.equals("http") && !s.equals("https")) return Optional.empty();
       String host = uri.getHost();
-      if (host == null || host.isBlank()) return java.util.Optional.empty();
+      if (host == null || host.isBlank()) return Optional.empty();
       String h = host.toLowerCase(Locale.ROOT);
       for (Provider p : values()) {
-        if (p.hosts.contains(h)) return java.util.Optional.of(p);
+        if (p.hosts.contains(h)) return Optional.of(p);
       }
-      return java.util.Optional.empty();
+      return Optional.empty();
     }
   }
 }

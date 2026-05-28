@@ -52,4 +52,27 @@ class JwtTokenServiceTest {
     assertThatThrownBy(() -> service.parseRefreshToken(access))
         .isInstanceOf(IllegalArgumentException.class);
   }
+
+  @Test
+  void parseStreamTokenReturnsUserIdWhenShortCodeMatches() {
+    String stream = service.createStreamToken(42L, "abc123");
+
+    assertThat(service.parseStreamToken(stream, "abc123")).isEqualTo(42L);
+  }
+
+  @Test
+  void parseStreamTokenRejectsDifferentShortCode() {
+    String stream = service.createStreamToken(42L, "abc123");
+
+    assertThatThrownBy(() -> service.parseStreamToken(stream, "other"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void parseStreamTokenRejectsAccessToken() {
+    String access = service.createAccessToken(42L, "USER");
+
+    assertThatThrownBy(() -> service.parseStreamToken(access, "abc123"))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
 }

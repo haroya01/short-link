@@ -11,6 +11,7 @@ import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -114,7 +115,7 @@ class LinkEventsControllerTest {
             .andExpect(jsonPath("$.nextCursor").isString())
             .andReturn();
     String cursor =
-        com.fasterxml.jackson.databind.json.JsonMapper.builder()
+        JsonMapper.builder()
             .build()
             .readTree(first.getResponse().getContentAsString())
             .get("nextCursor")

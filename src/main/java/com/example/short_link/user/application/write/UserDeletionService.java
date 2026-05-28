@@ -17,15 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Soft-deletes the user — marks {@code deleted_at} and wipes refresh tokens. Owned links remain in
- * place but the redirect path treats them as gone (410). Within the configurable grace window the
- * user can log in again to restore everything; after the window {@link
- * com.example.short_link.user.application.SoftDeletedUserCleanupJob} hard-deletes the row (link /
- * click_event / api_key / link_tag CASCADE).
- *
- * <p>Anonymous links (user_id IS NULL) are untouched.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -45,7 +36,6 @@ public class UserDeletionService {
             .findById(userId)
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (user.isDeleted()) {
-      // already pending deletion — idempotent
       return;
     }
     user.softDelete();
@@ -62,10 +52,6 @@ public class UserDeletionService {
     log.info("user {} soft-deleted (links retained: {})", userId, ownedLinks);
   }
 
-  /**
-   * Permanently removes a user and their owned data. Called by the scheduled cleanup job after the
-   * grace window expires. Anonymous links remain untouched.
-   */
   @Transactional
   public void hardDelete(Long userId) {
     if (!userRepository.existsById(userId)) return;

@@ -30,7 +30,10 @@ public class JwtTokenService {
   private static final String TYPE_ACCESS = "access";
   private static final String TYPE_REFRESH = "refresh";
   private static final String TYPE_TWOFA_CHALLENGE = "twofa_challenge";
+  private static final String TYPE_STREAM = "stream";
+  private static final String CLAIM_SHORT_CODE = "shortCode";
   private static final Duration CHALLENGE_TTL = Duration.ofMinutes(5);
+  private static final Duration STREAM_TTL = Duration.ofMinutes(2);
 
   private final PrivateKey privateKey;
   private final PublicKey publicKey;
@@ -128,6 +131,30 @@ public class JwtTokenService {
     Claims claims = parseClaims(token);
     if (!TYPE_TWOFA_CHALLENGE.equals(claims.get(CLAIM_TYPE))) {
       throw new IllegalArgumentException("expected 2FA challenge token");
+    }
+    return Long.valueOf(claims.getSubject());
+  }
+
+  public String createStreamToken(Long userId, String shortCode) {
+    Instant now = Instant.now();
+    return Jwts.builder()
+        .subject(String.valueOf(userId))
+        .issuedAt(Date.from(now))
+        .expiration(Date.from(now.plus(STREAM_TTL)))
+        .claim(CLAIM_TYPE, TYPE_STREAM)
+        .claim(CLAIM_SHORT_CODE, shortCode)
+        .signWith(privateKey, Jwts.SIG.RS256)
+        .compact();
+  }
+
+  public Long parseStreamToken(String token, String shortCode) {
+    Claims claims = parseClaims(token);
+    if (!TYPE_STREAM.equals(claims.get(CLAIM_TYPE))) {
+      throw new IllegalArgumentException("expected stream token");
+    }
+    String tokenShortCode = claims.get(CLAIM_SHORT_CODE, String.class);
+    if (!shortCode.equals(tokenShortCode)) {
+      throw new IllegalArgumentException("stream token short code mismatch");
     }
     return Long.valueOf(claims.getSubject());
   }

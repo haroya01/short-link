@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.scheduler;
 
+import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.webhook.application.helper.DailySummaryAssembler;
@@ -7,8 +8,6 @@ import com.example.short_link.link.webhook.application.helper.DailySummaryPayloa
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -39,7 +38,7 @@ public class DailyWebhookSummaryJob {
 
   private final LinkWebhookRepository hooks;
   private final LinkRepository links;
-  private final UserRepository users;
+  private final UserAccessLookup users;
   private final DailySummaryAssembler assembler;
   private final LinkWebhookDispatcher dispatcher;
   private final JsonMapper jsonMapper;
@@ -49,7 +48,7 @@ public class DailyWebhookSummaryJob {
   public DailyWebhookSummaryJob(
       LinkWebhookRepository hooks,
       LinkRepository links,
-      UserRepository users,
+      UserAccessLookup users,
       DailySummaryAssembler assembler,
       LinkWebhookDispatcher dispatcher,
       JsonMapper jsonMapper) {
@@ -59,7 +58,7 @@ public class DailyWebhookSummaryJob {
   DailyWebhookSummaryJob(
       LinkWebhookRepository hooks,
       LinkRepository links,
-      UserRepository users,
+      UserAccessLookup users,
       DailySummaryAssembler assembler,
       LinkWebhookDispatcher dispatcher,
       JsonMapper jsonMapper,
@@ -91,9 +90,9 @@ public class DailyWebhookSummaryJob {
     LinkEntity link = links.findById(hook.getLinkId()).orElse(null);
     if (link == null) return;
     if (link.getUserId() == null) return;
-    UserEntity owner = users.findById(link.getUserId()).orElse(null);
-    if (owner == null) return;
-    ZoneId tz = resolveZone(owner.getTimezone());
+    String ownerTimezone = users.timezone(link.getUserId()).orElse(null);
+    if (ownerTimezone == null) return;
+    ZoneId tz = resolveZone(ownerTimezone);
     ZonedDateTime nowLocal = ZonedDateTime.now(clock.withZone(tz));
     LocalDate today = nowLocal.toLocalDate();
     if (nowLocal.getHour() < hourOfDay) return;

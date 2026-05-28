@@ -1,6 +1,7 @@
 package com.example.short_link.link.og.application;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
@@ -20,7 +21,6 @@ import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.springframework.data.domain.Pageable;
 
 class OgRefreshJobDispatchTest {
 
@@ -60,7 +60,7 @@ class OgRefreshJobDispatchTest {
   void lockHeldSkipsWork() {
     when(lock.tryAcquire(eq("kurl:og-fetch:refresh"), any(Duration.class))).thenReturn(false);
     job.runWeekly();
-    verify(linkRepository, never()).findStaleOgCandidates(any(), any());
+    verify(linkRepository, never()).findStaleOgCandidates(any(), anyInt());
   }
 
   @Test
@@ -72,8 +72,7 @@ class OgRefreshJobDispatchTest {
     when(a.getOriginalUrl()).thenReturn("https://a.example");
     when(b.getShortCode()).thenReturn(new ShortCode("b000001"));
     when(b.getOriginalUrl()).thenReturn("https://b.example");
-    when(linkRepository.findStaleOgCandidates(any(), any(Pageable.class)))
-        .thenReturn(List.of(a, b));
+    when(linkRepository.findStaleOgCandidates(any(), anyInt())).thenReturn(List.of(a, b));
 
     job.runWeekly();
 
@@ -91,8 +90,7 @@ class OgRefreshJobDispatchTest {
     when(a.getOriginalUrl()).thenReturn("https://a.example");
     when(b.getShortCode()).thenReturn(new ShortCode("b000001"));
     when(b.getOriginalUrl()).thenReturn("https://b.example");
-    when(linkRepository.findStaleOgCandidates(any(), any(Pageable.class)))
-        .thenReturn(List.of(a, b));
+    when(linkRepository.findStaleOgCandidates(any(), anyInt())).thenReturn(List.of(a, b));
     Mockito.doThrow(new RuntimeException("boom"))
         .when(listener)
         .fetchAndStore(eq(new ShortCode("a000001")), anyString());

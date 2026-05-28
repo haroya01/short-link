@@ -1,8 +1,0 @@
-#
-#Mon May 25 15:18:08 JST 2026
-classes\ that\ have\ simple\ name\ ending\ with\ 'Controller'\ should\ reside\ in\ a\ package\ '..presentation..'=958da5b7-b08a-4dbb-893e-233552e30b0a
-classes\ that\ have\ simple\ name\ ending\ with\ 'QueryService'\ should\ reside\ in\ a\ package\ '..application.read..'=ba3ab70f-4163-4f70-9e79-1d326329daf9
-no\ classes\ that\ reside\ in\ a\ package\ '..application..'\ should\ depend\ on\ classes\ that\ reside\ in\ a\ package\ 'org.springframework.data..'=d8a33ea8-e07c-4642-933c-ad6a50f69125
-no\ classes\ that\ reside\ in\ a\ package\ '..domain..'\ should\ depend\ on\ classes\ that\ reside\ in\ a\ package\ '..application..'=8c7acda3-0296-418f-b0ff-b071e4bdf266
-no\ classes\ that\ reside\ outside\ of\ packages\ ['..common.net..',\ '..common.config..']\ should\ depend\ on\ classes\ that\ reside\ in\ a\ package\ 'org.apache.hc..'=27d046e2-4b9c-4a11-8922-676b73f247de
-slices\ matching\ 'com.example.short_link.(*)..'\ should\ be\ free\ of\ cycles=33ae5e6f-a496-4a34-86c8-87ce4933dea6

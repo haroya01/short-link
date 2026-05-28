@@ -10,6 +10,7 @@ import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -88,10 +89,10 @@ class LinkExportServiceTest {
     UserEntity attacker = userRepository.save(new UserEntity("a@x.com", "google", "g-csvnoa"));
     linkRepository.save(new LinkEntity("https://example.com", "csvno1", owner.getId(), null));
 
-    org.assertj.core.api.Assertions.assertThatThrownBy(
+    Assertions.assertThatThrownBy(
             () -> service.exportEventsCsv(attacker.getId(), new ShortCode("csvno1")))
         .isInstanceOf(LinkException.class);
-    org.assertj.core.api.Assertions.assertThatThrownBy(
+    Assertions.assertThatThrownBy(
             () -> service.exportStatsCsv(attacker.getId(), new ShortCode("csvno1"), "daily"))
         .isInstanceOf(LinkException.class);
   }
@@ -100,7 +101,7 @@ class LinkExportServiceTest {
   void rejectsUnknownLink() {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-csv404"));
 
-    org.assertj.core.api.Assertions.assertThatThrownBy(
+    Assertions.assertThatThrownBy(
             () -> service.exportEventsCsv(user.getId(), new ShortCode("missing")))
         .isInstanceOf(LinkException.class);
   }
