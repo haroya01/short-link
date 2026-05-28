@@ -1,0 +1,95 @@
+package com.example.short_link.post.application.write;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.example.short_link.post.domain.PostBlockEntity;
+import com.example.short_link.post.domain.PostBlockType;
+import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.PostBlockRepository;
+import com.example.short_link.post.exception.PostErrorCode;
+import com.example.short_link.post.exception.PostException;
+import java.util.List;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class ReplacePostBlocksUseCaseTest {
+
+  @Mock private PostOwnership postOwnership;
+  @Mock private PostBlockRepository postBlockRepository;
+
+  private ReplacePostBlocksUseCase useCase;
+
+  @BeforeEach
+  void setUp() {
+    useCase = new ReplacePostBlocksUseCase(postOwnership, postBlockRepository);
+  }
+
+  @Test
+  void replacesWithNewBlocks() {
+    PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postBlockRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+
+    List<PostBlockEntity> result =
+        useCase.execute(
+            new ReplacePostBlocksCommand(
+                7L,
+                42L,
+                List.of(
+                    new ReplacePostBlocksCommand.BlockInput(PostBlockType.PARAGRAPH, "Hello"),
+                    new ReplacePostBlocksCommand.BlockInput(PostBlockType.IMAGE, "{\"url\":\"x\"}"),
+                    new ReplacePostBlocksCommand.BlockInput(PostBlockType.DIVIDER, null))));
+
+    verify(postBlockRepository).deleteAllByPostId(42L);
+    assertThat(result).hasSize(3);
+    assertThat(result.get(0).getType()).isEqualTo(PostBlockType.PARAGRAPH);
+    assertThat(result.get(0).getBlockOrder()).isZero();
+    assertThat(result.get(1).getType()).isEqualTo(PostBlockType.IMAGE);
+    assertThat(result.get(1).getBlockOrder()).isEqualTo(1);
+    assertThat(result.get(2).getType()).isEqualTo(PostBlockType.DIVIDER);
+    assertThat(result.get(2).getBlockOrder()).isEqualTo(2);
+  }
+
+  @Test
+  void replaceWithEmptyDeletesAll() {
+    PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+
+    List<PostBlockEntity> result =
+        useCase.execute(new ReplacePostBlocksCommand(7L, 42L, List.of()));
+
+    verify(postBlockRepository).deleteAllByPostId(42L);
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void rejectsBlocksOverMax() {
+    List<ReplacePostBlocksCommand.BlockInput> tooMany =
+        java.util.stream.IntStream.range(0, 501)
+            .mapToObj(
+                i -> new ReplacePostBlocksCommand.BlockInput(PostBlockType.PARAGRAPH, "block " + i))
+            .toList();
+
+    assertThatThrownBy(() -> new ReplacePostBlocksCommand(7L, 42L, tooMany))
+        .isInstanceOf(IllegalArgumentException.class);
+  }
+
+  @Test
+  void rejectsForeignOwner() {
+    when(postOwnership.requireOwned(7L, 42L))
+        .thenThrow(new PostException(PostErrorCode.PERMISSION_DENIED));
+
+    assertThatThrownBy(() -> useCase.execute(new ReplacePostBlocksCommand(7L, 42L, List.of())))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.PERMISSION_DENIED);
+  }
+}
