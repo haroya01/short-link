@@ -9,7 +9,6 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,13 +18,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class UpdatePostMetadataUseCaseTest {
 
+  @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
 
   private UpdatePostMetadataUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new UpdatePostMetadataUseCase(postRepository);
+    useCase = new UpdatePostMetadataUseCase(postOwnership, postRepository);
   }
 
   private PostEntity ownedPost() {
@@ -35,7 +35,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesTitleOnly() {
     PostEntity post = ownedPost();
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     PostEntity updated =
@@ -49,7 +49,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesExcerptAndClearsWithBlank() {
     PostEntity post = ownedPost();
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
@@ -63,7 +63,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesOgImageAndClearsWithBlank() {
     PostEntity post = ownedPost();
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
@@ -80,7 +80,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesLanguageTag() {
     PostEntity post = ownedPost();
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(new UpdatePostMetadataCommand(7L, 42L, null, null, null, null, null, "ja"));
@@ -90,7 +90,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesSlugInDraft() {
     PostEntity post = ownedPost();
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.existsByUserIdAndSlug(7L, "new-slug")).thenReturn(false);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -102,7 +102,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void rejectsSlugCollision() {
     PostEntity post = ownedPost();
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.existsByUserIdAndSlug(7L, "taken")).thenReturn(true);
 
     assertThatThrownBy(
@@ -118,7 +118,7 @@ class UpdatePostMetadataUseCaseTest {
   void rejectsSlugChangeWhenFrozen() {
     PostEntity post = ownedPost();
     post.publish();
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.existsByUserIdAndSlug(7L, "new-slug")).thenReturn(false);
 
     assertThatThrownBy(
@@ -129,33 +129,6 @@ class UpdatePostMetadataUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.SLUG_FROZEN);
-  }
-
-  @Test
-  void rejectsNotFound() {
-    when(postRepository.findById(42L)).thenReturn(Optional.empty());
-
-    assertThatThrownBy(
-            () ->
-                useCase.execute(
-                    new UpdatePostMetadataCommand(7L, 42L, "T", null, null, null, null, null)))
-        .isInstanceOf(PostException.class)
-        .extracting(e -> ((PostException) e).errorCode())
-        .isEqualTo(PostErrorCode.POST_NOT_FOUND);
-  }
-
-  @Test
-  void rejectsForeignUser() {
-    PostEntity post = ownedPost();
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
-
-    assertThatThrownBy(
-            () ->
-                useCase.execute(
-                    new UpdatePostMetadataCommand(9L, 42L, "T", null, null, null, null, null)))
-        .isInstanceOf(PostException.class)
-        .extracting(e -> ((PostException) e).errorCode())
-        .isEqualTo(PostErrorCode.PERMISSION_DENIED);
   }
 
   @Test
