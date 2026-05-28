@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.PostEntity;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Public-safe post 메타데이터 (홈페이지 글 목록 + detail header). id 는 abuse report subjectId 등 stable
@@ -14,6 +15,7 @@ public record PublicPostListItem(
     String excerpt,
     String ogImageUrl,
     String languageTag,
+    List<String> tags,
     Instant publishedAt) {
 
   public static PublicPostListItem from(PostEntity post) {
@@ -24,6 +26,7 @@ public record PublicPostListItem(
         post.getExcerpt(),
         post.getOgImageUrl(),
         post.getLanguageTag(),
+        List.copyOf(post.getTags()),
         post.getPublishedAt());
   }
 }

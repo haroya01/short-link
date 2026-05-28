@@ -221,4 +221,39 @@ class PostEntityTest {
     p.updateLanguageTag("ja");
     assertThat(p.getLanguageTag()).isEqualTo("ja");
   }
+
+  @Test
+  void updateTagsTrimsDedupesAndDropsBlanks() {
+    PostEntity p = newPost();
+    p.updateTags(java.util.List.of("  Spring ", "spring", "", "  ", "JPA"));
+    assertThat(p.getTags()).containsExactly("Spring", "JPA");
+  }
+
+  @Test
+  void updateTagsTruncatesToMaxLength() {
+    PostEntity p = newPost();
+    String tooLong = "x".repeat(PostEntity.MAX_TAG_LENGTH + 10);
+    p.updateTags(java.util.List.of(tooLong));
+    assertThat(p.getTags()).hasSize(1);
+    assertThat(p.getTags().get(0)).hasSize(PostEntity.MAX_TAG_LENGTH);
+  }
+
+  @Test
+  void updateTagsCapsCount() {
+    PostEntity p = newPost();
+    java.util.List<String> many =
+        java.util.stream.IntStream.range(0, PostEntity.MAX_TAGS + 15)
+            .mapToObj(i -> "tag" + i)
+            .toList();
+    p.updateTags(many);
+    assertThat(p.getTags()).hasSize(PostEntity.MAX_TAGS);
+  }
+
+  @Test
+  void updateTagsWithNullClears() {
+    PostEntity p = newPost();
+    p.updateTags(java.util.List.of("a", "b"));
+    p.updateTags(null);
+    assertThat(p.getTags()).isEmpty();
+  }
 }
