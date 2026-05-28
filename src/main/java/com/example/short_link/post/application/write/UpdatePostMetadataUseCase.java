@@ -12,17 +12,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class UpdatePostMetadataUseCase {
 
+  private final PostOwnership postOwnership;
   private final PostRepository postRepository;
 
   @Transactional
   public PostEntity execute(UpdatePostMetadataCommand cmd) {
-    PostEntity post =
-        postRepository
-            .findById(cmd.postId())
-            .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, cmd.postId()));
-    if (!post.isOwnedBy(cmd.userId())) {
-      throw new PostException(PostErrorCode.PERMISSION_DENIED).with("postId", cmd.postId());
-    }
+    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
 
     if (cmd.slug() != null && !cmd.slug().equals(post.getSlug())) {
       if (postRepository.existsByUserIdAndSlug(cmd.userId(), cmd.slug())) {
