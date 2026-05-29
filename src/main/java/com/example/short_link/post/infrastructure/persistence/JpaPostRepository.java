@@ -4,6 +4,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
@@ -20,4 +21,11 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
+
+  List<PostEntity> findByStatusOrderByPublishedAtDesc(PostStatus status, Pageable pageable);
+
+  List<PostEntity> findByStatusOrderByViewCountDescPublishedAtDesc(
+      PostStatus status, Pageable pageable);
+
+  long countByStatus(PostStatus status);
 }

@@ -3,6 +3,7 @@ package com.example.short_link.user.infrastructure.persistence;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -17,6 +18,11 @@ class UserRepositoryAdapter implements UserRepository {
   @Override
   public Optional<UserEntity> findById(Long id) {
     return jpa.findById(id);
+  }
+
+  @Override
+  public List<UserEntity> findAllByIdIn(Collection<Long> ids) {
+    return jpa.findAllById(ids);
   }
 
   @Override
