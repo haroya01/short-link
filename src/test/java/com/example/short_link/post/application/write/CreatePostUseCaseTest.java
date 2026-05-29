@@ -61,9 +61,14 @@ class CreatePostUseCaseTest {
   }
 
   @Test
-  void rejectsEmptyTitle() {
-    assertThatThrownBy(() -> useCase.execute(new CreatePostCommand(7L, "valid-slug", "", "ko")))
-        .isInstanceOf(IllegalArgumentException.class);
+  void allowsEmptyTitleForDraft() {
+    when(postRepository.existsByUserIdAndSlug(7L, "valid-slug")).thenReturn(false);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    PostEntity created = useCase.execute(new CreatePostCommand(7L, "valid-slug", "", "ko"));
+
+    assertThat(created.getTitle()).isEmpty();
+    assertThat(created.getStatus()).isEqualTo(PostStatus.DRAFT);
   }
 
   @Test
