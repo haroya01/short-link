@@ -2,6 +2,7 @@ package com.example.short_link.post.domain.repository;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.TagCount;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -44,4 +45,7 @@ public interface PostRepository {
   List<PostEntity> findPublishedByAuthorIds(Collection<Long> authorIds, int page, int size);
 
   long countPublishedByAuthorIds(Collection<Long> authorIds);
+
+  /** Most-used tags across published posts, most popular first — the 주제 index. */
+  List<TagCount> findPopularTags(int limit);
 }

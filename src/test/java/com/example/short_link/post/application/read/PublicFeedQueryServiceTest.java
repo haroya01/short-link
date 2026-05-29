@@ -109,6 +109,21 @@ class PublicFeedQueryServiceTest {
   }
 
   @Test
+  void popularTagsDelegatesToRepository() {
+    when(postRepository.findPopularTags(50))
+        .thenReturn(
+            List.of(
+                new com.example.short_link.post.domain.TagCount("spring", 7L),
+                new com.example.short_link.post.domain.TagCount("react", 3L)));
+
+    var tags = service.popularTags(50);
+
+    assertThat(tags).hasSize(2);
+    assertThat(tags.get(0).tag()).isEqualTo("spring");
+    assertThat(tags.get(0).count()).isEqualTo(7);
+  }
+
+  @Test
   void trendingUsesTrendingQuery() {
     when(postRepository.findPublishedTrending(0, 20)).thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
