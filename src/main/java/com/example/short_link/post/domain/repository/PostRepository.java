@@ -33,4 +33,9 @@ public interface PostRepository {
   List<PostEntity> findPublishedTrending(int page, int size);
 
   long countPublished();
+
+  /** Published posts carrying a tag (case-insensitive), newest first. */
+  List<PostEntity> findPublishedByTag(String tag, int page, int size);
+
+  long countPublishedByTag(String tag);
 }
