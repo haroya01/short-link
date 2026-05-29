@@ -25,4 +25,12 @@ public interface PostRepository {
 
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
+
+  /** Global public feed (all authors), newest first. 0-based page. */
+  List<PostEntity> findPublishedRecent(int page, int size);
+
+  /** Global public feed ranked by view count, newest as tiebreak. */
+  List<PostEntity> findPublishedTrending(int page, int size);
+
+  long countPublished();
 }
