@@ -30,7 +30,16 @@ public class PublicFeedQueryService {
         "trending".equalsIgnoreCase(sort)
             ? postRepository.findPublishedTrending(page, size)
             : postRepository.findPublishedRecent(page, size);
+    return assemble(posts, postRepository.countPublished(), page, size);
+  }
 
+  /** Posts carrying a tag (case-insensitive), newest first. */
+  public PublicFeedView feedByTag(String tag, int page, int size) {
+    List<PostEntity> posts = postRepository.findPublishedByTag(tag, page, size);
+    return assemble(posts, postRepository.countPublishedByTag(tag), page, size);
+  }
+
+  private PublicFeedView assemble(List<PostEntity> posts, long total, int page, int size) {
     List<Long> authorIds = posts.stream().map(PostEntity::getUserId).distinct().toList();
     Map<Long, UserEntity> authors =
         userRepository.findAllByIdIn(authorIds).stream()
@@ -43,7 +52,6 @@ public class PublicFeedQueryService {
             .map(p -> toItem(p, authors.get(p.getUserId())))
             .toList();
 
-    long total = postRepository.countPublished();
     boolean hasNext = (long) (page + 1) * size < total;
     return new PublicFeedView(items, page, size, hasNext);
   }
