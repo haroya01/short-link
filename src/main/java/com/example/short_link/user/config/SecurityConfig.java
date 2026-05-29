@@ -156,6 +156,11 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/links/*/public-stats", "/api/v1/links/*/stream")
                     .permitAll()
+                    // Author follower count is public; following-state needs auth but the
+                    // controller reads a null principal for anonymous viewers. PUT/DELETE stay
+                    // authenticated via anyRequest().
+                    .requestMatchers(GET, "/api/v1/users/*/follow")
+                    .permitAll()
                     // Anonymous link creation — PoW filter sits in front of this in the controller
                     // path so it isn't an unauthenticated free-for-all.
                     .requestMatchers(POST, "/api/v1/links")

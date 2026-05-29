@@ -2,6 +2,7 @@ package com.example.short_link.post.domain.repository;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,4 +39,9 @@ public interface PostRepository {
   List<PostEntity> findPublishedByTag(String tag, int page, int size);
 
   long countPublishedByTag(String tag);
+
+  /** Published posts by any of the given authors, newest first — the "following" feed. */
+  List<PostEntity> findPublishedByAuthorIds(Collection<Long> authorIds, int page, int size);
+
+  long countPublishedByAuthorIds(Collection<Long> authorIds);
 }

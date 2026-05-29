@@ -3,6 +3,7 @@ package com.example.short_link.post.infrastructure.persistence;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -86,5 +87,16 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public long countPublishedByTag(String tag) {
     return jpa.countPublishedByTag(tag, PostStatus.PUBLISHED);
+  }
+
+  @Override
+  public List<PostEntity> findPublishedByAuthorIds(Collection<Long> authorIds, int page, int size) {
+    return jpa.findPublishedByAuthorIds(
+        authorIds, PostStatus.PUBLISHED, PageRequest.of(page, size));
+  }
+
+  @Override
+  public long countPublishedByAuthorIds(Collection<Long> authorIds) {
+    return jpa.countPublishedByAuthorIds(authorIds, PostStatus.PUBLISHED);
   }
 }

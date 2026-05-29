@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,12 +22,13 @@ class PublicFeedQueryServiceTest {
 
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
+  @Mock private FollowRepository followRepository;
 
   private PublicFeedQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new PublicFeedQueryService(postRepository, userRepository);
+    service = new PublicFeedQueryService(postRepository, userRepository, followRepository);
   }
 
   private UserEntity user(long id, String username) {
@@ -79,6 +81,30 @@ class PublicFeedQueryServiceTest {
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).slug()).isEqualTo("a");
+    assertThat(view.hasNext()).isFalse();
+  }
+
+  @Test
+  void followingFeedReturnsPostsFromFollowedAuthors() {
+    when(postRepository.findPublishedByAuthorIds(List.of(2L, 3L), 0, 20))
+        .thenReturn(List.of(post(2L, "a")));
+    when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
+    when(postRepository.countPublishedByAuthorIds(List.of(2L, 3L))).thenReturn(1L);
+    when(followRepository.findFollowingIds(9L)).thenReturn(List.of(2L, 3L));
+
+    PublicFeedView view = service.feedFollowing(9L, 0, 20);
+
+    assertThat(view.items()).hasSize(1);
+    assertThat(view.items().get(0).author().username()).isEqualTo("bob");
+  }
+
+  @Test
+  void followingFeedIsEmptyWhenUserFollowsNoOne() {
+    when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
+
+    PublicFeedView view = service.feedFollowing(9L, 0, 20);
+
+    assertThat(view.items()).isEmpty();
     assertThat(view.hasNext()).isFalse();
   }
 
