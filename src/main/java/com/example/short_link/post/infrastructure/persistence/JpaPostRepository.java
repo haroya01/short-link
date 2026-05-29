@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
@@ -28,4 +30,16 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       PostStatus status, Pageable pageable);
 
   long countByStatus(PostStatus status);
+
+  @Query(
+      "select p from PostEntity p join p.tags t "
+          + "where lower(t) = lower(:tag) and p.status = :status "
+          + "order by p.publishedAt desc")
+  List<PostEntity> findPublishedByTag(
+      @Param("tag") String tag, @Param("status") PostStatus status, Pageable pageable);
+
+  @Query(
+      "select count(p) from PostEntity p join p.tags t "
+          + "where lower(t) = lower(:tag) and p.status = :status")
+  long countPublishedByTag(@Param("tag") String tag, @Param("status") PostStatus status);
 }
