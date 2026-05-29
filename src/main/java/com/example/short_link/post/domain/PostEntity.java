@@ -76,6 +76,10 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "view_count", nullable = false)
   private long viewCount = 0L;
 
+  /** Denormalized like (공감) counter; the post_like table is the source of truth for uniqueness. */
+  @Column(name = "like_count", nullable = false)
+  private long likeCount = 0L;
+
   public static final int MAX_TAGS = 20;
   public static final int MAX_TAG_LENGTH = 40;
 
@@ -207,6 +211,14 @@ public class PostEntity extends BaseTimeEntity {
 
   public void incrementViewCount() {
     this.viewCount++;
+  }
+
+  public void incrementLikeCount() {
+    this.likeCount++;
+  }
+
+  public void decrementLikeCount() {
+    if (this.likeCount > 0) this.likeCount--;
   }
 
   /**
