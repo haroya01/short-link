@@ -42,8 +42,17 @@ class PublicPostControllerTest {
             new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
             List.of(
                 new PublicPostListItem(
-                    1L, "post-1", "Post 1", "Excerpt", null, "ko", List.of("spring", "jpa"), NOW),
-                new PublicPostListItem(2L, "post-2", "Post 2", null, null, "ja", List.of(), NOW)));
+                    1L,
+                    "post-1",
+                    "Post 1",
+                    "Excerpt",
+                    null,
+                    "ko",
+                    List.of("spring", "jpa"),
+                    0L,
+                    NOW),
+                new PublicPostListItem(
+                    2L, "post-2", "Post 2", null, null, "ja", List.of(), 0L, NOW)));
     when(publicPostQueryService.listPublicPosts("john")).thenReturn(response);
 
     mvc.perform(get("/api/v1/public/profiles/john/posts"))
@@ -70,7 +79,7 @@ class PublicPostControllerTest {
         new PublicPostDetail(
             new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
             new PublicPostListItem(
-                10L, "first-post", "First", "Excerpt", null, "ko", List.of(), NOW),
+                10L, "first-post", "First", "Excerpt", null, "ko", List.of(), 0L, NOW),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)),
             null);
     when(publicPostQueryService.findPublicPost("john", "first-post")).thenReturn(detail);

@@ -56,7 +56,7 @@ class PublicSeriesControllerTest {
                 new PublicSeriesListItem("guide", "Guide", 1),
                 List.of(
                     new PublicPostListItem(
-                        1L, "intro", "Intro", null, null, "ko", List.of(), NOW))));
+                        1L, "intro", "Intro", null, null, "ko", List.of(), 0L, NOW))));
 
     mvc.perform(get("/api/v1/public/profiles/john/series/guide"))
         .andExpect(status().isOk())
