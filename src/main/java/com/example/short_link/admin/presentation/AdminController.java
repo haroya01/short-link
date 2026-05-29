@@ -19,9 +19,12 @@ import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.common.observability.AdminSystemMetricsService;
 import com.example.short_link.link.webhook.application.dto.WebhookReDetectResult;
 import com.example.short_link.link.webhook.application.write.ReDetectWebhookFormatsUseCase;
+import com.example.short_link.user.application.dto.MintedAccessToken;
+import com.example.short_link.user.application.write.MintAccessTokenUseCase;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -43,6 +46,16 @@ public class AdminController {
   private final AdminRequestMetricsService requestMetricsService;
   private final AdminSystemMetricsService systemMetricsService;
   private final AdminFunnelService funnelService;
+  private final MintAccessTokenUseCase mintAccessToken;
+
+  /**
+   * Mint a fresh access token for the calling admin — a convenience for scripting against the API
+   * (seeding, one-off automation). The token carries the admin's own role only.
+   */
+  @PostMapping("/access-token")
+  public MintedAccessToken mintAccessToken(@AuthenticationPrincipal Long userId) {
+    return mintAccessToken.mintFor(userId);
+  }
 
   @GetMapping("/overview")
   public AdminOverview overview() {
