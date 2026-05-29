@@ -6,6 +6,7 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -59,5 +60,21 @@ class PostRepositoryAdapter implements PostRepository {
   public List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status) {
     return jpa.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, status);
+  }
+
+  @Override
+  public List<PostEntity> findPublishedRecent(int page, int size) {
+    return jpa.findByStatusOrderByPublishedAtDesc(PostStatus.PUBLISHED, PageRequest.of(page, size));
+  }
+
+  @Override
+  public List<PostEntity> findPublishedTrending(int page, int size) {
+    return jpa.findByStatusOrderByViewCountDescPublishedAtDesc(
+        PostStatus.PUBLISHED, PageRequest.of(page, size));
+  }
+
+  @Override
+  public long countPublished() {
+    return jpa.countByStatus(PostStatus.PUBLISHED);
   }
 }
