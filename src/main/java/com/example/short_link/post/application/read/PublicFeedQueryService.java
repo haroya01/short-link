@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -39,6 +40,11 @@ public class PublicFeedQueryService {
   public PublicFeedView feedByTag(String tag, int page, int size) {
     List<PostEntity> posts = postRepository.findPublishedByTag(tag, page, size);
     return assemble(posts, postRepository.countPublishedByTag(tag), page, size);
+  }
+
+  /** Most-used tags across published posts, most popular first — the 주제 index. */
+  public List<TagCount> popularTags(int limit) {
+    return postRepository.findPopularTags(limit);
   }
 
   /** Posts from authors the user follows, newest first. Empty when the user follows no one. */

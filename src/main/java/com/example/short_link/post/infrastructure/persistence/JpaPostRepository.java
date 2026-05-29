@@ -54,4 +54,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   @Query("select count(p) from PostEntity p where p.userId in :ids and p.status = :status")
   long countPublishedByAuthorIds(
       @Param("ids") Collection<Long> ids, @Param("status") PostStatus status);
+
+  @Query(
+      "select t, count(p) from PostEntity p join p.tags t "
+          + "where p.status = :status group by t order by count(p) desc")
+  List<Object[]> findPopularTags(@Param("status") PostStatus status, Pageable pageable);
 }

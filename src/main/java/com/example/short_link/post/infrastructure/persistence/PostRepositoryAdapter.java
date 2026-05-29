@@ -2,6 +2,7 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.util.Collection;
 import java.util.List;
@@ -98,5 +99,12 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public long countPublishedByAuthorIds(Collection<Long> authorIds) {
     return jpa.countPublishedByAuthorIds(authorIds, PostStatus.PUBLISHED);
+  }
+
+  @Override
+  public List<TagCount> findPopularTags(int limit) {
+    return jpa.findPopularTags(PostStatus.PUBLISHED, PageRequest.of(0, limit)).stream()
+        .map(row -> new TagCount((String) row[0], ((Number) row[1]).longValue()))
+        .toList();
   }
 }
