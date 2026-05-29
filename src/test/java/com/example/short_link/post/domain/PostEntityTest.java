@@ -31,6 +31,31 @@ class PostEntityTest {
   }
 
   @Test
+  void publishRequiresATitle() {
+    PostEntity untitled = new PostEntity(1L, "draft-x", "", "ko");
+    assertThatThrownBy(untitled::publish)
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.TITLE_REQUIRED);
+  }
+
+  @Test
+  void scheduleRequiresATitle() {
+    PostEntity untitled = new PostEntity(1L, "draft-y", "  ", "ko");
+    assertThatThrownBy(() -> untitled.schedule(Instant.now().plus(1, ChronoUnit.DAYS)))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.TITLE_REQUIRED);
+  }
+
+  @Test
+  void publishSucceedsWithATitle() {
+    PostEntity p = newPost();
+    p.publish();
+    assertThat(p.isPublished()).isTrue();
+  }
+
+  @Test
   void isOwnedByMatches() {
     PostEntity p = newPost();
     assertThat(p.isOwnedBy(1L)).isTrue();
