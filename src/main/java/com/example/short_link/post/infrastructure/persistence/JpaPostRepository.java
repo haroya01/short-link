@@ -2,6 +2,7 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -42,4 +43,15 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       "select count(p) from PostEntity p join p.tags t "
           + "where lower(t) = lower(:tag) and p.status = :status")
   long countPublishedByTag(@Param("tag") String tag, @Param("status") PostStatus status);
+
+  @Query(
+      "select p from PostEntity p "
+          + "where p.userId in :ids and p.status = :status "
+          + "order by p.publishedAt desc")
+  List<PostEntity> findPublishedByAuthorIds(
+      @Param("ids") Collection<Long> ids, @Param("status") PostStatus status, Pageable pageable);
+
+  @Query("select count(p) from PostEntity p where p.userId in :ids and p.status = :status")
+  long countPublishedByAuthorIds(
+      @Param("ids") Collection<Long> ids, @Param("status") PostStatus status);
 }
