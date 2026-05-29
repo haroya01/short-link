@@ -164,10 +164,18 @@ public class PostEntity extends BaseTimeEntity {
     this.languageTag = languageTag;
   }
 
+  /** A title may be blank while drafting, but is required before a post goes public. */
+  private void requireTitleToGoPublic() {
+    if (title == null || title.isBlank()) {
+      throw new PostException(PostErrorCode.TITLE_REQUIRED);
+    }
+  }
+
   public void publish() {
     if (status == PostStatus.PUBLISHED) {
       return;
     }
+    requireTitleToGoPublic();
     this.status = PostStatus.PUBLISHED;
     if (this.publishedAt == null) {
       this.publishedAt = Instant.now();
@@ -182,6 +190,7 @@ public class PostEntity extends BaseTimeEntity {
     if (status == PostStatus.PUBLISHED || status == PostStatus.UNPUBLISHED) {
       throw new PostException(PostErrorCode.SCHEDULE_AFTER_PUBLISH);
     }
+    requireTitleToGoPublic();
     this.status = PostStatus.SCHEDULED;
     this.scheduledAt = when;
   }
