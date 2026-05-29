@@ -21,7 +21,9 @@ public class CreatePostUseCase {
           .with("userId", cmd.userId())
           .with("slug", cmd.slug());
     }
-    PostEntity post = new PostEntity(cmd.userId(), cmd.slug(), cmd.title(), cmd.languageTag());
+    // Title column is NOT NULL; a draft may be untitled, so coalesce a missing title to blank.
+    String title = cmd.title() == null ? "" : cmd.title();
+    PostEntity post = new PostEntity(cmd.userId(), cmd.slug(), title, cmd.languageTag());
     return postRepository.save(post);
   }
 }

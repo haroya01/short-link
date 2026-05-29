@@ -6,6 +6,7 @@ public enum PostErrorCode {
   POST_NOT_FOUND(HttpStatus.NOT_FOUND, "post not found: %s"),
   SLUG_CONFLICT(HttpStatus.CONFLICT, "slug already used: %s"),
   SLUG_FROZEN(HttpStatus.CONFLICT, "slug is frozen after publish: %s"),
+  TITLE_REQUIRED(HttpStatus.CONFLICT, "a title is required to publish"),
   PERMISSION_DENIED(HttpStatus.FORBIDDEN, "post permission denied"),
   SCHEDULE_IN_PAST(HttpStatus.BAD_REQUEST, "scheduled time must be in the future"),
   SCHEDULE_AFTER_PUBLISH(HttpStatus.CONFLICT, "cannot schedule a post that was published"),
