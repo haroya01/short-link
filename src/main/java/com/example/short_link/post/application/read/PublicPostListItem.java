@@ -16,6 +16,7 @@ public record PublicPostListItem(
     String ogImageUrl,
     String languageTag,
     List<String> tags,
+    long likeCount,
     Instant publishedAt) {
 
   public static PublicPostListItem from(PostEntity post) {
@@ -27,6 +28,7 @@ public record PublicPostListItem(
         post.getOgImageUrl(),
         post.getLanguageTag(),
         List.copyOf(post.getTags()),
+        post.getLikeCount(),
         post.getPublishedAt());
   }
 }

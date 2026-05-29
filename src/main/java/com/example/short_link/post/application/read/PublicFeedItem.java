@@ -13,4 +13,5 @@ public record PublicFeedItem(
     String languageTag,
     List<String> tags,
     Instant publishedAt,
-    long viewCount) {}
+    long viewCount,
+    long likeCount) {}
