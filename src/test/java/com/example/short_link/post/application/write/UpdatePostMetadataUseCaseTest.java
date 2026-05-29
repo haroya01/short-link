@@ -185,12 +185,13 @@ class UpdatePostMetadataUseCaseTest {
   }
 
   @Test
-  void rejectsTitleBlank() {
-    assertThatThrownBy(
-            () ->
-                useCase.execute(
-                    new UpdatePostMetadataCommand(
-                        7L, 42L, "  ", null, null, null, null, null, null)))
-        .isInstanceOf(IllegalArgumentException.class);
+  void allowsBlankTitleForDraft() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(new UpdatePostMetadataCommand(7L, 42L, "", null, null, null, null, null, null));
+
+    assertThat(post.getTitle()).isEmpty();
   }
 }

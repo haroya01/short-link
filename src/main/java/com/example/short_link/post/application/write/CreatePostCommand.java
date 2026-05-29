@@ -18,7 +18,8 @@ public record CreatePostCommand(Long userId, String slug, String title, String l
       throw new IllegalArgumentException(
           "slug must be lowercase alphanumeric with single hyphens (e.g., my-first-post)");
     }
-    if (title == null || title.isBlank()) throw new IllegalArgumentException("title required");
+    // Title may be blank while drafting; it's required only at publish (PostEntity.publish()).
+    if (title == null) title = "";
     if (title.length() > 200) throw new IllegalArgumentException("title max 200");
     if (languageTag == null || languageTag.isBlank()) {
       languageTag = "ko";
