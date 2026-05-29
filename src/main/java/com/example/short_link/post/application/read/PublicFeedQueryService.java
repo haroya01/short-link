@@ -3,6 +3,7 @@ package com.example.short_link.post.application.read;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,7 @@ public class PublicFeedQueryService {
 
   private final PostRepository postRepository;
   private final UserRepository userRepository;
+  private final FollowRepository followRepository;
 
   public PublicFeedView feed(String sort, int page, int size) {
     List<PostEntity> posts =
@@ -37,6 +39,16 @@ public class PublicFeedQueryService {
   public PublicFeedView feedByTag(String tag, int page, int size) {
     List<PostEntity> posts = postRepository.findPublishedByTag(tag, page, size);
     return assemble(posts, postRepository.countPublishedByTag(tag), page, size);
+  }
+
+  /** Posts from authors the user follows, newest first. Empty when the user follows no one. */
+  public PublicFeedView feedFollowing(Long userId, int page, int size) {
+    List<Long> followingIds = followRepository.findFollowingIds(userId);
+    if (followingIds.isEmpty()) {
+      return new PublicFeedView(List.of(), page, size, false);
+    }
+    List<PostEntity> posts = postRepository.findPublishedByAuthorIds(followingIds, page, size);
+    return assemble(posts, postRepository.countPublishedByAuthorIds(followingIds), page, size);
   }
 
   private PublicFeedView assemble(List<PostEntity> posts, long total, int page, int size) {
