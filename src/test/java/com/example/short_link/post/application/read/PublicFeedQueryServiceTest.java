@@ -70,6 +70,19 @@ class PublicFeedQueryServiceTest {
   }
 
   @Test
+  void feedByTagUsesTagQuery() {
+    when(postRepository.findPublishedByTag("spring", 0, 20)).thenReturn(List.of(post(1L, "a")));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+    when(postRepository.countPublishedByTag("spring")).thenReturn(1L);
+
+    PublicFeedView view = service.feedByTag("spring", 0, 20);
+
+    assertThat(view.items()).hasSize(1);
+    assertThat(view.items().get(0).slug()).isEqualTo("a");
+    assertThat(view.hasNext()).isFalse();
+  }
+
+  @Test
   void trendingUsesTrendingQuery() {
     when(postRepository.findPublishedTrending(0, 20)).thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
