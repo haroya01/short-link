@@ -80,7 +80,7 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "like_count", nullable = false)
   private long likeCount = 0L;
 
-  public static final int MAX_TAGS = 20;
+  public static final int MAX_TAGS = 10;
   public static final int MAX_TAG_LENGTH = 40;
 
   /**
