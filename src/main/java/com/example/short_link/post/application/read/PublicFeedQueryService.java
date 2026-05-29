@@ -58,6 +58,7 @@ public class PublicFeedQueryService {
         post.getLanguageTag(),
         List.copyOf(post.getTags()),
         post.getPublishedAt(),
-        post.getViewCount());
+        post.getViewCount(),
+        post.getLikeCount());
   }
 }
