@@ -1,6 +1,7 @@
 package com.example.short_link.admin.presentation;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -47,6 +48,28 @@ class AdminControllerTest {
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(get("/api/v1/admin/overview").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void adminMintsAccessToken() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("mint@x.com", "google", "g-mint"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(post("/api/v1/admin/access-token").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.accessToken").isString())
+        .andExpect(jsonPath("$.expiresInSeconds").isNumber());
+  }
+
+  @Test
+  void plainUserCannotMintAccessToken() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("nomint@x.com", "google", "g-nomint"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+
+    mvc.perform(post("/api/v1/admin/access-token").header("Authorization", "Bearer " + token))
         .andExpect(status().isForbidden());
   }
 

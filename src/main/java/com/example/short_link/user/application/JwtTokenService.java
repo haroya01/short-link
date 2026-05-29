@@ -169,6 +169,10 @@ public class JwtTokenService {
     return refreshTtl;
   }
 
+  public Duration accessTtl() {
+    return accessTtl;
+  }
+
   private static PrivateKey parsePrivateKey(String pem) throws GeneralSecurityException {
     String stripped =
         pem.replace("-----BEGIN PRIVATE KEY-----", "")

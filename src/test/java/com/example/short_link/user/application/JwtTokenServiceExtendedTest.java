@@ -72,6 +72,13 @@ class JwtTokenServiceExtendedTest {
   }
 
   @Test
+  void accessTtlAccessor() throws Exception {
+    JwtTokenService svc =
+        new JwtTokenService(new JwtProperties("", "", Duration.ofMinutes(15), Duration.ofDays(30)));
+    assertThat(svc.accessTtl()).isEqualTo(Duration.ofMinutes(15));
+  }
+
+  @Test
   void serviceLoadsConfiguredKeysWhenProvided() throws Exception {
     KeyPair pair = KeyPairGenerator.getInstance("RSA").generateKeyPair();
     String priv =
