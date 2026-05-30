@@ -32,7 +32,11 @@ public interface PostRepository {
   /** Global public feed (all authors), newest first. 0-based page. */
   List<PostEntity> findPublishedRecent(int page, int size);
 
-  /** Global public feed ranked by view count, newest as tiebreak. */
+  /**
+   * Global public feed ranked by views inside a recent window (recent traction), newest as tiebreak
+   * — the honest "trending" sort. Posts with no recent views fall back to recency so the feed stays
+   * full. Distinct from posts.view_count, the lifetime counter shown on cards.
+   */
   List<PostEntity> findPublishedTrending(int page, int size);
 
   long countPublished();
