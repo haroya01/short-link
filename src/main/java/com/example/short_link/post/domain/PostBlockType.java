@@ -11,5 +11,7 @@ public enum PostBlockType {
   QUOTE,
   LIST_BULLET,
   LIST_NUMBERED,
-  EMBED
+  EMBED,
+  CODE,
+  TABLE
 }
