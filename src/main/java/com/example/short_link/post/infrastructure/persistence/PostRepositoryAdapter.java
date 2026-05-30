@@ -104,8 +104,8 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> searchPublishedTrending(String query, int page, int size) {
-    return jpa.searchPublishedTrending(
-        likePattern(query), PostStatus.PUBLISHED, PageRequest.of(page, size));
+    Instant since = Instant.now().minus(TRENDING_WINDOW);
+    return jpa.searchPublishedTrendingSince(likePattern(query), since, PageRequest.of(page, size));
   }
 
   @Override
