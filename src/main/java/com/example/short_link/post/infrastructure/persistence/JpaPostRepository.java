@@ -2,6 +2,7 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -27,8 +28,22 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findByStatusOrderByPublishedAtDesc(PostStatus status, Pageable pageable);
 
-  List<PostEntity> findByStatusOrderByViewCountDescPublishedAtDesc(
-      PostStatus status, Pageable pageable);
+  // Trending = most views inside a recent window (`since`), newest as tiebreak. LEFT JOIN so every
+  // published post still appears: posts with no recent views fall to a window count of 0 and sort
+  // by
+  // recency, keeping the feed full on a young platform while genuine traction floats to the top.
+  // posts.view_count (lifetime) is deliberately unused here — ranking on that all-time counter is
+  // exactly what made the old "trending" really just "most-viewed ever". Native because it crosses
+  // to post_view_event; SELECT p.* + GROUP BY p.id is valid under MySQL's PK functional dependency.
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p "
+              + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
+              + "WHERE p.status = 'PUBLISHED' "
+              + "GROUP BY p.id "
+              + "ORDER BY COUNT(e.id) DESC, p.published_at DESC")
+  List<PostEntity> findPublishedTrendingSince(@Param("since") Instant since, Pageable pageable);
 
   long countByStatus(PostStatus status);
 
