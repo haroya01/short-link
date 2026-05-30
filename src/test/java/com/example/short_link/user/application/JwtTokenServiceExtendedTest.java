@@ -18,7 +18,8 @@ class JwtTokenServiceExtendedTest {
 
   private JwtTokenService freshService() throws Exception {
     return new JwtTokenService(
-        new JwtProperties("", "", Duration.ofMinutes(5), Duration.ofDays(7)));
+        new JwtProperties(
+            "", "", Duration.ofMinutes(5), Duration.ofDays(7), Duration.ofSeconds(10)));
   }
 
   @Test
@@ -67,14 +68,18 @@ class JwtTokenServiceExtendedTest {
   @Test
   void refreshTtlAccessor() throws Exception {
     JwtTokenService svc =
-        new JwtTokenService(new JwtProperties("", "", Duration.ofMinutes(1), Duration.ofDays(30)));
+        new JwtTokenService(
+            new JwtProperties(
+                "", "", Duration.ofMinutes(1), Duration.ofDays(30), Duration.ofSeconds(10)));
     assertThat(svc.refreshTtl()).isEqualTo(Duration.ofDays(30));
   }
 
   @Test
   void accessTtlAccessor() throws Exception {
     JwtTokenService svc =
-        new JwtTokenService(new JwtProperties("", "", Duration.ofMinutes(15), Duration.ofDays(30)));
+        new JwtTokenService(
+            new JwtProperties(
+                "", "", Duration.ofMinutes(15), Duration.ofDays(30), Duration.ofSeconds(10)));
     assertThat(svc.accessTtl()).isEqualTo(Duration.ofMinutes(15));
   }
 
@@ -93,7 +98,8 @@ class JwtTokenServiceExtendedTest {
             + "\n-----END PUBLIC KEY-----";
     JwtTokenService svc =
         new JwtTokenService(
-            new JwtProperties(priv, pub, Duration.ofMinutes(5), Duration.ofDays(7)));
+            new JwtProperties(
+                priv, pub, Duration.ofMinutes(5), Duration.ofDays(7), Duration.ofSeconds(10)));
     String token = svc.createAccessToken(42L, "USER");
     assertThat(svc.parseAccessToken(token)).isEqualTo(42L);
   }
@@ -107,7 +113,8 @@ class JwtTokenServiceExtendedTest {
                         "-----BEGIN PRIVATE KEY-----\nXXX\n-----END PRIVATE KEY-----",
                         "-----BEGIN PUBLIC KEY-----\nXXX\n-----END PUBLIC KEY-----",
                         Duration.ofMinutes(5),
-                        Duration.ofDays(7))))
+                        Duration.ofDays(7),
+                        Duration.ofSeconds(10))))
         .isInstanceOf(GeneralSecurityException.class);
   }
 }
