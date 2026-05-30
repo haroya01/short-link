@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.TagCount;
@@ -91,6 +92,33 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> searchPublished(String query, int page, int size) {
+    return jpa.searchPublished(
+        likePattern(query), PostStatus.PUBLISHED, PageRequest.of(page, size));
+  }
+
+  @Override
+  public List<PostEntity> searchPublishedTrending(String query, int page, int size) {
+    return jpa.searchPublishedTrending(
+        likePattern(query), PostStatus.PUBLISHED, PageRequest.of(page, size));
+  }
+
+  @Override
+  public long countSearchPublished(String query) {
+    return jpa.countSearchPublished(likePattern(query), PostStatus.PUBLISHED);
+  }
+
+  // Lowercase + escape the LIKE metacharacters in user input, then wrap in %…% for a contains
+  // match.
+  // '!' is the escape char declared in the queries; escape it first so a literal '!' can't shield
+  // the
+  // following char. Without this, a search for "50%" would match every title.
+  private static String likePattern(String query) {
+    String escaped = query.toLowerCase().replace("!", "!!").replace("%", "!%").replace("_", "!_");
+    return "%" + escaped + "%";
+  }
+
+  @Override
   public List<PostEntity> findPublishedByAuthorIds(Collection<Long> authorIds, int page, int size) {
     return jpa.findPublishedByAuthorIds(
         authorIds, PostStatus.PUBLISHED, PageRequest.of(page, size));
@@ -105,6 +133,18 @@ class PostRepositoryAdapter implements PostRepository {
   public List<TagCount> findPopularTags(int limit) {
     return jpa.findPopularTags(PostStatus.PUBLISHED, PageRequest.of(0, limit)).stream()
         .map(row -> new TagCount((String) row[0], ((Number) row[1]).longValue()))
+        .toList();
+  }
+
+  @Override
+  public List<AuthorPostStats> findTopAuthorStats(int limit) {
+    return jpa.findTopAuthorIds(PostStatus.PUBLISHED, PageRequest.of(0, limit)).stream()
+        .map(
+            row ->
+                new AuthorPostStats(
+                    ((Number) row[0]).longValue(),
+                    ((Number) row[1]).longValue(),
+                    ((Number) row[2]).longValue()))
         .toList();
   }
 }

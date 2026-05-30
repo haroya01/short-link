@@ -1,5 +1,6 @@
 package com.example.short_link.post.domain.repository;
 
+import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.TagCount;
@@ -41,6 +42,14 @@ public interface PostRepository {
 
   long countPublishedByTag(String tag);
 
+  /** Published posts matching free text in title / excerpt / tags / author handle, newest first. */
+  List<PostEntity> searchPublished(String query, int page, int size);
+
+  /** Same match as {@link #searchPublished} but ranked by view count — the trending sort. */
+  List<PostEntity> searchPublishedTrending(String query, int page, int size);
+
+  long countSearchPublished(String query);
+
   /** Published posts by any of the given authors, newest first — the "following" feed. */
   List<PostEntity> findPublishedByAuthorIds(Collection<Long> authorIds, int page, int size);
 
@@ -48,4 +57,9 @@ public interface PostRepository {
 
   /** Most-used tags across published posts, most popular first — the 주제 index. */
   List<TagCount> findPopularTags(int limit);
+
+  /**
+   * [authorId, publishedPostCount, totalViews] ranked for the discovery rail, top authors first.
+   */
+  List<AuthorPostStats> findTopAuthorStats(int limit);
 }
