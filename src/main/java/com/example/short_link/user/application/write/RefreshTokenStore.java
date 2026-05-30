@@ -10,4 +10,10 @@ public interface RefreshTokenStore {
   void delete(Long userId, String jti);
 
   void deleteAllForUser(Long userId);
+
+  /** Record that {@code jti} was just rotated, so a replay within {@code graceTtl} is tolerated. */
+  void markRotated(Long userId, String jti, Duration graceTtl);
+
+  /** True while a just-rotated {@code jti} is still inside its grace window. */
+  boolean wasRecentlyRotated(Long userId, String jti);
 }

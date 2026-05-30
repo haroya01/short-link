@@ -34,6 +34,16 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
   }
 
   @Override
+  public void markRotated(Long userId, String jti, Duration graceTtl) {
+    redis.opsForValue().set(rotatedKey(userId, jti), "1", graceTtl);
+  }
+
+  @Override
+  public boolean wasRecentlyRotated(Long userId, String jti) {
+    return Boolean.TRUE.equals(redis.hasKey(rotatedKey(userId, jti)));
+  }
+
+  @Override
   public void deleteAllForUser(Long userId) {
     Set<String> toDelete = new HashSet<>();
     ScanOptions opts =
@@ -54,5 +64,11 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
 
   private String userPrefix(Long userId) {
     return "refresh:" + userId + ":";
+  }
+
+  // Separate prefix so the grace marker isn't swept by deleteAllForUser's "refresh:{id}:*" scan —
+  // it expires on its own short TTL, so a theft wipe never needs to clear it.
+  private String rotatedKey(Long userId, String jti) {
+    return "refresh-rotated:" + userId + ":" + jti;
   }
 }

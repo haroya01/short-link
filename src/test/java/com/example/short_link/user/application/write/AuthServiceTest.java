@@ -87,8 +87,22 @@ class AuthServiceTest {
   }
 
   @Test
-  void refreshReuseWipesAllSessionsForUser() {
-    UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-reuse"));
+  void refreshWithUnknownTokenPastGraceWipesAllSessionsForUser() {
+    UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-theft"));
+    RefreshToken otherSession = jwt.createRefreshToken(user.getId());
+    refreshStore.save(user.getId(), otherSession.jti(), jwt.refreshTtl());
+    // A token the server never has as a live session and never just rotated (no grace marker) —
+    // genuine reuse/theft, so every session for the user is wiped.
+    RefreshToken stolen = jwt.createRefreshToken(user.getId());
+
+    assertThatThrownBy(() -> authService.refresh(stolen.token())).isInstanceOf(UserException.class);
+
+    assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isFalse();
+  }
+
+  @Test
+  void replayWithinRotationGraceReissuesWithoutWipingSessions() {
+    UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-grace"));
     RefreshToken initial = jwt.createRefreshToken(user.getId());
     RefreshToken otherSession = jwt.createRefreshToken(user.getId());
     refreshStore.save(user.getId(), initial.jti(), jwt.refreshTtl());
@@ -96,14 +110,14 @@ class AuthServiceTest {
 
     IssuedTokens rotated = authService.refresh(initial.token());
     ParsedRefresh rotatedParsed = jwt.parseRefreshToken(rotated.refreshToken());
+
+    // Stale replay of the just-rotated token (the cross-tab/subdomain race) within the grace
+    // window must NOT throw and must NOT wipe sessions — it re-issues a fresh pair instead.
+    IssuedTokens reissued = authService.refresh(initial.token());
+    assertThat(reissued.refreshToken()).isNotBlank();
+
     assertThat(refreshStore.exists(user.getId(), rotatedParsed.jti())).isTrue();
     assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isTrue();
-
-    assertThatThrownBy(() -> authService.refresh(initial.token()))
-        .isInstanceOf(UserException.class);
-
-    assertThat(refreshStore.exists(user.getId(), rotatedParsed.jti())).isFalse();
-    assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isFalse();
   }
 
   @Test

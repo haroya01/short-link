@@ -11,7 +11,8 @@ import org.springframework.mock.web.MockHttpServletResponse;
 class RefreshCookieWriterTest {
 
   private JwtProperties jwt() {
-    return new JwtProperties(null, null, Duration.ofMinutes(15), Duration.ofDays(14));
+    return new JwtProperties(
+        null, null, Duration.ofMinutes(15), Duration.ofDays(14), Duration.ofSeconds(10));
   }
 
   @Test
