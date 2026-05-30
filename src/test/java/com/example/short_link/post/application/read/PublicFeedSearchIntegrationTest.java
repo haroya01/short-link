@@ -3,9 +3,13 @@ package com.example.short_link.post.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostViewEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -25,6 +29,7 @@ class PublicFeedSearchIntegrationTest {
 
   @Autowired private PublicFeedQueryService service;
   @Autowired private PostRepository postRepository;
+  @Autowired private PostViewEventRepository postViewEventRepository;
   @Autowired private UserRepository userRepository;
 
   private long author(String handle) {
@@ -126,5 +131,46 @@ class PublicFeedSearchIntegrationTest {
     postRepository.save(draft); // never published
 
     assertThat(service.suggestedAuthors(5)).isEmpty();
+  }
+
+  private long publishReturningId(
+      long userId, String slug, String title, List<String> tags, int lifetimeViews) {
+    PostEntity p = new PostEntity(userId, slug, title, "ko");
+    p.updateTags(tags);
+    for (int i = 0; i < lifetimeViews; i++) p.incrementViewCount();
+    p.publish();
+    return postRepository.save(p).getId();
+  }
+
+  private void view(long postId, Instant at) {
+    postViewEventRepository.save(new PostViewEventEntity(postId, at));
+  }
+
+  private List<String> trendingSlugs(String query) {
+    return service.search(query, "trending", 0, 20).items().stream()
+        .map(PublicFeedItem::slug)
+        .toList();
+  }
+
+  @Test
+  void trendingSearchRanksByRecentWindowViewsNotLifetimeCount() {
+    long a = author("searchtrend");
+    Instant now = Instant.now();
+    Instant inWindow = now.minus(2, ChronoUnit.HOURS);
+    Instant outOfWindow = now.minus(10, ChronoUnit.DAYS);
+
+    // All three match "kotlin" by title; the trending sort must follow recent-window views, not the
+    // lifetime view_count — the same honesty fix the main feed got, now inside search.
+    long stale = publishReturningId(a, "kotlin-stale", "Kotlin deep dive", List.of(), 800);
+    for (int i = 0; i < 6; i++) view(stale, outOfWindow); // big lifetime count, but all old
+
+    long fresh = publishReturningId(a, "kotlin-fresh", "Kotlin coroutines", List.of(), 1);
+    for (int i = 0; i < 4; i++) view(fresh, inWindow);
+
+    long mild = publishReturningId(a, "kotlin-mild", "Kotlin DSLs", List.of(), 0);
+    view(mild, inWindow);
+
+    assertThat(trendingSlugs("kotlin"))
+        .containsExactly("kotlin-fresh", "kotlin-mild", "kotlin-stale");
   }
 }

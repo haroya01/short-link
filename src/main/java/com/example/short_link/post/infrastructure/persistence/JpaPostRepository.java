@@ -95,18 +95,28 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   List<PostEntity> searchPublished(
       @Param("q") String q, @Param("status") PostStatus status, Pageable pageable);
 
-  // Same match as searchPublished, ranked by view count (newest as tiebreak) for the trending sort.
+  // Same match as searchPublished, but ranked by recent-window views (newest as tiebreak) so the
+  // trending sort means the same thing inside search as it does on the main feed. Native to mirror
+  // findPublishedTrendingSince: LEFT JOIN post_view_event for the windowed COUNT, LEFT JOIN
+  // post_tag
+  // for the tag match. COUNT(DISTINCT e.id) so the tag-join fan-out can't inflate the view count.
+  // `q` is the pre-lowercased, wildcard-escaped %…% LIKE pattern built by the adapter.
   @Query(
-      "select distinct p from PostEntity p left join p.tags t "
-          + "where p.status = :status and ("
-          + "lower(p.title) like :q escape '!' "
-          + "or lower(p.excerpt) like :q escape '!' "
-          + "or lower(t) like :q escape '!' "
-          + "or p.userId in (select u.id from UserEntity u "
-          + "where lower(u.username) like :q escape '!' and u.deletedAt is null)) "
-          + "order by p.viewCount desc, p.publishedAt desc")
-  List<PostEntity> searchPublishedTrending(
-      @Param("q") String q, @Param("status") PostStatus status, Pageable pageable);
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p "
+              + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
+              + "LEFT JOIN post_tag t ON t.post_id = p.id "
+              + "WHERE p.status = 'PUBLISHED' AND ("
+              + "LOWER(p.title) LIKE :q ESCAPE '!' "
+              + "OR LOWER(p.excerpt) LIKE :q ESCAPE '!' "
+              + "OR LOWER(t.tag) LIKE :q ESCAPE '!' "
+              + "OR p.user_id IN (SELECT u.id FROM users u "
+              + "WHERE LOWER(u.username) LIKE :q ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "GROUP BY p.id "
+              + "ORDER BY COUNT(DISTINCT e.id) DESC, p.published_at DESC")
+  List<PostEntity> searchPublishedTrendingSince(
+      @Param("q") String q, @Param("since") Instant since, Pageable pageable);
 
   @Query(
       "select count(distinct p) from PostEntity p left join p.tags t "
