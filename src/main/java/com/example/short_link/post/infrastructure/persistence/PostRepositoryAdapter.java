@@ -5,6 +5,8 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.PostRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -15,6 +17,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 class PostRepositoryAdapter implements PostRepository {
+
+  // Rolling window the trending feed ranks views over — "recent traction" = the last 7 days.
+  private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaPostRepository jpa;
 
@@ -72,8 +77,8 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> findPublishedTrending(int page, int size) {
-    return jpa.findByStatusOrderByViewCountDescPublishedAtDesc(
-        PostStatus.PUBLISHED, PageRequest.of(page, size));
+    Instant since = Instant.now().minus(TRENDING_WINDOW);
+    return jpa.findPublishedTrendingSince(since, PageRequest.of(page, size));
   }
 
   @Override

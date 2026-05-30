@@ -7,27 +7,41 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostViewEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
 class RecordPostViewUseCaseTest {
 
+  private static final Instant NOW = Instant.parse("2026-01-15T10:00:00Z");
+
   @Mock private UserRepository userRepository;
   @Mock private PostRepository postRepository;
+  @Mock private PostViewEventRepository postViewEventRepository;
 
   private RecordPostViewUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new RecordPostViewUseCase(userRepository, postRepository);
+    useCase =
+        new RecordPostViewUseCase(
+            userRepository,
+            postRepository,
+            postViewEventRepository,
+            Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private UserEntity author(String username) {
@@ -37,7 +51,7 @@ class RecordPostViewUseCaseTest {
   }
 
   @Test
-  void incrementsViewCountForPublished() {
+  void incrementsViewCountAndAppendsEventForPublished() {
     UserEntity author = author("john");
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
@@ -49,6 +63,9 @@ class RecordPostViewUseCaseTest {
 
     assertThat(post.getViewCount()).isEqualTo(1L);
     verify(postRepository).save(post);
+    ArgumentCaptor<PostViewEventEntity> event = ArgumentCaptor.forClass(PostViewEventEntity.class);
+    verify(postViewEventRepository).save(event.capture());
+    assertThat(event.getValue().getViewedAt()).isEqualTo(NOW);
   }
 
   @Test
@@ -72,6 +89,7 @@ class RecordPostViewUseCaseTest {
     useCase.execute(new RecordPostViewCommand("ghost", "p"));
 
     verify(postRepository, never()).save(any());
+    verify(postViewEventRepository, never()).save(any());
   }
 
   @Test
@@ -83,6 +101,7 @@ class RecordPostViewUseCaseTest {
     useCase.execute(new RecordPostViewCommand("john", "p"));
 
     verify(postRepository, never()).save(any());
+    verify(postViewEventRepository, never()).save(any());
   }
 
   @Test
@@ -97,6 +116,7 @@ class RecordPostViewUseCaseTest {
 
     assertThat(post.getViewCount()).isZero();
     verify(postRepository, never()).save(any());
+    verify(postViewEventRepository, never()).save(any());
   }
 
   @Test
@@ -111,5 +131,6 @@ class RecordPostViewUseCaseTest {
     useCase.execute(new RecordPostViewCommand("john", "p"));
 
     verify(postRepository, never()).save(any());
+    verify(postViewEventRepository, never()).save(any());
   }
 }
