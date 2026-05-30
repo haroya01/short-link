@@ -56,7 +56,7 @@ class AuthControllerTest {
   }
 
   @Test
-  void refreshAfterRotationFails() throws Exception {
+  void refreshReplayWithinGraceSucceeds() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
     RefreshToken refresh = jwt.createRefreshToken(user.getId());
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
@@ -64,7 +64,19 @@ class AuthControllerTest {
     mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("refresh_token", refresh.token())))
         .andExpect(status().isOk());
 
+    // Replaying the just-rotated token within the grace window is the benign cross-tab/subdomain
+    // race, so it re-issues a fresh pair instead of returning 401.
     mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("refresh_token", refresh.token())))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void refreshWithUnknownTokenReturns401() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
+    // Never stored and never just rotated → treated as reuse/theft.
+    RefreshToken stolen = jwt.createRefreshToken(user.getId());
+
+    mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("refresh_token", stolen.token())))
         .andExpect(status().isUnauthorized());
   }
 
