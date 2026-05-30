@@ -3,6 +3,7 @@ package com.example.short_link.user.application.write;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.dto.ParsedRefresh;
+import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.UserEntity;
@@ -23,6 +24,7 @@ public class AuthService {
   private final JwtTokenService jwt;
   private final RefreshTokenStore refreshStore;
   private final TwoFactorService twoFactor;
+  private final JwtProperties jwtProperties;
 
   /**
    * Result of an OAuth login. If the user has 2FA enabled this returns only a short-lived challenge
@@ -77,22 +79,36 @@ public class AuthService {
     } catch (Exception e) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
-    if (!refreshStore.exists(parsed.userId(), parsed.jti())) {
-      log.warn(
-          "refresh token reuse or theft suspected for userId={}, wiping all sessions",
-          parsed.userId());
-      refreshStore.deleteAllForUser(parsed.userId());
-      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
+    if (refreshStore.exists(parsed.userId(), parsed.jti())) {
+      // Live session: rotate it (one-time use) and leave a short grace marker, so a stale replay of
+      // this same token from another tab/subdomain isn't mistaken for theft.
+      refreshStore.delete(parsed.userId(), parsed.jti());
+      refreshStore.markRotated(parsed.userId(), parsed.jti(), jwtProperties.refreshRotationGrace());
+      return issue(loadActiveUser(parsed.userId()));
     }
-    refreshStore.delete(parsed.userId(), parsed.jti());
+    if (refreshStore.wasRecentlyRotated(parsed.userId(), parsed.jti())) {
+      // Replay inside the grace window — the benign cross-tab / cross-subdomain race. Re-issue a
+      // fresh pair instead of wiping the user's other (still valid) sessions.
+      log.debug("refresh within rotation grace for userId={}, reissuing", parsed.userId());
+      return issue(loadActiveUser(parsed.userId()));
+    }
+    // Unknown jti past its grace window (or never issued) — genuine reuse/theft. Wipe everything.
+    log.warn(
+        "refresh token reuse or theft suspected for userId={}, wiping all sessions",
+        parsed.userId());
+    refreshStore.deleteAllForUser(parsed.userId());
+    throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
+  }
+
+  private UserEntity loadActiveUser(Long userId) {
     UserEntity user =
         userRepository
-            .findById(parsed.userId())
+            .findById(userId)
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (user.isDeleted()) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
-    return issue(user);
+    return user;
   }
 
   public void logout(Long userId, String refreshToken) {
