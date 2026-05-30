@@ -25,10 +25,14 @@ public class PublicFeedController {
   public PublicFeedView feed(
       @RequestParam(defaultValue = "recent") String sort,
       @RequestParam(required = false) String tag,
+      @RequestParam(required = false) String q,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     int safePage = Math.max(page, 0);
     int safeSize = Math.min(Math.max(size, 1), MAX_SIZE);
+    if (q != null && !q.isBlank()) {
+      return publicFeedQueryService.search(q.trim(), sort, safePage, safeSize);
+    }
     if (tag != null && !tag.isBlank()) {
       return publicFeedQueryService.feedByTag(tag.trim(), safePage, safeSize);
     }

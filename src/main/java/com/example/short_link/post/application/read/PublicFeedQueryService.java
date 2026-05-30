@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -42,9 +43,43 @@ public class PublicFeedQueryService {
     return assemble(posts, postRepository.countPublishedByTag(tag), page, size);
   }
 
+  /**
+   * Free-text search across title / excerpt / tags / author handle. {@code sort} = recent|trending.
+   */
+  public PublicFeedView search(String query, String sort, int page, int size) {
+    List<PostEntity> posts =
+        "trending".equalsIgnoreCase(sort)
+            ? postRepository.searchPublishedTrending(query, page, size)
+            : postRepository.searchPublished(query, page, size);
+    return assemble(posts, postRepository.countSearchPublished(query), page, size);
+  }
+
   /** Most-used tags across published posts, most popular first — the 주제 index. */
   public List<TagCount> popularTags(int limit) {
     return postRepository.findPopularTags(limit);
+  }
+
+  /**
+   * Authors for the discovery rail — most published posts first. Over-fetches so deleted authors
+   * (filtered during hydration) don't shrink the list below {@code limit}, then trims to {@code
+   * limit} while preserving the ranking order.
+   */
+  public List<SuggestedAuthorView> suggestedAuthors(int limit) {
+    List<AuthorPostStats> ranked = postRepository.findTopAuthorStats(limit * 2);
+    Map<Long, UserEntity> authors =
+        userRepository
+            .findAllByIdIn(ranked.stream().map(AuthorPostStats::authorId).toList())
+            .stream()
+            .filter(u -> !u.isDeleted())
+            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    return ranked.stream()
+        .filter(s -> authors.containsKey(s.authorId()))
+        .limit(limit)
+        .map(
+            s ->
+                new SuggestedAuthorView(
+                    PublicAuthorView.from(authors.get(s.authorId())), s.postCount()))
+        .toList();
   }
 
   /** Posts from authors the user follows, newest first. Empty when the user follows no one. */

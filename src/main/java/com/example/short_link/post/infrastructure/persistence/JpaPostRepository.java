@@ -59,4 +59,55 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       "select t, count(p) from PostEntity p join p.tags t "
           + "where p.status = :status group by t order by count(p) desc")
   List<Object[]> findPopularTags(@Param("status") PostStatus status, Pageable pageable);
+
+  // Free-text feed search. Matches title / excerpt / any tag / author handle, newest first. `q` is
+  // a
+  // pre-lowercased, wildcard-escaped LIKE pattern (already wrapped in %…%) built by the adapter, so
+  // the query only LIKEs it. The author match is a subquery against UserEntity because a post holds
+  // a
+  // raw userId, not an association — deleted authors are excluded there. `distinct` collapses the
+  // row
+  // fan-out from the tag join.
+  @Query(
+      "select distinct p from PostEntity p left join p.tags t "
+          + "where p.status = :status and ("
+          + "lower(p.title) like :q escape '!' "
+          + "or lower(p.excerpt) like :q escape '!' "
+          + "or lower(t) like :q escape '!' "
+          + "or p.userId in (select u.id from UserEntity u "
+          + "where lower(u.username) like :q escape '!' and u.deletedAt is null)) "
+          + "order by p.publishedAt desc")
+  List<PostEntity> searchPublished(
+      @Param("q") String q, @Param("status") PostStatus status, Pageable pageable);
+
+  // Same match as searchPublished, ranked by view count (newest as tiebreak) for the trending sort.
+  @Query(
+      "select distinct p from PostEntity p left join p.tags t "
+          + "where p.status = :status and ("
+          + "lower(p.title) like :q escape '!' "
+          + "or lower(p.excerpt) like :q escape '!' "
+          + "or lower(t) like :q escape '!' "
+          + "or p.userId in (select u.id from UserEntity u "
+          + "where lower(u.username) like :q escape '!' and u.deletedAt is null)) "
+          + "order by p.viewCount desc, p.publishedAt desc")
+  List<PostEntity> searchPublishedTrending(
+      @Param("q") String q, @Param("status") PostStatus status, Pageable pageable);
+
+  @Query(
+      "select count(distinct p) from PostEntity p left join p.tags t "
+          + "where p.status = :status and ("
+          + "lower(p.title) like :q escape '!' "
+          + "or lower(p.excerpt) like :q escape '!' "
+          + "or lower(t) like :q escape '!' "
+          + "or p.userId in (select u.id from UserEntity u "
+          + "where lower(u.username) like :q escape '!' and u.deletedAt is null))")
+  long countSearchPublished(@Param("q") String q, @Param("status") PostStatus status);
+
+  // Authors ranked for the discovery rail — most published posts first, total views as tiebreak.
+  // Returns [userId, postCount, totalViews]; the service hydrates authors and drops deleted ones.
+  @Query(
+      "select p.userId, count(p), coalesce(sum(p.viewCount), 0) from PostEntity p "
+          + "where p.status = :status group by p.userId "
+          + "order by count(p) desc, coalesce(sum(p.viewCount), 0) desc")
+  List<Object[]> findTopAuthorIds(@Param("status") PostStatus status, Pageable pageable);
 }

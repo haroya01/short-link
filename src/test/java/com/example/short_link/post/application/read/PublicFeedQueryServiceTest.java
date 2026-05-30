@@ -85,6 +85,31 @@ class PublicFeedQueryServiceTest {
   }
 
   @Test
+  void searchUsesRecentQueryByDefault() {
+    when(postRepository.searchPublished("spring", 0, 20)).thenReturn(List.of(post(1L, "a")));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+    when(postRepository.countSearchPublished("spring")).thenReturn(1L);
+
+    PublicFeedView view = service.search("spring", "recent", 0, 20);
+
+    assertThat(view.items()).hasSize(1);
+    assertThat(view.items().get(0).slug()).isEqualTo("a");
+    verify(postRepository).searchPublished("spring", 0, 20);
+  }
+
+  @Test
+  void searchUsesTrendingQueryWhenSorted() {
+    when(postRepository.searchPublishedTrending("spring", 0, 20))
+        .thenReturn(List.of(post(1L, "a")));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+    when(postRepository.countSearchPublished("spring")).thenReturn(1L);
+
+    service.search("spring", "trending", 0, 20);
+
+    verify(postRepository).searchPublishedTrending("spring", 0, 20);
+  }
+
+  @Test
   void followingFeedReturnsPostsFromFollowedAuthors() {
     when(postRepository.findPublishedByAuthorIds(List.of(2L, 3L), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
