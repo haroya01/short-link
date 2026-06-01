@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.PostLinkClickReader;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -35,20 +36,27 @@ public class PostAnalyticsQueryService {
 
   private final PostRepository postRepository;
   private final PostViewEventRepository viewEventRepository;
+  private final PostLinkClickReader linkClickReader;
   private final Clock clock;
 
   // @Autowired marks the constructor Spring must use — without it the extra (test-only) Clock
   // constructor makes the bean ambiguous and Spring falls back to a no-arg ctor that doesn't exist.
   @Autowired
   public PostAnalyticsQueryService(
-      PostRepository postRepository, PostViewEventRepository viewEventRepository) {
-    this(postRepository, viewEventRepository, Clock.systemUTC());
+      PostRepository postRepository,
+      PostViewEventRepository viewEventRepository,
+      PostLinkClickReader linkClickReader) {
+    this(postRepository, viewEventRepository, linkClickReader, Clock.systemUTC());
   }
 
   PostAnalyticsQueryService(
-      PostRepository postRepository, PostViewEventRepository viewEventRepository, Clock clock) {
+      PostRepository postRepository,
+      PostViewEventRepository viewEventRepository,
+      PostLinkClickReader linkClickReader,
+      Clock clock) {
     this.postRepository = postRepository;
     this.viewEventRepository = viewEventRepository;
+    this.linkClickReader = linkClickReader;
     this.clock = clock;
   }
 
@@ -67,6 +75,7 @@ public class PostAnalyticsQueryService {
         fillDaily(
             viewEventRepository.countDailyByPostIdSince(postId, startOfDay(from)), from, today);
     long windowViews = daily.stream().mapToLong(DailyPoint::views).sum();
+    Instant since = startOfDay(from);
     return new PostAnalyticsView(
         post.getId(),
         post.getSlug(),
@@ -76,6 +85,8 @@ public class PostAnalyticsQueryService {
         post.getLikeCount(),
         window,
         windowViews,
+        linkClickReader.countByPostId(postId),
+        linkClickReader.countByPostIdSince(postId, since),
         daily);
   }
 
@@ -101,7 +112,16 @@ public class PostAnalyticsQueryService {
                         p.getId(), p.getSlug(), p.getTitle(), p.getViewCount(), p.getLikeCount()))
             .toList();
     return new AuthorAnalyticsOverview(
-        posts.size(), published, lifetimeViews, lifetimeLikes, window, windowViews, daily, top);
+        posts.size(),
+        published,
+        lifetimeViews,
+        lifetimeLikes,
+        window,
+        windowViews,
+        linkClickReader.countByUserId(userId),
+        linkClickReader.countByUserIdSince(userId, startOfDay(from)),
+        daily,
+        top);
   }
 
   private int clampWindow(int days) {

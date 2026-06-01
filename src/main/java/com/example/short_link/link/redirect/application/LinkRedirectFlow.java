@@ -48,6 +48,21 @@ public class LinkRedirectFlow {
       String acceptLanguage,
       String src,
       HttpServletRequest req) {
+    return execute(link, entity, referrer, userAgent, acceptLanguage, src, null, req);
+  }
+
+  /**
+   * Overload that also attributes the click to a blog post (the redirect carried {@code ?post=}).
+   */
+  public RedirectOutcome execute(
+      CachedLink link,
+      LinkEntity entity,
+      String referrer,
+      String userAgent,
+      String acceptLanguage,
+      String src,
+      Long postId,
+      HttpServletRequest req) {
     if (entity != null) {
       try {
         enforceViewLimit(link, entity);
@@ -88,7 +103,8 @@ public class LinkRedirectFlow {
                 LinkRedirectSupport.clientIp(req),
                 acceptLanguage)
             .withSourceChannel(src)
-            .withDestination(picked.destinationId()));
+            .withDestination(picked.destinationId())
+            .withPostId(postId));
     return new RedirectOutcome.Redirect(picked);
   }
 

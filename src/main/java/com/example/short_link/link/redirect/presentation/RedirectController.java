@@ -56,6 +56,7 @@ public class RedirectController {
   public ResponseEntity<?> redirect(
       @PathVariable ShortCode shortCode,
       @RequestParam(value = "src", required = false) String src,
+      @RequestParam(value = "post", required = false) Long post,
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
@@ -64,7 +65,7 @@ public class RedirectController {
     String outcome = "error";
     try {
       ResponseEntity<?> response =
-          handleRedirect(shortCode, src, referrer, userAgent, acceptLanguage, req);
+          handleRedirect(shortCode, src, post, referrer, userAgent, acceptLanguage, req);
       outcome = LinkRedirectSupport.classifyOutcome(response);
       return response;
     } catch (LinkException e) {
@@ -85,6 +86,7 @@ public class RedirectController {
   private ResponseEntity<?> handleRedirect(
       ShortCode shortCode,
       String src,
+      Long post,
       String referrer,
       String userAgent,
       String acceptLanguage,
@@ -115,7 +117,7 @@ public class RedirectController {
     if (link.passwordRequired()) {
       return LinkHtmlRenderer.passwordPromptResponse(HttpStatus.OK, shortCode, false);
     }
-    return render(flow.execute(link, null, referrer, userAgent, acceptLanguage, src, req));
+    return render(flow.execute(link, null, referrer, userAgent, acceptLanguage, src, post, req));
   }
 
   private ResponseEntity<?> render(RedirectOutcome outcome) {
