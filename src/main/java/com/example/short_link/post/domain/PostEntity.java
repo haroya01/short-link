@@ -102,6 +102,13 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "series_order")
   private Integer seriesOrder;
 
+  /**
+   * Author curation: 0-based position among the author's pinned posts (NULL = not pinned). Pinned
+   * posts surface first on the author's public profile, ordered by this. Owner-set, published-only.
+   */
+  @Column(name = "pin_order")
+  private Integer pinOrder;
+
   public PostEntity(Long userId, String slug, String title, String languageTag) {
     this.userId = userId;
     this.slug = slug;
@@ -248,6 +255,15 @@ public class PostEntity extends BaseTimeEntity {
   public void clearSeries() {
     this.seriesId = null;
     this.seriesOrder = null;
+  }
+
+  /** Pin at a 0-based position among the author's pinned posts (curation). */
+  public void pinAt(int order) {
+    this.pinOrder = order;
+  }
+
+  public void clearPin() {
+    this.pinOrder = null;
   }
 
   public static List<String> normalizeTags(List<String> raw) {
