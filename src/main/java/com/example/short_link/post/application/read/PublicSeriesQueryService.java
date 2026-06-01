@@ -29,6 +29,10 @@ public class PublicSeriesQueryService {
   // A "series" worth showcasing has at least two published posts; a lone post isn't a series yet.
   private static final int MIN_POSTS = 2;
 
+  // How many member titles the discovery card previews — enough to show "what's inside" at a
+  // glance.
+  private static final int PREVIEW_POSTS = 4;
+
   private final UserRepository userRepository;
   private final SeriesRepository seriesRepository;
   private final PostRepository postRepository;
@@ -57,25 +61,46 @@ public class PublicSeriesQueryService {
             .filter(u -> !u.isDeleted())
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
 
+    // Resolve + drop missing/deleted authors and cut to the limit FIRST, then fetch member previews
+    // only for the survivors (one small query each) — so dropped/over-limit series cost nothing
+    // extra.
     return ranked.stream()
-        .map(a -> toCard(a, series.get(a.seriesId()), authors))
+        .map(a -> resolve(a, series.get(a.seriesId()), authors))
         .filter(Objects::nonNull)
         .limit(safeLimit)
+        .map(this::toCard)
         .toList();
   }
 
-  private PublicSeriesCard toCard(
+  private Resolved resolve(
       SeriesActivity activity, SeriesEntity series, Map<Long, UserEntity> authors) {
     if (series == null) return null;
     UserEntity author = authors.get(series.getUserId());
     if (author == null) return null; // deleted/missing author → drop
-    return new PublicSeriesCard(
-        PublicAuthorView.from(author),
-        series.getSlug(),
-        series.getTitle(),
-        (int) activity.postCount(),
-        activity.lastPublishedAt());
+    return new Resolved(activity, series, author);
   }
+
+  private PublicSeriesCard toCard(Resolved r) {
+    return new PublicSeriesCard(
+        PublicAuthorView.from(r.author()),
+        r.series().getSlug(),
+        r.series().getTitle(),
+        (int) r.activity().postCount(),
+        r.activity().lastPublishedAt(),
+        memberPreviews(r.series().getId()));
+  }
+
+  /** The first few published members, in series order — the card's "what's inside" preview. */
+  private List<SeriesPostRef> memberPreviews(Long seriesId) {
+    return postRepository
+        .findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, PostStatus.PUBLISHED)
+        .stream()
+        .limit(PREVIEW_POSTS)
+        .map(p -> new SeriesPostRef(p.getSlug(), p.getTitle()))
+        .toList();
+  }
+
+  private record Resolved(SeriesActivity activity, SeriesEntity series, UserEntity author) {}
 
   public PublicSeriesListView listPublicSeries(String username) {
     UserEntity author = resolveAuthor(username);

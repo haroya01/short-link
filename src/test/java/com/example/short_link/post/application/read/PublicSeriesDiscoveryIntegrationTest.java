@@ -75,5 +75,7 @@ class PublicSeriesDiscoveryIntegrationTest {
     assertThat(dd.postCount()).isEqualTo(2); // draft excluded
     assertThat(dd.lastPublishedAt()).isNotNull();
     assertThat(dd.author().username()).isEqualTo("seriesauthor");
+    // Member previews list the published members in series order (draft excluded).
+    assertThat(dd.posts()).extracting(SeriesPostRef::slug).containsExactly("dd-1", "dd-2");
   }
 }
