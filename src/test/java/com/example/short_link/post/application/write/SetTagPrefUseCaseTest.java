@@ -77,4 +77,35 @@ class SetTagPrefUseCaseTest {
     useCase.follow(9L, "   ");
     verify(repository, never()).save(any());
   }
+
+  @Test
+  void hideFlipsAnExistingFollow() {
+    UserTagPrefEntity followed = new UserTagPrefEntity(9L, "광고", TagPrefKind.FOLLOW);
+    when(repository.findByUserIdAndTag(9L, "광고")).thenReturn(Optional.of(followed));
+
+    useCase.hide(9L, "광고");
+
+    assertThat(followed.getKind()).isEqualTo(TagPrefKind.HIDE);
+    verify(repository).save(followed);
+  }
+
+  @Test
+  void unhideDeletesWhenHide() {
+    UserTagPrefEntity hidden = new UserTagPrefEntity(9L, "광고", TagPrefKind.HIDE);
+    when(repository.findByUserIdAndTag(9L, "광고")).thenReturn(Optional.of(hidden));
+
+    useCase.unhide(9L, "광고");
+
+    verify(repository).delete(hidden);
+  }
+
+  @Test
+  void unhideNoOpWhenNotHidden() {
+    when(repository.findByUserIdAndTag(9L, "광고"))
+        .thenReturn(Optional.of(new UserTagPrefEntity(9L, "광고", TagPrefKind.FOLLOW)));
+
+    useCase.unhide(9L, "광고"); // tag is FOLLOW, not HIDE → must not delete
+
+    verify(repository, never()).delete(any());
+  }
 }

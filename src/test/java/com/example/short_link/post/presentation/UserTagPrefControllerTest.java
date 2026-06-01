@@ -2,6 +2,7 @@ package com.example.short_link.post.presentation;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -51,6 +52,38 @@ class UserTagPrefControllerTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.followed[0]").value("개발"));
+  }
+
+  @Test
+  void unfollowReturnsUpdatedPrefs() throws Exception {
+    when(tagPrefQueryService.get(eq(USER_ID))).thenReturn(new TagPrefsView(List.of(), List.of()));
+
+    mvc.perform(
+            delete("/api/v1/users/me/tag-prefs/followed/개발")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void hideReturnsUpdatedPrefs() throws Exception {
+    when(tagPrefQueryService.get(eq(USER_ID)))
+        .thenReturn(new TagPrefsView(List.of(), List.of("광고")));
+
+    mvc.perform(
+            put("/api/v1/users/me/tag-prefs/hidden/광고")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hidden[0]").value("광고"));
+  }
+
+  @Test
+  void unhideReturnsUpdatedPrefs() throws Exception {
+    when(tagPrefQueryService.get(eq(USER_ID))).thenReturn(new TagPrefsView(List.of(), List.of()));
+
+    mvc.perform(
+            delete("/api/v1/users/me/tag-prefs/hidden/광고")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk());
   }
 
   @Test
