@@ -132,9 +132,9 @@ class PublicSeriesQueryServiceTest {
 
   @Test
   void detailReturnsPublishedMembers() {
-    UserEntity author = author("john");
+    UserEntity author = author(1L, "john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    SeriesEntity series = new SeriesEntity(author.getId(), "my-series", "My Series");
+    SeriesEntity series = series(42L, author.getId(), "my-series", "My Series");
     when(seriesRepository.findByUserIdAndSlug(author.getId(), "my-series"))
         .thenReturn(Optional.of(series));
     when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
@@ -143,6 +143,7 @@ class PublicSeriesQueryServiceTest {
 
     PublicSeriesDetail detail = service.findPublicSeries("john", "my-series");
 
+    assertThat(detail.series().id()).isEqualTo(42L);
     assertThat(detail.series().title()).isEqualTo("My Series");
     assertThat(detail.posts()).hasSize(1);
     assertThat(detail.posts().get(0).slug()).isEqualTo("a");
