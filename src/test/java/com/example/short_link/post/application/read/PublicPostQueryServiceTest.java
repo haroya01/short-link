@@ -296,4 +296,28 @@ class PublicPostQueryServiceTest {
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
   }
+
+  @Test
+  void pinnedPostsSurfaceFirstThenPublishedOrderPreserved() {
+    UserEntity author = authorWithUsername("john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity newest = new PostEntity(author.getId(), "newest", "Newest", "ko");
+    newest.publish();
+    PostEntity pinned = new PostEntity(author.getId(), "pinned", "Pinned", "ko");
+    pinned.publish();
+    pinned.pinAt(0);
+    PostEntity oldest = new PostEntity(author.getId(), "oldest", "Oldest", "ko");
+    oldest.publish();
+    // Repo returns publishedAt-desc: newest, pinned, oldest.
+    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(
+            author.getId(), PostStatus.PUBLISHED))
+        .thenReturn(List.of(newest, pinned, oldest));
+
+    PublicPostListView response = service.listPublicPosts("john");
+
+    // Pinned first; the unpinned keep their original publishedAt-desc order.
+    assertThat(response.posts())
+        .extracting(PublicPostListItem::slug)
+        .containsExactly("pinned", "newest", "oldest");
+  }
 }

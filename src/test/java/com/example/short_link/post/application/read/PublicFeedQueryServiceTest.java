@@ -158,4 +158,34 @@ class PublicFeedQueryServiceTest {
 
     verify(postRepository).findPublishedTrending(0, 20);
   }
+
+  @Test
+  void trendingByTagBuildsSectionPerPopularTag() {
+    when(postRepository.findPopularTags(6))
+        .thenReturn(
+            List.of(
+                new com.example.short_link.post.domain.TagCount("spring", 3L),
+                new com.example.short_link.post.domain.TagCount("rag", 2L)));
+    when(postRepository.findPublishedByTag("spring", 0, 8)).thenReturn(List.of(post(1L, "a")));
+    when(postRepository.findPublishedByTag("rag", 0, 8)).thenReturn(List.of(post(1L, "b")));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+
+    List<TrendingTagSection> sections = service.trendingByTag(6, 8);
+
+    assertThat(sections).hasSize(2);
+    assertThat(sections.get(0).tag()).isEqualTo("spring");
+    assertThat(sections.get(0).postCount()).isEqualTo(3);
+    assertThat(sections.get(0).posts()).hasSize(1);
+    assertThat(sections.get(0).posts().get(0).slug()).isEqualTo("a");
+  }
+
+  @Test
+  void trendingByTagSkipsTagsWhoseAuthorsAreAllMissing() {
+    when(postRepository.findPopularTags(6))
+        .thenReturn(List.of(new com.example.short_link.post.domain.TagCount("ghost", 1L)));
+    when(postRepository.findPublishedByTag("ghost", 0, 8)).thenReturn(List.of(post(9L, "x")));
+    when(userRepository.findAllByIdIn(List.of(9L))).thenReturn(List.of()); // author missing/deleted
+
+    assertThat(service.trendingByTag(6, 8)).isEmpty();
+  }
 }
