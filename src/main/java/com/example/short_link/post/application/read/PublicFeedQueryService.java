@@ -129,6 +129,7 @@ public class PublicFeedQueryService {
 
   private PublicFeedItem toItem(PostEntity post, UserEntity author) {
     return new PublicFeedItem(
+        post.getId(),
         PublicAuthorView.from(author),
         post.getSlug(),
         post.getTitle(),

@@ -5,6 +5,7 @@ import java.util.List;
 
 /** One card in the global public feed — a published post plus its author summary. */
 public record PublicFeedItem(
+    long id,
     PublicAuthorView author,
     String slug,
     String title,
