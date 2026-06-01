@@ -108,7 +108,9 @@ public class PublicSeriesQueryService {
     List<PublicSeriesListItem> series =
         seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId()).stream()
             .map(
-                s -> new PublicSeriesListItem(s.getSlug(), s.getTitle(), publishedCount(s.getId())))
+                s ->
+                    new PublicSeriesListItem(
+                        s.getId(), s.getSlug(), s.getTitle(), publishedCount(s.getId())))
             .filter(s -> s.postCount() > 0)
             .toList();
     return new PublicSeriesListView(PublicAuthorView.from(author), series);
@@ -128,7 +130,7 @@ public class PublicSeriesQueryService {
             .toList();
     return new PublicSeriesDetail(
         PublicAuthorView.from(author),
-        new PublicSeriesListItem(series.getSlug(), series.getTitle(), posts.size()),
+        new PublicSeriesListItem(series.getId(), series.getSlug(), series.getTitle(), posts.size()),
         posts);
   }
 
