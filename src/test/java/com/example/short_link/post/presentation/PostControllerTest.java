@@ -1,6 +1,7 @@
 package com.example.short_link.post.presentation;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -30,6 +31,7 @@ import com.example.short_link.post.application.write.RestorePostRevisionCommand;
 import com.example.short_link.post.application.write.RestorePostRevisionUseCase;
 import com.example.short_link.post.application.write.SchedulePostCommand;
 import com.example.short_link.post.application.write.SchedulePostUseCase;
+import com.example.short_link.post.application.write.SetPinnedPostsUseCase;
 import com.example.short_link.post.application.write.UnpublishPostCommand;
 import com.example.short_link.post.application.write.UnpublishPostUseCase;
 import com.example.short_link.post.application.write.UpdatePostMetadataCommand;
@@ -62,6 +64,7 @@ class PostControllerTest {
   @MockitoBean private UpdatePostMetadataUseCase updatePostMetadata;
   @MockitoBean private PublishPostUseCase publishPost;
   @MockitoBean private SchedulePostUseCase schedulePost;
+  @MockitoBean private SetPinnedPostsUseCase setPinnedPosts;
   @MockitoBean private UnpublishPostUseCase unpublishPost;
   @MockitoBean private RepublishPostUseCase republishPost;
   @MockitoBean private BackToDraftPostUseCase backToDraftPost;
@@ -369,5 +372,26 @@ class PostControllerTest {
   @Test
   void anonymousDeleteIs401() throws Exception {
     mvc.perform(delete("/api/v1/posts/42")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void setPinsReturns204() throws Exception {
+    mvc.perform(
+            put("/api/v1/posts/pins")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"postIds\":[3,1]}"))
+        .andExpect(status().isNoContent());
+
+    org.mockito.Mockito.verify(setPinnedPosts).execute(eq(USER_ID), eq(List.of(3L, 1L)));
+  }
+
+  @Test
+  void anonymousSetPinsIs401() throws Exception {
+    mvc.perform(
+            put("/api/v1/posts/pins")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"postIds\":[]}"))
+        .andExpect(status().isUnauthorized());
   }
 }
