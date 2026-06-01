@@ -4,6 +4,7 @@ import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -25,9 +26,14 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PublicFeedQueryService {
 
+  // A sentinel id that matches no row — lets the union query stay valid when one side is empty
+  // (JPQL `in ()` is invalid) without branching into separate queries.
+  private static final List<Long> NONE = List.of(-1L);
+
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
+  private final SeriesSubscriptionRepository seriesSubscriptionRepository;
 
   public PublicFeedView feed(String sort, int page, int size) {
     List<PostEntity> posts =
@@ -82,14 +88,22 @@ public class PublicFeedQueryService {
         .toList();
   }
 
-  /** Posts from authors the user follows, newest first. Empty when the user follows no one. */
+  /**
+   * The "following" feed — posts from authors the user follows AND new episodes of series the user
+   * subscribes to, merged newest-first. Empty when the user follows/subscribes to nothing.
+   */
   public PublicFeedView feedFollowing(Long userId, int page, int size) {
     List<Long> followingIds = followRepository.findFollowingIds(userId);
-    if (followingIds.isEmpty()) {
+    List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);
+    if (followingIds.isEmpty() && subscribedSeriesIds.isEmpty()) {
       return new PublicFeedView(List.of(), page, size, false);
     }
-    List<PostEntity> posts = postRepository.findPublishedByAuthorIds(followingIds, page, size);
-    return assemble(posts, postRepository.countPublishedByAuthorIds(followingIds), page, size);
+    List<Long> authorIds = followingIds.isEmpty() ? NONE : followingIds;
+    List<Long> seriesIds = subscribedSeriesIds.isEmpty() ? NONE : subscribedSeriesIds;
+    List<PostEntity> posts =
+        postRepository.findPublishedByAuthorIdsOrSeriesIds(authorIds, seriesIds, page, size);
+    long total = postRepository.countPublishedByAuthorIdsOrSeriesIds(authorIds, seriesIds);
+    return assemble(posts, total, page, size);
   }
 
   /**
