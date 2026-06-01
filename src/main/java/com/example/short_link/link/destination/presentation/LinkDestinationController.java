@@ -90,6 +90,12 @@ public class LinkDestinationController {
     return ResponseEntity.noContent().build();
   }
 
+  @GetMapping("/{shortCode}/blocked-countries")
+  public LinkDestinationBlockedCountriesResponse getBlocked(
+      @AuthenticationPrincipal Long userId, @PathVariable ShortCode shortCode) {
+    return new LinkDestinationBlockedCountriesResponse(query.blockedCountries(userId, shortCode));
+  }
+
   @PutMapping("/{shortCode}/blocked-countries")
   public LinkDestinationBlockedCountriesResponse setBlocked(
       @AuthenticationPrincipal Long userId,
