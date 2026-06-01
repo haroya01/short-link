@@ -80,6 +80,12 @@ class PublicSeriesQueryServiceTest {
                 series(20L, 2L, "ghost", "Ghost"),
                 series(30L, 1L, "side-log", "Side Log")));
     when(userRepository.findAllByIdIn(any())).thenReturn(List.of(alice, bob));
+    // Member previews for the surviving series (deep-dive); fetched only for survivors.
+    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(10L, PostStatus.PUBLISHED))
+        .thenReturn(
+            List.of(
+                new PostEntity(1L, "dd-1", "DD One", "ko"),
+                new PostEntity(1L, "dd-2", "DD Two", "ko")));
 
     List<PublicSeriesCard> cards = service.discoverSeries(6);
 
@@ -90,6 +96,8 @@ class PublicSeriesQueryServiceTest {
     assertThat(first.postCount()).isEqualTo(4);
     assertThat(first.lastPublishedAt()).isEqualTo(recent);
     assertThat(first.author().username()).isEqualTo("alice");
+    assertThat(first.posts()).extracting(SeriesPostRef::slug).containsExactly("dd-1", "dd-2");
+    assertThat(first.posts().get(0).title()).isEqualTo("DD One");
   }
 
   @Test
