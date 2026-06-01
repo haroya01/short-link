@@ -2,6 +2,7 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -15,6 +16,11 @@ class PostLikeRepositoryAdapter implements PostLikeRepository {
   @Override
   public boolean existsByPostIdAndUserId(Long postId, Long userId) {
     return jpa.existsByPostIdAndUserId(postId, userId);
+  }
+
+  @Override
+  public List<PostLikeEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId) {
+    return jpa.findAllByUserIdOrderByCreatedAtDesc(userId);
   }
 
   @Override
