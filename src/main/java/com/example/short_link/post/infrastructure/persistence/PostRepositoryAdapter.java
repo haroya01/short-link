@@ -29,6 +29,11 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> findAllByIdIn(Collection<Long> ids) {
+    return jpa.findAllByIdIn(ids);
+  }
+
+  @Override
   public Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug) {
     return jpa.findByUserIdAndSlug(userId, slug);
   }
