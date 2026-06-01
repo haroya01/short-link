@@ -198,6 +198,34 @@ class PublicPostQueryServiceTest {
   }
 
   @Test
+  void servesTrackedShortLinkUrlWhenCtaHasTracking() {
+    UserEntity author = authorWithUsername("john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    PostBlockEntity ctaBlock =
+        new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(List.of(ctaBlock));
+    CtaEntity cta =
+        new CtaEntity(
+            author.getId(),
+            "Join",
+            "https://example.com/join",
+            CtaStyle.PRIMARY,
+            CtaPurpose.CUSTOM);
+    cta.trackVia("xy12ab"); // wrapped into a kurl short link
+    when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
+
+    PublicPostDetail detail = service.findPublicPost("john", "p");
+
+    // Public response serves the tracked short link (not the raw external url) so clicks are
+    // measured.
+    assertThat(detail.blocks().get(0).cta().url()).isEqualTo("https://kurl.me/xy12ab");
+  }
+
+  @Test
   void findHandlesDeletedCta() {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
