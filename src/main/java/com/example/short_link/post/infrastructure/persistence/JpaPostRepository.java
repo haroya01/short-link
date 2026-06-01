@@ -13,6 +13,8 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
+  List<PostEntity> findAllByIdIn(java.util.Collection<Long> ids);
+
   Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
 
   boolean existsByUserIdAndSlug(Long userId, String slug);

@@ -13,6 +13,8 @@ public interface PostRepository {
 
   Optional<PostEntity> findById(Long id);
 
+  List<PostEntity> findAllByIdIn(Collection<Long> ids);
+
   Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
 
   PostEntity save(PostEntity post);
