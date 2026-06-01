@@ -39,10 +39,11 @@ class PublicSeriesControllerTest {
         .thenReturn(
             new PublicSeriesListView(
                 new PublicAuthorView(7L, "john", "Bio", null),
-                List.of(new PublicSeriesListItem("guide", "Guide", 3))));
+                List.of(new PublicSeriesListItem(11L, "guide", "Guide", 3))));
 
     mvc.perform(get("/api/v1/public/profiles/john/series"))
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.series[0].id").value(11))
         .andExpect(jsonPath("$.series[0].slug").value("guide"))
         .andExpect(jsonPath("$.series[0].postCount").value(3));
   }
@@ -53,13 +54,14 @@ class PublicSeriesControllerTest {
         .thenReturn(
             new PublicSeriesDetail(
                 new PublicAuthorView(7L, "john", "Bio", null),
-                new PublicSeriesListItem("guide", "Guide", 1),
+                new PublicSeriesListItem(11L, "guide", "Guide", 1),
                 List.of(
                     new PublicPostListItem(
                         1L, "intro", "Intro", null, null, "ko", List.of(), 0L, NOW))));
 
     mvc.perform(get("/api/v1/public/profiles/john/series/guide"))
         .andExpect(status().isOk())
+        .andExpect(jsonPath("$.series.id").value(11))
         .andExpect(jsonPath("$.series.title").value("Guide"))
         .andExpect(jsonPath("$.posts[0].slug").value("intro"));
   }
