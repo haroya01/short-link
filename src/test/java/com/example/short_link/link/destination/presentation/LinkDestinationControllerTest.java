@@ -155,4 +155,24 @@ class LinkDestinationControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.codes").value("KP,IR"));
   }
+
+  @Test
+  void getBlockedCountriesReturnsCurrentCsv() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("bg@x.com", "google", "g-blkg"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    when(query.blockedCountries(eq(user.getId()), eq(new ShortCode("abc1234"))))
+        .thenReturn("KR,JP");
+
+    mvc.perform(
+            get("/api/v1/links/abc1234/blocked-countries")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.codes").value("KR,JP"));
+  }
+
+  @Test
+  void anonymousGetBlockedCountriesIs401() throws Exception {
+    mvc.perform(get("/api/v1/links/abc1234/blocked-countries"))
+        .andExpect(status().isUnauthorized());
+  }
 }

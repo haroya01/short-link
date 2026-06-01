@@ -180,4 +180,28 @@ class LinkDestinationServiceTest {
             () -> deleteUseCase.execute(stranger.getId(), new ShortCode("ab55555"), v.id()))
         .isInstanceOf(LinkException.class);
   }
+
+  @Test
+  void blockedCountriesReturnsCurrentValueForOwner() {
+    UserEntity user = userRepository.save(new UserEntity("bc1@local.test", "google", "g-bc1"));
+    LinkEntity link =
+        linkRepository.save(
+            new LinkEntity("https://example.com/bc", "abbc111", user.getId(), null));
+    link.setBlockedCountries("KR,JP");
+    linkRepository.save(link);
+
+    String codes = query.blockedCountries(user.getId(), new ShortCode("abbc111"));
+
+    assertThat(codes).contains("KR").contains("JP");
+  }
+
+  @Test
+  void blockedCountriesRejectsNonOwner() {
+    UserEntity owner = userRepository.save(new UserEntity("bc2@local.test", "google", "g-bc2"));
+    UserEntity stranger = userRepository.save(new UserEntity("bc3@local.test", "google", "g-bc3"));
+    linkRepository.save(new LinkEntity("https://example.com/bc2", "abbc222", owner.getId(), null));
+
+    assertThatThrownBy(() -> query.blockedCountries(stranger.getId(), new ShortCode("abbc222")))
+        .isInstanceOf(LinkException.class);
+  }
 }
