@@ -18,6 +18,7 @@ public record PostView(
     List<String> tags,
     Long seriesId,
     Integer seriesOrder,
+    Integer pinOrder,
     Instant createdAt,
     Instant updatedAt) {
 
@@ -36,6 +37,7 @@ public record PostView(
         List.copyOf(post.getTags()),
         post.getSeriesId(),
         post.getSeriesOrder(),
+        post.getPinOrder(),
         post.getCreatedAt(),
         post.getUpdatedAt());
   }

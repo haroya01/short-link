@@ -51,14 +51,31 @@ public class PublicPostQueryService {
 
   public PublicPostListView listPublicPosts(String username) {
     UserEntity author = resolveAuthor(username);
+    // Pinned posts (curation) surface first by pin_order; the rest keep publishedAt-desc. The repo
+    // already returns publishedAt-desc and Stream.sorted is stable, so unpinned order is preserved.
     List<PublicPostListItem> posts =
         postRepository
             .findAllByUserIdAndStatusOrderByPublishedAtDesc(author.getId(), PostStatus.PUBLISHED)
             .stream()
+            .sorted(PINNED_FIRST)
             .map(PublicPostListItem::from)
             .toList();
     return new PublicPostListView(PublicAuthorView.from(author), posts);
   }
+
+  /**
+   * Pinned (pin_order != null) before unpinned; pinned ordered by pin_order asc. Stable for ties.
+   */
+  private static final java.util.Comparator<com.example.short_link.post.domain.PostEntity>
+      PINNED_FIRST =
+          (a, b) -> {
+            Integer pa = a.getPinOrder();
+            Integer pb = b.getPinOrder();
+            if (pa != null && pb != null) return Integer.compare(pa, pb);
+            if (pa != null) return -1;
+            if (pb != null) return 1;
+            return 0;
+          };
 
   public PublicPostDetail findPublicPost(String username, String slug) {
     UserEntity author = resolveAuthor(username);

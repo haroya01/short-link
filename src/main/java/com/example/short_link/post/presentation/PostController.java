@@ -20,6 +20,7 @@ import com.example.short_link.post.application.write.RestorePostRevisionCommand;
 import com.example.short_link.post.application.write.RestorePostRevisionUseCase;
 import com.example.short_link.post.application.write.SchedulePostCommand;
 import com.example.short_link.post.application.write.SchedulePostUseCase;
+import com.example.short_link.post.application.write.SetPinnedPostsUseCase;
 import com.example.short_link.post.application.write.UnpublishPostCommand;
 import com.example.short_link.post.application.write.UnpublishPostUseCase;
 import com.example.short_link.post.application.write.UpdatePostMetadataCommand;
@@ -28,6 +29,7 @@ import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.presentation.request.CreatePostRequest;
 import com.example.short_link.post.presentation.request.ReplaceBlocksRequest;
 import com.example.short_link.post.presentation.request.SchedulePostRequest;
+import com.example.short_link.post.presentation.request.SetPinnedPostsRequest;
 import com.example.short_link.post.presentation.request.UpdatePostRequest;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -60,6 +62,7 @@ public class PostController {
   private final ReplacePostBlocksUseCase replacePostBlocks;
   private final RestorePostRevisionUseCase restorePostRevision;
   private final DeletePostUseCase deletePost;
+  private final SetPinnedPostsUseCase setPinnedPosts;
   private final PostQueryService postQueryService;
 
   @PostMapping
@@ -69,6 +72,13 @@ public class PostController {
     return PostView.from(
         createPost.execute(
             new CreatePostCommand(userId, request.slug(), request.title(), request.languageTag())));
+  }
+
+  @PutMapping("/pins")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void setPins(
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody SetPinnedPostsRequest request) {
+    setPinnedPosts.execute(userId, request.postIds());
   }
 
   @GetMapping
