@@ -140,4 +140,16 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "where p.status = :status group by p.userId "
           + "order by count(p) desc, coalesce(sum(p.viewCount), 0) desc")
   List<Object[]> findTopAuthorIds(@Param("status") PostStatus status, Pageable pageable);
+
+  // Series ranked for cross-author discovery — most recently active first. Counts only PUBLISHED
+  // member posts and drops thin series via HAVING. Returns [seriesId, postCount, lastPublishedAt];
+  // the service hydrates the series + author and drops deleted ones.
+  @Query(
+      "select p.seriesId, count(p), max(p.publishedAt) from PostEntity p "
+          + "where p.status = :status and p.seriesId is not null "
+          + "group by p.seriesId "
+          + "having count(p) >= :minPosts "
+          + "order by max(p.publishedAt) desc")
+  List<Object[]> findActiveSeries(
+      @Param("status") PostStatus status, @Param("minPosts") long minPosts, Pageable pageable);
 }

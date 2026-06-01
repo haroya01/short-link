@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
@@ -11,6 +12,10 @@ import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,9 +26,56 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PublicSeriesQueryService {
 
+  // A "series" worth showcasing has at least two published posts; a lone post isn't a series yet.
+  private static final int MIN_POSTS = 2;
+
   private final UserRepository userRepository;
   private final SeriesRepository seriesRepository;
   private final PostRepository postRepository;
+
+  /**
+   * Cross-author series for the discovery feed — most recently active first. Hydrates each ranked
+   * series with its author, dropping any whose author is deleted/missing, and keeps the activity
+   * ordering. Over-fetches a little so deleted-author drops don't shrink the result below {@code
+   * limit}.
+   */
+  public List<PublicSeriesCard> discoverSeries(int limit) {
+    int safeLimit = Math.max(limit, 1);
+    List<SeriesActivity> ranked = postRepository.findActiveSeries(MIN_POSTS, safeLimit * 2);
+    if (ranked.isEmpty()) return List.of();
+
+    Map<Long, SeriesEntity> series =
+        seriesRepository
+            .findAllByIdIn(ranked.stream().map(SeriesActivity::seriesId).toList())
+            .stream()
+            .collect(Collectors.toMap(SeriesEntity::getId, Function.identity()));
+    Map<Long, UserEntity> authors =
+        userRepository
+            .findAllByIdIn(
+                series.values().stream().map(SeriesEntity::getUserId).distinct().toList())
+            .stream()
+            .filter(u -> !u.isDeleted())
+            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+
+    return ranked.stream()
+        .map(a -> toCard(a, series.get(a.seriesId()), authors))
+        .filter(Objects::nonNull)
+        .limit(safeLimit)
+        .toList();
+  }
+
+  private PublicSeriesCard toCard(
+      SeriesActivity activity, SeriesEntity series, Map<Long, UserEntity> authors) {
+    if (series == null) return null;
+    UserEntity author = authors.get(series.getUserId());
+    if (author == null) return null; // deleted/missing author → drop
+    return new PublicSeriesCard(
+        PublicAuthorView.from(author),
+        series.getSlug(),
+        series.getTitle(),
+        (int) activity.postCount(),
+        activity.lastPublishedAt());
+  }
 
   public PublicSeriesListView listPublicSeries(String username) {
     UserEntity author = resolveAuthor(username);
