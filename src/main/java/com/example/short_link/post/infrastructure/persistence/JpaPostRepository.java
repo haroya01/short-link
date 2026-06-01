@@ -66,14 +66,21 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   @Query(
       "select p from PostEntity p "
-          + "where p.userId in :ids and p.status = :status "
+          + "where p.status = :status and (p.userId in :authorIds or p.seriesId in :seriesIds) "
           + "order by p.publishedAt desc")
-  List<PostEntity> findPublishedByAuthorIds(
-      @Param("ids") Collection<Long> ids, @Param("status") PostStatus status, Pageable pageable);
+  List<PostEntity> findPublishedByAuthorIdsOrSeriesIds(
+      @Param("authorIds") Collection<Long> authorIds,
+      @Param("seriesIds") Collection<Long> seriesIds,
+      @Param("status") PostStatus status,
+      Pageable pageable);
 
-  @Query("select count(p) from PostEntity p where p.userId in :ids and p.status = :status")
-  long countPublishedByAuthorIds(
-      @Param("ids") Collection<Long> ids, @Param("status") PostStatus status);
+  @Query(
+      "select count(p) from PostEntity p "
+          + "where p.status = :status and (p.userId in :authorIds or p.seriesId in :seriesIds)")
+  long countPublishedByAuthorIdsOrSeriesIds(
+      @Param("authorIds") Collection<Long> authorIds,
+      @Param("seriesIds") Collection<Long> seriesIds,
+      @Param("status") PostStatus status);
 
   @Query(
       "select t, count(p) from PostEntity p join p.tags t "
