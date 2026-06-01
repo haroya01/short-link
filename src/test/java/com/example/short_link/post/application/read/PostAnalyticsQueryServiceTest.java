@@ -32,12 +32,14 @@ class PostAnalyticsQueryServiceTest {
 
   @Mock private PostRepository postRepository;
   @Mock private PostViewEventRepository viewEventRepository;
+  @Mock private com.example.short_link.post.domain.repository.PostLinkClickReader linkClickReader;
 
   private PostAnalyticsQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new PostAnalyticsQueryService(postRepository, viewEventRepository, clock);
+    service =
+        new PostAnalyticsQueryService(postRepository, viewEventRepository, linkClickReader, clock);
   }
 
   private static PostEntity post(long owner, String slug, int views, int likes) {
@@ -61,6 +63,9 @@ class PostAnalyticsQueryServiceTest {
             List.of(
                 new DailyViewCount(LocalDate.parse("2026-05-30"), 2),
                 new DailyViewCount(LocalDate.parse("2026-06-01"), 5)));
+    when(linkClickReader.countByPostId(1L)).thenReturn(25L);
+    when(linkClickReader.countByPostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(7L);
 
     PostAnalyticsView view = service.postAnalytics(USER, 1L, 7);
 
@@ -73,6 +78,8 @@ class PostAnalyticsQueryServiceTest {
     assertThat(view.daily().get(6).date()).isEqualTo(LocalDate.parse("2026-06-01"));
     assertThat(view.windowViews()).isEqualTo(7); // 2 + 5, gaps filled with 0
     assertThat(view.daily().get(6).views()).isEqualTo(5);
+    assertThat(view.lifetimeLinkClicks()).isEqualTo(25);
+    assertThat(view.windowLinkClicks()).isEqualTo(7);
   }
 
   @Test
@@ -119,6 +126,10 @@ class PostAnalyticsQueryServiceTest {
     when(viewEventRepository.countDailyByUserIdSince(
             org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
         .thenReturn(List.of(new DailyViewCount(LocalDate.parse("2026-06-01"), 9)));
+    when(linkClickReader.countByUserId(USER)).thenReturn(40L);
+    when(linkClickReader.countByUserIdSince(
+            org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(6L);
 
     AuthorAnalyticsOverview o = service.overview(USER, 30);
 
@@ -127,6 +138,8 @@ class PostAnalyticsQueryServiceTest {
     assertThat(o.lifetimeViews()).isEqualTo(155);
     assertThat(o.lifetimeLikes()).isEqualTo(14);
     assertThat(o.windowViews()).isEqualTo(9);
+    assertThat(o.lifetimeLinkClicks()).isEqualTo(40);
+    assertThat(o.windowLinkClicks()).isEqualTo(6);
     assertThat(o.daily()).hasSize(30);
     // Top posts ranked by lifetime views desc: a(100), c(50), b(5).
     assertThat(o.topPosts()).extracting(TopPostView::slug).containsExactly("a", "c", "b");

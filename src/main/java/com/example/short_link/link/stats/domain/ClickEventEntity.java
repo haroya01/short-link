@@ -104,6 +104,13 @@ public class ClickEventEntity {
   @Column(name = "destination_id")
   private Long destinationId;
 
+  /**
+   * Blog post that embedded this link, when the click came from a post (the redirect carried {@code
+   * ?post=}). Powers "이 글이 만든 클릭" in author analytics; null for clicks from anywhere else.
+   */
+  @Column(name = "post_id")
+  private Long postId;
+
   /** Autonomous System Number for the visitor's IP — null when ASN db is unavailable. */
   @Column(name = "asn")
   private Integer asn;
@@ -136,6 +143,7 @@ public class ClickEventEntity {
       String visitorHash,
       String sourceChannel,
       Long destinationId,
+      Long postId,
       Integer asn,
       String asnOrg) {
     this.linkId = linkId == null ? null : linkId.value();
@@ -161,6 +169,7 @@ public class ClickEventEntity {
     this.visitorHash = visitorHash;
     this.sourceChannel = sourceChannel;
     this.destinationId = destinationId;
+    this.postId = postId;
     this.asn = asn;
     this.asnOrg = asnOrg;
   }

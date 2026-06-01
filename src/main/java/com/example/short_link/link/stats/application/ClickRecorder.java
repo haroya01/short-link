@@ -88,6 +88,7 @@ public class ClickRecorder {
                       ctx.userAgent()))
               .sourceChannel(SourceChannelNormalizer.normalize(ctx.sourceChannel()))
               .destinationId(ctx.destinationId())
+              .postId(ctx.postId())
               .asn(asnInfo.asn())
               .asnOrg(asnInfo.organization())
               .build();
