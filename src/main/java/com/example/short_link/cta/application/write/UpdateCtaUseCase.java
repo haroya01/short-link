@@ -12,12 +12,17 @@ public class UpdateCtaUseCase {
 
   private final CtaOwnership ctaOwnership;
   private final CtaRepository ctaRepository;
+  private final CtaLinkTracker linkTracker;
 
   @Transactional
   public CtaEntity execute(UpdateCtaCommand cmd) {
     CtaEntity cta = ctaOwnership.requireOwned(cmd.userId(), cmd.ctaId());
     if (cmd.label() != null) cta.updateLabel(cmd.label());
-    if (cmd.url() != null) cta.updateUrl(cmd.url());
+    if (cmd.url() != null) {
+      cta.updateUrl(cmd.url());
+      // URL changed → re-establish tracking (dedup means the same target reuses one short link).
+      cta.trackVia(linkTracker.trackingCodeFor(cmd.userId(), cmd.url()));
+    }
     if (cmd.style() != null) cta.updateStyle(cmd.style());
     if (cmd.purpose() != null) cta.updatePurpose(cmd.purpose());
     return ctaRepository.save(cta);
