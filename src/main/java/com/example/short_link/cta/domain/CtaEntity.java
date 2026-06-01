@@ -50,12 +50,25 @@ public class CtaEntity extends BaseTimeEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
+  /**
+   * Short code of the kurl link this CTA's target resolves to (wrapped at save time, or the code of
+   * an already-kurl URL). The public post serves this short link so clicks are measured +
+   * attributed. Null when tracking couldn't be established (e.g. the user's link quota is full).
+   */
+  @Column(name = "tracked_short_code", length = 16)
+  private String trackedShortCode;
+
   public CtaEntity(Long userId, String label, String url, CtaStyle style, CtaPurpose purpose) {
     this.userId = userId;
     this.label = label;
     this.url = url;
     this.style = style;
     this.purpose = purpose;
+  }
+
+  /** Set/replace the tracking short code (the kurl link a click on this CTA flows through). */
+  public void trackVia(String shortCode) {
+    this.trackedShortCode = shortCode;
   }
 
   public boolean isOwnedBy(Long userId) {
