@@ -92,21 +92,39 @@ public class PublicFeedQueryService {
     return assemble(posts, postRepository.countPublishedByAuthorIds(followingIds), page, size);
   }
 
+  /**
+   * Popular posts grouped by tag — one section per topic, for the 인기 tab. For each of the top
+   * {@code tagLimit} tags, the top {@code perTag} published posts (deleted-author posts filtered).
+   */
+  public List<TrendingTagSection> trendingByTag(int tagLimit, int perTag) {
+    List<TrendingTagSection> sections = new java.util.ArrayList<>();
+    for (TagCount tag : postRepository.findPopularTags(tagLimit)) {
+      List<PublicFeedItem> posts = toItems(postRepository.findPublishedByTag(tag.tag(), 0, perTag));
+      if (!posts.isEmpty()) {
+        sections.add(new TrendingTagSection(tag.tag(), tag.count(), posts));
+      }
+    }
+    return sections;
+  }
+
   private PublicFeedView assemble(List<PostEntity> posts, long total, int page, int size) {
+    boolean hasNext = (long) (page + 1) * size < total;
+    return new PublicFeedView(toItems(posts), page, size, hasNext);
+  }
+
+  /**
+   * Hydrate posts into feed items, joining each post's author and dropping deleted-author posts.
+   */
+  private List<PublicFeedItem> toItems(List<PostEntity> posts) {
     List<Long> authorIds = posts.stream().map(PostEntity::getUserId).distinct().toList();
     Map<Long, UserEntity> authors =
         userRepository.findAllByIdIn(authorIds).stream()
             .filter(u -> !u.isDeleted())
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
-
-    List<PublicFeedItem> items =
-        posts.stream()
-            .filter(p -> authors.containsKey(p.getUserId()))
-            .map(p -> toItem(p, authors.get(p.getUserId())))
-            .toList();
-
-    boolean hasNext = (long) (page + 1) * size < total;
-    return new PublicFeedView(items, page, size, hasNext);
+    return posts.stream()
+        .filter(p -> authors.containsKey(p.getUserId()))
+        .map(p -> toItem(p, authors.get(p.getUserId())))
+        .toList();
   }
 
   private PublicFeedItem toItem(PostEntity post, UserEntity author) {
