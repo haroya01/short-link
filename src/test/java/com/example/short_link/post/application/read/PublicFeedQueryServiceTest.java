@@ -38,13 +38,21 @@ class PublicFeedQueryServiceTest {
     return u;
   }
 
+  private long nextPostId = 1;
+
   private PostEntity post(long userId, String slug) {
-    return new PostEntity(userId, slug, "Title " + slug, "ko");
+    PostEntity p = new PostEntity(userId, slug, "Title " + slug, "ko");
+    // Published feed posts are always persisted, so PublicFeedItem.id is a primitive long — give
+    // the
+    // unpersisted test entity an id so mapping it doesn't unbox a null.
+    ReflectionTestUtils.setField(p, "id", nextPostId++);
+    return p;
   }
 
   @Test
   void recentFeedMapsAuthorsAndExcludesMissingAuthor() {
     PostEntity p1 = post(1L, "a");
+    ReflectionTestUtils.setField(p1, "id", 42L);
     PostEntity p2 = post(2L, "b"); // author 2 not returned (deleted/missing) → excluded
     when(postRepository.findPublishedRecent(0, 20)).thenReturn(List.of(p1, p2));
     when(userRepository.findAllByIdIn(List.of(1L, 2L))).thenReturn(List.of(user(1L, "alice")));
@@ -53,6 +61,7 @@ class PublicFeedQueryServiceTest {
     PublicFeedView view = service.feed("recent", 0, 20);
 
     assertThat(view.items()).hasSize(1);
+    assertThat(view.items().get(0).id()).isEqualTo(42L);
     assertThat(view.items().get(0).slug()).isEqualTo("a");
     assertThat(view.items().get(0).author().username()).isEqualTo("alice");
     assertThat(view.hasNext()).isFalse();
