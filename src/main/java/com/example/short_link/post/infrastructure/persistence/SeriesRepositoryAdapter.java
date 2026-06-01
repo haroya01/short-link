@@ -2,6 +2,7 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,11 @@ class SeriesRepositoryAdapter implements SeriesRepository {
   @Override
   public Optional<SeriesEntity> findById(Long id) {
     return jpa.findById(id);
+  }
+
+  @Override
+  public List<SeriesEntity> findAllByIdIn(Collection<Long> ids) {
+    return jpa.findAllByIdIn(ids);
   }
 
   @Override

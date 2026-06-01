@@ -3,6 +3,7 @@ package com.example.short_link.post.domain.repository;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.TagCount;
 import java.time.Instant;
 import java.util.Collection;
@@ -72,4 +73,10 @@ public interface PostRepository {
    * [authorId, publishedPostCount, totalViews] ranked for the discovery rail, top authors first.
    */
   List<AuthorPostStats> findTopAuthorStats(int limit);
+
+  /**
+   * Series with at least {@code minPosts} published members, most recently active first — backs the
+   * cross-author series discovery surface (the feed's series cards).
+   */
+  List<SeriesActivity> findActiveSeries(int minPosts, int limit);
 }
