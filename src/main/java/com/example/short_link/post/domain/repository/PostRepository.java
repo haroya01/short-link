@@ -4,6 +4,7 @@ import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.TagCount;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -23,6 +24,9 @@ public interface PostRepository {
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
+
+  /** SCHEDULED posts whose scheduledAt has arrived (<= now) — the auto-publish job's work list. */
+  List<PostEntity> findScheduledDue(Instant now);
 
   List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
 

@@ -60,6 +60,11 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> findScheduledDue(Instant now) {
+    return jpa.findAllByStatusAndScheduledAtLessThanEqual(PostStatus.SCHEDULED, now);
+  }
+
+  @Override
   public List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId) {
     return jpa.findAllBySeriesIdOrderBySeriesOrderAsc(seriesId);
   }
