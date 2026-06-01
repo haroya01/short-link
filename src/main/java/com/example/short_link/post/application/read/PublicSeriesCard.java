@@ -10,6 +10,7 @@ import java.util.List;
  * without a click.
  */
 public record PublicSeriesCard(
+    long id,
     PublicAuthorView author,
     String slug,
     String title,
