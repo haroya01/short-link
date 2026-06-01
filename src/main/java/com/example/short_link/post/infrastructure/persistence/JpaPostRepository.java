@@ -21,6 +21,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
+  List<PostEntity> findAllByStatusAndScheduledAtLessThanEqual(
+      PostStatus status, Instant scheduledAt);
+
   List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
 
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
