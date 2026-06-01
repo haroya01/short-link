@@ -82,6 +82,7 @@ public class PublicSeriesQueryService {
 
   private PublicSeriesCard toCard(Resolved r) {
     return new PublicSeriesCard(
+        r.series().getId(),
         PublicAuthorView.from(r.author()),
         r.series().getSlug(),
         r.series().getTitle(),

@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -23,12 +24,15 @@ class PublicFeedQueryServiceTest {
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
   @Mock private FollowRepository followRepository;
+  @Mock private SeriesSubscriptionRepository seriesSubscriptionRepository;
 
   private PublicFeedQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new PublicFeedQueryService(postRepository, userRepository, followRepository);
+    service =
+        new PublicFeedQueryService(
+            postRepository, userRepository, followRepository, seriesSubscriptionRepository);
   }
 
   private UserEntity user(long id, String username) {
@@ -119,12 +123,15 @@ class PublicFeedQueryServiceTest {
   }
 
   @Test
-  void followingFeedReturnsPostsFromFollowedAuthors() {
-    when(postRepository.findPublishedByAuthorIds(List.of(2L, 3L), 0, 20))
-        .thenReturn(List.of(post(2L, "a")));
-    when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
-    when(postRepository.countPublishedByAuthorIds(List.of(2L, 3L))).thenReturn(1L);
+  void followingFeedMergesFollowedAuthorsAndSubscribedSeries() {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of(2L, 3L));
+    when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
+    // No subscriptions → series side is the no-match sentinel.
+    when(postRepository.findPublishedByAuthorIdsOrSeriesIds(List.of(2L, 3L), List.of(-1L), 0, 20))
+        .thenReturn(List.of(post(2L, "a")));
+    when(postRepository.countPublishedByAuthorIdsOrSeriesIds(List.of(2L, 3L), List.of(-1L)))
+        .thenReturn(1L);
+    when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
 
     PublicFeedView view = service.feedFollowing(9L, 0, 20);
 
@@ -133,8 +140,26 @@ class PublicFeedQueryServiceTest {
   }
 
   @Test
-  void followingFeedIsEmptyWhenUserFollowsNoOne() {
+  void followingFeedDrawsFromSubscribedSeriesWhenFollowingNoAuthors() {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
+    when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of(7L));
+    // No followed authors → author side is the no-match sentinel; series side carries the query.
+    when(postRepository.findPublishedByAuthorIdsOrSeriesIds(List.of(-1L), List.of(7L), 0, 20))
+        .thenReturn(List.of(post(2L, "a")));
+    when(postRepository.countPublishedByAuthorIdsOrSeriesIds(List.of(-1L), List.of(7L)))
+        .thenReturn(1L);
+    when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
+
+    PublicFeedView view = service.feedFollowing(9L, 0, 20);
+
+    assertThat(view.items()).hasSize(1);
+    assertThat(view.items().get(0).author().username()).isEqualTo("bob");
+  }
+
+  @Test
+  void followingFeedIsEmptyWhenUserFollowsAndSubscribesNothing() {
+    when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
+    when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
 
     PublicFeedView view = service.feedFollowing(9L, 0, 20);
 

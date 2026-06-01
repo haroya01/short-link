@@ -61,10 +61,15 @@ public interface PostRepository {
 
   long countSearchPublished(String query);
 
-  /** Published posts by any of the given authors, newest first — the "following" feed. */
-  List<PostEntity> findPublishedByAuthorIds(Collection<Long> authorIds, int page, int size);
+  /**
+   * Published posts by any of the given authors OR in any of the given series, newest first — the
+   * "following" feed once it merges followed authors with subscribed series. Pass non-empty
+   * collections (use a sentinel that matches nothing when a side is empty).
+   */
+  List<PostEntity> findPublishedByAuthorIdsOrSeriesIds(
+      Collection<Long> authorIds, Collection<Long> seriesIds, int page, int size);
 
-  long countPublishedByAuthorIds(Collection<Long> authorIds);
+  long countPublishedByAuthorIdsOrSeriesIds(Collection<Long> authorIds, Collection<Long> seriesIds);
 
   /** Most-used tags across published posts, most popular first — the 주제 index. */
   List<TagCount> findPopularTags(int limit);
