@@ -19,12 +19,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CreateCtaUseCaseTest {
 
   @Mock private CtaRepository ctaRepository;
+  @Mock private CtaLinkTracker linkTracker;
 
   private CreateCtaUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new CreateCtaUseCase(ctaRepository);
+    useCase = new CreateCtaUseCase(ctaRepository, linkTracker);
   }
 
   @Test

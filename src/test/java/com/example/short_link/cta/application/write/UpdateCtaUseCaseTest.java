@@ -22,12 +22,13 @@ class UpdateCtaUseCaseTest {
 
   @Mock private CtaOwnership ctaOwnership;
   @Mock private CtaRepository ctaRepository;
+  @Mock private CtaLinkTracker linkTracker;
 
   private UpdateCtaUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new UpdateCtaUseCase(ctaOwnership, ctaRepository);
+    useCase = new UpdateCtaUseCase(ctaOwnership, ctaRepository, linkTracker);
   }
 
   private CtaEntity owned() {

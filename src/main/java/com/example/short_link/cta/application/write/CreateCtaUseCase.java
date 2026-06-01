@@ -11,10 +11,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class CreateCtaUseCase {
 
   private final CtaRepository ctaRepository;
+  private final CtaLinkTracker linkTracker;
 
   @Transactional
   public CtaEntity execute(CreateCtaCommand cmd) {
-    return ctaRepository.save(
-        new CtaEntity(cmd.userId(), cmd.label(), cmd.url(), cmd.style(), cmd.purpose()));
+    CtaEntity cta = new CtaEntity(cmd.userId(), cmd.label(), cmd.url(), cmd.style(), cmd.purpose());
+    cta.trackVia(linkTracker.trackingCodeFor(cmd.userId(), cmd.url()));
+    return ctaRepository.save(cta);
   }
 }

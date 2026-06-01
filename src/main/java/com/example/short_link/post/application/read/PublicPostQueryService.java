@@ -2,6 +2,8 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.repository.CtaRepository;
+import com.example.short_link.link.application.ShortLinkUrlBuilder;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -45,6 +47,7 @@ public class PublicPostQueryService {
   private final PostBlockRepository postBlockRepository;
   private final SeriesRepository seriesRepository;
   private final CtaRepository ctaRepository;
+  private final ShortLinkUrlBuilder shortLinkUrlBuilder;
 
   public PublicPostListView listPublicPosts(String username) {
     UserEntity author = resolveAuthor(username);
@@ -135,14 +138,16 @@ public class PublicPostQueryService {
       // 자기 글의 CTA 면 정상적으로 hydrate. 어쨌든 안전하게 null cta 로 반환 — UI 가 placeholder.
       return PublicPostBlockView.from(entity);
     }
+    // Serve the tracked kurl short link when one exists, so clicks flow through the redirect and
+    // attribute to this post. Falls back to the raw URL when tracking wasn't established.
+    String url =
+        cta.getTrackedShortCode() != null
+            ? shortLinkUrlBuilder.build(ShortCode.of(cta.getTrackedShortCode()))
+            : cta.getUrl();
     return PublicPostBlockView.fromWithCta(
         entity,
         new PublicPostBlockView.CtaInfo(
-            cta.getLabel(),
-            cta.getUrl(),
-            cta.getStyle().name(),
-            cta.getPurpose().name(),
-            cta.isDeleted()));
+            cta.getLabel(), url, cta.getStyle().name(), cta.getPurpose().name(), cta.isDeleted()));
   }
 
   /** CTA_REF block content = JSON {"ctaId": N}. 파싱 실패 시 null. */

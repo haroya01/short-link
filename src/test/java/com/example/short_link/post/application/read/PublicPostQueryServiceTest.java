@@ -44,7 +44,12 @@ class PublicPostQueryServiceTest {
   void setUp() {
     service =
         new PublicPostQueryService(
-            userRepository, postRepository, postBlockRepository, seriesRepository, ctaRepository);
+            userRepository,
+            postRepository,
+            postBlockRepository,
+            seriesRepository,
+            ctaRepository,
+            new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me"));
   }
 
   private UserEntity authorWithUsername(String username) {
