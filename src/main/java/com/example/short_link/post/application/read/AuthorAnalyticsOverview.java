@@ -13,5 +13,7 @@ public record AuthorAnalyticsOverview(
     long lifetimeLikes,
     int windowDays,
     long windowViews,
+    long lifetimeLinkClicks,
+    long windowLinkClicks,
     List<DailyPoint> daily,
     List<TopPostView> topPosts) {}
