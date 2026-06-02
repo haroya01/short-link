@@ -41,7 +41,7 @@ public class UserDeletionService {
     user.softDelete();
     refreshTokenStore.deleteAllForUser(userId);
 
-    long ownedLinks = linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId).size();
+    long ownedLinks = linkRepository.countByUserId(userId);
     meterRegistry.counter("user.soft_deleted").increment();
     auditLogService.record(
         AuditAction.USER_DELETED,

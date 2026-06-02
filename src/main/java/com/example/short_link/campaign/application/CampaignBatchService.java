@@ -75,7 +75,7 @@ public class CampaignBatchService {
     CampaignBatchEntity batch =
         batchRepository
             .findById(batchId)
-            .orElseThrow(() -> new CampaignException(CampaignErrorCode.CAMPAIGN_NOT_FOUND));
+            .orElseThrow(() -> new CampaignException(CampaignErrorCode.CAMPAIGN_BATCH_NOT_FOUND));
     if (!batch.getCampaignId().equals(campaignId)) {
       throw new CampaignException(CampaignErrorCode.CAMPAIGN_BATCH_NOT_FOUND);
     }
@@ -116,7 +116,7 @@ public class CampaignBatchService {
     LinkEntity link =
         linkRepository
             .findById(batch.getLinkId())
-            .orElseThrow(() -> new IllegalStateException("orphan batch — link missing"));
+            .orElseThrow(() -> new CampaignException(CampaignErrorCode.CAMPAIGN_BATCH_NOT_FOUND));
     return new BatchWithLink(batch, link);
   }
 
