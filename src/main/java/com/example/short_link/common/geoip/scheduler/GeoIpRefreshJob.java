@@ -44,6 +44,12 @@ public class GeoIpRefreshJob {
   private final MeterRegistry meterRegistry;
   private final GeoipProperties geoip;
 
+  // Reused across runs — a fresh HttpClient per invocation leaks its internal selector/executor
+  // threads, which accumulate over the job's weekly lifetime. (Field initializer, so it stays out
+  // of the @RequiredArgsConstructor.)
+  private final HttpClient httpClient =
+      HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
+
   @Scheduled(cron = "${short-link.geoip.refresh-cron:0 15 5 * * WED}", zone = "Asia/Seoul")
   public void refreshWeekly() {
     if (!geoip.refreshEnabled()) return;
@@ -77,11 +83,10 @@ public class GeoIpRefreshJob {
             : geoip.downloadUrl();
     Path tmpArchive = Files.createTempFile("geolite2-", ".tar.gz");
     tmpArchive.toFile().deleteOnExit();
-    HttpClient client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
     HttpRequest req =
         HttpRequest.newBuilder(URI.create(url)).timeout(Duration.ofMinutes(2)).GET().build();
     HttpResponse<Path> response =
-        client.send(
+        httpClient.send(
             req,
             HttpResponse.BodyHandlers.ofFile(
                 tmpArchive,

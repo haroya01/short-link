@@ -14,6 +14,8 @@ public interface JpaPostRevisionRepository extends JpaRepository<PostRevisionEnt
 
   Optional<PostRevisionEntity> findFirstByPostIdOrderByVersionNumberDesc(Long postId);
 
+  Optional<PostRevisionEntity> findByPostIdAndVersionNumber(Long postId, Integer versionNumber);
+
   @Modifying
   @Query("delete from PostRevisionEntity r where r.postId = :postId")
   void deleteAllByPostId(@Param("postId") Long postId);
