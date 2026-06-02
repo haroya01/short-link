@@ -10,6 +10,7 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -48,7 +49,7 @@ class PostLikeQueryServiceTest {
   @Test
   void statusReflectsLikeCountAndLiked() {
     PostEntity post = publishedPost(42L, 100L, "p");
-    when(postRepository.findById(42L)).thenReturn(java.util.Optional.of(post));
+    when(postRepository.findById(42L)).thenReturn(Optional.of(post));
     when(postLikeRepository.existsByPostIdAndUserId(42L, 9L)).thenReturn(true);
 
     PostLikeStatus status = service.status(9L, 42L);

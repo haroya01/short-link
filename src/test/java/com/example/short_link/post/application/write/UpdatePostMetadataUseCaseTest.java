@@ -9,6 +9,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -106,7 +107,7 @@ class UpdatePostMetadataUseCaseTest {
             null,
             null,
             null,
-            java.util.List.of("  Spring ", "spring", "JPA", "")));
+            List.of("  Spring ", "spring", "JPA", "")));
 
     // trimmed, case-insensitive dedup (first casing wins), blanks dropped
     assertThat(post.getTags()).containsExactly("Spring", "JPA");
@@ -115,13 +116,12 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void clearsTagsWithEmptyList() {
     PostEntity post = ownedPost();
-    post.updateTags(java.util.List.of("a", "b"));
+    post.updateTags(List.of("a", "b"));
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
-        new UpdatePostMetadataCommand(
-            7L, 42L, null, null, null, null, null, null, java.util.List.of()));
+        new UpdatePostMetadataCommand(7L, 42L, null, null, null, null, null, null, List.of()));
 
     assertThat(post.getTags()).isEmpty();
   }
@@ -129,7 +129,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void leavesTagsUnchangedWhenNull() {
     PostEntity post = ownedPost();
-    post.updateTags(java.util.List.of("keep"));
+    post.updateTags(List.of("keep"));
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 

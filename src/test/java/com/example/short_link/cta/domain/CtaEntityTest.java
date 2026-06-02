@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.cta.exception.CtaErrorCode;
 import com.example.short_link.cta.exception.CtaException;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 
 class CtaEntityTest {
@@ -63,7 +64,7 @@ class CtaEntityTest {
   void softDeleteIsIdempotent() {
     CtaEntity cta = sample();
     cta.softDelete();
-    java.time.Instant first = cta.getDeletedAt();
+    Instant first = cta.getDeletedAt();
     cta.softDelete();
     assertThat(cta.getDeletedAt()).isEqualTo(first);
   }
