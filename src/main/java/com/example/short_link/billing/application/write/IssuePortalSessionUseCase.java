@@ -12,7 +12,6 @@ import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
  * Issue a Stripe billing portal session for a user that already has a customer id. Throws {@link
@@ -28,7 +27,8 @@ public class IssuePortalSessionUseCase {
   private final UserRepository userRepository;
   private final MeterRegistry meterRegistry;
 
-  @Transactional
+  // No @Transactional: this only reads the user and calls Stripe (1-3s external IO). Holding a DB
+  // transaction open across that call would pin a pooled connection for the whole round-trip.
   public String execute(IssuePortalSessionCommand cmd) {
     if (!stripe.isConfigured()) throw new BillingException(BillingErrorCode.BILLING_NOT_CONFIGURED);
     UserEntity user =
