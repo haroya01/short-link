@@ -53,6 +53,35 @@ class SseClickStreamRegistryTest {
     assertThat(registry.register(new LinkId(11L), new CountingEmitter())).isFalse();
   }
 
+  @Test
+  void removeEvictsEmptyBucketButKeepsOthers() {
+    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    CountingEmitter keep = new CountingEmitter();
+    CountingEmitter drop = new CountingEmitter();
+    registry.register(new LinkId(5L), keep);
+    registry.register(new LinkId(5L), drop);
+
+    registry.remove(new LinkId(5L), drop);
+    assertThat(registry.activeStreams(new LinkId(5L))).isEqualTo(1);
+
+    registry.remove(new LinkId(5L), keep);
+    assertThat(registry.activeStreams(new LinkId(5L))).isZero();
+  }
+
+  @Test
+  void reRegisterAfterBucketEvictionKeepsNewEmitter() {
+    // Pre-fix race: remove() evicted the emptied bucket while register() added to it, orphaning the
+    // new emitter. A register following a remove-to-empty must recreate the bucket and retain it.
+    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    CountingEmitter first = new CountingEmitter();
+    registry.register(new LinkId(8L), first);
+    registry.remove(new LinkId(8L), first);
+
+    CountingEmitter second = new CountingEmitter();
+    assertThat(registry.register(new LinkId(8L), second)).isTrue();
+    assertThat(registry.activeStreams(new LinkId(8L))).isEqualTo(1);
+  }
+
   /** Minimal SseEmitter that lets us count send() calls without Tomcat. */
   private static class CountingEmitter extends SseEmitter {
     int sent = 0;
