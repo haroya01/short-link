@@ -8,12 +8,22 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllByIdIn(Collection<Long> ids);
+
+  @Modifying
+  @Query("update PostEntity p set p.likeCount = p.likeCount + 1 where p.id = :id")
+  int incrementLikeCount(@Param("id") Long id);
+
+  @Modifying
+  @Query(
+      "update PostEntity p set p.likeCount = p.likeCount - 1 where p.id = :id and p.likeCount > 0")
+  int decrementLikeCount(@Param("id") Long id);
 
   Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
 
