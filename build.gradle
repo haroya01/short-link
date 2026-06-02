@@ -77,15 +77,9 @@ jacoco {
 	toolVersion = '0.8.12'
 }
 
-jacocoTestReport {
-	dependsOn test
-	reports {
-		xml.required = true
-		html.required = true
-	}
-	afterEvaluate {
-		classDirectories.setFrom(files(classDirectories.files.collect {
-			fileTree(dir: it, exclude: [
+// Shared between the coverage report and the coverage-verification gate so the
+// measured metric and the enforced metric never drift apart.
+def coverageClassExcludes = [
 				'com/example/short_link/ShortLinkApplication.class',
 				'com/example/short_link/common/config/**',
 				'db/migration/**',
@@ -153,7 +147,47 @@ jacocoTestReport {
 				// User OAuth/JWT presentation security — branches map to provider config.
 				'**/user/presentation/security/**',
 				'**/user/presentation/oauth/**',
-			])
+]
+
+jacocoTestReport {
+	dependsOn test
+	reports {
+		xml.required = true
+		html.required = true
+	}
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: coverageClassExcludes)
+		}))
+	}
+	// Chain the gate onto the report (which runs as a `test` finalizer). CI runs the gate
+	// during `./gradlew test`; the later `./gradlew build -x test` step skips test — and
+	// therefore this finalizer — so the gate never runs without coverage data.
+	finalizedBy jacocoTestCoverageVerification
+}
+
+// Ratchet gate: floors are pinned to the current measured baseline
+// (instruction 92.2%, branch 83.5%) so coverage can only hold or rise.
+// Raise these numbers when a track lands new tests — never lower them.
+jacocoTestCoverageVerification {
+	dependsOn jacocoTestReport
+	violationRules {
+		rule {
+			limit {
+				counter = 'INSTRUCTION'
+				value = 'COVEREDRATIO'
+				minimum = 0.92
+			}
+			limit {
+				counter = 'BRANCH'
+				value = 'COVEREDRATIO'
+				minimum = 0.83
+			}
+		}
+	}
+	afterEvaluate {
+		classDirectories.setFrom(files(classDirectories.files.collect {
+			fileTree(dir: it, exclude: coverageClassExcludes)
 		}))
 	}
 }
