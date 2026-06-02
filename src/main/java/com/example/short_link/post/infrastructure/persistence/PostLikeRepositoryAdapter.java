@@ -3,7 +3,6 @@ package com.example.short_link.post.infrastructure.persistence;
 import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
 import java.util.List;
-import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -24,17 +23,17 @@ class PostLikeRepositoryAdapter implements PostLikeRepository {
   }
 
   @Override
-  public Optional<PostLikeEntity> findByPostIdAndUserId(Long postId, Long userId) {
-    return jpa.findByPostIdAndUserId(postId, userId);
+  public long countByPostId(Long postId) {
+    return jpa.countByPostId(postId);
   }
 
   @Override
-  public PostLikeEntity save(PostLikeEntity like) {
-    return jpa.save(like);
+  public int insertIgnore(Long postId, Long userId) {
+    return jpa.insertIgnore(postId, userId);
   }
 
   @Override
-  public void delete(PostLikeEntity like) {
-    jpa.delete(like);
+  public int deleteByPostIdAndUserId(Long postId, Long userId) {
+    return jpa.deleteByPostIdAndUserId(postId, userId);
   }
 }

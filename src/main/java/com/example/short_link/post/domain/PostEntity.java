@@ -233,10 +233,6 @@ public class PostEntity extends BaseTimeEntity {
     this.likeCount++;
   }
 
-  public void decrementLikeCount() {
-    if (this.likeCount > 0) this.likeCount--;
-  }
-
   /**
    * Replace all tags. Normalizes: trims, drops blanks, truncates each to {@link #MAX_TAG_LENGTH},
    * de-duplicates case-insensitively (first occurrence's casing wins), and caps the list at {@link
