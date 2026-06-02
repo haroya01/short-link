@@ -160,13 +160,17 @@ jacocoTestReport {
 			fileTree(dir: it, exclude: coverageClassExcludes)
 		}))
 	}
+	// Chain the gate onto the report (which runs as a `test` finalizer). CI runs the gate
+	// during `./gradlew test`; the later `./gradlew build -x test` step skips test — and
+	// therefore this finalizer — so the gate never runs without coverage data.
+	finalizedBy jacocoTestCoverageVerification
 }
 
 // Ratchet gate: floors are pinned to the current measured baseline
 // (instruction 92.2%, branch 83.5%) so coverage can only hold or rise.
 // Raise these numbers when a track lands new tests — never lower them.
 jacocoTestCoverageVerification {
-	dependsOn test
+	dependsOn jacocoTestReport
 	violationRules {
 		rule {
 			limit {
@@ -187,8 +191,6 @@ jacocoTestCoverageVerification {
 		}))
 	}
 }
-
-check.dependsOn jacocoTestCoverageVerification
 
 spotless {
 	java {
