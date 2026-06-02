@@ -4,7 +4,6 @@ import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkId;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -36,13 +35,25 @@ public class SseClickStreamRegistry {
   private final MeterRegistry meterRegistry;
 
   public boolean register(LinkId linkId, SseEmitter emitter) {
-    List<SseEmitter> bucket =
-        emittersByLinkId.computeIfAbsent(linkId, k -> new CopyOnWriteArrayList<>());
-    if (bucket.size() >= MAX_STREAMS_PER_LINK) {
+    // compute() runs under the key's bin lock, serializing with remove()'s computeIfPresent. That
+    // closes the race where remove() evicts an emptied bucket between this method's limit check and
+    // the add — which would otherwise orphan this emitter in a bucket no longer reachable from the
+    // map (it would never receive events or get cleaned up).
+    boolean[] added = {false};
+    emittersByLinkId.compute(
+        linkId,
+        (k, bucket) -> {
+          if (bucket == null) bucket = new CopyOnWriteArrayList<>();
+          if (bucket.size() < MAX_STREAMS_PER_LINK) {
+            bucket.add(emitter);
+            added[0] = true;
+          }
+          return bucket;
+        });
+    if (!added[0]) {
       meterRegistry.counter("sse.click_stream.rejected", "reason", "limit").increment();
       return false;
     }
-    bucket.add(emitter);
     emitter.onCompletion(() -> remove(linkId, emitter));
     emitter.onTimeout(
         () -> {
@@ -59,11 +70,20 @@ public class SseClickStreamRegistry {
   }
 
   void remove(LinkId linkId, SseEmitter emitter) {
-    List<SseEmitter> bucket = emittersByLinkId.get(linkId);
-    if (bucket == null) return;
-    bucket.remove(emitter);
-    if (bucket.isEmpty()) emittersByLinkId.remove(linkId, bucket);
-    meterRegistry.counter("sse.click_stream.closed").increment();
+    // computeIfPresent atomically removes the emitter and, when the bucket empties, evicts the
+    // entry
+    // (returning null) under the same bin lock register() holds — so a concurrent register() can't
+    // be adding to a bucket we're about to drop.
+    boolean[] removed = {false};
+    emittersByLinkId.computeIfPresent(
+        linkId,
+        (k, bucket) -> {
+          removed[0] = bucket.remove(emitter);
+          return bucket.isEmpty() ? null : bucket;
+        });
+    if (removed[0]) {
+      meterRegistry.counter("sse.click_stream.closed").increment();
+    }
   }
 
   public int activeStreams(LinkId linkId) {
@@ -85,18 +105,20 @@ public class SseClickStreamRegistry {
                     "deviceClass", nullToEmpty(event.deviceClass()),
                     "channel", nullToEmpty(event.channel()),
                     "bot", event.bot()));
-    Iterator<SseEmitter> it = bucket.iterator();
-    while (it.hasNext()) {
-      SseEmitter emitter = it.next();
+    int delivered = 0;
+    for (SseEmitter emitter : bucket) {
       try {
         emitter.send(built);
+        delivered++;
       } catch (IOException | IllegalStateException e) {
         // best-effort: drop dead emitters silently
         emitter.completeWithError(e);
         bucket.remove(emitter);
       }
     }
-    meterRegistry.counter("sse.click_stream.broadcast").increment(bucket.size());
+    if (delivered > 0) {
+      meterRegistry.counter("sse.click_stream.broadcast").increment(delivered);
+    }
   }
 
   private static String nullToEmpty(String s) {
