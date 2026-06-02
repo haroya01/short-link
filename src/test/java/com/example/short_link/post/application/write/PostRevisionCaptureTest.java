@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostBlockEntity;
@@ -54,7 +55,7 @@ class PostRevisionCaptureTest {
     capture.capture(post());
 
     ArgumentCaptor<PostRevisionEntity> saved = ArgumentCaptor.forClass(PostRevisionEntity.class);
-    org.mockito.Mockito.verify(postRevisionRepository).save(saved.capture());
+    verify(postRevisionRepository).save(saved.capture());
     assertThat(saved.getValue().getVersionNumber()).isEqualTo(1);
     assertThat(saved.getValue().getTitleSnapshot()).isEqualTo("My Title");
   }
@@ -73,7 +74,7 @@ class PostRevisionCaptureTest {
     capture.capture(post());
 
     ArgumentCaptor<PostRevisionEntity> saved = ArgumentCaptor.forClass(PostRevisionEntity.class);
-    org.mockito.Mockito.verify(postRevisionRepository).save(saved.capture());
+    verify(postRevisionRepository).save(saved.capture());
     assertThat(saved.getValue().getVersionNumber()).isEqualTo(4);
     // 본문 블록이 snapshot JSON 에 직렬화됐는지 — 내용 일부로 확인.
     assertThat(saved.getValue().getContentJson()).contains("hello").contains("PARAGRAPH");
