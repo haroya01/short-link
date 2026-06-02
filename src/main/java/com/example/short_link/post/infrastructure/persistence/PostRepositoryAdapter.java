@@ -50,6 +50,16 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public void incrementLikeCount(Long postId) {
+    jpa.incrementLikeCount(postId);
+  }
+
+  @Override
+  public void decrementLikeCount(Long postId) {
+    jpa.decrementLikeCount(postId);
+  }
+
+  @Override
   public boolean existsByUserIdAndSlug(Long userId, String slug) {
     return jpa.existsByUserIdAndSlug(userId, slug);
   }
