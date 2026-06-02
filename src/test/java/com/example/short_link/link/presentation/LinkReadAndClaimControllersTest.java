@@ -37,8 +37,6 @@ class LinkReadAndClaimControllersTest {
 
   private static final long USER_ID = 7L;
 
-  // --- PowController ---
-
   @Test
   void challengeReturnsIssuedChallengeAndEnforcement() throws Exception {
     when(powService.issue()).thenReturn(new PowService.Challenge("chal-abc", 4));
@@ -51,8 +49,6 @@ class LinkReadAndClaimControllersTest {
         .andExpect(jsonPath("$.difficulty").value(4))
         .andExpect(jsonPath("$.enforced").value(true));
   }
-
-  // --- LinkDetailController ---
 
   @Test
   void detailMapsViewToResponse() throws Exception {
@@ -90,8 +86,6 @@ class LinkReadAndClaimControllersTest {
   void detailRejectsAnonymous() throws Exception {
     mvc.perform(get("/api/v1/links/abc123/detail")).andExpect(status().isUnauthorized());
   }
-
-  // --- AnonymousClaimController ---
 
   @Test
   void claimReturnsClaimedAndSkippedCounts() throws Exception {

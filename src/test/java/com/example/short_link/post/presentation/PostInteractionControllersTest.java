@@ -58,8 +58,6 @@ class PostInteractionControllersTest {
 
   private static final long USER_ID = 7L;
 
-  // --- CommentController ---
-
   @Test
   void createCommentRejectsAnonymous() throws Exception {
     mvc.perform(
@@ -108,8 +106,6 @@ class PostInteractionControllersTest {
     verify(deleteComment).execute(any(DeleteCommentCommand.class));
   }
 
-  // --- PostLikeController ---
-
   @Test
   void likeStatusReturnsCount() throws Exception {
     when(postLikeQueryService.status(USER_ID, 3L)).thenReturn(new PostLikeStatus(12, true));
@@ -145,8 +141,6 @@ class PostInteractionControllersTest {
   void likeRejectsAnonymous() throws Exception {
     mvc.perform(get("/api/v1/posts/3/like")).andExpect(status().isUnauthorized());
   }
-
-  // --- PostImageController ---
 
   @Test
   void presignReturnsUploadUrl() throws Exception {
@@ -189,8 +183,6 @@ class PostInteractionControllersTest {
         .andExpect(status().isBadRequest());
   }
 
-  // --- FollowingFeedController ---
-
   @Test
   void followingFeedRejectsAnonymous() throws Exception {
     mvc.perform(get("/api/v1/feed/following")).andExpect(status().isUnauthorized());
@@ -208,8 +200,6 @@ class PostInteractionControllersTest {
 
     verify(publicFeedQueryService).feedFollowing(USER_ID, 0, 20);
   }
-
-  // --- PublicPostViewBeaconController ---
 
   @Test
   void viewBeaconReturns202() throws Exception {
