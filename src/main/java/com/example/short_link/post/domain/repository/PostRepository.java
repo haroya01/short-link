@@ -22,6 +22,12 @@ public interface PostRepository {
 
   void delete(PostEntity post);
 
+  /** Atomically bump the denormalized like counter so concurrent likes can't lose an update. */
+  void incrementLikeCount(Long postId);
+
+  /** Atomically drop the denormalized like counter, clamped at zero. */
+  void decrementLikeCount(Long postId);
+
   boolean existsByUserIdAndSlug(Long userId, String slug);
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
