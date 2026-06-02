@@ -13,6 +13,7 @@ import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -73,7 +74,7 @@ class ReplacePostBlocksUseCaseTest {
   @Test
   void rejectsBlocksOverMax() {
     List<ReplacePostBlocksCommand.BlockInput> tooMany =
-        java.util.stream.IntStream.range(0, 501)
+        IntStream.range(0, 501)
             .mapToObj(
                 i -> new ReplacePostBlocksCommand.BlockInput(PostBlockType.PARAGRAPH, "block " + i))
             .toList();
