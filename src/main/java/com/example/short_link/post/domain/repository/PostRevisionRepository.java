@@ -10,6 +10,8 @@ public interface PostRevisionRepository {
 
   Optional<PostRevisionEntity> findLatestByPostId(Long postId);
 
+  Optional<PostRevisionEntity> findByPostIdAndVersionNumber(Long postId, Integer versionNumber);
+
   List<PostRevisionEntity> findAllByPostIdOrderByVersionNumberDesc(Long postId);
 
   void deleteAllByPostId(Long postId);

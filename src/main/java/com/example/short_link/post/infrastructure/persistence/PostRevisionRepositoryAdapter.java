@@ -24,6 +24,12 @@ class PostRevisionRepositoryAdapter implements PostRevisionRepository {
   }
 
   @Override
+  public Optional<PostRevisionEntity> findByPostIdAndVersionNumber(
+      Long postId, Integer versionNumber) {
+    return jpa.findByPostIdAndVersionNumber(postId, versionNumber);
+  }
+
+  @Override
   public List<PostRevisionEntity> findAllByPostIdOrderByVersionNumberDesc(Long postId) {
     return jpa.findAllByPostIdOrderByVersionNumberDesc(postId);
   }

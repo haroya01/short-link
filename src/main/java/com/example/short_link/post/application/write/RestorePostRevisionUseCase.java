@@ -36,9 +36,8 @@ public class RestorePostRevisionUseCase {
   public PostEntity execute(RestorePostRevisionCommand cmd) {
     PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
     PostRevisionEntity revision =
-        postRevisionRepository.findAllByPostIdOrderByVersionNumberDesc(cmd.postId()).stream()
-            .filter(r -> r.getVersionNumber().equals(cmd.versionNumber()))
-            .findFirst()
+        postRevisionRepository
+            .findByPostIdAndVersionNumber(cmd.postId(), cmd.versionNumber())
             .orElseThrow(
                 () -> new PostException(PostErrorCode.REVISION_NOT_FOUND, cmd.versionNumber()));
 

@@ -16,6 +16,7 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,8 +58,8 @@ class RestorePostRevisionUseCaseTest {
                 "ja",
                 List.of(new PostSnapshot.BlockSnapshot("PARAGRAPH", "Old content"))));
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
-    when(postRevisionRepository.findAllByPostIdOrderByVersionNumberDesc(42L))
-        .thenReturn(List.of(revision(2, json), revision(1, "{}")));
+    when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 2))
+        .thenReturn(Optional.of(revision(2, json)));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     PostEntity restored = useCase.execute(new RestorePostRevisionCommand(7L, 42L, 2));
@@ -78,8 +79,8 @@ class RestorePostRevisionUseCaseTest {
     String json =
         objectMapper.writeValueAsString(new PostSnapshot("T", null, null, null, "ko", List.of()));
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
-    when(postRevisionRepository.findAllByPostIdOrderByVersionNumberDesc(42L))
-        .thenReturn(List.of(revision(1, json)));
+    when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 1))
+        .thenReturn(Optional.of(revision(1, json)));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(new RestorePostRevisionCommand(7L, 42L, 1));
@@ -93,8 +94,7 @@ class RestorePostRevisionUseCaseTest {
   void rejectsRevisionNotFound() {
     PostEntity post = new PostEntity(7L, "my-post", "Current", "ko");
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
-    when(postRevisionRepository.findAllByPostIdOrderByVersionNumberDesc(42L))
-        .thenReturn(List.of(revision(1, "{}")));
+    when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 99)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> useCase.execute(new RestorePostRevisionCommand(7L, 42L, 99)))
         .isInstanceOf(PostException.class)
