@@ -2,6 +2,7 @@ package com.example.short_link.tag.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -14,6 +15,7 @@ import com.example.short_link.tag.domain.TagEntity;
 import com.example.short_link.tag.domain.repository.TagRepository;
 import com.example.short_link.tag.exception.TagException;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -79,7 +81,7 @@ class UpdateTagUseCaseTest {
     TagEntity tag = ownedTag("old", null);
     when(tagRepository.findById(ID)).thenReturn(Optional.of(tag));
     when(tagRepository.findFirstByUserIdAndName(USER, "new")).thenReturn(Optional.empty());
-    when(tagQueryService.countMap(java.util.List.of(ID))).thenReturn(Map.of(ID, 4L));
+    when(tagQueryService.countMap(List.of(ID))).thenReturn(Map.of(ID, 4L));
 
     TagSummary summary = useCase.execute(USER, ID, "new", null);
 
@@ -91,7 +93,7 @@ class UpdateTagUseCaseTest {
   void skipsDuplicateCheckWhenNameUnchanged() {
     TagEntity tag = ownedTag("same", null);
     when(tagRepository.findById(ID)).thenReturn(Optional.of(tag));
-    when(tagQueryService.countMap(java.util.List.of(ID))).thenReturn(Map.of());
+    when(tagQueryService.countMap(List.of(ID))).thenReturn(Map.of());
 
     useCase.execute(USER, ID, "same", null);
 
@@ -103,24 +105,24 @@ class UpdateTagUseCaseTest {
   void recolorsWhenOnlyColorProvided() {
     TagEntity tag = ownedTag("old", null);
     when(tagRepository.findById(ID)).thenReturn(Optional.of(tag));
-    when(tagQueryService.countMap(java.util.List.of(ID))).thenReturn(Map.of(ID, 0L));
+    when(tagQueryService.countMap(List.of(ID))).thenReturn(Map.of(ID, 0L));
 
     useCase.execute(USER, ID, null, "#AABBCC");
 
     verify(tag).recolor("#aabbcc");
-    verify(tag, never()).rename(org.mockito.ArgumentMatchers.anyString());
+    verify(tag, never()).rename(anyString());
   }
 
   @Test
   void leavesTagUnchangedWhenNoFieldsProvided() {
     TagEntity tag = ownedTag("old", "#112233");
     when(tagRepository.findById(ID)).thenReturn(Optional.of(tag));
-    when(tagQueryService.countMap(java.util.List.of(ID))).thenReturn(Map.of(ID, 2L));
+    when(tagQueryService.countMap(List.of(ID))).thenReturn(Map.of(ID, 2L));
 
     TagSummary summary = useCase.execute(USER, ID, null, null);
 
-    verify(tag, never()).rename(org.mockito.ArgumentMatchers.anyString());
-    verify(tag, never()).recolor(org.mockito.ArgumentMatchers.anyString());
+    verify(tag, never()).rename(anyString());
+    verify(tag, never()).recolor(anyString());
     assertThat(summary.linkCount()).isEqualTo(2L);
   }
 }

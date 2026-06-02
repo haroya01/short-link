@@ -16,6 +16,7 @@ import com.example.short_link.post.application.read.PublicSeriesQueryService;
 import com.example.short_link.post.application.read.SuggestedAuthorView;
 import com.example.short_link.post.application.read.TrendingTagSection;
 import com.example.short_link.testsupport.KurlWebMvcTest;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -127,7 +128,7 @@ class PublicPostDiscoveryControllersTest {
                     null,
                     new PublicAuthorView(2L, "lee", null, null),
                     "nice post",
-                    java.time.Instant.parse("2026-01-01T00:00:00Z"))));
+                    Instant.parse("2026-01-01T00:00:00Z"))));
 
     mvc.perform(get("/api/v1/public/posts/5/comments"))
         .andExpect(status().isOk())

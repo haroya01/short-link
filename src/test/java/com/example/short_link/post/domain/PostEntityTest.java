@@ -7,6 +7,8 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
+import java.util.stream.IntStream;
 import org.junit.jupiter.api.Test;
 
 class PostEntityTest {
@@ -250,7 +252,7 @@ class PostEntityTest {
   @Test
   void updateTagsTrimsDedupesAndDropsBlanks() {
     PostEntity p = newPost();
-    p.updateTags(java.util.List.of("  Spring ", "spring", "", "  ", "JPA"));
+    p.updateTags(List.of("  Spring ", "spring", "", "  ", "JPA"));
     assertThat(p.getTags()).containsExactly("Spring", "JPA");
   }
 
@@ -258,7 +260,7 @@ class PostEntityTest {
   void updateTagsTruncatesToMaxLength() {
     PostEntity p = newPost();
     String tooLong = "x".repeat(PostEntity.MAX_TAG_LENGTH + 10);
-    p.updateTags(java.util.List.of(tooLong));
+    p.updateTags(List.of(tooLong));
     assertThat(p.getTags()).hasSize(1);
     assertThat(p.getTags().get(0)).hasSize(PostEntity.MAX_TAG_LENGTH);
   }
@@ -266,10 +268,8 @@ class PostEntityTest {
   @Test
   void updateTagsCapsCount() {
     PostEntity p = newPost();
-    java.util.List<String> many =
-        java.util.stream.IntStream.range(0, PostEntity.MAX_TAGS + 15)
-            .mapToObj(i -> "tag" + i)
-            .toList();
+    List<String> many =
+        IntStream.range(0, PostEntity.MAX_TAGS + 15).mapToObj(i -> "tag" + i).toList();
     p.updateTags(many);
     assertThat(p.getTags()).hasSize(PostEntity.MAX_TAGS);
   }
@@ -277,7 +277,7 @@ class PostEntityTest {
   @Test
   void updateTagsWithNullClears() {
     PostEntity p = newPost();
-    p.updateTags(java.util.List.of("a", "b"));
+    p.updateTags(List.of("a", "b"));
     p.updateTags(null);
     assertThat(p.getTags()).isEmpty();
   }

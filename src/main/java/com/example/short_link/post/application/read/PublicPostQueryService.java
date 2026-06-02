@@ -21,6 +21,7 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -66,16 +67,15 @@ public class PublicPostQueryService {
   /**
    * Pinned (pin_order != null) before unpinned; pinned ordered by pin_order asc. Stable for ties.
    */
-  private static final java.util.Comparator<com.example.short_link.post.domain.PostEntity>
-      PINNED_FIRST =
-          (a, b) -> {
-            Integer pa = a.getPinOrder();
-            Integer pb = b.getPinOrder();
-            if (pa != null && pb != null) return Integer.compare(pa, pb);
-            if (pa != null) return -1;
-            if (pb != null) return 1;
-            return 0;
-          };
+  private static final Comparator<PostEntity> PINNED_FIRST =
+      (a, b) -> {
+        Integer pa = a.getPinOrder();
+        Integer pb = b.getPinOrder();
+        if (pa != null && pb != null) return Integer.compare(pa, pb);
+        if (pa != null) return -1;
+        if (pb != null) return 1;
+        return 0;
+      };
 
   public PublicPostDetail findPublicPost(String username, String slug) {
     UserEntity author = resolveAuthor(username);

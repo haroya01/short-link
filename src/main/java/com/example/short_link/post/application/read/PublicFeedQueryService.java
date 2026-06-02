@@ -8,6 +8,7 @@ import com.example.short_link.post.domain.repository.SeriesSubscriptionRepositor
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -111,7 +112,7 @@ public class PublicFeedQueryService {
    * {@code tagLimit} tags, the top {@code perTag} published posts (deleted-author posts filtered).
    */
   public List<TrendingTagSection> trendingByTag(int tagLimit, int perTag) {
-    List<TrendingTagSection> sections = new java.util.ArrayList<>();
+    List<TrendingTagSection> sections = new ArrayList<>();
     for (TagCount tag : postRepository.findPopularTags(tagLimit)) {
       List<PublicFeedItem> posts = toItems(postRepository.findPublishedByTag(tag.tag(), 0, perTag));
       if (!posts.isEmpty()) {
