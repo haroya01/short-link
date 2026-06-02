@@ -64,16 +64,23 @@ public class PowService {
       meterRegistry.counter("pow.verify", "result", "missing").increment();
       return false;
     }
+    String hash = sha256Hex(challenge + ":" + nonce);
+    if (!hasLeadingZeros(hash, difficulty)) {
+      // Reject before touching Redis: a bad nonce must not consume the challenge, otherwise any
+      // client could invalidate another's outstanding challenge by replaying its id with garbage.
+      meterRegistry.counter("pow.verify", "result", "bad_proof").increment();
+      return false;
+    }
+    // Consume only after the proof checks out. delete() is atomic, so a replay of the same valid
+    // proof finds the key already gone and fails.
     String key = KEY_PREFIX + challenge;
     Boolean deleted = redis.delete(key);
     if (deleted == null || !deleted) {
       meterRegistry.counter("pow.verify", "result", "unknown_or_used").increment();
       return false;
     }
-    String hash = sha256Hex(challenge + ":" + nonce);
-    boolean ok = hasLeadingZeros(hash, difficulty);
-    meterRegistry.counter("pow.verify", "result", ok ? "ok" : "bad_proof").increment();
-    return ok;
+    meterRegistry.counter("pow.verify", "result", "ok").increment();
+    return true;
   }
 
   private static boolean hasLeadingZeros(String hex, int zeros) {
