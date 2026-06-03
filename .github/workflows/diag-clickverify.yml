@@ -22,8 +22,8 @@ jobs:
           script: |
             set +e
             cd ~/short-link/deploy
-            echo "===== recent hPIoNau clicks (last 20 min): is_bot / bot_name / country / src / UA ====="
-            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -e "SELECT c.clicked_at, c.is_bot, c.bot_name, c.country_code, c.source_channel, LEFT(c.user_agent,28) ua FROM click_event c JOIN link l ON l.id=c.link_id WHERE l.short_code='\''hPIoNau'\'' AND c.clicked_at > NOW() - INTERVAL 20 MINUTE ORDER BY c.clicked_at DESC LIMIT 20;"' 2>&1 | tail -c 3000
-            echo "===== system-wide bot vs human, last 20 min ====="
-            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -N -e "SELECT is_bot, COUNT(*) n FROM click_event WHERE clicked_at > NOW() - INTERVAL 20 MINUTE GROUP BY is_bot;"' 2>&1 | tail -c 1000
+            echo "===== latest 12 hPIoNau clicks (no time filter): clicked_at / is_bot / bot_name / asn / asn_org / country ====="
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -e "SELECT c.clicked_at, c.is_bot, c.bot_name, c.asn, c.asn_org, c.country_code FROM click_event c JOIN link l ON l.id=c.link_id WHERE l.short_code='\''hPIoNau'\'' ORDER BY c.id DESC LIMIT 12;"' 2>&1 | tail -c 4000
+            echo "===== mysql NOW() vs UTC_TIMESTAMP() (timezone sanity) ====="
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -e "SELECT NOW(), UTC_TIMESTAMP();"' 2>&1 | tail -c 400
             echo "===== done ====="
