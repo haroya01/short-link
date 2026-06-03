@@ -1,0 +1,29 @@
+name: diag-clickverify
+
+# Temporary read-only verification: confirm the nginx real_ip fix — recent clicks should now
+# record the real visitor IP (is_bot=0, bot_name NOT 'datacenter:Cloudflare'). Remove after use.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH read-only verification
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: false
+          script: |
+            set +e
+            cd ~/short-link/deploy
+            echo "===== recent hPIoNau clicks (last 20 min): is_bot / bot_name / country / src / UA ====="
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -e "SELECT c.clicked_at, c.is_bot, c.bot_name, c.country_code, c.source_channel, LEFT(c.user_agent,28) ua FROM click_event c JOIN link l ON l.id=c.link_id WHERE l.short_code='\''hPIoNau'\'' AND c.clicked_at > NOW() - INTERVAL 20 MINUTE ORDER BY c.clicked_at DESC LIMIT 20;"' 2>&1 | tail -c 3000
+            echo "===== system-wide bot vs human, last 20 min ====="
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -N -e "SELECT is_bot, COUNT(*) n FROM click_event WHERE clicked_at > NOW() - INTERVAL 20 MINUTE GROUP BY is_bot;"' 2>&1 | tail -c 1000
+            echo "===== done ====="
