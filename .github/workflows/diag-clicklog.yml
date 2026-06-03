@@ -1,0 +1,36 @@
+name: diag-clicklog
+
+# Temporary read-only diagnostic: inspect why click stats are empty in production.
+# Greps app logs for swallowed click-record failures and reads click_event bot/human
+# distribution. No writes. Remove after use.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH read-only diagnostics
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: false
+          script: |
+            set +e
+            cd ~/short-link/deploy
+            echo "===== 1) 'failed to record click' COUNT (72h) ====="
+            docker compose logs app --since 72h 2>&1 | grep -ciE "failed to record click"
+            echo "===== 2) 'failed to record click' SAMPLE + stacktrace ====="
+            docker compose logs app --since 72h 2>&1 | grep -A 25 "failed to record click" | tail -c 6000
+            echo "===== 3) other Click/ASN/Redis/Geo errors (72h) ====="
+            docker compose logs app --since 72h 2>&1 | grep -iE "ClickRecorder|AsnResolver|RedisConnection|Lettuce|GeoLite|lookupAsn|DataIntegrity" | tail -c 4000
+            echo "===== 4) click_event bot vs human distribution (last 2 days) ====="
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -N -e "SELECT is_bot, COUNT(*) n, MAX(clicked_at) latest FROM click_event WHERE clicked_at > NOW() - INTERVAL 2 DAY GROUP BY is_bot;"' 2>&1 | tail -c 2000
+            echo "===== 5) click_event for hPIoNau, by is_bot + bot_name ====="
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -N -e "SELECT c.is_bot, c.bot_name, COUNT(*) n, MAX(c.clicked_at) latest FROM click_event c JOIN link l ON l.id=c.link_id WHERE l.short_code='\''hPIoNau'\'' GROUP BY c.is_bot, c.bot_name ORDER BY n DESC LIMIT 20;"' 2>&1 | tail -c 3000
+            echo "===== done ====="
