@@ -17,6 +17,12 @@ import java.net.URI;
 /** Throws {@link ProfileException} on bad input — controller turns it into HTTP 400. */
 public final class BlockContentValidator {
 
+  /**
+   * 어떤 블록 타입이든 허용되는 raw content 의 절대 상한 — 가장 큰 타입(PRODUCT_CARD) 기준. 타입별 정밀 검증은 아래 switch 가 더 빡빡하게
+   * 수행하고, 이 상수는 request DTO 의 @Size 상한(악의적 초거대 입력 1차 차단)으로 공유된다.
+   */
+  public static final int MAX_CONTENT = 16384;
+
   private BlockContentValidator() {}
 
   public static String validate(ProfileBlockType type, String raw) {
@@ -73,7 +79,7 @@ public final class BlockContentValidator {
         yield Gallery.normalize(trimmed);
       }
       case PRODUCT_CARD -> {
-        if (trimmed.length() > 16384)
+        if (trimmed.length() > MAX_CONTENT)
           throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "product card too long");
         yield ProductCardCarousel.normalize(trimmed);
       }

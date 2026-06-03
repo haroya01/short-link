@@ -3,11 +3,13 @@ package com.example.short_link.common.web;
 import com.example.short_link.common.pow.PowRequiredException;
 import com.example.short_link.common.web.response.ProblemDetails;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
@@ -15,6 +17,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -85,11 +88,56 @@ public class GlobalExceptionHandler {
     return body;
   }
 
+  /**
+   * @RequestParam / @PathVariable 제약 위반(@Validated 컨트롤러)은 ConstraintViolationException 으로 떨어진다. 전용
+   * 핸들러가 없으면 catch-all 이 500 으로 보고해 클라이언트가 입력 오류를 4xx 로 인지하지 못하고 Sentry 에 가짜 에러가 쌓인다.
+   * MethodArgumentNotValid 와 동일한 VALIDATION_FAILED / errors 포맷으로 맞춘다.
+   */
+  @ExceptionHandler(ConstraintViolationException.class)
+  public ProblemDetail handleConstraintViolation(
+      ConstraintViolationException e, HttpServletRequest req) {
+    ProblemDetail body =
+        ProblemDetails.of(HttpStatus.BAD_REQUEST, "validation failed", "VALIDATION_FAILED", req);
+    List<Map<String, String>> errors =
+        e.getConstraintViolations().stream()
+            .map(
+                v ->
+                    Map.of(
+                        "field", String.valueOf(v.getPropertyPath()),
+                        "message", String.valueOf(v.getMessage())))
+            .toList();
+    body.setProperty("errors", errors);
+    return body;
+  }
+
   @ExceptionHandler(HttpMessageNotReadableException.class)
   public ProblemDetail handleNotReadable(
       HttpMessageNotReadableException e, HttpServletRequest req) {
     return ProblemDetails.of(
         HttpStatus.BAD_REQUEST, "malformed request body", "MALFORMED_REQUEST", req);
+  }
+
+  /** 업로드 본문이 multipart 한도를 넘으면 발생. catch-all 로 새면 500 이 되지만 의미상 클라이언트 오류이므로 413 으로 매핑한다. */
+  @ExceptionHandler(MaxUploadSizeExceededException.class)
+  public ProblemDetail handleMaxUploadSize(
+      MaxUploadSizeExceededException e, HttpServletRequest req) {
+    return ProblemDetails.of(
+        HttpStatus.PAYLOAD_TOO_LARGE, "upload too large", "UPLOAD_TOO_LARGE", req);
+  }
+
+  /**
+   * unique 제약 충돌 등 DB 무결성 위반. 도메인에서 잡지 못하고 빠져나온 경우의 안전망 — 동시 가입/중복 키 race 가 500 이 아닌 409 로 나가도록. 내부
+   * 메시지는 노출하지 않고 로그로만 남긴다.
+   */
+  @ExceptionHandler(DataIntegrityViolationException.class)
+  public ProblemDetail handleDataIntegrity(
+      DataIntegrityViolationException e, HttpServletRequest req) {
+    log.warn(
+        "data integrity violation: {} {} msg={}",
+        req.getMethod(),
+        req.getRequestURI(),
+        e.getMostSpecificCause().getMessage());
+    return ProblemDetails.of(HttpStatus.CONFLICT, "conflict", "CONFLICT", req);
   }
 
   @ExceptionHandler(Exception.class)

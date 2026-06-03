@@ -188,6 +188,49 @@ class PostControllerTest {
   }
 
   @Test
+  void patchAcceptsTagsAtLimit() throws Exception {
+    PostEntity updated = new PostEntity(USER_ID, "my-post", "Title", "ko");
+    when(updatePostMetadata.execute(any(UpdatePostMetadataCommand.class))).thenReturn(updated);
+    String tags = "[\"t1\",\"t2\",\"t3\",\"t4\",\"t5\",\"t6\",\"t7\",\"t8\",\"t9\",\"t10\"]";
+
+    mvc.perform(
+            patch("/api/v1/posts/42")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tags\":" + tags + "}"))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void patchRejectsTooManyTags() throws Exception {
+    // 11 tags — 도메인 상한(10)을 넘는 입력은 조용히 잘리지 않고 명시적 400 으로 거부되어야 한다.
+    String tags =
+        "[\"t1\",\"t2\",\"t3\",\"t4\",\"t5\",\"t6\",\"t7\",\"t8\",\"t9\",\"t10\",\"t11\"]";
+
+    mvc.perform(
+            patch("/api/v1/posts/42")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tags\":" + tags + "}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+  }
+
+  @Test
+  void patchRejectsOverlongTag() throws Exception {
+    // 41 chars — 도메인 상한(40)을 넘는 태그는 truncate 되지 않고 400 으로 거부.
+    String overlong = "a".repeat(41);
+
+    mvc.perform(
+            patch("/api/v1/posts/42")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tags\":[\"" + overlong + "\"]}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+  }
+
+  @Test
   void patchSlugFrozenReturns409() throws Exception {
     when(updatePostMetadata.execute(any(UpdatePostMetadataCommand.class)))
         .thenThrow(new PostException(PostErrorCode.SLUG_FROZEN, "original-slug"));
