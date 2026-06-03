@@ -1,0 +1,81 @@
+name: prod-smoke
+
+# Scheduled synthetic check of production critical paths against the REAL edge
+# (Cloudflare → nginx → app) — the localhost e2e suite can't see deploy/config/edge drift.
+# Alerts Discord on failure. Tune the cron cadence as needed; */15 = every 15 min.
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prod-smoke
+  cancel-in-progress: true
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe production critical paths
+        id: probe
+        env:
+          # A dedicated throwaway short link is best (so smoke clicks don't pollute a real link's
+          # stats). Falls back to a known test code if the repo var isn't set.
+          SMOKE_CODE: ${{ vars.SMOKE_SHORT_CODE }}
+        run: |
+          set -u
+          BASE="https://kurl.me"
+          CODE="${SMOKE_CODE:-hPIoNau}"
+          # Distinctive UA so it can be allowlisted in Cloudflare if bot-fight ever challenges the runner.
+          UA="kurl-prod-smoke/1.0 (+github-actions)"
+          fails=()
+
+          # status check: $1 label, $2 expected status, $3 url, [$4 body substring]
+          check() {
+            local label="$1" want="$2" url="$3" needle="${4:-}" out code body
+            out="$(curl -sS -m 15 -A "$UA" -w $'\n%{http_code}' "$url" 2>/dev/null)" \
+              || { fails+=("$label: curl error ($url)"); return; }
+            code="${out##*$'\n'}"; body="${out%$'\n'*}"
+            if [ "$code" != "$want" ]; then fails+=("$label: expected $want got $code ($url)"); return; fi
+            if [ -n "$needle" ] && ! printf '%s' "$body" | grep -q "$needle"; then
+              fails+=("$label: body missing '$needle'"); return
+            fi
+            echo "ok  $label ($code)"
+          }
+          # redirect check (no follow): $1 label, $2 url — expect 302
+          redir() {
+            local label="$1" url="$2" code
+            code="$(curl -sS -m 15 -A "$UA" -o /dev/null -w '%{http_code}' "$url" 2>/dev/null)" \
+              || { fails+=("$label: curl error ($url)"); return; }
+            [ "$code" = "302" ] && echo "ok  $label (302)" || fails+=("$label: expected 302 got $code ($url)")
+          }
+
+          check "frontend home"       200 "$BASE/ko"
+          check "public feed"         200 "$BASE/api/v1/public/posts?size=1" '"items"'
+          check "auth endpoint shape" 401 "$BASE/api/v1/users/me" '"UNAUTHORIZED"'
+          redir "redirect bare"       "$BASE/$CODE"
+          redir "redirect ?src"       "$BASE/$CODE?src=smoke"
+          redir "redirect ?utm"       "$BASE/$CODE?utm_source=smoke&utm_medium=cron"
+
+          if [ "${#fails[@]}" -gt 0 ]; then
+            echo "::error::prod smoke failed (${#fails[@]} check(s))"
+            printf '%s\n' "${fails[@]}"
+            { echo "report<<EOF"; printf '%s\n' "${fails[@]}"; echo "EOF"; } >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+          echo "all prod smoke checks passed"
+
+      - name: Notify Discord on failure
+        if: failure()
+        env:
+          WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+          REPORT: ${{ steps.probe.outputs.report }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "${WEBHOOK:-}" ] || { echo "no Discord webhook configured; skipping"; exit 0; }
+          MSG=$(jq -nc --arg r "${REPORT:-unknown failure}" --arg run "$RUN_URL" \
+            '{ content: ("🚨 **prod smoke FAILED**\n```\n" + $r + "```\n<" + $run + ">") }')
+          curl -fsS -X POST -H "Content-Type: application/json" -d "$MSG" "$WEBHOOK" || true
