@@ -57,6 +57,40 @@ class ProfileBlockControllerTest {
   }
 
   @Test
+  void createTextBlockOver120CharsSucceeds() throws Exception {
+    // 과거 DTO @Size(max=120) 이 도메인(TEXT 본문 2000자)을 목 졸라 정상 블록을 400 으로 막던 자리.
+    // 이제 DTO 상한이 도메인 최대치로 정렬되어 120 자를 넘는 본문도 저장돼야 한다.
+    UserEntity user = userRepository.save(new UserEntity("t@x.com", "google", "g-txt"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    String body = "a".repeat(500);
+
+    mvc.perform(
+            post("/api/v1/users/me/profile/blocks")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"TEXT\",\"content\":\"" + body + "\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.type").value("TEXT"))
+        .andExpect(jsonPath("$.id").isNumber());
+  }
+
+  @Test
+  void createContentOverAbsoluteCapRejected() throws Exception {
+    // 절대 상한(BlockContentValidator.MAX_CONTENT)을 넘는 초거대 입력은 거부되어야 한다. 이 정도 크기면 전송 단계
+    // (tomcat 본문 한도)에서 413, 혹은 그 아래 @Size 에서 400 — 어느 쪽이든 4xx 로 막히고 절대 통과/500 이 아니다.
+    UserEntity user = userRepository.save(new UserEntity("h@x.com", "google", "g-huge"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    String huge = "a".repeat(16385);
+
+    mvc.perform(
+            post("/api/v1/users/me/profile/blocks")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"type\":\"TEXT\",\"content\":\"" + huge + "\"}"))
+        .andExpect(status().is4xxClientError());
+  }
+
+  @Test
   void updateBlockContent() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("b@x.com", "google", "g-blk2"));
     String token = jwt.createAccessToken(user.getId(), "USER");

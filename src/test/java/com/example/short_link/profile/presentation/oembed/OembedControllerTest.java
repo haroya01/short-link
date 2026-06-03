@@ -35,4 +35,22 @@ class OembedControllerTest {
         .andExpect(jsonPath("$.type").value("video"))
         .andExpect(jsonPath("$.title").value("T"));
   }
+
+  @Test
+  void blankUrlReturns400NotServerError() throws Exception {
+    // @NotBlank 위반 → ConstraintViolationException. 전용 핸들러가 생기기 전에는 catch-all 이 500 으로
+    // 보고하던 자리 — 입력 오류이므로 400 VALIDATION_FAILED 여야 한다.
+    mvc.perform(get("/api/v1/public/oembed").param("url", ""))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+  }
+
+  @Test
+  void overlongUrlReturns400() throws Exception {
+    String tooLong = "https://example.com/" + "a".repeat(3000);
+
+    mvc.perform(get("/api/v1/public/oembed").param("url", tooLong))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+  }
 }

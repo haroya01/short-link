@@ -71,4 +71,20 @@ class LinkTagControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.tags[0]").value("new-tag"));
   }
+
+  @Test
+  void replaceRejectsOverlongTagAtDtoLayer() throws Exception {
+    // 개별 태그 51자 — DTO @Size(max=MAX_NAME_LENGTH=50) 위반으로 sanitizer 도달 전 400.
+    UserEntity user = userRepository.save(new UserEntity("o@x.com", "google", "g-lto"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    String overlong = "a".repeat(51);
+
+    mvc.perform(
+            put("/api/v1/links/abc1234/tags")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"tags\":[\"" + overlong + "\"]}"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"));
+  }
 }

@@ -1,5 +1,6 @@
 package com.example.short_link.post.presentation.request;
 
+import com.example.short_link.post.domain.PostEntity;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
@@ -16,4 +17,5 @@ public record UpdatePostRequest(
     @Size(max = 512) String ogImageUrl,
     @Size(max = 256) String ogImageKey,
     @Size(max = 16) String languageTag,
-    @Size(max = 100) List<@Size(max = 80) String> tags) {}
+    // 도메인 상한과 정렬: 초과분이 조용히 truncate/drop 되지 않고 명시적 400 으로 거부되도록.
+    @Size(max = PostEntity.MAX_TAGS) List<@Size(max = PostEntity.MAX_TAG_LENGTH) String> tags) {}
