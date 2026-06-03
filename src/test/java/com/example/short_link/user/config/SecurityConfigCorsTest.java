@@ -9,6 +9,7 @@ import com.example.short_link.user.presentation.security.JsonAuthenticationEntry
 import com.example.short_link.user.presentation.security.JwtAuthenticationFilter;
 import com.example.short_link.user.presentation.security.OAuth2LoginFailureHandler;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
+import java.util.regex.Pattern;
 import org.junit.jupiter.api.Test;
 
 class SecurityConfigCorsTest {
@@ -69,5 +70,27 @@ class SecurityConfigCorsTest {
   void rejectsProdProfileMixedWithOtherProfiles() {
     assertThatThrownBy(() -> config.corsConfigurationSource("http://localhost:3001", "local,prod"))
         .isInstanceOf(IllegalStateException.class);
+  }
+
+  // RegexRequestMatcher matches against the URL *with* the query string, so the short-code anchor
+  // must tolerate a trailing query — otherwise a tracked link (?src=…) or UTM link 401s instead of
+  // redirecting. Regression for that production bug.
+  @Test
+  void shortCodeRegexToleratesTrackingQueryString() {
+    Pattern p = Pattern.compile(SecurityConfig.SHORT_CODE_REGEX);
+    assertThat(p.matcher("/abc123").matches()).isTrue();
+    assertThat(p.matcher("/abc123?src=kakao").matches()).isTrue();
+    assertThat(p.matcher("/abc123?utm_source=x&utm_medium=qr").matches()).isTrue();
+    // Still scoped to a single alphanumeric segment — must not open real API/authenticated paths.
+    assertThat(p.matcher("/api/v1/posts").matches()).isFalse();
+    assertThat(p.matcher("/abc/123").matches()).isFalse();
+  }
+
+  @Test
+  void ogCardRegexToleratesQueryString() {
+    Pattern p = Pattern.compile(SecurityConfig.OG_CARD_REGEX);
+    assertThat(p.matcher("/abc123/og.png").matches()).isTrue();
+    assertThat(p.matcher("/abc123/og.png?v=2").matches()).isTrue();
+    assertThat(p.matcher("/abc123/other.png").matches()).isFalse();
   }
 }
