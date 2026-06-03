@@ -38,15 +38,22 @@ import tools.jackson.databind.json.JsonMapper;
 public class SecurityConfig {
 
   /**
-   * Short-code surface — {@code /{shortCode}} for GET redirects and POST password unlocks. The
-   * regex matches {@code RedirectController}'s path constraint exactly so the security layer can't
-   * accidentally open paths the controller would never serve. Single-segment alphanumeric, 3–16
-   * chars.
+   * Short-code surface — {@code /{shortCode}} for GET redirects and POST password unlocks.
+   * Single-segment alphanumeric, 3–16 chars, matching {@code RedirectController}'s path constraint
+   * so the security layer can't open paths the controller would never serve.
+   *
+   * <p>The trailing {@code (\?.*)?} is required: {@link
+   * org.springframework.security.web.util.matcher.RegexRequestMatcher} matches against the URL
+   * <em>including the query string</em>, so a tracked link like {@code /abc123?src=kakao} or a UTM
+   * link ({@code ?utm_source=…}) wouldn't match a query-less anchor — it would fall through to
+   * {@code anyRequest().authenticated()} and 401 instead of redirecting. {@code src} is a
+   * first-class redirect feature ({@code RedirectController} reads it), so query strings must be
+   * permitted here.
    */
-  private static final String SHORT_CODE_REGEX = "^/[0-9A-Za-z]{3,16}$";
+  static final String SHORT_CODE_REGEX = "^/[0-9A-Za-z]{3,16}(\\?.*)?$";
 
   /** OG preview image rendered for crawlers — same short-code shape with {@code /og.png} suffix. */
-  private static final String OG_CARD_REGEX = "^/[0-9A-Za-z]{3,16}/og\\.png$";
+  static final String OG_CARD_REGEX = "^/[0-9A-Za-z]{3,16}/og\\.png(\\?.*)?$";
 
   private final JwtAuthenticationFilter jwtFilter;
   private final ApiKeyAuthenticationFilter apiKeyFilter;
