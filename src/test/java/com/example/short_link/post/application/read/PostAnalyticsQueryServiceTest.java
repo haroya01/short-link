@@ -34,6 +34,11 @@ class PostAnalyticsQueryServiceTest {
   @Mock private PostViewEventRepository viewEventRepository;
   @Mock private com.example.short_link.post.domain.repository.PostLinkClickReader linkClickReader;
   @Mock private com.example.short_link.post.domain.repository.PostFollowReader followReader;
+  @Mock private com.example.short_link.post.domain.repository.SeriesRepository seriesRepository;
+
+  @Mock
+  private com.example.short_link.post.domain.repository.SeriesSubscriptionRepository
+      subscriptionRepository;
 
   private PostAnalyticsQueryService service;
 
@@ -41,7 +46,13 @@ class PostAnalyticsQueryServiceTest {
   void setUp() {
     service =
         new PostAnalyticsQueryService(
-            postRepository, viewEventRepository, linkClickReader, followReader, clock);
+            postRepository,
+            viewEventRepository,
+            linkClickReader,
+            followReader,
+            seriesRepository,
+            subscriptionRepository,
+            clock);
   }
 
   private static PostEntity post(long owner, String slug, int views, int likes) {
@@ -101,16 +112,19 @@ class PostAnalyticsQueryServiceTest {
   }
 
   @Test
-  void postAnalytics_defaultsWindowWhenNonPositive() {
+  void postAnalytics_allTimeWhenNonPositiveSpansFromFirstActivity() {
     PostEntity p = post(USER, "hello", 0, 0);
     when(postRepository.findById(1L)).thenReturn(Optional.of(p));
+    // days <= 0 = 전체(all-time): the window spans from the earliest recorded day, not a fixed 30.
     when(viewEventRepository.countDailyByPostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
-        .thenReturn(List.of());
+        .thenReturn(List.of(new DailyViewCount(LocalDate.parse("2026-05-25"), 4)));
 
     PostAnalyticsView view = service.postAnalytics(USER, 1L, 0);
 
-    assertThat(view.windowDays()).isEqualTo(30);
-    assertThat(view.daily()).hasSize(30);
+    // Frozen today = 2026-06-01; earliest data 2026-05-25 → 8 days inclusive.
+    assertThat(view.windowDays()).isEqualTo(8);
+    assertThat(view.daily()).hasSize(8);
+    assertThat(view.windowViews()).isEqualTo(4);
   }
 
   @Test
@@ -204,6 +218,109 @@ class PostAnalyticsQueryServiceTest {
             USER, 1, 2, com.example.short_link.post.domain.PostPerformanceSort.LIKES);
 
     assertThat(pageResult.hasNext()).isFalse(); // (1+1)*2 = 4, not < 4
+  }
+
+  @Test
+  void overview_allTimeSpansFromFirstActivity() {
+    PostEntity a = post(USER, "a", 10, 1);
+    a.publish();
+    when(postRepository.findAllByUserIdOrderByCreatedAtDesc(USER)).thenReturn(List.of(a));
+    when(viewEventRepository.countDailyByUserIdSince(
+            org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(
+            List.of(
+                new DailyViewCount(LocalDate.parse("2026-05-20"), 3),
+                new DailyViewCount(LocalDate.parse("2026-06-01"), 4)));
+    when(linkClickReader.countByUserId(USER)).thenReturn(0L);
+    when(linkClickReader.countByUserIdSince(
+            org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(40L);
+    when(followReader.countByUserId(USER)).thenReturn(0L);
+    when(followReader.countByUserIdSince(
+            org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(8L);
+
+    AuthorAnalyticsOverview o = service.overview(USER, 0); // 0 = 전체(all-time)
+
+    // Frozen today = 2026-06-01; earliest data 2026-05-20 → 13 days inclusive, spanning the chart.
+    assertThat(o.windowDays()).isEqualTo(13);
+    assertThat(o.daily()).hasSize(13);
+    assertThat(o.windowViews()).isEqualTo(7); // 3 + 4
+    // windowed link/follow counts use since=EPOCH for all-time → equal the lifetime totals.
+    assertThat(o.windowLinkClicks()).isEqualTo(40);
+    assertThat(o.windowFollows()).isEqualTo(8);
+  }
+
+  @Test
+  void seriesAnalytics_aggregatesSubscribersAndTraction() {
+    com.example.short_link.post.domain.SeriesEntity s =
+        new com.example.short_link.post.domain.SeriesEntity(USER, "s1", "My Series");
+    org.springframework.test.util.ReflectionTestUtils.setField(s, "id", 9L);
+    when(seriesRepository.findAllByUserIdOrderByCreatedAtDesc(USER)).thenReturn(List.of(s));
+    when(postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(9L))
+        .thenReturn(List.of(post(USER, "a", 100, 5), post(USER, "b", 50, 3)));
+    when(subscriptionRepository.countBySeriesId(9L)).thenReturn(7L);
+
+    assertThat(service.seriesAnalytics(USER))
+        .singleElement()
+        .satisfies(
+            r -> {
+              assertThat(r.title()).isEqualTo("My Series");
+              assertThat(r.postCount()).isEqualTo(2);
+              assertThat(r.subscriberCount()).isEqualTo(7);
+              assertThat(r.totalViews()).isEqualTo(150);
+              assertThat(r.totalLikes()).isEqualTo(8);
+            });
+  }
+
+  @Test
+  void seriesDetail_buildsCumulativeSubscriberTrend() {
+    com.example.short_link.post.domain.SeriesEntity s =
+        new com.example.short_link.post.domain.SeriesEntity(USER, "s1", "My Series");
+    org.springframework.test.util.ReflectionTestUtils.setField(s, "id", 9L);
+    when(seriesRepository.findById(9L)).thenReturn(Optional.of(s));
+    when(postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(9L))
+        .thenReturn(List.of(post(USER, "a", 100, 5)));
+    when(subscriptionRepository.countBySeriesId(9L)).thenReturn(3L);
+    when(subscriptionRepository.countDailyBySeriesIdSince(
+            eqId(9L), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(
+            List.of(
+                new DailyViewCount(LocalDate.parse("2026-05-30"), 2),
+                new DailyViewCount(LocalDate.parse("2026-06-01"), 1)));
+
+    SeriesAnalyticsDetail d = service.seriesDetail(USER, 9L, 7);
+
+    assertThat(d.series().title()).isEqualTo("My Series");
+    assertThat(d.series().subscriberCount()).isEqualTo(3);
+    assertThat(d.windowDays()).isEqualTo(7);
+    assertThat(d.subscriberDaily()).hasSize(7); // 2026-05-26 .. 2026-06-01
+    // Cumulative running total: 0,0,0,0,2(05-30),2,3(06-01).
+    assertThat(d.subscriberDaily().get(4).views()).isEqualTo(2);
+    assertThat(d.subscriberDaily().get(6).views()).isEqualTo(3);
+  }
+
+  @Test
+  void seriesDetail_rejectsOtherOwner() {
+    com.example.short_link.post.domain.SeriesEntity s =
+        new com.example.short_link.post.domain.SeriesEntity(OTHER, "hers", "Hers");
+    org.springframework.test.util.ReflectionTestUtils.setField(s, "id", 9L);
+    when(seriesRepository.findById(9L)).thenReturn(Optional.of(s));
+
+    assertThatThrownBy(() -> service.seriesDetail(USER, 9L, 7))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.SERIES_PERMISSION_DENIED));
+  }
+
+  @Test
+  void seriesDetail_notFound() {
+    when(seriesRepository.findById(9L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.seriesDetail(USER, 9L, 7))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.SERIES_NOT_FOUND));
   }
 
   @Test
