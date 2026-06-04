@@ -15,6 +15,7 @@ import com.example.short_link.post.application.read.PostPerformanceResult;
 import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.TopPostView;
+import com.example.short_link.post.domain.PostLinkClick;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.testsupport.KurlWebMvcTest;
@@ -109,7 +110,8 @@ class PostAnalyticsControllerTest {
                 9,
                 5,
                 2,
-                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 5))));
+                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 5)),
+                List.of(new PostLinkClick("abc123", "https://example.com", 4))));
 
     mvc.perform(
             get("/api/v1/posts/1/analytics?days=7")
@@ -122,7 +124,9 @@ class PostAnalyticsControllerTest {
         .andExpect(jsonPath("$.windowLinkClicks").value(9))
         .andExpect(jsonPath("$.lifetimeFollows").value(5))
         .andExpect(jsonPath("$.windowFollows").value(2))
-        .andExpect(jsonPath("$.daily[0].views").value(5));
+        .andExpect(jsonPath("$.daily[0].views").value(5))
+        .andExpect(jsonPath("$.linkBreakdown[0].shortCode").value("abc123"))
+        .andExpect(jsonPath("$.linkBreakdown[0].clicks").value(4));
   }
 
   @Test

@@ -1,6 +1,8 @@
 package com.example.short_link.post.domain.repository;
 
+import com.example.short_link.post.domain.PostLinkClick;
 import java.time.Instant;
+import java.util.List;
 
 /**
  * Read port for kurl link-click attribution — how many clicks the links embedded in a post
@@ -17,4 +19,7 @@ public interface PostLinkClickReader {
   long countByUserId(Long userId);
 
   long countByUserIdSince(Long userId, Instant since);
+
+  /** Per-link click breakdown for one post (most-clicked first), capped at {@code limit} links. */
+  List<PostLinkClick> breakdownByPostId(Long postId, int limit);
 }
