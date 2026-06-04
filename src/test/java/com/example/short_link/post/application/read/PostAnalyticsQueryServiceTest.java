@@ -33,13 +33,15 @@ class PostAnalyticsQueryServiceTest {
   @Mock private PostRepository postRepository;
   @Mock private PostViewEventRepository viewEventRepository;
   @Mock private com.example.short_link.post.domain.repository.PostLinkClickReader linkClickReader;
+  @Mock private com.example.short_link.post.domain.repository.PostFollowReader followReader;
 
   private PostAnalyticsQueryService service;
 
   @BeforeEach
   void setUp() {
     service =
-        new PostAnalyticsQueryService(postRepository, viewEventRepository, linkClickReader, clock);
+        new PostAnalyticsQueryService(
+            postRepository, viewEventRepository, linkClickReader, followReader, clock);
   }
 
   private static PostEntity post(long owner, String slug, int views, int likes) {
@@ -66,6 +68,9 @@ class PostAnalyticsQueryServiceTest {
     when(linkClickReader.countByPostId(1L)).thenReturn(25L);
     when(linkClickReader.countByPostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
         .thenReturn(7L);
+    when(followReader.countBySourcePostId(1L)).thenReturn(3L);
+    when(followReader.countBySourcePostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(1L);
 
     PostAnalyticsView view = service.postAnalytics(USER, 1L, 7);
 
@@ -80,6 +85,8 @@ class PostAnalyticsQueryServiceTest {
     assertThat(view.daily().get(6).views()).isEqualTo(5);
     assertThat(view.lifetimeLinkClicks()).isEqualTo(25);
     assertThat(view.windowLinkClicks()).isEqualTo(7);
+    assertThat(view.lifetimeFollows()).isEqualTo(3);
+    assertThat(view.windowFollows()).isEqualTo(1);
   }
 
   @Test
@@ -119,9 +126,12 @@ class PostAnalyticsQueryServiceTest {
   void overview_aggregatesTotalsAndRanksTopPosts() {
     PostEntity a = post(USER, "a", 100, 10);
     a.publish();
+    org.springframework.test.util.ReflectionTestUtils.setField(a, "id", 1L);
     PostEntity b = post(USER, "b", 5, 1); // draft
+    org.springframework.test.util.ReflectionTestUtils.setField(b, "id", 2L);
     PostEntity c = post(USER, "c", 50, 3);
     c.publish();
+    org.springframework.test.util.ReflectionTestUtils.setField(c, "id", 3L);
     when(postRepository.findAllByUserIdOrderByCreatedAtDesc(USER)).thenReturn(List.of(a, b, c));
     when(viewEventRepository.countDailyByUserIdSince(
             org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
@@ -130,6 +140,13 @@ class PostAnalyticsQueryServiceTest {
     when(linkClickReader.countByUserIdSince(
             org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
         .thenReturn(6L);
+    when(followReader.countByUserId(USER)).thenReturn(8L);
+    when(followReader.countByUserIdSince(
+            org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(2L);
+    // a(id1) drove 5 follows, c(id3) drove 1; b(id2) none → 0 via getOrDefault.
+    when(followReader.countBySourcePostIdIn(org.mockito.ArgumentMatchers.any()))
+        .thenReturn(java.util.Map.of(1L, 5L, 3L, 1L));
 
     AuthorAnalyticsOverview o = service.overview(USER, 30);
 
@@ -140,9 +157,13 @@ class PostAnalyticsQueryServiceTest {
     assertThat(o.windowViews()).isEqualTo(9);
     assertThat(o.lifetimeLinkClicks()).isEqualTo(40);
     assertThat(o.windowLinkClicks()).isEqualTo(6);
+    assertThat(o.lifetimeFollows()).isEqualTo(8);
+    assertThat(o.windowFollows()).isEqualTo(2);
     assertThat(o.daily()).hasSize(30);
-    // Top posts ranked by lifetime views desc: a(100), c(50), b(5).
+    // Every post gets a row, ranked by lifetime views desc: a(100), c(50), b(5).
     assertThat(o.topPosts()).extracting(TopPostView::slug).containsExactly("a", "c", "b");
+    // Per-post follows attributed, in the same ranked order: a=5, c=1, b=0.
+    assertThat(o.topPosts()).extracting(TopPostView::followsGained).containsExactly(5L, 1L, 0L);
   }
 
   @Test

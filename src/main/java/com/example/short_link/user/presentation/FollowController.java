@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -30,8 +31,11 @@ public class FollowController {
   }
 
   @PutMapping
-  public FollowStatus follow(@AuthenticationPrincipal Long userId, @PathVariable String username) {
-    return followUseCase.follow(userId, username);
+  public FollowStatus follow(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable String username,
+      @RequestParam(required = false) Long sourcePostId) {
+    return followUseCase.follow(userId, username, sourcePostId);
   }
 
   @DeleteMapping

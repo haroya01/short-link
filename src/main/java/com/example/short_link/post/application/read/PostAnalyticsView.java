@@ -17,4 +17,6 @@ public record PostAnalyticsView(
     long windowViews,
     long lifetimeLinkClicks,
     long windowLinkClicks,
+    long lifetimeFollows,
+    long windowFollows,
     List<DailyPoint> daily) {}

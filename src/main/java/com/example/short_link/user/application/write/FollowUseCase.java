@@ -20,13 +20,17 @@ public class FollowUseCase {
   private final FollowRepository followRepository;
 
   @Transactional
-  public FollowStatus follow(Long followerId, String targetUsername) {
+  public FollowStatus follow(Long followerId, String targetUsername, Long sourcePostId) {
     UserEntity target = requireUser(targetUsername);
     if (target.getId().equals(followerId)) {
       throw new UserException(UserErrorCode.CANNOT_FOLLOW_SELF);
     }
+    // Attribute only the edge that actually gets created — a re-follow of someone you already
+    // follow
+    // leaves the original (and its original source) untouched, so the metric isn't inflated by
+    // repeats.
     if (!followRepository.existsByFollowerIdAndFollowingId(followerId, target.getId())) {
-      followRepository.save(new FollowEntity(followerId, target.getId()));
+      followRepository.save(new FollowEntity(followerId, target.getId(), sourcePostId));
     }
     return statusOf(true, target.getId());
   }
