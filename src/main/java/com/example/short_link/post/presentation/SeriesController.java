@@ -1,5 +1,7 @@
 package com.example.short_link.post.presentation;
 
+import com.example.short_link.post.application.read.PostReadStats;
+import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.SeriesDetailView;
 import com.example.short_link.post.application.read.SeriesQueryService;
 import com.example.short_link.post.application.read.SeriesView;
@@ -41,6 +43,7 @@ public class SeriesController {
   private final DeleteSeriesUseCase deleteSeries;
   private final SetSeriesPostsUseCase setSeriesPosts;
   private final SeriesQueryService seriesQueryService;
+  private final PostReadStatsService readStats;
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
@@ -59,6 +62,14 @@ public class SeriesController {
   @GetMapping("/{id}")
   public SeriesDetailView get(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return seriesQueryService.getMine(userId, id);
+  }
+
+  /**
+   * Deep reader breakdown aggregated across the series' member posts — same shape as post stats.
+   */
+  @GetMapping("/{id}/stats")
+  public PostReadStats stats(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return readStats.forSeries(userId, id);
   }
 
   @PatchMapping("/{id}")
