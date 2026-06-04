@@ -11,6 +11,8 @@ import com.example.short_link.post.application.read.AuthorAnalyticsOverview;
 import com.example.short_link.post.application.read.DailyPoint;
 import com.example.short_link.post.application.read.PostAnalyticsQueryService;
 import com.example.short_link.post.application.read.PostAnalyticsView;
+import com.example.short_link.post.application.read.PostReadStats;
+import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.TopPostView;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -31,6 +33,7 @@ class PostAnalyticsControllerTest {
   @Autowired private MockMvc mvc;
 
   @MockitoBean private PostAnalyticsQueryService analytics;
+  @MockitoBean private PostReadStatsService readStats;
 
   private static final long USER_ID = 7L;
 
@@ -93,6 +96,38 @@ class PostAnalyticsControllerTest {
         .andExpect(jsonPath("$.lifetimeLinkClicks").value(30))
         .andExpect(jsonPath("$.windowLinkClicks").value(9))
         .andExpect(jsonPath("$.daily[0].views").value(5));
+  }
+
+  @Test
+  void postStatsReturnsReaderBreakdown() throws Exception {
+    when(readStats.forPost(eq(USER_ID), eq(1L)))
+        .thenReturn(
+            new PostReadStats(
+                "Asia/Seoul",
+                120,
+                100,
+                20,
+                80,
+                null,
+                null,
+                21,
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(new PostReadStats.CountryVisit("KR", 80)),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of(),
+                List.of()));
+
+    mvc.perform(
+            get("/api/v1/posts/1/stats").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.totalVisits").value(120))
+        .andExpect(jsonPath("$.humanVisits").value(100))
+        .andExpect(jsonPath("$.countryVisits[0].country").value("KR"));
   }
 
   @Test

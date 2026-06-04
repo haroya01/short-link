@@ -25,6 +25,7 @@ import com.example.short_link.post.application.write.DeleteCommentUseCase;
 import com.example.short_link.post.application.write.LikePostUseCase;
 import com.example.short_link.post.application.write.RecordPostViewCommand;
 import com.example.short_link.post.application.write.RecordPostViewUseCase;
+import com.example.short_link.post.application.write.ViewContext;
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.time.Instant;
@@ -209,6 +210,6 @@ class PostInteractionControllersTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isAccepted());
 
-    verify(recordPostView).execute(any(RecordPostViewCommand.class));
+    verify(recordPostView).execute(any(RecordPostViewCommand.class), any(ViewContext.class));
   }
 }
