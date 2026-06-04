@@ -2,17 +2,22 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostFollowReader;
 import com.example.short_link.post.domain.repository.PostLinkClickReader;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
+import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +45,8 @@ public class PostAnalyticsQueryService {
   private final PostViewEventRepository viewEventRepository;
   private final PostLinkClickReader linkClickReader;
   private final PostFollowReader followReader;
+  private final SeriesRepository seriesRepository;
+  private final SeriesSubscriptionRepository subscriptionRepository;
   private final Clock clock;
 
   // @Autowired marks the constructor Spring must use — without it the extra (test-only) Clock
@@ -49,8 +56,17 @@ public class PostAnalyticsQueryService {
       PostRepository postRepository,
       PostViewEventRepository viewEventRepository,
       PostLinkClickReader linkClickReader,
-      PostFollowReader followReader) {
-    this(postRepository, viewEventRepository, linkClickReader, followReader, Clock.systemUTC());
+      PostFollowReader followReader,
+      SeriesRepository seriesRepository,
+      SeriesSubscriptionRepository subscriptionRepository) {
+    this(
+        postRepository,
+        viewEventRepository,
+        linkClickReader,
+        followReader,
+        seriesRepository,
+        subscriptionRepository,
+        Clock.systemUTC());
   }
 
   PostAnalyticsQueryService(
@@ -58,11 +74,15 @@ public class PostAnalyticsQueryService {
       PostViewEventRepository viewEventRepository,
       PostLinkClickReader linkClickReader,
       PostFollowReader followReader,
+      SeriesRepository seriesRepository,
+      SeriesSubscriptionRepository subscriptionRepository,
       Clock clock) {
     this.postRepository = postRepository;
     this.viewEventRepository = viewEventRepository;
     this.linkClickReader = linkClickReader;
     this.followReader = followReader;
+    this.seriesRepository = seriesRepository;
+    this.subscriptionRepository = subscriptionRepository;
     this.clock = clock;
   }
 
@@ -74,14 +94,12 @@ public class PostAnalyticsQueryService {
     if (!post.isOwnedBy(userId)) {
       throw new PostException(PostErrorCode.PERMISSION_DENIED).with("postId", postId);
     }
-    int window = clampWindow(days);
     LocalDate today = LocalDate.now(clock);
-    LocalDate from = today.minusDays(window - 1L);
-    List<DailyPoint> daily =
-        fillDaily(
-            viewEventRepository.countDailyByPostIdSince(postId, startOfDay(from)), from, today);
+    Instant since = fetchSince(days, today);
+    List<DailyViewCount> sparse = viewEventRepository.countDailyByPostIdSince(postId, since);
+    Window w = resolveWindow(days, sparse, today);
+    List<DailyPoint> daily = fillDaily(sparse, w.from(), today);
     long windowViews = daily.stream().mapToLong(DailyPoint::views).sum();
-    Instant since = startOfDay(from);
     return new PostAnalyticsView(
         post.getId(),
         post.getSlug(),
@@ -89,7 +107,7 @@ public class PostAnalyticsQueryService {
         post.getStatus().name(),
         post.getViewCount(),
         post.getLikeCount(),
-        window,
+        w.windowDays(),
         windowViews,
         linkClickReader.countByPostId(postId),
         linkClickReader.countByPostIdSince(postId, since),
@@ -101,12 +119,11 @@ public class PostAnalyticsQueryService {
 
   public AuthorAnalyticsOverview overview(Long userId, int days) {
     List<PostEntity> posts = postRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
-    int window = clampWindow(days);
     LocalDate today = LocalDate.now(clock);
-    LocalDate from = today.minusDays(window - 1L);
-    List<DailyPoint> daily =
-        fillDaily(
-            viewEventRepository.countDailyByUserIdSince(userId, startOfDay(from)), from, today);
+    Instant since = fetchSince(days, today);
+    List<DailyViewCount> sparse = viewEventRepository.countDailyByUserIdSince(userId, since);
+    Window w = resolveWindow(days, sparse, today);
+    List<DailyPoint> daily = fillDaily(sparse, w.from(), today);
     long windowViews = daily.stream().mapToLong(DailyPoint::views).sum();
     long lifetimeViews = posts.stream().mapToLong(PostEntity::getViewCount).sum();
     long lifetimeLikes = posts.stream().mapToLong(PostEntity::getLikeCount).sum();
@@ -116,12 +133,12 @@ public class PostAnalyticsQueryService {
         published,
         lifetimeViews,
         lifetimeLikes,
-        window,
+        w.windowDays(),
         windowViews,
         linkClickReader.countByUserId(userId),
-        linkClickReader.countByUserIdSince(userId, startOfDay(from)),
+        linkClickReader.countByUserIdSince(userId, since),
         followReader.countByUserId(userId),
-        followReader.countByUserIdSince(userId, startOfDay(from)),
+        followReader.countByUserIdSince(userId, since),
         daily);
   }
 
@@ -156,11 +173,58 @@ public class PostAnalyticsQueryService {
     return new PostPerformanceResult(items, p, hasNext);
   }
 
+  /**
+   * Per-series analytics for the author: subscriber count (the recurring-readership signal) plus
+   * the traction of each series' member posts. Newest series first. Bounded by the author's series
+   * count.
+   */
+  public List<SeriesAnalyticsRow> seriesAnalytics(Long userId) {
+    return seriesRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
+        .map(this::seriesRow)
+        .toList();
+  }
+
+  private SeriesAnalyticsRow seriesRow(SeriesEntity series) {
+    List<PostEntity> members =
+        postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(series.getId());
+    long totalViews = members.stream().mapToLong(PostEntity::getViewCount).sum();
+    long totalLikes = members.stream().mapToLong(PostEntity::getLikeCount).sum();
+    return new SeriesAnalyticsRow(
+        series.getId(),
+        series.getSlug(),
+        series.getTitle(),
+        members.size(),
+        subscriptionRepository.countBySeriesId(series.getId()),
+        totalViews,
+        totalLikes);
+  }
+
   private int clampWindow(int days) {
     if (days <= 0) {
       return DEFAULT_WINDOW_DAYS;
     }
     return Math.min(days, MAX_WINDOW_DAYS);
+  }
+
+  /** The chart span + windowed-metric window. {@code days <= 0} means all-time (the "전체" tab). */
+  private record Window(LocalDate from, int windowDays) {}
+
+  /**
+   * When-to-query-from: EPOCH for all-time (counts everything), else the start of the N-day window.
+   */
+  private Instant fetchSince(int days, LocalDate today) {
+    return days <= 0 ? Instant.EPOCH : startOfDay(today.minusDays(clampWindow(days) - 1L));
+  }
+
+  /** All-time spans from the first day that actually has data (no leading empty stretch). */
+  private Window resolveWindow(int days, List<DailyViewCount> sparse, LocalDate today) {
+    if (days > 0) {
+      int w = clampWindow(days);
+      return new Window(today.minusDays(w - 1L), w);
+    }
+    LocalDate from =
+        sparse.stream().map(DailyViewCount::date).min(Comparator.naturalOrder()).orElse(today);
+    return new Window(from, (int) (ChronoUnit.DAYS.between(from, today) + 1));
   }
 
   private static Instant startOfDay(LocalDate date) {

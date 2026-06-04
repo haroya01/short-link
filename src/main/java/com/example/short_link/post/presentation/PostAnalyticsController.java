@@ -6,6 +6,8 @@ import com.example.short_link.post.application.read.PostAnalyticsView;
 import com.example.short_link.post.application.read.PostPerformanceResult;
 import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
+import com.example.short_link.post.application.read.SeriesAnalyticsRow;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -45,6 +47,12 @@ public class PostAnalyticsController {
       @RequestParam(defaultValue = "views") String sort) {
     return analytics.postPerformance(
         userId, page, size, com.example.short_link.post.domain.PostPerformanceSort.fromParam(sort));
+  }
+
+  /** Per-series analytics — subscriber count + member-post traction, newest series first. */
+  @GetMapping("/analytics/series")
+  public List<SeriesAnalyticsRow> seriesAnalytics(@AuthenticationPrincipal Long userId) {
+    return analytics.seriesAnalytics(userId);
   }
 
   @GetMapping("/{id}/analytics")
