@@ -2,6 +2,7 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostPerformanceSort;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.TagCount;
@@ -13,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -73,6 +75,31 @@ class PostRepositoryAdapter implements PostRepository {
   public List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(
       Long userId, PostStatus status) {
     return jpa.findAllByUserIdAndStatusOrderByPublishedAtDesc(userId, status);
+  }
+
+  // Posts with analytics meaning — drafts/scheduled have never been read, so they're excluded.
+  private static final List<PostStatus> ANALYTICS_STATUSES =
+      List.of(PostStatus.PUBLISHED, PostStatus.UNPUBLISHED);
+
+  @Override
+  public List<PostEntity> findUserAnalyticsPosts(
+      Long userId, int page, int size, PostPerformanceSort sort) {
+    String field =
+        switch (sort) {
+          case LIKES -> "likeCount";
+          case RECENT -> "createdAt";
+          case VIEWS -> "viewCount";
+        };
+    // id-desc tie-break keeps paging stable when many posts share the same metric value (e.g. all
+    // 0).
+    Sort ordering = Sort.by(Sort.Order.desc(field), Sort.Order.desc("id"));
+    return jpa.findByUserIdAndStatusIn(
+        userId, ANALYTICS_STATUSES, PageRequest.of(page, size, ordering));
+  }
+
+  @Override
+  public long countUserAnalyticsPosts(Long userId) {
+    return jpa.countByUserIdAndStatusIn(userId, ANALYTICS_STATUSES);
   }
 
   @Override
