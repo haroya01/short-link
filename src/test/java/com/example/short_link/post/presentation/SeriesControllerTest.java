@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.read.PostReadStats;
+import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.SeriesDetailView;
 import com.example.short_link.post.application.read.SeriesQueryService;
 import com.example.short_link.post.application.read.SeriesView;
@@ -39,6 +41,7 @@ class SeriesControllerTest {
   @MockitoBean private DeleteSeriesUseCase deleteSeries;
   @MockitoBean private SetSeriesPostsUseCase setSeriesPosts;
   @MockitoBean private SeriesQueryService seriesQueryService;
+  @MockitoBean private PostReadStatsService readStats;
 
   private static final long USER_ID = 7L;
 
@@ -46,6 +49,17 @@ class SeriesControllerTest {
     return new SeriesDetailView(
         new SeriesView(5L, "guide", "Guide", 0, Instant.parse("2026-01-01T00:00:00Z"), null),
         List.of());
+  }
+
+  @Test
+  void seriesStatsReturnsReaderBreakdown() throws Exception {
+    when(readStats.forSeries(any(), any())).thenReturn(PostReadStats.empty("Asia/Seoul"));
+
+    mvc.perform(
+            get("/api/v1/series/5/stats").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.timezone").value("Asia/Seoul"))
+        .andExpect(jsonPath("$.totalVisits").value(0));
   }
 
   @Test
