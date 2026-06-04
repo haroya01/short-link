@@ -50,4 +50,11 @@ jobs:
             docker compose exec -T redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning \
               eval "return #redis.call('keys','refresh-rotated:*')" 0 2>&1 | tail -3
 
+            echo "===== nginx: ALL /api/v1/auth/refresh access lines (last ~120, status+time+ip) ====="
+            docker compose logs nginx --since 96h 2>&1 | grep "/api/v1/auth/refresh" | tail -120
+
+            echo "===== nginx: refresh status-code histogram (last 96h) ====="
+            docker compose logs nginx --since 96h 2>&1 | grep "/api/v1/auth/refresh" \
+              | grep -oE "\" (200|401|403|500) " | sort | uniq -c
+
             echo "===== done ====="
