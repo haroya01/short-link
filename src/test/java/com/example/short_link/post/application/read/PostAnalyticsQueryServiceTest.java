@@ -112,16 +112,19 @@ class PostAnalyticsQueryServiceTest {
   }
 
   @Test
-  void postAnalytics_defaultsWindowWhenNonPositive() {
+  void postAnalytics_allTimeWhenNonPositiveSpansFromFirstActivity() {
     PostEntity p = post(USER, "hello", 0, 0);
     when(postRepository.findById(1L)).thenReturn(Optional.of(p));
+    // days <= 0 = 전체(all-time): the window spans from the earliest recorded day, not a fixed 30.
     when(viewEventRepository.countDailyByPostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
-        .thenReturn(List.of());
+        .thenReturn(List.of(new DailyViewCount(LocalDate.parse("2026-05-25"), 4)));
 
     PostAnalyticsView view = service.postAnalytics(USER, 1L, 0);
 
-    assertThat(view.windowDays()).isEqualTo(30);
-    assertThat(view.daily()).hasSize(30);
+    // Frozen today = 2026-06-01; earliest data 2026-05-25 → 8 days inclusive.
+    assertThat(view.windowDays()).isEqualTo(8);
+    assertThat(view.daily()).hasSize(8);
+    assertThat(view.windowViews()).isEqualTo(4);
   }
 
   @Test
@@ -268,6 +271,56 @@ class PostAnalyticsQueryServiceTest {
               assertThat(r.totalViews()).isEqualTo(150);
               assertThat(r.totalLikes()).isEqualTo(8);
             });
+  }
+
+  @Test
+  void seriesDetail_buildsCumulativeSubscriberTrend() {
+    com.example.short_link.post.domain.SeriesEntity s =
+        new com.example.short_link.post.domain.SeriesEntity(USER, "s1", "My Series");
+    org.springframework.test.util.ReflectionTestUtils.setField(s, "id", 9L);
+    when(seriesRepository.findById(9L)).thenReturn(Optional.of(s));
+    when(postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(9L))
+        .thenReturn(List.of(post(USER, "a", 100, 5)));
+    when(subscriptionRepository.countBySeriesId(9L)).thenReturn(3L);
+    when(subscriptionRepository.countDailyBySeriesIdSince(
+            eqId(9L), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(
+            List.of(
+                new DailyViewCount(LocalDate.parse("2026-05-30"), 2),
+                new DailyViewCount(LocalDate.parse("2026-06-01"), 1)));
+
+    SeriesAnalyticsDetail d = service.seriesDetail(USER, 9L, 7);
+
+    assertThat(d.series().title()).isEqualTo("My Series");
+    assertThat(d.series().subscriberCount()).isEqualTo(3);
+    assertThat(d.windowDays()).isEqualTo(7);
+    assertThat(d.subscriberDaily()).hasSize(7); // 2026-05-26 .. 2026-06-01
+    // Cumulative running total: 0,0,0,0,2(05-30),2,3(06-01).
+    assertThat(d.subscriberDaily().get(4).views()).isEqualTo(2);
+    assertThat(d.subscriberDaily().get(6).views()).isEqualTo(3);
+  }
+
+  @Test
+  void seriesDetail_rejectsOtherOwner() {
+    com.example.short_link.post.domain.SeriesEntity s =
+        new com.example.short_link.post.domain.SeriesEntity(OTHER, "hers", "Hers");
+    org.springframework.test.util.ReflectionTestUtils.setField(s, "id", 9L);
+    when(seriesRepository.findById(9L)).thenReturn(Optional.of(s));
+
+    assertThatThrownBy(() -> service.seriesDetail(USER, 9L, 7))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.SERIES_PERMISSION_DENIED));
+  }
+
+  @Test
+  void seriesDetail_notFound() {
+    when(seriesRepository.findById(9L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.seriesDetail(USER, 9L, 7))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.SERIES_NOT_FOUND));
   }
 
   @Test

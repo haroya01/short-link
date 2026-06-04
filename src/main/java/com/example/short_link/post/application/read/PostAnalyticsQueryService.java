@@ -35,7 +35,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PostAnalyticsQueryService {
 
-  private static final int DEFAULT_WINDOW_DAYS = 30;
   private static final int MAX_WINDOW_DAYS = 365;
   private static final int LINK_BREAKDOWN_LIMIT = 20;
   private static final int DEFAULT_PAGE_SIZE = 20;
@@ -184,6 +183,30 @@ public class PostAnalyticsQueryService {
         .toList();
   }
 
+  /** One series' detail: headline row + a cumulative subscriber-growth line over the window. */
+  public SeriesAnalyticsDetail seriesDetail(Long userId, Long seriesId, int days) {
+    SeriesEntity series =
+        seriesRepository
+            .findById(seriesId)
+            .orElseThrow(
+                () -> new PostException(PostErrorCode.SERIES_NOT_FOUND, String.valueOf(seriesId)));
+    if (!series.getUserId().equals(userId)) {
+      throw new PostException(PostErrorCode.SERIES_PERMISSION_DENIED);
+    }
+    LocalDate today = LocalDate.now(clock);
+    Instant since = fetchSince(days, today);
+    List<DailyViewCount> sparse = subscriptionRepository.countDailyBySeriesIdSince(seriesId, since);
+    Window w = resolveWindow(days, sparse, today);
+    // New subscribers per day, accumulated into the running total the chart draws.
+    List<DailyPoint> cumulative = new ArrayList<>();
+    long running = 0;
+    for (DailyPoint d : fillDaily(sparse, w.from(), today)) {
+      running += d.views();
+      cumulative.add(new DailyPoint(d.date(), running));
+    }
+    return new SeriesAnalyticsDetail(seriesRow(series), w.windowDays(), cumulative);
+  }
+
   private SeriesAnalyticsRow seriesRow(SeriesEntity series) {
     List<PostEntity> members =
         postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(series.getId());
@@ -199,10 +222,11 @@ public class PostAnalyticsQueryService {
         totalLikes);
   }
 
+  /**
+   * Caps a positive day-window at the max; all-time (days &lt;= 0) is handled before this is
+   * called.
+   */
   private int clampWindow(int days) {
-    if (days <= 0) {
-      return DEFAULT_WINDOW_DAYS;
-    }
     return Math.min(days, MAX_WINDOW_DAYS);
   }
 

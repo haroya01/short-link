@@ -14,6 +14,7 @@ import com.example.short_link.post.application.read.PostAnalyticsView;
 import com.example.short_link.post.application.read.PostPerformanceResult;
 import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
+import com.example.short_link.post.application.read.SeriesAnalyticsDetail;
 import com.example.short_link.post.application.read.SeriesAnalyticsRow;
 import com.example.short_link.post.application.read.TopPostView;
 import com.example.short_link.post.domain.PostLinkClick;
@@ -106,6 +107,24 @@ class PostAnalyticsControllerTest {
         .andExpect(jsonPath("$[0].title").value("My Series"))
         .andExpect(jsonPath("$[0].subscriberCount").value(7))
         .andExpect(jsonPath("$[0].totalViews").value(150));
+  }
+
+  @Test
+  void seriesDetailReturnsTrend() throws Exception {
+    when(analytics.seriesDetail(eq(USER_ID), eq(9L), anyInt()))
+        .thenReturn(
+            new SeriesAnalyticsDetail(
+                new SeriesAnalyticsRow(9L, "s1", "My Series", 2, 7, 150, 8),
+                7,
+                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 7))));
+
+    mvc.perform(
+            get("/api/v1/posts/analytics/series/9?days=7")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.series.subscriberCount").value(7))
+        .andExpect(jsonPath("$.windowDays").value(7))
+        .andExpect(jsonPath("$.subscriberDaily[0].views").value(7));
   }
 
   @Test
