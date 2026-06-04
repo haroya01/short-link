@@ -106,7 +106,7 @@ short-link:
     public-key: ${JWT_PUBLIC_KEY:}
     access-ttl: 15m
     refresh-ttl: 14d
-    refresh-rotation-grace: 10s
+    refresh-rotation-grace: 60s
   cookie:
     secure: ${COOKIE_SECURE:false}
     domain: ${COOKIE_DOMAIN:}
