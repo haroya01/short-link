@@ -16,6 +16,7 @@ import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.SeriesAnalyticsDetail;
 import com.example.short_link.post.application.read.SeriesAnalyticsRow;
+import com.example.short_link.post.application.read.SeriesMemberStat;
 import com.example.short_link.post.application.read.TopPostView;
 import com.example.short_link.post.domain.PostLinkClick;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -116,7 +117,8 @@ class PostAnalyticsControllerTest {
             new SeriesAnalyticsDetail(
                 new SeriesAnalyticsRow(9L, "s1", "My Series", 2, 7, 150, 8),
                 7,
-                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 7))));
+                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 7)),
+                List.of(new SeriesMemberStat(1L, "ep1", "Episode 1", 1, 100, 5, 4, 30, 18))));
 
     mvc.perform(
             get("/api/v1/posts/analytics/series/9?days=7")
@@ -124,7 +126,10 @@ class PostAnalyticsControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.series.subscriberCount").value(7))
         .andExpect(jsonPath("$.windowDays").value(7))
-        .andExpect(jsonPath("$.subscriberDaily[0].views").value(7));
+        .andExpect(jsonPath("$.subscriberDaily[0].views").value(7))
+        .andExpect(jsonPath("$.members[0].episode").value(1))
+        .andExpect(jsonPath("$.members[0].uniqueReaders").value(30))
+        .andExpect(jsonPath("$.members[0].continuedToNext").value(18));
   }
 
   @Test

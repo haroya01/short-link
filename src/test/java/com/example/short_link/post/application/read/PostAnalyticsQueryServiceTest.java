@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -298,6 +299,63 @@ class PostAnalyticsQueryServiceTest {
     // Cumulative running total: 0,0,0,0,2(05-30),2,3(06-01).
     assertThat(d.subscriberDaily().get(4).views()).isEqualTo(2);
     assertThat(d.subscriberDaily().get(6).views()).isEqualTo(3);
+  }
+
+  @Test
+  void seriesDetail_buildsReadThroughFunnel() {
+    com.example.short_link.post.domain.SeriesEntity s =
+        new com.example.short_link.post.domain.SeriesEntity(USER, "s1", "My Series");
+    org.springframework.test.util.ReflectionTestUtils.setField(s, "id", 9L);
+    PostEntity ep1 = post(USER, "ep1", 100, 5);
+    PostEntity ep2 = post(USER, "ep2", 60, 3);
+    PostEntity ep3 = post(USER, "ep3", 40, 2);
+    org.springframework.test.util.ReflectionTestUtils.setField(ep1, "id", 1L);
+    org.springframework.test.util.ReflectionTestUtils.setField(ep2, "id", 2L);
+    org.springframework.test.util.ReflectionTestUtils.setField(ep3, "id", 3L);
+    when(seriesRepository.findById(9L)).thenReturn(Optional.of(s));
+    when(postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(9L))
+        .thenReturn(List.of(ep1, ep2, ep3));
+    when(subscriptionRepository.countBySeriesId(9L)).thenReturn(3L);
+    // Reader sets chosen so each step has a drop-off (v9 / v5 don't carry over):
+    // ep1∩ep2 = {v2,v3} (2 of ep1's 4 continued), ep2∩ep3 = {v2,v3} (2 of ep2's 3 continued).
+    when(viewEventRepository.readersByPostId(List.of(1L, 2L, 3L)))
+        .thenReturn(
+            Map.of(
+                1L, java.util.Set.of("v1", "v2", "v3", "v4"),
+                2L, java.util.Set.of("v2", "v3", "v9"),
+                3L, java.util.Set.of("v2", "v3", "v5")));
+    when(followReader.countBySourcePostIdIn(List.of(1L, 2L, 3L)))
+        .thenReturn(Map.of(1L, 4L, 2L, 1L));
+
+    SeriesAnalyticsDetail d = service.seriesDetail(USER, 9L, 7);
+
+    assertThat(d.members()).hasSize(3);
+    assertThat(d.members().get(0))
+        .satisfies(
+            m -> {
+              assertThat(m.episode()).isEqualTo(1);
+              assertThat(m.slug()).isEqualTo("ep1");
+              assertThat(m.views()).isEqualTo(100);
+              assertThat(m.follows()).isEqualTo(4);
+              assertThat(m.uniqueReaders()).isEqualTo(4);
+              assertThat(m.continuedToNext()).isEqualTo(2);
+            });
+    assertThat(d.members().get(1))
+        .satisfies(
+            m -> {
+              assertThat(m.episode()).isEqualTo(2);
+              assertThat(m.uniqueReaders()).isEqualTo(3);
+              assertThat(m.continuedToNext()).isEqualTo(2);
+              assertThat(m.follows()).isEqualTo(1);
+            });
+    assertThat(d.members().get(2))
+        .satisfies(
+            m -> {
+              assertThat(m.episode()).isEqualTo(3);
+              assertThat(m.uniqueReaders()).isEqualTo(3);
+              assertThat(m.continuedToNext()).isZero(); // last episode — nothing follows
+              assertThat(m.follows()).isZero(); // not in the follows map → default 0
+            });
   }
 
   @Test
