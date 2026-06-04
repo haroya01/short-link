@@ -11,6 +11,7 @@ import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -30,12 +31,21 @@ class PublicSeriesQueryServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private SeriesRepository seriesRepository;
   @Mock private PostRepository postRepository;
+  @Mock private SeriesSubscriptionRepository subscriptionRepository;
 
   private PublicSeriesQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new PublicSeriesQueryService(userRepository, seriesRepository, postRepository);
+    service =
+        new PublicSeriesQueryService(
+            userRepository, seriesRepository, postRepository, subscriptionRepository);
+  }
+
+  private PostEntity publishedPost(long userId, String slug, String title) {
+    PostEntity p = new PostEntity(userId, slug, title, "ko");
+    p.publish();
+    return p;
   }
 
   private UserEntity author(String username) {
@@ -154,5 +164,36 @@ class PublicSeriesQueryServiceTest {
     when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.listPublicSeries("ghost"))
         .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
+  void subscribedSeriesEmptyWhenNoSubscriptions() {
+    when(subscriptionRepository.findSubscribedSeriesIds(7L)).thenReturn(List.of());
+    assertThat(service.subscribedSeries(7L)).isEmpty();
+  }
+
+  @Test
+  void subscribedSeriesHydratesCardsSkipsEmptyAndDeletedAuthor() {
+    UserEntity alice = author(1L, "alice");
+    UserEntity ghost = author(2L, "ghost");
+    ghost.softDelete(); // s30's author gone → dropped
+    when(subscriptionRepository.findSubscribedSeriesIds(7L)).thenReturn(List.of(10L, 20L, 30L));
+    SeriesEntity s10 = series(10L, 1L, "guide", "Guide");
+    SeriesEntity s20 = series(20L, 1L, "empty", "Empty"); // no published posts → dropped
+    SeriesEntity s30 = series(30L, 2L, "gone", "Gone");
+    when(seriesRepository.findAllByIdIn(List.of(10L, 20L, 30L))).thenReturn(List.of(s10, s20, s30));
+    when(userRepository.findAllByIdIn(any())).thenReturn(List.of(alice, ghost));
+    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(10L, PostStatus.PUBLISHED))
+        .thenReturn(List.of(publishedPost(1L, "g1", "G1"), publishedPost(1L, "g2", "G2")));
+    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(20L, PostStatus.PUBLISHED))
+        .thenReturn(List.of());
+
+    List<PublicSeriesCard> cards = service.subscribedSeries(7L);
+
+    assertThat(cards).hasSize(1);
+    assertThat(cards.get(0).id()).isEqualTo(10L);
+    assertThat(cards.get(0).postCount()).isEqualTo(2);
+    assertThat(cards.get(0).posts()).hasSize(2);
+    assertThat(cards.get(0).author().username()).isEqualTo("alice");
   }
 }
