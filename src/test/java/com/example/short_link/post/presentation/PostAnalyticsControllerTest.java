@@ -11,6 +11,7 @@ import com.example.short_link.post.application.read.AuthorAnalyticsOverview;
 import com.example.short_link.post.application.read.DailyPoint;
 import com.example.short_link.post.application.read.PostAnalyticsQueryService;
 import com.example.short_link.post.application.read.PostAnalyticsView;
+import com.example.short_link.post.application.read.PostPerformanceResult;
 import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.TopPostView;
@@ -58,8 +59,7 @@ class PostAnalyticsControllerTest {
                 6,
                 8,
                 2,
-                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 9)),
-                List.of(new TopPostView(1L, "a", "A", 100, 10, 7))));
+                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 9))));
 
     mvc.perform(
             get("/api/v1/posts/analytics/overview?days=30")
@@ -70,9 +70,27 @@ class PostAnalyticsControllerTest {
         .andExpect(jsonPath("$.lifetimeViews").value(155))
         .andExpect(jsonPath("$.lifetimeLinkClicks").value(40))
         .andExpect(jsonPath("$.lifetimeFollows").value(8))
-        .andExpect(jsonPath("$.windowFollows").value(2))
-        .andExpect(jsonPath("$.topPosts[0].slug").value("a"))
-        .andExpect(jsonPath("$.topPosts[0].followsGained").value(7));
+        .andExpect(jsonPath("$.windowFollows").value(2));
+  }
+
+  @Test
+  void performanceReturnsPagedPosts() throws Exception {
+    when(analytics.postPerformance(
+            eq(USER_ID),
+            eq(0),
+            eq(20),
+            eq(com.example.short_link.post.domain.PostPerformanceSort.LIKES)))
+        .thenReturn(
+            new PostPerformanceResult(List.of(new TopPostView(1L, "a", "A", 100, 10, 7)), 0, true));
+
+    mvc.perform(
+            get("/api/v1/posts/analytics/posts?page=0&size=20&sort=likes")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.page").value(0))
+        .andExpect(jsonPath("$.hasNext").value(true))
+        .andExpect(jsonPath("$.items[0].slug").value("a"))
+        .andExpect(jsonPath("$.items[0].followsGained").value(7));
   }
 
   @Test
