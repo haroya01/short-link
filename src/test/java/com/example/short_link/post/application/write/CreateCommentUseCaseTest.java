@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.application.read.CommentView;
@@ -27,12 +28,13 @@ class CreateCommentUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private CommentRepository commentRepository;
   @Mock private UserRepository userRepository;
+  @Mock private org.springframework.context.ApplicationEventPublisher events;
 
   private CreateCommentUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new CreateCommentUseCase(postRepository, commentRepository, userRepository);
+    useCase = new CreateCommentUseCase(postRepository, commentRepository, userRepository, events);
   }
 
   private PostEntity publishedPost() {
@@ -58,6 +60,14 @@ class CreateCommentUseCaseTest {
     assertThat(c.body()).isEqualTo("hello");
     assertThat(c.parentId()).isNull();
     assertThat(c.author().username()).isEqualTo("carol");
+    // The post owner (7L ≠ commenter 9L) is notified of the new comment.
+    org.mockito.ArgumentCaptor<com.example.short_link.common.event.BlogInteractionEvent> evt =
+        org.mockito.ArgumentCaptor.forClass(
+            com.example.short_link.common.event.BlogInteractionEvent.class);
+    verify(events).publishEvent(evt.capture());
+    assertThat(evt.getValue().type())
+        .isEqualTo(com.example.short_link.common.event.BlogInteractionType.COMMENT);
+    assertThat(evt.getValue().recipientUserId()).isEqualTo(7L);
   }
 
   @Test
