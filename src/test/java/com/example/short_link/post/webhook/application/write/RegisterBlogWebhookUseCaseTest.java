@@ -53,6 +53,54 @@ class RegisterBlogWebhookUseCaseTest {
   }
 
   @Test
+  void keepsExplicitEventSubsetAndTruncatesLongName() {
+    when(repository.countByUserId(7L)).thenReturn(0L);
+    when(repository.save(org.mockito.ArgumentMatchers.any(BlogWebhookEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    String longName = "x".repeat(150);
+    try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
+      guard.when(() -> PublicHttpUrlGuard.isPublic("https://example.com/h")).thenReturn(true);
+
+      IssuedBlogWebhook issued =
+          useCase()
+              .execute(7L, "https://example.com/h", longName, Set.of(BlogInteractionType.FOLLOW));
+
+      assertThat(issued.format()).isEqualTo(BlogWebhookFormat.GENERIC);
+      assertThat(issued.events()).containsExactly(BlogInteractionType.FOLLOW);
+      assertThat(issued.name()).hasSize(100);
+    }
+  }
+
+  @Test
+  void nullNameAndNullEventsRegisterWithDefaults() {
+    when(repository.countByUserId(7L)).thenReturn(0L);
+    when(repository.save(org.mockito.ArgumentMatchers.any(BlogWebhookEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
+      guard.when(() -> PublicHttpUrlGuard.isPublic("https://example.com/h")).thenReturn(true);
+
+      IssuedBlogWebhook issued = useCase().execute(7L, "https://example.com/h", null, null);
+
+      assertThat(issued.name()).isNull();
+      assertThat(issued.events()).containsExactlyInAnyOrder(BlogInteractionType.values());
+    }
+  }
+
+  @Test
+  void blankNameBecomesNull() {
+    when(repository.countByUserId(7L)).thenReturn(0L);
+    when(repository.save(org.mockito.ArgumentMatchers.any(BlogWebhookEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
+      guard.when(() -> PublicHttpUrlGuard.isPublic("https://example.com/h")).thenReturn(true);
+
+      IssuedBlogWebhook issued = useCase().execute(7L, "https://example.com/h", "   ", Set.of());
+
+      assertThat(issued.name()).isNull();
+    }
+  }
+
+  @Test
   void rejectsNonPublicUrl() {
     try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
       guard.when(() -> PublicHttpUrlGuard.isPublic("http://localhost/x")).thenReturn(false);

@@ -115,4 +115,36 @@ class BlogWebhookPayloadAdapterTest {
         BlogWebhookPayloadAdapter.build(BlogWebhookFormat.SLACK, follow(), null);
     assertThat((String) body.get("text")).contains("@someone");
   }
+
+  @Test
+  void discordTitleCoversEveryInteractionType() {
+    record Case(BlogInteractionEvent ev, String title) {}
+    List<Case> cases =
+        List.of(
+            new Case(like(), "New like"),
+            new Case(BlogInteractionEvent.comment(1L, 2L, 42L, "s", "T", AT), "New comment"),
+            new Case(follow(), "New follower"),
+            new Case(seriesSubscribe(), "New series subscriber"));
+    for (Case c : cases) {
+      Map<String, Object> body =
+          BlogWebhookPayloadAdapter.build(BlogWebhookFormat.DISCORD, c.ev(), "a");
+      @SuppressWarnings("unchecked")
+      List<Map<String, Object>> embeds = (List<Map<String, Object>>) body.get("embeds");
+      assertThat(embeds.get(0).get("title")).isEqualTo(c.title());
+    }
+  }
+
+  @Test
+  void nullTitlesRenderAsEmptyString() {
+    BlogInteractionEvent likeNoTitle = BlogInteractionEvent.like(1L, 2L, 42L, null, null, AT);
+    // generic carries the empty title; summary's safe() renders "" rather than "null".
+    Map<String, Object> generic =
+        BlogWebhookPayloadAdapter.build(BlogWebhookFormat.GENERIC, likeNoTitle, "a");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> post = (Map<String, Object>) generic.get("post");
+    assertThat(post.get("title")).isEqualTo("");
+    Map<String, Object> slack =
+        BlogWebhookPayloadAdapter.build(BlogWebhookFormat.SLACK, likeNoTitle, "a");
+    assertThat((String) slack.get("text")).doesNotContain("null");
+  }
 }

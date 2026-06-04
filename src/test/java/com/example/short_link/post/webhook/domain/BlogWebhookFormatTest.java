@@ -20,6 +20,8 @@ class BlogWebhookFormatTest {
   void detectsSlack() {
     assertThat(BlogWebhookFormat.detect("https://hooks.slack.com/services/T/B/X"))
         .isEqualTo(BlogWebhookFormat.SLACK);
+    assertThat(BlogWebhookFormat.detect("https://team.hooks.slack.com/services/T/B/X"))
+        .isEqualTo(BlogWebhookFormat.SLACK);
   }
 
   @Test

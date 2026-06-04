@@ -99,4 +99,35 @@ class BlogWebhookEntityTest {
     assertThat(h.events())
         .containsExactlyInAnyOrder(BlogInteractionType.LIKE, BlogInteractionType.COMMENT);
   }
+
+  @Test
+  void blankEventsColumnYieldsEmptySet() {
+    BlogWebhookEntity h = hook(EnumSet.of(BlogInteractionType.LIKE));
+    org.springframework.test.util.ReflectionTestUtils.setField(h, "events", "  ");
+    assertThat(h.events()).isEmpty();
+  }
+
+  @Test
+  void emptyEventUpdateLeavesSetUnchanged() {
+    BlogWebhookEntity h = hook(EnumSet.of(BlogInteractionType.LIKE));
+    h.update(null, Set.of(), null); // empty set ⇒ keep existing
+    assertThat(h.events()).containsExactly(BlogInteractionType.LIKE);
+  }
+
+  @Test
+  void furtherFailuresAfterAutoDisableKeepCounting() {
+    BlogWebhookEntity h = hook(Set.of());
+    for (int i = 0; i < 6; i++) {
+      h.recordFailure(503, "boom"); // 6th lands while already disabled
+    }
+    assertThat(h.isEnabled()).isFalse();
+    assertThat(h.getConsecutiveFailures()).isEqualTo(6);
+  }
+
+  @Test
+  void recordFailureTruncatesLongError() {
+    BlogWebhookEntity h = hook(Set.of());
+    h.recordFailure(500, "x".repeat(800));
+    assertThat(h.getLastError()).hasSize(500);
+  }
 }
