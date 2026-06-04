@@ -3,6 +3,7 @@ package com.example.short_link.post.infrastructure.persistence;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -16,6 +17,25 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
 
     long getViews();
   }
+
+  /** One distinct (post, human-reader) pair — alias names map to the getters. */
+  interface ReaderRow {
+    Long getPostId();
+
+    String getVisitorHash();
+  }
+
+  // Distinct human readers (visitor_hash) per post for a set of posts — powers the series
+  // read-through funnel, where we intersect adjacent episodes' reader sets. Bots and hashless
+  // (pre-V80) rows are dropped so the funnel reflects real continued reading.
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT e.post_id AS postId, e.visitor_hash AS visitorHash "
+              + "FROM post_view_event e "
+              + "WHERE e.post_id IN (:postIds) AND e.visitor_hash IS NOT NULL AND e.is_bot = FALSE "
+              + "GROUP BY e.post_id, e.visitor_hash")
+  List<ReaderRow> findDistinctReaders(@Param("postIds") Collection<Long> postIds);
 
   // Native because it groups on a SQL date function over post_view_event, mirroring the trending
   // window query's native style. UTC dates (viewed_at is stored as an Instant) — good enough for v0

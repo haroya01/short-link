@@ -4,7 +4,12 @@ import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
 import java.time.Instant;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -31,5 +36,17 @@ class PostViewEventRepositoryAdapter implements PostViewEventRepository {
     return jpa.countDailyByUserId(userId, since).stream()
         .map(r -> new DailyViewCount(r.getViewDate(), r.getViews()))
         .toList();
+  }
+
+  @Override
+  public Map<Long, Set<String>> readersByPostId(Collection<Long> postIds) {
+    if (postIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<Long, Set<String>> readers = new HashMap<>();
+    for (JpaPostViewEventRepository.ReaderRow row : jpa.findDistinctReaders(postIds)) {
+      readers.computeIfAbsent(row.getPostId(), k -> new HashSet<>()).add(row.getVisitorHash());
+    }
+    return readers;
   }
 }

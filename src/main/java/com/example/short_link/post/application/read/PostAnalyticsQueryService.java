@@ -21,6 +21,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -204,7 +205,59 @@ public class PostAnalyticsQueryService {
       running += d.views();
       cumulative.add(new DailyPoint(d.date(), running));
     }
-    return new SeriesAnalyticsDetail(seriesRow(series), w.windowDays(), cumulative);
+    return new SeriesAnalyticsDetail(
+        seriesRow(series), w.windowDays(), cumulative, seriesMembers(seriesId));
+  }
+
+  /**
+   * Per-episode performance in series order, with the read-through funnel: each episode's distinct
+   * human readers and how many of them also read the next episode. Lifetime — a reader's path
+   * through the series isn't bounded by the dashboard's day-window. Bounded by the series' member
+   * count (one reader-set query for the whole series).
+   */
+  private List<SeriesMemberStat> seriesMembers(Long seriesId) {
+    List<PostEntity> members = postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(seriesId);
+    if (members.isEmpty()) {
+      return List.of();
+    }
+    List<Long> ids = members.stream().map(PostEntity::getId).toList();
+    Map<Long, Long> followsByPost = followReader.countBySourcePostIdIn(ids);
+    Map<Long, Set<String>> readers = viewEventRepository.readersByPostId(ids);
+    List<SeriesMemberStat> out = new ArrayList<>();
+    for (int i = 0; i < members.size(); i++) {
+      PostEntity post = members.get(i);
+      Set<String> mine = readers.getOrDefault(post.getId(), Set.of());
+      long continued = 0;
+      if (i + 1 < members.size()) {
+        Set<String> next = readers.getOrDefault(members.get(i + 1).getId(), Set.of());
+        continued = intersectionSize(mine, next);
+      }
+      out.add(
+          new SeriesMemberStat(
+              post.getId(),
+              post.getSlug(),
+              post.getTitle(),
+              i + 1,
+              post.getViewCount(),
+              post.getLikeCount(),
+              followsByPost.getOrDefault(post.getId(), 0L),
+              mine.size(),
+              continued));
+    }
+    return out;
+  }
+
+  /** Size of {@code a ∩ b}, iterating the smaller set for the larger one's contains-checks. */
+  private static long intersectionSize(Set<String> a, Set<String> b) {
+    Set<String> smaller = a.size() <= b.size() ? a : b;
+    Set<String> larger = smaller == a ? b : a;
+    long n = 0;
+    for (String v : smaller) {
+      if (larger.contains(v)) {
+        n++;
+      }
+    }
+    return n;
   }
 
   private SeriesAnalyticsRow seriesRow(SeriesEntity series) {

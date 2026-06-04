@@ -3,7 +3,10 @@ package com.example.short_link.post.domain.repository;
 import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /** Append-only log of public post views — the source the trending feed windows over. */
 public interface PostViewEventRepository {
@@ -15,4 +18,11 @@ public interface PostViewEventRepository {
 
   /** Per-day view counts across all of an author's posts since {@code since} (sparse). */
   List<DailyViewCount> countDailyByUserIdSince(Long userId, Instant since);
+
+  /**
+   * Distinct human reader fingerprints (visitor_hash) per post, keyed by post id. Lifetime — the
+   * series read-through funnel intersects adjacent episodes' reader sets. Posts with no readers are
+   * absent from the map.
+   */
+  Map<Long, Set<String>> readersByPostId(Collection<Long> postIds);
 }
