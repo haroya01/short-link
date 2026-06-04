@@ -73,7 +73,7 @@ class RecordPostViewUseCaseTest {
     when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"));
+    useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
 
     assertThat(post.getViewCount()).isEqualTo(1L);
     verify(postRepository).save(post);
@@ -91,7 +91,7 @@ class RecordPostViewUseCaseTest {
     when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    useCase.execute(new RecordPostViewCommand("  JOHN  ", "p"));
+    useCase.execute(new RecordPostViewCommand("  JOHN  ", "p"), ViewContext.empty());
 
     assertThat(post.getViewCount()).isEqualTo(1L);
   }
@@ -100,7 +100,7 @@ class RecordPostViewUseCaseTest {
   void noopForUnknownUser() {
     when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-    useCase.execute(new RecordPostViewCommand("ghost", "p"));
+    useCase.execute(new RecordPostViewCommand("ghost", "p"), ViewContext.empty());
 
     verify(postRepository, never()).save(any());
     verify(postViewEventRepository, never()).save(any());
@@ -112,7 +112,7 @@ class RecordPostViewUseCaseTest {
     author.softDelete();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"));
+    useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
 
     verify(postRepository, never()).save(any());
     verify(postViewEventRepository, never()).save(any());
@@ -126,7 +126,7 @@ class RecordPostViewUseCaseTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"));
+    useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
 
     assertThat(post.getViewCount()).isZero();
     verify(postRepository, never()).save(any());
@@ -142,7 +142,7 @@ class RecordPostViewUseCaseTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"));
+    useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
 
     verify(postRepository, never()).save(any());
     verify(postViewEventRepository, never()).save(any());

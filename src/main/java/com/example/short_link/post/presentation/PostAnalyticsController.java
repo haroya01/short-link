@@ -3,6 +3,8 @@ package com.example.short_link.post.presentation;
 import com.example.short_link.post.application.read.AuthorAnalyticsOverview;
 import com.example.short_link.post.application.read.PostAnalyticsQueryService;
 import com.example.short_link.post.application.read.PostAnalyticsView;
+import com.example.short_link.post.application.read.PostReadStats;
+import com.example.short_link.post.application.read.PostReadStatsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PostAnalyticsController {
 
   private final PostAnalyticsQueryService analytics;
+  private final PostReadStatsService readStats;
 
   @GetMapping("/analytics/overview")
   public AuthorAnalyticsOverview overview(
@@ -35,5 +38,11 @@ public class PostAnalyticsController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "30") int days) {
     return analytics.postAnalytics(userId, id, days);
+  }
+
+  /** Deep reader breakdown for one post (누가·어디서 봤나) — same shape as the profile-visit dashboard. */
+  @GetMapping("/{id}/stats")
+  public PostReadStats postStats(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return readStats.forPost(userId, id);
   }
 }

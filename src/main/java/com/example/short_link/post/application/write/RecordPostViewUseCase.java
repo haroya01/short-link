@@ -85,12 +85,6 @@ public class RecordPostViewUseCase {
     this.clock = clock;
   }
 
-  /** Bare view (no request context) — kept for callers without an HTTP request. */
-  @Transactional
-  public void execute(RecordPostViewCommand cmd) {
-    execute(cmd, ViewContext.empty());
-  }
-
   @Transactional
   public void execute(RecordPostViewCommand cmd, ViewContext ctx) {
     String normalized = cmd.username().trim().toLowerCase();
