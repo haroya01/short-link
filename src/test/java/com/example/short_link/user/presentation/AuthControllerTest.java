@@ -73,10 +73,10 @@ class AuthControllerTest {
   @Test
   void refreshWithUnknownTokenReturns401() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
-    // Never stored and never just rotated → treated as reuse/theft.
-    RefreshToken stolen = jwt.createRefreshToken(user.getId());
+    // Never stored and never just rotated → rejected as a stale/unknown token (this token only).
+    RefreshToken stale = jwt.createRefreshToken(user.getId());
 
-    mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("refresh_token", stolen.token())))
+    mvc.perform(post("/api/v1/auth/refresh").cookie(new Cookie("refresh_token", stale.token())))
         .andExpect(status().isUnauthorized());
   }
 

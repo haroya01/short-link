@@ -92,11 +92,16 @@ public class AuthService {
       log.debug("refresh within rotation grace for userId={}, reissuing", parsed.userId());
       return issue(loadActiveUser(parsed.userId()));
     }
-    // Unknown jti past its grace window (or never issued) — genuine reuse/theft. Wipe everything.
+    // Unknown jti past its grace window: most often a stale token the client never advanced to (a
+    // dropped rotation, an idle tab), occasionally a replayed/stolen old one. Reject just THIS
+    // token
+    // — nuking every session over a single stale token logged the owner out on all devices (the
+    // "logged out whenever I step away" report), and a rotated token is already worthless, so the
+    // blast radius bought little. Other live sessions stay intact.
     log.warn(
-        "refresh token reuse or theft suspected for userId={}, wiping all sessions",
+        "refresh token unknown or expired for userId={}, rejecting this token "
+            + "(other sessions kept)",
         parsed.userId());
-    refreshStore.deleteAllForUser(parsed.userId());
     throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
   }
 
