@@ -1,5 +1,7 @@
 package com.example.short_link.post.presentation;
 
+import com.example.short_link.post.application.read.PublicSeriesCard;
+import com.example.short_link.post.application.read.PublicSeriesQueryService;
 import com.example.short_link.post.application.read.SeriesSubscriptionQueryService;
 import com.example.short_link.post.application.read.SeriesSubscriptionStatus;
 import com.example.short_link.post.application.write.SubscribeSeriesUseCase;
@@ -24,10 +26,19 @@ public class SeriesSubscriptionController {
 
   private final SubscribeSeriesUseCase subscribeSeriesUseCase;
   private final SeriesSubscriptionQueryService seriesSubscriptionQueryService;
+  private final PublicSeriesQueryService publicSeriesQueryService;
 
   @GetMapping("/api/v1/users/me/series-subscriptions")
   public List<Long> mySubscriptions(@AuthenticationPrincipal Long userId) {
     return seriesSubscriptionQueryService.mySubscriptions(userId);
+  }
+
+  /**
+   * The viewer's subscribed series as feed cards — the blog home "시리즈" tab (latest active first).
+   */
+  @GetMapping("/api/v1/users/me/subscribed-series")
+  public List<PublicSeriesCard> subscribedSeries(@AuthenticationPrincipal Long userId) {
+    return publicSeriesQueryService.subscribedSeries(userId);
   }
 
   @GetMapping("/api/v1/series/{seriesId}/subscription")

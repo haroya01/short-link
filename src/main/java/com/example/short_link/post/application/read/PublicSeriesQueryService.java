@@ -1,16 +1,20 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -36,6 +40,65 @@ public class PublicSeriesQueryService {
   private final UserRepository userRepository;
   private final SeriesRepository seriesRepository;
   private final PostRepository postRepository;
+  private final SeriesSubscriptionRepository subscriptionRepository;
+
+  /**
+   * The series this user subscribes to, as feed cards (most recently active first) — the home
+   * feed's "시리즈" tab. Mirrors {@link #discoverSeries(int)}'s hydration but scoped to the viewer's
+   * subscriptions: drops series whose author is gone or that have no published posts yet.
+   */
+  public List<PublicSeriesCard> subscribedSeries(Long userId) {
+    List<Long> ids = subscriptionRepository.findSubscribedSeriesIds(userId);
+    if (ids.isEmpty()) return List.of();
+
+    Map<Long, SeriesEntity> series =
+        seriesRepository.findAllByIdIn(ids).stream()
+            .collect(Collectors.toMap(SeriesEntity::getId, Function.identity()));
+    Map<Long, UserEntity> authors =
+        userRepository
+            .findAllByIdIn(
+                series.values().stream().map(SeriesEntity::getUserId).distinct().toList())
+            .stream()
+            .filter(u -> !u.isDeleted())
+            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+
+    return ids.stream()
+        .map(series::get)
+        .filter(Objects::nonNull)
+        .filter(s -> authors.containsKey(s.getUserId()))
+        .map(s -> subscribedCard(s, authors.get(s.getUserId())))
+        .filter(Objects::nonNull)
+        .sorted(
+            Comparator.comparing(
+                PublicSeriesCard::lastPublishedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+        .toList();
+  }
+
+  private PublicSeriesCard subscribedCard(SeriesEntity s, UserEntity author) {
+    List<PostEntity> published =
+        postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
+            s.getId(), PostStatus.PUBLISHED);
+    if (published.isEmpty()) return null; // no public posts yet → not worth a card
+    Instant last =
+        published.stream()
+            .map(PostEntity::getPublishedAt)
+            .filter(Objects::nonNull)
+            .max(Comparator.naturalOrder())
+            .orElse(null);
+    List<SeriesPostRef> previews =
+        published.stream()
+            .limit(PREVIEW_POSTS)
+            .map(p -> new SeriesPostRef(p.getSlug(), p.getTitle()))
+            .toList();
+    return new PublicSeriesCard(
+        s.getId(),
+        PublicAuthorView.from(author),
+        s.getSlug(),
+        s.getTitle(),
+        published.size(),
+        last,
+        previews);
+  }
 
   /**
    * Cross-author series for the discovery feed — most recently active first. Hydrates each ranked
