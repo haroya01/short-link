@@ -3,7 +3,7 @@ package com.example.short_link.post.presentation;
 import com.example.short_link.post.application.read.AuthorAnalyticsOverview;
 import com.example.short_link.post.application.read.PostAnalyticsQueryService;
 import com.example.short_link.post.application.read.PostAnalyticsView;
-import com.example.short_link.post.application.read.PostPerformancePage;
+import com.example.short_link.post.application.read.PostPerformanceResult;
 import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +38,7 @@ public class PostAnalyticsController {
    * one of views|likes|recent (unknown falls back to views).
    */
   @GetMapping("/analytics/posts")
-  public PostPerformancePage performance(
+  public PostPerformanceResult performance(
       @AuthenticationPrincipal Long userId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size,

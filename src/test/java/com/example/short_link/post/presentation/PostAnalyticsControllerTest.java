@@ -11,7 +11,7 @@ import com.example.short_link.post.application.read.AuthorAnalyticsOverview;
 import com.example.short_link.post.application.read.DailyPoint;
 import com.example.short_link.post.application.read.PostAnalyticsQueryService;
 import com.example.short_link.post.application.read.PostAnalyticsView;
-import com.example.short_link.post.application.read.PostPerformancePage;
+import com.example.short_link.post.application.read.PostPerformanceResult;
 import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import com.example.short_link.post.application.read.TopPostView;
@@ -80,7 +80,7 @@ class PostAnalyticsControllerTest {
             eq(20),
             eq(com.example.short_link.post.domain.PostPerformanceSort.LIKES)))
         .thenReturn(
-            new PostPerformancePage(List.of(new TopPostView(1L, "a", "A", 100, 10, 7)), 0, true));
+            new PostPerformanceResult(List.of(new TopPostView(1L, "a", "A", 100, 10, 7)), 0, true));
 
     mvc.perform(
             get("/api/v1/posts/analytics/posts?page=0&size=20&sort=likes")

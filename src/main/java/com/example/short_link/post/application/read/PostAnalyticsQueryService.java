@@ -128,7 +128,7 @@ public class PostAnalyticsQueryService {
    * Only posts that have been public (PUBLISHED / UNPUBLISHED) appear — drafts have no reads. The
    * follows each post drove are pulled for just this page in a single grouped query.
    */
-  public PostPerformancePage postPerformance(
+  public PostPerformanceResult postPerformance(
       Long userId,
       int page,
       int size,
@@ -151,7 +151,7 @@ public class PostAnalyticsQueryService {
                         followsByPost.getOrDefault(post.getId(), 0L)))
             .toList();
     boolean hasNext = (long) (p + 1) * sz < postRepository.countUserAnalyticsPosts(userId);
-    return new PostPerformancePage(items, p, hasNext);
+    return new PostPerformanceResult(items, p, hasNext);
   }
 
   private int clampWindow(int days) {

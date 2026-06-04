@@ -10,4 +10,4 @@ import java.util.List;
  * @param page zero-based page index this response represents
  * @param hasNext whether another page exists after this one
  */
-public record PostPerformancePage(List<TopPostView> items, int page, boolean hasNext) {}
+public record PostPerformanceResult(List<TopPostView> items, int page, boolean hasNext) {}

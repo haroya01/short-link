@@ -169,7 +169,7 @@ class PostAnalyticsQueryServiceTest {
         .thenReturn(java.util.Map.of(1L, 5L, 3L, 1L));
     when(postRepository.countUserAnalyticsPosts(USER)).thenReturn(5L);
 
-    PostPerformancePage pageResult =
+    PostPerformanceResult pageResult =
         service.postPerformance(
             USER, 0, 2, com.example.short_link.post.domain.PostPerformanceSort.VIEWS);
 
@@ -188,7 +188,7 @@ class PostAnalyticsQueryServiceTest {
         .thenReturn(java.util.Map.of());
     when(postRepository.countUserAnalyticsPosts(USER)).thenReturn(4L);
 
-    PostPerformancePage pageResult =
+    PostPerformanceResult pageResult =
         service.postPerformance(
             USER, 1, 2, com.example.short_link.post.domain.PostPerformanceSort.LIKES);
 
