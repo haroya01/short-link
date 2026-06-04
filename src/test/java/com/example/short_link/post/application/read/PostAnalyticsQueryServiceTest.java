@@ -71,6 +71,10 @@ class PostAnalyticsQueryServiceTest {
     when(followReader.countBySourcePostId(1L)).thenReturn(3L);
     when(followReader.countBySourcePostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
         .thenReturn(1L);
+    when(linkClickReader.breakdownByPostId(eqId(1L), org.mockito.ArgumentMatchers.anyInt()))
+        .thenReturn(
+            List.of(
+                new com.example.short_link.post.domain.PostLinkClick("abc", "https://x.com", 9)));
 
     PostAnalyticsView view = service.postAnalytics(USER, 1L, 7);
 
@@ -87,6 +91,13 @@ class PostAnalyticsQueryServiceTest {
     assertThat(view.windowLinkClicks()).isEqualTo(7);
     assertThat(view.lifetimeFollows()).isEqualTo(3);
     assertThat(view.windowFollows()).isEqualTo(1);
+    assertThat(view.linkBreakdown())
+        .singleElement()
+        .satisfies(
+            lc -> {
+              assertThat(lc.shortCode()).isEqualTo("abc");
+              assertThat(lc.clicks()).isEqualTo(9);
+            });
   }
 
   @Test
