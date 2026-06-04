@@ -3,11 +3,13 @@ package com.example.short_link.post.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections;
 import com.example.short_link.post.application.write.SeriesOwnership;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostReadStatsReader;
@@ -67,6 +69,68 @@ class PostReadStatsServiceTest {
     // Unstubbed list queries default to empty (Mockito) → stable empty breakdowns, not null.
     assertThat(stats.countryVisits()).isEmpty();
     assertThat(stats.dailyVisits()).isEmpty();
+  }
+
+  private static ClickProjections.HeatmapRow heat(int dow) {
+    return new ClickProjections.HeatmapRow() {
+      @Override
+      public Integer getDow() {
+        return dow;
+      }
+
+      @Override
+      public Integer getHour() {
+        return 9;
+      }
+
+      @Override
+      public Long getCount() {
+        return 1L;
+      }
+    };
+  }
+
+  @Test
+  void forPostMapsDimensions() {
+    when(postRepository.findById(1L)).thenReturn(Optional.of(ownedPost()));
+    ClickProjections.HourClickRow h = mock(ClickProjections.HourClickRow.class);
+    when(h.getHour()).thenReturn(21);
+    when(h.getCount()).thenReturn(50L);
+    when(reader.hourly(any(), any())).thenReturn(List.of(h));
+    // dow 0 (default→UNKNOWN) + 1..7 covers every dayOfWeekName branch.
+    when(reader.heatmap(any(), any()))
+        .thenReturn(
+            List.of(heat(0), heat(1), heat(2), heat(3), heat(4), heat(5), heat(6), heat(7)));
+    ClickProjections.CountryClickRow c = mock(ClickProjections.CountryClickRow.class);
+    when(c.getCountry()).thenReturn(null); // null → "unknown"
+    when(c.getCount()).thenReturn(7L);
+    when(reader.topCountries(any(), anyInt())).thenReturn(List.of(c));
+
+    PostReadStats stats = service.forPost(USER, 1L);
+
+    assertThat(stats.peakHour()).isEqualTo(21);
+    assertThat(stats.heatmap())
+        .extracting(PostReadStats.HeatmapCell::dayOfWeek)
+        .containsExactly(
+            "UNKNOWN",
+            "SUNDAY",
+            "MONDAY",
+            "TUESDAY",
+            "WEDNESDAY",
+            "THURSDAY",
+            "FRIDAY",
+            "SATURDAY");
+    assertThat(stats.countryVisits().get(0).country()).isEqualTo("unknown");
+  }
+
+  @Test
+  void forPostFallsBackToDefaultTimezoneWhenUserMissing() {
+    when(postRepository.findById(1L)).thenReturn(Optional.of(ownedPost()));
+    when(userRepository.findById(USER)).thenReturn(Optional.empty()); // tz null → DEFAULT_ZONE
+
+    PostReadStats stats = service.forPost(USER, 1L);
+
+    assertThat(stats.timezone()).isEqualTo("Asia/Seoul");
   }
 
   @Test

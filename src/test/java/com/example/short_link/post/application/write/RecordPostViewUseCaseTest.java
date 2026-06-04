@@ -186,4 +186,66 @@ class RecordPostViewUseCaseTest {
     assertThat(saved.isBot()).isFalse();
     assertThat(saved.getViewedAt()).isEqualTo(NOW);
   }
+
+  private void stubPublished() {
+    UserEntity author = author("john");
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+  }
+
+  private ViewContext ctx() {
+    return new ViewContext(
+        "https://x.com", "Mozilla/5.0", "1.2.3.4", "ko", "social", "tw", null, null, null, null);
+  }
+
+  private PostViewEventEntity savedEvent() {
+    ArgumentCaptor<PostViewEventEntity> c = ArgumentCaptor.forClass(PostViewEventEntity.class);
+    verify(postViewEventRepository).save(c.capture());
+    return c.getValue();
+  }
+
+  @Test
+  void marksBotOnSuspectBurst() {
+    stubPublished();
+    when(userAgentClassifier.classify(any()))
+        .thenReturn(new UserAgentInfo("desktop", "Win", "Chrome", false, null));
+    when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("US", null, null));
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false));
+    when(botHeuristic.isSuspectBurst(any())).thenReturn(true);
+
+    useCase.execute(new RecordPostViewCommand("john", "p"), ctx());
+
+    assertThat(savedEvent().isBot()).isTrue();
+    assertThat(savedEvent().getBotName()).isEqualTo(BotHeuristic.SUSPECT_LABEL);
+  }
+
+  @Test
+  void marksBotOnDatacenterAsn() {
+    stubPublished();
+    when(userAgentClassifier.classify(any()))
+        .thenReturn(new UserAgentInfo("desktop", "Win", "Chrome", false, null));
+    when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("US", null, null));
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(15169, "GOOGLE", true));
+    when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
+
+    useCase.execute(new RecordPostViewCommand("john", "p"), ctx());
+
+    assertThat(savedEvent().isBot()).isTrue();
+    assertThat(savedEvent().getBotName()).startsWith("datacenter:");
+  }
+
+  @Test
+  void fallsBackToBareEventWhenEnrichmentThrows() {
+    stubPublished();
+    when(userAgentClassifier.classify(any())).thenThrow(new RuntimeException("classifier down"));
+
+    useCase.execute(new RecordPostViewCommand("john", "p"), ctx());
+
+    PostViewEventEntity saved = savedEvent();
+    assertThat(saved.getCountryCode()).isNull();
+    assertThat(saved.getViewedAt()).isEqualTo(NOW);
+  }
 }
