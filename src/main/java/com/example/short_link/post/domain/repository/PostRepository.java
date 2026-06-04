@@ -2,6 +2,7 @@ package com.example.short_link.post.domain.repository;
 
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostPerformanceSort;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.TagCount;
@@ -35,10 +36,11 @@ public interface PostRepository {
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
   /**
-   * Author's posts that have been public (PUBLISHED/UNPUBLISHED), ordered by lifetime views — paged
-   * for the analytics per-post table (infinite scroll).
+   * Author's posts that have been public (PUBLISHED/UNPUBLISHED), paged + sorted for the analytics
+   * per-post table (infinite scroll).
    */
-  List<PostEntity> findUserAnalyticsPosts(Long userId, int page, int size);
+  List<PostEntity> findUserAnalyticsPosts(
+      Long userId, int page, int size, PostPerformanceSort sort);
 
   long countUserAnalyticsPosts(Long userId);
 

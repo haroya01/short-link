@@ -74,12 +74,16 @@ class PostAnalyticsControllerTest {
 
   @Test
   void performanceReturnsPagedPosts() throws Exception {
-    when(analytics.postPerformance(eq(USER_ID), eq(0), eq(20)))
+    when(analytics.postPerformance(
+            eq(USER_ID),
+            eq(0),
+            eq(20),
+            eq(com.example.short_link.post.domain.PostPerformanceSort.LIKES)))
         .thenReturn(
             new PostPerformancePage(List.of(new TopPostView(1L, "a", "A", 100, 10, 7)), 0, true));
 
     mvc.perform(
-            get("/api/v1/posts/analytics/posts?page=0&size=20")
+            get("/api/v1/posts/analytics/posts?page=0&size=20&sort=likes")
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.page").value(0))

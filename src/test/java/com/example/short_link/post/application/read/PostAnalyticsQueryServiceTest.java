@@ -162,12 +162,16 @@ class PostAnalyticsQueryServiceTest {
     org.springframework.test.util.ReflectionTestUtils.setField(a, "id", 1L);
     PostEntity c = post(USER, "c", 50, 3);
     org.springframework.test.util.ReflectionTestUtils.setField(c, "id", 3L);
-    when(postRepository.findUserAnalyticsPosts(USER, 0, 2)).thenReturn(List.of(a, c));
+    when(postRepository.findUserAnalyticsPosts(
+            USER, 0, 2, com.example.short_link.post.domain.PostPerformanceSort.VIEWS))
+        .thenReturn(List.of(a, c));
     when(followReader.countBySourcePostIdIn(org.mockito.ArgumentMatchers.any()))
         .thenReturn(java.util.Map.of(1L, 5L, 3L, 1L));
     when(postRepository.countUserAnalyticsPosts(USER)).thenReturn(5L);
 
-    PostPerformancePage pageResult = service.postPerformance(USER, 0, 2);
+    PostPerformancePage pageResult =
+        service.postPerformance(
+            USER, 0, 2, com.example.short_link.post.domain.PostPerformanceSort.VIEWS);
 
     assertThat(pageResult.items()).extracting(TopPostView::slug).containsExactly("a", "c");
     assertThat(pageResult.items()).extracting(TopPostView::followsGained).containsExactly(5L, 1L);
@@ -177,12 +181,16 @@ class PostAnalyticsQueryServiceTest {
 
   @Test
   void postPerformance_lastPageHasNoNext() {
-    when(postRepository.findUserAnalyticsPosts(USER, 1, 2)).thenReturn(List.of());
+    when(postRepository.findUserAnalyticsPosts(
+            USER, 1, 2, com.example.short_link.post.domain.PostPerformanceSort.LIKES))
+        .thenReturn(List.of());
     when(followReader.countBySourcePostIdIn(org.mockito.ArgumentMatchers.any()))
         .thenReturn(java.util.Map.of());
     when(postRepository.countUserAnalyticsPosts(USER)).thenReturn(4L);
 
-    PostPerformancePage pageResult = service.postPerformance(USER, 1, 2);
+    PostPerformancePage pageResult =
+        service.postPerformance(
+            USER, 1, 2, com.example.short_link.post.domain.PostPerformanceSort.LIKES);
 
     assertThat(pageResult.hasNext()).isFalse(); // (1+1)*2 = 4, not < 4
   }

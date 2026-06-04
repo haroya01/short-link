@@ -33,8 +33,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
-  // Tie-break by id desc so paging is stable when many posts share a view count (e.g. all 0).
-  List<PostEntity> findByUserIdAndStatusInOrderByViewCountDescIdDesc(
+  // Sort comes from the Pageable (per analytics sort dimension); the adapter appends an id-desc
+  // tie-break so paging stays stable when many posts share a metric value (e.g. all 0).
+  List<PostEntity> findByUserIdAndStatusIn(
       Long userId, Collection<PostStatus> statuses, Pageable pageable);
 
   long countByUserIdAndStatusIn(Long userId, Collection<PostStatus> statuses);

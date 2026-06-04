@@ -124,14 +124,18 @@ public class PostAnalyticsQueryService {
   }
 
   /**
-   * One page of the author's per-post performance (views·likes·follows), ordered by lifetime views.
+   * One page of the author's per-post performance (views·likes·follows), ordered by {@code sort}.
    * Only posts that have been public (PUBLISHED / UNPUBLISHED) appear — drafts have no reads. The
    * follows each post drove are pulled for just this page in a single grouped query.
    */
-  public PostPerformancePage postPerformance(Long userId, int page, int size) {
+  public PostPerformancePage postPerformance(
+      Long userId,
+      int page,
+      int size,
+      com.example.short_link.post.domain.PostPerformanceSort sort) {
     int p = Math.max(0, page);
     int sz = size <= 0 ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
-    List<PostEntity> posts = postRepository.findUserAnalyticsPosts(userId, p, sz);
+    List<PostEntity> posts = postRepository.findUserAnalyticsPosts(userId, p, sz, sort);
     Map<Long, Long> followsByPost =
         followReader.countBySourcePostIdIn(posts.stream().map(PostEntity::getId).toList());
     List<TopPostView> items =

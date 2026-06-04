@@ -34,14 +34,17 @@ public class PostAnalyticsController {
   }
 
   /**
-   * Paginated per-post performance table (views·likes·follows), ordered by views — infinite scroll.
+   * Paginated per-post performance table (views·likes·follows) — infinite scroll. {@code sort} is
+   * one of views|likes|recent (unknown falls back to views).
    */
   @GetMapping("/analytics/posts")
   public PostPerformancePage performance(
       @AuthenticationPrincipal Long userId,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
-    return analytics.postPerformance(userId, page, size);
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(defaultValue = "views") String sort) {
+    return analytics.postPerformance(
+        userId, page, size, com.example.short_link.post.domain.PostPerformanceSort.fromParam(sort));
   }
 
   @GetMapping("/{id}/analytics")
