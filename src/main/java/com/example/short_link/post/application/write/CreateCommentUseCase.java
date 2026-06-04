@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.domain.CommentEntity;
@@ -11,6 +12,7 @@ import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class CreateCommentUseCase {
   private final PostRepository postRepository;
   private final CommentRepository commentRepository;
   private final UserRepository userRepository;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public CommentView execute(CreateCommentCommand cmd) {
@@ -46,6 +49,17 @@ public class CreateCommentUseCase {
     CommentEntity saved =
         commentRepository.save(
             new CommentEntity(cmd.postId(), cmd.userId(), cmd.parentId(), cmd.body().trim()));
+    // Notify the post's author of a new comment — never for a comment on your own post.
+    if (!post.getUserId().equals(cmd.userId())) {
+      events.publishEvent(
+          BlogInteractionEvent.comment(
+              post.getUserId(),
+              cmd.userId(),
+              post.getId(),
+              post.getSlug(),
+              post.getTitle(),
+              saved.getCreatedAt()));
+    }
     UserEntity author = userRepository.findById(cmd.userId()).orElse(null);
     return new CommentView(
         saved.getId(),
