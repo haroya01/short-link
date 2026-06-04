@@ -33,6 +33,8 @@ public class PostAnalyticsQueryService {
 
   private static final int DEFAULT_WINDOW_DAYS = 30;
   private static final int MAX_WINDOW_DAYS = 365;
+  // The overview's per-post table is a bounded "top movers" preview; the full list is the 내 글 hub.
+  private static final int TOP_POSTS = 12;
 
   private final PostRepository postRepository;
   private final PostViewEventRepository viewEventRepository;
@@ -108,13 +110,19 @@ public class PostAnalyticsQueryService {
     long lifetimeViews = posts.stream().mapToLong(PostEntity::getViewCount).sum();
     long lifetimeLikes = posts.stream().mapToLong(PostEntity::getLikeCount).sum();
     long published = posts.stream().filter(PostEntity::isPublished).count();
-    // Every post gets its own row (per-post breakdown), with the follows it drove pulled in one
-    // grouped query instead of N — sorted by lifetime views so the strongest posts lead.
-    Map<Long, Long> followsByPost =
-        followReader.countBySourcePostIdIn(posts.stream().map(PostEntity::getId).toList());
-    List<TopPostView> top =
+    // The overview shows the TOP movers, not every post — an author with hundreds of posts would
+    // otherwise balloon the payload and the row count. The full per-post list is the 내 글 hub
+    // (/write), where each published post links to its own detail. Follows are pulled for just this
+    // bounded set in one grouped query.
+    List<PostEntity> ranked =
         posts.stream()
             .sorted(Comparator.comparingLong(PostEntity::getViewCount).reversed())
+            .limit(TOP_POSTS)
+            .toList();
+    Map<Long, Long> followsByPost =
+        followReader.countBySourcePostIdIn(ranked.stream().map(PostEntity::getId).toList());
+    List<TopPostView> top =
+        ranked.stream()
             .map(
                 p ->
                     new TopPostView(
