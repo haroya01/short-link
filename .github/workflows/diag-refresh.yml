@@ -1,0 +1,53 @@
+name: diag-refresh
+
+# Temporary READ-ONLY diagnostics for the "logged out after a short while away" report.
+# Confirms whether the refresh-token reuse/theft wipe (AuthService) is actually firing in prod and
+# how often, plus the live session/grace-marker counts in Redis. No writes. Remove after use.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: SSH read-only refresh diagnostics
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: false
+          script: |
+            set +e
+            cd ~/short-link/deploy
+            set -a; . ./.env 2>/dev/null; set +a
+
+            echo "===== reuse/theft WARN — total count (last 96h of retained logs) ====="
+            docker compose logs app --since 96h 2>&1 | grep -c "reuse or theft suspected"
+
+            echo "===== reuse/theft WARN — most recent 40 lines ====="
+            docker compose logs app --since 96h 2>&1 | grep "reuse or theft suspected" | tail -40
+
+            echo "===== distinct userIds wiped + how many times each (top 30) ====="
+            docker compose logs app --since 96h 2>&1 | grep "reuse or theft suspected" \
+              | grep -oE "userId=[0-9]+" | sort | uniq -c | sort -rn | head -30
+
+            echo "===== wipes per hour (timestamp prefix, last 60 buckets) ====="
+            docker compose logs app -t --since 96h 2>&1 | grep "reuse or theft suspected" \
+              | grep -oE "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}" | sort | uniq -c | tail -60
+
+            echo "===== 'refresh within rotation grace' hits (DEBUG — likely 0 at prod level) ====="
+            docker compose logs app --since 96h 2>&1 | grep -c "refresh within rotation grace"
+
+            echo "===== Redis: live refresh sessions (refresh:* count) ====="
+            docker compose exec -T redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning \
+              eval "return #redis.call('keys','refresh:*')" 0 2>&1 | tail -3
+
+            echo "===== Redis: live grace markers (refresh-rotated:* count) ====="
+            docker compose exec -T redis redis-cli -a "$REDIS_PASSWORD" --no-auth-warning \
+              eval "return #redis.call('keys','refresh-rotated:*')" 0 2>&1 | tail -3
+
+            echo "===== done ====="
