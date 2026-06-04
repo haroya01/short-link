@@ -75,6 +75,21 @@ class PostRepositoryAdapter implements PostRepository {
     return jpa.findAllByUserIdAndStatusOrderByPublishedAtDesc(userId, status);
   }
 
+  // Posts with analytics meaning — drafts/scheduled have never been read, so they're excluded.
+  private static final List<PostStatus> ANALYTICS_STATUSES =
+      List.of(PostStatus.PUBLISHED, PostStatus.UNPUBLISHED);
+
+  @Override
+  public List<PostEntity> findUserAnalyticsPosts(Long userId, int page, int size) {
+    return jpa.findByUserIdAndStatusInOrderByViewCountDescIdDesc(
+        userId, ANALYTICS_STATUSES, PageRequest.of(page, size));
+  }
+
+  @Override
+  public long countUserAnalyticsPosts(Long userId) {
+    return jpa.countByUserIdAndStatusIn(userId, ANALYTICS_STATUSES);
+  }
+
   @Override
   public List<PostEntity> findScheduledDue(Instant now) {
     return jpa.findAllByStatusAndScheduledAtLessThanEqual(PostStatus.SCHEDULED, now);

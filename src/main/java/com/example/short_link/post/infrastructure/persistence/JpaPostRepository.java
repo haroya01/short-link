@@ -33,6 +33,12 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
+  // Tie-break by id desc so paging is stable when many posts share a view count (e.g. all 0).
+  List<PostEntity> findByUserIdAndStatusInOrderByViewCountDescIdDesc(
+      Long userId, Collection<PostStatus> statuses, Pageable pageable);
+
+  long countByUserIdAndStatusIn(Long userId, Collection<PostStatus> statuses);
+
   List<PostEntity> findAllByStatusAndScheduledAtLessThanEqual(
       PostStatus status, Instant scheduledAt);
 

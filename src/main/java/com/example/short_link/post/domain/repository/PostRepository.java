@@ -34,6 +34,14 @@ public interface PostRepository {
 
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
+  /**
+   * Author's posts that have been public (PUBLISHED/UNPUBLISHED), ordered by lifetime views — paged
+   * for the analytics per-post table (infinite scroll).
+   */
+  List<PostEntity> findUserAnalyticsPosts(Long userId, int page, int size);
+
+  long countUserAnalyticsPosts(Long userId);
+
   /** SCHEDULED posts whose scheduledAt has arrived (<= now) — the auto-publish job's work list. */
   List<PostEntity> findScheduledDue(Instant now);
 

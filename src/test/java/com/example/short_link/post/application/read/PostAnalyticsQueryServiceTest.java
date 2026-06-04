@@ -123,15 +123,12 @@ class PostAnalyticsQueryServiceTest {
   }
 
   @Test
-  void overview_aggregatesTotalsAndRanksTopPosts() {
+  void overview_aggregatesTotals() {
     PostEntity a = post(USER, "a", 100, 10);
     a.publish();
-    org.springframework.test.util.ReflectionTestUtils.setField(a, "id", 1L);
     PostEntity b = post(USER, "b", 5, 1); // draft
-    org.springframework.test.util.ReflectionTestUtils.setField(b, "id", 2L);
     PostEntity c = post(USER, "c", 50, 3);
     c.publish();
-    org.springframework.test.util.ReflectionTestUtils.setField(c, "id", 3L);
     when(postRepository.findAllByUserIdOrderByCreatedAtDesc(USER)).thenReturn(List.of(a, b, c));
     when(viewEventRepository.countDailyByUserIdSince(
             org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
@@ -144,9 +141,6 @@ class PostAnalyticsQueryServiceTest {
     when(followReader.countByUserIdSince(
             org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
         .thenReturn(2L);
-    // a(id1) drove 5 follows, c(id3) drove 1; b(id2) none → 0 via getOrDefault.
-    when(followReader.countBySourcePostIdIn(org.mockito.ArgumentMatchers.any()))
-        .thenReturn(java.util.Map.of(1L, 5L, 3L, 1L));
 
     AuthorAnalyticsOverview o = service.overview(USER, 30);
 
@@ -160,10 +154,37 @@ class PostAnalyticsQueryServiceTest {
     assertThat(o.lifetimeFollows()).isEqualTo(8);
     assertThat(o.windowFollows()).isEqualTo(2);
     assertThat(o.daily()).hasSize(30);
-    // Every post gets a row, ranked by lifetime views desc: a(100), c(50), b(5).
-    assertThat(o.topPosts()).extracting(TopPostView::slug).containsExactly("a", "c", "b");
-    // Per-post follows attributed, in the same ranked order: a=5, c=1, b=0.
-    assertThat(o.topPosts()).extracting(TopPostView::followsGained).containsExactly(5L, 1L, 0L);
+  }
+
+  @Test
+  void postPerformance_mapsRowsWithFollowsAndComputesHasNext() {
+    PostEntity a = post(USER, "a", 100, 10);
+    org.springframework.test.util.ReflectionTestUtils.setField(a, "id", 1L);
+    PostEntity c = post(USER, "c", 50, 3);
+    org.springframework.test.util.ReflectionTestUtils.setField(c, "id", 3L);
+    when(postRepository.findUserAnalyticsPosts(USER, 0, 2)).thenReturn(List.of(a, c));
+    when(followReader.countBySourcePostIdIn(org.mockito.ArgumentMatchers.any()))
+        .thenReturn(java.util.Map.of(1L, 5L, 3L, 1L));
+    when(postRepository.countUserAnalyticsPosts(USER)).thenReturn(5L);
+
+    PostPerformancePage pageResult = service.postPerformance(USER, 0, 2);
+
+    assertThat(pageResult.items()).extracting(TopPostView::slug).containsExactly("a", "c");
+    assertThat(pageResult.items()).extracting(TopPostView::followsGained).containsExactly(5L, 1L);
+    assertThat(pageResult.page()).isZero();
+    assertThat(pageResult.hasNext()).isTrue(); // (0+1)*2 = 2 < 5
+  }
+
+  @Test
+  void postPerformance_lastPageHasNoNext() {
+    when(postRepository.findUserAnalyticsPosts(USER, 1, 2)).thenReturn(List.of());
+    when(followReader.countBySourcePostIdIn(org.mockito.ArgumentMatchers.any()))
+        .thenReturn(java.util.Map.of());
+    when(postRepository.countUserAnalyticsPosts(USER)).thenReturn(4L);
+
+    PostPerformancePage pageResult = service.postPerformance(USER, 1, 2);
+
+    assertThat(pageResult.hasNext()).isFalse(); // (1+1)*2 = 4, not < 4
   }
 
   @Test

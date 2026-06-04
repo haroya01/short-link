@@ -3,6 +3,7 @@ package com.example.short_link.post.presentation;
 import com.example.short_link.post.application.read.AuthorAnalyticsOverview;
 import com.example.short_link.post.application.read.PostAnalyticsQueryService;
 import com.example.short_link.post.application.read.PostAnalyticsView;
+import com.example.short_link.post.application.read.PostPerformancePage;
 import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,17 @@ public class PostAnalyticsController {
   public AuthorAnalyticsOverview overview(
       @AuthenticationPrincipal Long userId, @RequestParam(defaultValue = "30") int days) {
     return analytics.overview(userId, days);
+  }
+
+  /**
+   * Paginated per-post performance table (views·likes·follows), ordered by views — infinite scroll.
+   */
+  @GetMapping("/analytics/posts")
+  public PostPerformancePage performance(
+      @AuthenticationPrincipal Long userId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return analytics.postPerformance(userId, page, size);
   }
 
   @GetMapping("/{id}/analytics")

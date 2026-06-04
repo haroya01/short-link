@@ -4,7 +4,9 @@ import java.util.List;
 
 /**
  * Author-wide analytics overview: lifetime totals across all their posts, a windowed view-over-time
- * line aggregated across posts, the follows their posts drove, and a per-post traction table.
+ * line aggregated across posts, and the follows their posts drove. The per-post breakdown is a
+ * separate paginated surface ({@link PostPerformancePage}) so an author with hundreds of posts
+ * doesn't pull them all in one response.
  */
 public record AuthorAnalyticsOverview(
     long totalPosts,
@@ -17,5 +19,4 @@ public record AuthorAnalyticsOverview(
     long windowLinkClicks,
     long lifetimeFollows,
     long windowFollows,
-    List<DailyPoint> daily,
-    List<TopPostView> topPosts) {}
+    List<DailyPoint> daily) {}

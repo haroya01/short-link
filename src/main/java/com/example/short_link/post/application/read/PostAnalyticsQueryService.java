@@ -13,7 +13,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +32,8 @@ public class PostAnalyticsQueryService {
 
   private static final int DEFAULT_WINDOW_DAYS = 30;
   private static final int MAX_WINDOW_DAYS = 365;
+  private static final int DEFAULT_PAGE_SIZE = 20;
+  private static final int MAX_PAGE_SIZE = 50;
 
   private final PostRepository postRepository;
   private final PostViewEventRepository viewEventRepository;
@@ -108,23 +109,6 @@ public class PostAnalyticsQueryService {
     long lifetimeViews = posts.stream().mapToLong(PostEntity::getViewCount).sum();
     long lifetimeLikes = posts.stream().mapToLong(PostEntity::getLikeCount).sum();
     long published = posts.stream().filter(PostEntity::isPublished).count();
-    // Every post gets its own row (per-post breakdown), with the follows it drove pulled in one
-    // grouped query instead of N — sorted by lifetime views so the strongest posts lead.
-    Map<Long, Long> followsByPost =
-        followReader.countBySourcePostIdIn(posts.stream().map(PostEntity::getId).toList());
-    List<TopPostView> top =
-        posts.stream()
-            .sorted(Comparator.comparingLong(PostEntity::getViewCount).reversed())
-            .map(
-                p ->
-                    new TopPostView(
-                        p.getId(),
-                        p.getSlug(),
-                        p.getTitle(),
-                        p.getViewCount(),
-                        p.getLikeCount(),
-                        followsByPost.getOrDefault(p.getId(), 0L)))
-            .toList();
     return new AuthorAnalyticsOverview(
         posts.size(),
         published,
@@ -136,8 +120,34 @@ public class PostAnalyticsQueryService {
         linkClickReader.countByUserIdSince(userId, startOfDay(from)),
         followReader.countByUserId(userId),
         followReader.countByUserIdSince(userId, startOfDay(from)),
-        daily,
-        top);
+        daily);
+  }
+
+  /**
+   * One page of the author's per-post performance (views·likes·follows), ordered by lifetime views.
+   * Only posts that have been public (PUBLISHED / UNPUBLISHED) appear — drafts have no reads. The
+   * follows each post drove are pulled for just this page in a single grouped query.
+   */
+  public PostPerformancePage postPerformance(Long userId, int page, int size) {
+    int p = Math.max(0, page);
+    int sz = size <= 0 ? DEFAULT_PAGE_SIZE : Math.min(size, MAX_PAGE_SIZE);
+    List<PostEntity> posts = postRepository.findUserAnalyticsPosts(userId, p, sz);
+    Map<Long, Long> followsByPost =
+        followReader.countBySourcePostIdIn(posts.stream().map(PostEntity::getId).toList());
+    List<TopPostView> items =
+        posts.stream()
+            .map(
+                post ->
+                    new TopPostView(
+                        post.getId(),
+                        post.getSlug(),
+                        post.getTitle(),
+                        post.getViewCount(),
+                        post.getLikeCount(),
+                        followsByPost.getOrDefault(post.getId(), 0L)))
+            .toList();
+    boolean hasNext = (long) (p + 1) * sz < postRepository.countUserAnalyticsPosts(userId);
+    return new PostPerformancePage(items, p, hasNext);
   }
 
   private int clampWindow(int days) {
