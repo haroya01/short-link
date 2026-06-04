@@ -87,17 +87,18 @@ class AuthServiceTest {
   }
 
   @Test
-  void refreshWithUnknownTokenPastGraceWipesAllSessionsForUser() {
+  void refreshWithUnknownTokenPastGraceRejectsTokenButKeepsOtherSessions() {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-theft"));
     RefreshToken otherSession = jwt.createRefreshToken(user.getId());
     refreshStore.save(user.getId(), otherSession.jti(), jwt.refreshTtl());
-    // A token the server never has as a live session and never just rotated (no grace marker) —
-    // genuine reuse/theft, so every session for the user is wiped.
-    RefreshToken stolen = jwt.createRefreshToken(user.getId());
+    // A token the server has no live session for and never just rotated (no grace marker) — a stale
+    // or replayed token. It must be rejected, but the user's OTHER live sessions stay intact:
+    // wiping everything over one stale token logged the owner out on every device.
+    RefreshToken stale = jwt.createRefreshToken(user.getId());
 
-    assertThatThrownBy(() -> authService.refresh(stolen.token())).isInstanceOf(UserException.class);
+    assertThatThrownBy(() -> authService.refresh(stale.token())).isInstanceOf(UserException.class);
 
-    assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isFalse();
+    assertThat(refreshStore.exists(user.getId(), otherSession.jti())).isTrue();
   }
 
   @Test
