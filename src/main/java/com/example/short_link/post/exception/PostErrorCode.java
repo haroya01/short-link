@@ -20,7 +20,10 @@ public enum PostErrorCode {
   SERIES_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "series permission denied"),
   COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "comment not found: %s"),
   COMMENT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "comment permission denied"),
-  COMMENT_PARENT_INVALID(HttpStatus.BAD_REQUEST, "parent comment invalid");
+  COMMENT_PARENT_INVALID(HttpStatus.BAD_REQUEST, "parent comment invalid"),
+  WEBHOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "blog webhook not found: %s"),
+  INVALID_WEBHOOK_URL(HttpStatus.BAD_REQUEST, "webhook url must be a public https endpoint"),
+  TOO_MANY_WEBHOOKS(HttpStatus.CONFLICT, "too many blog webhooks (max %s)");
 
   private final HttpStatus status;
   private final String template;

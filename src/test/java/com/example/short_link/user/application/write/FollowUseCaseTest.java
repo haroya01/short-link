@@ -26,12 +26,13 @@ class FollowUseCaseTest {
 
   @Mock private UserRepository userRepository;
   @Mock private FollowRepository followRepository;
+  @Mock private org.springframework.context.ApplicationEventPublisher events;
 
   private FollowUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new FollowUseCase(userRepository, followRepository);
+    useCase = new FollowUseCase(userRepository, followRepository, events);
   }
 
   private UserEntity user(long id, String username) {
@@ -57,6 +58,15 @@ class FollowUseCaseTest {
         org.mockito.ArgumentCaptor.forClass(FollowEntity.class);
     verify(followRepository).save(saved.capture());
     assertThat(saved.getValue().getSourcePostId()).isEqualTo(42L);
+    // A new follow notifies the followed author.
+    org.mockito.ArgumentCaptor<com.example.short_link.common.event.BlogInteractionEvent> evt =
+        org.mockito.ArgumentCaptor.forClass(
+            com.example.short_link.common.event.BlogInteractionEvent.class);
+    verify(events).publishEvent(evt.capture());
+    assertThat(evt.getValue().type())
+        .isEqualTo(com.example.short_link.common.event.BlogInteractionType.FOLLOW);
+    assertThat(evt.getValue().recipientUserId()).isEqualTo(2L);
+    assertThat(evt.getValue().actorUserId()).isEqualTo(9L);
   }
 
   @Test
@@ -70,6 +80,7 @@ class FollowUseCaseTest {
 
     assertThat(status.following()).isTrue();
     verify(followRepository, never()).save(any());
+    verify(events, never()).publishEvent(any());
   }
 
   @Test
