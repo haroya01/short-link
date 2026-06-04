@@ -7,6 +7,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.BlogInteractionEvent;
+import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.post.application.read.PostLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
@@ -16,20 +18,23 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class LikePostUseCaseTest {
 
   @Mock private PostRepository postRepository;
   @Mock private PostLikeRepository postLikeRepository;
+  @Mock private ApplicationEventPublisher events;
 
   private LikePostUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new LikePostUseCase(postRepository, postLikeRepository);
+    useCase = new LikePostUseCase(postRepository, postLikeRepository, events);
   }
 
   private PostEntity post() {
@@ -47,6 +52,24 @@ class LikePostUseCaseTest {
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(1);
     verify(postRepository).incrementLikeCount(42L);
+    // A new like notifies the post's author (owner 7L ≠ liker 9L).
+    ArgumentCaptor<BlogInteractionEvent> evt = ArgumentCaptor.forClass(BlogInteractionEvent.class);
+    verify(events).publishEvent(evt.capture());
+    assertThat(evt.getValue().type()).isEqualTo(BlogInteractionType.LIKE);
+    assertThat(evt.getValue().recipientUserId()).isEqualTo(7L);
+    assertThat(evt.getValue().actorUserId()).isEqualTo(9L);
+    assertThat(evt.getValue().postId()).isEqualTo(42L);
+  }
+
+  @Test
+  void newLikeOnOwnPostDoesNotNotify() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(post())); // owner 7L
+    when(postLikeRepository.insertIgnore(42L, 7L)).thenReturn(1);
+    when(postLikeRepository.countByPostId(42L)).thenReturn(1L);
+
+    useCase.like(7L, 42L);
+
+    verify(events, never()).publishEvent(org.mockito.ArgumentMatchers.any());
   }
 
   @Test
@@ -60,6 +83,7 @@ class LikePostUseCaseTest {
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(3);
     verify(postRepository, never()).incrementLikeCount(anyLong());
+    verify(events, never()).publishEvent(org.mockito.ArgumentMatchers.any());
   }
 
   @Test

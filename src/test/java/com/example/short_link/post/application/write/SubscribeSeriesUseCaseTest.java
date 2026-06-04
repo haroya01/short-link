@@ -25,12 +25,13 @@ class SubscribeSeriesUseCaseTest {
 
   @Mock private SeriesRepository seriesRepository;
   @Mock private SeriesSubscriptionRepository subscriptionRepository;
+  @Mock private org.springframework.context.ApplicationEventPublisher events;
 
   private SubscribeSeriesUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new SubscribeSeriesUseCase(seriesRepository, subscriptionRepository);
+    useCase = new SubscribeSeriesUseCase(seriesRepository, subscriptionRepository, events);
   }
 
   @Test
@@ -44,6 +45,15 @@ class SubscribeSeriesUseCaseTest {
     verify(subscriptionRepository).save(ArgumentMatchers.any(SeriesSubscriptionEntity.class));
     assertThat(status.subscribed()).isTrue();
     assertThat(status.subscriberCount()).isEqualTo(3L);
+    // The series owner (1L ≠ subscriber 9L) is notified.
+    org.mockito.ArgumentCaptor<com.example.short_link.common.event.BlogInteractionEvent> evt =
+        org.mockito.ArgumentCaptor.forClass(
+            com.example.short_link.common.event.BlogInteractionEvent.class);
+    verify(events).publishEvent(evt.capture());
+    assertThat(evt.getValue().type())
+        .isEqualTo(com.example.short_link.common.event.BlogInteractionType.SERIES_SUBSCRIBE);
+    assertThat(evt.getValue().recipientUserId()).isEqualTo(1L);
+    assertThat(evt.getValue().seriesId()).isEqualTo(5L);
   }
 
   @Test
@@ -55,6 +65,7 @@ class SubscribeSeriesUseCaseTest {
     SeriesSubscriptionStatus status = useCase.subscribe(9L, 5L);
 
     verify(subscriptionRepository, never()).save(ArgumentMatchers.any());
+    verify(events, never()).publishEvent(ArgumentMatchers.any());
     assertThat(status.subscribed()).isTrue();
   }
 
