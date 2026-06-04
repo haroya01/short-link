@@ -1,9 +1,11 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.post.domain.PostLinkClick;
 import com.example.short_link.post.domain.repository.PostLinkClickReader;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Instant;
+import java.util.List;
 import org.springframework.stereotype.Repository;
 
 /**
@@ -57,5 +59,25 @@ class PostLinkClickReaderAdapter implements PostLinkClickReader {
                 .setParameter("since", since)
                 .getSingleResult())
         .longValue();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<PostLinkClick> breakdownByPostId(Long postId, int limit) {
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT l.short_code, l.original_url, COUNT(*) AS clicks "
+                    + "FROM click_event c JOIN link l ON l.id = c.link_id "
+                    + "WHERE c.post_id = :postId "
+                    + "GROUP BY l.id, l.short_code, l.original_url "
+                    + "ORDER BY clicks DESC, l.id DESC")
+            .setParameter("postId", postId)
+            .setMaxResults(Math.max(1, limit))
+            .getResultList();
+    return rows.stream()
+        .map(
+            row ->
+                new PostLinkClick((String) row[0], (String) row[1], ((Number) row[2]).longValue()))
+        .toList();
   }
 }

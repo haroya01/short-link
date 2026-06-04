@@ -33,6 +33,7 @@ public class PostAnalyticsQueryService {
 
   private static final int DEFAULT_WINDOW_DAYS = 30;
   private static final int MAX_WINDOW_DAYS = 365;
+  private static final int LINK_BREAKDOWN_LIMIT = 20;
 
   private final PostRepository postRepository;
   private final PostViewEventRepository viewEventRepository;
@@ -93,7 +94,8 @@ public class PostAnalyticsQueryService {
         linkClickReader.countByPostIdSince(postId, since),
         followReader.countBySourcePostId(postId),
         followReader.countBySourcePostIdSince(postId, since),
-        daily);
+        daily,
+        linkClickReader.breakdownByPostId(postId, LINK_BREAKDOWN_LIMIT));
   }
 
   public AuthorAnalyticsOverview overview(Long userId, int days) {

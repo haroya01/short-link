@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.domain.PostLinkClick;
 import java.util.List;
 
 /**
@@ -19,4 +20,5 @@ public record PostAnalyticsView(
     long windowLinkClicks,
     long lifetimeFollows,
     long windowFollows,
-    List<DailyPoint> daily) {}
+    List<DailyPoint> daily,
+    List<PostLinkClick> linkBreakdown) {}
