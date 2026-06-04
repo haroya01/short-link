@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.read.PublicSeriesQueryService;
 import com.example.short_link.post.application.read.SeriesSubscriptionQueryService;
 import com.example.short_link.post.application.read.SeriesSubscriptionStatus;
 import com.example.short_link.post.application.write.SubscribeSeriesUseCase;
@@ -25,6 +26,7 @@ class SeriesSubscriptionControllerTest {
 
   @MockitoBean private SubscribeSeriesUseCase subscribeSeriesUseCase;
   @MockitoBean private SeriesSubscriptionQueryService seriesSubscriptionQueryService;
+  @MockitoBean private PublicSeriesQueryService publicSeriesQueryService;
 
   private static final long USER_ID = 7L;
 
@@ -68,6 +70,21 @@ class SeriesSubscriptionControllerTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.subscriberCount").value(9));
+  }
+
+  @Test
+  void subscribedSeriesReturnsCards() throws Exception {
+    when(publicSeriesQueryService.subscribedSeries(USER_ID)).thenReturn(List.of());
+
+    mvc.perform(
+            get("/api/v1/users/me/subscribed-series")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk());
+  }
+
+  @Test
+  void subscribedSeriesIs401WhenAnonymous() throws Exception {
+    mvc.perform(get("/api/v1/users/me/subscribed-series")).andExpect(status().isUnauthorized());
   }
 
   @Test
