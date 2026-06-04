@@ -6,6 +6,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.geoip.GeoLocation;
+import com.example.short_link.link.application.dto.UserAgentInfo;
+import com.example.short_link.link.classifier.application.AsnResolver;
+import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.GeoIpResolver;
+import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -31,6 +37,10 @@ class RecordPostViewUseCaseTest {
   @Mock private UserRepository userRepository;
   @Mock private PostRepository postRepository;
   @Mock private PostViewEventRepository postViewEventRepository;
+  @Mock private UserAgentClassifier userAgentClassifier;
+  @Mock private GeoIpResolver geoIpResolver;
+  @Mock private AsnResolver asnResolver;
+  @Mock private BotHeuristic botHeuristic;
 
   private RecordPostViewUseCase useCase;
 
@@ -41,6 +51,10 @@ class RecordPostViewUseCaseTest {
             userRepository,
             postRepository,
             postViewEventRepository,
+            userAgentClassifier,
+            geoIpResolver,
+            asnResolver,
+            botHeuristic,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -132,5 +146,44 @@ class RecordPostViewUseCaseTest {
 
     verify(postRepository, never()).save(any());
     verify(postViewEventRepository, never()).save(any());
+  }
+
+  @Test
+  void enrichesEventFromContext() {
+    UserEntity author = author("john");
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(userAgentClassifier.classify(any()))
+        .thenReturn(new UserAgentInfo("mobile", "iOS", "Safari", false, null));
+    when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("KR", "Seoul", "Seoul"));
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false));
+    when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
+
+    useCase.execute(
+        new RecordPostViewCommand("john", "p"),
+        new ViewContext(
+            "https://news.example.com/x",
+            "Mozilla/5.0",
+            "1.2.3.4",
+            "ko-KR",
+            "social",
+            "twitter",
+            null,
+            null,
+            null,
+            null));
+
+    ArgumentCaptor<PostViewEventEntity> event = ArgumentCaptor.forClass(PostViewEventEntity.class);
+    verify(postViewEventRepository).save(event.capture());
+    PostViewEventEntity saved = event.getValue();
+    assertThat(saved.getCountryCode()).isEqualTo("KR");
+    assertThat(saved.getDeviceClass()).isEqualTo("mobile");
+    assertThat(saved.getBrowserName()).isEqualTo("Safari");
+    assertThat(saved.getReferrerHost()).isNotBlank();
+    assertThat(saved.isBot()).isFalse();
+    assertThat(saved.getViewedAt()).isEqualTo(NOW);
   }
 }
