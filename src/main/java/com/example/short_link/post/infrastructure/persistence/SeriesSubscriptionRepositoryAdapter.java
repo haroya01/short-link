@@ -1,7 +1,9 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.SeriesSubscriptionEntity;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -41,5 +43,12 @@ class SeriesSubscriptionRepositoryAdapter implements SeriesSubscriptionRepositor
   @Override
   public List<Long> findSubscribedSeriesIds(Long userId) {
     return jpa.findSubscribedSeriesIds(userId);
+  }
+
+  @Override
+  public List<DailyViewCount> countDailyBySeriesIdSince(Long seriesId, Instant since) {
+    return jpa.countDailyBySeriesIdSince(seriesId, since).stream()
+        .map(r -> new DailyViewCount(r.getDay(), r.getCount()))
+        .toList();
   }
 }
