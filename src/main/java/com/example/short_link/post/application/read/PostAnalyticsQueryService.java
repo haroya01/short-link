@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.PostFollowReader;
 import com.example.short_link.post.domain.repository.PostLinkClickReader;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
@@ -32,11 +33,11 @@ public class PostAnalyticsQueryService {
 
   private static final int DEFAULT_WINDOW_DAYS = 30;
   private static final int MAX_WINDOW_DAYS = 365;
-  private static final int TOP_POSTS = 5;
 
   private final PostRepository postRepository;
   private final PostViewEventRepository viewEventRepository;
   private final PostLinkClickReader linkClickReader;
+  private final PostFollowReader followReader;
   private final Clock clock;
 
   // @Autowired marks the constructor Spring must use — without it the extra (test-only) Clock
@@ -45,18 +46,21 @@ public class PostAnalyticsQueryService {
   public PostAnalyticsQueryService(
       PostRepository postRepository,
       PostViewEventRepository viewEventRepository,
-      PostLinkClickReader linkClickReader) {
-    this(postRepository, viewEventRepository, linkClickReader, Clock.systemUTC());
+      PostLinkClickReader linkClickReader,
+      PostFollowReader followReader) {
+    this(postRepository, viewEventRepository, linkClickReader, followReader, Clock.systemUTC());
   }
 
   PostAnalyticsQueryService(
       PostRepository postRepository,
       PostViewEventRepository viewEventRepository,
       PostLinkClickReader linkClickReader,
+      PostFollowReader followReader,
       Clock clock) {
     this.postRepository = postRepository;
     this.viewEventRepository = viewEventRepository;
     this.linkClickReader = linkClickReader;
+    this.followReader = followReader;
     this.clock = clock;
   }
 
@@ -87,6 +91,8 @@ public class PostAnalyticsQueryService {
         windowViews,
         linkClickReader.countByPostId(postId),
         linkClickReader.countByPostIdSince(postId, since),
+        followReader.countBySourcePostId(postId),
+        followReader.countBySourcePostIdSince(postId, since),
         daily);
   }
 
@@ -102,14 +108,22 @@ public class PostAnalyticsQueryService {
     long lifetimeViews = posts.stream().mapToLong(PostEntity::getViewCount).sum();
     long lifetimeLikes = posts.stream().mapToLong(PostEntity::getLikeCount).sum();
     long published = posts.stream().filter(PostEntity::isPublished).count();
+    // Every post gets its own row (per-post breakdown), with the follows it drove pulled in one
+    // grouped query instead of N — sorted by lifetime views so the strongest posts lead.
+    Map<Long, Long> followsByPost =
+        followReader.countBySourcePostIdIn(posts.stream().map(PostEntity::getId).toList());
     List<TopPostView> top =
         posts.stream()
             .sorted(Comparator.comparingLong(PostEntity::getViewCount).reversed())
-            .limit(TOP_POSTS)
             .map(
                 p ->
                     new TopPostView(
-                        p.getId(), p.getSlug(), p.getTitle(), p.getViewCount(), p.getLikeCount()))
+                        p.getId(),
+                        p.getSlug(),
+                        p.getTitle(),
+                        p.getViewCount(),
+                        p.getLikeCount(),
+                        followsByPost.getOrDefault(p.getId(), 0L)))
             .toList();
     return new AuthorAnalyticsOverview(
         posts.size(),
@@ -120,6 +134,8 @@ public class PostAnalyticsQueryService {
         windowViews,
         linkClickReader.countByUserId(userId),
         linkClickReader.countByUserIdSince(userId, startOfDay(from)),
+        followReader.countByUserId(userId),
+        followReader.countByUserIdSince(userId, startOfDay(from)),
         daily,
         top);
   }

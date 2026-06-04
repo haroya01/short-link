@@ -46,13 +46,27 @@ class FollowControllerTest {
 
   @Test
   void followReturnsUpdatedStatus() throws Exception {
-    when(followUseCase.follow(USER_ID, "bob")).thenReturn(new FollowStatus(true, 1L, 0L));
+    when(followUseCase.follow(USER_ID, "bob", null)).thenReturn(new FollowStatus(true, 1L, 0L));
 
     mvc.perform(
             put("/api/v1/users/bob/follow")
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.following").value(true));
+  }
+
+  @Test
+  void followAttributesSourcePost() throws Exception {
+    when(followUseCase.follow(USER_ID, "bob", 42L)).thenReturn(new FollowStatus(true, 1L, 0L));
+
+    mvc.perform(
+            put("/api/v1/users/bob/follow")
+                .param("sourcePostId", "42")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.following").value(true));
+
+    org.mockito.Mockito.verify(followUseCase).follow(USER_ID, "bob", 42L);
   }
 
   @Test
@@ -68,7 +82,7 @@ class FollowControllerTest {
 
   @Test
   void followingYourselfIs400() throws Exception {
-    when(followUseCase.follow(USER_ID, "me"))
+    when(followUseCase.follow(USER_ID, "me", null))
         .thenThrow(new UserException(UserErrorCode.CANNOT_FOLLOW_SELF));
 
     mvc.perform(

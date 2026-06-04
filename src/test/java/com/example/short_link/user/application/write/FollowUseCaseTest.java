@@ -48,11 +48,15 @@ class FollowUseCaseTest {
     when(followRepository.countByFollowingId(2L)).thenReturn(1L);
     when(followRepository.countByFollowerId(2L)).thenReturn(0L);
 
-    FollowStatus status = useCase.follow(9L, "bob");
+    FollowStatus status = useCase.follow(9L, "bob", 42L);
 
     assertThat(status.following()).isTrue();
     assertThat(status.followerCount()).isEqualTo(1);
-    verify(followRepository).save(any(FollowEntity.class));
+    // The new edge carries the post the follow came from — drives the per-post follow metric.
+    org.mockito.ArgumentCaptor<FollowEntity> saved =
+        org.mockito.ArgumentCaptor.forClass(FollowEntity.class);
+    verify(followRepository).save(saved.capture());
+    assertThat(saved.getValue().getSourcePostId()).isEqualTo(42L);
   }
 
   @Test
@@ -62,7 +66,7 @@ class FollowUseCaseTest {
     when(followRepository.countByFollowingId(2L)).thenReturn(1L);
     when(followRepository.countByFollowerId(2L)).thenReturn(0L);
 
-    FollowStatus status = useCase.follow(9L, "bob");
+    FollowStatus status = useCase.follow(9L, "bob", null);
 
     assertThat(status.following()).isTrue();
     verify(followRepository, never()).save(any());
@@ -72,7 +76,7 @@ class FollowUseCaseTest {
   void followingYourselfIsRejected() {
     when(userRepository.findByUsername("me")).thenReturn(Optional.of(user(9L, "me")));
 
-    assertThatThrownBy(() -> useCase.follow(9L, "me")).isInstanceOf(UserException.class);
+    assertThatThrownBy(() -> useCase.follow(9L, "me", null)).isInstanceOf(UserException.class);
     verify(followRepository, never()).save(any());
   }
 
@@ -80,7 +84,7 @@ class FollowUseCaseTest {
   void followingUnknownUserThrows() {
     when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> useCase.follow(9L, "ghost")).isInstanceOf(UserException.class);
+    assertThatThrownBy(() -> useCase.follow(9L, "ghost", null)).isInstanceOf(UserException.class);
   }
 
   @Test

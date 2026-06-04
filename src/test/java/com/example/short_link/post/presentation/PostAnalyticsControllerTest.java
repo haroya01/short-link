@@ -55,8 +55,10 @@ class PostAnalyticsControllerTest {
                 9,
                 40,
                 6,
+                8,
+                2,
                 List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 9)),
-                List.of(new TopPostView(1L, "a", "A", 100, 10))));
+                List.of(new TopPostView(1L, "a", "A", 100, 10, 7))));
 
     mvc.perform(
             get("/api/v1/posts/analytics/overview?days=30")
@@ -66,7 +68,10 @@ class PostAnalyticsControllerTest {
         .andExpect(jsonPath("$.publishedPosts").value(2))
         .andExpect(jsonPath("$.lifetimeViews").value(155))
         .andExpect(jsonPath("$.lifetimeLinkClicks").value(40))
-        .andExpect(jsonPath("$.topPosts[0].slug").value("a"));
+        .andExpect(jsonPath("$.lifetimeFollows").value(8))
+        .andExpect(jsonPath("$.windowFollows").value(2))
+        .andExpect(jsonPath("$.topPosts[0].slug").value("a"))
+        .andExpect(jsonPath("$.topPosts[0].followsGained").value(7));
   }
 
   @Test
@@ -84,6 +89,8 @@ class PostAnalyticsControllerTest {
                 7,
                 30,
                 9,
+                5,
+                2,
                 List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 5))));
 
     mvc.perform(
@@ -95,6 +102,8 @@ class PostAnalyticsControllerTest {
         .andExpect(jsonPath("$.windowViews").value(7))
         .andExpect(jsonPath("$.lifetimeLinkClicks").value(30))
         .andExpect(jsonPath("$.windowLinkClicks").value(9))
+        .andExpect(jsonPath("$.lifetimeFollows").value(5))
+        .andExpect(jsonPath("$.windowFollows").value(2))
         .andExpect(jsonPath("$.daily[0].views").value(5));
   }
 
