@@ -17,7 +17,8 @@ public record PublicPostListItem(
     String languageTag,
     List<String> tags,
     long likeCount,
-    Instant publishedAt) {
+    Instant publishedAt,
+    boolean pinned) {
 
   public static PublicPostListItem from(PostEntity post) {
     return new PublicPostListItem(
@@ -29,6 +30,7 @@ public record PublicPostListItem(
         post.getLanguageTag(),
         List.copyOf(post.getTags()),
         post.getLikeCount(),
-        post.getPublishedAt());
+        post.getPublishedAt(),
+        post.getPinOrder() != null);
   }
 }

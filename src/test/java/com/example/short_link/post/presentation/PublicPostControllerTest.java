@@ -50,9 +50,10 @@ class PublicPostControllerTest {
                     "ko",
                     List.of("spring", "jpa"),
                     0L,
-                    NOW),
+                    NOW,
+                    true),
                 new PublicPostListItem(
-                    2L, "post-2", "Post 2", null, null, "ja", List.of(), 0L, NOW)));
+                    2L, "post-2", "Post 2", null, null, "ja", List.of(), 0L, NOW, false)));
     when(publicPostQueryService.listPublicPosts("john")).thenReturn(response);
 
     mvc.perform(get("/api/v1/public/profiles/john/posts"))
@@ -60,7 +61,9 @@ class PublicPostControllerTest {
         .andExpect(jsonPath("$.author.username").value("john"))
         .andExpect(jsonPath("$.posts[0].slug").value("post-1"))
         .andExpect(jsonPath("$.posts[0].tags[0]").value("spring"))
-        .andExpect(jsonPath("$.posts[1].slug").value("post-2"));
+        .andExpect(jsonPath("$.posts[0].pinned").value(true))
+        .andExpect(jsonPath("$.posts[1].slug").value("post-2"))
+        .andExpect(jsonPath("$.posts[1].pinned").value(false));
   }
 
   @Test
@@ -79,7 +82,7 @@ class PublicPostControllerTest {
         new PublicPostDetail(
             new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
             new PublicPostListItem(
-                10L, "first-post", "First", "Excerpt", null, "ko", List.of(), 0L, NOW),
+                10L, "first-post", "First", "Excerpt", null, "ko", List.of(), 0L, NOW, false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)),
             null);
     when(publicPostQueryService.findPublicPost("john", "first-post")).thenReturn(detail);
