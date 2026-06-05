@@ -319,5 +319,9 @@ class PublicPostQueryServiceTest {
     assertThat(response.posts())
         .extracting(PublicPostListItem::slug)
         .containsExactly("pinned", "newest", "oldest");
+    // The pinned flag rides on each item so the public blog can split a 대표글 section.
+    assertThat(response.posts())
+        .extracting(PublicPostListItem::pinned)
+        .containsExactly(true, false, false);
   }
 }
