@@ -12,7 +12,8 @@ public record MeResponse(
     Instant createdAt,
     String tier,
     Instant subscriptionCurrentPeriodEnd,
-    String username) {
+    String username,
+    String avatarUrl) {
 
   public static MeResponse from(UserEntity u) {
     return new MeResponse(
@@ -24,6 +25,7 @@ public record MeResponse(
         u.getCreatedAt(),
         u.getTier().name(),
         u.getSubscriptionCurrentPeriodEnd(),
-        u.getUsername());
+        u.getUsername(),
+        u.getAvatarUrl());
   }
 }
