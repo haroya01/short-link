@@ -32,7 +32,9 @@ class UserControllerTest {
 
   @Test
   void returnsCurrentUser() throws Exception {
-    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-me"));
+    UserEntity user = new UserEntity("u@x.com", "google", "g-me");
+    user.updateAvatar("https://cdn.kurl.me/avatars/1/a.png", "avatars/1/a.png");
+    userRepository.save(user);
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + token))
@@ -40,7 +42,8 @@ class UserControllerTest {
         .andExpect(jsonPath("$.id").value(user.getId()))
         .andExpect(jsonPath("$.email").value("u@x.com"))
         .andExpect(jsonPath("$.role").value("USER"))
-        .andExpect(jsonPath("$.provider").value("google"));
+        .andExpect(jsonPath("$.provider").value("google"))
+        .andExpect(jsonPath("$.avatarUrl").value("https://cdn.kurl.me/avatars/1/a.png"));
   }
 
   @Test
