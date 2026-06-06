@@ -4,10 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.CommentEntity;
+import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,12 +23,13 @@ class PostCommentQueryServiceTest {
 
   @Mock private CommentRepository commentRepository;
   @Mock private UserRepository userRepository;
+  @Mock private PostRepository postRepository;
 
   private PostCommentQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new PostCommentQueryService(commentRepository, userRepository);
+    service = new PostCommentQueryService(commentRepository, userRepository, postRepository);
   }
 
   private UserEntity user(long id, String username) {
@@ -35,8 +39,16 @@ class PostCommentQueryServiceTest {
     return u;
   }
 
+  private PostEntity publishedPost(long id) {
+    PostEntity p = new PostEntity(1L, "slug", "Title", "ko");
+    p.publish();
+    ReflectionTestUtils.setField(p, "id", id);
+    return p;
+  }
+
   @Test
   void listsCommentsWithAuthorsAndParentId() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost(42L)));
     CommentEntity top = new CommentEntity(42L, 1L, null, "first");
     CommentEntity reply = new CommentEntity(42L, 2L, 10L, "reply");
     when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(42L)).thenReturn(List.of(top, reply));
@@ -50,5 +62,11 @@ class PostCommentQueryServiceTest {
     assertThat(views.get(0).body()).isEqualTo("first");
     assertThat(views.get(1).parentId()).isEqualTo(10L);
     assertThat(views.get(1).author().username()).isEqualTo("bob");
+  }
+
+  @Test
+  void hidesCommentsOfUnpublishedOrMissingPost() {
+    when(postRepository.findById(42L)).thenReturn(Optional.empty());
+    assertThat(service.listForPost(42L)).isEmpty();
   }
 }

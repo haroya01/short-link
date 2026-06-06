@@ -50,6 +50,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
 
+  List<PostEntity> findAllBySeriesIdInOrderBySeriesOrderAsc(Collection<Long> seriesIds);
+
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 

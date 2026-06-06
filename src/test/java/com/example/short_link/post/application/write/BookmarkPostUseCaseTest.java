@@ -36,23 +36,23 @@ class BookmarkPostUseCaseTest {
   @Test
   void bookmarksWhenNew() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(new PostEntity(7L, "s", "T", "ko")));
-    when(postBookmarkRepository.existsByPostIdAndUserId(42L, 9L)).thenReturn(false);
+    when(postBookmarkRepository.insertIgnore(42L, 9L)).thenReturn(1);
 
     PostBookmarkStatus status = useCase.bookmark(9L, 42L);
 
     assertThat(status.bookmarked()).isTrue();
-    verify(postBookmarkRepository).save(any(PostBookmarkEntity.class));
+    verify(postBookmarkRepository).insertIgnore(42L, 9L);
   }
 
   @Test
   void bookmarkIsIdempotent() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(new PostEntity(7L, "s", "T", "ko")));
-    when(postBookmarkRepository.existsByPostIdAndUserId(42L, 9L)).thenReturn(true);
+    when(postBookmarkRepository.insertIgnore(42L, 9L)).thenReturn(0); // already bookmarked → no-op
 
     PostBookmarkStatus status = useCase.bookmark(9L, 42L);
 
     assertThat(status.bookmarked()).isTrue();
-    verify(postBookmarkRepository, never()).save(any());
+    verify(postBookmarkRepository).insertIgnore(42L, 9L);
   }
 
   @Test
@@ -60,7 +60,7 @@ class BookmarkPostUseCaseTest {
     when(postRepository.findById(99L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> useCase.bookmark(9L, 99L)).isInstanceOf(PostException.class);
-    verify(postBookmarkRepository, never()).save(any());
+    verify(postBookmarkRepository, never()).insertIgnore(any(), any());
   }
 
   @Test

@@ -17,4 +17,7 @@ public interface CommentRepository {
 
   /** Replies to a top-level comment — used to cascade on delete. */
   List<CommentEntity> findAllByParentId(Long parentId);
+
+  /** Purge every comment on a post — used when the post is permanently deleted. */
+  int deleteAllByPostId(Long postId);
 }

@@ -49,6 +49,13 @@ public interface PostRepository {
 
   List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
 
+  /**
+   * All member posts across many series in one query — the batch form of {@link
+   * #findAllBySeriesIdOrderBySeriesOrderAsc} for the series-analytics list (group by seriesId in
+   * memory). Series order is preserved within each series.
+   */
+  List<PostEntity> findAllBySeriesIdInOrderBySeriesOrderAsc(Collection<Long> seriesIds);
+
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 

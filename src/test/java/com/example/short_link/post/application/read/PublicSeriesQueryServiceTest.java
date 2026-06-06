@@ -126,12 +126,11 @@ class PublicSeriesQueryServiceTest {
     ReflectionTestUtils.setField(empty, "id", 2L);
     when(seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId()))
         .thenReturn(List.of(withPosts, empty));
-    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-            withPosts.getId(), PostStatus.PUBLISHED))
-        .thenReturn(List.of(new PostEntity(author.getId(), "p", "P", "ko")));
-    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-            empty.getId(), PostStatus.PUBLISHED))
-        .thenReturn(List.of());
+    PostEntity member = new PostEntity(author.getId(), "p", "P", "ko");
+    member.publish();
+    ReflectionTestUtils.setField(member, "seriesId", 1L);
+    when(postRepository.findAllBySeriesIdInOrderBySeriesOrderAsc(List.of(1L, 2L)))
+        .thenReturn(List.of(member));
 
     PublicSeriesListView view = service.listPublicSeries("john");
 

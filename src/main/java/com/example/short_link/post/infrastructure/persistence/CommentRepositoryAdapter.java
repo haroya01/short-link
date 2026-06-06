@@ -37,4 +37,9 @@ class CommentRepositoryAdapter implements CommentRepository {
   public List<CommentEntity> findAllByParentId(Long parentId) {
     return jpa.findAllByParentId(parentId);
   }
+
+  @Override
+  public int deleteAllByPostId(Long postId) {
+    return jpa.deleteAllByPostId(postId);
+  }
 }
