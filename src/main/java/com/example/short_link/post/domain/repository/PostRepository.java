@@ -64,6 +64,9 @@ public interface PostRepository {
 
   long countPublished();
 
+  /** Count of an author's PUBLISHED posts — backs the public profile's blog entry-point flag. */
+  long countPublishedByUserId(Long userId);
+
   /** Published posts carrying a tag (case-insensitive), newest first. */
   List<PostEntity> findPublishedByTag(String tag, int page, int size);
 

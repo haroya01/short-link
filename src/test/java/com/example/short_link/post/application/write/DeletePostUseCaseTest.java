@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -24,6 +25,7 @@ class DeletePostUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private PostBlockRepository postBlockRepository;
   @Mock private PostRevisionRepository postRevisionRepository;
+  @Mock private ProfileCacheInvalidator cacheEviction;
 
   private DeletePostUseCase useCase;
 
@@ -31,7 +33,11 @@ class DeletePostUseCaseTest {
   void setUp() {
     useCase =
         new DeletePostUseCase(
-            postOwnership, postRepository, postBlockRepository, postRevisionRepository);
+            postOwnership,
+            postRepository,
+            postBlockRepository,
+            postRevisionRepository,
+            cacheEviction);
   }
 
   @Test

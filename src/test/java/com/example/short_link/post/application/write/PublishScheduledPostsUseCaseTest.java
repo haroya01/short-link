@@ -7,6 +7,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -22,9 +23,10 @@ class PublishScheduledPostsUseCaseTest {
 
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionCapture postRevisionCapture;
+  @Mock private ProfileCacheInvalidator cacheEviction;
 
   private PublishScheduledPostsUseCase useCase() {
-    return new PublishScheduledPostsUseCase(postRepository, postRevisionCapture);
+    return new PublishScheduledPostsUseCase(postRepository, postRevisionCapture, cacheEviction);
   }
 
   private static PostEntity scheduledPost(String slug) {

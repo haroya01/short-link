@@ -1,5 +1,6 @@
 package com.example.short_link.profile.application.read;
 
+import com.example.short_link.common.post.PublishedPostCountReader;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -38,6 +39,7 @@ public class ProfileQueryService {
   private final ClickTotalsReadRepository clickRepository;
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final ProfileBlockRepository profileBlockRepository;
+  private final PublishedPostCountReader postCountReader;
   private final ShortLinkUrlBuilder urlBuilder;
   private final PublicHandleReader publicHandles;
   private final String publicProfileBaseUrl;
@@ -48,6 +50,7 @@ public class ProfileQueryService {
       ClickTotalsReadRepository clickRepository,
       UsernameHistoryRepository usernameHistoryRepository,
       ProfileBlockRepository profileBlockRepository,
+      PublishedPostCountReader postCountReader,
       ShortLinkUrlBuilder urlBuilder,
       PublicHandleReader publicHandles,
       @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
@@ -57,6 +60,7 @@ public class ProfileQueryService {
     this.clickRepository = clickRepository;
     this.usernameHistoryRepository = usernameHistoryRepository;
     this.profileBlockRepository = profileBlockRepository;
+    this.postCountReader = postCountReader;
     this.urlBuilder = urlBuilder;
     this.publicHandles = publicHandles;
     this.publicProfileBaseUrl = publicProfileBaseUrl;
@@ -131,6 +135,7 @@ public class ProfileQueryService {
         bi++;
       }
     }
+    long publishedPostCount = postCountReader.countPublishedByUserId(user.getId());
     return new PublicProfile(
         user.getUsername(),
         user.getBio(),
@@ -138,7 +143,8 @@ public class ProfileQueryService {
         user.getAvatarUrl(),
         user.getBannerUrl(),
         Socials.toList(user.getSocials()),
-        out);
+        out,
+        publishedPostCount);
   }
 
   public PublicHandlesPage publicHandlesPage(int page, int size) {

@@ -11,7 +11,8 @@ public record PublicProfile(
     String avatarUrl,
     String bannerUrl,
     List<Social> socials,
-    List<ProfileEntry> entries) {
+    List<ProfileEntry> entries,
+    long publishedPostCount) {
 
   /**
    * Single shape for the rendered public profile feed. The {@code kind} discriminator drives

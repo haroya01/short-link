@@ -40,6 +40,11 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   long countByUserIdAndStatusIn(Long userId, Collection<PostStatus> statuses);
 
+  // Single-status count (PUBLISHED) for the public profile's blog flag — resolved index-only by
+  // idx_posts_user_status (user_id, status). Distinct from the Collection version, which spans
+  // PUBLISHED+UNPUBLISHED for analytics and would over-count here.
+  long countByUserIdAndStatus(Long userId, PostStatus status);
+
   List<PostEntity> findAllByStatusAndScheduledAtLessThanEqual(
       PostStatus status, Instant scheduledAt);
 

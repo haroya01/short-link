@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.post.PublishedPostCountReader;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
@@ -39,6 +40,7 @@ class ProfileQueryServiceTest {
   @Mock private ClickTotalsReadRepository clickRepository;
   @Mock private UsernameHistoryRepository usernameHistoryRepository;
   @Mock private ProfileBlockRepository profileBlockRepository;
+  @Mock private PublishedPostCountReader postCountReader;
   @Mock private ShortLinkUrlBuilder urlBuilder;
   @Mock private PublicHandleReader publicHandles;
 
@@ -53,6 +55,7 @@ class ProfileQueryServiceTest {
             clickRepository,
             usernameHistoryRepository,
             profileBlockRepository,
+            postCountReader,
             urlBuilder,
             publicHandles,
             "https://kurl.app/u/");
