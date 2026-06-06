@@ -168,15 +168,35 @@ public class PublicSeriesQueryService {
 
   public PublicSeriesListView listPublicSeries(String username) {
     UserEntity author = resolveAuthor(username);
+    List<SeriesEntity> all = seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId());
+    // 시리즈별 발행 멤버글을 한 번에 모아 글 수·태그를 메모리 집계 (시리즈마다 따로 조회하던 N+1 제거).
+    Map<Long, List<PostEntity>> publishedBySeries =
+        postRepository
+            .findAllBySeriesIdInOrderBySeriesOrderAsc(
+                all.stream().map(SeriesEntity::getId).toList())
+            .stream()
+            .filter(p -> p.getStatus() == PostStatus.PUBLISHED)
+            .collect(Collectors.groupingBy(PostEntity::getSeriesId));
     List<PublicSeriesListItem> series =
-        seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId()).stream()
+        all.stream()
             .map(
-                s ->
-                    new PublicSeriesListItem(
-                        s.getId(), s.getSlug(), s.getTitle(), publishedCount(s.getId())))
+                s -> {
+                  List<PostEntity> published = publishedBySeries.getOrDefault(s.getId(), List.of());
+                  return new PublicSeriesListItem(
+                      s.getId(),
+                      s.getSlug(),
+                      s.getTitle(),
+                      published.size(),
+                      distinctTags(published));
+                })
             .filter(s -> s.postCount() > 0)
             .toList();
     return new PublicSeriesListView(PublicAuthorView.from(author), series);
+  }
+
+  /** 발행 멤버글 태그를 등장 순서 보존하며 중복 제거. */
+  private static List<String> distinctTags(List<PostEntity> posts) {
+    return posts.stream().flatMap(p -> p.getTags().stream()).distinct().toList();
   }
 
   public PublicSeriesDetail findPublicSeries(String username, String slug) {
@@ -185,22 +205,19 @@ public class PublicSeriesQueryService {
         seriesRepository
             .findByUserIdAndSlug(author.getId(), slug)
             .orElseThrow(() -> new PostException(PostErrorCode.SERIES_NOT_FOUND, slug));
-    List<PublicPostListItem> posts =
-        postRepository
-            .findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(series.getId(), PostStatus.PUBLISHED)
-            .stream()
-            .map(PublicPostListItem::from)
-            .toList();
+    List<PostEntity> members =
+        postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
+            series.getId(), PostStatus.PUBLISHED);
+    List<PublicPostListItem> posts = members.stream().map(PublicPostListItem::from).toList();
     return new PublicSeriesDetail(
         PublicAuthorView.from(author),
-        new PublicSeriesListItem(series.getId(), series.getSlug(), series.getTitle(), posts.size()),
+        new PublicSeriesListItem(
+            series.getId(),
+            series.getSlug(),
+            series.getTitle(),
+            posts.size(),
+            distinctTags(members)),
         posts);
-  }
-
-  private int publishedCount(Long seriesId) {
-    return postRepository
-        .findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, PostStatus.PUBLISHED)
-        .size();
   }
 
   private UserEntity resolveAuthor(String username) {

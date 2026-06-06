@@ -43,4 +43,14 @@ class PostBookmarkRepositoryAdapter implements PostBookmarkRepository {
   public void delete(PostBookmarkEntity bookmark) {
     jpa.delete(bookmark);
   }
+
+  @Override
+  public int insertIgnore(Long postId, Long userId) {
+    return jpa.insertIgnore(postId, userId);
+  }
+
+  @Override
+  public int deleteAllByPostId(Long postId) {
+    return jpa.deleteAllByPostId(postId);
+  }
 }

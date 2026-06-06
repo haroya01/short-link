@@ -1,7 +1,6 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.post.application.read.PostBookmarkStatus;
-import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -21,9 +20,9 @@ public class BookmarkPostUseCase {
   @Transactional
   public PostBookmarkStatus bookmark(Long userId, Long postId) {
     requirePost(postId);
-    if (!postBookmarkRepository.existsByPostIdAndUserId(postId, userId)) {
-      postBookmarkRepository.save(new PostBookmarkEntity(postId, userId));
-    }
+    // INSERT IGNORE: idempotent + race-safe — a concurrent duplicate becomes a no-op instead of a
+    // unique-key violation.
+    postBookmarkRepository.insertIgnore(postId, userId);
     return new PostBookmarkStatus(true);
   }
 

@@ -113,6 +113,14 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> findAllBySeriesIdInOrderBySeriesOrderAsc(Collection<Long> seriesIds) {
+    if (seriesIds.isEmpty()) {
+      return List.of();
+    }
+    return jpa.findAllBySeriesIdInOrderBySeriesOrderAsc(seriesIds);
+  }
+
+  @Override
   public List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status) {
     return jpa.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, status);

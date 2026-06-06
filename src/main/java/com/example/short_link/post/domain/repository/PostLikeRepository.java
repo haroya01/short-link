@@ -22,4 +22,7 @@ public interface PostLikeRepository {
 
   /** Delete the user's like if present; returns the number of rows removed (0 or 1). */
   int deleteByPostIdAndUserId(Long postId, Long userId);
+
+  /** Purge every like on a post — used when the post is permanently deleted. */
+  int deleteAllByPostId(Long postId);
 }

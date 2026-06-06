@@ -39,7 +39,7 @@ class PublicSeriesControllerTest {
         .thenReturn(
             new PublicSeriesListView(
                 new PublicAuthorView(7L, "john", "Bio", null),
-                List.of(new PublicSeriesListItem(11L, "guide", "Guide", 3))));
+                List.of(new PublicSeriesListItem(11L, "guide", "Guide", 3, List.of("tag")))));
 
     mvc.perform(get("/api/v1/public/profiles/john/series"))
         .andExpect(status().isOk())
@@ -54,7 +54,7 @@ class PublicSeriesControllerTest {
         .thenReturn(
             new PublicSeriesDetail(
                 new PublicAuthorView(7L, "john", "Bio", null),
-                new PublicSeriesListItem(11L, "guide", "Guide", 1),
+                new PublicSeriesListItem(11L, "guide", "Guide", 1, List.of()),
                 List.of(
                     new PublicPostListItem(
                         1L, "intro", "Intro", null, null, "ko", List.of(), 0L, NOW, null, false))));
