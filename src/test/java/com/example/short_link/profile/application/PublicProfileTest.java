@@ -109,7 +109,7 @@ class PublicProfileTest {
   @Test
   void publicProfileRecordExposesFields() {
     PublicProfile p =
-        new PublicProfile("alice", "bio", "dark", "a.png", "b.png", List.of(), List.of());
+        new PublicProfile("alice", "bio", "dark", "a.png", "b.png", List.of(), List.of(), 3L);
     assertThat(p.username()).isEqualTo("alice");
     assertThat(p.bio()).isEqualTo("bio");
     assertThat(p.theme()).isEqualTo("dark");
@@ -117,5 +117,6 @@ class PublicProfileTest {
     assertThat(p.bannerUrl()).isEqualTo("b.png");
     assertThat(p.socials()).isEmpty();
     assertThat(p.entries()).isEmpty();
+    assertThat(p.publishedPostCount()).isEqualTo(3L);
   }
 }

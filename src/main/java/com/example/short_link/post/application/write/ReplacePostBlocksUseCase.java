@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.post.domain.PostBlockEntity;
+import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +18,11 @@ public class ReplacePostBlocksUseCase {
 
   @Transactional
   public List<PostBlockEntity> execute(ReplacePostBlocksCommand cmd) {
-    postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    // Stamp the edit on the (managed) post — a body replace otherwise never touches the posts row,
+    // so without this a content-only edit wouldn't move last_edited_at. Hibernate dirty-checks the
+    // managed entity and flushes the stamp at commit (no explicit save needed).
+    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    post.markEdited();
     postBlockRepository.deleteAllByPostId(cmd.postId());
     if (cmd.blocks().isEmpty()) {
       return List.of();

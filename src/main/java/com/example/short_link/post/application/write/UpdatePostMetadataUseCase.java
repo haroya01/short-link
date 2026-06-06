@@ -46,6 +46,7 @@ public class UpdatePostMetadataUseCase {
       post.updateTags(cmd.tags());
     }
 
+    post.markEdited();
     return postRepository.save(post);
   }
 }
