@@ -23,7 +23,11 @@ public enum PostErrorCode {
   COMMENT_PARENT_INVALID(HttpStatus.BAD_REQUEST, "parent comment invalid"),
   WEBHOOK_NOT_FOUND(HttpStatus.NOT_FOUND, "blog webhook not found: %s"),
   INVALID_WEBHOOK_URL(HttpStatus.BAD_REQUEST, "webhook url must be a public https endpoint"),
-  TOO_MANY_WEBHOOKS(HttpStatus.CONFLICT, "too many blog webhooks (max %s)");
+  TOO_MANY_WEBHOOKS(HttpStatus.CONFLICT, "too many blog webhooks (max %s)"),
+  BOOKMARK_FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "bookmark folder not found: %s"),
+  BOOKMARK_FOLDER_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "a folder name is required"),
+  BOOKMARK_FOLDER_NAME_CONFLICT(HttpStatus.CONFLICT, "bookmark folder name already used: %s"),
+  BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "bookmark not found for post: %s");
 
   private final HttpStatus status;
   private final String template;

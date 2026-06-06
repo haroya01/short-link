@@ -32,7 +32,11 @@ class PublicFeedQueryServiceTest {
   void setUp() {
     service =
         new PublicFeedQueryService(
-            postRepository, userRepository, followRepository, seriesSubscriptionRepository);
+            postRepository,
+            userRepository,
+            followRepository,
+            seriesSubscriptionRepository,
+            new PostFeedItemAssembler(userRepository));
   }
 
   private UserEntity user(long id, String username) {

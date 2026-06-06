@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.post.domain.FolderBookmarkCount;
 import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
 import java.util.List;
@@ -26,6 +27,11 @@ class PostBookmarkRepositoryAdapter implements PostBookmarkRepository {
   @Override
   public List<PostBookmarkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId) {
     return jpa.findAllByUserIdOrderByCreatedAtDesc(userId);
+  }
+
+  @Override
+  public List<FolderBookmarkCount> countByFolder(Long userId) {
+    return jpa.countByFolder(userId);
   }
 
   @Override

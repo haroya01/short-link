@@ -12,39 +12,38 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One user's bookmark on a post (reading list). (post_id, user_id) is unique. */
+/**
+ * A user-made folder over their bookmarks ("스마트 셸프"). A bookmark with {@code folder_id = NULL} is
+ * unfiled (auto-grouped by tag in the UI); filing it points it at one of these. Folder names are
+ * unique per user.
+ */
 @Entity
 @Table(
-    name = "post_bookmark",
+    name = "bookmark_folder",
     uniqueConstraints =
         @UniqueConstraint(
-            name = "uk_post_bookmark_post_user",
-            columnNames = {"post_id", "user_id"}))
+            name = "uk_bookmark_folder_user_name",
+            columnNames = {"user_id", "name"}))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class PostBookmarkEntity extends BaseCreatedEntity {
+public class BookmarkFolderEntity extends BaseCreatedEntity {
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "post_id", nullable = false)
-  private Long postId;
-
   @Column(name = "user_id", nullable = false)
   private Long userId;
 
-  /** Which folder this bookmark is filed under. NULL = unfiled (auto-grouped by tag in the UI). */
-  @Column(name = "folder_id")
-  private Long folderId;
+  @Column(nullable = false)
+  private String name;
 
-  public PostBookmarkEntity(Long postId, Long userId) {
-    this.postId = postId;
+  public BookmarkFolderEntity(Long userId, String name) {
     this.userId = userId;
+    this.name = name;
   }
 
-  /** File this bookmark under {@code folderId}, or NULL to unfile it. */
-  public void moveToFolder(Long folderId) {
-    this.folderId = folderId;
+  public void rename(String name) {
+    this.name = name;
   }
 }
