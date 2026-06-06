@@ -29,7 +29,9 @@ class PostLikeQueryServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new PostLikeQueryService(postRepository, postLikeRepository, userRepository);
+    service =
+        new PostLikeQueryService(
+            postRepository, postLikeRepository, new PostFeedItemAssembler(userRepository));
   }
 
   private PostEntity publishedPost(long id, long authorId, String slug) {
@@ -72,10 +74,10 @@ class PostLikeQueryServiceTest {
     when(postRepository.findAllByIdIn(List.of(1L, 2L, 3L))).thenReturn(List.of(p1, p2, p3));
     when(userRepository.findAllByIdIn(List.of(100L))).thenReturn(List.of(author(100L, "alice")));
 
-    List<LikedPostView> list = service.likedPosts(9L);
+    List<PublicFeedItem> list = service.likedPosts(9L);
 
-    assertThat(list).extracting(LikedPostView::id).containsExactly(1L, 3L);
-    assertThat(list.get(0).username()).isEqualTo("alice");
+    assertThat(list).extracting(PublicFeedItem::id).containsExactly(1L, 3L);
+    assertThat(list.get(0).author().username()).isEqualTo("alice");
     assertThat(list.get(0).slug()).isEqualTo("a");
   }
 

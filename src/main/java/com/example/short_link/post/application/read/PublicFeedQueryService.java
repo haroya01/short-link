@@ -35,6 +35,7 @@ public class PublicFeedQueryService {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
   private final SeriesSubscriptionRepository seriesSubscriptionRepository;
+  private final PostFeedItemAssembler feedItemAssembler;
 
   public PublicFeedView feed(String sort, int page, int size) {
     List<PostEntity> posts =
@@ -114,7 +115,8 @@ public class PublicFeedQueryService {
   public List<TrendingTagSection> trendingByTag(int tagLimit, int perTag) {
     List<TrendingTagSection> sections = new ArrayList<>();
     for (TagCount tag : postRepository.findPopularTags(tagLimit)) {
-      List<PublicFeedItem> posts = toItems(postRepository.findPublishedByTag(tag.tag(), 0, perTag));
+      List<PublicFeedItem> posts =
+          feedItemAssembler.assemble(postRepository.findPublishedByTag(tag.tag(), 0, perTag));
       if (!posts.isEmpty()) {
         sections.add(new TrendingTagSection(tag.tag(), tag.count(), posts));
       }
@@ -124,36 +126,6 @@ public class PublicFeedQueryService {
 
   private PublicFeedView assemble(List<PostEntity> posts, long total, int page, int size) {
     boolean hasNext = (long) (page + 1) * size < total;
-    return new PublicFeedView(toItems(posts), page, size, hasNext);
-  }
-
-  /**
-   * Hydrate posts into feed items, joining each post's author and dropping deleted-author posts.
-   */
-  private List<PublicFeedItem> toItems(List<PostEntity> posts) {
-    List<Long> authorIds = posts.stream().map(PostEntity::getUserId).distinct().toList();
-    Map<Long, UserEntity> authors =
-        userRepository.findAllByIdIn(authorIds).stream()
-            .filter(u -> !u.isDeleted())
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
-    return posts.stream()
-        .filter(p -> authors.containsKey(p.getUserId()))
-        .map(p -> toItem(p, authors.get(p.getUserId())))
-        .toList();
-  }
-
-  private PublicFeedItem toItem(PostEntity post, UserEntity author) {
-    return new PublicFeedItem(
-        post.getId(),
-        PublicAuthorView.from(author),
-        post.getSlug(),
-        post.getTitle(),
-        post.getExcerpt(),
-        post.getOgImageUrl(),
-        post.getLanguageTag(),
-        List.copyOf(post.getTags()),
-        post.getPublishedAt(),
-        post.getViewCount(),
-        post.getLikeCount());
+    return new PublicFeedView(feedItemAssembler.assemble(posts), page, size, hasNext);
   }
 }
