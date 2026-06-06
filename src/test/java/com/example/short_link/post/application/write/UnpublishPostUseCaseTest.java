@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -21,12 +22,13 @@ class UnpublishPostUseCaseTest {
 
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
+  @Mock private ProfileCacheInvalidator cacheEviction;
 
   private UnpublishPostUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new UnpublishPostUseCase(postOwnership, postRepository);
+    useCase = new UnpublishPostUseCase(postOwnership, postRepository, cacheEviction);
   }
 
   @Test

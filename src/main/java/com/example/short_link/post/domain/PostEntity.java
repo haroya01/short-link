@@ -60,6 +60,15 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "published_at")
   private Instant publishedAt;
 
+  /**
+   * Last meaningful content/metadata edit (NULL until first edited). Set explicitly by the edit
+   * use-cases via {@link #markEdited()} — deliberately NOT a Hibernate @UpdateTimestamp, so it's
+   * immune to view-count / like-count writes that touch the row. The reader surfaces "수정 {date}"
+   * only when this is meaningfully later than publishedAt.
+   */
+  @Column(name = "last_edited_at")
+  private Instant lastEditedAt;
+
   @Column(name = "scheduled_at")
   private Instant scheduledAt;
 
@@ -169,6 +178,15 @@ public class PostEntity extends BaseTimeEntity {
 
   public void updateLanguageTag(String languageTag) {
     this.languageTag = languageTag;
+  }
+
+  /**
+   * Stamp the last-edited time. Called by the edit use-cases (metadata update / body block replace
+   * / revision restore) so it tracks real author edits, not lifecycle writes (views, likes,
+   * publish).
+   */
+  public void markEdited() {
+    this.lastEditedAt = Instant.now();
   }
 
   /** A title may be blank while drafting, but is required before a post goes public. */

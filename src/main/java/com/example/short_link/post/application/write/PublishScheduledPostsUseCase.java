@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.time.Instant;
@@ -23,6 +24,7 @@ public class PublishScheduledPostsUseCase {
 
   private final PostRepository postRepository;
   private final PostRevisionCapture postRevisionCapture;
+  private final ProfileCacheInvalidator cacheEviction;
 
   @Transactional
   public int execute(Instant now) {
@@ -33,6 +35,8 @@ public class PublishScheduledPostsUseCase {
         post.publish();
         postRepository.save(post);
         postRevisionCapture.capture(post);
+        // Auto-publish flips hasBlog false→true just like a manual publish; evict the profile.
+        cacheEviction.evictByUserId(post.getUserId());
         published++;
       } catch (RuntimeException e) {
         log.warn("scheduled publish skipped post {}: {}", post.getId(), e.getMessage());

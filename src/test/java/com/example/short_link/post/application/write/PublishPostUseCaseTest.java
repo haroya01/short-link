@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -20,12 +21,14 @@ class PublishPostUseCaseTest {
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionCapture postRevisionCapture;
+  @Mock private ProfileCacheInvalidator cacheEviction;
 
   private PublishPostUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new PublishPostUseCase(postOwnership, postRepository, postRevisionCapture);
+    useCase =
+        new PublishPostUseCase(postOwnership, postRepository, postRevisionCapture, cacheEviction);
   }
 
   @Test

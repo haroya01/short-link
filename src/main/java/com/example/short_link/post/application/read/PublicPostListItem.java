@@ -18,6 +18,7 @@ public record PublicPostListItem(
     List<String> tags,
     long likeCount,
     Instant publishedAt,
+    Instant lastEditedAt,
     boolean pinned) {
 
   public static PublicPostListItem from(PostEntity post) {
@@ -31,6 +32,7 @@ public record PublicPostListItem(
         List.copyOf(post.getTags()),
         post.getLikeCount(),
         post.getPublishedAt(),
+        post.getLastEditedAt(),
         post.getPinOrder() != null);
   }
 }

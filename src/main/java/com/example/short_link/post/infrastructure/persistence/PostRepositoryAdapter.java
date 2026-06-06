@@ -135,6 +135,11 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public long countPublishedByUserId(Long userId) {
+    return jpa.countByUserIdAndStatus(userId, PostStatus.PUBLISHED);
+  }
+
+  @Override
   public List<PostEntity> findPublishedByTag(String tag, int page, int size) {
     return jpa.findPublishedByTag(tag, PostStatus.PUBLISHED, PageRequest.of(page, size));
   }

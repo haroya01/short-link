@@ -66,6 +66,7 @@ public class RestorePostRevisionUseCase {
       postBlockRepository.saveAll(blocks);
     }
 
+    post.markEdited();
     return postRepository.save(post);
   }
 
