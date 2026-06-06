@@ -6,10 +6,9 @@ import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +22,7 @@ public class PostLikeQueryService {
 
   private final PostRepository postRepository;
   private final PostLikeRepository postLikeRepository;
-  private final UserRepository userRepository;
+  private final PostFeedItemAssembler feedItemAssembler;
 
   public PostLikeStatus status(Long userId, Long postId) {
     PostEntity post =
@@ -35,32 +34,22 @@ public class PostLikeQueryService {
   }
 
   /**
-   * The caller's liked posts, newest-liked first. Stale likes (post deleted/unpublished or author
-   * gone) are skipped. Posts and authors are batch-loaded to avoid an N+1 over the list.
+   * The caller's liked posts as full feed cards, newest-liked first. Stale likes (post
+   * deleted/unpublished or author gone) are skipped — unpublished posts are filtered here and the
+   * assembler drops deleted-author posts. Posts are batch-loaded to avoid an N+1 over the list.
    */
-  public List<LikedPostView> likedPosts(Long userId) {
+  public List<PublicFeedItem> likedPosts(Long userId) {
     List<PostLikeEntity> likes = postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (likes.isEmpty()) return List.of();
 
     List<Long> postIds = likes.stream().map(PostLikeEntity::getPostId).toList();
-    Map<Long, PostEntity> posts =
+    Map<Long, PostEntity> published =
         postRepository.findAllByIdIn(postIds).stream()
             .filter(PostEntity::isPublished)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
-    Map<Long, UserEntity> authors =
-        userRepository
-            .findAllByIdIn(posts.values().stream().map(PostEntity::getUserId).distinct().toList())
-            .stream()
-            .filter(u -> !u.isDeleted())
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
 
-    return likes.stream()
-        .map(l -> posts.get(l.getPostId()))
-        .filter(p -> p != null && authors.containsKey(p.getUserId()))
-        .map(
-            p ->
-                new LikedPostView(
-                    p.getId(), authors.get(p.getUserId()).getUsername(), p.getTitle(), p.getSlug()))
-        .toList();
+    List<PostEntity> ordered =
+        likes.stream().map(l -> published.get(l.getPostId())).filter(Objects::nonNull).toList();
+    return feedItemAssembler.assemble(ordered);
   }
 }
