@@ -258,9 +258,13 @@ class PostAnalyticsQueryServiceTest {
         new com.example.short_link.post.domain.SeriesEntity(USER, "s1", "My Series");
     org.springframework.test.util.ReflectionTestUtils.setField(s, "id", 9L);
     when(seriesRepository.findAllByUserIdOrderByCreatedAtDesc(USER)).thenReturn(List.of(s));
-    when(postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(9L))
-        .thenReturn(List.of(post(USER, "a", 100, 5), post(USER, "b", 50, 3)));
-    when(subscriptionRepository.countBySeriesId(9L)).thenReturn(7L);
+    PostEntity a = post(USER, "a", 100, 5);
+    PostEntity b = post(USER, "b", 50, 3);
+    org.springframework.test.util.ReflectionTestUtils.setField(a, "seriesId", 9L);
+    org.springframework.test.util.ReflectionTestUtils.setField(b, "seriesId", 9L);
+    when(postRepository.findAllBySeriesIdInOrderBySeriesOrderAsc(List.of(9L)))
+        .thenReturn(List.of(a, b));
+    when(subscriptionRepository.countBySeriesIdIn(List.of(9L))).thenReturn(Map.of(9L, 7L));
 
     assertThat(service.seriesAnalytics(USER))
         .singleElement()

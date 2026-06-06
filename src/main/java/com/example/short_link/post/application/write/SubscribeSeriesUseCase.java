@@ -3,7 +3,6 @@ package com.example.short_link.post.application.write;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.post.application.read.SeriesSubscriptionStatus;
 import com.example.short_link.post.domain.SeriesEntity;
-import com.example.short_link.post.domain.SeriesSubscriptionEntity;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -30,8 +29,11 @@ public class SubscribeSeriesUseCase {
   @Transactional
   public SeriesSubscriptionStatus subscribe(Long userId, Long seriesId) {
     SeriesEntity series = requireSeries(seriesId);
-    if (!subscriptionRepository.existsByUserIdAndSeriesId(userId, seriesId)) {
-      subscriptionRepository.save(new SeriesSubscriptionEntity(userId, seriesId));
+    // INSERT IGNORE: idempotent + race-safe — a concurrent duplicate becomes a no-op instead of a
+    // unique-key violation. Rows>0 means this call is the one that actually created the
+    // subscription.
+    int inserted = subscriptionRepository.insertIgnore(userId, seriesId);
+    if (inserted > 0) {
       // Notify the series owner of a new subscriber — never for subscribing your own series.
       if (!series.getUserId().equals(userId)) {
         events.publishEvent(

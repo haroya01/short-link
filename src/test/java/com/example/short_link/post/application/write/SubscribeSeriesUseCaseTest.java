@@ -37,12 +37,12 @@ class SubscribeSeriesUseCaseTest {
   @Test
   void subscribeCreatesEdgeWhenNotYetSubscribed() {
     when(seriesRepository.findById(5L)).thenReturn(Optional.of(new SeriesEntity(1L, "s", "S")));
-    when(subscriptionRepository.existsByUserIdAndSeriesId(9L, 5L)).thenReturn(false);
+    when(subscriptionRepository.insertIgnore(9L, 5L)).thenReturn(1);
     when(subscriptionRepository.countBySeriesId(5L)).thenReturn(3L);
 
     SeriesSubscriptionStatus status = useCase.subscribe(9L, 5L);
 
-    verify(subscriptionRepository).save(ArgumentMatchers.any(SeriesSubscriptionEntity.class));
+    verify(subscriptionRepository).insertIgnore(9L, 5L);
     assertThat(status.subscribed()).isTrue();
     assertThat(status.subscriberCount()).isEqualTo(3L);
     // The series owner (1L ≠ subscriber 9L) is notified.
@@ -59,12 +59,11 @@ class SubscribeSeriesUseCaseTest {
   @Test
   void subscribeIsIdempotentWhenAlreadySubscribed() {
     when(seriesRepository.findById(5L)).thenReturn(Optional.of(new SeriesEntity(1L, "s", "S")));
-    when(subscriptionRepository.existsByUserIdAndSeriesId(9L, 5L)).thenReturn(true);
+    when(subscriptionRepository.insertIgnore(9L, 5L)).thenReturn(0); // already subscribed → no-op
     when(subscriptionRepository.countBySeriesId(5L)).thenReturn(1L);
 
     SeriesSubscriptionStatus status = useCase.subscribe(9L, 5L);
 
-    verify(subscriptionRepository, never()).save(ArgumentMatchers.any());
     verify(events, never()).publishEvent(ArgumentMatchers.any());
     assertThat(status.subscribed()).isTrue();
   }
@@ -74,7 +73,8 @@ class SubscribeSeriesUseCaseTest {
     when(seriesRepository.findById(404L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> useCase.subscribe(9L, 404L)).isInstanceOf(PostException.class);
-    verify(subscriptionRepository, never()).save(ArgumentMatchers.any());
+    verify(subscriptionRepository, never())
+        .insertIgnore(ArgumentMatchers.any(), ArgumentMatchers.any());
   }
 
   @Test

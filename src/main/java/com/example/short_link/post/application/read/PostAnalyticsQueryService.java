@@ -22,6 +22,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -179,8 +180,31 @@ public class PostAnalyticsQueryService {
    * count.
    */
   public List<SeriesAnalyticsRow> seriesAnalytics(Long userId) {
-    return seriesRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
-        .map(this::seriesRow)
+    List<SeriesEntity> series = seriesRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    if (series.isEmpty()) {
+      return List.of();
+    }
+    List<Long> seriesIds = series.stream().map(SeriesEntity::getId).toList();
+    // 시리즈마다 멤버글·구독자수를 따로 조회하던 1+2N 을, 멤버글 배치 조회 + 구독자수 묶음 조회 후 메모리 집계로 축약.
+    Map<Long, List<PostEntity>> membersBySeries =
+        postRepository.findAllBySeriesIdInOrderBySeriesOrderAsc(seriesIds).stream()
+            .collect(Collectors.groupingBy(PostEntity::getSeriesId));
+    Map<Long, Long> subscribersBySeries = subscriptionRepository.countBySeriesIdIn(seriesIds);
+    return series.stream()
+        .map(
+            s -> {
+              List<PostEntity> members = membersBySeries.getOrDefault(s.getId(), List.of());
+              long totalViews = members.stream().mapToLong(PostEntity::getViewCount).sum();
+              long totalLikes = members.stream().mapToLong(PostEntity::getLikeCount).sum();
+              return new SeriesAnalyticsRow(
+                  s.getId(),
+                  s.getSlug(),
+                  s.getTitle(),
+                  members.size(),
+                  subscribersBySeries.getOrDefault(s.getId(), 0L),
+                  totalViews,
+                  totalLikes);
+            })
         .toList();
   }
 

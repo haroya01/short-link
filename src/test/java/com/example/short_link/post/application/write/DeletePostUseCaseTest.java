@@ -6,7 +6,10 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
+import com.example.short_link.post.domain.repository.PostBookmarkRepository;
+import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostRevisionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -25,6 +28,9 @@ class DeletePostUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private PostBlockRepository postBlockRepository;
   @Mock private PostRevisionRepository postRevisionRepository;
+  @Mock private CommentRepository commentRepository;
+  @Mock private PostLikeRepository postLikeRepository;
+  @Mock private PostBookmarkRepository postBookmarkRepository;
   @Mock private ProfileCacheInvalidator cacheEviction;
 
   private DeletePostUseCase useCase;
@@ -37,6 +43,9 @@ class DeletePostUseCaseTest {
             postRepository,
             postBlockRepository,
             postRevisionRepository,
+            commentRepository,
+            postLikeRepository,
+            postBookmarkRepository,
             cacheEviction);
   }
 
@@ -47,9 +56,19 @@ class DeletePostUseCaseTest {
 
     useCase.execute(new DeletePostCommand(7L, 42L));
 
-    InOrder order = inOrder(postBlockRepository, postRevisionRepository, postRepository);
+    InOrder order =
+        inOrder(
+            postBlockRepository,
+            postRevisionRepository,
+            commentRepository,
+            postLikeRepository,
+            postBookmarkRepository,
+            postRepository);
     order.verify(postBlockRepository).deleteAllByPostId(post.getId());
     order.verify(postRevisionRepository).deleteAllByPostId(post.getId());
+    order.verify(commentRepository).deleteAllByPostId(post.getId());
+    order.verify(postLikeRepository).deleteAllByPostId(post.getId());
+    order.verify(postBookmarkRepository).deleteAllByPostId(post.getId());
     order.verify(postRepository).delete(post);
   }
 

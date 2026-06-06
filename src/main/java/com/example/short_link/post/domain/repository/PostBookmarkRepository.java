@@ -20,4 +20,14 @@ public interface PostBookmarkRepository {
   PostBookmarkEntity save(PostBookmarkEntity bookmark);
 
   void delete(PostBookmarkEntity bookmark);
+
+  /**
+   * Insert a bookmark, ignoring the duplicate-key conflict when the user already bookmarked the
+   * post. Returns the number of rows inserted (1 = newly bookmarked, 0 = already bookmarked).
+   * Atomic — no read-then-write race, and no exception to poison the surrounding transaction.
+   */
+  int insertIgnore(Long postId, Long userId);
+
+  /** Purge every bookmark on a post — used when the post is permanently deleted. */
+  int deleteAllByPostId(Long postId);
 }

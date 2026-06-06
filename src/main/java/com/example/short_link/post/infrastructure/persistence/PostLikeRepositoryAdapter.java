@@ -36,4 +36,9 @@ class PostLikeRepositoryAdapter implements PostLikeRepository {
   public int deleteByPostIdAndUserId(Long postId, Long userId) {
     return jpa.deleteByPostIdAndUserId(postId, userId);
   }
+
+  @Override
+  public int deleteAllByPostId(Long postId) {
+    return jpa.deleteAllByPostId(postId);
+  }
 }

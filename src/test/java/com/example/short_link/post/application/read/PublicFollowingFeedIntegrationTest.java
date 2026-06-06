@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
-import com.example.short_link.post.domain.SeriesSubscriptionEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
@@ -60,7 +59,7 @@ class PublicFollowingFeedIntegrationTest {
     // I follow `followed`; I subscribe to `stranger`'s series (but don't follow them).
     followRepository.save(new FollowEntity(me, followed));
     long series = seriesRepository.save(new SeriesEntity(stranger, "guide", "Guide")).getId();
-    subscriptionRepository.save(new SeriesSubscriptionEntity(me, series));
+    subscriptionRepository.insertIgnore(me, series);
 
     publish(followed, "from-followed", null);
     publish(stranger, "series-episode", series);
