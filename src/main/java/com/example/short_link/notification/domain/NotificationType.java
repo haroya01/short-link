@@ -11,6 +11,8 @@ package com.example.short_link.notification.domain;
  *       recipient is the parent comment's author, distinct from the post-owner COMMENT notice.
  *   <li>{@code NEW_POST} — an author you follow published their first public post (a fan-out off
  *       {@code PostPublishedEvent}: one row per follower).
+ *   <li>{@code MENTION} — someone @-mentioned you in a comment (off {@code CommentMentionEvent});
+ *       one row per mentioned user, deduped against the COMMENT/REPLY that comment already sends.
  * </ul>
  */
 public enum NotificationType {
@@ -19,5 +21,6 @@ public enum NotificationType {
   FOLLOW,
   SERIES_SUBSCRIBE,
   REPLY,
-  NEW_POST
+  NEW_POST,
+  MENTION
 }

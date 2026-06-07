@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
+import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PublicAuthorView;
@@ -12,6 +13,9 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -55,6 +59,9 @@ public class CreateCommentUseCase {
     Long ownerId = post.getUserId();
     Long actorId = cmd.userId();
     Long parentAuthorId = parent == null ? null : parent.getUserId();
+    // Everyone this one comment has already notified — so a @-mention of the same person collapses
+    // into the COMMENT/REPLY they already get (one notice per person).
+    Set<Long> notified = new HashSet<>();
 
     // Notify the post's author of a new comment — never for a comment on your own post. But when
     // the
@@ -71,16 +78,44 @@ public class CreateCommentUseCase {
               post.getSlug(),
               post.getTitle(),
               saved.getCreatedAt()));
+      notified.add(ownerId);
     }
 
-    // Notify the parent comment's author of a reply — never for replying to your own comment. The
-    // parent's author may not own the post, so we carry the post owner's username for the link.
+    // REPLY and MENTION links point at the post, whose owner may not be the recipient — so both
+    // carry
+    // the post owner's username. Resolve it once, only when one of them will actually fire.
+    List<String> mentionedHandles = MentionParser.parse(cmd.body());
+    boolean needsOwnerHandle =
+        (parentAuthorId != null && !parentAuthorId.equals(actorId)) || !mentionedHandles.isEmpty();
+    String ownerUsername =
+        needsOwnerHandle
+            ? userRepository.findById(ownerId).map(UserEntity::getUsername).orElse(null)
+            : null;
+
+    // Notify the parent comment's author of a reply — never for replying to your own comment.
     if (parentAuthorId != null && !parentAuthorId.equals(actorId)) {
-      String ownerUsername =
-          userRepository.findById(ownerId).map(UserEntity::getUsername).orElse(null);
       events.publishEvent(
           new CommentReplyEvent(
               parentAuthorId,
+              actorId,
+              post.getId(),
+              post.getSlug(),
+              post.getTitle(),
+              ownerUsername,
+              saved.getCreatedAt()));
+      notified.add(parentAuthorId);
+    }
+
+    // @-mentions — one notice per mentioned user, skipping self, unknown handles, and anyone the
+    // COMMENT/REPLY above already notified (notified.add returns false → skip).
+    for (String handle : mentionedHandles) {
+      Long mentionedId = userRepository.findByUsername(handle).map(UserEntity::getId).orElse(null);
+      if (mentionedId == null || mentionedId.equals(actorId) || !notified.add(mentionedId)) {
+        continue;
+      }
+      events.publishEvent(
+          new CommentMentionEvent(
+              mentionedId,
               actorId,
               post.getId(),
               post.getSlug(),
