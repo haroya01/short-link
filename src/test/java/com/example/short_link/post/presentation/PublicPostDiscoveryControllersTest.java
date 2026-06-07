@@ -46,23 +46,23 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void feedDefaultUsesRecentSort() throws Exception {
-    when(publicFeedQueryService.feed("recent", 0, 20)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed("recent", null, 0, 20)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.hasNext").value(false))
         .andExpect(jsonPath("$.items.length()").value(0));
 
-    verify(publicFeedQueryService).feed("recent", 0, 20);
+    verify(publicFeedQueryService).feed("recent", null, 0, 20);
   }
 
   @Test
   void feedWithQueryRoutesToSearch() throws Exception {
-    when(publicFeedQueryService.search("hello", "recent", 0, 20)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.search("hello", "recent", null, 0, 20)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("q", " hello ")).andExpect(status().isOk());
 
-    verify(publicFeedQueryService).search("hello", "recent", 0, 20);
+    verify(publicFeedQueryService).search("hello", "recent", null, 0, 20);
   }
 
   @Test
@@ -76,12 +76,12 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void feedClampsOversizedPageSizeTo50() throws Exception {
-    when(publicFeedQueryService.feed("recent", 0, 50)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed("recent", null, 0, 50)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("size", "999").param("page", "-3"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed("recent", 0, 50);
+    verify(publicFeedQueryService).feed("recent", null, 0, 50);
   }
 
   @Test

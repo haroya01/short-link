@@ -37,12 +37,12 @@ public class PublicFeedQueryService {
   private final SeriesSubscriptionRepository seriesSubscriptionRepository;
   private final PostFeedItemAssembler feedItemAssembler;
 
-  public PublicFeedView feed(String sort, int page, int size) {
+  public PublicFeedView feed(String sort, String lang, int page, int size) {
     List<PostEntity> posts =
         "trending".equalsIgnoreCase(sort)
-            ? postRepository.findPublishedTrending(page, size)
-            : postRepository.findPublishedRecent(page, size);
-    return assemble(posts, postRepository.countPublished(), page, size);
+            ? postRepository.findPublishedTrending(lang, page, size)
+            : postRepository.findPublishedRecent(lang, page, size);
+    return assemble(posts, postRepository.countPublished(lang), page, size);
   }
 
   /** Posts carrying a tag (case-insensitive), newest first. */
@@ -54,12 +54,12 @@ public class PublicFeedQueryService {
   /**
    * Free-text search across title / excerpt / tags / author handle. {@code sort} = recent|trending.
    */
-  public PublicFeedView search(String query, String sort, int page, int size) {
+  public PublicFeedView search(String query, String sort, String lang, int page, int size) {
     List<PostEntity> posts =
         "trending".equalsIgnoreCase(sort)
-            ? postRepository.searchPublishedTrending(query, page, size)
-            : postRepository.searchPublished(query, page, size);
-    return assemble(posts, postRepository.countSearchPublished(query), page, size);
+            ? postRepository.searchPublishedTrending(query, lang, page, size)
+            : postRepository.searchPublished(query, lang, page, size);
+    return assemble(posts, postRepository.countSearchPublished(query, lang), page, size);
   }
 
   /** Most-used tags across published posts, most popular first — the 주제 index. */
