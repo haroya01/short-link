@@ -62,17 +62,21 @@ public interface PostRepository {
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 
-  /** Global public feed (all authors), newest first. 0-based page. */
-  List<PostEntity> findPublishedRecent(int page, int size);
+  /**
+   * Global public feed (all authors), newest first. 0-based page. {@code lang} (null/blank = all)
+   * filters to one post language, backing the feed's language chips.
+   */
+  List<PostEntity> findPublishedRecent(String lang, int page, int size);
 
   /**
    * Global public feed ranked by views inside a recent window (recent traction), newest as tiebreak
    * — the honest "trending" sort. Posts with no recent views fall back to recency so the feed stays
-   * full. Distinct from posts.view_count, the lifetime counter shown on cards.
+   * full. Distinct from posts.view_count, the lifetime counter shown on cards. {@code lang}
+   * (null/blank = all) filters to one post language.
    */
-  List<PostEntity> findPublishedTrending(int page, int size);
+  List<PostEntity> findPublishedTrending(String lang, int page, int size);
 
-  long countPublished();
+  long countPublished(String lang);
 
   /** Count of an author's PUBLISHED posts — backs the public profile's blog entry-point flag. */
   long countPublishedByUserId(Long userId);
@@ -82,13 +86,16 @@ public interface PostRepository {
 
   long countPublishedByTag(String tag);
 
-  /** Published posts matching free text in title / excerpt / tags / author handle, newest first. */
-  List<PostEntity> searchPublished(String query, int page, int size);
+  /**
+   * Published posts matching free text in title / excerpt / tags / author handle, newest first.
+   * {@code lang} (null/blank = all) filters to one post language.
+   */
+  List<PostEntity> searchPublished(String query, String lang, int page, int size);
 
   /** Same match as {@link #searchPublished} but ranked by view count — the trending sort. */
-  List<PostEntity> searchPublishedTrending(String query, int page, int size);
+  List<PostEntity> searchPublishedTrending(String query, String lang, int page, int size);
 
-  long countSearchPublished(String query);
+  long countSearchPublished(String query, String lang);
 
   /**
    * Published posts by any of the given authors OR in any of the given series, newest first — the

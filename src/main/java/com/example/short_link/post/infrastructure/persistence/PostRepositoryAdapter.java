@@ -132,19 +132,20 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findPublishedRecent(int page, int size) {
-    return jpa.findByStatusOrderByPublishedAtDesc(PostStatus.PUBLISHED, PageRequest.of(page, size));
+  public List<PostEntity> findPublishedRecent(String lang, int page, int size) {
+    return jpa.findPublishedRecent(
+        PostStatus.PUBLISHED, normLang(lang), PageRequest.of(page, size));
   }
 
   @Override
-  public List<PostEntity> findPublishedTrending(int page, int size) {
+  public List<PostEntity> findPublishedTrending(String lang, int page, int size) {
     Instant since = Instant.now().minus(TRENDING_WINDOW);
-    return jpa.findPublishedTrendingSince(since, PageRequest.of(page, size));
+    return jpa.findPublishedTrendingSince(since, normLang(lang), PageRequest.of(page, size));
   }
 
   @Override
-  public long countPublished() {
-    return jpa.countByStatus(PostStatus.PUBLISHED);
+  public long countPublished(String lang) {
+    return jpa.countPublishedByLang(PostStatus.PUBLISHED, normLang(lang));
   }
 
   @Override
@@ -163,20 +164,28 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> searchPublished(String query, int page, int size) {
+  public List<PostEntity> searchPublished(String query, String lang, int page, int size) {
     return jpa.searchPublished(
-        likePattern(query), PostStatus.PUBLISHED, PageRequest.of(page, size));
+        likePattern(query), PostStatus.PUBLISHED, normLang(lang), PageRequest.of(page, size));
   }
 
   @Override
-  public List<PostEntity> searchPublishedTrending(String query, int page, int size) {
+  public List<PostEntity> searchPublishedTrending(String query, String lang, int page, int size) {
     Instant since = Instant.now().minus(TRENDING_WINDOW);
-    return jpa.searchPublishedTrendingSince(likePattern(query), since, PageRequest.of(page, size));
+    return jpa.searchPublishedTrendingSince(
+        likePattern(query), since, normLang(lang), PageRequest.of(page, size));
   }
 
   @Override
-  public long countSearchPublished(String query) {
-    return jpa.countSearchPublished(likePattern(query), PostStatus.PUBLISHED);
+  public long countSearchPublished(String query, String lang) {
+    return jpa.countSearchPublished(likePattern(query), PostStatus.PUBLISHED, normLang(lang));
+  }
+
+  /**
+   * Blank/whitespace language → null (no filter). Keeps "all languages" the empty-string default.
+   */
+  private static String normLang(String lang) {
+    return lang == null || lang.isBlank() ? null : lang.trim();
   }
 
   // Lowercase + escape the LIKE metacharacters in user input, then wrap in %…% for a contains

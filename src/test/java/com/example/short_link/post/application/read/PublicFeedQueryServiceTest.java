@@ -62,11 +62,11 @@ class PublicFeedQueryServiceTest {
     PostEntity p1 = post(1L, "a");
     ReflectionTestUtils.setField(p1, "id", 42L);
     PostEntity p2 = post(2L, "b"); // author 2 not returned (deleted/missing) → excluded
-    when(postRepository.findPublishedRecent(0, 20)).thenReturn(List.of(p1, p2));
+    when(postRepository.findPublishedRecent(null, 0, 20)).thenReturn(List.of(p1, p2));
     when(userRepository.findAllByIdIn(List.of(1L, 2L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countPublished()).thenReturn(1L);
+    when(postRepository.countPublished(null)).thenReturn(1L);
 
-    PublicFeedView view = service.feed("recent", 0, 20);
+    PublicFeedView view = service.feed("recent", null, 0, 20);
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).id()).isEqualTo(42L);
@@ -77,12 +77,12 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void hasNextWhenMorePagesRemain() {
-    when(postRepository.findPublishedRecent(0, 2))
+    when(postRepository.findPublishedRecent(null, 0, 2))
         .thenReturn(List.of(post(1L, "a"), post(1L, "b")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countPublished()).thenReturn(10L);
+    when(postRepository.countPublished(null)).thenReturn(10L);
 
-    PublicFeedView view = service.feed("recent", 0, 2);
+    PublicFeedView view = service.feed("recent", null, 0, 2);
 
     assertThat(view.items()).hasSize(2);
     assertThat(view.hasNext()).isTrue();
@@ -103,27 +103,27 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void searchUsesRecentQueryByDefault() {
-    when(postRepository.searchPublished("spring", 0, 20)).thenReturn(List.of(post(1L, "a")));
+    when(postRepository.searchPublished("spring", null, 0, 20)).thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countSearchPublished("spring")).thenReturn(1L);
+    when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
 
-    PublicFeedView view = service.search("spring", "recent", 0, 20);
+    PublicFeedView view = service.search("spring", "recent", null, 0, 20);
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).slug()).isEqualTo("a");
-    verify(postRepository).searchPublished("spring", 0, 20);
+    verify(postRepository).searchPublished("spring", null, 0, 20);
   }
 
   @Test
   void searchUsesTrendingQueryWhenSorted() {
-    when(postRepository.searchPublishedTrending("spring", 0, 20))
+    when(postRepository.searchPublishedTrending("spring", null, 0, 20))
         .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countSearchPublished("spring")).thenReturn(1L);
+    when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
 
-    service.search("spring", "trending", 0, 20);
+    service.search("spring", "trending", null, 0, 20);
 
-    verify(postRepository).searchPublishedTrending("spring", 0, 20);
+    verify(postRepository).searchPublishedTrending("spring", null, 0, 20);
   }
 
   @Test
@@ -188,13 +188,13 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void trendingUsesTrendingQuery() {
-    when(postRepository.findPublishedTrending(0, 20)).thenReturn(List.of(post(1L, "a")));
+    when(postRepository.findPublishedTrending(null, 0, 20)).thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countPublished()).thenReturn(1L);
+    when(postRepository.countPublished(null)).thenReturn(1L);
 
-    service.feed("trending", 0, 20);
+    service.feed("trending", null, 0, 20);
 
-    verify(postRepository).findPublishedTrending(0, 20);
+    verify(postRepository).findPublishedTrending(null, 0, 20);
   }
 
   @Test
@@ -225,5 +225,37 @@ class PublicFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(9L))).thenReturn(List.of()); // author missing/deleted
 
     assertThat(service.trendingByTag(6, 8)).isEmpty();
+  }
+
+  @Test
+  void recentFeedPassesLanguageFilterToRepository() {
+    when(postRepository.findPublishedRecent("ko", 0, 20)).thenReturn(List.of());
+    when(postRepository.countPublished("ko")).thenReturn(0L);
+
+    service.feed("recent", "ko", 0, 20);
+
+    verify(postRepository).findPublishedRecent("ko", 0, 20);
+    verify(postRepository).countPublished("ko");
+  }
+
+  @Test
+  void trendingFeedPassesLanguageFilterToRepository() {
+    when(postRepository.findPublishedTrending("ja", 0, 20)).thenReturn(List.of());
+    when(postRepository.countPublished("ja")).thenReturn(0L);
+
+    service.feed("trending", "ja", 0, 20);
+
+    verify(postRepository).findPublishedTrending("ja", 0, 20);
+  }
+
+  @Test
+  void searchPassesLanguageFilterToRepository() {
+    when(postRepository.searchPublished("rust", "en", 0, 20)).thenReturn(List.of());
+    when(postRepository.countSearchPublished("rust", "en")).thenReturn(0L);
+
+    service.search("rust", "recent", "en", 0, 20);
+
+    verify(postRepository).searchPublished("rust", "en", 0, 20);
+    verify(postRepository).countSearchPublished("rust", "en");
   }
 }

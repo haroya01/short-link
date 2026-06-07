@@ -48,7 +48,7 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> slugs(String query) {
-    return service.search(query, "recent", 0, 20).items().stream()
+    return service.search(query, "recent", null, 0, 20).items().stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -147,7 +147,7 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> trendingSlugs(String query) {
-    return service.search(query, "trending", 0, 20).items().stream()
+    return service.search(query, "trending", null, 0, 20).items().stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
