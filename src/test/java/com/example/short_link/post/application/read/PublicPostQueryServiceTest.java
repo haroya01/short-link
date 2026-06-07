@@ -149,6 +149,57 @@ class PublicPostQueryServiceTest {
   }
 
   @Test
+  void previewReturnsDraftPostBypassingStatusGuard() {
+    UserEntity author = authorWithUsername("john");
+    PostEntity post = new PostEntity(author.getId(), "draft-post", "Draft", "ko"); // stays DRAFT
+    post.ensurePreviewToken("tok-123");
+    when(postRepository.findByPreviewToken("tok-123")).thenReturn(Optional.of(post));
+    when(userRepository.findById(author.getId())).thenReturn(Optional.of(author));
+    PostBlockEntity b1 = new PostBlockEntity(post.getId(), PostBlockType.PARAGRAPH, "Hello", 0);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
+        .thenReturn(List.of(b1));
+
+    PublicPostDetail detail = service.findPreviewPost("tok-123");
+
+    assertThat(detail.author().username()).isEqualTo("john");
+    assertThat(detail.post().slug()).isEqualTo("draft-post");
+    assertThat(detail.blocks()).hasSize(1);
+  }
+
+  @Test
+  void previewUnknownTokenReturnsNotFound() {
+    when(postRepository.findByPreviewToken("nope")).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.findPreviewPost("nope"))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+  }
+
+  @Test
+  void previewBlankTokenReturnsNotFound() {
+    assertThatThrownBy(() -> service.findPreviewPost("  "))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+  }
+
+  @Test
+  void previewDeletedAuthorReturnsNotFound() {
+    UserEntity author = authorWithUsername("john");
+    author.softDelete();
+    PostEntity post = new PostEntity(author.getId(), "draft-post", "Draft", "ko");
+    post.ensurePreviewToken("tok-123");
+    when(postRepository.findByPreviewToken("tok-123")).thenReturn(Optional.of(post));
+    when(userRepository.findById(author.getId())).thenReturn(Optional.of(author));
+
+    assertThatThrownBy(() -> service.findPreviewPost("tok-123"))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+  }
+
+  @Test
   void findUnpublishedReturnsGone() {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));

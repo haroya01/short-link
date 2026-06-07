@@ -21,6 +21,7 @@ import com.example.short_link.post.application.write.CreatePostCommand;
 import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
+import com.example.short_link.post.application.write.IssuePreviewTokenUseCase;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
@@ -71,6 +72,7 @@ class PostControllerTest {
   @MockitoBean private ReplacePostBlocksUseCase replacePostBlocks;
   @MockitoBean private RestorePostRevisionUseCase restorePostRevision;
   @MockitoBean private DeletePostUseCase deletePost;
+  @MockitoBean private IssuePreviewTokenUseCase issuePreviewToken;
   @MockitoBean private PostQueryService postQueryService;
 
   private static final long USER_ID = 7L;
@@ -212,6 +214,17 @@ class PostControllerTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.status").value("PUBLISHED"));
+  }
+
+  @Test
+  void issuePreviewTokenReturnsToken() throws Exception {
+    when(issuePreviewToken.issue(USER_ID, 42L)).thenReturn("tok-abc");
+
+    mvc.perform(
+            post("/api/v1/posts/42/preview-token")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.token").value("tok-abc"));
   }
 
   @Test
