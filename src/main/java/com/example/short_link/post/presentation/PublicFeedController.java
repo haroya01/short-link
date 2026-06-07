@@ -26,16 +26,19 @@ public class PublicFeedController {
       @RequestParam(defaultValue = "recent") String sort,
       @RequestParam(required = false) String tag,
       @RequestParam(required = false) String q,
+      @RequestParam(required = false) String lang,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     int safePage = Math.max(page, 0);
     int safeSize = Math.min(Math.max(size, 1), MAX_SIZE);
+    // lang (e.g. ko/ja/en) narrows the feed/search to one post language; null/blank = all
+    // languages.
     if (q != null && !q.isBlank()) {
-      return publicFeedQueryService.search(q.trim(), sort, safePage, safeSize);
+      return publicFeedQueryService.search(q.trim(), sort, lang, safePage, safeSize);
     }
     if (tag != null && !tag.isBlank()) {
       return publicFeedQueryService.feedByTag(tag.trim(), safePage, safeSize);
     }
-    return publicFeedQueryService.feed(sort, safePage, safeSize);
+    return publicFeedQueryService.feed(sort, lang, safePage, safeSize);
   }
 }

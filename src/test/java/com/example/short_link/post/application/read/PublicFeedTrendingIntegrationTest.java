@@ -40,7 +40,11 @@ class PublicFeedTrendingIntegrationTest {
   }
 
   private long publish(long userId, String slug, int lifetimeViews) {
-    PostEntity p = new PostEntity(userId, slug, slug, "ko");
+    return publish(userId, slug, lifetimeViews, "ko");
+  }
+
+  private long publish(long userId, String slug, int lifetimeViews, String lang) {
+    PostEntity p = new PostEntity(userId, slug, slug, lang);
     for (int i = 0; i < lifetimeViews; i++) p.incrementViewCount();
     p.publish();
     return postRepository.save(p).getId();
@@ -51,7 +55,9 @@ class PublicFeedTrendingIntegrationTest {
   }
 
   private List<String> trendingSlugs() {
-    return service.feed("trending", 0, 50).items().stream().map(PublicFeedItem::slug).toList();
+    return service.feed("trending", null, 0, 50).items().stream()
+        .map(PublicFeedItem::slug)
+        .toList();
   }
 
   @Test
@@ -90,5 +96,21 @@ class PublicFeedTrendingIntegrationTest {
     publish(a, "trend-quiet-newcomer", 0);
 
     assertThat(trendingSlugs()).contains("trend-quiet-newcomer");
+  }
+
+  @Test
+  void languageFilterNarrowsTrendingToOnePostLanguage() {
+    long a = author("langauthor");
+    publish(a, "trend-lang-ko", 0, "ko");
+    publish(a, "trend-lang-ja", 0, "ja");
+
+    // Native query with :lang bound → only the matching language. Proves the `:lang IS NULL OR
+    // p.language_tag = :lang` filter holds against MySQL, both set and unset.
+    List<String> ja =
+        service.feed("trending", "ja", 0, 50).items().stream().map(PublicFeedItem::slug).toList();
+    assertThat(ja).contains("trend-lang-ja").doesNotContain("trend-lang-ko");
+
+    List<String> all = trendingSlugs(); // lang null → all languages
+    assertThat(all).contains("trend-lang-ko", "trend-lang-ja");
   }
 }

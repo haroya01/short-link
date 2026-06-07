@@ -57,8 +57,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 
-  List<PostEntity> findByStatusOrderByPublishedAtDesc(PostStatus status, Pageable pageable);
-
   // Trending = most views inside a recent window (`since`), newest as tiebreak. LEFT JOIN so every
   // published post still appears: posts with no recent views fall to a window count of 0 and sort
   // by
@@ -71,12 +69,23 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       value =
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
-              + "WHERE p.status = 'PUBLISHED' "
+              + "WHERE p.status = 'PUBLISHED' AND (:lang IS NULL OR p.language_tag = :lang) "
               + "GROUP BY p.id "
               + "ORDER BY COUNT(e.id) DESC, p.published_at DESC")
-  List<PostEntity> findPublishedTrendingSince(@Param("since") Instant since, Pageable pageable);
+  List<PostEntity> findPublishedTrendingSince(
+      @Param("since") Instant since, @Param("lang") String lang, Pageable pageable);
 
-  long countByStatus(PostStatus status);
+  // Global recent feed with an optional language filter (:lang null = all languages).
+  @Query(
+      "select p from PostEntity p where p.status = :status "
+          + "and (:lang is null or p.languageTag = :lang) order by p.publishedAt desc")
+  List<PostEntity> findPublishedRecent(
+      @Param("status") PostStatus status, @Param("lang") String lang, Pageable pageable);
+
+  @Query(
+      "select count(p) from PostEntity p where p.status = :status "
+          + "and (:lang is null or p.languageTag = :lang)")
+  long countPublishedByLang(@Param("status") PostStatus status, @Param("lang") String lang);
 
   @Query(
       "select p from PostEntity p join p.tags t "
@@ -129,9 +138,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "or lower(t) like :q escape '!' "
           + "or p.userId in (select u.id from UserEntity u "
           + "where lower(u.username) like :q escape '!' and u.deletedAt is null)) "
+          + "and (:lang is null or p.languageTag = :lang) "
           + "order by p.publishedAt desc")
   List<PostEntity> searchPublished(
-      @Param("q") String q, @Param("status") PostStatus status, Pageable pageable);
+      @Param("q") String q,
+      @Param("status") PostStatus status,
+      @Param("lang") String lang,
+      Pageable pageable);
 
   // Same match as searchPublished, but ranked by recent-window views (newest as tiebreak) so the
   // trending sort means the same thing inside search as it does on the main feed. Native to mirror
@@ -151,10 +164,14 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
               + "OR LOWER(t.tag) LIKE :q ESCAPE '!' "
               + "OR p.user_id IN (SELECT u.id FROM users u "
               + "WHERE LOWER(u.username) LIKE :q ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "AND (:lang IS NULL OR p.language_tag = :lang) "
               + "GROUP BY p.id "
               + "ORDER BY COUNT(DISTINCT e.id) DESC, p.published_at DESC")
   List<PostEntity> searchPublishedTrendingSince(
-      @Param("q") String q, @Param("since") Instant since, Pageable pageable);
+      @Param("q") String q,
+      @Param("since") Instant since,
+      @Param("lang") String lang,
+      Pageable pageable);
 
   @Query(
       "select count(distinct p) from PostEntity p left join p.tags t "
@@ -163,8 +180,10 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "or lower(p.excerpt) like :q escape '!' "
           + "or lower(t) like :q escape '!' "
           + "or p.userId in (select u.id from UserEntity u "
-          + "where lower(u.username) like :q escape '!' and u.deletedAt is null))")
-  long countSearchPublished(@Param("q") String q, @Param("status") PostStatus status);
+          + "where lower(u.username) like :q escape '!' and u.deletedAt is null)) "
+          + "and (:lang is null or p.languageTag = :lang)")
+  long countSearchPublished(
+      @Param("q") String q, @Param("status") PostStatus status, @Param("lang") String lang);
 
   // Authors ranked for the discovery rail — most published posts first, total views as tiebreak.
   // Returns [userId, postCount, totalViews]; the service hydrates authors and drops deleted ones.
