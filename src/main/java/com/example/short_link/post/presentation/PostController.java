@@ -10,6 +10,7 @@ import com.example.short_link.post.application.write.CreatePostCommand;
 import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
+import com.example.short_link.post.application.write.IssuePreviewTokenUseCase;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
@@ -31,6 +32,7 @@ import com.example.short_link.post.presentation.request.ReplaceBlocksRequest;
 import com.example.short_link.post.presentation.request.SchedulePostRequest;
 import com.example.short_link.post.presentation.request.SetPinnedPostsRequest;
 import com.example.short_link.post.presentation.request.UpdatePostRequest;
+import com.example.short_link.post.presentation.response.PreviewTokenResponse;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -63,6 +65,7 @@ public class PostController {
   private final RestorePostRevisionUseCase restorePostRevision;
   private final DeletePostUseCase deletePost;
   private final SetPinnedPostsUseCase setPinnedPosts;
+  private final IssuePreviewTokenUseCase issuePreviewToken;
   private final PostQueryService postQueryService;
 
   @PostMapping
@@ -113,6 +116,13 @@ public class PostController {
   @PostMapping("/{id}/publish")
   public PostView publish(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return PostView.from(publishPost.execute(new PublishPostCommand(userId, id)));
+  }
+
+  /** Get-or-create the share token so the owner can preview/share a not-yet-public post. */
+  @PostMapping("/{id}/preview-token")
+  public PreviewTokenResponse issuePreviewToken(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return new PreviewTokenResponse(issuePreviewToken.issue(userId, id));
   }
 
   @PostMapping("/{id}/schedule")
