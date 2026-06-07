@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.common.event.PostPublishedEvent;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
@@ -49,6 +50,18 @@ class PostNotificationListenerTest {
     listener().onCommentReply(new CommentReplyEvent(9L, 9L, 10L, "s", "t", "o", AT));
 
     verify(recordUseCase, never()).record(any(), any(), any(), any());
+  }
+
+  @Test
+  void mentionRecordsMentionNotificationCarryingPostAuthorHandle() {
+    listener()
+        .onCommentMention(
+            new CommentMentionEvent(5L, 9L, 10L, "the-post", "The Post", "owner", AT));
+
+    ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
+    verify(recordUseCase).record(eq(5L), eq(NotificationType.MENTION), eq(9L), post.capture());
+    assertThat(post.getValue().authorUsername()).isEqualTo("owner");
+    assertThat(post.getValue().slug()).isEqualTo("the-post");
   }
 
   @Test
