@@ -28,7 +28,7 @@ class BlogInteractionEventTest {
         .isEqualTo(BlogInteractionType.COMMENT);
     assertThat(BlogInteractionEvent.follow(1L, 2L, AT).type())
         .isEqualTo(BlogInteractionType.FOLLOW);
-    assertThat(BlogInteractionEvent.seriesSubscribe(1L, 2L, 3L, "x", AT).type())
+    assertThat(BlogInteractionEvent.seriesSubscribe(1L, 2L, 3L, "x-slug", "x", AT).type())
         .isEqualTo(BlogInteractionType.SERIES_SUBSCRIBE);
   }
 }

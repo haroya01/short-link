@@ -1,12 +1,14 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.event.PostPublishedEvent;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +27,7 @@ public class PublishScheduledPostsUseCase {
   private final PostRepository postRepository;
   private final PostRevisionCapture postRevisionCapture;
   private final ProfileCacheInvalidator cacheEviction;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public int execute(Instant now) {
@@ -32,11 +35,18 @@ public class PublishScheduledPostsUseCase {
     int published = 0;
     for (PostEntity post : due) {
       try {
+        // A scheduled post has never been public, so its first auto-publish notifies followers.
+        boolean firstPublish = post.getPublishedAt() == null;
         post.publish();
         postRepository.save(post);
         postRevisionCapture.capture(post);
         // Auto-publish flips hasBlog false→true just like a manual publish; evict the profile.
         cacheEviction.evictByUserId(post.getUserId());
+        if (firstPublish) {
+          events.publishEvent(
+              new PostPublishedEvent(
+                  post.getUserId(), post.getId(), post.getSlug(), post.getTitle(), now));
+        }
         published++;
       } catch (RuntimeException e) {
         log.warn("scheduled publish skipped post {}: {}", post.getId(), e.getMessage());

@@ -42,7 +42,8 @@ class NotificationControllerTest {
             5L,
             NotificationType.LIKE,
             new NotificationActor(2L, "alice", "a.png"),
-            new NotificationPostRef(10L, "my-post", "Hi"),
+            new NotificationPostRef(10L, "my-post", "Hi", null),
+            null,
             false,
             Instant.parse("2026-06-07T00:00:00Z"));
     when(queryService.list(eq(USER_ID), isNull(), eq(20)))

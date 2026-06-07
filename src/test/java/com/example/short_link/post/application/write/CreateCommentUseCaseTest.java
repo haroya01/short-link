@@ -3,9 +3,12 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.BlogInteractionEvent;
+import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -15,10 +18,12 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -46,6 +51,12 @@ class CreateCommentUseCaseTest {
   private UserEntity commenter() {
     UserEntity u = new UserEntity("c@x.com", "google", "g-9");
     u.claimUsername("carol");
+    return u;
+  }
+
+  private UserEntity owner() {
+    UserEntity u = new UserEntity("o@x.com", "google", "g-7");
+    u.claimUsername("olivia");
     return u;
   }
 
@@ -78,6 +89,77 @@ class CreateCommentUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+  }
+
+  @Test
+  void replyNotifiesBothPostOwnerAndParentCommentAuthor() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    CommentEntity parent =
+        new CommentEntity(42L, 3L, null, "top"); // parent author 3 (a third party)
+    when(commentRepository.findById(50L)).thenReturn(Optional.of(parent));
+    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
+    when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
+
+    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"));
+
+    ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(2)).publishEvent(evt.capture());
+    List<Object> events = evt.getAllValues();
+    // COMMENT to the post owner (7), REPLY to the parent comment's author (3).
+    BlogInteractionEvent comment =
+        events.stream()
+            .filter(e -> e instanceof BlogInteractionEvent)
+            .map(e -> (BlogInteractionEvent) e)
+            .findFirst()
+            .orElseThrow();
+    CommentReplyEvent reply =
+        events.stream()
+            .filter(e -> e instanceof CommentReplyEvent)
+            .map(e -> (CommentReplyEvent) e)
+            .findFirst()
+            .orElseThrow();
+    assertThat(comment.recipientUserId()).isEqualTo(7L);
+    assertThat(reply.recipientUserId()).isEqualTo(3L);
+    assertThat(reply.actorUserId()).isEqualTo(9L);
+    // The reply carries the post owner's handle (not the recipient's) so the link resolves.
+    assertThat(reply.postAuthorUsername()).isEqualTo("olivia");
+  }
+
+  @Test
+  void replyToPostOwnersOwnCommentSendsOnlyTheReplyNotice() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    CommentEntity parent =
+        new CommentEntity(42L, 7L, null, "owner's top"); // parent author == owner
+    when(commentRepository.findById(50L)).thenReturn(Optional.of(parent));
+    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
+    when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
+
+    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"));
+
+    // Owner would get both COMMENT and REPLY — collapse to the single, more specific REPLY.
+    ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(1)).publishEvent(evt.capture());
+    assertThat(evt.getValue()).isInstanceOf(CommentReplyEvent.class);
+    assertThat(((CommentReplyEvent) evt.getValue()).recipientUserId()).isEqualTo(7L);
+  }
+
+  @Test
+  void replyingToYourOwnCommentSendsNoReplyNotice() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    CommentEntity parent =
+        new CommentEntity(42L, 9L, null, "my own top"); // parent author == actor 9
+    when(commentRepository.findById(50L)).thenReturn(Optional.of(parent));
+    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
+
+    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"));
+
+    // Only the post-owner COMMENT fires; the self-reply produces no REPLY.
+    ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(1)).publishEvent(evt.capture());
+    assertThat(evt.getValue()).isInstanceOf(BlogInteractionEvent.class);
   }
 
   @Test

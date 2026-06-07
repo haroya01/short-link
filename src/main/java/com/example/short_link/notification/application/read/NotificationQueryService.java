@@ -2,9 +2,11 @@ package com.example.short_link.notification.application.read;
 
 import com.example.short_link.notification.application.dto.NotificationListResult;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.dto.NotificationView;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
+import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationActorReader;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import java.util.List;
@@ -56,19 +58,19 @@ public class NotificationQueryService {
   private NotificationView toView(NotificationEntity row, Map<Long, NotificationActor> actors) {
     NotificationActor actor =
         row.getActorUserId() == null ? null : actors.get(row.getActorUserId());
+    boolean isSeries = row.getType() == NotificationType.SERIES_SUBSCRIBE;
+    NotificationPostRef post =
+        isSeries ? null : decode(row.getPayload(), NotificationPostRef.class);
+    NotificationSeriesRef series =
+        isSeries ? decode(row.getPayload(), NotificationSeriesRef.class) : null;
     return new NotificationView(
-        row.getId(),
-        row.getType(),
-        actor,
-        decodePost(row.getPayload()),
-        row.isRead(),
-        row.getCreatedAt());
+        row.getId(), row.getType(), actor, post, series, row.isRead(), row.getCreatedAt());
   }
 
-  private NotificationPostRef decodePost(String payload) {
+  private <T> T decode(String payload, Class<T> type) {
     if (payload == null || payload.isBlank()) {
       return null;
     }
-    return jsonMapper.readValue(payload, NotificationPostRef.class);
+    return jsonMapper.readValue(payload, type);
   }
 }

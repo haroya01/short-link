@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
+import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.domain.CommentEntity;
@@ -35,8 +36,9 @@ public class CreateCommentUseCase {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, cmd.postId());
     }
 
+    CommentEntity parent = null;
     if (cmd.parentId() != null) {
-      CommentEntity parent =
+      parent =
           commentRepository
               .findById(cmd.parentId())
               .orElseThrow(() -> new PostException(PostErrorCode.COMMENT_PARENT_INVALID));
@@ -49,18 +51,45 @@ public class CreateCommentUseCase {
     CommentEntity saved =
         commentRepository.save(
             new CommentEntity(cmd.postId(), cmd.userId(), cmd.parentId(), cmd.body().trim()));
-    // Notify the post's author of a new comment — never for a comment on your own post.
-    if (!post.getUserId().equals(cmd.userId())) {
+
+    Long ownerId = post.getUserId();
+    Long actorId = cmd.userId();
+    Long parentAuthorId = parent == null ? null : parent.getUserId();
+
+    // Notify the post's author of a new comment — never for a comment on your own post. But when
+    // the
+    // comment replies to the owner's own comment, the more specific REPLY notice below covers it,
+    // so
+    // we don't also send a COMMENT (one notice, not two, for the same person).
+    boolean replyToOwner = parentAuthorId != null && parentAuthorId.equals(ownerId);
+    if (!ownerId.equals(actorId) && !replyToOwner) {
       events.publishEvent(
           BlogInteractionEvent.comment(
-              post.getUserId(),
-              cmd.userId(),
+              ownerId,
+              actorId,
               post.getId(),
               post.getSlug(),
               post.getTitle(),
               saved.getCreatedAt()));
     }
-    UserEntity author = userRepository.findById(cmd.userId()).orElse(null);
+
+    // Notify the parent comment's author of a reply — never for replying to your own comment. The
+    // parent's author may not own the post, so we carry the post owner's username for the link.
+    if (parentAuthorId != null && !parentAuthorId.equals(actorId)) {
+      String ownerUsername =
+          userRepository.findById(ownerId).map(UserEntity::getUsername).orElse(null);
+      events.publishEvent(
+          new CommentReplyEvent(
+              parentAuthorId,
+              actorId,
+              post.getId(),
+              post.getSlug(),
+              post.getTitle(),
+              ownerUsername,
+              saved.getCreatedAt()));
+    }
+
+    UserEntity author = userRepository.findById(actorId).orElse(null);
     return new CommentView(
         saved.getId(),
         saved.getParentId(),
