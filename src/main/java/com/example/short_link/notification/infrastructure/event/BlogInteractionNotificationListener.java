@@ -3,6 +3,7 @@ package com.example.short_link.notification.infrastructure.event;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -12,11 +13,11 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Writes an in-app notification when a reader likes/comments/follows. The sibling of {@link
- * com.example.short_link.post.webhook.scheduler.BlogWebhookDispatcher}: it consumes the same {@link
- * BlogInteractionEvent}, fires only after the interaction commits (so a rolled-back like leaves no
- * phantom notification), and runs on the shared {@code webhookExecutor} so the recording insert
- * never stalls the request path.
+ * Writes an in-app notification when a reader likes/comments/follows/subscribes. The sibling of
+ * {@link com.example.short_link.post.webhook.scheduler.BlogWebhookDispatcher}: it consumes the same
+ * {@link BlogInteractionEvent}, fires only after the interaction commits (so a rolled-back like
+ * leaves no phantom notification), and runs on the shared {@code webhookExecutor} so the recording
+ * insert never stalls the request path.
  */
 @Component
 @RequiredArgsConstructor
@@ -34,20 +35,30 @@ public class BlogInteractionNotificationListener {
     if (type == null) {
       return;
     }
-    NotificationPostRef post =
-        event.postId() == null
-            ? null
-            : new NotificationPostRef(event.postId(), event.postSlug(), event.postTitle());
-    recordUseCase.record(event.recipientUserId(), type, event.actorUserId(), post);
+    recordUseCase.record(event.recipientUserId(), type, event.actorUserId(), payloadOf(event));
   }
 
-  /** Maps the interaction kind onto the bell's surface; SERIES_SUBSCRIBE isn't surfaced yet. */
+  /**
+   * The target ref serialized into the row's payload: a series ref for SERIES_SUBSCRIBE, a post ref
+   * (no author handle — the recipient IS the author for LIKE/COMMENT) when a post is present, else
+   * null (FOLLOW).
+   */
+  private static Object payloadOf(BlogInteractionEvent event) {
+    if (event.type() == BlogInteractionType.SERIES_SUBSCRIBE) {
+      return new NotificationSeriesRef(event.seriesId(), event.seriesSlug(), event.seriesTitle());
+    }
+    if (event.postId() == null) {
+      return null;
+    }
+    return new NotificationPostRef(event.postId(), event.postSlug(), event.postTitle(), null);
+  }
+
   private static NotificationType mapType(BlogInteractionType type) {
     return switch (type) {
       case LIKE -> NotificationType.LIKE;
       case COMMENT -> NotificationType.COMMENT;
       case FOLLOW -> NotificationType.FOLLOW;
-      case SERIES_SUBSCRIBE -> null;
+      case SERIES_SUBSCRIBE -> NotificationType.SERIES_SUBSCRIBE;
     };
   }
 }

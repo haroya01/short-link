@@ -19,6 +19,7 @@ import java.time.Instant;
  * @param postSlug post slug snapshot for the payload; null when no post
  * @param postTitle post title snapshot for the payload; null when no post
  * @param seriesId the series, for SERIES_SUBSCRIBE; null otherwise
+ * @param seriesSlug series slug snapshot (builds the series link); null otherwise
  * @param seriesTitle series title snapshot; null otherwise
  * @param occurredAt when the interaction happened
  */
@@ -30,6 +31,7 @@ public record BlogInteractionEvent(
     String postSlug,
     String postTitle,
     Long seriesId,
+    String seriesSlug,
     String seriesTitle,
     Instant occurredAt) {
 
@@ -49,6 +51,7 @@ public record BlogInteractionEvent(
         title,
         null,
         null,
+        null,
         at);
   }
 
@@ -63,16 +66,31 @@ public record BlogInteractionEvent(
         title,
         null,
         null,
+        null,
         at);
   }
 
   public static BlogInteractionEvent follow(Long recipientUserId, Long actorUserId, Instant at) {
     return new BlogInteractionEvent(
-        BlogInteractionType.FOLLOW, recipientUserId, actorUserId, null, null, null, null, null, at);
+        BlogInteractionType.FOLLOW,
+        recipientUserId,
+        actorUserId,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        at);
   }
 
   public static BlogInteractionEvent seriesSubscribe(
-      Long recipientUserId, Long actorUserId, Long seriesId, String seriesTitle, Instant at) {
+      Long recipientUserId,
+      Long actorUserId,
+      Long seriesId,
+      String seriesSlug,
+      String seriesTitle,
+      Instant at) {
     return new BlogInteractionEvent(
         BlogInteractionType.SERIES_SUBSCRIBE,
         recipientUserId,
@@ -81,6 +99,7 @@ public record BlogInteractionEvent(
         null,
         null,
         seriesId,
+        seriesSlug,
         seriesTitle,
         at);
   }

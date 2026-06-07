@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.event.PostPublishedEvent;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PublishScheduledPostsUseCaseTest {
@@ -24,9 +26,11 @@ class PublishScheduledPostsUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionCapture postRevisionCapture;
   @Mock private ProfileCacheInvalidator cacheEviction;
+  @Mock private ApplicationEventPublisher events;
 
   private PublishScheduledPostsUseCase useCase() {
-    return new PublishScheduledPostsUseCase(postRepository, postRevisionCapture, cacheEviction);
+    return new PublishScheduledPostsUseCase(
+        postRepository, postRevisionCapture, cacheEviction, events);
   }
 
   private static PostEntity scheduledPost(String slug) {
@@ -48,6 +52,8 @@ class PublishScheduledPostsUseCaseTest {
     assertThat(b.getStatus()).isEqualTo(PostStatus.PUBLISHED);
     verify(postRepository, times(2)).save(any(PostEntity.class));
     verify(postRevisionCapture, times(2)).capture(any(PostEntity.class));
+    // Each scheduled post is going public for the first time → one fan-out event apiece.
+    verify(events, times(2)).publishEvent(any(PostPublishedEvent.class));
   }
 
   @Test
