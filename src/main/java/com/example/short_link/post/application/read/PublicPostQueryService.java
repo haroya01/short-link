@@ -91,6 +91,33 @@ public class PublicPostQueryService {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, slug);
     }
 
+    return buildDetail(author, post);
+  }
+
+  /**
+   * Reads a post by its share token, bypassing the status guard — this is how an owner previews a
+   * not-yet-public draft. The token IS the authorization (unguessable), so no principal is
+   * required. A deleted author or unknown token is a 404 (no detail leaked about which). Series nav
+   * resolves to null for an unpublished post (it isn't among its series' published siblings), which
+   * is the intended preview behavior.
+   */
+  public PublicPostDetail findPreviewPost(String token) {
+    if (token == null || token.isBlank()) {
+      throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
+    }
+    PostEntity post =
+        postRepository
+            .findByPreviewToken(token)
+            .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, ""));
+    UserEntity author =
+        userRepository
+            .findById(post.getUserId())
+            .filter(u -> !u.isDeleted())
+            .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, ""));
+    return buildDetail(author, post);
+  }
+
+  private PublicPostDetail buildDetail(UserEntity author, PostEntity post) {
     List<PostBlockEntity> entities =
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId());
     Map<Long, CtaEntity> ctaMap = hydrateCtas(entities);

@@ -42,6 +42,11 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public Optional<PostEntity> findByPreviewToken(String previewToken) {
+    return jpa.findByPreviewToken(previewToken);
+  }
+
+  @Override
   public PostEntity save(PostEntity post) {
     return jpa.save(post);
   }

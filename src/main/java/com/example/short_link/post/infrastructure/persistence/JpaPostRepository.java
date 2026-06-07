@@ -27,6 +27,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
 
+  Optional<PostEntity> findByPreviewToken(String previewToken);
+
   boolean existsByUserIdAndSlug(Long userId, String slug);
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);

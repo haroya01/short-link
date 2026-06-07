@@ -19,6 +19,9 @@ public interface PostRepository {
 
   Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
 
+  /** Resolves a post by its share token (any status), for the unauthenticated preview read. */
+  Optional<PostEntity> findByPreviewToken(String previewToken);
+
   PostEntity save(PostEntity post);
 
   void delete(PostEntity post);

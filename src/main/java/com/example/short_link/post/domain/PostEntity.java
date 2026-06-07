@@ -104,6 +104,14 @@ public class PostEntity extends BaseTimeEntity {
   @BatchSize(size = 50)
   private List<String> tags = new ArrayList<>();
 
+  /**
+   * Unguessable token that lets the owner share a not-yet-public post via {@code
+   * {slug}?preview=...} without publishing it. Null until first requested; the public read path
+   * bypasses the status guard when it matches. Set lazily via {@link #ensurePreviewToken}.
+   */
+  @Column(name = "preview_token", length = 64)
+  private String previewToken;
+
   /** Optional series membership. seriesOrder is the 0-based position within the series. */
   @Column(name = "series_id")
   private Long seriesId;
@@ -259,6 +267,18 @@ public class PostEntity extends BaseTimeEntity {
   public void updateTags(List<String> raw) {
     this.tags.clear();
     this.tags.addAll(normalizeTags(raw));
+  }
+
+  /**
+   * Assigns a share token if one isn't set yet and returns the effective token. Idempotent —
+   * calling again keeps (and returns) the existing token, so re-opening the share dialog yields a
+   * stable link. The caller supplies the generated token so the entity stays free of randomness.
+   */
+  public String ensurePreviewToken(String token) {
+    if (this.previewToken == null) {
+      this.previewToken = token;
+    }
+    return this.previewToken;
   }
 
   public void assignToSeries(Long seriesId, int order) {
