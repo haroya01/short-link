@@ -2,18 +2,22 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.event.PostPublishedEvent;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PublishPostUseCaseTest {
@@ -22,17 +26,19 @@ class PublishPostUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionCapture postRevisionCapture;
   @Mock private ProfileCacheInvalidator cacheEviction;
+  @Mock private ApplicationEventPublisher events;
 
   private PublishPostUseCase useCase;
 
   @BeforeEach
   void setUp() {
     useCase =
-        new PublishPostUseCase(postOwnership, postRepository, postRevisionCapture, cacheEviction);
+        new PublishPostUseCase(
+            postOwnership, postRepository, postRevisionCapture, cacheEviction, events);
   }
 
   @Test
-  void publishesDraftAndCapturesRevision() {
+  void publishesDraftAndCapturesRevisionAndAnnouncesFirstPublish() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -42,5 +48,22 @@ class PublishPostUseCaseTest {
     assertThat(result.getStatus()).isEqualTo(PostStatus.PUBLISHED);
     assertThat(result.getPublishedAt()).isNotNull();
     verify(postRevisionCapture).capture(result);
+    // First publish fans out to followers via PostPublishedEvent.
+    ArgumentCaptor<PostPublishedEvent> evt = ArgumentCaptor.forClass(PostPublishedEvent.class);
+    verify(events).publishEvent(evt.capture());
+    assertThat(evt.getValue().authorUserId()).isEqualTo(7L);
+    assertThat(evt.getValue().postSlug()).isEqualTo("my-post");
+  }
+
+  @Test
+  void republishingAnAlreadyPublishedPostDoesNotAnnounceAgain() {
+    PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
+    post.publish(); // already public once → publishedAt set
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(new PublishPostCommand(7L, 42L));
+
+    verify(events, never()).publishEvent(any());
   }
 }

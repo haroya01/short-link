@@ -29,7 +29,8 @@ class RecordBlogNotificationUseCaseTest {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
 
-    useCase().record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "my-post", "Hi"));
+    useCase()
+        .record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "my-post", "Hi", null));
 
     ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
     org.mockito.Mockito.verify(repository).save(saved.capture());

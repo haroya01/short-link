@@ -23,7 +23,7 @@ class BlogWebhookPayloadAdapterTest {
   }
 
   private static BlogInteractionEvent seriesSubscribe() {
-    return BlogInteractionEvent.seriesSubscribe(1L, 2L, 7L, "My Series", AT);
+    return BlogInteractionEvent.seriesSubscribe(1L, 2L, 7L, "my-series", "My Series", AT);
   }
 
   @Test

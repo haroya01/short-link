@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
 import java.time.Instant;
@@ -60,16 +61,23 @@ class BlogInteractionNotificationListenerTest {
   }
 
   @Test
-  void seriesSubscribeIsNotSurfaced() {
-    listener().onBlogInteraction(BlogInteractionEvent.seriesSubscribe(9L, 2L, 4L, "Series", AT));
+  void seriesSubscribeRecordsNotificationWithSeriesReference() {
+    listener()
+        .onBlogInteraction(
+            BlogInteractionEvent.seriesSubscribe(9L, 2L, 4L, "my-series", "Series", AT));
 
-    verify(recordUseCase, never()).record(any(), any(), any(), any());
+    ArgumentCaptor<NotificationSeriesRef> series =
+        ArgumentCaptor.forClass(NotificationSeriesRef.class);
+    verify(recordUseCase)
+        .record(eq(9L), eq(NotificationType.SERIES_SUBSCRIBE), eq(2L), series.capture());
+    org.assertj.core.api.Assertions.assertThat(series.getValue().slug()).isEqualTo("my-series");
   }
 
   @Test
   void nullRecipientIsSkipped() {
     BlogInteractionEvent event =
-        new BlogInteractionEvent(BlogInteractionType.LIKE, null, 2L, 10L, "s", "t", null, null, AT);
+        new BlogInteractionEvent(
+            BlogInteractionType.LIKE, null, 2L, 10L, "s", "t", null, null, null, AT);
 
     listener().onBlogInteraction(event);
 

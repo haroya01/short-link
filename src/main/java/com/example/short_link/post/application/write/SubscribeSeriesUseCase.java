@@ -38,7 +38,12 @@ public class SubscribeSeriesUseCase {
       if (!series.getUserId().equals(userId)) {
         events.publishEvent(
             BlogInteractionEvent.seriesSubscribe(
-                series.getUserId(), userId, seriesId, series.getTitle(), Instant.now()));
+                series.getUserId(),
+                userId,
+                seriesId,
+                series.getSlug(),
+                series.getTitle(),
+                Instant.now()));
       }
     }
     return new SeriesSubscriptionStatus(true, subscriptionRepository.countBySeriesId(seriesId));
