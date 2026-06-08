@@ -65,7 +65,10 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       SHORT_LINK_BASE_URL: https://${BACKEND_HOST}
       SHORT_LINK_FRONTEND_BASE_URL: https://${FRONTEND_HOST}
-      CORS_ALLOWED_ORIGINS: https://${FRONTEND_HOST}
+      # apex + every platform subdomain (blog.kurl.me AND each author {username}.kurl.me) — they all
+      # make credentialed /api/v1/auth/refresh calls. `https://*.<host>` is an allowed-origin PATTERN
+      # (CorsConfiguration#setAllowedOriginPatterns); the apex needs its own entry (wildcard won't match it).
+      CORS_ALLOWED_ORIGINS: https://${FRONTEND_HOST},https://*.${FRONTEND_HOST}
       JWT_PRIVATE_KEY: ${JWT_PRIVATE_KEY}
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
