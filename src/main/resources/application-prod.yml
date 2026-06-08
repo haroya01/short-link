@@ -46,3 +46,12 @@ short-link:
     secure: true
     domain: ${COOKIE_DOMAIN:.kurl.me}
     same-site: ${COOKIE_SAME_SITE:Lax}
+  # Credentialed (refresh-cookie) requests come from EVERY platform surface, not just the apex:
+  # the apex (kurl.me), the blog (blog.kurl.me) AND each author subdomain ({username}.kurl.me).
+  # Listing only the apex is why the blog/subdomain sessions silently dropped — the credentialed
+  # /api/v1/auth/refresh preflight was blocked there, so bootstrapSession couldn't restore the token.
+  # `https://*.kurl.me` is an allowed-origin PATTERN (CorsConfiguration#setAllowedOriginPatterns) that
+  # covers blog + every author subdomain; the apex needs its own entry (the wildcard won't match it).
+  # Env still wins — but when set, CORS_ALLOWED_ORIGINS MUST include both of these.
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://kurl.me,https://*.kurl.me}
