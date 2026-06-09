@@ -74,11 +74,22 @@ class PublicFollowingFeedIntegrationTest {
     publish(stranger, "series-episode", series);
     publish(stranger, "stranger-standalone", null); // not followed, not in a subscribed series
 
-    List<String> slugs =
-        service.feedFollowing(me, 0, 20).items().stream().map(PublicFeedItem::slug).toList();
+    List<PublicFeedItem> items = service.feedFollowing(me, 0, 20).items();
+    List<String> slugs = items.stream().map(PublicFeedItem::slug).toList();
 
     assertThat(slugs).contains("from-followed", "series-episode");
     assertThat(slugs).doesNotContain("stranger-standalone");
+    // followReason explains each card: followed author → AUTHOR, subscribed series → SERIES.
+    assertThat(reasonOf(items, "from-followed").kind()).isEqualTo(FollowReason.AUTHOR);
+    assertThat(reasonOf(items, "series-episode").kind()).isEqualTo(FollowReason.SERIES);
+  }
+
+  private static FollowReason reasonOf(List<PublicFeedItem> items, String slug) {
+    return items.stream()
+        .filter(i -> i.slug().equals(slug))
+        .findFirst()
+        .orElseThrow()
+        .followReason();
   }
 
   @Test
@@ -92,11 +103,15 @@ class PublicFollowingFeedIntegrationTest {
     publish(author, "spring-post", null, List.of("spring", "java")); // matches by tag (case-insens)
     publish(author, "react-post", null, List.of("react")); // unrelated topic, author not followed
 
-    List<String> slugs =
-        service.feedFollowing(me, 0, 20).items().stream().map(PublicFeedItem::slug).toList();
+    List<PublicFeedItem> items = service.feedFollowing(me, 0, 20).items();
+    List<String> slugs = items.stream().map(PublicFeedItem::slug).toList();
 
     assertThat(slugs).contains("spring-post");
     assertThat(slugs).doesNotContain("react-post");
+    // Surfaced by the topic, so followReason names the matched (lower-cased) tag.
+    FollowReason reason = reasonOf(items, "spring-post");
+    assertThat(reason.kind()).isEqualTo(FollowReason.TOPIC);
+    assertThat(reason.tag()).isEqualTo("spring");
   }
 
   @Test
