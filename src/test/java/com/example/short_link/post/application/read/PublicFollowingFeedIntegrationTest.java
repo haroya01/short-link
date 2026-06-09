@@ -4,9 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.TagPrefKind;
+import com.example.short_link.post.domain.UserTagPrefEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
+import com.example.short_link.post.domain.repository.UserTagPrefRepository;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -34,6 +37,7 @@ class PublicFollowingFeedIntegrationTest {
   @Autowired private SeriesSubscriptionRepository subscriptionRepository;
   @Autowired private FollowRepository followRepository;
   @Autowired private UserRepository userRepository;
+  @Autowired private UserTagPrefRepository tagPrefRepository;
 
   private long user(String handle) {
     UserEntity u = userRepository.save(new UserEntity(handle + "@x.com", "google", "g-" + handle));
@@ -43,8 +47,13 @@ class PublicFollowingFeedIntegrationTest {
   }
 
   private String publish(long userId, String slug, Long seriesId) {
+    return publish(userId, slug, seriesId, List.of());
+  }
+
+  private String publish(long userId, String slug, Long seriesId, List<String> tags) {
     PostEntity p = new PostEntity(userId, slug, slug, "ko");
     if (seriesId != null) p.assignToSeries(seriesId, 0);
+    if (!tags.isEmpty()) p.updateTags(tags);
     p.publish();
     postRepository.save(p);
     return slug;
@@ -70,6 +79,24 @@ class PublicFollowingFeedIntegrationTest {
 
     assertThat(slugs).contains("from-followed", "series-episode");
     assertThat(slugs).doesNotContain("stranger-standalone");
+  }
+
+  @Test
+  void mergesPostsCarryingAFollowedTag() {
+    long me = user("topicreader");
+    long author = user("writer");
+
+    // I follow the topic "Spring" (mixed case) — but not the author.
+    tagPrefRepository.save(new UserTagPrefEntity(me, "Spring", TagPrefKind.FOLLOW));
+
+    publish(author, "spring-post", null, List.of("spring", "java")); // matches by tag (case-insens)
+    publish(author, "react-post", null, List.of("react")); // unrelated topic, author not followed
+
+    List<String> slugs =
+        service.feedFollowing(me, 0, 20).items().stream().map(PublicFeedItem::slug).toList();
+
+    assertThat(slugs).contains("spring-post");
+    assertThat(slugs).doesNotContain("react-post");
   }
 
   @Test

@@ -25,6 +25,7 @@ class PublicFeedQueryServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private FollowRepository followRepository;
   @Mock private SeriesSubscriptionRepository seriesSubscriptionRepository;
+  @Mock private TagPrefQueryService tagPrefQueryService;
 
   private PublicFeedQueryService service;
 
@@ -36,6 +37,7 @@ class PublicFeedQueryServiceTest {
             userRepository,
             followRepository,
             seriesSubscriptionRepository,
+            tagPrefQueryService,
             new PostFeedItemAssembler(userRepository));
   }
 
@@ -130,10 +132,13 @@ class PublicFeedQueryServiceTest {
   void followingFeedMergesFollowedAuthorsAndSubscribedSeries() {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of(2L, 3L));
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
-    // No subscriptions → series side is the no-match sentinel.
-    when(postRepository.findPublishedByAuthorIdsOrSeriesIds(List.of(2L, 3L), List.of(-1L), 0, 20))
+    when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
+    // No subscriptions / followed tags → those sides are the no-match sentinels.
+    when(postRepository.findPublishedByAuthorsSeriesOrTags(
+            List.of(2L, 3L), List.of(-1L), List.of("\u0000"), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
-    when(postRepository.countPublishedByAuthorIdsOrSeriesIds(List.of(2L, 3L), List.of(-1L)))
+    when(postRepository.countPublishedByAuthorsSeriesOrTags(
+            List.of(2L, 3L), List.of(-1L), List.of("\u0000")))
         .thenReturn(1L);
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
 
@@ -147,10 +152,33 @@ class PublicFeedQueryServiceTest {
   void followingFeedDrawsFromSubscribedSeriesWhenFollowingNoAuthors() {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of(7L));
-    // No followed authors → author side is the no-match sentinel; series side carries the query.
-    when(postRepository.findPublishedByAuthorIdsOrSeriesIds(List.of(-1L), List.of(7L), 0, 20))
+    when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
+    // No followed authors/tags → those sides are no-match sentinels; series side carries the query.
+    when(postRepository.findPublishedByAuthorsSeriesOrTags(
+            List.of(-1L), List.of(7L), List.of("\u0000"), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
-    when(postRepository.countPublishedByAuthorIdsOrSeriesIds(List.of(-1L), List.of(7L)))
+    when(postRepository.countPublishedByAuthorsSeriesOrTags(
+            List.of(-1L), List.of(7L), List.of("\u0000")))
+        .thenReturn(1L);
+    when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
+
+    PublicFeedView view = service.feedFollowing(9L, 0, 20);
+
+    assertThat(view.items()).hasSize(1);
+    assertThat(view.items().get(0).author().username()).isEqualTo("bob");
+  }
+
+  @Test
+  void followingFeedDrawsFromFollowedTagsWhenFollowingNoAuthorsOrSeries() {
+    when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
+    when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
+    // Followed a tag (mixed case) → it's lower-cased before hitting the (lower(t) in :tags) query.
+    when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of("Spring"), List.of()));
+    when(postRepository.findPublishedByAuthorsSeriesOrTags(
+            List.of(-1L), List.of(-1L), List.of("spring"), 0, 20))
+        .thenReturn(List.of(post(2L, "a")));
+    when(postRepository.countPublishedByAuthorsSeriesOrTags(
+            List.of(-1L), List.of(-1L), List.of("spring")))
         .thenReturn(1L);
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
 
@@ -164,6 +192,7 @@ class PublicFeedQueryServiceTest {
   void followingFeedIsEmptyWhenUserFollowsAndSubscribesNothing() {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
+    when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
 
     PublicFeedView view = service.feedFollowing(9L, 0, 20);
 

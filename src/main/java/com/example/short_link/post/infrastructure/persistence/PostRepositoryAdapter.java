@@ -199,16 +199,21 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findPublishedByAuthorIdsOrSeriesIds(
-      Collection<Long> authorIds, Collection<Long> seriesIds, int page, int size) {
-    return jpa.findPublishedByAuthorIdsOrSeriesIds(
-        authorIds, seriesIds, PostStatus.PUBLISHED, PageRequest.of(page, size));
+  public List<PostEntity> findPublishedByAuthorsSeriesOrTags(
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags,
+      int page,
+      int size) {
+    return jpa.findPublishedByAuthorsSeriesOrTags(
+        authorIds, seriesIds, tags, PostStatus.PUBLISHED, PageRequest.of(page, size));
   }
 
   @Override
-  public long countPublishedByAuthorIdsOrSeriesIds(
-      Collection<Long> authorIds, Collection<Long> seriesIds) {
-    return jpa.countPublishedByAuthorIdsOrSeriesIds(authorIds, seriesIds, PostStatus.PUBLISHED);
+  public long countPublishedByAuthorsSeriesOrTags(
+      Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags) {
+    return jpa.countPublishedByAuthorsSeriesOrTags(
+        authorIds, seriesIds, tags, PostStatus.PUBLISHED);
   }
 
   @Override
