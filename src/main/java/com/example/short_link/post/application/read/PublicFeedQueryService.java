@@ -9,9 +9,11 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -117,7 +119,42 @@ public class PublicFeedQueryService {
     List<PostEntity> posts =
         postRepository.findPublishedByAuthorsSeriesOrTags(authorIds, seriesIds, tags, page, size);
     long total = postRepository.countPublishedByAuthorsSeriesOrTags(authorIds, seriesIds, tags);
-    return assemble(posts, total, page, size);
+
+    // Annotate each card with why it matched (작가/시리즈/주제) so the UI can explain it. Keyed by post
+    // id, not list index — the assembler drops deleted-author posts, so positions wouldn't line up.
+    Set<Long> followingSet = Set.copyOf(followingIds);
+    Set<Long> seriesSet = Set.copyOf(subscribedSeriesIds);
+    Set<String> tagSet = Set.copyOf(followedTags);
+    // Plain HashMap, not Collectors.toMap — a post with no matching signal maps to a null reason,
+    // which toMap rejects. Absent key == null reason == unannotated card.
+    Map<Long, FollowReason> reasonById = new HashMap<>();
+    for (PostEntity p : posts) {
+      FollowReason reason = followReason(p, followingSet, seriesSet, tagSet);
+      if (reason != null) reasonById.put(p.getId(), reason);
+    }
+
+    boolean hasNext = (long) (page + 1) * size < total;
+    List<PublicFeedItem> items =
+        feedItemAssembler.assemble(posts).stream()
+            .map(it -> it.withFollowReason(reasonById.get(it.id())))
+            .toList();
+    return new PublicFeedView(items, page, size, hasNext);
+  }
+
+  // AUTHOR > SERIES > TOPIC — the most direct relationship wins, so a followed author's post reads
+  // as
+  // "팔로잉" rather than incidentally "주제". For TOPIC, name the first followed tag the post carries.
+  private FollowReason followReason(
+      PostEntity post, Set<Long> followingSet, Set<Long> seriesSet, Set<String> tagSet) {
+    if (followingSet.contains(post.getUserId())) return FollowReason.author();
+    if (post.getSeriesId() != null && seriesSet.contains(post.getSeriesId())) {
+      return FollowReason.series();
+    }
+    return post.getTags().stream()
+        .filter(t -> tagSet.contains(t.toLowerCase(Locale.ROOT)))
+        .findFirst()
+        .map(FollowReason::topic)
+        .orElse(null);
   }
 
   /**
