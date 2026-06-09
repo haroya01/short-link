@@ -98,14 +98,20 @@ public interface PostRepository {
   long countSearchPublished(String query, String lang);
 
   /**
-   * Published posts by any of the given authors OR in any of the given series, newest first — the
-   * "following" feed once it merges followed authors with subscribed series. Pass non-empty
-   * collections (use a sentinel that matches nothing when a side is empty).
+   * Published posts by any of the given authors OR in any of the given series OR carrying any of
+   * the given (lower-cased) tags, newest first — the "following" feed merging the three follow
+   * signals (작가·시리즈·주제). Pass non-empty collections (use a sentinel that matches nothing when a
+   * side is empty).
    */
-  List<PostEntity> findPublishedByAuthorIdsOrSeriesIds(
-      Collection<Long> authorIds, Collection<Long> seriesIds, int page, int size);
+  List<PostEntity> findPublishedByAuthorsSeriesOrTags(
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags,
+      int page,
+      int size);
 
-  long countPublishedByAuthorIdsOrSeriesIds(Collection<Long> authorIds, Collection<Long> seriesIds);
+  long countPublishedByAuthorsSeriesOrTags(
+      Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags);
 
   /** Most-used tags across published posts, most popular first — the 주제 index. */
   List<TagCount> findPopularTags(int limit);

@@ -99,22 +99,31 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "where lower(t) = lower(:tag) and p.status = :status")
   long countPublishedByTag(@Param("tag") String tag, @Param("status") PostStatus status);
 
+  // The "following" feed union: posts whose author I follow OR whose series I subscribe to OR which
+  // carry a tag I follow. LEFT JOIN p.tags so the `lower(t) in :tags` (case-insensitive) match
+  // works;
+  // `distinct` collapses the row fan-out that join produces for multi-tag posts. Callers pass a
+  // no-match sentinel for any empty side (JPQL `in ()` is invalid).
   @Query(
-      "select p from PostEntity p "
-          + "where p.status = :status and (p.userId in :authorIds or p.seriesId in :seriesIds) "
+      "select distinct p from PostEntity p left join p.tags t "
+          + "where p.status = :status "
+          + "and (p.userId in :authorIds or p.seriesId in :seriesIds or lower(t) in :tags) "
           + "order by p.publishedAt desc")
-  List<PostEntity> findPublishedByAuthorIdsOrSeriesIds(
+  List<PostEntity> findPublishedByAuthorsSeriesOrTags(
       @Param("authorIds") Collection<Long> authorIds,
       @Param("seriesIds") Collection<Long> seriesIds,
+      @Param("tags") Collection<String> tags,
       @Param("status") PostStatus status,
       Pageable pageable);
 
   @Query(
-      "select count(p) from PostEntity p "
-          + "where p.status = :status and (p.userId in :authorIds or p.seriesId in :seriesIds)")
-  long countPublishedByAuthorIdsOrSeriesIds(
+      "select count(distinct p) from PostEntity p left join p.tags t "
+          + "where p.status = :status "
+          + "and (p.userId in :authorIds or p.seriesId in :seriesIds or lower(t) in :tags)")
+  long countPublishedByAuthorsSeriesOrTags(
       @Param("authorIds") Collection<Long> authorIds,
       @Param("seriesIds") Collection<Long> seriesIds,
+      @Param("tags") Collection<String> tags,
       @Param("status") PostStatus status);
 
   @Query(

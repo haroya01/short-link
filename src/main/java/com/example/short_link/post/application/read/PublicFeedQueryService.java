@@ -10,6 +10,7 @@ import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -30,11 +31,15 @@ public class PublicFeedQueryService {
   // A sentinel id that matches no row — lets the union query stay valid when one side is empty
   // (JPQL `in ()` is invalid) without branching into separate queries.
   private static final List<Long> NONE = List.of(-1L);
+  // Tag-side sentinel: a NUL char no real tag can equal (tags are trimmed, non-blank). Keeps
+  // the union query valid when the user follows no tags (JPQL `in ()` is invalid).
+  private static final List<String> NO_TAGS = List.of("\u0000");
 
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
   private final SeriesSubscriptionRepository seriesSubscriptionRepository;
+  private final TagPrefQueryService tagPrefQueryService;
   private final PostFeedItemAssembler feedItemAssembler;
 
   public PublicFeedView feed(String sort, String lang, int page, int size) {
@@ -91,20 +96,27 @@ public class PublicFeedQueryService {
   }
 
   /**
-   * The "following" feed — posts from authors the user follows AND new episodes of series the user
-   * subscribes to, merged newest-first. Empty when the user follows/subscribes to nothing.
+   * The "following" feed — everything the user opted into, merged newest-first: posts from authors
+   * they follow, new episodes of series they subscribe to, AND posts carrying a tag they follow (주제
+   * 팔로우). Empty when the user follows/subscribes to nothing on all three axes.
    */
   public PublicFeedView feedFollowing(Long userId, int page, int size) {
     List<Long> followingIds = followRepository.findFollowingIds(userId);
     List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);
-    if (followingIds.isEmpty() && subscribedSeriesIds.isEmpty()) {
+    // Match the tag query's lower() — followed tags are user-entered, compare case-insensitively.
+    List<String> followedTags =
+        tagPrefQueryService.get(userId).followed().stream()
+            .map(t -> t.toLowerCase(Locale.ROOT))
+            .toList();
+    if (followingIds.isEmpty() && subscribedSeriesIds.isEmpty() && followedTags.isEmpty()) {
       return new PublicFeedView(List.of(), page, size, false);
     }
     List<Long> authorIds = followingIds.isEmpty() ? NONE : followingIds;
     List<Long> seriesIds = subscribedSeriesIds.isEmpty() ? NONE : subscribedSeriesIds;
+    List<String> tags = followedTags.isEmpty() ? NO_TAGS : followedTags;
     List<PostEntity> posts =
-        postRepository.findPublishedByAuthorIdsOrSeriesIds(authorIds, seriesIds, page, size);
-    long total = postRepository.countPublishedByAuthorIdsOrSeriesIds(authorIds, seriesIds);
+        postRepository.findPublishedByAuthorsSeriesOrTags(authorIds, seriesIds, tags, page, size);
+    long total = postRepository.countPublishedByAuthorsSeriesOrTags(authorIds, seriesIds, tags);
     return assemble(posts, total, page, size);
   }
 
