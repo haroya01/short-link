@@ -130,6 +130,7 @@ public class CreateCommentUseCase {
         saved.getParentId(),
         author == null ? null : PublicAuthorView.from(author),
         saved.getBody(),
-        saved.getCreatedAt());
+        saved.getCreatedAt(),
+        0L);
   }
 }

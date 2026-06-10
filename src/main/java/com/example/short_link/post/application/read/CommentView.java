@@ -7,4 +7,9 @@ import java.time.Instant;
  * top-level parent. author is the hydrated commenter summary.
  */
 public record CommentView(
-    Long id, Long parentId, PublicAuthorView author, String body, Instant createdAt) {}
+    Long id,
+    Long parentId,
+    PublicAuthorView author,
+    String body,
+    Instant createdAt,
+    long likeCount) {}

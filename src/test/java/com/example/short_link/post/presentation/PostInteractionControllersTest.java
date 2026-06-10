@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.post.application.image.PostImageService;
 import com.example.short_link.post.application.read.CommentView;
+import com.example.short_link.post.application.read.PostCommentQueryService;
 import com.example.short_link.post.application.read.PostLikeQueryService;
 import com.example.short_link.post.application.read.PostLikeStatus;
 import com.example.short_link.post.application.read.PublicAuthorView;
@@ -22,6 +23,7 @@ import com.example.short_link.post.application.write.CreateCommentCommand;
 import com.example.short_link.post.application.write.CreateCommentUseCase;
 import com.example.short_link.post.application.write.DeleteCommentCommand;
 import com.example.short_link.post.application.write.DeleteCommentUseCase;
+import com.example.short_link.post.application.write.LikeCommentUseCase;
 import com.example.short_link.post.application.write.LikePostUseCase;
 import com.example.short_link.post.application.write.RecordPostViewCommand;
 import com.example.short_link.post.application.write.RecordPostViewUseCase;
@@ -51,6 +53,8 @@ class PostInteractionControllersTest {
 
   @MockitoBean private CreateCommentUseCase createComment;
   @MockitoBean private DeleteCommentUseCase deleteComment;
+  @MockitoBean private LikeCommentUseCase likeComment;
+  @MockitoBean private PostCommentQueryService postCommentQueryService;
   @MockitoBean private LikePostUseCase likePost;
   @MockitoBean private PostLikeQueryService postLikeQueryService;
   @MockitoBean private PostImageService postImageService;
@@ -77,7 +81,8 @@ class PostInteractionControllersTest {
                 null,
                 new PublicAuthorView(USER_ID, "kim", null, null),
                 "hi there",
-                Instant.parse("2026-01-01T00:00:00Z")));
+                Instant.parse("2026-01-01T00:00:00Z"),
+                0L));
 
     mvc.perform(
             post("/api/v1/posts/3/comments")

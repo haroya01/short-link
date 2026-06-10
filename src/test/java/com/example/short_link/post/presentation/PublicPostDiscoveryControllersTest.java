@@ -128,7 +128,8 @@ class PublicPostDiscoveryControllersTest {
                     null,
                     new PublicAuthorView(2L, "lee", null, null),
                     "nice post",
-                    Instant.parse("2026-01-01T00:00:00Z"))));
+                    Instant.parse("2026-01-01T00:00:00Z"),
+                    0L)));
 
     mvc.perform(get("/api/v1/public/posts/5/comments"))
         .andExpect(status().isOk())

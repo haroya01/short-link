@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.CommentLikeRepository;
 import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -22,6 +23,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class PostCommentQueryServiceTest {
 
   @Mock private CommentRepository commentRepository;
+  @Mock private CommentLikeRepository commentLikeRepository;
   @Mock private UserRepository userRepository;
   @Mock private PostRepository postRepository;
 
@@ -29,7 +31,9 @@ class PostCommentQueryServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new PostCommentQueryService(commentRepository, userRepository, postRepository);
+    service =
+        new PostCommentQueryService(
+            commentRepository, commentLikeRepository, userRepository, postRepository);
   }
 
   private UserEntity user(long id, String username) {
