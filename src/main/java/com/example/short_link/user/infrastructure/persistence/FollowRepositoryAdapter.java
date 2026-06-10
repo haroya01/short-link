@@ -47,4 +47,9 @@ class FollowRepositoryAdapter implements FollowRepository {
   public List<Long> findFollowingIds(Long followerId) {
     return jpa.findFollowingIds(followerId);
   }
+
+  @Override
+  public int deleteAllInvolving(Long userId) {
+    return jpa.deleteAllInvolving(userId);
+  }
 }

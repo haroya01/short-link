@@ -7,6 +7,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.URI;
 import java.time.Instant;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
@@ -20,7 +21,21 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class BodySizeFilter extends OncePerRequestFilter {
 
-  private static final long MAX_BODY_BYTES = 16L * 1024L;
+  private static final long DEFAULT_MAX_BODY_BYTES = 16L * 1024L;
+
+  /**
+   * Routes whose legitimate payloads outgrow the default cap: the block editor saves whole
+   * documents (per-block validation alone allows far more than 16KB), bulk import uploads CSV
+   * files, and Stripe webhook events can run large — a 413 there makes Stripe retry and eventually
+   * disable the endpoint.
+   */
+  private static final List<Limit> EXPANDED_LIMITS =
+      List.of(
+          new Limit("/api/v1/posts", 1024L * 1024L),
+          new Limit("/api/v1/links/bulk", 1024L * 1024L),
+          new Limit("/api/v1/billing/webhook", 256L * 1024L));
+
+  private record Limit(String pathPrefix, long maxBytes) {}
 
   private final JsonMapper jsonMapper;
 
@@ -29,17 +44,28 @@ public class BodySizeFilter extends OncePerRequestFilter {
       HttpServletRequest req, HttpServletResponse res, FilterChain chain)
       throws ServletException, IOException {
     long contentLength = req.getContentLengthLong();
-    if (contentLength > MAX_BODY_BYTES) {
-      writeTooLarge(req, res);
+    long limit = limitFor(req.getRequestURI());
+    if (contentLength > limit) {
+      writeTooLarge(req, res, limit);
       return;
     }
     chain.doFilter(req, res);
   }
 
-  private void writeTooLarge(HttpServletRequest req, HttpServletResponse res) throws IOException {
+  private static long limitFor(String requestUri) {
+    for (Limit limit : EXPANDED_LIMITS) {
+      if (requestUri.startsWith(limit.pathPrefix())) {
+        return limit.maxBytes();
+      }
+    }
+    return DEFAULT_MAX_BODY_BYTES;
+  }
+
+  private void writeTooLarge(HttpServletRequest req, HttpServletResponse res, long limit)
+      throws IOException {
     ProblemDetail body =
         ProblemDetail.forStatusAndDetail(
-            HttpStatus.PAYLOAD_TOO_LARGE, "request body exceeds 16KB limit");
+            HttpStatus.PAYLOAD_TOO_LARGE, "request body exceeds " + (limit / 1024) + "KB limit");
     body.setInstance(URI.create(req.getRequestURI()));
     body.setProperty("code", "PAYLOAD_TOO_LARGE");
     body.setProperty("timestamp", Instant.now().toString());

@@ -3,7 +3,6 @@ package com.example.short_link.profile.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -29,6 +28,7 @@ class UpdateProfileUseCaseTest {
 
   @Mock private UserRepository userRepository;
   @Mock private UsernameHistoryRepository usernameHistoryRepository;
+  @Mock private ProfileCacheEviction cacheEviction;
 
   private SimpleMeterRegistry meterRegistry;
   private UpdateProfileUseCase useCase;
@@ -41,7 +41,7 @@ class UpdateProfileUseCaseTest {
             userRepository,
             usernameHistoryRepository,
             meterRegistry,
-            mock(ProfileCacheEviction.class),
+            cacheEviction,
             "https://kurl.app/u/");
   }
 
@@ -147,5 +147,28 @@ class UpdateProfileUseCaseTest {
     String socials = "[{\"channel\":\"x\",\"url\":\"https://x.com/me\"}]";
     useCase.execute(new UpdateProfileCommand(7L, null, null, null, socials));
     assertThat(u.getSocials()).contains("\"x\"");
+  }
+
+  @Test
+  void evictsCacheForCurrentUsernameOnBioChange() {
+    UserEntity me = userWithId(7L);
+    me.claimUsername("bob");
+    when(userRepository.findById(7L)).thenReturn(Optional.of(me));
+    useCase.execute(new UpdateProfileCommand(7L, null, "new bio", null, null));
+    verify(cacheEviction).evictByUsername("bob");
+  }
+
+  @Test
+  void evictsCacheForOldAndNewUsernameOnRename() {
+    UserEntity me = userWithId(7L);
+    me.claimUsername("old");
+    when(userRepository.findById(7L)).thenReturn(Optional.of(me));
+    when(userRepository.findByUsername("alice")).thenReturn(Optional.empty());
+    when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
+            any(), any(Instant.class)))
+        .thenReturn(Optional.empty());
+    useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null));
+    verify(cacheEviction).evictByUsername("old");
+    verify(cacheEviction).evictByUsername("alice");
   }
 }
