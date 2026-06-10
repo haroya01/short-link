@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.CommentLikeRepository;
 import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostCommentQueryService {
 
   private final CommentRepository commentRepository;
+  private final CommentLikeRepository commentLikeRepository;
   private final UserRepository userRepository;
   private final PostRepository postRepository;
 
@@ -31,6 +33,9 @@ public class PostCommentQueryService {
     }
     List<CommentEntity> comments = commentRepository.findAllByPostIdOrderByCreatedAtAsc(postId);
     List<Long> authorIds = comments.stream().map(CommentEntity::getUserId).distinct().toList();
+    Map<Long, Long> likeCounts =
+        commentLikeRepository.countByCommentIds(
+            comments.stream().map(CommentEntity::getId).toList());
     Map<Long, UserEntity> authors =
         userRepository.findAllByIdIn(authorIds).stream()
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
@@ -43,8 +48,18 @@ public class PostCommentQueryService {
                     c.getParentId(),
                     authorView(authors.get(c.getUserId())),
                     c.getBody(),
-                    c.getCreatedAt()))
+                    c.getCreatedAt(),
+                    likeCounts.getOrDefault(c.getId(), 0L)))
         .toList();
+  }
+
+  /** Of the post's comments, the ids the viewer liked — likedByMe for the authed reader. */
+  public List<Long> likedCommentIds(Long userId, Long postId) {
+    List<Long> ids =
+        commentRepository.findAllByPostIdOrderByCreatedAtAsc(postId).stream()
+            .map(CommentEntity::getId)
+            .toList();
+    return commentLikeRepository.findLikedCommentIds(userId, ids);
   }
 
   private PublicAuthorView authorView(UserEntity user) {
