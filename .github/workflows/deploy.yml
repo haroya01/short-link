@@ -69,7 +69,12 @@ jobs:
           script: |
             set -e
             cd ~/short-link
-            git pull --ff-only
+            # pull --ff-only 는 서버 체크아웃이 한 번이라도 diverge 하면(과거 수동 커밋·force-push
+            # 잔재) 영구히 실패한다 — 배포 박스의 워킹트리는 어차피 origin/main 의 사본이어야 하므로
+            # 원격 상태로 강제 동기화한다. reset --hard 는 tracked 파일만 만지므로 서버의 .env 등
+            # untracked 설정은 그대로다.
+            git fetch origin main
+            git reset --hard origin/main
             cd deploy
             # GHCR package is private; auth before pull, then drop the token from the EC2's
             # docker config so the credential isn't sitting on disk after we're done.
