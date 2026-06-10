@@ -22,4 +22,7 @@ public interface FollowRepository {
 
   /** Ids of everyone this user follows — drives the "following" feed. */
   List<Long> findFollowingIds(Long followerId);
+
+  /** Removes every edge the user appears on (either side) — account hard-delete path. */
+  int deleteAllInvolving(Long userId);
 }

@@ -2,10 +2,12 @@ package com.example.short_link.user.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.common.user.UserDataEraser;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
@@ -25,6 +27,8 @@ public class UserDeletionService {
   private final UserRepository userRepository;
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickEventRepository;
+  private final FollowRepository followRepository;
+  private final List<UserDataEraser> userDataErasers;
   private final RefreshTokenStore refreshTokenStore;
   private final MeterRegistry meterRegistry;
   private final AuditLogService auditLogService;
@@ -55,6 +59,11 @@ public class UserDeletionService {
   @Transactional
   public void hardDelete(Long userId) {
     if (!userRepository.existsById(userId)) return;
+
+    // Blog/social tables reference users without ON DELETE CASCADE — purge slice-local rows
+    // first or the final users delete trips FK constraints and the cleanup job retries forever.
+    userDataErasers.forEach(eraser -> eraser.eraseFor(userId));
+    followRepository.deleteAllInvolving(userId);
 
     List<LinkEntity> links = linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (!links.isEmpty()) {

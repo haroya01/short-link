@@ -55,6 +55,7 @@ public class UpdateProfileUseCase {
         userRepository
             .findById(cmd.userId())
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
+    String previousUsername = user.getUsername();
     if (cmd.username() != null) {
       String normalized = cmd.username().trim().toLowerCase();
       validateUsername(normalized);
@@ -97,6 +98,13 @@ public class UpdateProfileUseCase {
     }
     if (cmd.socials() != null) {
       user.updateSocials(Socials.normalize(cmd.socials()));
+    }
+    // The public-profile cache is keyed by username with a long TTL — without eviction every
+    // bio/theme/socials edit keeps serving the stale entry, and a rename leaves the old key alive.
+    cacheEviction.evictByUsername(previousUsername);
+    String currentUsername = user.getUsername();
+    if (currentUsername != null && !currentUsername.equals(previousUsername)) {
+      cacheEviction.evictByUsername(currentUsername);
     }
     meterRegistry.counter("profile.updated").increment();
     return MyProfileMapper.from(user, publicProfileBaseUrl);
