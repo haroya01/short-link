@@ -73,4 +73,38 @@ class PostCommentQueryServiceTest {
     when(postRepository.findById(42L)).thenReturn(Optional.empty());
     assertThat(service.listForPost(42L)).isEmpty();
   }
+
+  @Test
+  void listHydratesLikeCountsInOneBatch() {
+    org.mockito.Mockito.when(postRepository.findById(5L))
+        .thenReturn(java.util.Optional.of(publishedPost(5L)));
+    com.example.short_link.post.domain.CommentEntity c =
+        new com.example.short_link.post.domain.CommentEntity(5L, 1L, null, "hi");
+    org.springframework.test.util.ReflectionTestUtils.setField(c, "id", 11L);
+    org.mockito.Mockito.when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(5L))
+        .thenReturn(java.util.List.of(c));
+    org.mockito.Mockito.when(userRepository.findAllByIdIn(java.util.List.of(1L)))
+        .thenReturn(java.util.List.of(user(1L, "kim")));
+    org.mockito.Mockito.when(commentLikeRepository.countByCommentIds(java.util.List.of(11L)))
+        .thenReturn(java.util.Map.of(11L, 4L));
+
+    java.util.List<CommentView> views = service.listForPost(5L);
+
+    org.assertj.core.api.Assertions.assertThat(views).hasSize(1);
+    org.assertj.core.api.Assertions.assertThat(views.get(0).likeCount()).isEqualTo(4L);
+  }
+
+  @Test
+  void likedCommentIdsScopesToThePostsComments() {
+    com.example.short_link.post.domain.CommentEntity c =
+        new com.example.short_link.post.domain.CommentEntity(5L, 1L, null, "hi");
+    org.springframework.test.util.ReflectionTestUtils.setField(c, "id", 11L);
+    org.mockito.Mockito.when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(5L))
+        .thenReturn(java.util.List.of(c));
+    org.mockito.Mockito.when(commentLikeRepository.findLikedCommentIds(9L, java.util.List.of(11L)))
+        .thenReturn(java.util.List.of(11L));
+
+    org.assertj.core.api.Assertions.assertThat(service.likedCommentIds(9L, 5L))
+        .containsExactly(11L);
+  }
 }

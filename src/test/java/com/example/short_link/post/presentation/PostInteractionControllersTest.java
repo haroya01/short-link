@@ -12,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.post.application.image.PostImageService;
+import com.example.short_link.post.application.read.CommentLikeStatus;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PostCommentQueryService;
 import com.example.short_link.post.application.read.PostLikeQueryService;
@@ -62,6 +63,47 @@ class PostInteractionControllersTest {
   @MockitoBean private RecordPostViewUseCase recordPostView;
 
   private static final long USER_ID = 7L;
+
+  @Test
+  void likeCommentRejectsAnonymous() throws Exception {
+    mvc.perform(post("/api/v1/comments/10/like")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void likeCommentReturnsStatus() throws Exception {
+    when(likeComment.like(USER_ID, 10L)).thenReturn(new CommentLikeStatus(4L, true));
+
+    mvc.perform(
+            post("/api/v1/comments/10/like")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.likeCount").value(4))
+        .andExpect(jsonPath("$.liked").value(true));
+  }
+
+  @Test
+  void unlikeCommentReturnsStatus() throws Exception {
+    when(likeComment.unlike(USER_ID, 10L)).thenReturn(new CommentLikeStatus(3L, false));
+
+    mvc.perform(
+            delete("/api/v1/comments/10/like")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.likeCount").value(3))
+        .andExpect(jsonPath("$.liked").value(false));
+  }
+
+  @Test
+  void likedCommentIdsReturnsViewerLikes() throws Exception {
+    when(postCommentQueryService.likedCommentIds(USER_ID, 3L)).thenReturn(List.of(10L, 12L));
+
+    mvc.perform(
+            get("/api/v1/posts/3/comments/liked")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0]").value(10))
+        .andExpect(jsonPath("$[1]").value(12));
+  }
 
   @Test
   void createCommentRejectsAnonymous() throws Exception {
