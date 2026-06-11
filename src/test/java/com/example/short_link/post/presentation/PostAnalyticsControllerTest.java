@@ -14,6 +14,7 @@ import com.example.short_link.post.application.read.PostAnalyticsView;
 import com.example.short_link.post.application.read.PostPerformanceResult;
 import com.example.short_link.post.application.read.PostReadStats;
 import com.example.short_link.post.application.read.PostReadStatsService;
+import com.example.short_link.post.application.read.ReferrerPoint;
 import com.example.short_link.post.application.read.SeriesAnalyticsDetail;
 import com.example.short_link.post.application.read.SeriesAnalyticsRow;
 import com.example.short_link.post.application.read.SeriesMemberStat;
@@ -62,7 +63,8 @@ class PostAnalyticsControllerTest {
                 6,
                 8,
                 2,
-                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 9))));
+                List.of(new DailyPoint(LocalDate.parse("2026-06-01"), 9)),
+                List.of(new ReferrerPoint("news.ycombinator.com", 5))));
 
     mvc.perform(
             get("/api/v1/posts/analytics/overview?days=30")
@@ -73,7 +75,9 @@ class PostAnalyticsControllerTest {
         .andExpect(jsonPath("$.lifetimeViews").value(155))
         .andExpect(jsonPath("$.lifetimeLinkClicks").value(40))
         .andExpect(jsonPath("$.lifetimeFollows").value(8))
-        .andExpect(jsonPath("$.windowFollows").value(2));
+        .andExpect(jsonPath("$.windowFollows").value(2))
+        .andExpect(jsonPath("$.referrers[0].host").value("news.ycombinator.com"))
+        .andExpect(jsonPath("$.referrers[0].views").value(5));
   }
 
   @Test

@@ -2,6 +2,7 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.DailyViewCount;
 import com.example.short_link.post.domain.PostViewEventEntity;
+import com.example.short_link.post.domain.ReferrerViewCount;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
 import java.time.Instant;
 import java.util.Collection;
@@ -35,6 +36,14 @@ class PostViewEventRepositoryAdapter implements PostViewEventRepository {
   public List<DailyViewCount> countDailyByUserIdSince(Long userId, Instant since) {
     return jpa.countDailyByUserId(userId, since).stream()
         .map(r -> new DailyViewCount(r.getViewDate(), r.getViews()))
+        .toList();
+  }
+
+  @Override
+  public List<ReferrerViewCount> topReferrerHostsByUserSince(
+      Long userId, Instant since, int limit) {
+    return jpa.topReferrerHostsByUser(userId, since, limit).stream()
+        .map(r -> new ReferrerViewCount(r.getHost(), r.getViews()))
         .toList();
   }
 

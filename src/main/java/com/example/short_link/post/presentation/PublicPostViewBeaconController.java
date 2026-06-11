@@ -33,6 +33,7 @@ public class PublicPostViewBeaconController {
       @PathVariable String username,
       @PathVariable String slug,
       @RequestParam(value = "src", required = false) String src,
+      @RequestParam(value = "ref", required = false) String ref,
       @RequestParam(value = "utm_source", required = false) String utmSource,
       @RequestParam(value = "utm_medium", required = false) String utmMedium,
       @RequestParam(value = "utm_campaign", required = false) String utmCampaign,
@@ -45,7 +46,9 @@ public class PublicPostViewBeaconController {
     recordPostView.execute(
         new RecordPostViewCommand(username, slug),
         new ViewContext(
-            referrer,
+            // ref(쿼리) 우선 — fetch 비콘의 Referer 헤더는 비콘을 쏜 글 페이지 자신이라 유입원이
+            // 못 된다. 프론트가 document.referrer 를 ref 로 실어 보내고, 헤더는 폴백.
+            ref != null && !ref.isBlank() ? ref : referrer,
             userAgent,
             ClientIp.of(req),
             acceptLanguage,
