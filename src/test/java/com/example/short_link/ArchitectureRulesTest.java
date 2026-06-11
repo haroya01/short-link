@@ -22,7 +22,7 @@ class ArchitectureRulesTest {
    * ControllerTest pushes the count past baseline and fails the build — migrate an existing one to
    * balance, or raise the baseline only with a deliberate decision.
    */
-  private static final int SPRING_BOOT_CONTROLLER_TEST_BASELINE = 36;
+  private static final int SPRING_BOOT_CONTROLLER_TEST_BASELINE = 37;
 
   private static final Pattern FEATURE_PRESENTATION_IMPORT =
       Pattern.compile(

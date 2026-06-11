@@ -21,14 +21,17 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
   private final AuthService authService;
   private final RefreshCookieWriter refreshCookieWriter;
   private final String frontendBaseUrl;
+  private final String mobileRedirectUri;
 
   public OAuth2LoginSuccessHandler(
       AuthService authService,
       RefreshCookieWriter refreshCookieWriter,
-      @Value("${short-link.frontend-base-url}") String frontendBaseUrl) {
+      @Value("${short-link.frontend-base-url}") String frontendBaseUrl,
+      @Value("${short-link.mobile.redirect-uri}") String mobileRedirectUri) {
     this.authService = authService;
     this.refreshCookieWriter = refreshCookieWriter;
     this.frontendBaseUrl = frontendBaseUrl;
+    this.mobileRedirectUri = mobileRedirectUri;
   }
 
   @Override
@@ -40,6 +43,11 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
     String oauthId = principal.getAttribute("sub");
     String provider =
         ((OAuth2AuthenticationToken) authentication).getAuthorizedClientRegistrationId();
+
+    if (MobileLoginFlag.consume(req)) {
+      handleMobile(res, authService.loginWithOAuthMobile(email, provider, oauthId));
+      return;
+    }
 
     LoginResult result = authService.loginWithOAuth(email, provider, oauthId);
 
@@ -59,5 +67,20 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
             + "/auth/callback#access_token="
             + URLEncoder.encode(tokens.issued().accessToken(), StandardCharsets.UTF_8);
     res.sendRedirect(target);
+  }
+
+  // The app can't read cookies or fragments out of the browser sheet, so both outcomes travel as
+  // query params on the custom scheme: a one-time exchange code, or the 2FA challenge token.
+  private void handleMobile(HttpServletResponse res, LoginResult result) throws IOException {
+    if (result instanceof LoginResult.TwoFactorRequired challenge) {
+      res.sendRedirect(
+          mobileRedirectUri
+              + "?challenge="
+              + URLEncoder.encode(challenge.challengeToken(), StandardCharsets.UTF_8));
+      return;
+    }
+    LoginResult.MobileExchangeCode code = (LoginResult.MobileExchangeCode) result;
+    res.sendRedirect(
+        mobileRedirectUri + "?code=" + URLEncoder.encode(code.code(), StandardCharsets.UTF_8));
   }
 }

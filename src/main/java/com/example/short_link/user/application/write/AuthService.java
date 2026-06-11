@@ -23,6 +23,7 @@ public class AuthService {
   private final UserRepository userRepository;
   private final JwtTokenService jwt;
   private final RefreshTokenStore refreshStore;
+  private final MobileExchangeCodeStore exchangeCodes;
   private final TwoFactorService twoFactor;
   private final JwtProperties jwtProperties;
 
@@ -35,10 +36,43 @@ public class AuthService {
     record Tokens(IssuedTokens issued) implements LoginResult {}
 
     record TwoFactorRequired(String challengeToken) implements LoginResult {}
+
+    record MobileExchangeCode(String code) implements LoginResult {}
   }
 
   @Transactional
   public LoginResult loginWithOAuth(String email, String oauthProvider, String oauthId) {
+    UserEntity user = upsertOAuthUser(email, oauthProvider, oauthId);
+    if (twoFactor.isEnabled(user.getId())) {
+      return new LoginResult.TwoFactorRequired(jwt.createTwoFactorChallengeToken(user.getId()));
+    }
+    return new LoginResult.Tokens(issue(user));
+  }
+
+  /**
+   * Mobile variant of {@link #loginWithOAuth}: the browser sheet can't receive tokens directly, so
+   * a successful login yields a one-time exchange code instead — the app redeems it for the pair
+   * via {@link #exchangeMobileCode}. No session is issued until the code is redeemed.
+   */
+  @Transactional
+  public LoginResult loginWithOAuthMobile(String email, String oauthProvider, String oauthId) {
+    UserEntity user = upsertOAuthUser(email, oauthProvider, oauthId);
+    if (twoFactor.isEnabled(user.getId())) {
+      return new LoginResult.TwoFactorRequired(jwt.createTwoFactorChallengeToken(user.getId()));
+    }
+    return new LoginResult.MobileExchangeCode(exchangeCodes.create(user.getId()));
+  }
+
+  @Transactional
+  public IssuedTokens exchangeMobileCode(String code) {
+    Long userId =
+        exchangeCodes
+            .consume(code)
+            .orElseThrow(() -> new UserException(UserErrorCode.INVALID_EXCHANGE_CODE));
+    return issue(loadActiveUser(userId));
+  }
+
+  private UserEntity upsertOAuthUser(String email, String oauthProvider, String oauthId) {
     UserEntity user =
         userRepository
             .findByOauthProviderAndOauthId(oauthProvider, oauthId)
@@ -47,10 +81,7 @@ public class AuthService {
       log.info("restoring soft-deleted user {} on OAuth login", user.getId());
       user.restore();
     }
-    if (twoFactor.isEnabled(user.getId())) {
-      return new LoginResult.TwoFactorRequired(jwt.createTwoFactorChallengeToken(user.getId()));
-    }
-    return new LoginResult.Tokens(issue(user));
+    return user;
   }
 
   @Transactional
@@ -117,6 +148,11 @@ public class AuthService {
   }
 
   public void logout(Long userId, String refreshToken) {
+    logout(refreshToken);
+  }
+
+  /** Kills exactly the session whose refresh token is presented — holding the token is the auth. */
+  public void logout(String refreshToken) {
     try {
       ParsedRefresh parsed = jwt.parseRefreshToken(refreshToken);
       refreshStore.delete(parsed.userId(), parsed.jti());

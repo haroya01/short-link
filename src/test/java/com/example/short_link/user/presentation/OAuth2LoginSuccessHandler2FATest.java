@@ -36,7 +36,8 @@ class OAuth2LoginSuccessHandler2FATest {
   @BeforeEach
   void setUp() {
     handler =
-        new OAuth2LoginSuccessHandler(authService, refreshCookieWriter, "http://localhost:3001");
+        new OAuth2LoginSuccessHandler(
+            authService, refreshCookieWriter, "http://localhost:3001", "kurl://auth");
   }
 
   @Test

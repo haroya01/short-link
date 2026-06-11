@@ -181,6 +181,18 @@ public class SecurityConfig {
                         "/api/v1/auth/2fa/verify",
                         "/api/v1/auth/dev-login")
                     .permitAll()
+                    // Native-app auth: /start opens the OAuth dance from the browser sheet, the
+                    // rest speak tokens in the body (Keychain, not cookies). /logout is permitAll
+                    // because presenting the refresh token IS the authorization to kill it.
+                    .requestMatchers(GET, "/api/v1/auth/mobile/start")
+                    .permitAll()
+                    .requestMatchers(
+                        POST,
+                        "/api/v1/auth/mobile/exchange",
+                        "/api/v1/auth/mobile/refresh",
+                        "/api/v1/auth/mobile/2fa/verify",
+                        "/api/v1/auth/mobile/logout")
+                    .permitAll()
                     // Stripe verifies its own signature inside the handler — auth-by-signature, not
                     // auth-by-session.
                     .requestMatchers(POST, "/api/v1/billing/webhook")

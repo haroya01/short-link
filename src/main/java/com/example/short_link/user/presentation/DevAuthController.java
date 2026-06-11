@@ -45,6 +45,9 @@ public class DevAuthController {
         refreshCookieWriter.set(res, t.issued().refreshToken());
         yield ResponseEntity.ok(TokenResponse.from(t.issued()));
       }
+        // Web-only entry point — loginWithOAuth never yields a mobile exchange code.
+      case LoginResult.MobileExchangeCode c ->
+          ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     };
   }
 }

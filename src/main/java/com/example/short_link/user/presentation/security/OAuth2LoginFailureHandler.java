@@ -16,10 +16,13 @@ import org.springframework.stereotype.Component;
 public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHandler {
 
   private final String frontendBaseUrl;
+  private final String mobileRedirectUri;
 
   public OAuth2LoginFailureHandler(
-      @Value("${short-link.frontend-base-url}") String frontendBaseUrl) {
+      @Value("${short-link.frontend-base-url}") String frontendBaseUrl,
+      @Value("${short-link.mobile.redirect-uri}") String mobileRedirectUri) {
     this.frontendBaseUrl = frontendBaseUrl;
+    this.mobileRedirectUri = mobileRedirectUri;
   }
 
   @Override
@@ -28,10 +31,9 @@ public class OAuth2LoginFailureHandler extends SimpleUrlAuthenticationFailureHan
       throws IOException {
     log.warn("oauth login failed: {}", exception.toString());
     String reason = exception.getClass().getSimpleName();
-    String target =
-        frontendBaseUrl
-            + "/auth/callback?error="
-            + URLEncoder.encode(reason, StandardCharsets.UTF_8);
+    String base =
+        MobileLoginFlag.consume(req) ? mobileRedirectUri : frontendBaseUrl + "/auth/callback";
+    String target = base + "?error=" + URLEncoder.encode(reason, StandardCharsets.UTF_8);
     res.sendRedirect(target);
   }
 }
