@@ -109,6 +109,15 @@ class MobileAuthControllerTest {
   }
 
   @Test
+  void twoFactorVerifyWithGarbageChallengeReturns401() throws Exception {
+    mvc.perform(
+            post("/api/v1/auth/mobile/2fa/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"challenge\":\"not-a-jwt\",\"code\":\"000000\",\"recovery\":false}"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void logoutKillsExactlyThePresentedSession() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("m@example.com", "google", "g-m4"));
     RefreshToken refresh = jwt.createRefreshToken(user.getId());
