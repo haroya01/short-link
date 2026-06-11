@@ -167,6 +167,14 @@ class PostAnalyticsQueryServiceTest {
     when(followReader.countByUserIdSince(
             org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
         .thenReturn(2L);
+    when(viewEventRepository.topReferrerHostsByUserSince(
+            org.mockito.ArgumentMatchers.eq(USER),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.anyInt()))
+        .thenReturn(
+            List.of(
+                new com.example.short_link.post.domain.ReferrerViewCount("google.com", 7),
+                new com.example.short_link.post.domain.ReferrerViewCount("t.co", 2)));
 
     AuthorAnalyticsOverview o = service.overview(USER, 30);
 
@@ -180,6 +188,9 @@ class PostAnalyticsQueryServiceTest {
     assertThat(o.lifetimeFollows()).isEqualTo(8);
     assertThat(o.windowFollows()).isEqualTo(2);
     assertThat(o.daily()).hasSize(30);
+    // 유입 경로 — 같은 since 윈도우의 top 호스트가 순서대로 매핑된다.
+    assertThat(o.referrers())
+        .containsExactly(new ReferrerPoint("google.com", 7), new ReferrerPoint("t.co", 2));
   }
 
   @Test

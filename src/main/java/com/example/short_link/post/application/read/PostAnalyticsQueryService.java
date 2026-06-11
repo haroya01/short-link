@@ -39,6 +39,7 @@ public class PostAnalyticsQueryService {
 
   private static final int MAX_WINDOW_DAYS = 365;
   private static final int LINK_BREAKDOWN_LIMIT = 20;
+  private static final int REFERRER_LIMIT = 10;
   private static final int DEFAULT_PAGE_SIZE = 20;
   private static final int MAX_PAGE_SIZE = 50;
 
@@ -129,6 +130,12 @@ public class PostAnalyticsQueryService {
     long lifetimeViews = posts.stream().mapToLong(PostEntity::getViewCount).sum();
     long lifetimeLikes = posts.stream().mapToLong(PostEntity::getLikeCount).sum();
     long published = posts.stream().filter(PostEntity::isPublished).count();
+    // 윈도우 유입 호스트 top — 글 단위 독자 분석(PostReadStats)의 작가 전체 합. 같은 since 를 써
+    // 위 windowViews 와 한 윈도우를 본다.
+    List<ReferrerPoint> referrers =
+        viewEventRepository.topReferrerHostsByUserSince(userId, since, REFERRER_LIMIT).stream()
+            .map(r -> new ReferrerPoint(r.host(), r.views()))
+            .toList();
     return new AuthorAnalyticsOverview(
         posts.size(),
         published,
@@ -140,7 +147,8 @@ public class PostAnalyticsQueryService {
         linkClickReader.countByUserIdSince(userId, since),
         followReader.countByUserId(userId),
         followReader.countByUserIdSince(userId, since),
-        daily);
+        daily,
+        referrers);
   }
 
   /**

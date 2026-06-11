@@ -62,4 +62,28 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
               + "ORDER BY viewDate")
   List<DailyViewRow> countDailyByUserId(
       @Param("userId") Long userId, @Param("since") Instant since);
+
+  /** Projection for the GROUP BY referrer_host aggregation — alias names map to the getters. */
+  interface ReferrerRow {
+    String getHost();
+
+    long getViews();
+  }
+
+  // 작가 전체(post join)의 윈도우 유입 호스트 집계 — 개요 대시보드의 "유입 경로". 사람 조회만
+  // (is_bot = FALSE), referrer 없는 direct 는 제외(글 단위 독자 분석의 topReferrerHosts 와 같은
+  // 의미론). daily-by-user 와 같은 native 스타일이고, 동률은 host 로 고정해 페이지가 안 흔들린다.
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT e.referrer_host AS host, COUNT(*) AS views "
+              + "FROM post_view_event e "
+              + "JOIN posts p ON p.id = e.post_id "
+              + "WHERE p.user_id = :userId AND e.viewed_at >= :since "
+              + "AND e.is_bot = FALSE AND e.referrer_host IS NOT NULL "
+              + "GROUP BY e.referrer_host "
+              + "ORDER BY views DESC, host "
+              + "LIMIT :limit")
+  List<ReferrerRow> topReferrerHostsByUser(
+      @Param("userId") Long userId, @Param("since") Instant since, @Param("limit") int limit);
 }

@@ -259,4 +259,22 @@ class PostInteractionControllersTest {
 
     verify(recordPostView).execute(any(RecordPostViewCommand.class), any(ViewContext.class));
   }
+
+  @Test
+  void viewBeaconPrefersRefParamOverRefererHeader() throws Exception {
+    // fetch 비콘의 Referer 헤더는 글 페이지 자신 — 프론트가 실어 보내는 ref(document.referrer)가
+    // 유입원으로 우선돼야 분석의 referrer_host 가 의미를 가진다.
+    mvc.perform(
+            post("/api/v1/public/profiles/kim/posts/my-slug/view")
+                .param("ref", "https://news.ycombinator.com/item?id=1")
+                .header("Referer", "https://kim.kurl.me/my-slug")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isAccepted());
+
+    org.mockito.ArgumentCaptor<ViewContext> ctx =
+        org.mockito.ArgumentCaptor.forClass(ViewContext.class);
+    verify(recordPostView).execute(any(RecordPostViewCommand.class), ctx.capture());
+    org.assertj.core.api.Assertions.assertThat(ctx.getValue().referrer())
+        .isEqualTo("https://news.ycombinator.com/item?id=1");
+  }
 }
