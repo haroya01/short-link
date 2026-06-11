@@ -22,6 +22,7 @@ import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
 import com.example.short_link.post.application.write.IssuePreviewTokenUseCase;
+import com.example.short_link.post.application.write.MarkdownBlocksConverter;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
@@ -70,6 +71,7 @@ class PostControllerTest {
   @MockitoBean private RepublishPostUseCase republishPost;
   @MockitoBean private BackToDraftPostUseCase backToDraftPost;
   @MockitoBean private ReplacePostBlocksUseCase replacePostBlocks;
+  @MockitoBean private MarkdownBlocksConverter markdownBlocks;
   @MockitoBean private RestorePostRevisionUseCase restorePostRevision;
   @MockitoBean private DeletePostUseCase deletePost;
   @MockitoBean private IssuePreviewTokenUseCase issuePreviewToken;
@@ -327,6 +329,42 @@ class PostControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"blocks\":[]}"))
         .andExpect(status().isOk());
+  }
+
+  @Test
+  void anonymousMarkdownIs401() throws Exception {
+    mvc.perform(get("/api/v1/posts/42/markdown")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void markdownSerializesOwnBlocks() throws Exception {
+    List<PostBlockView> views = List.of(new PostBlockView(1L, "H1", "Hello", 0));
+    when(postQueryService.listBlocks(USER_ID, 42L)).thenReturn(views);
+    when(markdownBlocks.toMarkdown(views)).thenReturn("# Hello");
+
+    mvc.perform(
+            get("/api/v1/posts/42/markdown")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.markdown").value("# Hello"));
+  }
+
+  @Test
+  void replaceMarkdownConvertsThenPersists() throws Exception {
+    List<ReplacePostBlocksCommand.BlockInput> inputs =
+        List.of(new ReplacePostBlocksCommand.BlockInput(PostBlockType.H1, "Hello"));
+    when(markdownBlocks.toBlocks("# Hello")).thenReturn(inputs);
+    PostBlockEntity saved = new PostBlockEntity(42L, PostBlockType.H1, "Hello", 0);
+    when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class))).thenReturn(List.of(saved));
+    when(markdownBlocks.toMarkdown(any())).thenReturn("# Hello");
+
+    mvc.perform(
+            put("/api/v1/posts/42/markdown")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"markdown\":\"# Hello\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.markdown").value("# Hello"));
   }
 
   @Test
