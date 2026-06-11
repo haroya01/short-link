@@ -11,6 +11,7 @@ import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
 import com.example.short_link.post.application.write.IssuePreviewTokenUseCase;
+import com.example.short_link.post.application.write.MarkdownBlocksConverter;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
@@ -28,10 +29,12 @@ import com.example.short_link.post.application.write.UpdatePostMetadataCommand;
 import com.example.short_link.post.application.write.UpdatePostMetadataUseCase;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.presentation.request.CreatePostRequest;
+import com.example.short_link.post.presentation.request.PostMarkdownRequest;
 import com.example.short_link.post.presentation.request.ReplaceBlocksRequest;
 import com.example.short_link.post.presentation.request.SchedulePostRequest;
 import com.example.short_link.post.presentation.request.SetPinnedPostsRequest;
 import com.example.short_link.post.presentation.request.UpdatePostRequest;
+import com.example.short_link.post.presentation.response.PostMarkdownResponse;
 import com.example.short_link.post.presentation.response.PreviewTokenResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -55,6 +58,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class PostController {
 
   private final CreatePostUseCase createPost;
+  private final MarkdownBlocksConverter markdownBlocks;
   private final UpdatePostMetadataUseCase updatePostMetadata;
   private final PublishPostUseCase publishPost;
   private final SchedulePostUseCase schedulePost;
@@ -170,6 +174,31 @@ public class PostController {
     return replacePostBlocks.execute(new ReplacePostBlocksCommand(userId, id, inputs)).stream()
         .map(PostBlockView::from)
         .toList();
+  }
+
+  /** The post body as markdown — the native app edits markdown, not the block JSON. */
+  @GetMapping("/{id}/markdown")
+  public PostMarkdownResponse markdown(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return new PostMarkdownResponse(
+        markdownBlocks.toMarkdown(postQueryService.listBlocks(userId, id)));
+  }
+
+  /**
+   * Replace the body from markdown — the server-owned md→blocks conversion keeps the app and the
+   * web editor producing identical block streams. Responds with the round-tripped markdown so the
+   * client can adopt the canonical serialization.
+   */
+  @PutMapping("/{id}/markdown")
+  public PostMarkdownResponse replaceMarkdown(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @Valid @RequestBody PostMarkdownRequest request) {
+    var saved =
+        replacePostBlocks.execute(
+            new ReplacePostBlocksCommand(userId, id, markdownBlocks.toBlocks(request.markdown())));
+    return new PostMarkdownResponse(
+        markdownBlocks.toMarkdown(saved.stream().map(PostBlockView::from).toList()));
   }
 
   @GetMapping("/{id}/revisions")
