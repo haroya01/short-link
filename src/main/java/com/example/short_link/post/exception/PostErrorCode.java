@@ -27,7 +27,11 @@ public enum PostErrorCode {
   BOOKMARK_FOLDER_NOT_FOUND(HttpStatus.NOT_FOUND, "bookmark folder not found: %s"),
   BOOKMARK_FOLDER_NAME_REQUIRED(HttpStatus.BAD_REQUEST, "a folder name is required"),
   BOOKMARK_FOLDER_NAME_CONFLICT(HttpStatus.CONFLICT, "bookmark folder name already used: %s"),
-  BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "bookmark not found for post: %s");
+  BOOKMARK_NOT_FOUND(HttpStatus.NOT_FOUND, "bookmark not found for post: %s"),
+  NOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "note not found: %s"),
+  NOTE_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "note permission denied"),
+  NOTE_BODY_REQUIRED(HttpStatus.BAD_REQUEST, "note body is required"),
+  NOTE_BODY_TOO_LONG(HttpStatus.BAD_REQUEST, "note body exceeds 500 characters");
 
   private final HttpStatus status;
   private final String template;

@@ -4,9 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
+import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -18,10 +24,17 @@ import tools.jackson.databind.json.JsonMapper;
 class RecordBlogNotificationUseCaseTest {
 
   @Mock private NotificationRepository repository;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private PushSender pushSender;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private UserRepository userRepository;
+
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
   private RecordBlogNotificationUseCase useCase() {
-    return new RecordBlogNotificationUseCase(repository, jsonMapper);
+    return new RecordBlogNotificationUseCase(repository, jsonMapper, pushSender, userRepository);
   }
 
   @Test
@@ -51,5 +64,115 @@ class RecordBlogNotificationUseCaseTest {
     ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
     org.mockito.Mockito.verify(repository).save(saved.capture());
     assertThat(saved.getValue().getPayload()).isNull();
+  }
+
+  @Test
+  void pushMirrorsEveryTypeWithActorName() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    UserEntity actor = org.mockito.Mockito.mock(UserEntity.class);
+    when(actor.getUsername()).thenReturn("yuki");
+    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+
+    Map<NotificationType, String> expected =
+        Map.of(
+            NotificationType.LIKE, "yuki님이 글을 좋아합니다",
+            NotificationType.COMMENT, "yuki님이 댓글을 남겼습니다",
+            NotificationType.REPLY, "yuki님이 답글을 남겼습니다",
+            NotificationType.FOLLOW, "yuki님이 팔로우하기 시작했습니다",
+            NotificationType.SERIES_SUBSCRIBE, "yuki님이 시리즈를 구독합니다",
+            NotificationType.NEW_POST, "yuki님이 새 글을 발행했습니다",
+            NotificationType.MENTION, "yuki님이 회원님을 언급했습니다");
+
+    NotificationPostRef ref = new NotificationPostRef(10L, "my-post", "글 제목", null);
+    for (NotificationType type : NotificationType.values()) {
+      useCase().record(9L, type, 2L, ref);
+    }
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(expected.size()))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .allSatisfy(
+            message -> {
+              assertThat(message.title()).isEqualTo("kurl");
+              assertThat(message.subtitle()).isEqualTo("글 제목");
+            });
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::body)
+        .containsExactlyInAnyOrderElementsOf(expected.values());
+  }
+
+  @Test
+  void pushFallsBackToKurlWhenActorMissingOrNameless() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L)).thenReturn(Optional.empty());
+
+    useCase().record(9L, NotificationType.FOLLOW, 2L, null);
+
+    UserEntity nameless = org.mockito.Mockito.mock(UserEntity.class);
+    when(nameless.getUsername()).thenReturn(null);
+    when(userRepository.findById(3L)).thenReturn(Optional.of(nameless));
+
+    useCase().record(9L, NotificationType.FOLLOW, 3L, null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(2))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::body)
+        .containsOnly("kurl님이 팔로우하기 시작했습니다");
+    assertThat(pushed.getAllValues().getFirst().subtitle()).isNull();
+  }
+
+  @Test
+  void fanOutSavesPerRecipientAndPushesOnce() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L)).thenReturn(Optional.empty());
+
+    NotificationPostRef ref = new NotificationPostRef(10L, "new-post", "새 글", null);
+    useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, 2L, ref);
+
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(3))
+        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 8L, 9L)), pushed.capture());
+    assertThat(pushed.getValue().subtitle()).isEqualTo("새 글");
+    assertThat(pushed.getValue().body()).isEqualTo("kurl님이 새 글을 발행했습니다");
+  }
+
+  @Test
+  void fanOutWithNoRecipientsIsSilent() {
+    useCase().recordForEach(List.of(), NotificationType.NEW_POST, 2L, null);
+
+    org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
+  }
+
+  @Test
+  void fanOutWithoutPostRefAndTitlelessRefHaveNoSubtitle() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L)).thenReturn(Optional.empty());
+
+    useCase().recordForEach(List.of(7L), NotificationType.NEW_POST, 2L, null);
+    useCase().record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", null, null));
+
+    ArgumentCaptor<PushSender.PushMessage> fanned =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L)), fanned.capture());
+    assertThat(fanned.getValue().subtitle()).isNull();
+
+    ArgumentCaptor<PushSender.PushMessage> single =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), single.capture());
+    assertThat(single.getValue().subtitle()).isNull();
   }
 }
