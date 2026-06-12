@@ -10,6 +10,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -82,6 +83,47 @@ public class AuthService {
       user.restore();
     }
     return user;
+  }
+
+  /**
+   * Native Sign in with Apple — {@link AppleIdentityVerifier} has already pinned
+   * signature/issuer/audience/nonce, so subject and email arrive trusted. Linking rule: an existing
+   * account with the same email logs into that account. Both Google and Apple hand us IdP-verified
+   * addresses and {@code users.email} is UNIQUE, so one kurl account per email stays the invariant;
+   * the row keeps its original oauth_provider/oauth_id identity and later Apple logins keep
+   * arriving through the email match.
+   */
+  @Transactional
+  public LoginResult loginWithAppleNative(String appleSubject, String email) {
+    UserEntity user =
+        userRepository
+            .findByOauthProviderAndOauthId("apple", appleSubject)
+            .or(() -> findLinkableByEmail(email))
+            .orElseGet(() -> createAppleUser(email, appleSubject));
+    if (user.isDeleted()) {
+      log.info("restoring soft-deleted user {} on Apple login", user.getId());
+      user.restore();
+    }
+    if (twoFactor.isEnabled(user.getId())) {
+      return new LoginResult.TwoFactorRequired(jwt.createTwoFactorChallengeToken(user.getId()));
+    }
+    return new LoginResult.Tokens(issue(user));
+  }
+
+  private Optional<UserEntity> findLinkableByEmail(String email) {
+    if (email == null || email.isBlank()) {
+      return Optional.empty();
+    }
+    return userRepository.findByEmail(email);
+  }
+
+  private UserEntity createAppleUser(String email, String appleSubject) {
+    // A brand-new account needs an address; Apple always offers one (relay or real) on first
+    // consent, so an absent claim here means a returning user we somehow can't match — surface it.
+    if (email == null || email.isBlank()) {
+      throw new UserException(UserErrorCode.APPLE_EMAIL_REQUIRED);
+    }
+    return userRepository.save(new UserEntity(email, "apple", appleSubject));
   }
 
   @Transactional

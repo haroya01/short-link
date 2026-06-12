@@ -191,6 +191,7 @@ public class SecurityConfig {
                         "/api/v1/auth/mobile/exchange",
                         "/api/v1/auth/mobile/refresh",
                         "/api/v1/auth/mobile/2fa/verify",
+                        "/api/v1/auth/mobile/apple",
                         "/api/v1/auth/mobile/logout")
                     .permitAll()
                     // Stripe verifies its own signature inside the handler — auth-by-signature, not
