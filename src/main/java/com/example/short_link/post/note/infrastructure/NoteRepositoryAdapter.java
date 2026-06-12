@@ -1,12 +1,12 @@
 package com.example.short_link.post.note.infrastructure;
 
-import com.example.short_link.post.note.application.read.NoteRow;
 import com.example.short_link.post.note.domain.NoteEntity;
+import com.example.short_link.post.note.domain.NoteRow;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -31,8 +31,13 @@ public class NoteRepositoryAdapter implements NoteRepository {
   }
 
   @Override
-  public Page<NoteRow> feed(Pageable pageable) {
-    return jpa.feed(pageable);
+  public List<NoteRow> feed(int page, int size) {
+    return jpa.feedRows(PageRequest.of(page, size));
+  }
+
+  @Override
+  public long countAll() {
+    return jpa.count();
   }
 
   @Override

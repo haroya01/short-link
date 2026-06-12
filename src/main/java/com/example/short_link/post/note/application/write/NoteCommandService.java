@@ -2,9 +2,9 @@ package com.example.short_link.post.note.application.write;
 
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.post.note.application.read.NoteRow;
 import com.example.short_link.post.note.domain.NoteEntity;
 import com.example.short_link.post.note.domain.NoteLikeEntity;
+import com.example.short_link.post.note.domain.NoteRow;
 import com.example.short_link.post.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
 import lombok.RequiredArgsConstructor;

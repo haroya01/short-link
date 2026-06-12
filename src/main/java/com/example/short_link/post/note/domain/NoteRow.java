@@ -1,4 +1,4 @@
-package com.example.short_link.post.note.application.read;
+package com.example.short_link.post.note.domain;
 
 import java.time.Instant;
 

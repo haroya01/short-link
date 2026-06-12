@@ -119,7 +119,7 @@ public class ApnsPushSender implements PushSender {
         java.util.Map.of("aps", java.util.Map.of("alert", alert, "sound", "default")));
   }
 
-  private synchronized String jwt() {
+  synchronized String jwt() {
     if (cachedJwt != null && jwtIssuedAt.isAfter(Instant.now().minus(Duration.ofMinutes(50)))) {
       return cachedJwt;
     }
@@ -145,7 +145,7 @@ public class ApnsPushSender implements PushSender {
   }
 
   /** SHA256withECDSA 는 DER 시퀀스를 내놓는다 — JOSE 는 r·s 각 32바이트 원시 연결을 원한다. */
-  private static byte[] derToJose(byte[] der) {
+  static byte[] derToJose(byte[] der) {
     int rLength = der[3];
     int rOffset = 4;
     int sLength = der[rOffset + rLength + 1];

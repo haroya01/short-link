@@ -1,11 +1,10 @@
 package com.example.short_link.post.note.application.read;
 
+import com.example.short_link.post.note.domain.NoteRow;
 import com.example.short_link.post.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +19,11 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteFeedView feed(int page, int size) {
+    int safePage = Math.max(page, 0);
     int safeSize = Math.clamp(size, 1, MAX_SIZE);
-    Page<NoteRow> result = notes.feed(PageRequest.of(Math.max(page, 0), safeSize));
-    return new NoteFeedView(result.getContent(), result.getNumber(), result.hasNext());
+    List<NoteRow> rows = notes.feed(safePage, safeSize);
+    boolean hasNext = (long) (safePage + 1) * safeSize < notes.countAll();
+    return new NoteFeedView(rows, safePage, hasNext);
   }
 
   /** likedByMe 는 공개 피드에 안 싣는다(#538 comment_like 와 같은 분리) — 배치로 따로 묻는다. */

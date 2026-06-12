@@ -1,14 +1,11 @@
 package com.example.short_link.user.presentation;
 
-import com.example.short_link.user.domain.DeviceTokenEntity;
-import com.example.short_link.user.domain.repository.DeviceTokenRepository;
+import com.example.short_link.user.application.write.DeviceTokenCommandService;
+import com.example.short_link.user.presentation.request.RegisterDeviceRequest;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,30 +19,19 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class DeviceTokenController {
 
-  private final DeviceTokenRepository deviceTokens;
+  private final DeviceTokenCommandService deviceTokens;
 
   @PostMapping
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  @Transactional
   public void register(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody RegisterDeviceRequest request) {
-    deviceTokens
-        .findByToken(request.token())
-        .ifPresentOrElse(
-            existing -> existing.reassign(userId),
-            () ->
-                deviceTokens.save(
-                    new DeviceTokenEntity(userId, request.token(), request.platform())));
+    deviceTokens.register(userId, request.token(), request.platform());
   }
 
   @DeleteMapping
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void unregister(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody RegisterDeviceRequest request) {
-    // 소유자 검증 없이 토큰만으로 지운다 — 토큰을 아는 쪽이 그 기기다(로그아웃 직후 호출).
-    deviceTokens.deleteByToken(request.token());
+    deviceTokens.unregister(request.token());
   }
-
-  public record RegisterDeviceRequest(
-      @NotBlank @Size(max = 200) String token, @NotBlank @Size(max = 16) String platform) {}
 }

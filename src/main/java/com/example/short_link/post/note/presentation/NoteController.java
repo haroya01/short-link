@@ -2,10 +2,11 @@ package com.example.short_link.post.note.presentation;
 
 import com.example.short_link.post.note.application.read.NoteFeedView;
 import com.example.short_link.post.note.application.read.NoteQueryService;
-import com.example.short_link.post.note.application.read.NoteRow;
 import com.example.short_link.post.note.application.write.NoteCommandService;
+import com.example.short_link.post.note.domain.NoteRow;
+import com.example.short_link.post.note.presentation.request.CreateNoteRequest;
+import com.example.short_link.post.note.presentation.response.LikedIdsResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -67,8 +68,4 @@ public class NoteController {
       @AuthenticationPrincipal Long userId, @RequestParam List<Long> ids) {
     return new LikedIdsResponse(query.likedNoteIds(userId, ids));
   }
-
-  public record CreateNoteRequest(@NotBlank String body) {}
-
-  public record LikedIdsResponse(List<Long> likedIds) {}
 }
