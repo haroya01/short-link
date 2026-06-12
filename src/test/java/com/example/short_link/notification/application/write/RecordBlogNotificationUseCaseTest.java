@@ -4,9 +4,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -18,10 +20,17 @@ import tools.jackson.databind.json.JsonMapper;
 class RecordBlogNotificationUseCaseTest {
 
   @Mock private NotificationRepository repository;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private PushSender pushSender;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private UserRepository userRepository;
+
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
   private RecordBlogNotificationUseCase useCase() {
-    return new RecordBlogNotificationUseCase(repository, jsonMapper);
+    return new RecordBlogNotificationUseCase(repository, jsonMapper, pushSender, userRepository);
   }
 
   @Test
