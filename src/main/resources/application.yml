@@ -89,6 +89,13 @@ short-link:
     # with Apple JS" flow uses a separate Services ID, so add it here (comma-separated) once it's
     # created in Apple Developer, e.g. APPLE_SIGNIN_CLIENT_IDS=focustime.kurl,me.kurl.signin
     client-ids: ${APPLE_SIGNIN_CLIENT_IDS:focustime.kurl}
+  apns:
+    team-id: ${APNS_TEAM_ID:}
+    key-id: ${APNS_KEY_ID:}
+    # .p8 PEM 원문 — 줄바꿈 없이 한 줄이어도 된다(파서가 공백을 전부 무시).
+    private-key: ${APNS_PRIVATE_KEY:}
+    # 기본 sandbox — 개발 서명 앱(aps-environment=development)과 짝. 스토어 빌드 때 true.
+    production: ${APNS_PRODUCTION:false}
   rate-limit:
     anonymous: 100
     authenticated: 1000
