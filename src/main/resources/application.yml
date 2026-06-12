@@ -70,6 +70,10 @@ short-link:
   frontend-base-url: ${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}
   mobile:
     redirect-uri: ${MOBILE_REDIRECT_URI:kurl://auth}
+  apple:
+    issuer: ${APPLE_SIGNIN_ISSUER:https://appleid.apple.com}
+    jwk-set-uri: ${APPLE_SIGNIN_JWKS:https://appleid.apple.com/auth/keys}
+    client-ids: ${APPLE_SIGNIN_CLIENT_IDS:focustime.kurl}
   rate-limit:
     anonymous: 100
     authenticated: 1000

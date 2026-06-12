@@ -11,6 +11,9 @@ public enum UserErrorCode {
   INVALID_AVATAR(HttpStatus.BAD_REQUEST, "%s"),
   AVATAR_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "avatar upload not configured"),
   INVALID_TOTP(HttpStatus.UNAUTHORIZED, "invalid TOTP or recovery code"),
+  INVALID_APPLE_IDENTITY(HttpStatus.UNAUTHORIZED, "invalid Apple identity token"),
+  APPLE_EMAIL_REQUIRED(
+      HttpStatus.BAD_REQUEST, "Apple sign-in did not include an email for a new account"),
   TWO_FACTOR_STATE(HttpStatus.CONFLICT, "%s"),
   INVALID_TOKEN_TYPE(HttpStatus.UNAUTHORIZED, "%s");
 

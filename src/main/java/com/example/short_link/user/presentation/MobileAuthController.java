@@ -1,9 +1,13 @@
 package com.example.short_link.user.presentation;
 
+import com.example.short_link.user.application.dto.AppleIdentity;
+import com.example.short_link.user.application.write.AppleIdentityVerifier;
 import com.example.short_link.user.application.write.AuthService;
+import com.example.short_link.user.presentation.request.AppleLoginRequest;
 import com.example.short_link.user.presentation.request.MobileExchangeRequest;
 import com.example.short_link.user.presentation.request.MobileRefreshRequest;
 import com.example.short_link.user.presentation.request.TwoFactorVerifyRequest;
+import com.example.short_link.user.presentation.response.AppleLoginResponse;
 import com.example.short_link.user.presentation.response.MobileTokenResponse;
 import com.example.short_link.user.presentation.security.MobileLoginFlag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,11 +36,29 @@ import org.springframework.web.bind.annotation.RestController;
 public class MobileAuthController {
 
   private final AuthService authService;
+  private final AppleIdentityVerifier appleVerifier;
 
   @GetMapping("/start")
   public void start(HttpServletRequest req, HttpServletResponse res) throws IOException {
     MobileLoginFlag.mark(req);
     res.sendRedirect("/oauth2/authorization/google");
+  }
+
+  /**
+   * Native Sign in with Apple — no browser hop. The system sheet hands the app an identity token;
+   * we verify it against Apple's JWKS and answer with either a token pair or a 2FA challenge. The
+   * challenge is the same contract as the browser dance, so {@code /2fa/verify} is shared.
+   */
+  @PostMapping("/apple")
+  public AppleLoginResponse apple(@Valid @RequestBody AppleLoginRequest request) {
+    AppleIdentity identity = appleVerifier.verify(request.identityToken(), request.nonce());
+    return switch (authService.loginWithAppleNative(identity.subject(), identity.email())) {
+      case AuthService.LoginResult.Tokens tokens -> AppleLoginResponse.tokens(tokens.issued());
+      case AuthService.LoginResult.TwoFactorRequired challenge ->
+          AppleLoginResponse.twoFactor(challenge.challengeToken());
+      case AuthService.LoginResult.MobileExchangeCode unused ->
+          throw new IllegalStateException("apple native login never issues an exchange code");
+    };
   }
 
   @PostMapping("/exchange")
