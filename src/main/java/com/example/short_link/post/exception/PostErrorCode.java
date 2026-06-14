@@ -31,7 +31,9 @@ public enum PostErrorCode {
   NOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "note not found: %s"),
   NOTE_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "note permission denied"),
   NOTE_BODY_REQUIRED(HttpStatus.BAD_REQUEST, "note body is required"),
-  NOTE_BODY_TOO_LONG(HttpStatus.BAD_REQUEST, "note body exceeds 500 characters");
+  NOTE_BODY_TOO_LONG(HttpStatus.BAD_REQUEST, "note body exceeds 500 characters"),
+  HIGHLIGHT_NOT_FOUND(HttpStatus.NOT_FOUND, "highlight not found: %s"),
+  HIGHLIGHT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "highlight permission denied");
 
   private final HttpStatus status;
   private final String template;
