@@ -3,6 +3,7 @@ package com.example.short_link.post.note.infrastructure;
 import com.example.short_link.post.note.domain.NoteEntity;
 import com.example.short_link.post.note.domain.NoteRow;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +24,11 @@ public class NoteRepositoryAdapter implements NoteRepository {
   @Override
   public Optional<NoteEntity> findById(Long id) {
     return jpa.findById(id);
+  }
+
+  @Override
+  public List<NoteEntity> findAllByIdIn(Collection<Long> ids) {
+    return jpa.findAllByIdIn(ids);
   }
 
   @Override

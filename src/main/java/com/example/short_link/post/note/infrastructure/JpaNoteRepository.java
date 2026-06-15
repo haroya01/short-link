@@ -2,6 +2,7 @@ package com.example.short_link.post.note.infrastructure;
 
 import com.example.short_link.post.note.domain.NoteEntity;
 import com.example.short_link.post.note.domain.NoteRow;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -10,6 +11,8 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface JpaNoteRepository extends JpaRepository<NoteEntity, Long> {
+
+  List<NoteEntity> findAllByIdIn(Collection<Long> ids);
 
   String ROW_SELECT =
       """

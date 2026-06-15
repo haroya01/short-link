@@ -2,6 +2,7 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,11 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
   @Override
   public Optional<PostHighlightEntity> findById(Long id) {
     return jpa.findById(id);
+  }
+
+  @Override
+  public List<PostHighlightEntity> findAllByIdIn(Collection<Long> ids) {
+    return jpa.findAllByIdIn(ids);
   }
 
   @Override

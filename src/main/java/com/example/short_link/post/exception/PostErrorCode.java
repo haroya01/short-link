@@ -33,7 +33,12 @@ public enum PostErrorCode {
   NOTE_BODY_REQUIRED(HttpStatus.BAD_REQUEST, "note body is required"),
   NOTE_BODY_TOO_LONG(HttpStatus.BAD_REQUEST, "note body exceeds 500 characters"),
   HIGHLIGHT_NOT_FOUND(HttpStatus.NOT_FOUND, "highlight not found: %s"),
-  HIGHLIGHT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "highlight permission denied");
+  HIGHLIGHT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "highlight permission denied"),
+  COLLECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "collection not found: %s"),
+  COLLECTION_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "collection permission denied"),
+  COLLECTION_TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "a collection title is required"),
+  CONNECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "connection not found: %s"),
+  CONNECTION_TARGET_NOT_FOUND(HttpStatus.NOT_FOUND, "connection target not found: %s");
 
   private final HttpStatus status;
   private final String template;
