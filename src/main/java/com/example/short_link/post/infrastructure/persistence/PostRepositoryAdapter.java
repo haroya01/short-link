@@ -217,6 +217,19 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> findForYouCandidates(
+      Long userId, Collection<String> tags, Collection<Long> excludeIds, int page, int size) {
+    return jpa.findForYouCandidates(
+        userId, tags, excludeIds, PostStatus.PUBLISHED, PageRequest.of(page, size));
+  }
+
+  @Override
+  public long countForYouCandidates(
+      Long userId, Collection<String> tags, Collection<Long> excludeIds) {
+    return jpa.countForYouCandidates(userId, tags, excludeIds, PostStatus.PUBLISHED);
+  }
+
+  @Override
   public List<TagCount> findPopularTags(int limit) {
     return jpa.findPopularTags(PostStatus.PUBLISHED, PageRequest.of(0, limit)).stream()
         .map(row -> new TagCount((String) row[0], ((Number) row[1]).longValue()))

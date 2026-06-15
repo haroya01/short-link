@@ -126,6 +126,31 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("tags") Collection<String> tags,
       @Param("status") PostStatus status);
 
+  // "For You" — posts carrying any interest tag (inner join: a match is required), not the reader's
+  // own and not already read. `distinct` collapses the multi-tag join fan-out. excludeIds is never
+  // empty (caller passes a no-match sentinel), so `not in` stays valid.
+  @Query(
+      "select distinct p from PostEntity p join p.tags t "
+          + "where p.status = :status and p.userId <> :userId "
+          + "and lower(t) in :tags and p.id not in :excludeIds "
+          + "order by p.publishedAt desc")
+  List<PostEntity> findForYouCandidates(
+      @Param("userId") Long userId,
+      @Param("tags") Collection<String> tags,
+      @Param("excludeIds") Collection<Long> excludeIds,
+      @Param("status") PostStatus status,
+      Pageable pageable);
+
+  @Query(
+      "select count(distinct p) from PostEntity p join p.tags t "
+          + "where p.status = :status and p.userId <> :userId "
+          + "and lower(t) in :tags and p.id not in :excludeIds")
+  long countForYouCandidates(
+      @Param("userId") Long userId,
+      @Param("tags") Collection<String> tags,
+      @Param("excludeIds") Collection<Long> excludeIds,
+      @Param("status") PostStatus status);
+
   @Query(
       "select t, count(p) from PostEntity p join p.tags t "
           + "where p.status = :status group by t order by count(p) desc")
