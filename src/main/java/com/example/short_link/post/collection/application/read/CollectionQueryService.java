@@ -41,6 +41,11 @@ public class CollectionQueryService {
   private final NoteRepository noteRepository;
   private final UserRepository userRepository;
 
+  /** Connections in a collection — for echoing a fresh summary after edit. */
+  public long connectionCount(Long collectionId) {
+    return connectionRepository.countByCollectionId(collectionId);
+  }
+
   /** The viewer's own collections, most recently touched first. */
   public List<CollectionSummaryView> listMine(Long userId) {
     return collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(userId).stream()

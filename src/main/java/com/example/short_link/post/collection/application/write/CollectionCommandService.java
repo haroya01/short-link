@@ -40,6 +40,21 @@ public class CollectionCommandService {
         new CollectionEntity(cmd.userId(), title, description, cmd.visibility()));
   }
 
+  /** 이름·소개·공개 범위 수정(주인만). 제목은 비울 수 없다. */
+  @Transactional
+  public CollectionEntity edit(EditCollectionCommand cmd) {
+    CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
+    String title = cmd.title() == null ? "" : cmd.title().strip();
+    if (title.isEmpty()) {
+      throw new PostException(PostErrorCode.COLLECTION_TITLE_REQUIRED);
+    }
+    collection.edit(
+        clamp(title, CollectionEntity.MAX_TITLE),
+        clampNullable(cmd.description(), CollectionEntity.MAX_DESCRIPTION),
+        cmd.visibility());
+    return collection;
+  }
+
   /** 블록을 컬렉션에 잇는다. 이미 이어져 있으면 그대로 둔다(멱등). */
   @Transactional
   public CollectionConnectionEntity connect(ConnectBlockCommand cmd) {
