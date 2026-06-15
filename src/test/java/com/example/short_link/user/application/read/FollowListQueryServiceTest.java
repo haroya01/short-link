@@ -55,7 +55,7 @@ class FollowListQueryServiceTest {
   void followersHydratesRowsInOrderWithCountsAndViewerState() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
     when(followRepository.findFollowerIds(2L, 0, 20)).thenReturn(List.of(10L, 11L));
-    when(followRepository.countByFollowingId(2L)).thenReturn(2L);
+    when(followRepository.countByFollowingId(2L)).thenReturn(50L); // (0+1)*20 < 50 -> hasNext
     when(userRepository.findAllByIdIn(List.of(10L, 11L)))
         .thenReturn(List.of(user(10L, "alice"), user(11L, "carol")));
     when(followRepository.countFollowersByIdIn(anyCollection()))
@@ -64,7 +64,7 @@ class FollowListQueryServiceTest {
 
     FollowListView view = service.followers(9L, "bob", 0, 20);
 
-    assertThat(view.hasNext()).isFalse();
+    assertThat(view.hasNext()).isTrue();
     assertThat(view.items()).extracting(FollowUserView::id).containsExactly(10L, 11L);
     FollowUserView alice = view.items().get(0);
     assertThat(alice.username()).isEqualTo("alice");
@@ -103,6 +103,21 @@ class FollowListQueryServiceTest {
     assertThat(view.items()).extracting(FollowUserView::id).containsExactly(10L);
     assertThat(view.items().get(0).followerCount()).isEqualTo(7);
     assertThat(view.items().get(0).followedByMe()).isFalse();
+  }
+
+  @Test
+  void followingReportsNoNextWhenPageCoversEveryone() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(followRepository.findFollowingIds(2L, 0, 20)).thenReturn(List.of(10L));
+    when(followRepository.countByFollowerId(2L)).thenReturn(1L); // (0+1)*20 < 1 -> no next
+    when(userRepository.findAllByIdIn(List.of(10L))).thenReturn(List.of(user(10L, "alice")));
+    when(followRepository.countFollowersByIdIn(anyCollection())).thenReturn(Map.of(10L, 7L));
+    when(followRepository.findFollowedAmong(eq(9L), anyCollection())).thenReturn(List.of(10L));
+
+    FollowListView view = service.following(9L, "bob", 0, 20);
+
+    assertThat(view.hasNext()).isFalse();
+    assertThat(view.items().get(0).followedByMe()).isTrue();
   }
 
   @Test
