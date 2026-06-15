@@ -2,10 +2,13 @@ package com.example.short_link.post.collection.infrastructure;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
+import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -33,6 +36,13 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   public List<CollectionConnectionEntity> findAllByCollectionIdOrderByPositionAsc(
       Long collectionId) {
     return jpa.findAllByCollectionIdOrderByPositionAsc(collectionId);
+  }
+
+  @Override
+  public List<DiscoverConnectionRow> findPublicConnectionsByOwners(
+      Collection<Long> ownerIds, int page, int size) {
+    if (ownerIds.isEmpty()) return List.of();
+    return jpa.findPublicConnectionsByOwners(ownerIds, PageRequest.of(page, size));
   }
 
   @Override
