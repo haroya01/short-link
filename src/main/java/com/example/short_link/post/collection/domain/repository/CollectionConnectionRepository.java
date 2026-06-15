@@ -22,6 +22,10 @@ public interface CollectionConnectionRepository {
   /** A collection's connections in curator order. */
   List<CollectionConnectionEntity> findAllByCollectionIdOrderByPositionAsc(Long collectionId);
 
+  /** Connections across several collections, most-recent first — drives list previews. */
+  List<CollectionConnectionEntity> findAllByCollectionIdInOrderByPositionDesc(
+      Collection<Long> collectionIds);
+
   long countByCollectionId(Long collectionId);
 
   boolean existsByCollectionIdAndBlockTypeAndRefId(

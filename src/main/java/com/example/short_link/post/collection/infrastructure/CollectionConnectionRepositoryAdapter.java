@@ -39,6 +39,13 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   }
 
   @Override
+  public List<CollectionConnectionEntity> findAllByCollectionIdInOrderByPositionDesc(
+      Collection<Long> collectionIds) {
+    if (collectionIds.isEmpty()) return List.of();
+    return jpa.findAllByCollectionIdInOrderByPositionDesc(collectionIds);
+  }
+
+  @Override
   public List<DiscoverConnectionRow> findPublicConnectionsByOwners(
       Collection<Long> ownerIds, int page, int size) {
     if (ownerIds.isEmpty()) return List.of();

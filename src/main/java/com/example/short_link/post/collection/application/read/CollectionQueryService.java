@@ -16,6 +16,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -46,9 +47,16 @@ public class CollectionQueryService {
     return connectionRepository.countByCollectionId(collectionId);
   }
 
-  /** The viewer's own collections, most recently touched first. */
+  public static final int PREVIEW_PER_COLLECTION = 2;
+  private static final int PREVIEW_LABEL_MAX = 40;
+
+  /** The viewer's own collections, most recently touched first, each with a recent-item preview. */
   public List<CollectionSummaryView> listMine(Long userId) {
-    return collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(userId).stream()
+    List<CollectionEntity> collections =
+        collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(userId);
+    Map<Long, List<String>> previews =
+        previewByCollection(collections.stream().map(CollectionEntity::getId).toList());
+    return collections.stream()
         .map(
             c ->
                 new CollectionSummaryView(
@@ -57,8 +65,82 @@ public class CollectionQueryService {
                     c.getDescription(),
                     c.getVisibility().name(),
                     (int) connectionRepository.countByCollectionId(c.getId()),
-                    c.getUpdatedAt()))
+                    c.getUpdatedAt(),
+                    previews.getOrDefault(c.getId(), List.of())))
         .toList();
+  }
+
+  /** 컬렉션마다 최근 항목 라벨 몇 개 — "안에 뭐가 들었는지" 떠올리게(어디 넣을지 결정 보조). */
+  private Map<Long, List<String>> previewByCollection(List<Long> collectionIds) {
+    if (collectionIds.isEmpty()) return Map.of();
+
+    // 최신순(position desc)으로 받아 컬렉션별 상위 N 만 남긴다.
+    Map<Long, List<CollectionConnectionEntity>> topByCollection = new LinkedHashMap<>();
+    for (CollectionConnectionEntity c :
+        connectionRepository.findAllByCollectionIdInOrderByPositionDesc(collectionIds)) {
+      List<CollectionConnectionEntity> bucket =
+          topByCollection.computeIfAbsent(c.getCollectionId(), k -> new ArrayList<>());
+      if (bucket.size() < PREVIEW_PER_COLLECTION) bucket.add(c);
+    }
+
+    List<CollectionConnectionEntity> top =
+        topByCollection.values().stream().flatMap(List::stream).toList();
+    Map<Long, PostEntity> posts =
+        bulk(postRepository.findAllByIdIn(previewRefIds(top, "POST")), PostEntity::getId);
+    Map<Long, PostHighlightEntity> highlights =
+        bulk(
+            highlightRepository.findAllByIdIn(previewRefIds(top, "HIGHLIGHT")),
+            PostHighlightEntity::getId);
+    Map<Long, NoteEntity> notes =
+        bulk(noteRepository.findAllByIdIn(previewRefIds(top, "NOTE")), NoteEntity::getId);
+
+    Map<Long, List<String>> result = new LinkedHashMap<>();
+    topByCollection.forEach(
+        (collectionId, conns) -> {
+          List<String> labels = new ArrayList<>();
+          for (CollectionConnectionEntity c : conns) {
+            String label = previewLabel(c, posts, highlights, notes);
+            if (label != null) labels.add(label);
+          }
+          result.put(collectionId, labels);
+        });
+    return result;
+  }
+
+  private static String previewLabel(
+      CollectionConnectionEntity c,
+      Map<Long, PostEntity> posts,
+      Map<Long, PostHighlightEntity> highlights,
+      Map<Long, NoteEntity> notes) {
+    return switch (c.getBlockType()) {
+      case POST -> {
+        PostEntity post = posts.get(c.getRefId());
+        yield post == null ? null : clampLabel(post.getTitle());
+      }
+      case HIGHLIGHT -> {
+        PostHighlightEntity hl = highlights.get(c.getRefId());
+        yield hl == null ? null : clampLabel(hl.getQuote());
+      }
+      case NOTE -> {
+        NoteEntity note = notes.get(c.getRefId());
+        yield note == null ? null : clampLabel(note.getBody());
+      }
+    };
+  }
+
+  private static List<Long> previewRefIds(List<CollectionConnectionEntity> conns, String type) {
+    return conns.stream()
+        .filter(c -> c.getBlockType().name().equals(type))
+        .map(CollectionConnectionEntity::getRefId)
+        .distinct()
+        .toList();
+  }
+
+  private static String clampLabel(String s) {
+    String trimmed = s.strip();
+    return trimmed.length() > PREVIEW_LABEL_MAX
+        ? trimmed.substring(0, PREVIEW_LABEL_MAX) + "…"
+        : trimmed;
   }
 
   /** Collection detail with resolved blocks. PRIVATE is hidden from non-owners as NOT_FOUND. */

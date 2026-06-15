@@ -52,7 +52,8 @@ public class CollectionController {
         saved.getDescription(),
         saved.getVisibility().name(),
         0,
-        saved.getUpdatedAt());
+        saved.getUpdatedAt(),
+        List.of());
   }
 
   @PutMapping("/collections/{id}")
@@ -70,7 +71,8 @@ public class CollectionController {
         saved.getDescription(),
         saved.getVisibility().name(),
         (int) queryService.connectionCount(saved.getId()),
-        saved.getUpdatedAt());
+        saved.getUpdatedAt(),
+        List.of());
   }
 
   @GetMapping("/users/me/collections")
