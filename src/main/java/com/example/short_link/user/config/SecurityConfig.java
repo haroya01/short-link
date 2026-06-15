@@ -168,6 +168,10 @@ public class SecurityConfig {
                     // authenticated via anyRequest().
                     .requestMatchers(GET, "/api/v1/users/*/follow")
                     .permitAll()
+                    // The followers / following lists are public too (Medium shows them openly);
+                    // per-row followedByMe just needs the optional principal.
+                    .requestMatchers(GET, "/api/v1/users/*/followers", "/api/v1/users/*/following")
+                    .permitAll()
                     // Anonymous link creation — PoW filter sits in front of this in the controller
                     // path so it isn't an unauthenticated free-for-all.
                     .requestMatchers(POST, "/api/v1/links")
