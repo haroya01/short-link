@@ -113,6 +113,16 @@ public interface PostRepository {
   long countPublishedByAuthorsSeriesOrTags(
       Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags);
 
+  /**
+   * "For You" candidates — recent published posts carrying any of the reader's interest tags
+   * (lower-cased), excluding their own posts and a set of already-read post ids. Newest first. Pass
+   * non-empty {@code excludeIds} (use a sentinel that matches nothing when there are no reads yet).
+   */
+  List<PostEntity> findForYouCandidates(
+      Long userId, Collection<String> tags, Collection<Long> excludeIds, int page, int size);
+
+  long countForYouCandidates(Long userId, Collection<String> tags, Collection<Long> excludeIds);
+
   /** Most-used tags across published posts, most popular first — the 주제 index. */
   List<TagCount> findPopularTags(int limit);
 
