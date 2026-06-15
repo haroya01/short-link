@@ -2,6 +2,7 @@ package com.example.short_link.post.note.domain.repository;
 
 import com.example.short_link.post.note.domain.NoteEntity;
 import com.example.short_link.post.note.domain.NoteRow;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -10,6 +11,9 @@ public interface NoteRepository {
   NoteEntity save(NoteEntity note);
 
   Optional<NoteEntity> findById(Long id);
+
+  /** Bulk fetch by ids — resolving notes connected to a collection. */
+  List<NoteEntity> findAllByIdIn(Collection<Long> ids);
 
   void delete(NoteEntity note);
 

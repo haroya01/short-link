@@ -1,6 +1,7 @@
 package com.example.short_link.post.domain.repository;
 
 import com.example.short_link.post.domain.PostHighlightEntity;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -9,6 +10,9 @@ public interface PostHighlightRepository {
   PostHighlightEntity save(PostHighlightEntity highlight);
 
   Optional<PostHighlightEntity> findById(Long id);
+
+  /** Bulk fetch by ids — resolving highlights connected to a collection. */
+  List<PostHighlightEntity> findAllByIdIn(Collection<Long> ids);
 
   void delete(PostHighlightEntity highlight);
 
