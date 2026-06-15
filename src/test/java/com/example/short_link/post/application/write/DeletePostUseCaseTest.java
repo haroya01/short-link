@@ -9,6 +9,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
+import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostRevisionRepository;
@@ -31,6 +32,7 @@ class DeletePostUseCaseTest {
   @Mock private CommentRepository commentRepository;
   @Mock private PostLikeRepository postLikeRepository;
   @Mock private PostBookmarkRepository postBookmarkRepository;
+  @Mock private PostHighlightRepository postHighlightRepository;
   @Mock private ProfileCacheInvalidator cacheEviction;
 
   private DeletePostUseCase useCase;
@@ -46,6 +48,7 @@ class DeletePostUseCaseTest {
             commentRepository,
             postLikeRepository,
             postBookmarkRepository,
+            postHighlightRepository,
             cacheEviction);
   }
 
@@ -63,12 +66,14 @@ class DeletePostUseCaseTest {
             commentRepository,
             postLikeRepository,
             postBookmarkRepository,
+            postHighlightRepository,
             postRepository);
     order.verify(postBlockRepository).deleteAllByPostId(post.getId());
     order.verify(postRevisionRepository).deleteAllByPostId(post.getId());
     order.verify(commentRepository).deleteAllByPostId(post.getId());
     order.verify(postLikeRepository).deleteAllByPostId(post.getId());
     order.verify(postBookmarkRepository).deleteAllByPostId(post.getId());
+    order.verify(postHighlightRepository).deleteAllByPostId(post.getId());
     order.verify(postRepository).delete(post);
   }
 
