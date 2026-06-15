@@ -109,6 +109,50 @@ class CollectionCommandServiceTest {
     assertThat(saved.getTitle()).hasSize(CollectionEntity.MAX_TITLE);
   }
 
+  // ---- edit ----
+
+  @Test
+  void editUpdatesFieldsWhenOwner() {
+    CollectionEntity c = collection(10L, 1L, CollectionVisibility.PRIVATE);
+    when(collectionRepository.findById(10L)).thenReturn(Optional.of(c));
+
+    CollectionEntity result =
+        service.edit(
+            new EditCollectionCommand(1L, 10L, "  새 이름  ", "새 소개", CollectionVisibility.PUBLIC));
+
+    assertThat(result.getTitle()).isEqualTo("새 이름"); // stripped
+    assertThat(result.getDescription()).isEqualTo("새 소개");
+    assertThat(result.getVisibility()).isEqualTo(CollectionVisibility.PUBLIC);
+  }
+
+  @Test
+  void editRejectsBlankTitle() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
+
+    assertThatThrownBy(
+            () ->
+                service.edit(
+                    new EditCollectionCommand(1L, 10L, "  ", null, CollectionVisibility.PUBLIC)))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.COLLECTION_TITLE_REQUIRED);
+  }
+
+  @Test
+  void editRejectsForeignOwner() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 2L, CollectionVisibility.PRIVATE)));
+
+    assertThatThrownBy(
+            () ->
+                service.edit(
+                    new EditCollectionCommand(1L, 10L, "x", null, CollectionVisibility.PUBLIC)))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.COLLECTION_PERMISSION_DENIED);
+  }
+
   // ---- connect ----
 
   @Test

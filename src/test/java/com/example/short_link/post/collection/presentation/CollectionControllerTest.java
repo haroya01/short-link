@@ -6,6 +6,7 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -84,6 +85,31 @@ class CollectionControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"title\":\"느린 사고\"}"))
         .andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void editReturnsUpdatedSummary() throws Exception {
+    when(command.edit(any())).thenReturn(collection(10L));
+    when(query.connectionCount(10L)).thenReturn(2L);
+
+    mvc.perform(
+            put("/api/v1/collections/10")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"느린 사고\",\"visibility\":\"PUBLIC\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id").value(10))
+        .andExpect(jsonPath("$.count").value(2));
+  }
+
+  @Test
+  void editRejectsBlankTitleWithValidation() throws Exception {
+    mvc.perform(
+            put("/api/v1/collections/10")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"\"}"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test

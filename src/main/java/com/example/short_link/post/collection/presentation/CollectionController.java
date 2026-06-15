@@ -6,9 +6,11 @@ import com.example.short_link.post.collection.application.read.CollectionSummary
 import com.example.short_link.post.collection.application.write.CollectionCommandService;
 import com.example.short_link.post.collection.application.write.ConnectBlockCommand;
 import com.example.short_link.post.collection.application.write.CreateCollectionCommand;
+import com.example.short_link.post.collection.application.write.EditCollectionCommand;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.presentation.request.ConnectBlockRequest;
 import com.example.short_link.post.collection.presentation.request.CreateCollectionRequest;
+import com.example.short_link.post.collection.presentation.request.EditCollectionRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +20,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -49,6 +52,24 @@ public class CollectionController {
         saved.getDescription(),
         saved.getVisibility().name(),
         0,
+        saved.getUpdatedAt());
+  }
+
+  @PutMapping("/collections/{id}")
+  public CollectionSummaryView edit(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @Valid @RequestBody EditCollectionRequest request) {
+    CollectionEntity saved =
+        commandService.edit(
+            new EditCollectionCommand(
+                userId, id, request.title(), request.description(), request.visibility()));
+    return new CollectionSummaryView(
+        saved.getId(),
+        saved.getTitle(),
+        saved.getDescription(),
+        saved.getVisibility().name(),
+        (int) queryService.connectionCount(saved.getId()),
         saved.getUpdatedAt());
   }
 
