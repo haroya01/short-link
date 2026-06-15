@@ -40,6 +40,16 @@ class PostUserDataEraser implements UserDataEraser {
             + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",
         userId);
     execute("DELETE FROM bookmark_folder WHERE user_id = :userId", userId);
+    // Reader highlights and reading history are private per-user records (PII) — drop the ones this
+    // user made, plus any others left on this user's own posts.
+    execute(
+        "DELETE FROM post_highlight WHERE user_id = :userId"
+            + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",
+        userId);
+    execute(
+        "DELETE FROM post_read WHERE user_id = :userId"
+            + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",
+        userId);
     execute(
         "DELETE FROM series_subscription WHERE user_id = :userId"
             + " OR series_id IN (SELECT id FROM series WHERE user_id = :userId)",
