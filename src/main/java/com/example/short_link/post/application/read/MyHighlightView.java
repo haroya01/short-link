@@ -10,4 +10,5 @@ public record MyHighlightView(
     String postUsername,
     String postSlug,
     String postTitle,
-    Instant createdAt) {}
+    Instant createdAt,
+    String note) {}

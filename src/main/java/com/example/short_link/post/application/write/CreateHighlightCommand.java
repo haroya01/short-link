@@ -6,7 +6,8 @@ public record CreateHighlightCommand(
     Integer blockOrder,
     Integer startOffset,
     Integer endOffset,
-    String quote) {
+    String quote,
+    String note) {
 
   public CreateHighlightCommand {
     if (userId == null) throw new IllegalArgumentException("userId required");

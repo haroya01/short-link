@@ -2,6 +2,7 @@ package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.read.CommentLikeStatus;
 import com.example.short_link.post.application.read.CommentView;
+import com.example.short_link.post.application.read.MyCommentView;
 import com.example.short_link.post.application.read.PostCommentQueryService;
 import com.example.short_link.post.application.write.CreateCommentCommand;
 import com.example.short_link.post.application.write.CreateCommentUseCase;
@@ -64,5 +65,10 @@ public class CommentController {
   public List<Long> likedCommentIds(
       @AuthenticationPrincipal Long userId, @PathVariable Long postId) {
     return commentQuery.likedCommentIds(userId, postId);
+  }
+
+  @GetMapping("/users/me/comments")
+  public List<MyCommentView> myComments(@AuthenticationPrincipal Long userId) {
+    return commentQuery.listMyComments(userId);
   }
 }

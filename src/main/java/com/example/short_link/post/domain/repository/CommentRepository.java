@@ -15,6 +15,9 @@ public interface CommentRepository {
   /** All comments for a post (top-level + replies), oldest first. */
   List<CommentEntity> findAllByPostIdOrderByCreatedAtAsc(Long postId);
 
+  /** The user's own comments across all posts, newest first — the "my comments" library. */
+  List<CommentEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+
   /** Replies to a top-level comment — used to cascade on delete. */
   List<CommentEntity> findAllByParentId(Long parentId);
 

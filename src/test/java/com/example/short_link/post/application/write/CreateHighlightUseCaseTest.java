@@ -43,7 +43,7 @@ class CreateHighlightUseCaseTest {
   }
 
   private PostHighlightEntity highlight(long id, long postId, long userId) {
-    PostHighlightEntity h = new PostHighlightEntity(postId, userId, 0, 0, 3, "abc");
+    PostHighlightEntity h = new PostHighlightEntity(postId, userId, 0, 0, 3, "abc", null);
     ReflectionTestUtils.setField(h, "id", id);
     return h;
   }
@@ -59,11 +59,29 @@ class CreateHighlightUseCaseTest {
               return e;
             });
 
-    HighlightRef ref = useCase.execute(new CreateHighlightCommand(1L, 5L, 2, 3, 10, "hello"));
+    HighlightRef ref =
+        useCase.execute(new CreateHighlightCommand(1L, 5L, 2, 3, 10, "hello", "  메모  "));
 
     assertThat(ref.id()).isEqualTo(99L);
     assertThat(ref.blockOrder()).isEqualTo(2);
     assertThat(ref.quote()).isEqualTo("hello");
+    assertThat(ref.note()).isEqualTo("메모"); // 양끝 공백 정규화
+  }
+
+  @Test
+  void blankNoteIsStoredAsNull() {
+    when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
+    when(highlightRepository.save(any()))
+        .thenAnswer(
+            inv -> {
+              PostHighlightEntity e = inv.getArgument(0);
+              ReflectionTestUtils.setField(e, "id", 99L);
+              return e;
+            });
+
+    HighlightRef ref = useCase.execute(new CreateHighlightCommand(1L, 5L, 0, 0, 5, "q", "   "));
+
+    assertThat(ref.note()).isNull();
   }
 
   @Test
@@ -72,7 +90,7 @@ class CreateHighlightUseCaseTest {
     when(highlightRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     String tooLong = "x".repeat(PostHighlightEntity.MAX_QUOTE + 500);
 
-    HighlightRef ref = useCase.execute(new CreateHighlightCommand(1L, 5L, 0, 0, 5, tooLong));
+    HighlightRef ref = useCase.execute(new CreateHighlightCommand(1L, 5L, 0, 0, 5, tooLong, null));
 
     assertThat(ref.quote()).hasSize(PostHighlightEntity.MAX_QUOTE);
   }
@@ -81,7 +99,8 @@ class CreateHighlightUseCaseTest {
   void rejectsMissingPost() {
     when(postRepository.findById(5L)).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> useCase.execute(new CreateHighlightCommand(1L, 5L, 0, 0, 5, "q")))
+    assertThatThrownBy(
+            () -> useCase.execute(new CreateHighlightCommand(1L, 5L, 0, 0, 5, "q", null)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -93,7 +112,8 @@ class CreateHighlightUseCaseTest {
     ReflectionTestUtils.setField(draft, "id", 5L);
     when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
 
-    assertThatThrownBy(() -> useCase.execute(new CreateHighlightCommand(1L, 5L, 0, 0, 5, "q")))
+    assertThatThrownBy(
+            () -> useCase.execute(new CreateHighlightCommand(1L, 5L, 0, 0, 5, "q", null)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);

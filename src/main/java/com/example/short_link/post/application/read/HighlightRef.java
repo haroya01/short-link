@@ -9,4 +9,5 @@ public record HighlightRef(
     Integer startOffset,
     Integer endOffset,
     String quote,
-    Instant createdAt) {}
+    Instant createdAt,
+    String note) {}
