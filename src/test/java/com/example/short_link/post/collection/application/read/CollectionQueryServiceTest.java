@@ -119,7 +119,7 @@ class CollectionQueryServiceTest {
                 conn(200L, ConnectionBlockType.HIGHLIGHT, 9L, 1),
                 conn(201L, ConnectionBlockType.POST, 999L, 0))); // 원문 글 사라짐 → 라벨 null → 제외
     String longQuote = "가".repeat(60);
-    PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 3, longQuote);
+    PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 3, longQuote, null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of()); // 999 없음
@@ -165,7 +165,7 @@ class CollectionQueryServiceTest {
                 conn(102L, ConnectionBlockType.NOTE, 7L, 2),
                 conn(103L, ConnectionBlockType.POST, 999L, 3)));
 
-    PostHighlightEntity hl = new PostHighlightEntity(6L, 3L, 0, 0, 3, "좋은 추상은 더 지울 게 없을 때");
+    PostHighlightEntity hl = new PostHighlightEntity(6L, 3L, 0, 0, 3, "좋은 추상은 더 지울 게 없을 때", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
     NoteEntity note = new NoteEntity(1L, "더 나은 질문을 기다리는 일");

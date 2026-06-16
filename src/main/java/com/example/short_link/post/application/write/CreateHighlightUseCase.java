@@ -36,6 +36,8 @@ public class CreateHighlightUseCase {
             ? cmd.quote().substring(0, PostHighlightEntity.MAX_QUOTE)
             : cmd.quote();
 
+    String note = normalizeNote(cmd.note());
+
     PostHighlightEntity saved =
         highlightRepository.save(
             new PostHighlightEntity(
@@ -44,7 +46,8 @@ public class CreateHighlightUseCase {
                 cmd.blockOrder(),
                 cmd.startOffset(),
                 cmd.endOffset(),
-                quote));
+                quote,
+                note));
 
     return new HighlightRef(
         saved.getId(),
@@ -52,7 +55,8 @@ public class CreateHighlightUseCase {
         saved.getStartOffset(),
         saved.getEndOffset(),
         saved.getQuote(),
-        saved.getCreatedAt());
+        saved.getCreatedAt(),
+        saved.getNote());
   }
 
   @Transactional
@@ -65,5 +69,14 @@ public class CreateHighlightUseCase {
       throw new PostException(PostErrorCode.HIGHLIGHT_PERMISSION_DENIED);
     }
     highlightRepository.delete(highlight);
+  }
+
+  private static String normalizeNote(String note) {
+    if (note == null) return null;
+    String trimmed = note.strip();
+    if (trimmed.isEmpty()) return null;
+    return trimmed.length() > PostHighlightEntity.MAX_NOTE
+        ? trimmed.substring(0, PostHighlightEntity.MAX_NOTE)
+        : trimmed;
   }
 }

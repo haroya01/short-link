@@ -24,6 +24,7 @@ import lombok.NoArgsConstructor;
 public class PostHighlightEntity extends BaseCreatedEntity {
 
   public static final int MAX_QUOTE = 1000;
+  public static final int MAX_NOTE = 500;
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -47,18 +48,24 @@ public class PostHighlightEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = MAX_QUOTE)
   private String quote;
 
+  /** Optional public margin note — a curator's attributed comment shown alongside the highlight. */
+  @Column(name = "note", length = MAX_NOTE)
+  private String note;
+
   public PostHighlightEntity(
       Long postId,
       Long userId,
       Integer blockOrder,
       Integer startOffset,
       Integer endOffset,
-      String quote) {
+      String quote,
+      String note) {
     this.postId = postId;
     this.userId = userId;
     this.blockOrder = blockOrder;
     this.startOffset = startOffset;
     this.endOffset = endOffset;
     this.quote = quote;
+    this.note = note;
   }
 }

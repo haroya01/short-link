@@ -41,7 +41,13 @@ class PostHighlightQueryServiceTest {
   }
 
   private PostHighlightEntity highlight(long id, long postId, long userId) {
-    PostHighlightEntity h = new PostHighlightEntity(postId, userId, 0, 0, 3, "quote-" + id);
+    PostHighlightEntity h = new PostHighlightEntity(postId, userId, 0, 0, 3, "quote-" + id, null);
+    ReflectionTestUtils.setField(h, "id", id);
+    return h;
+  }
+
+  private PostHighlightEntity highlightWithNote(long id, long postId, long userId, String note) {
+    PostHighlightEntity h = new PostHighlightEntity(postId, userId, 0, 0, 3, "quote-" + id, note);
     ReflectionTestUtils.setField(h, "id", id);
     return h;
   }
@@ -57,14 +63,16 @@ class PostHighlightQueryServiceTest {
   void listForPostAttributesHighlightsAndNullsMissingAuthor() {
     when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
     when(highlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(5L))
-        .thenReturn(List.of(highlight(10L, 5L, 1L), highlight(11L, 5L, 999L)));
+        .thenReturn(List.of(highlightWithNote(10L, 5L, 1L, "여백의 메모"), highlight(11L, 5L, 999L)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
 
     List<HighlightView> views = service.listForPost(5L);
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
+    assertThat(views.get(0).note()).isEqualTo("여백의 메모");
     assertThat(views.get(1).author()).isNull(); // user 999 not found
+    assertThat(views.get(1).note()).isNull();
   }
 
   @Test
@@ -81,7 +89,10 @@ class PostHighlightQueryServiceTest {
     // hA: post present + author present | hB: post missing | hC: post present + author missing
     when(highlightRepository.findAllByUserIdOrderByCreatedAtDesc(1L))
         .thenReturn(
-            List.of(highlight(10L, 5L, 1L), highlight(11L, 999L, 1L), highlight(12L, 6L, 1L)));
+            List.of(
+                highlightWithNote(10L, 5L, 1L, "내 메모"),
+                highlight(11L, 999L, 1L),
+                highlight(12L, 6L, 1L)));
     when(postRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(publishedPost(5L, 2L), publishedPost(6L, 3L)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(2L, "bob")));
@@ -93,6 +104,7 @@ class PostHighlightQueryServiceTest {
     assertThat(present.postUsername()).isEqualTo("bob");
     assertThat(present.postSlug()).isEqualTo("slug-5");
     assertThat(present.postTitle()).isEqualTo("Title 5");
+    assertThat(present.note()).isEqualTo("내 메모");
 
     MyHighlightView postMissing = views.get(1);
     assertThat(postMissing.postUsername()).isNull();

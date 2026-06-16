@@ -48,7 +48,8 @@ public class PostHighlightQueryService {
                   h.getStartOffset(),
                   h.getEndOffset(),
                   h.getQuote(),
-                  h.getCreatedAt());
+                  h.getCreatedAt(),
+                  h.getNote());
             })
         .toList();
   }
@@ -79,7 +80,8 @@ public class PostHighlightQueryService {
                   author == null ? null : author.getUsername(),
                   post == null ? null : post.getSlug(),
                   post == null ? null : post.getTitle(),
-                  h.getCreatedAt());
+                  h.getCreatedAt(),
+                  h.getNote());
             })
         .toList();
   }

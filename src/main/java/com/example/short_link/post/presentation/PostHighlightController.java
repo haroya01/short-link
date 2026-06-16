@@ -42,7 +42,8 @@ public class PostHighlightController {
             request.blockOrder(),
             request.startOffset(),
             request.endOffset(),
-            request.quote()));
+            request.quote(),
+            request.note()));
   }
 
   @DeleteMapping("/highlights/{id}")

@@ -200,7 +200,7 @@ class CollectionCommandServiceTest {
   void connectIsIdempotentWhenAlreadyConnected() {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
-    PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 3, "q");
+    PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 3, "q", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findById(9L)).thenReturn(Optional.of(hl));
     when(connectionRepository.existsByCollectionIdAndBlockTypeAndRefId(
