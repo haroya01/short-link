@@ -10,6 +10,10 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -37,7 +41,32 @@ public class CollectionCommandService {
     title = clamp(title, CollectionEntity.MAX_TITLE);
     String description = clampNullable(cmd.description(), CollectionEntity.MAX_DESCRIPTION);
     return collectionRepository.save(
-        new CollectionEntity(cmd.userId(), title, description, cmd.visibility()));
+        new CollectionEntity(cmd.userId(), title, description, cmd.visibility(), cmd.kind()));
+  }
+
+  /**
+   * 연결 순서 재배치(주인만) — PATH(reading path)에서 position 이 곧 논증의 흐름이다. 주어진 connectionId 순서대로 position 을
+   * 0..n 으로 다시 매긴다. 제공된 id 집합이 이 컬렉션의 연결 집합과 정확히 일치해야 한다(부분/이질 id 거부).
+   */
+  @Transactional
+  public void reorder(Long userId, Long collectionId, List<Long> orderedConnectionIds) {
+    CollectionEntity collection = ownedCollection(userId, collectionId);
+    List<CollectionConnectionEntity> connections =
+        connectionRepository.findAllByCollectionIdOrderByPositionAsc(collection.getId());
+    Map<Long, CollectionConnectionEntity> byId = new HashMap<>();
+    for (CollectionConnectionEntity c : connections) byId.put(c.getId(), c);
+
+    if (orderedConnectionIds.size() != connections.size()
+        || !byId.keySet().equals(new HashSet<>(orderedConnectionIds))) {
+      // 한 컬렉션의 연결 전체를 빠짐없이·중복 없이 넘겨야 한다(스냅샷 재배치).
+      throw new PostException(PostErrorCode.COLLECTION_REORDER_MISMATCH, collectionId);
+    }
+
+    for (int i = 0; i < orderedConnectionIds.size(); i++) {
+      byId.get(orderedConnectionIds.get(i)).reposition(i);
+    }
+    // updated_at 을 끌어올려 "최근 손댄 컬렉션"이 목록 위로.
+    collection.edit(collection.getTitle(), collection.getDescription(), collection.getVisibility());
   }
 
   /** 이름·소개·공개 범위 수정(주인만). 제목은 비울 수 없다. */

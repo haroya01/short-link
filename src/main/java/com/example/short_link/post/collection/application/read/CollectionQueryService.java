@@ -64,6 +64,7 @@ public class CollectionQueryService {
                     c.getTitle(),
                     c.getDescription(),
                     c.getVisibility().name(),
+                    c.getKind().name(),
                     (int) connectionRepository.countByCollectionId(c.getId()),
                     c.getUpdatedAt(),
                     previews.getOrDefault(c.getId(), List.of())))
@@ -219,6 +220,7 @@ public class CollectionQueryService {
         collection.getTitle(),
         collection.getDescription(),
         collection.getVisibility().name(),
+        collection.getKind().name(),
         curatorUsername,
         views);
   }

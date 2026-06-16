@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
+import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -53,7 +54,8 @@ class CollectionCommandServiceTest {
   }
 
   private CollectionEntity collection(long id, long ownerId, CollectionVisibility visibility) {
-    CollectionEntity c = new CollectionEntity(ownerId, "느린 사고", null, visibility);
+    CollectionEntity c =
+        new CollectionEntity(ownerId, "느린 사고", null, visibility, CollectionKind.COLLECTION);
     ReflectionTestUtils.setField(c, "id", id);
     return c;
   }
@@ -67,19 +69,33 @@ class CollectionCommandServiceTest {
     CollectionEntity saved =
         service.create(
             new CreateCollectionCommand(
-                1L, "  느린 사고  ", "  오래 머문 글  ", CollectionVisibility.PUBLIC));
+                1L, "  느린 사고  ", "  오래 머문 글  ", CollectionVisibility.PUBLIC, null));
 
     assertThat(saved.getOwnerId()).isEqualTo(1L);
     assertThat(saved.getTitle()).isEqualTo("느린 사고"); // stripped
     assertThat(saved.getDescription()).isEqualTo("오래 머문 글");
     assertThat(saved.getVisibility()).isEqualTo(CollectionVisibility.PUBLIC);
+    assertThat(saved.getKind()).isEqualTo(CollectionKind.COLLECTION); // null → 기본
+  }
+
+  @Test
+  void createWithPathKindEchoesPath() {
+    when(collectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    CollectionEntity saved =
+        service.create(
+            new CreateCollectionCommand(
+                1L, "읽기 경로", null, CollectionVisibility.PUBLIC, CollectionKind.PATH));
+
+    assertThat(saved.getKind()).isEqualTo(CollectionKind.PATH);
   }
 
   @Test
   void createDefaultsVisibilityToPrivateAndNullsBlankDescription() {
     when(collectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-    CollectionEntity saved = service.create(new CreateCollectionCommand(1L, "제목", "   ", null));
+    CollectionEntity saved =
+        service.create(new CreateCollectionCommand(1L, "제목", "   ", null, null));
 
     assertThat(saved.getVisibility()).isEqualTo(CollectionVisibility.PRIVATE);
     assertThat(saved.getDescription()).isNull();
@@ -90,7 +106,8 @@ class CollectionCommandServiceTest {
     assertThatThrownBy(
             () ->
                 service.create(
-                    new CreateCollectionCommand(1L, "   ", null, CollectionVisibility.PRIVATE)))
+                    new CreateCollectionCommand(
+                        1L, "   ", null, CollectionVisibility.PRIVATE, null)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_TITLE_REQUIRED);
@@ -104,7 +121,7 @@ class CollectionCommandServiceTest {
 
     CollectionEntity saved =
         service.create(
-            new CreateCollectionCommand(1L, tooLong, null, CollectionVisibility.PRIVATE));
+            new CreateCollectionCommand(1L, tooLong, null, CollectionVisibility.PRIVATE, null));
 
     assertThat(saved.getTitle()).hasSize(CollectionEntity.MAX_TITLE);
   }
@@ -315,5 +332,55 @@ class CollectionCommandServiceTest {
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_PERMISSION_DENIED);
     verify(collectionRepository, never()).delete(any());
+  }
+
+  // ---- reorder ----
+
+  private CollectionConnectionEntity conn(long id, int position) {
+    CollectionConnectionEntity c =
+        new CollectionConnectionEntity(10L, ConnectionBlockType.HIGHLIGHT, id, null, position);
+    ReflectionTestUtils.setField(c, "id", id);
+    return c;
+  }
+
+  @Test
+  void reorderReassignsPositionsInGivenOrder() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
+    CollectionConnectionEntity a = conn(101L, 0);
+    CollectionConnectionEntity b = conn(102L, 1);
+    CollectionConnectionEntity c = conn(103L, 2);
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(List.of(a, b, c));
+
+    service.reorder(1L, 10L, List.of(103L, 101L, 102L));
+
+    assertThat(c.getPosition()).isZero();
+    assertThat(a.getPosition()).isEqualTo(1);
+    assertThat(b.getPosition()).isEqualTo(2);
+  }
+
+  @Test
+  void reorderRejectsMismatchedIdSet() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(List.of(conn(101L, 0), conn(102L, 1)));
+
+    assertThatThrownBy(() -> service.reorder(1L, 10L, List.of(101L, 999L)))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.COLLECTION_REORDER_MISMATCH);
+  }
+
+  @Test
+  void reorderRejectsForeignCollection() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 2L, CollectionVisibility.PRIVATE)));
+
+    assertThatThrownBy(() -> service.reorder(1L, 10L, List.of(1L)))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.COLLECTION_PERMISSION_DENIED);
   }
 }
