@@ -62,6 +62,29 @@ class CollectionQueryServiceTest {
     return c;
   }
 
+  @Test
+  void publicCollectionsContainingReturnsOnlyPublic() {
+    when(connectionRepository.findAllByBlockTypeAndRefId(ConnectionBlockType.HIGHLIGHT, 9L))
+        .thenReturn(
+            List.of(
+                new CollectionConnectionEntity(10L, ConnectionBlockType.HIGHLIGHT, 9L, null, 0),
+                new CollectionConnectionEntity(11L, ConnectionBlockType.HIGHLIGHT, 9L, null, 0)));
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    when(collectionRepository.findById(11L))
+        .thenReturn(Optional.of(collection(11L, 1L, CollectionVisibility.PRIVATE)));
+    when(connectionRepository.countByCollectionId(10L)).thenReturn(3L);
+
+    List<CollectionSummaryView> result =
+        service.publicCollectionsContaining(ConnectionBlockType.HIGHLIGHT, 9L);
+
+    // 비공개(11)는 빠지고 공개(10)만, count·kind 채워서.
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).id()).isEqualTo(10L);
+    assertThat(result.get(0).count()).isEqualTo(3);
+    assertThat(result.get(0).kind()).isEqualTo("COLLECTION");
+  }
+
   private CollectionConnectionEntity conn(long id, ConnectionBlockType type, long refId, int pos) {
     CollectionConnectionEntity c = new CollectionConnectionEntity(10L, type, refId, "왜", pos);
     ReflectionTestUtils.setField(c, "id", id);

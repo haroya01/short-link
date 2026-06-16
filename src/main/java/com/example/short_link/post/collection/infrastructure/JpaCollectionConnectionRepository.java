@@ -21,7 +21,7 @@ public interface JpaCollectionConnectionRepository
   @Query(
       """
       select new com.example.short_link.post.collection.domain.DiscoverConnectionRow(
-          c.id, c.blockType, c.refId, c.why, c.createdAt, col.id, col.title, col.ownerId)
+          c.id, c.blockType, c.refId, c.why, c.createdAt, col.id, col.title, col.kind, col.ownerId)
       from CollectionConnectionEntity c, CollectionEntity col
       where c.collectionId = col.id
         and col.ownerId in :ownerIds
@@ -35,6 +35,9 @@ public interface JpaCollectionConnectionRepository
 
   boolean existsByCollectionIdAndBlockTypeAndRefId(
       Long collectionId, ConnectionBlockType blockType, Long refId);
+
+  List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
+      ConnectionBlockType blockType, Long refId);
 
   @Query(
       "select max(c.position) from CollectionConnectionEntity c where c.collectionId = :collectionId")

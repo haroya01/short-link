@@ -2,6 +2,8 @@ package com.example.short_link.post.collection.application.read;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
+import com.example.short_link.post.collection.domain.CollectionVisibility;
+import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
 import com.example.short_link.post.collection.domain.repository.CollectionRepository;
 import com.example.short_link.post.domain.PostEntity;
@@ -15,10 +17,12 @@ import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -45,6 +49,36 @@ public class CollectionQueryService {
   /** Connections in a collection — for echoing a fresh summary after edit. */
   public long connectionCount(Long collectionId) {
     return connectionRepository.countByCollectionId(collectionId);
+  }
+
+  /**
+   * "이 문장이 속한 길/컬렉션" — 이 블록(하이라이트 등)을 담은 *공개* 컬렉션들(최근순). 비공개·링크공유는 빼서 누구나(미로그인 포함) 안전히 본다. A 척추의 발견
+   * 고리 — 한 문장에서 그것이 엮인 길들로.
+   */
+  public List<CollectionSummaryView> publicCollectionsContaining(
+      ConnectionBlockType blockType, Long refId) {
+    List<Long> collectionIds =
+        connectionRepository.findAllByBlockTypeAndRefId(blockType, refId).stream()
+            .map(CollectionConnectionEntity::getCollectionId)
+            .distinct()
+            .toList();
+    return collectionIds.stream()
+        .map(collectionRepository::findById)
+        .flatMap(Optional::stream)
+        .filter(c -> c.getVisibility() == CollectionVisibility.PUBLIC)
+        .sorted(Comparator.comparing(CollectionEntity::getUpdatedAt).reversed())
+        .map(
+            c ->
+                new CollectionSummaryView(
+                    c.getId(),
+                    c.getTitle(),
+                    c.getDescription(),
+                    c.getVisibility().name(),
+                    c.getKind().name(),
+                    (int) connectionRepository.countByCollectionId(c.getId()),
+                    c.getUpdatedAt(),
+                    List.of()))
+        .toList();
   }
 
   public static final int PREVIEW_PER_COLLECTION = 2;

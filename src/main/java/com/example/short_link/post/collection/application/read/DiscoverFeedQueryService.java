@@ -139,6 +139,7 @@ public class DiscoverFeedQueryService {
         curator,
         row.collectionId(),
         row.collectionTitle(),
+        row.kind() == null ? "COLLECTION" : row.kind().name(),
         row.why(),
         row.connectedAt(),
         blockType,

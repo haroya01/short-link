@@ -12,6 +12,7 @@ public record DiscoverConnectionView(
     PublicAuthorView curator,
     Long collectionId,
     String collectionTitle,
+    String collectionKind,
     String why,
     Instant connectedAt,
     String blockType,

@@ -31,6 +31,10 @@ public interface CollectionConnectionRepository {
   boolean existsByCollectionIdAndBlockTypeAndRefId(
       Long collectionId, ConnectionBlockType blockType, Long refId);
 
+  /** 이 블록(글·하이라이트·노트)을 담은 모든 연결 — "이 문장이 속한 길" 역조회. */
+  List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
+      ConnectionBlockType blockType, Long refId);
+
   /** Highest position in a collection (for append), or null when empty. */
   Integer findMaxPositionByCollectionId(Long collectionId);
 }

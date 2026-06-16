@@ -39,6 +39,7 @@ class DiscoverFeedControllerTest {
             new PublicAuthorView(2L, "minji", null, null),
             50L,
             "느린 사고",
+            "COLLECTION",
             "두고두고 다시 본다.",
             Instant.parse("2026-06-12T00:00:00Z"),
             "POST",
