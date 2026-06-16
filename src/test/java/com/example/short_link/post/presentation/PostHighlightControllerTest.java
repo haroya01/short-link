@@ -36,7 +36,8 @@ class PostHighlightControllerTest {
   void createReturns201WithNote() throws Exception {
     when(createHighlight.execute(any()))
         .thenReturn(
-            new HighlightRef(10L, 0, 0, 5, "abc", Instant.parse("2026-06-12T00:00:00Z"), "여백의 메모"));
+            new HighlightRef(
+                10L, 0, 0, 0, 5, "abc", Instant.parse("2026-06-12T00:00:00Z"), "여백의 메모"));
 
     mvc.perform(
             post("/api/v1/posts/5/highlights")
@@ -46,15 +47,34 @@ class PostHighlightControllerTest {
                     "{\"blockOrder\":0,\"startOffset\":0,\"endOffset\":5,\"quote\":\"abc\",\"note\":\"여백의 메모\"}"))
         .andExpect(status().isCreated())
         .andExpect(jsonPath("$.id").value(10))
+        .andExpect(jsonPath("$.blockOrder").value(0))
+        .andExpect(jsonPath("$.endBlockOrder").value(0))
         .andExpect(jsonPath("$.quote").value("abc"))
         .andExpect(jsonPath("$.note").value("여백의 메모"));
+  }
+
+  @Test
+  void createMultiBlockEchoesEndBlockOrder() throws Exception {
+    when(createHighlight.execute(any()))
+        .thenReturn(
+            new HighlightRef(10L, 2, 5, 3, 1, "abc", Instant.parse("2026-06-12T00:00:00Z"), null));
+
+    mvc.perform(
+            post("/api/v1/posts/5/highlights")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    "{\"blockOrder\":2,\"endBlockOrder\":5,\"startOffset\":3,\"endOffset\":1,\"quote\":\"abc\"}"))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.blockOrder").value(2))
+        .andExpect(jsonPath("$.endBlockOrder").value(5));
   }
 
   @Test
   void createWithoutNoteIsAllowed() throws Exception {
     when(createHighlight.execute(any()))
         .thenReturn(
-            new HighlightRef(10L, 0, 0, 5, "abc", Instant.parse("2026-06-12T00:00:00Z"), null));
+            new HighlightRef(10L, 0, 0, 0, 5, "abc", Instant.parse("2026-06-12T00:00:00Z"), null));
 
     mvc.perform(
             post("/api/v1/posts/5/highlights")
@@ -97,6 +117,7 @@ class PostHighlightControllerTest {
                 new MyHighlightView(
                     10L,
                     "abc",
+                    0,
                     0,
                     "bob",
                     "slug-5",

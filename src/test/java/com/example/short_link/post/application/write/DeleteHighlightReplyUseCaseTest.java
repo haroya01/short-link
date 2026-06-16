@@ -41,7 +41,7 @@ class DeleteHighlightReplyUseCaseTest {
   }
 
   private PostHighlightEntity highlight() {
-    PostHighlightEntity h = new PostHighlightEntity(42L, 3L, 0, 0, 3, "quote", null);
+    PostHighlightEntity h = new PostHighlightEntity(42L, 3L, 0, 0, 0, 3, "quote", null);
     ReflectionTestUtils.setField(h, "id", 50L);
     return h;
   }

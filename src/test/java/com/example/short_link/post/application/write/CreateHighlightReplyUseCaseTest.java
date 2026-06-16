@@ -50,7 +50,7 @@ class CreateHighlightReplyUseCaseTest {
 
   /** Highlight 50 on post 42, authored by {@code authorId}. */
   private PostHighlightEntity highlight(long authorId) {
-    PostHighlightEntity h = new PostHighlightEntity(42L, authorId, 0, 0, 3, "quote", null);
+    PostHighlightEntity h = new PostHighlightEntity(42L, authorId, 0, 0, 0, 3, "quote", null);
     ReflectionTestUtils.setField(h, "id", 50L);
     return h;
   }

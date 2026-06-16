@@ -46,6 +46,7 @@ public class CreateHighlightUseCase {
                 post.getId(),
                 cmd.userId(),
                 cmd.blockOrder(),
+                cmd.endBlockOrder(),
                 cmd.startOffset(),
                 cmd.endOffset(),
                 quote,
@@ -54,6 +55,7 @@ public class CreateHighlightUseCase {
     return new HighlightRef(
         saved.getId(),
         saved.getBlockOrder(),
+        saved.getEndBlockOrder(),
         saved.getStartOffset(),
         saved.getEndOffset(),
         saved.getQuote(),

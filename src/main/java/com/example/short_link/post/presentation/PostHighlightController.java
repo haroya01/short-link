@@ -40,6 +40,7 @@ public class PostHighlightController {
             userId,
             postId,
             request.blockOrder(),
+            request.endBlockOrder(),
             request.startOffset(),
             request.endOffset(),
             request.quote(),
