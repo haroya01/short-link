@@ -85,6 +85,18 @@ class CollectionQueryServiceTest {
     when(collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(1L))
         .thenReturn(List.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
     when(connectionRepository.countByCollectionId(10L)).thenReturn(3L);
+    // 최신순 연결 — 상위 2개만 미리보기에 든다(POST 제목 + NOTE 본문).
+    when(connectionRepository.findAllByCollectionIdInOrderByPositionDesc(anyCollection()))
+        .thenReturn(
+            List.of(
+                conn(100L, ConnectionBlockType.POST, 5L, 2),
+                conn(101L, ConnectionBlockType.NOTE, 7L, 1),
+                conn(102L, ConnectionBlockType.POST, 6L, 0))); // 3번째는 제외
+    when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(post(5L, 2L)));
+    NoteEntity note = new NoteEntity(1L, "더 나은 질문을 기다리는 일");
+    ReflectionTestUtils.setField(note, "id", 7L);
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(note));
+    when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
 
     List<CollectionSummaryView> views = service.listMine(1L);
 
@@ -93,6 +105,30 @@ class CollectionQueryServiceTest {
     assertThat(views.get(0).title()).isEqualTo("느린 사고");
     assertThat(views.get(0).visibility()).isEqualTo("PUBLIC");
     assertThat(views.get(0).count()).isEqualTo(3);
+    assertThat(views.get(0).preview()).containsExactly("Title 5", "더 나은 질문을 기다리는 일");
+  }
+
+  @Test
+  void listMinePreviewResolvesHighlightTruncatesAndSkipsMissing() {
+    when(collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(1L))
+        .thenReturn(List.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    when(connectionRepository.countByCollectionId(10L)).thenReturn(2L);
+    when(connectionRepository.findAllByCollectionIdInOrderByPositionDesc(anyCollection()))
+        .thenReturn(
+            List.of(
+                conn(200L, ConnectionBlockType.HIGHLIGHT, 9L, 1),
+                conn(201L, ConnectionBlockType.POST, 999L, 0))); // 원문 글 사라짐 → 라벨 null → 제외
+    String longQuote = "가".repeat(60);
+    PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 3, longQuote);
+    ReflectionTestUtils.setField(hl, "id", 9L);
+    when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
+    when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of()); // 999 없음
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+
+    List<CollectionSummaryView> views = service.listMine(1L);
+
+    assertThat(views.get(0).preview()).hasSize(1); // 사라진 글 행은 빠짐
+    assertThat(views.get(0).preview().get(0)).endsWith("…").hasSize(41); // 40자 + …
   }
 
   @Test

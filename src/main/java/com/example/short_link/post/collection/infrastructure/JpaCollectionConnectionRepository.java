@@ -15,6 +15,9 @@ public interface JpaCollectionConnectionRepository
 
   List<CollectionConnectionEntity> findAllByCollectionIdOrderByPositionAsc(Long collectionId);
 
+  List<CollectionConnectionEntity> findAllByCollectionIdInOrderByPositionDesc(
+      Collection<Long> collectionIds);
+
   @Query(
       """
       select new com.example.short_link.post.collection.domain.DiscoverConnectionRow(

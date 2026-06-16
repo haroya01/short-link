@@ -118,14 +118,21 @@ class CollectionControllerTest {
         .thenReturn(
             List.of(
                 new CollectionSummaryView(
-                    10L, "느린 사고", "오래 머문 글", "PUBLIC", 3, Instant.parse("2026-06-12T00:00:00Z"))));
+                    10L,
+                    "느린 사고",
+                    "오래 머문 글",
+                    "PUBLIC",
+                    3,
+                    Instant.parse("2026-06-12T00:00:00Z"),
+                    List.of("헥사고날로 갈아탄 지 석 달", "좋은 추상은 더 지울 게 없을 때"))));
 
     mvc.perform(
             get("/api/v1/users/me/collections")
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(10))
-        .andExpect(jsonPath("$[0].count").value(3));
+        .andExpect(jsonPath("$[0].count").value(3))
+        .andExpect(jsonPath("$[0].preview[0]").value("헥사고날로 갈아탄 지 석 달"));
   }
 
   @Test
