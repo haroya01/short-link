@@ -7,12 +7,14 @@ package com.example.short_link.notification.domain;
  *
  * <ul>
  *   <li>{@code SERIES_SUBSCRIBE} — someone subscribed to your series (also a BlogInteractionEvent).
- *   <li>{@code REPLY} — someone replied to your comment (off {@code CommentReplyEvent}); the
- *       recipient is the parent comment's author, distinct from the post-owner COMMENT notice.
+ *   <li>{@code REPLY} — someone replied to your comment (off {@code CommentReplyEvent}) or to your
+ *       reader highlight (off {@code HighlightReplyEvent}); the recipient is the thread's author,
+ *       distinct from the post-owner COMMENT notice.
  *   <li>{@code NEW_POST} — an author you follow published their first public post (a fan-out off
  *       {@code PostPublishedEvent}: one row per follower).
- *   <li>{@code MENTION} — someone @-mentioned you in a comment (off {@code CommentMentionEvent});
- *       one row per mentioned user, deduped against the COMMENT/REPLY that comment already sends.
+ *   <li>{@code MENTION} — someone @-mentioned you in a comment (off {@code CommentMentionEvent}) or
+ *       a highlight reply (off {@code HighlightMentionEvent}); one row per mentioned user, deduped
+ *       against the COMMENT/REPLY that thread already sends.
  * </ul>
  */
 public enum NotificationType {

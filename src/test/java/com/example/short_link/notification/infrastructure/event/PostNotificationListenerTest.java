@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
+import com.example.short_link.common.event.HighlightMentionEvent;
+import com.example.short_link.common.event.HighlightReplyEvent;
 import com.example.short_link.common.event.PostPublishedEvent;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
@@ -57,6 +59,37 @@ class PostNotificationListenerTest {
     listener()
         .onCommentMention(
             new CommentMentionEvent(5L, 9L, 10L, "the-post", "The Post", "owner", AT));
+
+    ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
+    verify(recordUseCase).record(eq(5L), eq(NotificationType.MENTION), eq(9L), post.capture());
+    assertThat(post.getValue().authorUsername()).isEqualTo("owner");
+    assertThat(post.getValue().slug()).isEqualTo("the-post");
+  }
+
+  @Test
+  void highlightReplyRecordsReplyNotificationCarryingPostAuthorHandle() {
+    listener()
+        .onHighlightReply(
+            new HighlightReplyEvent(3L, 9L, 10L, "the-post", "The Post", "owner", AT));
+
+    ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
+    verify(recordUseCase).record(eq(3L), eq(NotificationType.REPLY), eq(9L), post.capture());
+    assertThat(post.getValue().authorUsername()).isEqualTo("owner");
+    assertThat(post.getValue().slug()).isEqualTo("the-post");
+  }
+
+  @Test
+  void selfHighlightReplyIsSkipped() {
+    listener().onHighlightReply(new HighlightReplyEvent(9L, 9L, 10L, "s", "t", "o", AT));
+
+    verify(recordUseCase, never()).record(any(), any(), any(), any());
+  }
+
+  @Test
+  void highlightMentionRecordsMentionNotificationCarryingPostAuthorHandle() {
+    listener()
+        .onHighlightMention(
+            new HighlightMentionEvent(5L, 9L, 10L, "the-post", "The Post", "owner", AT));
 
     ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
     verify(recordUseCase).record(eq(5L), eq(NotificationType.MENTION), eq(9L), post.capture());

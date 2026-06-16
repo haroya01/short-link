@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -27,12 +28,13 @@ class CreateHighlightUseCaseTest {
 
   @Mock private PostRepository postRepository;
   @Mock private PostHighlightRepository highlightRepository;
+  @Mock private PostHighlightReplyRepository replyRepository;
 
   private CreateHighlightUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new CreateHighlightUseCase(postRepository, highlightRepository);
+    useCase = new CreateHighlightUseCase(postRepository, highlightRepository, replyRepository);
   }
 
   private PostEntity publishedPost(long id, long authorId) {

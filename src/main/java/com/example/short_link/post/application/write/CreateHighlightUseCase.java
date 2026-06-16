@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -22,6 +23,7 @@ public class CreateHighlightUseCase {
 
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
+  private final PostHighlightReplyRepository replyRepository;
 
   @Transactional
   public HighlightRef execute(CreateHighlightCommand cmd) {
@@ -68,6 +70,9 @@ public class CreateHighlightUseCase {
     if (!highlight.getUserId().equals(userId)) {
       throw new PostException(PostErrorCode.HIGHLIGHT_PERMISSION_DENIED);
     }
+    // Take the highlight's reply thread with it. The DB FK cascades too, but purging explicitly
+    // keeps the cleanup visible at the use-case level (and independent of dialect cascade support).
+    replyRepository.deleteAllByHighlightId(highlight.getId());
     highlightRepository.delete(highlight);
   }
 

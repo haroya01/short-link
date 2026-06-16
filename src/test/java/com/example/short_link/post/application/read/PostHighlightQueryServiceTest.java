@@ -6,11 +6,13 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,6 +25,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class PostHighlightQueryServiceTest {
 
   @Mock private PostHighlightRepository highlightRepository;
+  @Mock private PostHighlightReplyRepository replyRepository;
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
 
@@ -30,7 +33,9 @@ class PostHighlightQueryServiceTest {
 
   @BeforeEach
   void setUp() {
-    service = new PostHighlightQueryService(highlightRepository, postRepository, userRepository);
+    service =
+        new PostHighlightQueryService(
+            highlightRepository, replyRepository, postRepository, userRepository);
   }
 
   private PostEntity publishedPost(long id, long authorId) {
@@ -73,6 +78,21 @@ class PostHighlightQueryServiceTest {
     assertThat(views.get(0).note()).isEqualTo("여백의 메모");
     assertThat(views.get(1).author()).isNull(); // user 999 not found
     assertThat(views.get(1).note()).isNull();
+  }
+
+  @Test
+  void listForPostHydratesReplyCountsInOneBatch() {
+    when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
+    when(highlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(5L))
+        .thenReturn(List.of(highlight(10L, 5L, 1L), highlight(11L, 5L, 1L)));
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
+    when(replyRepository.countByHighlightIds(anyCollection())).thenReturn(Map.of(10L, 3L));
+
+    List<HighlightView> views = service.listForPost(5L);
+
+    assertThat(views).hasSize(2);
+    assertThat(views.get(0).replyCount()).isEqualTo(3L);
+    assertThat(views.get(1).replyCount()).isZero(); // no replies → 0, not null
   }
 
   @Test

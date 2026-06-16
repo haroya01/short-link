@@ -34,6 +34,8 @@ public enum PostErrorCode {
   NOTE_BODY_TOO_LONG(HttpStatus.BAD_REQUEST, "note body exceeds 500 characters"),
   HIGHLIGHT_NOT_FOUND(HttpStatus.NOT_FOUND, "highlight not found: %s"),
   HIGHLIGHT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "highlight permission denied"),
+  HIGHLIGHT_REPLY_NOT_FOUND(HttpStatus.NOT_FOUND, "highlight reply not found: %s"),
+  HIGHLIGHT_REPLY_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "highlight reply permission denied"),
   COLLECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "collection not found: %s"),
   COLLECTION_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "collection permission denied"),
   COLLECTION_TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "a collection title is required"),
