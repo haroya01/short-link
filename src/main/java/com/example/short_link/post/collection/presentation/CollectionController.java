@@ -11,6 +11,7 @@ import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.presentation.request.ConnectBlockRequest;
 import com.example.short_link.post.collection.presentation.request.CreateCollectionRequest;
 import com.example.short_link.post.collection.presentation.request.EditCollectionRequest;
+import com.example.short_link.post.collection.presentation.request.ReorderConnectionsRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -45,12 +46,17 @@ public class CollectionController {
     CollectionEntity saved =
         commandService.create(
             new CreateCollectionCommand(
-                userId, request.title(), request.description(), request.visibility()));
+                userId,
+                request.title(),
+                request.description(),
+                request.visibility(),
+                request.kind()));
     return new CollectionSummaryView(
         saved.getId(),
         saved.getTitle(),
         saved.getDescription(),
         saved.getVisibility().name(),
+        saved.getKind().name(),
         0,
         saved.getUpdatedAt(),
         List.of());
@@ -70,6 +76,7 @@ public class CollectionController {
         saved.getTitle(),
         saved.getDescription(),
         saved.getVisibility().name(),
+        saved.getKind().name(),
         (int) queryService.connectionCount(saved.getId()),
         saved.getUpdatedAt(),
         List.of());
@@ -102,6 +109,16 @@ public class CollectionController {
       @PathVariable Long id,
       @PathVariable Long connectionId) {
     commandService.disconnect(userId, id, connectionId);
+  }
+
+  /** 연결 순서 재배치 — PATH(reading path)의 흐름을 짠다. 이 컬렉션의 모든 연결 id 를 순서대로 나열. */
+  @PutMapping("/collections/{id}/connections/order")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void reorderConnections(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @Valid @RequestBody ReorderConnectionsRequest request) {
+    commandService.reorder(userId, id, request.connectionIds());
   }
 
   @DeleteMapping("/collections/{id}")

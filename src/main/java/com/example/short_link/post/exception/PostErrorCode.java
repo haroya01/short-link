@@ -40,7 +40,9 @@ public enum PostErrorCode {
   COLLECTION_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "collection permission denied"),
   COLLECTION_TITLE_REQUIRED(HttpStatus.BAD_REQUEST, "a collection title is required"),
   CONNECTION_NOT_FOUND(HttpStatus.NOT_FOUND, "connection not found: %s"),
-  CONNECTION_TARGET_NOT_FOUND(HttpStatus.NOT_FOUND, "connection target not found: %s");
+  CONNECTION_TARGET_NOT_FOUND(HttpStatus.NOT_FOUND, "connection target not found: %s"),
+  COLLECTION_REORDER_MISMATCH(
+      HttpStatus.BAD_REQUEST, "reorder must list exactly this collection's connections: %s");
 
   private final HttpStatus status;
   private final String template;

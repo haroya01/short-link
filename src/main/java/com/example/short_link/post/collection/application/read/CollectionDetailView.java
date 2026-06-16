@@ -8,5 +8,6 @@ public record CollectionDetailView(
     String title,
     String description,
     String visibility,
+    String kind,
     String curatorUsername,
     List<ConnectionView> connections) {}

@@ -54,7 +54,15 @@ class DiscoverFeedQueryServiceTest {
   private DiscoverConnectionRow row(
       long connId, ConnectionBlockType type, long refId, long ownerId) {
     return new DiscoverConnectionRow(
-        connId, type, refId, "왜", Instant.parse("2026-06-12T00:00:00Z"), 50L, "느린 사고", ownerId);
+        connId,
+        type,
+        refId,
+        "왜",
+        Instant.parse("2026-06-12T00:00:00Z"),
+        50L,
+        "느린 사고",
+        com.example.short_link.post.collection.domain.CollectionKind.COLLECTION,
+        ownerId);
   }
 
   private PostEntity post(long id, long authorId) {

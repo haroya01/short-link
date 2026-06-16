@@ -43,12 +43,22 @@ public class CollectionEntity extends BaseTimeEntity {
   @Column(nullable = false, length = 16)
   private CollectionVisibility visibility;
 
+  /** COLLECTION(주제 묶음) | PATH(순서로 엮은 reading path, A 척추). 생성 시 고정. */
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  private CollectionKind kind;
+
   public CollectionEntity(
-      Long ownerId, String title, String description, CollectionVisibility visibility) {
+      Long ownerId,
+      String title,
+      String description,
+      CollectionVisibility visibility,
+      CollectionKind kind) {
     this.ownerId = ownerId;
     this.title = title;
     this.description = description;
     this.visibility = visibility;
+    this.kind = kind == null ? CollectionKind.COLLECTION : kind;
   }
 
   public boolean isOwnedBy(Long viewerId) {

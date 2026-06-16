@@ -12,6 +12,7 @@ public record CollectionSummaryView(
     String title,
     String description,
     String visibility,
+    String kind,
     int count,
     Instant updatedAt,
     List<String> preview) {}

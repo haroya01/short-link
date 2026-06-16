@@ -54,4 +54,9 @@ public class CollectionConnectionEntity extends BaseCreatedEntity {
     this.why = why;
     this.position = position;
   }
+
+  /** 재배치(reorder) — PATH 에서 순서가 곧 논증 흐름이라 position 을 새 값으로 옮긴다. */
+  public void reposition(int position) {
+    this.position = position;
+  }
 }

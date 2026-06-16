@@ -16,6 +16,7 @@ import com.example.short_link.post.collection.application.read.CollectionSummary
 import com.example.short_link.post.collection.application.read.ConnectionView;
 import com.example.short_link.post.collection.application.write.CollectionCommandService;
 import com.example.short_link.post.collection.domain.CollectionEntity;
+import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -46,7 +47,8 @@ class CollectionControllerTest {
 
   private static CollectionEntity collection(long id) {
     CollectionEntity c =
-        new CollectionEntity(USER_ID, "느린 사고", "오래 머문 글", CollectionVisibility.PUBLIC);
+        new CollectionEntity(
+            USER_ID, "느린 사고", "오래 머문 글", CollectionVisibility.PUBLIC, CollectionKind.COLLECTION);
     ReflectionTestUtils.setField(c, "id", id);
     ReflectionTestUtils.setField(c, "updatedAt", Instant.parse("2026-06-12T00:00:00Z"));
     return c;
@@ -122,6 +124,7 @@ class CollectionControllerTest {
                     "느린 사고",
                     "오래 머문 글",
                     "PUBLIC",
+                    "COLLECTION",
                     3,
                     Instant.parse("2026-06-12T00:00:00Z"),
                     List.of("헥사고날로 갈아탄 지 석 달", "좋은 추상은 더 지울 게 없을 때"))));
@@ -142,7 +145,8 @@ class CollectionControllerTest {
             100L, "왜", Instant.parse("2026-06-12T00:00:00Z"), "글 제목", "발췌", "slug", "alice");
     when(query.detail(USER_ID, 10L))
         .thenReturn(
-            new CollectionDetailView(10L, "느린 사고", "오래 머문 글", "PUBLIC", "curator", List.of(post)));
+            new CollectionDetailView(
+                10L, "느린 사고", "오래 머문 글", "PUBLIC", "COLLECTION", "curator", List.of(post)));
 
     mvc.perform(
             get("/api/v1/collections/10").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
@@ -193,6 +197,28 @@ class CollectionControllerTest {
         .andExpect(status().isNoContent());
 
     verify(command).disconnect(USER_ID, 10L, 33L);
+  }
+
+  @Test
+  void reorderConnectionsReturns204AndPassesOrder() throws Exception {
+    mvc.perform(
+            put("/api/v1/collections/10/connections/order")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"connectionIds\":[103,101,102]}"))
+        .andExpect(status().isNoContent());
+
+    verify(command).reorder(USER_ID, 10L, List.of(103L, 101L, 102L));
+  }
+
+  @Test
+  void reorderRejectsEmptyList() throws Exception {
+    mvc.perform(
+            put("/api/v1/collections/10/connections/order")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"connectionIds\":[]}"))
+        .andExpect(status().isBadRequest());
   }
 
   @Test

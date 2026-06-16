@@ -64,6 +64,12 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   }
 
   @Override
+  public List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
+      ConnectionBlockType blockType, Long refId) {
+    return jpa.findAllByBlockTypeAndRefId(blockType, refId);
+  }
+
+  @Override
   public Integer findMaxPositionByCollectionId(Long collectionId) {
     return jpa.findMaxPositionByCollectionId(collectionId);
   }
