@@ -11,4 +11,5 @@ public record HighlightView(
     Integer endOffset,
     String quote,
     Instant createdAt,
-    String note) {}
+    String note,
+    long replyCount) {}

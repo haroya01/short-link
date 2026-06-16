@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -21,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class PostHighlightQueryService {
 
   private final PostHighlightRepository highlightRepository;
+  private final PostHighlightReplyRepository replyRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
 
@@ -36,6 +38,9 @@ public class PostHighlightQueryService {
     Map<Long, UserEntity> users =
         userRepository.findAllByIdIn(userIds).stream()
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, Long> replyCounts =
+        replyRepository.countByHighlightIds(
+            highlights.stream().map(PostHighlightEntity::getId).toList());
 
     return highlights.stream()
         .map(
@@ -49,7 +54,8 @@ public class PostHighlightQueryService {
                   h.getEndOffset(),
                   h.getQuote(),
                   h.getCreatedAt(),
-                  h.getNote());
+                  h.getNote(),
+                  replyCounts.getOrDefault(h.getId(), 0L));
             })
         .toList();
   }
