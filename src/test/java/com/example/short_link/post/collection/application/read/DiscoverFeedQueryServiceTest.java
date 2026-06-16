@@ -92,7 +92,8 @@ class DiscoverFeedQueryServiceTest {
                 row(101L, ConnectionBlockType.HIGHLIGHT, 9L, 3L),
                 row(102L, ConnectionBlockType.NOTE, 7L, 2L)));
 
-    PostHighlightEntity hl = new PostHighlightEntity(6L, 4L, 0, 0, 3, "좋은 추상은 더 지울 게 없을 때", null);
+    PostHighlightEntity hl =
+        new PostHighlightEntity(6L, 4L, 0, 0, 0, 3, "좋은 추상은 더 지울 게 없을 때", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
     NoteEntity note = new NoteEntity(2L, "더 나은 질문을 기다리는 일");

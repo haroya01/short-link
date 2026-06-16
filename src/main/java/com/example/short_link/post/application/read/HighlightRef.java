@@ -6,6 +6,7 @@ import java.time.Instant;
 public record HighlightRef(
     Long id,
     Integer blockOrder,
+    Integer endBlockOrder,
     Integer startOffset,
     Integer endOffset,
     String quote,

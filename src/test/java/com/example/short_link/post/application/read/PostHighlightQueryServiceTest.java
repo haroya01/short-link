@@ -46,13 +46,24 @@ class PostHighlightQueryServiceTest {
   }
 
   private PostHighlightEntity highlight(long id, long postId, long userId) {
-    PostHighlightEntity h = new PostHighlightEntity(postId, userId, 0, 0, 3, "quote-" + id, null);
+    PostHighlightEntity h =
+        new PostHighlightEntity(postId, userId, 0, 0, 0, 3, "quote-" + id, null);
     ReflectionTestUtils.setField(h, "id", id);
     return h;
   }
 
   private PostHighlightEntity highlightWithNote(long id, long postId, long userId, String note) {
-    PostHighlightEntity h = new PostHighlightEntity(postId, userId, 0, 0, 3, "quote-" + id, note);
+    PostHighlightEntity h =
+        new PostHighlightEntity(postId, userId, 0, 0, 0, 3, "quote-" + id, note);
+    ReflectionTestUtils.setField(h, "id", id);
+    return h;
+  }
+
+  private PostHighlightEntity multiBlockHighlight(
+      long id, long postId, long userId, int blockOrder, int endBlockOrder) {
+    PostHighlightEntity h =
+        new PostHighlightEntity(
+            postId, userId, blockOrder, endBlockOrder, 0, 3, "quote-" + id, null);
     ReflectionTestUtils.setField(h, "id", id);
     return h;
   }
@@ -78,6 +89,24 @@ class PostHighlightQueryServiceTest {
     assertThat(views.get(0).note()).isEqualTo("여백의 메모");
     assertThat(views.get(1).author()).isNull(); // user 999 not found
     assertThat(views.get(1).note()).isNull();
+  }
+
+  @Test
+  void listForPostExposesEndBlockOrderForSingleAndMultiBlockSpans() {
+    when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
+    when(highlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(5L))
+        .thenReturn(
+            List.of(
+                highlight(10L, 5L, 1L), // 단일 블록: endBlockOrder == blockOrder == 0
+                multiBlockHighlight(11L, 5L, 1L, 2, 5))); // 여러 블록: 2 → 5
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
+
+    List<HighlightView> views = service.listForPost(5L);
+
+    assertThat(views.get(0).blockOrder()).isEqualTo(0);
+    assertThat(views.get(0).endBlockOrder()).isEqualTo(0);
+    assertThat(views.get(1).blockOrder()).isEqualTo(2);
+    assertThat(views.get(1).endBlockOrder()).isEqualTo(5);
   }
 
   @Test

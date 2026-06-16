@@ -15,7 +15,9 @@ import lombok.NoArgsConstructor;
  * A reader's highlight on a published post — a text span anchored by {@code blockOrder} + character
  * offsets, with the selected {@code quote} snapshotted so later post edits don't stale it. Public +
  * attributed (Medium-style social highlights): anyone reading the post sees who highlighted what.
- * The block is referenced by ORDER, not PK, because clients render blocks by order.
+ * The block is referenced by ORDER, not PK, because clients render blocks by order. A highlight may
+ * span blocks: it runs from ({@code blockOrder}, {@code startOffset}) to ({@code endBlockOrder},
+ * {@code endOffset}); for a single-block highlight {@code endBlockOrder == blockOrder}.
  */
 @Entity
 @Table(name = "post_highlight")
@@ -39,6 +41,10 @@ public class PostHighlightEntity extends BaseCreatedEntity {
   @Column(name = "block_order", nullable = false)
   private Integer blockOrder;
 
+  /** Last block the highlight reaches; equals {@code blockOrder} for a single-block highlight. */
+  @Column(name = "end_block_order")
+  private Integer endBlockOrder;
+
   @Column(name = "start_offset", nullable = false)
   private Integer startOffset;
 
@@ -56,6 +62,7 @@ public class PostHighlightEntity extends BaseCreatedEntity {
       Long postId,
       Long userId,
       Integer blockOrder,
+      Integer endBlockOrder,
       Integer startOffset,
       Integer endOffset,
       String quote,
@@ -63,6 +70,8 @@ public class PostHighlightEntity extends BaseCreatedEntity {
     this.postId = postId;
     this.userId = userId;
     this.blockOrder = blockOrder;
+    // 단일 블록 하이라이트는 endBlockOrder 가 비어 들어올 수 있다. 항상 채워 두어 읽기 시 null 이 없게 한다.
+    this.endBlockOrder = endBlockOrder == null ? blockOrder : endBlockOrder;
     this.startOffset = startOffset;
     this.endOffset = endOffset;
     this.quote = quote;

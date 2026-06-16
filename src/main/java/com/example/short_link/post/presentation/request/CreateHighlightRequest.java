@@ -7,6 +7,7 @@ import jakarta.validation.constraints.Size;
 
 public record CreateHighlightRequest(
     @NotNull @Min(0) Integer blockOrder,
+    @Min(0) Integer endBlockOrder,
     @NotNull @Min(0) Integer startOffset,
     @NotNull @Min(0) Integer endOffset,
     @NotBlank String quote,
