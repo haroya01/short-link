@@ -11,6 +11,8 @@ public interface JpaCommentRepository extends JpaRepository<CommentEntity, Long>
 
   List<CommentEntity> findAllByPostIdOrderByCreatedAtAsc(Long postId);
 
+  List<CommentEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+
   List<CommentEntity> findAllByParentId(Long parentId);
 
   @Modifying

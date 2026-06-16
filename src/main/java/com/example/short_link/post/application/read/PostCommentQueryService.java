@@ -53,6 +53,41 @@ public class PostCommentQueryService {
         .toList();
   }
 
+  /** The viewer's own comments across all posts — the "my comments" library. */
+  public List<MyCommentView> listMyComments(Long userId) {
+    List<CommentEntity> comments = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
+    List<Long> postIds = comments.stream().map(CommentEntity::getPostId).distinct().toList();
+    Map<Long, PostEntity> posts =
+        postRepository.findAllByIdIn(postIds).stream()
+            .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
+    List<Long> authorIds = posts.values().stream().map(PostEntity::getUserId).distinct().toList();
+    Map<Long, UserEntity> authors =
+        userRepository.findAllByIdIn(authorIds).stream()
+            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, Long> likeCounts =
+        commentLikeRepository.countByCommentIds(
+            comments.stream().map(CommentEntity::getId).toList());
+
+    return comments.stream()
+        // 글이 사라지면(소프트 참조, FK 없음) 링크백할 맥락이 없으므로 제외한다.
+        .filter(c -> posts.containsKey(c.getPostId()))
+        .map(
+            c -> {
+              PostEntity post = posts.get(c.getPostId());
+              UserEntity author = authors.get(post.getUserId());
+              return new MyCommentView(
+                  c.getId(),
+                  c.getBody(),
+                  c.getParentId(),
+                  likeCounts.getOrDefault(c.getId(), 0L),
+                  c.getCreatedAt(),
+                  post.getSlug(),
+                  post.getTitle(),
+                  author == null ? null : author.getUsername());
+            })
+        .toList();
+  }
+
   /** Of the post's comments, the ids the viewer liked — likedByMe for the authed reader. */
   public List<Long> likedCommentIds(Long userId, Long postId) {
     List<Long> ids =

@@ -34,6 +34,11 @@ class CommentRepositoryAdapter implements CommentRepository {
   }
 
   @Override
+  public List<CommentEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId) {
+    return jpa.findAllByUserIdOrderByCreatedAtDesc(userId);
+  }
+
+  @Override
   public List<CommentEntity> findAllByParentId(Long parentId) {
     return jpa.findAllByParentId(parentId);
   }

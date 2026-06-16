@@ -1,6 +1,8 @@
 package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.CommentEntity;
@@ -48,6 +50,19 @@ class PostCommentQueryServiceTest {
     p.publish();
     ReflectionTestUtils.setField(p, "id", id);
     return p;
+  }
+
+  private PostEntity publishedPost(long id, long authorId) {
+    PostEntity p = new PostEntity(authorId, "slug-" + id, "Title " + id, "ko");
+    p.publish();
+    ReflectionTestUtils.setField(p, "id", id);
+    return p;
+  }
+
+  private CommentEntity comment(long id, long postId, long userId, Long parentId, String body) {
+    CommentEntity c = new CommentEntity(postId, userId, parentId, body);
+    ReflectionTestUtils.setField(c, "id", id);
+    return c;
   }
 
   @Test
@@ -106,5 +121,40 @@ class PostCommentQueryServiceTest {
 
     org.assertj.core.api.Assertions.assertThat(service.likedCommentIds(9L, 5L))
         .containsExactly(11L);
+  }
+
+  @Test
+  void listMyCommentsCarriesPostRefAndLikeCountsAndSkipsMissingPost() {
+    // cA: post present + author present | cB: post missing → 제외 | cC: post present + author missing
+    when(commentRepository.findAllByUserIdOrderByCreatedAtDesc(1L))
+        .thenReturn(
+            List.of(
+                comment(10L, 5L, 1L, null, "내 댓글"),
+                comment(11L, 999L, 1L, null, "사라진 글의 댓글"),
+                comment(12L, 6L, 1L, 10L, "답글")));
+    when(postRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(publishedPost(5L, 2L), publishedPost(6L, 3L)));
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(2L, "bob")));
+    when(commentLikeRepository.countByCommentIds(anyList())).thenReturn(java.util.Map.of(10L, 4L));
+
+    List<MyCommentView> views = service.listMyComments(1L);
+
+    assertThat(views).hasSize(2); // 사라진 글의 댓글은 빠짐
+
+    MyCommentView present = views.get(0);
+    assertThat(present.id()).isEqualTo(10L);
+    assertThat(present.body()).isEqualTo("내 댓글");
+    assertThat(present.parentId()).isNull();
+    assertThat(present.likeCount()).isEqualTo(4L);
+    assertThat(present.postSlug()).isEqualTo("slug-5");
+    assertThat(present.postTitle()).isEqualTo("Title 5");
+    assertThat(present.postUsername()).isEqualTo("bob");
+
+    MyCommentView authorMissing = views.get(1);
+    assertThat(authorMissing.id()).isEqualTo(12L);
+    assertThat(authorMissing.parentId()).isEqualTo(10L);
+    assertThat(authorMissing.likeCount()).isZero();
+    assertThat(authorMissing.postSlug()).isEqualTo("slug-6");
+    assertThat(authorMissing.postUsername()).isNull(); // author 3 not found
   }
 }
