@@ -35,7 +35,7 @@ dependencies {
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
-	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:3.0.3'
 	implementation 'nl.basjes.parse.useragent:yauaa:7.30.0'
 	implementation 'com.maxmind.geoip2:geoip2:4.2.1'
 	implementation 'org.apache.commons:commons-compress:1.27.1'
