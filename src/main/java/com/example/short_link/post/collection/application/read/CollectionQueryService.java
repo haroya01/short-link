@@ -105,6 +105,35 @@ public class CollectionQueryService {
         .toList();
   }
 
+  /**
+   * A curator's PUBLIC collections, most recently touched first — the public facet of their
+   * identity (연결 그래프의 "이 큐레이터의 다른 길들"). 비공개·링크공유는 빼서 누구나(미로그인 포함) 안전히 본다. 없는 핸들은 빈 목록 — 존재 여부가 새지
+   * 않게(§0 바깥은 조용히).
+   */
+  public List<CollectionSummaryView> listPublicByUsername(String username) {
+    Optional<UserEntity> user = userRepository.findByUsername(username);
+    if (user.isEmpty()) return List.of();
+    List<CollectionEntity> collections =
+        collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(user.get().getId()).stream()
+            .filter(c -> c.getVisibility() == CollectionVisibility.PUBLIC)
+            .toList();
+    Map<Long, List<String>> previews =
+        previewByCollection(collections.stream().map(CollectionEntity::getId).toList());
+    return collections.stream()
+        .map(
+            c ->
+                new CollectionSummaryView(
+                    c.getId(),
+                    c.getTitle(),
+                    c.getDescription(),
+                    c.getVisibility().name(),
+                    c.getKind().name(),
+                    (int) connectionRepository.countByCollectionId(c.getId()),
+                    c.getUpdatedAt(),
+                    previews.getOrDefault(c.getId(), List.of())))
+        .toList();
+  }
+
   /** 컬렉션마다 최근 항목 라벨 몇 개 — "안에 뭐가 들었는지" 떠올리게(어디 넣을지 결정 보조). */
   private Map<Long, List<String>> previewByCollection(List<Long> collectionIds) {
     if (collectionIds.isEmpty()) return Map.of();
