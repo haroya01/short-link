@@ -29,7 +29,9 @@ public class MarkdownBlocksConverter {
   private static final Pattern FENCE = Pattern.compile("^(`{3,}|~{3,})(.*)$");
   private static final Pattern HEADING = Pattern.compile("^(#{1,3})\\s+(.+)$");
   private static final Pattern QUOTE = Pattern.compile("^>\\s*(.*)$");
-  private static final Pattern IMAGE = Pattern.compile("!\\[([^\\]]*)\\]\\(([^)]+)\\)");
+  // 표준 마크다운 image title `![alt](url "캡션")` 의 title 을 캡션으로 분리 캡처(group 3).
+  private static final Pattern IMAGE =
+      Pattern.compile("!\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+\"([^\"]*)\")?\\)");
   private static final Pattern AUTOLINK = Pattern.compile("^<(https?://[^>\\s]+)>$");
   private static final Pattern LINK_ONLY =
       Pattern.compile("^\\[[^\\]]*\\]\\((https?://[^)\\s]+)\\)$");
@@ -142,7 +144,7 @@ public class MarkdownBlocksConverter {
       Matcher img = IMAGE.matcher(line);
       List<String[]> images = new ArrayList<>();
       while (img.find()) {
-        images.add(new String[] {img.group(1), img.group(2)});
+        images.add(new String[] {img.group(1), img.group(2), img.group(3)});
       }
       if (!images.isEmpty() && IMAGE.matcher(line).replaceAll("").trim().isEmpty()) {
         for (String[] im : images) {
@@ -161,6 +163,9 @@ public class MarkdownBlocksConverter {
           node.put("alt", alt);
           if (width != null) {
             node.put("width", width);
+          }
+          if (im[2] != null && !im[2].isBlank()) {
+            node.put("caption", im[2].trim());
           }
           blocks.add(block(PostBlockType.IMAGE, json.writeValueAsString(node)));
         }
@@ -242,7 +247,10 @@ public class MarkdownBlocksConverter {
             String alt = node.path("alt").isString() ? node.path("alt").stringValue() : "";
             String width = node.path("width").isString() ? node.path("width").stringValue() : null;
             String marked = width != null ? "«" + width + "» " + alt : alt;
-            parts.add("![" + marked + "](" + node.path("url").stringValue() + ")");
+            String caption =
+                node.path("caption").isString() ? node.path("caption").stringValue() : "";
+            String title = caption.isBlank() ? "" : " \"" + caption.replace("\"", "'") + "\"";
+            parts.add("![" + marked + "](" + node.path("url").stringValue() + title + ")");
           }
         }
         case "LIST_BULLET", "LIST_NUMBERED" -> {

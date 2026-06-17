@@ -96,6 +96,19 @@ class MarkdownBlocksConverterTest {
   }
 
   @Test
+  void roundTripsImageCaptionViaMarkdownTitle() {
+    String md = "![«wide» 사진](https://cdn/x.png \"어느 봄날, 도쿄\")";
+    List<BlockInput> blocks = toBlocks(md);
+    assertThat(blocks).hasSize(1);
+    assertThat(blocks.get(0).type()).isEqualTo(PostBlockType.IMAGE);
+    assertThat(blocks.get(0).content())
+        .isEqualTo(
+            "{\"url\":\"https://cdn/x.png\",\"alt\":\"사진\",\"width\":\"wide\","
+                + "\"caption\":\"어느 봄날, 도쿄\"}");
+    assertThat(roundTrip(blocks)).isEqualTo(md);
+  }
+
+  @Test
   void groupsBulletList() {
     List<BlockInput> blocks = toBlocks("- one\n- two\n- three");
     assertThat(blocks).hasSize(1);
