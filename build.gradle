@@ -42,6 +42,10 @@ dependencies {
 	implementation 'org.jsoup:jsoup:1.18.1'
 	implementation 'com.google.zxing:core:3.5.3'
 	implementation 'com.google.zxing:javase:3.5.3'
+	implementation 'nl.martijndwars:web-push:5.1.1'
+	// web-push 5.1.1 declares BouncyCastle as provided — pull it explicitly (VAPID key parsing / ECDH).
+	implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
+	implementation 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
 	implementation 'com.stripe:stripe-java:28.4.0'
 	implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.2.0'
 	implementation 'io.github.resilience4j:resilience4j-micrometer:2.2.0'
