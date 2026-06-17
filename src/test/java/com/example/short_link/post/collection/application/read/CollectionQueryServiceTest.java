@@ -220,4 +220,32 @@ class CollectionQueryServiceTest {
     assertThat(noteView.blockType()).isEqualTo("NOTE");
     assertThat(noteView.body()).isEqualTo("더 나은 질문을 기다리는 일");
   }
+
+  @Test
+  void listPublicByUsernameReturnsOnlyThatCuratorsPublicCollections() {
+    when(userRepository.findByUsername("curator")).thenReturn(Optional.of(user(1L, "curator")));
+    when(collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(1L))
+        .thenReturn(
+            List.of(
+                collection(10L, 1L, CollectionVisibility.PUBLIC),
+                collection(11L, 1L, CollectionVisibility.PRIVATE)));
+    when(connectionRepository.countByCollectionId(10L)).thenReturn(2L);
+    when(connectionRepository.findAllByCollectionIdInOrderByPositionDesc(anyCollection()))
+        .thenReturn(List.of());
+
+    List<CollectionSummaryView> result = service.listPublicByUsername("curator");
+
+    // 비공개(11)는 빠지고 공개(10)만.
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).id()).isEqualTo(10L);
+    assertThat(result.get(0).visibility()).isEqualTo("PUBLIC");
+    assertThat(result.get(0).count()).isEqualTo(2);
+  }
+
+  @Test
+  void listPublicByUsernameEmptyForUnknownHandle() {
+    when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
+
+    assertThat(service.listPublicByUsername("ghost")).isEmpty();
+  }
 }
