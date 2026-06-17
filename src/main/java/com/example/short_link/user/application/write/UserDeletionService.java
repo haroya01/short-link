@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -28,6 +29,7 @@ public class UserDeletionService {
   private final LinkRepository linkRepository;
   private final ClickEventRepository clickEventRepository;
   private final FollowRepository followRepository;
+  private final BlockRepository blockRepository;
   private final List<UserDataEraser> userDataErasers;
   private final RefreshTokenStore refreshTokenStore;
   private final MeterRegistry meterRegistry;
@@ -64,6 +66,7 @@ public class UserDeletionService {
     // first or the final users delete trips FK constraints and the cleanup job retries forever.
     userDataErasers.forEach(eraser -> eraser.eraseFor(userId));
     followRepository.deleteAllInvolving(userId);
+    blockRepository.deleteAllInvolving(userId);
 
     List<LinkEntity> links = linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (!links.isEmpty()) {

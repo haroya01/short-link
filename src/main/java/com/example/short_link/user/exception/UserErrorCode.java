@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 public enum UserErrorCode {
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "user not found"),
   CANNOT_FOLLOW_SELF(HttpStatus.BAD_REQUEST, "cannot follow yourself"),
+  CANNOT_BLOCK_SELF(HttpStatus.BAD_REQUEST, "cannot block yourself"),
   INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "invalid or expired refresh token"),
   INVALID_EXCHANGE_CODE(HttpStatus.UNAUTHORIZED, "invalid or expired exchange code"),
   INVALID_TIMEZONE(HttpStatus.BAD_REQUEST, "Invalid timezone: %s"),
