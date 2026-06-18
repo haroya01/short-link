@@ -96,6 +96,34 @@ class MarkdownBlocksConverterTest {
   }
 
   @Test
+  void roundTripsImageCaptionViaMarkdownTitle() {
+    String md = "![«wide» 사진](https://cdn/x.png \"어느 봄날, 도쿄\")";
+    List<BlockInput> blocks = toBlocks(md);
+    assertThat(blocks).hasSize(1);
+    assertThat(blocks.get(0).type()).isEqualTo(PostBlockType.IMAGE);
+    assertThat(blocks.get(0).content())
+        .isEqualTo(
+            "{\"url\":\"https://cdn/x.png\",\"alt\":\"사진\",\"width\":\"wide\","
+                + "\"caption\":\"어느 봄날, 도쿄\"}");
+    assertThat(roundTrip(blocks)).isEqualTo(md);
+  }
+
+  @Test
+  void serializesCaptionWithQuoteUsingSingleQuote() {
+    // 캡션 안의 " 는 image title 을 깨므로 ' 로 치환해 직렬화한다(방어적 경로).
+    String content = "{\"url\":\"https://cdn/x.png\",\"alt\":\"\",\"caption\":\"그가 \\\"진심\\\"\"}";
+    String md = roundTrip(List.of(new BlockInput(PostBlockType.IMAGE, content)));
+    assertThat(md).isEqualTo("![](https://cdn/x.png \"그가 '진심'\")");
+  }
+
+  @Test
+  void plainImageHasNoCaption() {
+    List<BlockInput> blocks = toBlocks("![alt](https://cdn/x.png)");
+    assertThat(blocks.get(0).content()).doesNotContain("caption");
+    assertThat(roundTrip(blocks)).isEqualTo("![alt](https://cdn/x.png)");
+  }
+
+  @Test
   void groupsBulletList() {
     List<BlockInput> blocks = toBlocks("- one\n- two\n- three");
     assertThat(blocks).hasSize(1);
