@@ -88,7 +88,7 @@ public class PublicSeriesQueryService {
     List<SeriesPostRef> previews =
         published.stream()
             .limit(PREVIEW_POSTS)
-            .map(p -> new SeriesPostRef(p.getSlug(), p.getTitle()))
+            .map(p -> new SeriesPostRef(p.getSlug(), p.getTitle(), p.getOgImageUrl()))
             .toList();
     return new PublicSeriesCard(
         s.getId(),
@@ -160,7 +160,7 @@ public class PublicSeriesQueryService {
         .findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, PostStatus.PUBLISHED)
         .stream()
         .limit(PREVIEW_POSTS)
-        .map(p -> new SeriesPostRef(p.getSlug(), p.getTitle()))
+        .map(p -> new SeriesPostRef(p.getSlug(), p.getTitle(), p.getOgImageUrl()))
         .toList();
   }
 
