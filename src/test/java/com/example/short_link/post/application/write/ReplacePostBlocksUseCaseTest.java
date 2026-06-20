@@ -2,7 +2,6 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -17,6 +16,7 @@ import java.util.stream.IntStream;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -37,7 +37,14 @@ class ReplacePostBlocksUseCaseTest {
   void replacesWithNewBlocks() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
-    when(postBlockRepository.saveAll(anyList())).thenAnswer(inv -> inv.getArgument(0));
+    // insertAll returns no ids, so the use case reads the blocks back for the response — the
+    // re-read is the source of the returned list.
+    List<PostBlockEntity> persisted =
+        List.of(
+            new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0),
+            new PostBlockEntity(42L, PostBlockType.IMAGE, "{\"url\":\"x\"}", 1),
+            new PostBlockEntity(42L, PostBlockType.DIVIDER, null, 2));
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(42L)).thenReturn(persisted);
 
     List<PostBlockEntity> result =
         useCase.execute(
@@ -50,13 +57,20 @@ class ReplacePostBlocksUseCaseTest {
                     new ReplacePostBlocksCommand.BlockInput(PostBlockType.DIVIDER, null))));
 
     verify(postBlockRepository).deleteAllByPostId(42L);
-    assertThat(result).hasSize(3);
-    assertThat(result.get(0).getType()).isEqualTo(PostBlockType.PARAGRAPH);
-    assertThat(result.get(0).getBlockOrder()).isZero();
-    assertThat(result.get(1).getType()).isEqualTo(PostBlockType.IMAGE);
-    assertThat(result.get(1).getBlockOrder()).isEqualTo(1);
-    assertThat(result.get(2).getType()).isEqualTo(PostBlockType.DIVIDER);
-    assertThat(result.get(2).getBlockOrder()).isEqualTo(2);
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<PostBlockEntity>> inserted = ArgumentCaptor.forClass(List.class);
+    verify(postBlockRepository).insertAll(inserted.capture());
+    List<PostBlockEntity> built = inserted.getValue();
+    assertThat(built).hasSize(3);
+    assertThat(built.get(0).getType()).isEqualTo(PostBlockType.PARAGRAPH);
+    assertThat(built.get(0).getBlockOrder()).isZero();
+    assertThat(built.get(1).getType()).isEqualTo(PostBlockType.IMAGE);
+    assertThat(built.get(1).getBlockOrder()).isEqualTo(1);
+    assertThat(built.get(2).getType()).isEqualTo(PostBlockType.DIVIDER);
+    assertThat(built.get(2).getBlockOrder()).isEqualTo(2);
+
+    assertThat(result).isSameAs(persisted);
   }
 
   @Test

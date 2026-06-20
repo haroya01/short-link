@@ -63,7 +63,7 @@ public class RestorePostRevisionUseCase {
             new PostBlockEntity(
                 cmd.postId(), PostBlockType.valueOf(bs.type()), bs.content(), order++));
       }
-      postBlockRepository.saveAll(blocks);
+      postBlockRepository.insertAll(blocks);
     }
 
     post.markEdited();
