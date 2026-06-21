@@ -106,20 +106,37 @@ class CurationGraphQueryServiceIntegrationTest {
 
     List<RelatedBlockView> related = service.relatedTo(ConnectionBlockType.HIGHLIGHT, h1, 24);
 
-    // 쿼리는 (block_type, ref_id) 값으로 매칭하므로, 공유 DB 에 다른 테스트가 커밋한 행이 id 값 충돌로 섞일 수
-    // 있다. 내 블록 id 만 추려 정확히 {p1,p2,p3,n1} 인지 본다 — 씨앗(h1)·비공개(pSecret) 제외가 핵심.
-    java.util.Set<Long> mine = java.util.Set.of(p1, p2, p3, n1, h1, pSecret);
-    List<Long> minePresent =
-        related.stream().map(RelatedBlockView::refId).filter(mine::contains).distinct().toList();
-    assertThat(minePresent).containsExactlyInAnyOrder(p1, p2, p3, n1);
+    // id 는 테이블별로 매겨져 글·하이라이트·노트가 같은 숫자일 수 있다(신선한 CI DB). 또 공유 DB 라 다른
+    // 테스트 커밋 행이 섞일 수 있다. 그래서 (blockType, refId) *쌍* 으로 키를 잡고 내 블록만 추려 본다.
+    java.util.Set<String> mine =
+        java.util.Set.of(
+            "POST:" + p1,
+            "POST:" + p2,
+            "POST:" + p3,
+            "NOTE:" + n1,
+            "HIGHLIGHT:" + h1,
+            "POST:" + pSecret);
+    List<String> minePresent =
+        related.stream()
+            .map(r -> r.blockType() + ":" + r.refId())
+            .filter(mine::contains)
+            .distinct()
+            .toList();
+    // 씨앗(HIGHLIGHT:h1)·비공개(POST:pSecret)는 빠지고 공개 공존 블록 4개만.
+    assertThat(minePresent)
+        .containsExactlyInAnyOrder("POST:" + p1, "POST:" + p2, "POST:" + p3, "NOTE:" + n1);
     // p1 은 두 공개 컬렉션에서 h1 과 공존 → sharedCount 2(공동 등장 가중치). NOTE n1 은 1.
     RelatedBlockView p1View =
-        related.stream().filter(r -> r.refId().equals(p1)).findFirst().orElseThrow();
-    assertThat(p1View.blockType()).isEqualTo("POST");
+        related.stream()
+            .filter(r -> r.blockType().equals("POST") && r.refId().equals(p1))
+            .findFirst()
+            .orElseThrow();
     assertThat(p1View.sharedCount()).isEqualTo(2);
     RelatedBlockView n1View =
-        related.stream().filter(r -> r.refId().equals(n1)).findFirst().orElseThrow();
-    assertThat(n1View.blockType()).isEqualTo("NOTE");
+        related.stream()
+            .filter(r -> r.blockType().equals("NOTE") && r.refId().equals(n1))
+            .findFirst()
+            .orElseThrow();
     assertThat(n1View.sharedCount()).isEqualTo(1);
   }
 
