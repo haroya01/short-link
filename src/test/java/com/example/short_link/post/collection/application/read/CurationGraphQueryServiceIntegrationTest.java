@@ -95,6 +95,10 @@ class CurationGraphQueryServiceIntegrationTest {
     connect(c2, ConnectionBlockType.HIGHLIGHT, h1, 0);
     connect(c2, ConnectionBlockType.POST, p1, 1);
     connect(c2, ConnectionBlockType.POST, p2, 2);
+    // 대상이 사라진 연결(고아 ref) — resolve 가 null 로 조용히 건너뛴다(POST/HIGHLIGHT/NOTE 각 갈래).
+    connect(c1, ConnectionBlockType.POST, 999_000_001L, 3);
+    connect(c1, ConnectionBlockType.HIGHLIGHT, 999_000_002L, 4);
+    connect(c1, ConnectionBlockType.NOTE, 999_000_003L, 5);
     // 다른 큐레이터의 공개: C3{h1, p3}.
     Long c3 = collection(bob, "C3", CollectionVisibility.PUBLIC);
     connect(c3, ConnectionBlockType.HIGHLIGHT, h1, 0);

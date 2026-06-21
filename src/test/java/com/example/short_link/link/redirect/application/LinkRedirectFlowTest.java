@@ -213,6 +213,75 @@ class LinkRedirectFlowTest {
     verify(clickRecorder).record(any());
   }
 
+  private HttpServletRequest reqWith(String header, String value) {
+    MockHttpServletRequest r = new MockHttpServletRequest("GET", "/abc");
+    r.addHeader(header, value);
+    return r;
+  }
+
+  @Test
+  void secGpcHeaderMarksContextOptOut() {
+    stubBasics();
+    var captor =
+        org.mockito.ArgumentCaptor.forClass(
+            com.example.short_link.link.stats.application.ClickContext.class);
+
+    flow.execute(
+        basicLink("https://example.com/dst"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        reqWith("Sec-GPC", "1"));
+
+    verify(clickRecorder).record(captor.capture());
+    assertThat(captor.getValue().gpc()).isTrue();
+  }
+
+  @Test
+  void prefetchViaSecPurposeRecordsAsPreviewNotClick() {
+    stubBasics();
+    flow.execute(
+        basicLink("https://example.com/dst"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        reqWith("Sec-Purpose", "prefetch;prerender"));
+    verify(clickRecorder).recordPreview(any(), org.mockito.ArgumentMatchers.eq("prefetch"));
+    verify(clickRecorder, never()).record(any());
+  }
+
+  @Test
+  void prefetchViaLegacyPurposeHeader() {
+    stubBasics();
+    flow.execute(
+        basicLink("https://example.com/dst"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        reqWith("Purpose", "prefetch"));
+    verify(clickRecorder).recordPreview(any(), org.mockito.ArgumentMatchers.eq("prefetch"));
+  }
+
+  @Test
+  void prefetchViaFirefoxXMozHeader() {
+    stubBasics();
+    flow.execute(
+        basicLink("https://example.com/dst"),
+        null,
+        null,
+        null,
+        null,
+        null,
+        reqWith("X-moz", "prefetch"));
+    verify(clickRecorder).recordPreview(any(), org.mockito.ArgumentMatchers.eq("prefetch"));
+  }
+
   @Test
   void osNormalizationFlowsThroughToVariantSelection() {
     when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation(null, null, null));

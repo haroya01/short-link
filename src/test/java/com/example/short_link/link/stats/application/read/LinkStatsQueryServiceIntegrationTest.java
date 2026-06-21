@@ -145,4 +145,17 @@ class LinkStatsQueryServiceIntegrationTest {
 
     assertThat(lifecycleReader.channelJump(link.linkId())).isEmpty();
   }
+
+  @Test
+  void channelJump_emptyWhenAllHostsWithinAnHour() {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cj2"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "stcj2h", owner.getId(), null));
+    java.time.Instant t0 = java.time.Instant.now().minus(java.time.Duration.ofHours(2));
+    hostClick(link, "instagram.com", t0);
+    hostClick(link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(20))); // gap<3600 → 점프 아님
+
+    // 두 host 지만 1시간 안에 다 나타나 채널 점프로 보지 않는다(루프가 점프 없이 끝나는 갈래).
+    assertThat(lifecycleReader.channelJump(link.linkId())).isEmpty();
+  }
 }

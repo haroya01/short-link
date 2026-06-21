@@ -174,6 +174,19 @@ class LinkInsightsTest {
   }
 
   @Test
+  void peakHourCoversAllKoreanWeekdayLabels() {
+    // dayOfWeekKo 의 요일별 갈래 — 수~일까지 라벨이 모두 채워진다(피크 메시지에 한글 요일).
+    for (String dow : List.of("WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY", "SUNDAY")) {
+      var heatmap = List.of(new LinkStats.HeatmapCell(dow, 20, 30L));
+      List<LinkStats.Insight> result =
+          insights.compute(100, 0, heatmap, List.of(), List.of(), null, null, List.of());
+      var peak =
+          result.stream().filter(i -> i.type().equals("PEAK_HOUR")).findFirst().orElseThrow();
+      assertThat(peak.data()).containsEntry("dayOfWeek", dow);
+    }
+  }
+
+  @Test
   void detectsDarkSocialWhenDirectShareHigh() {
     var channels =
         List.of(
