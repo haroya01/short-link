@@ -104,26 +104,23 @@ class CurationGraphQueryServiceIntegrationTest {
     connect(c4, ConnectionBlockType.HIGHLIGHT, h1, 0);
     connect(c4, ConnectionBlockType.POST, pSecret, 1);
 
-    List<RelatedBlockView> related = service.relatedTo(ConnectionBlockType.HIGHLIGHT, h1, 12);
+    List<RelatedBlockView> related = service.relatedTo(ConnectionBlockType.HIGHLIGHT, h1, 24);
 
-    // 씨앗(h1)·비공개(pSecret)는 빠지고 공개 공존 블록(p1·p2·p3·n1)은 든다. 공유 DB 라 다른 테스트가 커밋한
-    // 행이 섞일 수 있어 containsExactly 대신 contains — 쿼리의 구조적 보장(씨앗·PRIVATE 제외)만 단언.
-    assertThat(related)
-        .extracting(RelatedBlockView::refId)
-        .contains(p1, p2, p3, n1)
-        .doesNotContain(h1, pSecret);
-    // p1 은 두 공개 컬렉션에서 함께 놓여 sharedCount 2, 나머지는 1 — p1 이 맨 앞.
-    RelatedBlockView first = related.get(0);
-    assertThat(first.refId()).isEqualTo(p1);
-    assertThat(first.blockType()).isEqualTo("POST");
-    assertThat(first.sharedCount()).isEqualTo(2);
-    assertThat(related.stream().filter(r -> r.refId().equals(n1)).findFirst())
-        .get()
-        .satisfies(
-            r -> {
-              assertThat(r.blockType()).isEqualTo("NOTE");
-              assertThat(r.sharedCount()).isEqualTo(1);
-            });
+    // 쿼리는 (block_type, ref_id) 값으로 매칭하므로, 공유 DB 에 다른 테스트가 커밋한 행이 id 값 충돌로 섞일 수
+    // 있다. 내 블록 id 만 추려 정확히 {p1,p2,p3,n1} 인지 본다 — 씨앗(h1)·비공개(pSecret) 제외가 핵심.
+    java.util.Set<Long> mine = java.util.Set.of(p1, p2, p3, n1, h1, pSecret);
+    List<Long> minePresent =
+        related.stream().map(RelatedBlockView::refId).filter(mine::contains).distinct().toList();
+    assertThat(minePresent).containsExactlyInAnyOrder(p1, p2, p3, n1);
+    // p1 은 두 공개 컬렉션에서 h1 과 공존 → sharedCount 2(공동 등장 가중치). NOTE n1 은 1.
+    RelatedBlockView p1View =
+        related.stream().filter(r -> r.refId().equals(p1)).findFirst().orElseThrow();
+    assertThat(p1View.blockType()).isEqualTo("POST");
+    assertThat(p1View.sharedCount()).isEqualTo(2);
+    RelatedBlockView n1View =
+        related.stream().filter(r -> r.refId().equals(n1)).findFirst().orElseThrow();
+    assertThat(n1View.blockType()).isEqualTo("NOTE");
+    assertThat(n1View.sharedCount()).isEqualTo(1);
   }
 
   @Test
