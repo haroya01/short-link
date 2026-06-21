@@ -104,7 +104,8 @@ public class LinkRedirectFlow {
                 acceptLanguage)
             .withSourceChannel(src)
             .withDestination(picked.destinationId())
-            .withPostId(postId));
+            .withPostId(postId)
+            .withGpc("1".equals(req.getHeader("Sec-GPC"))));
     return new RedirectOutcome.Redirect(picked);
   }
 
