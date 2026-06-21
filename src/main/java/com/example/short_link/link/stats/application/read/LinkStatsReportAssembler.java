@@ -36,15 +36,20 @@ class LinkStatsReportAssembler {
     LinkStats.Lifecycle lifecycle = lifecycleReader.lifecycle(linkId);
 
     List<LinkStats.Insight> insights =
-        insightsCalculator.compute(
-            totals.total(),
-            totals.bot(),
-            time.heatmap(),
-            channels.channels(),
-            geo.countries(),
-            returnRate,
-            lifecycle,
-            time.daily());
+        new java.util.ArrayList<>(
+            insightsCalculator.compute(
+                totals.total(),
+                totals.bot(),
+                time.heatmap(),
+                channels.channels(),
+                geo.countries(),
+                returnRate,
+                lifecycle,
+                time.daily()));
+    // 채널 점프는 시계열 first-seen 쿼리가 필요해 compute() 밖에서 곁들인다(원래 청중 탈출 신호).
+    if (totals.total() >= 10) {
+      lifecycleReader.channelJump(linkId).ifPresent(insights::add);
+    }
 
     return new LinkStats(
         link.getShortCode(),

@@ -17,7 +17,8 @@ public record ClickContext(
     String acceptLanguage,
     String sourceChannel,
     Long destinationId,
-    Long postId) {
+    Long postId,
+    boolean gpc) {
 
   public static ClickContext of(
       LinkId linkId,
@@ -27,7 +28,16 @@ public record ClickContext(
       String clientIp,
       String acceptLanguage) {
     return new ClickContext(
-        linkId, originalUrl, referrer, userAgent, clientIp, acceptLanguage, null, null, null);
+        linkId,
+        originalUrl,
+        referrer,
+        userAgent,
+        clientIp,
+        acceptLanguage,
+        null,
+        null,
+        null,
+        false);
   }
 
   public ClickContext withSourceChannel(String sourceChannel) {
@@ -40,7 +50,8 @@ public record ClickContext(
         acceptLanguage,
         sourceChannel,
         destinationId,
-        postId);
+        postId,
+        gpc);
   }
 
   public ClickContext withDestination(Long destinationId) {
@@ -53,7 +64,8 @@ public record ClickContext(
         acceptLanguage,
         sourceChannel,
         destinationId,
-        postId);
+        postId,
+        gpc);
   }
 
   public ClickContext withPostId(Long postId) {
@@ -66,6 +78,22 @@ public record ClickContext(
         acceptLanguage,
         sourceChannel,
         destinationId,
-        postId);
+        postId,
+        gpc);
+  }
+
+  /// Global Privacy Control(Sec-GPC: 1) 신호 — 옵트아웃 시 재방문 식별(visitorHash)을 끈다.
+  public ClickContext withGpc(boolean value) {
+    return new ClickContext(
+        linkId,
+        originalUrl,
+        referrer,
+        userAgent,
+        clientIp,
+        acceptLanguage,
+        sourceChannel,
+        destinationId,
+        postId,
+        value);
   }
 }

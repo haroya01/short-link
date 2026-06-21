@@ -82,6 +82,19 @@ class ClickRecorderTest {
   }
 
   @Test
+  void gpcOptOutSkipsVisitorHash() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+    // Sec-GPC 옵트아웃 → 재방문 식별 해시를 만들지 않는다(§0, 측정 아닌 존중).
+    recorder.record(ctx(null, "1.2.3.4", null).withGpc(true));
+
+    assertThat(captor.getValue().getVisitorHash()).isNull();
+  }
+
+  @Test
   void persistsResolvedGeoLocation() {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
     when(geoIpResolver.resolve("8.8.8.8"))

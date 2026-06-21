@@ -25,6 +25,36 @@ class LinkStatsLifecycleReader {
     return new LinkStats.ReturnRate(newCount, returningCount, ratio);
   }
 
+  /// 채널 점프 — 원래(가장 이른) referrer host 이후 *1시간 이상 늦게* 처음 등장한 다른 host =
+  /// 링크가 원래 청중 밖으로 넘어간 순간("발견됨"). 시계열 first-seen 으로만 derivable, 신원 X.
+  java.util.Optional<LinkStats.Insight> channelJump(LinkId linkId) {
+    var rows = clickLifecycle.findFirstSeenByReferrerHost(linkId.value());
+    if (rows.size() < 2) return java.util.Optional.empty();
+    var origin = rows.get(0);
+    if (origin.getHost() == null || origin.getFirstSeenEpoch() == null)
+      return java.util.Optional.empty();
+    long originEpoch = origin.getFirstSeenEpoch();
+    for (int i = 1; i < rows.size(); i++) {
+      var row = rows.get(i);
+      if (row.getHost() == null || row.getFirstSeenEpoch() == null) continue;
+      long gapSeconds = row.getFirstSeenEpoch() - originEpoch;
+      if (gapSeconds >= 3600) {
+        String message =
+            String.format(
+                java.util.Locale.KOREAN,
+                "%s에서 시작했는데 %s로 퍼졌어요 — 원래 청중 밖으로 넘어갔어요",
+                origin.getHost(),
+                row.getHost());
+        java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
+        data.put("origin", origin.getHost());
+        data.put("jumpedTo", row.getHost());
+        data.put("gapHours", gapSeconds / 3600);
+        return java.util.Optional.of(new LinkStats.Insight("CHANNEL_JUMP", "info", message, data));
+      }
+    }
+    return java.util.Optional.empty();
+  }
+
   LinkStats.Lifecycle lifecycle(LinkId linkId) {
     List<LinkStats.DayClick> days =
         clickLifecycle.findLifecycleClicks(linkId.value(), LIFECYCLE_MAX_DAY).stream()

@@ -32,6 +32,9 @@ public class ReplacePostBlocksUseCase {
     for (ReplacePostBlocksCommand.BlockInput input : cmd.blocks()) {
       entities.add(new PostBlockEntity(cmd.postId(), input.type(), input.content(), order++));
     }
-    return postBlockRepository.saveAll(entities);
+    // One multi-row INSERT instead of saveAll's per-row INSERTs (IDENTITY ids can't be batched),
+    // then re-read so callers still receive the persisted blocks with their generated ids.
+    postBlockRepository.insertAll(entities);
+    return postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId());
   }
 }

@@ -75,6 +75,13 @@ public final class ClickProjections {
     Long getCount();
   }
 
+  /** referrer host 별 *최초* 클릭 시각(epoch 초) — 채널 점프("원래 채널 탈출") 판별용. */
+  public interface HostFirstSeenRow {
+    String getHost();
+
+    Long getFirstSeenEpoch();
+  }
+
   public interface DeviceClickRow {
     String getDevice();
 

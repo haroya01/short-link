@@ -69,7 +69,7 @@ class RestorePostRevisionUseCaseTest {
     assertThat(restored.getOgImageUrl()).isEqualTo("https://cdn/og.png");
     assertThat(restored.getLanguageTag()).isEqualTo("ja");
     verify(postBlockRepository).deleteAllByPostId(42L);
-    verify(postBlockRepository).saveAll(anyList());
+    verify(postBlockRepository).insertAll(anyList());
   }
 
   @Test

@@ -40,7 +40,65 @@ public class LinkInsights {
     botRatio(bot, total).ifPresent(insights::add);
     decayShape(lifecycle).ifPresent(insights::add);
     weekOverWeek(dailyClicks).ifPresent(insights::add);
+    darkSocial(channels, total).ifPresent(insights::add);
+    secondWind(dailyClicks).ifPresent(insights::add);
+    dormancy(dailyClicks).ifPresent(insights::add);
     return insights;
+  }
+
+  /// 직접 공유(다크 소셜) — referrer 없는 사람 클릭 비율 = DM·복붙으로 퍼진 입소문 신호.
+  private Optional<LinkStats.Insight> darkSocial(
+      List<LinkStats.ChannelClick> channels, long total) {
+    if (total == 0) return Optional.empty();
+    long direct = 0;
+    for (LinkStats.ChannelClick c : channels) {
+      if ("direct".equals(c.channel())) direct += c.count();
+    }
+    double share = (double) direct / total;
+    if (share < 0.3) return Optional.empty();
+    String message =
+        String.format(Locale.KOREAN, "직접 공유(다크소셜)가 %.1f%% — DM·복붙으로 퍼졌어요", share * 100);
+    Map<String, Object> data = new LinkedHashMap<>();
+    data.put("share", round3(share));
+    data.put("directClicks", direct);
+    return Optional.of(new LinkStats.Insight("DARK_SOCIAL", "info", message, data));
+  }
+
+  /// 재점화(second wind) — 잠잠하던 링크가 최근 며칠 확 뜀(휴면 후 부활).
+  private Optional<LinkStats.Insight> secondWind(List<LinkStats.DailyClick> dailyClicks) {
+    int n = dailyClicks.size();
+    if (n < 10) return Optional.empty();
+    long recent3 = 0;
+    for (int i = Math.max(0, n - 3); i < n; i++) recent3 += dailyClicks.get(i).count();
+    int ds = Math.max(0, n - 10);
+    int de = Math.max(0, n - 3);
+    long dormant = 0;
+    for (int i = ds; i < de; i++) dormant += dailyClicks.get(i).count();
+    double dormantAvg = (de - ds) > 0 ? (double) dormant / (de - ds) : 0;
+    if (recent3 >= 5 && dormantAvg < 1.0 && recent3 >= 3 * Math.max(dormant, 1)) {
+      String message = String.format(Locale.KOREAN, "다시 살아났어요 — 잠잠하던 링크가 최근 %d클릭", recent3);
+      Map<String, Object> data = new LinkedHashMap<>();
+      data.put("recent3", recent3);
+      data.put("dormantAvg", round3(dormantAvg));
+      return Optional.of(new LinkStats.Insight("SECOND_WIND", "info", message, data));
+    }
+    return Optional.empty();
+  }
+
+  /// 휴면(dormancy) — 마지막 사람 클릭 이후 N일 조용. 콜드 링크 재공유 넛지의 단일 진실원.
+  private Optional<LinkStats.Insight> dormancy(List<LinkStats.DailyClick> dailyClicks) {
+    java.time.LocalDate lastActive = null;
+    for (LinkStats.DailyClick dc : dailyClicks) {
+      if (dc.count() > 0) lastActive = dc.date();
+    }
+    if (lastActive == null) return Optional.empty();
+    long daysIdle =
+        java.time.temporal.ChronoUnit.DAYS.between(lastActive, java.time.LocalDate.now());
+    if (daysIdle < 7) return Optional.empty();
+    String message = String.format(Locale.KOREAN, "%d일째 클릭이 없어요 — 다시 공유하면 살아날 수 있어요", daysIdle);
+    Map<String, Object> data = new LinkedHashMap<>();
+    data.put("daysIdle", daysIdle);
+    return Optional.of(new LinkStats.Insight("DORMANT", "warning", message, data));
   }
 
   private Optional<LinkStats.Insight> peakHour(List<LinkStats.HeatmapCell> heatmap, long total) {

@@ -29,6 +29,7 @@ class LinkStatsQueryServiceIntegrationTest {
   @Autowired private ClickEventRepository clickRepository;
   @Autowired private UserRepository userRepository;
   @Autowired private LinkVisibilityService visibilityService;
+  @Autowired private LinkStatsLifecycleReader lifecycleReader;
 
   @Test
   void statsForOwner_returnsAggregatedCounts() {
@@ -99,5 +100,62 @@ class LinkStatsQueryServiceIntegrationTest {
   void publicStatsThrowsForUnknown() {
     assertThatThrownBy(() -> service.publicStats(new ShortCode("nope9999")))
         .isInstanceOf(LinkException.class);
+  }
+
+  private void hostClick(LinkEntity link, String host, java.time.Instant at) {
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.linkId())
+            .userAgent("ua")
+            .clientIp("9.9.9.9")
+            .deviceClass("mobile")
+            .referrer("https://" + host + "/x")
+            .referrerHost(host)
+            .clickedAt(at)
+            .bot(false)
+            .build());
+  }
+
+  @Test
+  void channelJump_detectsHostThatAppearsLongAfterOrigin() {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cj"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "stcjmp", owner.getId(), null));
+    java.time.Instant t0 = java.time.Instant.now().minus(java.time.Duration.ofHours(3));
+    hostClick(link, "instagram.com", t0); // 원래 채널(가장 이른)
+    hostClick(
+        link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(30))); // 30분 — gap<3600, 건너뜀
+    hostClick(link, "reddit.com", t0.plus(java.time.Duration.ofHours(2))); // 2시간 — gap≥3600, 점프
+
+    var insight = lifecycleReader.channelJump(link.linkId());
+
+    assertThat(insight).isPresent();
+    assertThat(insight.get().type()).isEqualTo("CHANNEL_JUMP");
+    assertThat(insight.get().data())
+        .containsEntry("origin", "instagram.com")
+        .containsEntry("jumpedTo", "reddit.com");
+  }
+
+  @Test
+  void channelJump_emptyWhenSingleHost() {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cj1"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "stcj1h", owner.getId(), null));
+    hostClick(link, "instagram.com", java.time.Instant.now().minus(java.time.Duration.ofHours(1)));
+
+    assertThat(lifecycleReader.channelJump(link.linkId())).isEmpty();
+  }
+
+  @Test
+  void channelJump_emptyWhenAllHostsWithinAnHour() {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cj2"));
+    LinkEntity link =
+        linkRepository.save(new LinkEntity("https://example.com", "stcj2h", owner.getId(), null));
+    java.time.Instant t0 = java.time.Instant.now().minus(java.time.Duration.ofHours(2));
+    hostClick(link, "instagram.com", t0);
+    hostClick(link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(20))); // gap<3600 → 점프 아님
+
+    // 두 host 지만 1시간 안에 다 나타나 채널 점프로 보지 않는다(루프가 점프 없이 끝나는 갈래).
+    assertThat(lifecycleReader.channelJump(link.linkId())).isEmpty();
   }
 }

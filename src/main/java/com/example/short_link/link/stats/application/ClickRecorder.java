@@ -81,11 +81,15 @@ public class ClickRecorder {
               .regionName(geo.region())
               .cityName(geo.city())
               .language(LanguageExtractor.extract(ctx.acceptLanguage()))
+              // Sec-GPC(옵트아웃) 신호가 오면 재방문 식별 해시를 만들지 않는다 — "측정 위해 수집"이 아니라
+              // "존중 위해 수집"(§0). 클릭 자체는 익명 집계로 잡히되, 그 방문자는 return-tracking 안 함.
               .visitorHash(
-                  VisitorHasher.hash(
-                      ctx.linkId() == null ? null : ctx.linkId().value(),
-                      ctx.clientIp(),
-                      ctx.userAgent()))
+                  ctx.gpc()
+                      ? null
+                      : VisitorHasher.hash(
+                          ctx.linkId() == null ? null : ctx.linkId().value(),
+                          ctx.clientIp(),
+                          ctx.userAgent()))
               .sourceChannel(SourceChannelNormalizer.normalize(ctx.sourceChannel()))
               .destinationId(ctx.destinationId())
               .postId(ctx.postId())
