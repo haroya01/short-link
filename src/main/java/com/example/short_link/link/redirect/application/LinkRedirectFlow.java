@@ -94,7 +94,7 @@ public class LinkRedirectFlow {
     UserAgentInfo ua = userAgentClassifier.classify(userAgent);
     CachedLink.Picked picked =
         link.pick(clientCountry, LinkRedirectSupport.normalizeOs(ua.osName()), ua.deviceClass());
-    clickRecorder.record(
+    ClickContext ctx =
         ClickContext.of(
                 link.linkId(),
                 picked.url(),
@@ -105,8 +105,27 @@ public class LinkRedirectFlow {
             .withSourceChannel(src)
             .withDestination(picked.destinationId())
             .withPostId(postId)
-            .withGpc("1".equals(req.getHeader("Sec-GPC"))));
+            .withGpc("1".equals(req.getHeader("Sec-GPC")));
+    // 브라우저 프리페치는 사람이 연 게 아니다 — Sec-Fetch(Sec-Purpose/Purpose/X-moz)로 가려 프리뷰로 집계해
+    // 사람 클릭에서 뺀다(정직성). 진짜 클릭만 humanClicks 로 남는다.
+    if (isPrefetch(req)) {
+      clickRecorder.recordPreview(ctx, "prefetch");
+    } else {
+      clickRecorder.record(ctx);
+    }
     return new RedirectOutcome.Redirect(picked);
+  }
+
+  /// 프리페치/프리렌더 요청 판별 — Chrome(Sec-Purpose), 레거시(Purpose), Firefox(X-moz).
+  private static boolean isPrefetch(HttpServletRequest req) {
+    String secPurpose = req.getHeader("Sec-Purpose");
+    if (secPurpose != null && secPurpose.toLowerCase().contains("prefetch")) {
+      return true;
+    }
+    if ("prefetch".equalsIgnoreCase(req.getHeader("Purpose"))) {
+      return true;
+    }
+    return "prefetch".equalsIgnoreCase(req.getHeader("X-moz"));
   }
 
   private void enforceViewLimit(CachedLink link, LinkEntity entity) {
