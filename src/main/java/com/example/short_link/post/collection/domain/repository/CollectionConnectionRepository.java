@@ -3,6 +3,8 @@ package com.example.short_link.post.collection.domain.repository;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
+import com.example.short_link.post.collection.domain.repository.projection.CurationGraphProjections.CooccurrenceRow;
+import com.example.short_link.post.collection.domain.repository.projection.CurationGraphProjections.CuratorOverlapRow;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -37,4 +39,10 @@ public interface CollectionConnectionRepository {
 
   /** Highest position in a collection (for append), or null when empty. */
   Integer findMaxPositionByCollectionId(Long collectionId);
+
+  /** 공동 등장 — 이 블록과 같은 공개 컬렉션에 함께 놓인 블록들(자기 제외), 함께 놓인 컬렉션 수 큰 순. */
+  List<CooccurrenceRow> findCooccurring(ConnectionBlockType blockType, Long refId, int limit);
+
+  /** 큐레이터 겹침 — 이 큐레이터의 공개 컬렉션 블록을 같이 엮은 다른 큐레이터들, 겹치는 블록 수 큰 순. */
+  List<CuratorOverlapRow> findOverlappingCurators(Long ownerId, int limit);
 }

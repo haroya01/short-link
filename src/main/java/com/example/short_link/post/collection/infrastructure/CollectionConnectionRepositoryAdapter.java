@@ -4,6 +4,8 @@ import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
+import com.example.short_link.post.collection.domain.repository.projection.CurationGraphProjections.CooccurrenceRow;
+import com.example.short_link.post.collection.domain.repository.projection.CurationGraphProjections.CuratorOverlapRow;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -72,5 +74,16 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   @Override
   public Integer findMaxPositionByCollectionId(Long collectionId) {
     return jpa.findMaxPositionByCollectionId(collectionId);
+  }
+
+  @Override
+  public List<CooccurrenceRow> findCooccurring(
+      ConnectionBlockType blockType, Long refId, int limit) {
+    return jpa.findCooccurring(blockType.name(), refId, limit);
+  }
+
+  @Override
+  public List<CuratorOverlapRow> findOverlappingCurators(Long ownerId, int limit) {
+    return jpa.findOverlappingCurators(ownerId, limit);
   }
 }
