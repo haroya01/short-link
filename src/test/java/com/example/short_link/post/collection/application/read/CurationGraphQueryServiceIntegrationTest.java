@@ -106,10 +106,11 @@ class CurationGraphQueryServiceIntegrationTest {
 
     List<RelatedBlockView> related = service.relatedTo(ConnectionBlockType.HIGHLIGHT, h1, 12);
 
-    // 씨앗(h1)·비공개(pSecret)는 빠지고 공개 공존 블록만: p1, p2, p3, n1.
+    // 씨앗(h1)·비공개(pSecret)는 빠지고 공개 공존 블록(p1·p2·p3·n1)은 든다. 공유 DB 라 다른 테스트가 커밋한
+    // 행이 섞일 수 있어 containsExactly 대신 contains — 쿼리의 구조적 보장(씨앗·PRIVATE 제외)만 단언.
     assertThat(related)
         .extracting(RelatedBlockView::refId)
-        .containsExactlyInAnyOrder(p1, p2, p3, n1)
+        .contains(p1, p2, p3, n1)
         .doesNotContain(h1, pSecret);
     // p1 은 두 공개 컬렉션에서 함께 놓여 sharedCount 2, 나머지는 1 — p1 이 맨 앞.
     RelatedBlockView first = related.get(0);
@@ -150,10 +151,18 @@ class CurationGraphQueryServiceIntegrationTest {
 
     List<KindredCuratorView> kindred = service.kindredCurators("alice-kin", 12);
 
-    // bob 만, 자기(alice) 제외. 공개 겹침은 h1 하나 → sharedItems 1.
-    assertThat(kindred).hasSize(1);
-    assertThat(kindred.get(0).curator().username()).isEqualTo("bob-kin");
-    assertThat(kindred.get(0).sharedItems()).isEqualTo(1);
+    // bob 은 들고 자기(alice)는 빠진다. 공개 겹침은 h1 하나 → bob 의 sharedItems 1.
+    // 공유 DB 오염 대비 hasSize 대신 contains/자기제외만 단언(bob·alice 는 이 테스트 고유 유저).
+    assertThat(kindred)
+        .extracting(k -> k.curator().username())
+        .contains("bob-kin")
+        .doesNotContain("alice-kin");
+    KindredCuratorView bobView =
+        kindred.stream()
+            .filter(k -> k.curator().username().equals("bob-kin"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(bobView.sharedItems()).isEqualTo(1);
   }
 
   @Test

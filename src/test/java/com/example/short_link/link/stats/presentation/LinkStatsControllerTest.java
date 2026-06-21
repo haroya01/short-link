@@ -12,6 +12,8 @@ import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Duration;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -367,6 +369,8 @@ class LinkStatsControllerTest {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-rli"));
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "statrli", owner.getId(), null));
+    // 세션화 재방문 — 같은 visitor 가 *30분 이상 간격*으로 와야 returning(같은 자리 더블탭은 1회).
+    // 1시간씩 벌린 3개 = 3세션 ≥2 → returning.
     for (int i = 0; i < 3; i++) {
       clickRepository.save(
           ClickEventEntity.builder()
@@ -375,6 +379,7 @@ class LinkStatsControllerTest {
               .clientIp("1.1.1." + i)
               .deviceClass("desktop")
               .visitorHash("returner".repeat(8).substring(0, 64))
+              .clickedAt(Instant.now().minus(Duration.ofHours(i)))
               .bot(false)
               .build());
     }
