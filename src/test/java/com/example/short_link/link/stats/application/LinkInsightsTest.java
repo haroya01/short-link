@@ -172,4 +172,74 @@ class LinkInsightsTest {
         insights.compute(100, 0, List.of(), List.of(), countries, null, null, List.of());
     assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("COUNTRY_CONCENTRATION");
   }
+
+  @Test
+  void detectsDarkSocialWhenDirectShareHigh() {
+    var channels =
+        List.of(
+            new LinkStats.ChannelClick("direct", 40L), new LinkStats.ChannelClick("social", 60L));
+    List<LinkStats.Insight> result =
+        insights.compute(100, 0, List.of(), channels, List.of(), null, null, List.of());
+    var ds = result.stream().filter(i -> i.type().equals("DARK_SOCIAL")).findFirst().orElseThrow();
+    assertThat(ds.severity()).isEqualTo("info");
+    assertThat(ds.data()).containsKey("share").containsEntry("directClicks", 40L);
+  }
+
+  @Test
+  void darkSocialSkippedWhenDirectShareLow() {
+    var channels =
+        List.of(
+            new LinkStats.ChannelClick("direct", 20L), new LinkStats.ChannelClick("social", 80L));
+    List<LinkStats.Insight> result =
+        insights.compute(100, 0, List.of(), channels, List.of(), null, null, List.of());
+    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("DARK_SOCIAL");
+  }
+
+  @Test
+  void detectsSecondWindAfterDormancy() {
+    LocalDate base = LocalDate.of(2026, 4, 1);
+    var daily = new ArrayList<LinkStats.DailyClick>();
+    for (int i = 0; i < 7; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 0L)); // 잠잠
+    for (int i = 7; i < 10; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 2L)); // 최근 부활
+    List<LinkStats.Insight> result =
+        insights.compute(100, 0, List.of(), List.of(), List.of(), null, null, daily);
+    var sw = result.stream().filter(i -> i.type().equals("SECOND_WIND")).findFirst().orElseThrow();
+    assertThat(sw.severity()).isEqualTo("info");
+  }
+
+  @Test
+  void secondWindSkippedWhenSteady() {
+    LocalDate base = LocalDate.of(2026, 4, 1);
+    var daily = new ArrayList<LinkStats.DailyClick>();
+    for (int i = 0; i < 10; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 5L)); // 꾸준
+    List<LinkStats.Insight> result =
+        insights.compute(100, 0, List.of(), List.of(), List.of(), null, null, daily);
+    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("SECOND_WIND");
+  }
+
+  @Test
+  void detectsDormancyWhenLongIdle() {
+    var daily = List.of(new LinkStats.DailyClick(LocalDate.now().minusDays(12), 5L));
+    List<LinkStats.Insight> result =
+        insights.compute(100, 0, List.of(), List.of(), List.of(), null, null, daily);
+    var dm = result.stream().filter(i -> i.type().equals("DORMANT")).findFirst().orElseThrow();
+    assertThat(dm.severity()).isEqualTo("warning");
+    assertThat(dm.data()).containsKey("daysIdle");
+  }
+
+  @Test
+  void dormancySkippedWhenRecentlyActive() {
+    var daily = List.of(new LinkStats.DailyClick(LocalDate.now().minusDays(1), 5L));
+    List<LinkStats.Insight> result =
+        insights.compute(100, 0, List.of(), List.of(), List.of(), null, null, daily);
+    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("DORMANT");
+  }
+
+  @Test
+  void dormancySkippedWhenNeverActive() {
+    var daily = List.of(new LinkStats.DailyClick(LocalDate.now().minusDays(12), 0L));
+    List<LinkStats.Insight> result =
+        insights.compute(100, 0, List.of(), List.of(), List.of(), null, null, daily);
+    assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("DORMANT");
+  }
 }

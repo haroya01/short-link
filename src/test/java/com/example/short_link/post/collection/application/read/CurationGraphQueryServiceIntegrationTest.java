@@ -183,4 +183,43 @@ class CurationGraphQueryServiceIntegrationTest {
   void kindredCurators_emptyForUnknownHandle() {
     assertThat(service.kindredCurators("no-such-curator-xyz", 12)).isEmpty();
   }
+
+  @Test
+  void relatedTo_resolvesHighlightCoMember_emptyWhenUnconnected_andClampsLimit() {
+    // 하이라이트는 (post,span) 유니크라 같은 글에 같은 span 으로 둘 만들면 충돌 → 글을 따로 둔다.
+    Long writer = user("writer-edge", "wed");
+    Long h1 = highlight(post(writer, "e-s1"), writer, "씨앗 문장");
+    Long h2 =
+        highlight(post(writer, "e-s2"), writer, "곁에 놓인 다른 문장"); // HIGHLIGHT 공동 멤버 — resolve 갈래.
+    Long lonely = highlight(post(writer, "e-s3"), writer, "아무 컬렉션에도 없는 문장");
+
+    Long c = collection(writer, "E", CollectionVisibility.PUBLIC);
+    connect(c, ConnectionBlockType.HIGHLIGHT, h1, 0);
+    connect(c, ConnectionBlockType.HIGHLIGHT, h2, 1);
+
+    // h2 가 (HIGHLIGHT) 로 해석돼 quote 가 채워진다(resolve 의 HIGHLIGHT 갈래).
+    List<RelatedBlockView> related = service.relatedTo(ConnectionBlockType.HIGHLIGHT, h1, 24);
+    RelatedBlockView h2View =
+        related.stream()
+            .filter(r -> r.blockType().equals("HIGHLIGHT") && r.refId().equals(h2))
+            .findFirst()
+            .orElseThrow();
+    assertThat(h2View.quote()).isEqualTo("곁에 놓인 다른 문장");
+
+    // clamp: limit 0 → 최소 1(예외 없이 ≤1개), limit 100 → 상한 24. 둘 다 호출만으로 갈래 커버.
+    assertThat(service.relatedTo(ConnectionBlockType.HIGHLIGHT, h1, 0)).hasSizeLessThanOrEqualTo(1);
+    // 어떤 공개 컬렉션에도 없는 블록 → 빈 결과(rows.isEmpty 조기 반환).
+    assertThat(service.relatedTo(ConnectionBlockType.HIGHLIGHT, lonely, 100)).isEmpty();
+  }
+
+  @Test
+  void kindredCurators_emptyWhenNoOneSharesTheirItems() {
+    Long solo = user("solo-curator", "slo");
+    Long p = post(solo, "s-one");
+    Long c = collection(solo, "Solo", CollectionVisibility.PUBLIC);
+    connect(c, ConnectionBlockType.POST, p, 0);
+
+    // 공개 컬렉션은 있지만 그 블록을 엮은 다른 큐레이터가 없다 → 빈 결과(겹침 rows.isEmpty).
+    assertThat(service.kindredCurators("solo-curator", 12)).isEmpty();
+  }
 }
