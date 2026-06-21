@@ -37,4 +37,18 @@ public interface JpaClickLifecycleReadRepository extends Repository<ClickEventEn
               + "GROUP BY day ORDER BY day",
       nativeQuery = true)
   List<DayClickRow> findLifecycleClicks(@Param("linkId") Long linkId, @Param("maxDay") int maxDay);
+
+  // referrer host 별 최초 등장 시각 — 가장 이른 host = 원래 채널, 한참 뒤 등장한 host = "넘어간" 채널.
+  @Query(
+      value =
+          "SELECT referrer_host AS host, UNIX_TIMESTAMP(MIN(clicked_at)) AS firstSeenEpoch "
+              + "FROM click_event "
+              + "WHERE link_id = :linkId AND is_bot = 0 AND referrer_host IS NOT NULL "
+              + "AND referrer_host <> '' "
+              + "GROUP BY referrer_host ORDER BY firstSeenEpoch",
+      nativeQuery = true)
+  List<
+          com.example.short_link.link.stats.domain.repository.projection.ClickProjections
+              .HostFirstSeenRow>
+      findFirstSeenByReferrerHost(@Param("linkId") Long linkId);
 }
