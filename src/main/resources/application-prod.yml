@@ -4,6 +4,16 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      # 기본 풀(10)·기본 타임아웃(30s)으로 운영하던 중 풀이 통째로 묶이는 구간이 있었다.
+      # leak-detection-threshold 가 꺼져 있어 어떤 호출이 커넥션을 오래 쥐었는지 로그에 남지 않았다.
+      maximum-pool-size: ${DB_POOL_MAX:20}
+      minimum-idle: ${DB_POOL_MIN_IDLE:5}
+      # 풀이 비어 있을 때 30초를 매달리는 대신 10초에 끊어 빨리 실패시킨다(스케줄 잡·요청 모두).
+      connection-timeout: ${DB_CONNECTION_TIMEOUT_MS:10000}
+      # 커넥션을 20초 넘게 쥐고 있으면 보유 스택을 WARN 으로 남긴다. 정상 트랜잭션은
+      # 20초를 넘지 않으므로 오탐 없이, 풀을 비운 호출만 스택과 함께 드러난다.
+      leak-detection-threshold: ${DB_LEAK_DETECTION_MS:20000}
   jpa:
     hibernate:
       ddl-auto: validate
