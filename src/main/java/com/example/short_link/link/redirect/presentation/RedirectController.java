@@ -2,6 +2,7 @@ package com.example.short_link.link.redirect.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
+import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
@@ -51,6 +52,7 @@ public class RedirectController {
   private final ShortLinkUrlBuilder urlBuilder;
   private final MeterRegistry meterRegistry;
   private final CustomDomainQueryService customDomainService;
+  private final TurnstileProperties turnstile;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -115,7 +117,8 @@ public class RedirectController {
           shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req);
     }
     if (link.passwordRequired()) {
-      return LinkHtmlRenderer.passwordPromptResponse(HttpStatus.OK, shortCode, false);
+      return LinkHtmlRenderer.passwordPromptResponse(
+          HttpStatus.OK, shortCode, false, turnstile.siteKey());
     }
     return render(flow.execute(link, null, referrer, userAgent, acceptLanguage, src, post, req));
   }

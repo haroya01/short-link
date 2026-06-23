@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.access.application.LinkProtectionService;
+import com.example.short_link.link.access.application.TurnstileProperties;
+import com.example.short_link.link.access.application.TurnstileVerifier;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
@@ -30,8 +32,11 @@ class PasswordUnlockControllerTest {
   private final LinkLookupQueryService lookup = mock(LinkLookupQueryService.class);
   private final LinkProtectionService protectionService = mock(LinkProtectionService.class);
   private final LinkRedirectFlow flow = mock(LinkRedirectFlow.class);
+  // Turnstile unconfigured (empty secret) → verifier is a no-op, so the gate behaves as before.
+  private final TurnstileProperties turnstile = new TurnstileProperties("", "");
+  private final TurnstileVerifier turnstileVerifier = new TurnstileVerifier(turnstile);
   private final PasswordUnlockController controller =
-      new PasswordUnlockController(lookup, protectionService, flow);
+      new PasswordUnlockController(lookup, protectionService, flow, turnstile, turnstileVerifier);
 
   private static final ShortCode CODE = new ShortCode("abc123");
 
@@ -53,7 +58,7 @@ class PasswordUnlockControllerTest {
     when(protectionService.checkPassword(entity, "bad")).thenReturn(false);
 
     MockHttpServletRequest req = request();
-    ResponseEntity<?> response = controller.unlock(CODE, "bad", null, null, null, null, req);
+    ResponseEntity<?> response = controller.unlock(CODE, "bad", null, null, null, null, null, req);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("password_required");
@@ -72,7 +77,7 @@ class PasswordUnlockControllerTest {
         .thenReturn(new RedirectOutcome.Redirect(new CachedLink.Picked("https://dst", null)));
 
     MockHttpServletRequest req = request();
-    ResponseEntity<?> response = controller.unlock(CODE, "good", null, null, null, null, req);
+    ResponseEntity<?> response = controller.unlock(CODE, "good", null, null, null, null, null, req);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
     assertThat(response.getHeaders().getLocation().toString()).isEqualTo("https://dst");
@@ -91,7 +96,7 @@ class PasswordUnlockControllerTest {
 
     MockHttpServletRequest req = request();
     ResponseEntity<?> response =
-        controller.unlock(CODE, "ignored", "yt", "ref", "ua", "ko-KR", req);
+        controller.unlock(CODE, "ignored", "yt", null, "ref", "ua", "ko-KR", req);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
     verify(protectionService, never()).checkPassword(any(), any());
@@ -109,7 +114,7 @@ class PasswordUnlockControllerTest {
         .thenReturn(new RedirectOutcome.Blocked());
 
     MockHttpServletRequest req = request();
-    ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, req);
+    ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("blocked");
@@ -126,7 +131,7 @@ class PasswordUnlockControllerTest {
         .thenReturn(new RedirectOutcome.ExpiredWithMessage("Campaign closed"));
 
     MockHttpServletRequest req = request();
-    ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, req);
+    ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.GONE);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("expired");
@@ -139,7 +144,7 @@ class PasswordUnlockControllerTest {
     when(lookup.findEntity(CODE)).thenReturn(Optional.empty());
 
     MockHttpServletRequest req = request();
-    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, req))
+    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, null, req))
         .isInstanceOf(LinkException.class)
         .extracting(e -> ((LinkException) e).errorCode())
         .isEqualTo(LinkErrorCode.LINK_NOT_FOUND);
@@ -157,7 +162,7 @@ class PasswordUnlockControllerTest {
         .thenThrow(new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, CODE));
 
     MockHttpServletRequest req = request();
-    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, req))
+    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, null, req))
         .isInstanceOf(LinkException.class);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("view_limit");
   }
@@ -173,7 +178,7 @@ class PasswordUnlockControllerTest {
         .thenThrow(new LinkException(LinkErrorCode.LINK_EXPIRED, CODE));
 
     MockHttpServletRequest req = request();
-    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, req))
+    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, null, req))
         .isInstanceOf(LinkException.class);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("expired");
   }
@@ -184,7 +189,7 @@ class PasswordUnlockControllerTest {
         .thenThrow(new LinkException(LinkErrorCode.LINK_NOT_OWNED, CODE));
 
     MockHttpServletRequest req = request();
-    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, req))
+    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, null, req))
         .isInstanceOf(LinkException.class);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("error");
   }

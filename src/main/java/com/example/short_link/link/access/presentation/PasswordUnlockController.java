@@ -2,6 +2,8 @@ package com.example.short_link.link.access.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.access.application.LinkProtectionService;
+import com.example.short_link.link.access.application.TurnstileProperties;
+import com.example.short_link.link.access.application.TurnstileVerifier;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
@@ -35,6 +37,8 @@ public class PasswordUnlockController {
   private final LinkLookupQueryService lookup;
   private final LinkProtectionService protectionService;
   private final LinkRedirectFlow flow;
+  private final TurnstileProperties turnstile;
+  private final TurnstileVerifier turnstileVerifier;
 
   @PostMapping(
       value = "/{shortCode:[0-9A-Za-z]{3,16}}",
@@ -43,12 +47,19 @@ public class PasswordUnlockController {
       @PathVariable ShortCode shortCode,
       @RequestParam("password") String password,
       @RequestParam(value = "src", required = false) String src,
+      @RequestParam(value = "cf-turnstile-response", required = false) String captchaToken,
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
       HttpServletRequest req) {
     String outcome = "error";
     try {
+      // 봇 차단(Turnstile)이 켜져 있으면 먼저 통과해야 한다 — 비밀번호 추측 자동화를 막는다.
+      if (turnstileVerifier.enabled() && !turnstileVerifier.verify(captchaToken, null)) {
+        outcome = "captcha_failed";
+        return LinkHtmlRenderer.passwordPromptResponse(
+            HttpStatus.UNAUTHORIZED, shortCode, false, turnstile.siteKey());
+      }
       CachedLink link = lookup.findActiveLink(shortCode);
       LinkEntity entity =
           lookup
@@ -56,7 +67,8 @@ public class PasswordUnlockController {
               .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
       if (entity.hasPassword() && !protectionService.checkPassword(entity, password)) {
         outcome = "password_required";
-        return LinkHtmlRenderer.passwordPromptResponse(HttpStatus.UNAUTHORIZED, shortCode, true);
+        return LinkHtmlRenderer.passwordPromptResponse(
+            HttpStatus.UNAUTHORIZED, shortCode, true, turnstile.siteKey());
       }
       RedirectOutcome result =
           flow.execute(link, entity, referrer, userAgent, acceptLanguage, src, req);
