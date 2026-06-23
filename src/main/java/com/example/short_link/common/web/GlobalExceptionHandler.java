@@ -15,6 +15,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -90,6 +91,22 @@ public class GlobalExceptionHandler {
       HttpMessageNotReadableException e, HttpServletRequest req) {
     return ProblemDetails.of(
         HttpStatus.BAD_REQUEST, "malformed request body", "MALFORMED_REQUEST", req);
+  }
+
+  /**
+   * SSE 클라이언트(특히 {@code /api/v1/links/{code}/stream})가 스트림 도중 끊으면 async 응답이 더는 쓸 수 없는 상태가 되어 {@link
+   * AsyncRequestNotUsableException} 이 올라온다. 정상적인 구독 종료라 잘못이 아니다 — 그런데 이게 catch-all {@link
+   * #handleUnknown} 으로 흘러 ERROR 로 찍히면 (1) Sentry 가 정상 끊김을 에러로 잡고 (2) 이미 닫힌 응답에 ProblemDetail 본문을
+   * 쓰려다 HttpMessageNotWritableException 까지 2차로 터진다. 응답이 쓸 수 없으니 본문 없이 조용히 흘려보낸다(void) — debug 로만
+   * 흔적을 남긴다.
+   */
+  @ExceptionHandler(AsyncRequestNotUsableException.class)
+  public void handleAsyncRequestNotUsable(
+      AsyncRequestNotUsableException e, HttpServletRequest req) {
+    log.debug(
+        "async response no longer usable (client closed stream): {} {}",
+        req.getMethod(),
+        req.getRequestURI());
   }
 
   @ExceptionHandler(Exception.class)

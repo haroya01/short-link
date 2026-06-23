@@ -6,6 +6,13 @@ spring:
   cache:
     type: redis
   jpa:
+    # open-session-in-view 를 끈다. 기본값(true)이면 EntityManager 와 그것이 잡은 JDBC 커넥션이
+    # 요청 스레드에 요청 끝까지 묶인다 — 보통 요청은 밀리초라 문제없지만, /api/v1/links/{code}/stream
+    # SSE 는 최대 5분 살아 있는 async 요청이라 lookup 한 번에 잡힌 커넥션을 그 5분 내내 쥔다.
+    # 열린 스트림 하나가 풀 커넥션 하나를 점유 → 동시 대시보드가 풀(20)을 통째로 굶긴다(2026-06-22 인시던트).
+    # 끄면 각 @Transactional 조회가 커넥션을 즉시 반납하고, 긴 async 구간은 커넥션을 0개 쥔다.
+    # (컨트롤러는 엔티티가 아닌 DTO 를 반환하므로 뷰 렌더링 중 lazy 로딩이 없어 안전하다.)
+    open-in-view: false
     properties:
       hibernate:
         # Emit a WARN log for any SQL query that takes longer than the threshold (ms). 500ms is a
