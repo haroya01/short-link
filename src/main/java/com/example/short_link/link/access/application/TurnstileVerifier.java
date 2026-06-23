@@ -24,11 +24,18 @@ public class TurnstileVerifier {
       URI.create("https://challenges.cloudflare.com/turnstile/v0/siteverify");
 
   private final TurnstileProperties props;
+  private final URI endpoint;
   private final HttpClient http =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
 
   public TurnstileVerifier(TurnstileProperties props) {
+    this(props, SITEVERIFY);
+  }
+
+  // 테스트 심: siteverify 엔드포인트를 로컬 스텁으로 바꿔 검증 경로를 결정적으로 돌린다.
+  TurnstileVerifier(TurnstileProperties props, URI endpoint) {
     this.props = props;
+    this.endpoint = endpoint;
   }
 
   public boolean enabled() {
@@ -53,7 +60,7 @@ public class TurnstileVerifier {
         form.append("&remoteip=").append(enc(remoteIp));
       }
       HttpRequest request =
-          HttpRequest.newBuilder(SITEVERIFY)
+          HttpRequest.newBuilder(endpoint)
               .timeout(Duration.ofSeconds(4))
               .header("Content-Type", "application/x-www-form-urlencoded")
               .POST(HttpRequest.BodyPublishers.ofString(form.toString()))
