@@ -104,6 +104,16 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<Long> findDistinctUserIds() {
+    return jpa.findDistinctUserIds();
+  }
+
+  @Override
+  public List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to) {
+    return jpa.findByExpiresAtBetween(from, to);
+  }
+
+  @Override
   public List<LinkEntity> findOgRetryCandidates(int maxAttempts, Instant before, int limit) {
     return jpa.findOgRetryCandidates(maxAttempts, before, PageRequest.ofSize(limit));
   }

@@ -132,6 +132,15 @@ short-link:
     timeout: 2s
   bot-heuristic:
     rate-threshold: ${BOT_HEURISTIC_RATE_THRESHOLD:5}
+  # 링크 소유자 푸시 알림 — 종류별 기본 on(앱 설정에서 끔). 다이제스트·만료 잡은 toggle.
+  link-notification:
+    digest-enabled: ${LINK_NOTIFICATION_DIGEST_ENABLED:true}
+    digest-cron: ${LINK_NOTIFICATION_DIGEST_CRON:0 0 8 * * *}
+    expiry-enabled: ${LINK_NOTIFICATION_EXPIRY_ENABLED:true}
+    expiry-cron: ${LINK_NOTIFICATION_EXPIRY_CRON:0 0 9 * * *}
+    expiry-threshold-days: ${LINK_NOTIFICATION_EXPIRY_THRESHOLD_DAYS:7}
+    velocity-min-clicks: ${LINK_NOTIFICATION_VELOCITY_MIN_CLICKS:10}
+    velocity-ratio: ${LINK_NOTIFICATION_VELOCITY_RATIO:3.0}
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}

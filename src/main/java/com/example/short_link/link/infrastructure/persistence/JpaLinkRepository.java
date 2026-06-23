@@ -57,6 +57,11 @@ public interface JpaLinkRepository
 
   List<LinkEntity> findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(Instant when);
 
+  @Query("select distinct l.userId from LinkEntity l")
+  List<Long> findDistinctUserIds();
+
+  List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to);
+
   @Query(
       "SELECT l FROM LinkEntity l "
           + "WHERE l.ogFetchStatus IN ('PENDING','RETRYABLE') "
