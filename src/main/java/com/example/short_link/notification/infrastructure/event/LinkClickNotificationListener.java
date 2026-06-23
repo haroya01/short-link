@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -40,9 +41,14 @@ public class LinkClickNotificationListener {
   private final LinkNotificationProperties props;
   private final RedisDistributedLock cooldown;
 
+  // AFTER_COMMIT 이라 원래 클릭 트랜잭션은 이미 끝났다. 여기서 @Transactional(REQUIRED)을 걸면
+  // 새 트랜잭션이 열리지 않은 채 조회가 돌아 위험하다(스프링 RestrictedTransactionalEventListenerFactory 가
+  // REQUIRES_NEW/NOT_SUPPORTED 외엔 거부). 이 리스너는 읽기만 하고 푸시(APNs 네트워크 I/O)를 보낸다 —
+  // NOT_SUPPORTED 로 트랜잭션을 잡지 않으면 각 조회가 짧게 커넥션을 쥐었다 즉시 반납하고, 느린 푸시 전송
+  // 동안에는 커넥션을 0개 쥔다(2026-06 풀 고갈 인시던트 교훈: 긴 I/O 구간에 커넥션을 들고 있지 않는다).
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(readOnly = true)
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public void onClickRecorded(ClickRecordedEvent event) {
     if (event.bot()) {
       return;
