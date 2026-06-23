@@ -8,6 +8,7 @@ import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 /**
@@ -28,6 +29,8 @@ public class TurnstileVerifier {
   private final HttpClient http =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
 
+  // 생성자가 둘이라 스프링이 주입용을 못 고른다 — 운영용을 @Autowired 로 명시(2-arg 는 테스트 심).
+  @Autowired
   public TurnstileVerifier(TurnstileProperties props) {
     this(props, SITEVERIFY);
   }
