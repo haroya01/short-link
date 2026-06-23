@@ -132,6 +132,10 @@ short-link:
     timeout: 2s
   bot-heuristic:
     rate-threshold: ${BOT_HEURISTIC_RATE_THRESHOLD:5}
+  # Cloudflare Turnstile on the password gate — both empty = widget hidden + verification skipped.
+  turnstile:
+    site-key: ${TURNSTILE_SITE_KEY:}
+    secret: ${TURNSTILE_SECRET:}
   # 링크 소유자 푸시 알림 — 종류별 기본 on(앱 설정에서 끔). 다이제스트·만료 잡은 toggle.
   link-notification:
     digest-enabled: ${LINK_NOTIFICATION_DIGEST_ENABLED:true}
