@@ -6,11 +6,58 @@ import com.example.short_link.link.application.dto.LinkStats;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
+import org.springframework.context.support.ResourceBundleMessageSource;
 
 class LinkInsightsTest {
 
-  private final LinkInsights insights = new LinkInsights();
+  private static MessageSource messageSource() {
+    var ms = new ResourceBundleMessageSource();
+    ms.setBasename("messages");
+    ms.setDefaultEncoding("UTF-8");
+    ms.setFallbackToSystemLocale(false);
+    return ms;
+  }
+
+  private final LinkInsights insights = new LinkInsights(messageSource());
+
+  @AfterEach
+  void resetLocale() {
+    LocaleContextHolder.resetLocaleContext();
+  }
+
+  @Test
+  void messageLocalizesByRequestLocale() {
+    var heatmap = List.of(new LinkStats.HeatmapCell("TUESDAY", 21, 30L));
+
+    LocaleContextHolder.setLocale(Locale.ENGLISH);
+    var en =
+        insights.compute(100, 0, heatmap, List.of(), List.of(), null, null, List.of()).stream()
+            .filter(i -> i.type().equals("PEAK_HOUR"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(en.message()).contains("Peak time").contains("Tuesday");
+
+    LocaleContextHolder.setLocale(Locale.KOREAN);
+    var ko =
+        insights.compute(100, 0, heatmap, List.of(), List.of(), null, null, List.of()).stream()
+            .filter(i -> i.type().equals("PEAK_HOUR"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(ko.message()).contains("피크 시간").contains("화요일");
+
+    LocaleContextHolder.setLocale(Locale.JAPANESE);
+    var ja =
+        insights.compute(100, 0, heatmap, List.of(), List.of(), null, null, List.of()).stream()
+            .filter(i -> i.type().equals("PEAK_HOUR"))
+            .findFirst()
+            .orElseThrow();
+    assertThat(ja.message()).contains("ピーク時間").contains("火曜日");
+  }
 
   @Test
   void returnsEmptyWhenTotalBelowThreshold() {

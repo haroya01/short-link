@@ -1,13 +1,14 @@
 package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.application.dto.LinkStats;
-import java.time.DayOfWeek;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -18,6 +19,12 @@ public class LinkInsights {
   private static final double TOP_COUNTRY_THRESHOLD = 0.8;
   private static final double BOT_RATIO_THRESHOLD = 0.3;
   private static final double FAST_DECAY_THRESHOLD = 0.2;
+
+  private final MessageSource messages;
+
+  public LinkInsights(MessageSource messages) {
+    this.messages = messages;
+  }
 
   public List<LinkStats.Insight> compute(
       long total,
@@ -46,6 +53,21 @@ public class LinkInsights {
     return insights;
   }
 
+  /// 메시지는 요청 로케일(Accept-Language)로 — messages_xx.properties 에서 코드로 룩업.
+  private String msg(String code, Object... args) {
+    return messages.getMessage(code, args, LocaleContextHolder.getLocale());
+  }
+
+  /// 퍼센트 숫자를 미리 문자열로(로케일 무관). 템플릿의 % 는 리터럴이라 여기선 숫자만.
+  private static String pct(double ratio) {
+    return String.format(Locale.ROOT, "%.1f", ratio * 100);
+  }
+
+  /// 알 수 없는 요일 enum 이면 그 값 그대로(예외 없이) — 기존 dayOfWeekKo 폴백과 동일.
+  private String dayName(String dow) {
+    return messages.getMessage("dayOfWeek." + dow, null, dow, LocaleContextHolder.getLocale());
+  }
+
   /// 직접 공유(다크 소셜) — referrer 없는 사람 클릭 비율 = DM·복붙으로 퍼진 입소문 신호.
   private Optional<LinkStats.Insight> darkSocial(
       List<LinkStats.ChannelClick> channels, long total) {
@@ -56,8 +78,7 @@ public class LinkInsights {
     }
     double share = (double) direct / total;
     if (share < 0.3) return Optional.empty();
-    String message =
-        String.format(Locale.KOREAN, "직접 공유(다크소셜)가 %.1f%% — DM·복붙으로 퍼졌어요", share * 100);
+    String message = msg("insight.DARK_SOCIAL", pct(share));
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("share", round3(share));
     data.put("directClicks", direct);
@@ -76,7 +97,7 @@ public class LinkInsights {
     for (int i = ds; i < de; i++) dormant += dailyClicks.get(i).count();
     double dormantAvg = (de - ds) > 0 ? (double) dormant / (de - ds) : 0;
     if (recent3 >= 5 && dormantAvg < 1.0 && recent3 >= 3 * Math.max(dormant, 1)) {
-      String message = String.format(Locale.KOREAN, "다시 살아났어요 — 잠잠하던 링크가 최근 %d클릭", recent3);
+      String message = msg("insight.SECOND_WIND", String.valueOf(recent3));
       Map<String, Object> data = new LinkedHashMap<>();
       data.put("recent3", recent3);
       data.put("dormantAvg", round3(dormantAvg));
@@ -95,7 +116,7 @@ public class LinkInsights {
     long daysIdle =
         java.time.temporal.ChronoUnit.DAYS.between(lastActive, java.time.LocalDate.now());
     if (daysIdle < 7) return Optional.empty();
-    String message = String.format(Locale.KOREAN, "%d일째 클릭이 없어요 — 다시 공유하면 살아날 수 있어요", daysIdle);
+    String message = msg("insight.DORMANT", String.valueOf(daysIdle));
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("daysIdle", daysIdle);
     return Optional.of(new LinkStats.Insight("DORMANT", "warning", message, data));
@@ -110,9 +131,8 @@ public class LinkInsights {
     if (peak.count() < 2) return Optional.empty();
     double share = (double) peak.count() / total;
     String dow = peak.dayOfWeek();
-    String dowKo = dayOfWeekKo(dow);
     String message =
-        String.format(Locale.KOREAN, "피크 시간은 %s %d시 (전체의 %.1f%%)", dowKo, peak.hour(), share * 100);
+        msg("insight.PEAK_HOUR", dayName(dow), String.valueOf(peak.hour()), pct(share));
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("dayOfWeek", dow);
     data.put("hour", peak.hour());
@@ -127,8 +147,7 @@ public class LinkInsights {
     LinkStats.ChannelClick top = channels.get(0);
     double share = (double) top.count() / total;
     if (share < TOP_CHANNEL_THRESHOLD) return Optional.empty();
-    String message =
-        String.format(Locale.KOREAN, "트래픽의 %.1f%%가 %s에서 발생", share * 100, top.channel());
+    String message = msg("insight.TOP_CHANNEL", pct(share), top.channel());
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("channel", top.channel());
     data.put("share", round3(share));
@@ -141,8 +160,7 @@ public class LinkInsights {
     LinkStats.CountryClick top = countries.get(0);
     double share = (double) top.count() / total;
     if (share < TOP_COUNTRY_THRESHOLD) return Optional.empty();
-    String message =
-        String.format(Locale.KOREAN, "클릭의 %.1f%%가 %s에서 발생, 글로벌 도달이 낮음", share * 100, top.country());
+    String message = msg("insight.COUNTRY_CONCENTRATION", pct(share), top.country());
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("country", top.country());
     data.put("share", round3(share));
@@ -154,7 +172,7 @@ public class LinkInsights {
     long denom = rr.newVisitors() + rr.returningVisitors();
     if (denom < 5) return Optional.empty();
     double newShare = (double) rr.newVisitors() / denom;
-    String message = String.format(Locale.KOREAN, "방문자 %.1f%%가 첫 방문", newShare * 100);
+    String message = msg("insight.VISITOR_MIX", pct(newShare));
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("newShare", round3(newShare));
     data.put("returningShare", round3(1.0 - newShare));
@@ -165,7 +183,7 @@ public class LinkInsights {
     if (total == 0) return Optional.empty();
     double share = (double) bot / total;
     if (share < BOT_RATIO_THRESHOLD) return Optional.empty();
-    String message = String.format(Locale.KOREAN, "봇 트래픽이 %.1f%%로 비정상적으로 높음", share * 100);
+    String message = msg("insight.BOT_RATIO_HIGH", pct(share));
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("share", round3(share));
     return Optional.of(new LinkStats.Insight("BOT_RATIO_HIGH", "warning", message, data));
@@ -184,8 +202,7 @@ public class LinkInsights {
     if (total < 10 || firstWeek == 0) return Optional.empty();
     double firstDayShare = (double) firstDay / total;
     if (firstDayShare >= 1 - FAST_DECAY_THRESHOLD) {
-      String message =
-          String.format(Locale.KOREAN, "빠른 소멸형 (1일 이내 %.1f%% 소진)", firstDayShare * 100);
+      String message = msg("insight.FAST_DECAY", pct(firstDayShare));
       Map<String, Object> data = new LinkedHashMap<>();
       data.put("firstDayShare", round3(firstDayShare));
       data.put("halfLifeDays", lifecycle.halfLifeDays());
@@ -206,9 +223,8 @@ public class LinkInsights {
     if (prev7 < 5) return Optional.empty();
     double ratio = (double) (last7 - prev7) / prev7;
     if (Math.abs(ratio) < 0.2) return Optional.empty();
-    String direction = ratio > 0 ? "+" : "";
-    String message =
-        String.format(Locale.KOREAN, "지난 7일 클릭 %s%.1f%% (전 7일 대비)", direction, ratio * 100);
+    String signedPct = (ratio > 0 ? "+" : "") + pct(ratio);
+    String message = msg("insight.WEEK_OVER_WEEK", signedPct);
     Map<String, Object> data = new LinkedHashMap<>();
     data.put("last7", last7);
     data.put("prev7", prev7);
@@ -219,22 +235,5 @@ public class LinkInsights {
 
   private static double round3(double v) {
     return Math.round(v * 1000.0) / 1000.0;
-  }
-
-  private static String dayOfWeekKo(String enumName) {
-    try {
-      DayOfWeek dow = DayOfWeek.valueOf(enumName);
-      return switch (dow) {
-        case MONDAY -> "월요일";
-        case TUESDAY -> "화요일";
-        case WEDNESDAY -> "수요일";
-        case THURSDAY -> "목요일";
-        case FRIDAY -> "금요일";
-        case SATURDAY -> "토요일";
-        case SUNDAY -> "일요일";
-      };
-    } catch (IllegalArgumentException e) {
-      return enumName;
-    }
   }
 }

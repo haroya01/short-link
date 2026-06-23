@@ -1,6 +1,11 @@
 spring:
   application:
     name: short-link
+  messages:
+    # 인사이트 메시지 i18n — Accept-Language 로 ko/en/ja/vi/hi 결정. 없는 키/로케일은 영어(base)로.
+    basename: messages
+    encoding: UTF-8
+    fallback-to-system-locale: false
   lifecycle:
     timeout-per-shutdown-phase: 30s
   cache:
