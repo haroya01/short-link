@@ -44,6 +44,12 @@ public interface LinkRepository {
 
   List<LinkEntity> findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(Instant when);
 
+  /** Distinct owners of any link — drives the per-user notification digest. */
+  List<Long> findDistinctUserIds();
+
+  /** Links whose expiry falls in [from, to) — drives the expiry-imminent notification. */
+  List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to);
+
   List<LinkEntity> findOgRetryCandidates(int maxAttempts, Instant before, int limit);
 
   List<LinkEntity> findStaleOgCandidates(Instant before, int limit);
