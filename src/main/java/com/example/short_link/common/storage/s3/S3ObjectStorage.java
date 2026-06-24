@@ -6,6 +6,7 @@ import java.time.Duration;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
@@ -43,6 +44,22 @@ public class S3ObjectStorage implements ObjectStorage {
       return signed.url().toString();
     } catch (RuntimeException e) {
       throw new ObjectStorageException("S3 presign failed for key=" + key, e);
+    }
+  }
+
+  @Override
+  public void putObject(String key, String contentType, byte[] body) {
+    try {
+      PutObjectRequest put =
+          PutObjectRequest.builder()
+              .bucket(props.bucket())
+              .key(key)
+              .contentType(contentType)
+              .contentLength((long) body.length)
+              .build();
+      s3Client.putObject(put, RequestBody.fromBytes(body));
+    } catch (RuntimeException e) {
+      throw new ObjectStorageException("S3 putObject failed for key=" + key, e);
     }
   }
 
