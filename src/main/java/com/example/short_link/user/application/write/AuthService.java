@@ -86,15 +86,16 @@ public class AuthService {
   }
 
   /**
-   * Native Sign in with Apple — {@link AppleIdentityVerifier} has already pinned
-   * signature/issuer/audience/nonce, so subject and email arrive trusted. Linking rule: an existing
-   * account with the same email logs into that account. Both Google and Apple hand us IdP-verified
-   * addresses and {@code users.email} is UNIQUE, so one kurl account per email stays the invariant;
-   * the row keeps its original oauth_provider/oauth_id identity and later Apple logins keep
-   * arriving through the email match.
+   * Sign in with Apple — shared by the native app and the web "Sign in with Apple JS" flow (only
+   * the delivery differs: the app reads body tokens, the web gets a refresh cookie + body access
+   * token). {@link AppleIdentityVerifier} has already pinned signature/issuer/audience/nonce, so
+   * subject and email arrive trusted. Linking rule: an existing account with the same email logs
+   * into that account. Both Google and Apple hand us IdP-verified addresses and {@code users.email}
+   * is UNIQUE, so one kurl account per email stays the invariant; the row keeps its original
+   * oauth_provider/oauth_id identity and later Apple logins keep arriving through the email match.
    */
   @Transactional
-  public LoginResult loginWithAppleNative(String appleSubject, String email) {
+  public LoginResult loginWithApple(String appleSubject, String email) {
     UserEntity user =
         userRepository
             .findByOauthProviderAndOauthId("apple", appleSubject)

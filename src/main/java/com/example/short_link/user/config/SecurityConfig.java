@@ -183,6 +183,10 @@ public class SecurityConfig {
                         POST,
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/2fa/verify",
+                        // Web "Sign in with Apple" — the id_token IS the credential (verified
+                        // against
+                        // Apple's JWKS), so this lands before a session exists, like /refresh.
+                        "/api/v1/auth/apple",
                         "/api/v1/auth/dev-login")
                     .permitAll()
                     // Native-app auth: /start opens the OAuth dance from the browser sheet, the
