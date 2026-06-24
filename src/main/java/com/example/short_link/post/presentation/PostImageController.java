@@ -2,6 +2,7 @@ package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.image.PostImageService;
 import com.example.short_link.post.presentation.request.PostImageCommitRequest;
+import com.example.short_link.post.presentation.request.PostImageImportRequest;
 import com.example.short_link.post.presentation.request.PostImagePresignRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,5 +34,14 @@ public class PostImageController {
       @PathVariable Long postId,
       @Valid @RequestBody PostImageCommitRequest request) {
     return postImageService.commitUpload(userId, postId, request.key());
+  }
+
+  /** Re-host an external image URL (e.g. pasted from Notion) — server fetches and stores it. */
+  @PostMapping("/import")
+  public PostImageService.CommitResult importFromUrl(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long postId,
+      @Valid @RequestBody PostImageImportRequest request) {
+    return postImageService.importFromUrl(userId, postId, request.url());
   }
 }

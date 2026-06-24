@@ -13,10 +13,12 @@ import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
@@ -94,6 +96,23 @@ class S3ObjectStorageTest {
         .deleteObject(any(DeleteObjectRequest.class));
 
     assertThatThrownBy(() -> storage(true).delete("avatars/u-5.png"))
+        .isInstanceOf(ObjectStorageException.class);
+  }
+
+  @Test
+  void putObjectInvokesSdkClient() {
+    storage(true).putObject("post-images/7/42/x.png", "image/png", new byte[] {1, 2, 3});
+
+    verify(s3).putObject(any(PutObjectRequest.class), any(RequestBody.class));
+  }
+
+  @Test
+  void putObjectWrapsSdkExceptionAsObjectStorage() {
+    when(s3.putObject(any(PutObjectRequest.class), any(RequestBody.class)))
+        .thenThrow(S3Exception.builder().message("boom").build());
+
+    assertThatThrownBy(
+            () -> storage(true).putObject("post-images/7/42/x.png", "image/png", new byte[] {1}))
         .isInstanceOf(ObjectStorageException.class);
   }
 }
