@@ -85,6 +85,9 @@ short-link:
   apple:
     issuer: ${APPLE_SIGNIN_ISSUER:https://appleid.apple.com}
     jwk-set-uri: ${APPLE_SIGNIN_JWKS:https://appleid.apple.com/auth/keys}
+    # Accepted identity-token audiences. The iOS bundle id covers the native app; the WEB "Sign in
+    # with Apple JS" flow uses a separate Services ID, so add it here (comma-separated) once it's
+    # created in Apple Developer, e.g. APPLE_SIGNIN_CLIENT_IDS=focustime.kurl,me.kurl.signin
     client-ids: ${APPLE_SIGNIN_CLIENT_IDS:focustime.kurl}
   rate-limit:
     anonymous: 100

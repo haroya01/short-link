@@ -1,11 +1,17 @@
 package com.example.short_link.user.presentation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.user.application.JwtTokenService;
+import com.example.short_link.user.application.dto.AppleIdentity;
+import com.example.short_link.user.application.write.AppleIdentityVerifier;
 import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.UserEntity;
@@ -16,7 +22,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +39,10 @@ class AuthControllerTest {
   @Autowired private JwtTokenService jwt;
   @Autowired private RefreshTokenStore refreshStore;
   @Autowired private UserRepository userRepository;
+
+  // Can't forge an Apple-signed id_token, so stub the JWKS verification; everything downstream
+  // (permitAll, user upsert, token issue, refresh cookie) runs for real against the DB.
+  @MockitoBean private AppleIdentityVerifier appleVerifier;
 
   @Test
   void refreshIssuesNewAccessToken() throws Exception {
@@ -99,5 +112,32 @@ class AuthControllerTest {
   @Test
   void logoutWithoutAuthReturns401() throws Exception {
     mvc.perform(post("/api/v1/auth/logout")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void appleWebLoginUpsertsUserSetsRefreshCookieAndReturnsAccessToken() throws Exception {
+    when(appleVerifier.verify(any(), any()))
+        .thenReturn(new AppleIdentity("apple-sub-web", "apple-web@example.com"));
+
+    mvc.perform(
+            post("/api/v1/auth/apple")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"identityToken\":\"id-token\",\"nonce\":\"raw-nonce\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.accessToken").isString())
+        .andExpect(jsonPath("$.challenge").doesNotExist())
+        .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("refresh_token=")))
+        .andExpect(header().string(HttpHeaders.SET_COOKIE, containsString("HttpOnly")));
+
+    assertThat(userRepository.findByOauthProviderAndOauthId("apple", "apple-sub-web")).isPresent();
+  }
+
+  @Test
+  void appleWebLoginRequiresIdentityToken() throws Exception {
+    mvc.perform(
+            post("/api/v1/auth/apple")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"nonce\":\"raw-nonce\"}"))
+        .andExpect(status().isBadRequest());
   }
 }
