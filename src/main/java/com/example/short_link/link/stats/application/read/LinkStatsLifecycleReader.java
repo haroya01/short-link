@@ -5,6 +5,8 @@ import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.repository.ClickLifecycleReadRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,6 +16,7 @@ class LinkStatsLifecycleReader {
   private static final int LIFECYCLE_MAX_DAY = 30;
 
   private final ClickLifecycleReadRepository clickLifecycle;
+  private final MessageSource messages;
 
   LinkStats.ReturnRate returnRate(LinkId linkId) {
     var row = clickLifecycle.findReturnRate(linkId.value());
@@ -40,11 +43,10 @@ class LinkStatsLifecycleReader {
       long gapSeconds = row.getFirstSeenEpoch() - originEpoch;
       if (gapSeconds >= 3600) {
         String message =
-            String.format(
-                java.util.Locale.KOREAN,
-                "%s에서 시작했는데 %s로 퍼졌어요 — 원래 청중 밖으로 넘어갔어요",
-                origin.getHost(),
-                row.getHost());
+            messages.getMessage(
+                "insight.CHANNEL_JUMP",
+                new Object[] {origin.getHost(), row.getHost()},
+                LocaleContextHolder.getLocale());
         java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
         data.put("origin", origin.getHost());
         data.put("jumpedTo", row.getHost());
