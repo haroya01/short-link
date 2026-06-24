@@ -240,4 +240,59 @@ class PostImageServiceTest {
     whenImport().runExpectingThrow();
     verify(objectStorage, never()).putObject(anyString(), anyString(), any(byte[].class));
   }
+
+  @Test
+  void importRejectsNullUserId() {
+    assertThatThrownBy(() -> service.importFromUrl(null, 42L, IMG_URL))
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.INVALID_AVATAR);
+  }
+
+  @Test
+  void importRejectsNullUrl() {
+    when(props.isConfigured()).thenReturn(true);
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
+
+    assertThatThrownBy(() -> service.importFromUrl(7L, 42L, null))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.PERMISSION_DENIED);
+  }
+
+  @Test
+  void importRejectsMissingContentType() {
+    when(props.isConfigured()).thenReturn(true);
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
+    when(props.maxBytes()).thenReturn(5_000_000L);
+    when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
+        .thenReturn(new HttpFetcher.Response(200, Map.of(), new byte[] {1, 2}));
+
+    whenImport().runExpectingThrow();
+    verify(objectStorage, never()).putObject(anyString(), anyString(), any(byte[].class));
+  }
+
+  @Test
+  void importRejectsEmptyBody() {
+    when(props.isConfigured()).thenReturn(true);
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
+    when(props.maxBytes()).thenReturn(5_000_000L);
+    when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
+        .thenReturn(response(200, "image/png", new byte[0]));
+
+    whenImport().runExpectingThrow();
+    verify(objectStorage, never()).putObject(anyString(), anyString(), any(byte[].class));
+  }
+
+  @Test
+  void importWrapsFetchError() {
+    when(props.isConfigured()).thenReturn(true);
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
+    when(props.maxBytes()).thenReturn(5_000_000L);
+    when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
+        .thenThrow(new RuntimeException("connection reset"));
+
+    whenImport().runExpectingThrow();
+    verify(objectStorage, never()).putObject(anyString(), anyString(), any(byte[].class));
+  }
 }
