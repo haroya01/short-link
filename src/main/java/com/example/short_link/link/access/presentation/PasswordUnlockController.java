@@ -14,9 +14,7 @@ import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.application.helper.LinkHtmlRenderer;
 import jakarta.servlet.http.HttpServletRequest;
-import java.net.URI;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -86,6 +84,11 @@ public class PasswordUnlockController {
             case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
             default -> "error";
           };
+      // 비밀번호를 맞춰도 한도초과·만료면 JSON 대신 브랜드 HTML 페이지로.
+      ResponseEntity<byte[]> page = LinkHtmlRenderer.visitorErrorPage(e.errorCode());
+      if (page != null) {
+        return page;
+      }
       throw e;
     } finally {
       req.setAttribute(OutcomeResolver.ATTRIBUTE, outcome);
@@ -94,12 +97,8 @@ public class PasswordUnlockController {
 
   private ResponseEntity<?> renderUnlock(RedirectOutcome outcome) {
     return switch (outcome) {
-      case RedirectOutcome.Redirect r ->
-          ResponseEntity.status(HttpStatus.FOUND)
-              .location(URI.create(r.picked().url()))
-              .header(HttpHeaders.CACHE_CONTROL, "no-store")
-              .header("X-Robots-Tag", "noindex, nofollow")
-              .build();
+        // 비밀번호가 맞으면 곧장 302 하지 않고, kurl 마크가 그려지는 잠금 해제 화면을 잠깐 보여준 뒤 이동한다.
+      case RedirectOutcome.Redirect r -> LinkHtmlRenderer.unlockedPageResponse(r.picked().url());
       case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
       case RedirectOutcome.ExpiredWithMessage em ->
           LinkHtmlRenderer.expiredPageResponse(em.message());

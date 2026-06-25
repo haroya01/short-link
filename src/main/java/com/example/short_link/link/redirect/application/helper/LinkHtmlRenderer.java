@@ -1,16 +1,19 @@
 package com.example.short_link.link.redirect.application.helper;
 
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.exception.LinkErrorCode;
 import java.nio.charset.StandardCharsets;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Static-HTML interstitials rendered inline by the redirect / unlock flow — expired, blocked,
- * password prompt. No external assets (served from the redirect hot path), but responsive and
- * on-brand: a centered card, kurl green accent, dark-mode aware, 16px inputs (no iOS zoom). The
- * password prompt optionally renders a Cloudflare Turnstile widget when a site key is configured.
+ * Static-HTML interstitials rendered inline by the redirect / unlock flow — not-found, expired,
+ * view-limit reached, blocked, password prompt, and the post-unlock kurl reveal. No external assets
+ * (served from the redirect hot path), but responsive (desktop + mobile, 16px inputs = no iOS
+ * zoom), dark-mode aware, and on-brand: a centered card with the kurl green mark and a gentle
+ * entrance. The password prompt shakes on a wrong password and optionally renders a Cloudflare
+ * Turnstile widget; a correct password animates a kurl mark, then forwards to the destination.
  */
 public final class LinkHtmlRenderer {
 
@@ -27,7 +30,9 @@ public final class LinkHtmlRenderer {
       font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',system-ui,sans-serif;\
       background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
       .card{width:100%;max-width:360px;background:var(--card);border:1px solid var(--border);\
-      border-radius:16px;padding:28px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px rgba(15,23,42,.05)}
+      border-radius:16px;padding:28px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px rgba(15,23,42,.05);\
+      animation:rise .4s cubic-bezier(.16,1,.3,1)}
+      @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
       .mark{display:flex;gap:3px;align-items:center;margin-bottom:18px}
       .mark i{height:4px;border-radius:2px;background:var(--brand);display:block}
       .mark i:nth-child(1){width:18px}.mark i:nth-child(2){width:12px}.mark i:nth-child(3){width:7px}
@@ -43,16 +48,41 @@ public final class LinkHtmlRenderer {
       button:hover{background:var(--press)}
       .cf{margin-top:14px;display:flex;justify-content:center}
       .err{color:var(--danger);font-size:13px;margin:10px 0 0;text-align:center}
+      @keyframes shake{10%,90%{transform:translateX(-1px)}20%,80%{transform:translateX(2px)}\
+      30%,50%,70%{transform:translateX(-6px)}40%,60%{transform:translateX(6px)}}
+      .shake{animation:shake .5s cubic-bezier(.36,.07,.19,.97)}
+      .shake input{border-color:var(--danger);box-shadow:0 0 0 3px rgba(220,38,38,.12)}
+      .unlock{text-align:center}
+      .unlock .mark{display:none}
+      .bigmark{display:flex;flex-direction:column;gap:6px;align-items:center;margin:4px 0 18px}
+      .bigmark i{height:8px;border-radius:4px;background:var(--brand);transform-origin:left;\
+      transform:scaleX(0);animation:grow .55s cubic-bezier(.16,1,.3,1) forwards}
+      .bigmark i:nth-child(1){width:52px;animation-delay:.06s}
+      .bigmark i:nth-child(2){width:36px;animation-delay:.19s}
+      .bigmark i:nth-child(3){width:22px;animation-delay:.32s}
+      @keyframes grow{to{transform:scaleX(1)}}
+      .bar{width:130px;height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin:16px auto 0}
+      .bar span{display:block;height:100%;background:var(--brand);transform-origin:left;\
+      transform:scaleX(0);animation:fill 1.25s linear .3s forwards}
+      @keyframes fill{to{transform:scaleX(1)}}
+      .pow{font-size:12px;color:var(--muted);margin-top:14px}.pow b{color:var(--brand);font-weight:600}
       """;
 
   private static String page(String title, String inner) {
+    return page(title, inner, "", "");
+  }
+
+  private static String page(String title, String inner, String cardClass, String headExtra) {
     return "<!doctype html><html lang=\"ko\"><head><meta charset=\"utf-8\">"
         + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
+        + headExtra
         + "<title>"
         + title
         + "</title><style>"
         + STYLE
-        + "</style></head><body><main class=\"card\">"
+        + "</style></head><body><main class=\"card"
+        + cardClass
+        + "\">"
         + "<div class=\"mark\"><i></i><i></i><i></i></div>"
         + inner
         + "</main></body></html>";
@@ -66,19 +96,62 @@ public final class LinkHtmlRenderer {
     return htmlResponse(HttpStatus.FORBIDDEN, blockedPage());
   }
 
+  public static ResponseEntity<byte[]> notFoundPageResponse() {
+    return htmlResponse(HttpStatus.NOT_FOUND, notFoundPage());
+  }
+
+  public static ResponseEntity<byte[]> viewLimitPageResponse() {
+    return htmlResponse(HttpStatus.GONE, viewLimitPage());
+  }
+
   public static ResponseEntity<byte[]> passwordPromptResponse(
       HttpStatus status, ShortCode shortCode, boolean failed, String turnstileSiteKey) {
     return htmlResponse(status, passwordPrompt(shortCode, failed, turnstileSiteKey));
   }
 
+  /** Post-unlock kurl reveal — animates, then forwards to {@code destinationUrl}. */
+  public static ResponseEntity<byte[]> unlockedPageResponse(String destinationUrl) {
+    return htmlResponse(HttpStatus.OK, unlockedPage(destinationUrl));
+  }
+
+  /**
+   * Maps a visitor-facing terminal error to its branded HTML page so the bare {@code /{code}} link
+   * never shows raw JSON. Returns {@code null} for codes that aren't visitor-facing, so the caller
+   * propagates them to the API error handler.
+   */
+  public static ResponseEntity<byte[]> visitorErrorPage(LinkErrorCode code) {
+    return switch (code) {
+      case LINK_NOT_FOUND -> notFoundPageResponse();
+      case LINK_EXPIRED -> expiredPageResponse(null);
+      case LINK_VIEW_LIMIT_EXCEEDED -> viewLimitPageResponse();
+      default -> null;
+    };
+  }
+
   static String expiredPage(String message) {
-    return page(
-        "Link no longer available", "<h1>이 링크는 더 이상 열 수 없어요</h1><p>" + escape(message) + "</p>");
+    String body =
+        (message == null || message.isBlank())
+            ? "<p>설정된 기간이 지났거나 만든 사람이 만료시킨 링크예요.</p>"
+            : "<p>" + escape(message) + "</p>";
+    return page("Link no longer available", "<h1>이 링크는 더 이상 열 수 없어요</h1>" + body);
   }
 
   static String blockedPage() {
     return page(
         "Not available", "<h1>이 지역에서는 열 수 없는 링크예요</h1>" + "<p>잘못된 것 같다면 링크를 만든 사람에게 문의하세요.</p>");
+  }
+
+  static String notFoundPage() {
+    return page(
+        "Link not found",
+        "<h1>찾을 수 없는 링크예요</h1>" + "<p>주소가 틀렸거나, 삭제됐거나, 아직 만들어지지 않은 링크일 수 있어요.</p>");
+  }
+
+  static String viewLimitPage() {
+    return page(
+        "Link no longer available",
+        "<h1>조회 한도에 도달한 링크예요</h1>"
+            + "<p>이 링크는 만든 사람이 정한 최대 조회수를 모두 채워 더 이상 열 수 없어요.\n새 링크가 필요하면 만든 사람에게 문의하세요.</p>");
   }
 
   static String passwordPrompt(ShortCode shortCode, boolean failed, String turnstileSiteKey) {
@@ -106,7 +179,29 @@ public final class LinkHtmlRenderer {
             + error
             + "</form>"
             + script;
-    return page(shortCode + " · 비밀번호", inner);
+    // 비밀번호 오류 시 카드를 흔들어(shake) 즉각적인 피드백을 준다.
+    return page(shortCode + " · 비밀번호", inner, failed ? " shake" : "", "");
+  }
+
+  static String unlockedPage(String destinationUrl) {
+    String safe = escape(destinationUrl);
+    // no-JS 폴백(3초) + JS 즉시(1.3초). URL 은 HTML 이스케이프해 data 속성에 싣고 JS 가 DOM 에서 읽어
+    // 문자열 인젝션 없이 location.replace 한다.
+    String head = "<meta http-equiv=\"refresh\" content=\"3; url=" + safe + "\">";
+    String inner =
+        "<div class=\"unlock\">"
+            + "<div class=\"bigmark\"><i></i><i></i><i></i></div>"
+            + "<h1>열렸어요</h1>"
+            + "<p>kurl 로 안전하게 잠금을 풀었어요.\n곧 이동합니다.</p>"
+            + "<div class=\"bar\"><span></span></div>"
+            + "<p class=\"pow\"><b>kurl</b> 로 단축한 링크</p>"
+            + "<span id=\"d\" data-u=\""
+            + safe
+            + "\" hidden></span>"
+            + "</div>"
+            + "<script>setTimeout(function(){var u=document.getElementById('d').dataset.u;"
+            + "if(u){location.replace(u)}},1300)</script>";
+    return page("여는 중…", inner, " unlock", head);
   }
 
   private static String escape(String s) {

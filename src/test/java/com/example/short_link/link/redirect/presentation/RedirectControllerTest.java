@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.cache.CacheManager;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
@@ -85,13 +86,12 @@ class RedirectControllerTest {
   }
 
   @Test
-  void returns404ForUnknownCode() throws Exception {
+  void returns404HtmlForUnknownCode() throws Exception {
+    // 방문자가 연 링크라 JSON 대신 브랜드 HTML 404 페이지를 준다(상태코드는 유지).
     mvc.perform(get("/zzzzzzz"))
         .andExpect(status().isNotFound())
-        .andExpect(jsonPath("$.code").value("LINK_NOT_FOUND"))
-        .andExpect(jsonPath("$.status").value(404))
-        .andExpect(jsonPath("$.timestamp").exists())
-        .andExpect(jsonPath("$.detail").value("link not found: zzzzzzz"));
+        .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+        .andExpect(content().string(Matchers.containsString("찾을 수 없는 링크")));
   }
 
   @Test
@@ -150,6 +150,7 @@ class RedirectControllerTest {
 
     mvc.perform(get("/exp1234"))
         .andExpect(status().isGone())
-        .andExpect(jsonPath("$.code").value("LINK_EXPIRED"));
+        .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
+        .andExpect(content().string(Matchers.containsString("더 이상 열 수 없")));
   }
 }
