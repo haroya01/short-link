@@ -49,14 +49,14 @@ class LinkClickNotificationListenerTest {
   @Test
   void botClickIsIgnored() {
     listener.onClickRecorded(event(true));
-    verify(dispatcher, never()).dispatch(any(), any(), anyString(), anyString());
+    verify(dispatcher, never()).dispatch(any(), any(), any(), any(), any());
   }
 
   @Test
   void missingLinkIsIgnored() {
     when(links.findById(1L)).thenReturn(Optional.empty());
     listener.onClickRecorded(event(false));
-    verify(dispatcher, never()).dispatch(any(), any(), anyString(), anyString());
+    verify(dispatcher, never()).dispatch(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -65,7 +65,8 @@ class LinkClickNotificationListenerTest {
     when(totals.countHumanByLinkId(1L)).thenReturn(1L);
     listener.onClickRecorded(event(false));
     verify(dispatcher)
-        .dispatch(eq(5L), eq(LinkNotificationType.FIRST_CLICK), anyString(), anyString());
+        .dispatch(
+            eq(5L), eq(LinkNotificationType.FIRST_CLICK), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -74,7 +75,8 @@ class LinkClickNotificationListenerTest {
     when(totals.countHumanByLinkId(1L)).thenReturn(100L);
     listener.onClickRecorded(event(false));
     verify(dispatcher)
-        .dispatch(eq(5L), eq(LinkNotificationType.MILESTONE), anyString(), anyString());
+        .dispatch(
+            eq(5L), eq(LinkNotificationType.MILESTONE), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -86,7 +88,8 @@ class LinkClickNotificationListenerTest {
     when(cooldown.tryAcquire(anyString(), any(Duration.class))).thenReturn(true);
     listener.onClickRecorded(event(false));
     verify(dispatcher)
-        .dispatch(eq(5L), eq(LinkNotificationType.VELOCITY_SPIKE), anyString(), anyString());
+        .dispatch(
+            eq(5L), eq(LinkNotificationType.VELOCITY_SPIKE), anyString(), anyString(), anyString());
   }
 
   @Test
@@ -95,7 +98,7 @@ class LinkClickNotificationListenerTest {
     when(totals.countHumanByLinkId(1L)).thenReturn(50L);
     when(ranges.countHumanByLinkIdAndRange(eq(1L), any(), any())).thenReturn(2L); // current < 3
     listener.onClickRecorded(event(false));
-    verify(dispatcher, never()).dispatch(any(), any(), anyString(), anyString());
+    verify(dispatcher, never()).dispatch(any(), any(), any(), any(), any());
   }
 
   @Test
@@ -105,6 +108,6 @@ class LinkClickNotificationListenerTest {
     when(ranges.countHumanByLinkIdAndRange(eq(1L), any(), any())).thenReturn(20L, 0L);
     when(cooldown.tryAcquire(anyString(), any(Duration.class))).thenReturn(false);
     listener.onClickRecorded(event(false));
-    verify(dispatcher, never()).dispatch(any(), any(), anyString(), anyString());
+    verify(dispatcher, never()).dispatch(any(), any(), any(), any(), any());
   }
 }
