@@ -33,9 +33,7 @@ public final class LinkHtmlRenderer {
       border-radius:16px;padding:28px;box-shadow:0 1px 2px rgba(15,23,42,.04),0 10px 30px rgba(15,23,42,.05);\
       animation:rise .4s cubic-bezier(.16,1,.3,1)}
       @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-      .mark{display:flex;gap:3px;align-items:center;margin-bottom:18px}
-      .mark i{height:4px;border-radius:2px;background:var(--brand);display:block}
-      .mark i:nth-child(1){width:18px}.mark i:nth-child(2){width:12px}.mark i:nth-child(3){width:7px}
+      .mark{display:block;width:26px;height:auto;color:var(--brand);margin-bottom:18px}
       h1{font-size:17px;margin:0 0 6px;letter-spacing:-.01em;line-height:1.4}
       p{font-size:14px;line-height:1.6;color:var(--muted);margin:0;white-space:pre-wrap}
       form{margin-top:18px}
@@ -54,19 +52,25 @@ public final class LinkHtmlRenderer {
       .shake input{border-color:var(--danger);box-shadow:0 0 0 3px rgba(220,38,38,.12)}
       .unlock{text-align:center}
       .unlock .mark{display:none}
-      .bigmark{display:flex;flex-direction:column;gap:6px;align-items:center;margin:4px 0 18px}
-      .bigmark i{height:8px;border-radius:4px;background:var(--brand);transform-origin:left;\
-      transform:scaleX(0);animation:grow .55s cubic-bezier(.16,1,.3,1) forwards}
-      .bigmark i:nth-child(1){width:52px;animation-delay:.06s}
-      .bigmark i:nth-child(2){width:36px;animation-delay:.19s}
-      .bigmark i:nth-child(3){width:22px;animation-delay:.32s}
-      @keyframes grow{to{transform:scaleX(1)}}
+      .bigmark{display:block;width:92px;height:auto;color:var(--brand);margin:2px auto 18px;\
+      clip-path:inset(0 100% 0 0);animation:wipe .7s cubic-bezier(.16,1,.3,1) .1s forwards}
+      @keyframes wipe{to{clip-path:inset(0 0 0 0)}}
       .bar{width:130px;height:4px;border-radius:2px;background:var(--border);overflow:hidden;margin:16px auto 0}
       .bar span{display:block;height:100%;background:var(--brand);transform-origin:left;\
       transform:scaleX(0);animation:fill 1.25s linear .3s forwards}
       @keyframes fill{to{transform:scaleX(1)}}
       .pow{font-size:12px;color:var(--muted);margin-top:14px}.pow b{color:var(--brand);font-weight:600}
       """;
+
+  /** Canonical kurl mark — same geometry as the web Logo (components/common/logo.tsx) and iOS. */
+  private static String markSvg(String cls) {
+    return "<svg class=\""
+        + cls
+        + "\" viewBox=\"0 0 28 18\" fill=\"currentColor\" aria-hidden=\"true\">"
+        + "<rect x=\"6\" y=\"1\" width=\"20\" height=\"3.4\" rx=\"1.7\"/>"
+        + "<rect x=\"0\" y=\"7.3\" width=\"28\" height=\"3.4\" rx=\"1.7\"/>"
+        + "<rect x=\"9\" y=\"13.6\" width=\"17\" height=\"3.4\" rx=\"1.7\"/></svg>";
+  }
 
   private static String page(String title, String inner) {
     return page(title, inner, "", "");
@@ -83,7 +87,7 @@ public final class LinkHtmlRenderer {
         + "</style></head><body><main class=\"card"
         + cardClass
         + "\">"
-        + "<div class=\"mark\"><i></i><i></i><i></i></div>"
+        + markSvg("mark")
         + inner
         + "</main></body></html>";
   }
@@ -190,7 +194,7 @@ public final class LinkHtmlRenderer {
     String head = "<meta http-equiv=\"refresh\" content=\"3; url=" + safe + "\">";
     String inner =
         "<div class=\"unlock\">"
-            + "<div class=\"bigmark\"><i></i><i></i><i></i></div>"
+            + markSvg("bigmark")
             + "<h1>열렸어요</h1>"
             + "<p>kurl 로 안전하게 잠금을 풀었어요.\n곧 이동합니다.</p>"
             + "<div class=\"bar\"><span></span></div>"
