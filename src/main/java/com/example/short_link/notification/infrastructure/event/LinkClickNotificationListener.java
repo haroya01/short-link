@@ -64,19 +64,30 @@ public class LinkClickNotificationListener {
       long human = totals.countHumanByLinkId(linkId);
 
       if (human == 1L) {
-        dispatcher.dispatch(userId, LinkNotificationType.FIRST_CLICK, label, "첫 클릭이 들어왔어요 🎉");
+        dispatcher.dispatch(
+            userId,
+            LinkNotificationType.FIRST_CLICK,
+            link.getShortCode().value(),
+            label,
+            "첫 클릭이 들어왔어요 🎉");
         return; // 첫 클릭이면 마일스톤/급증은 무의미
       }
       if (MILESTONES.contains(human)) {
-        dispatcher.dispatch(userId, LinkNotificationType.MILESTONE, label, human + " 클릭을 넘었어요");
+        dispatcher.dispatch(
+            userId,
+            LinkNotificationType.MILESTONE,
+            link.getShortCode().value(),
+            label,
+            human + " 클릭을 넘었어요");
       }
-      maybeVelocity(userId, linkId, label, human, event.occurredAt());
+      maybeVelocity(userId, linkId, link.getShortCode().value(), label, human, event.occurredAt());
     } catch (Exception e) {
       log.warn("link click notification skipped: {}", e.toString());
     }
   }
 
-  private void maybeVelocity(Long userId, Long linkId, String label, long human, Instant now) {
+  private void maybeVelocity(
+      Long userId, Long linkId, String shortCode, String label, long human, Instant now) {
     if (human < props.velocityMinClicks()) {
       return;
     }
@@ -99,6 +110,7 @@ public class LinkClickNotificationListener {
     dispatcher.dispatch(
         userId,
         LinkNotificationType.VELOCITY_SPIKE,
+        shortCode,
         label,
         "지금 평소의 " + Math.round(ratio) + "배 — 어디서 퍼지는지 보세요");
   }

@@ -59,7 +59,7 @@ public class LinkDigestJob {
           continue;
         }
         dispatcher.dispatch(
-            userId, LinkNotificationType.DIGEST, "어제 요약", body(userId, human, from, to));
+            userId, LinkNotificationType.DIGEST, null, "어제 요약", body(userId, human, from, to));
         sent++;
       }
       log.info("link digest: sent {} notifications", sent);

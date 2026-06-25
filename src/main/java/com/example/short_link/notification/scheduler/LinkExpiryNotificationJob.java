@@ -54,6 +54,7 @@ public class LinkExpiryNotificationJob {
         dispatcher.dispatch(
             link.getUserId(),
             LinkNotificationType.EXPIRY_IMMINENT,
+            link.getShortCode().value(),
             label,
             "약 " + days + "일 뒤 만료돼요");
         sent++;
