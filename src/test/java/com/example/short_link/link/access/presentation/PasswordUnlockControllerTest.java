@@ -66,7 +66,7 @@ class PasswordUnlockControllerTest {
   }
 
   @Test
-  void correctPasswordTriggersRedirectFlowAnd302() {
+  void correctPasswordRendersUnlockRevealWithDestination() {
     CachedLink link = cachedLink();
     LinkEntity entity = mock(LinkEntity.class);
     when(entity.hasPassword()).thenReturn(true);
@@ -79,8 +79,9 @@ class PasswordUnlockControllerTest {
     MockHttpServletRequest req = request();
     ResponseEntity<?> response = controller.unlock(CODE, "good", null, null, null, null, null, req);
 
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
-    assertThat(response.getHeaders().getLocation().toString()).isEqualTo("https://dst");
+    // 정답이면 곧장 302 가 아니라 kurl 잠금 해제 화면(200 HTML)을 주고 거기서 목적지로 보낸다.
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+    assertThat(new String((byte[]) response.getBody())).contains("https://dst");
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("redirect");
   }
 
@@ -98,7 +99,7 @@ class PasswordUnlockControllerTest {
     ResponseEntity<?> response =
         controller.unlock(CODE, "ignored", "yt", null, "ref", "ua", "ko-KR", req);
 
-    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FOUND);
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     verify(protectionService, never()).checkPassword(any(), any());
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("redirect");
   }
@@ -138,21 +139,21 @@ class PasswordUnlockControllerTest {
   }
 
   @Test
-  void linkNotFoundFromEntityThrowsLinkExceptionAndTagsOutcome() {
+  void linkNotFoundFromEntityRendersNotFoundHtmlAndTagsOutcome() {
     CachedLink link = cachedLink();
     when(lookup.findActiveLink(CODE)).thenReturn(link);
     when(lookup.findEntity(CODE)).thenReturn(Optional.empty());
 
     MockHttpServletRequest req = request();
-    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, null, req))
-        .isInstanceOf(LinkException.class)
-        .extracting(e -> ((LinkException) e).errorCode())
-        .isEqualTo(LinkErrorCode.LINK_NOT_FOUND);
+    ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);
+
+    // 방문자 오류는 JSON 예외로 새지 않고 브랜드 HTML 페이지로 렌더된다(상태코드 유지).
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("not_found");
   }
 
   @Test
-  void viewLimitLinkExceptionTagsViewLimit() {
+  void viewLimitRendersGoneHtmlAndTagsViewLimit() {
     CachedLink link = cachedLink();
     LinkEntity entity = mock(LinkEntity.class);
     when(entity.hasPassword()).thenReturn(false);
@@ -162,13 +163,14 @@ class PasswordUnlockControllerTest {
         .thenThrow(new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, CODE));
 
     MockHttpServletRequest req = request();
-    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, null, req))
-        .isInstanceOf(LinkException.class);
+    ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.GONE);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("view_limit");
   }
 
   @Test
-  void linkExpiredExceptionTagsExpired() {
+  void linkExpiredRendersGoneHtmlAndTagsExpired() {
     CachedLink link = cachedLink();
     LinkEntity entity = mock(LinkEntity.class);
     when(entity.hasPassword()).thenReturn(false);
@@ -178,8 +180,9 @@ class PasswordUnlockControllerTest {
         .thenThrow(new LinkException(LinkErrorCode.LINK_EXPIRED, CODE));
 
     MockHttpServletRequest req = request();
-    assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, null, req))
-        .isInstanceOf(LinkException.class);
+    ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.GONE);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("expired");
   }
 

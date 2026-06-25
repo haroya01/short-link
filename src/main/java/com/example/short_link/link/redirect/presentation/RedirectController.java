@@ -78,6 +78,11 @@ public class RedirectController {
             case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
             default -> "error";
           };
+      // 방문자가 연 링크 — 만료·한도초과·없음은 JSON 대신 브랜드 HTML 페이지로 보여준다.
+      ResponseEntity<byte[]> page = LinkHtmlRenderer.visitorErrorPage(e.errorCode());
+      if (page != null) {
+        return page;
+      }
       throw e;
     } finally {
       sample.stop(meterRegistry.timer("redirect.latency", "outcome", outcome));
