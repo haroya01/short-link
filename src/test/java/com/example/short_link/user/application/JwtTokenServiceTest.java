@@ -28,14 +28,14 @@ class JwtTokenServiceTest {
   void parseAccessTokenReturnsUserId() {
     String token = service.createAccessToken(42L, "USER");
 
-    assertThat(service.parseAccessToken(token)).isEqualTo(42L);
+    assertThat(service.parseAccessTokenDetailed(token).userId()).isEqualTo(42L);
   }
 
   @Test
   void parseAccessTokenRejectsRefreshToken() {
     String refresh = service.createRefreshToken(42L).token();
 
-    assertThatThrownBy(() -> service.parseAccessToken(refresh))
+    assertThatThrownBy(() -> service.parseAccessTokenDetailed(refresh))
         .isInstanceOf(UserException.class)
         .extracting(e -> ((UserException) e).errorCode())
         .isEqualTo(UserErrorCode.INVALID_TOKEN_TYPE);

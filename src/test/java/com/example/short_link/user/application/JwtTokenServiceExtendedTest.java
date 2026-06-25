@@ -101,7 +101,7 @@ class JwtTokenServiceExtendedTest {
             new JwtProperties(
                 priv, pub, Duration.ofMinutes(5), Duration.ofDays(7), Duration.ofSeconds(10)));
     String token = svc.createAccessToken(42L, "USER");
-    assertThat(svc.parseAccessToken(token)).isEqualTo(42L);
+    assertThat(svc.parseAccessTokenDetailed(token).userId()).isEqualTo(42L);
   }
 
   @Test

@@ -38,6 +38,9 @@ class RecordBlogNotificationUseCaseTest {
   @Mock(strictness = Mock.Strictness.LENIENT)
   private BlogNotificationPreferenceService preferenceService;
 
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private NotificationFanoutWriter fanoutWriter;
+
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final MessageSource messageSource = pushMessages();
 
@@ -71,7 +74,13 @@ class RecordBlogNotificationUseCaseTest {
 
   private RecordBlogNotificationUseCase useCase() {
     return new RecordBlogNotificationUseCase(
-        repository, jsonMapper, pushSender, userRepository, messageSource, preferenceService);
+        repository,
+        jsonMapper,
+        pushSender,
+        userRepository,
+        messageSource,
+        preferenceService,
+        fanoutWriter);
   }
 
   @Test
@@ -188,9 +197,7 @@ class RecordBlogNotificationUseCaseTest {
   }
 
   @Test
-  void fanOutSavesPerRecipientAndPushesOnce() {
-    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
-        .thenAnswer(inv -> inv.getArgument(0));
+  void fanOutChunksToWriterAndPushesOnce() {
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
     UserEntity r7 = userWith(7L, "ko");
     UserEntity r8 = userWith(8L, "ko");
@@ -201,8 +208,14 @@ class RecordBlogNotificationUseCaseTest {
     NotificationPostRef ref = new NotificationPostRef(10L, "new-post", "새 글", null);
     useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, 2L, ref);
 
-    org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(3))
-        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    ArgumentCaptor<String> json = ArgumentCaptor.forClass(String.class);
+    org.mockito.Mockito.verify(fanoutWriter)
+        .persistChunk(
+            org.mockito.ArgumentMatchers.eq(List.of(7L, 8L, 9L)),
+            org.mockito.ArgumentMatchers.eq(NotificationType.NEW_POST),
+            org.mockito.ArgumentMatchers.eq(2L),
+            json.capture());
+    assertThat(json.getValue()).contains("\"slug\":\"new-post\"");
     ArgumentCaptor<PushSender.PushMessage> pushed =
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
     org.mockito.Mockito.verify(pushSender)
@@ -272,22 +285,24 @@ class RecordBlogNotificationUseCaseTest {
 
   @Test
   void fanOutSkipsFollowersWhoMutedNewPost() {
-    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
-        .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
     UserEntity r7 = userWith(7L, "ko");
     UserEntity r9 = userWith(9L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7, r9));
-    // 8 muted NEW_POST; the filtered list keeps 7 and 9 in order.
+    // 8 muted NEW_POST; the filtered list keeps 7 and 9 in order — only those reach the writer.
     when(preferenceService.filterEnabled(List.of(7L, 8L, 9L), NotificationType.NEW_POST))
         .thenReturn(List.of(7L, 9L));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "new-post", "새 글", null);
     useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, 2L, ref);
 
-    org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(2))
-        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    org.mockito.Mockito.verify(fanoutWriter)
+        .persistChunk(
+            org.mockito.ArgumentMatchers.eq(List.of(7L, 9L)),
+            org.mockito.ArgumentMatchers.eq(NotificationType.NEW_POST),
+            org.mockito.ArgumentMatchers.eq(2L),
+            org.mockito.ArgumentMatchers.anyString());
     org.mockito.Mockito.verify(pushSender)
         .sendToAll(
             org.mockito.ArgumentMatchers.eq(List.of(7L, 9L)),
@@ -337,8 +352,6 @@ class RecordBlogNotificationUseCaseTest {
 
   @Test
   void pathGrewFanOutSerializesCollectionRefAndSubtitlesWithCollectionName() {
-    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
-        .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
     UserEntity r7 = userWith(7L, "ko");
     UserEntity r9 = userWith(9L, "ko");
@@ -352,8 +365,16 @@ class RecordBlogNotificationUseCaseTest {
             2L,
             new NotificationCollectionRef(42L, "긴 여름의 독서", null));
 
-    org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(2))
-        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    ArgumentCaptor<String> json = ArgumentCaptor.forClass(String.class);
+    org.mockito.Mockito.verify(fanoutWriter)
+        .persistChunk(
+            org.mockito.ArgumentMatchers.eq(List.of(7L, 9L)),
+            org.mockito.ArgumentMatchers.eq(NotificationType.PATH_GREW),
+            org.mockito.ArgumentMatchers.eq(2L),
+            json.capture());
+    assertThat(json.getValue())
+        .contains("\"collectionId\":42")
+        .contains("\"collectionName\":\"긴 여름의 독서\"");
     ArgumentCaptor<PushSender.PushMessage> pushed =
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
     org.mockito.Mockito.verify(pushSender)
@@ -374,13 +395,11 @@ class RecordBlogNotificationUseCaseTest {
 
   @Test
   void pathGrewFanOutSkipsContributorsWhoMutedIt() {
-    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
-        .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
     UserEntity r7 = userWith(7L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7));
-    // 9 muted PATH_GREW; the filtered list keeps 7.
+    // 9 muted PATH_GREW; the filtered list keeps 7 — only that survivor reaches the writer.
     when(preferenceService.filterEnabled(List.of(7L, 9L), NotificationType.PATH_GREW))
         .thenReturn(List.of(7L));
 
@@ -391,8 +410,12 @@ class RecordBlogNotificationUseCaseTest {
             2L,
             new NotificationCollectionRef(42L, "c", null));
 
-    org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(1))
-        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    org.mockito.Mockito.verify(fanoutWriter)
+        .persistChunk(
+            org.mockito.ArgumentMatchers.eq(List.of(7L)),
+            org.mockito.ArgumentMatchers.eq(NotificationType.PATH_GREW),
+            org.mockito.ArgumentMatchers.eq(2L),
+            org.mockito.ArgumentMatchers.anyString());
     org.mockito.Mockito.verify(pushSender)
         .sendToAll(
             org.mockito.ArgumentMatchers.eq(List.of(7L)),

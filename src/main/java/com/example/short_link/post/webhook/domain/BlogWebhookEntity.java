@@ -43,7 +43,7 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = 2048)
   private String url;
 
-  @Column(nullable = false, length = 64)
+  @Column(nullable = false, length = 255)
   private String secret;
 
   @Column(length = 100)

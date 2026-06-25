@@ -1,5 +1,6 @@
 package com.example.short_link.user.application.twofactor;
 
+import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.UserTwoFactorEntity;
 import com.example.short_link.user.domain.repository.UserRepository;

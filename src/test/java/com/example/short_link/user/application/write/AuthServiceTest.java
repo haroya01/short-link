@@ -51,7 +51,7 @@ class AuthServiceTest {
                 authService.loginWithOAuth("existing@example.com", "google", "g-ex"))
             .issued();
 
-    Long userId = jwt.parseAccessToken(tokens.accessToken());
+    Long userId = jwt.parseAccessTokenDetailed(tokens.accessToken()).userId();
     assertThat(userId).isEqualTo(existing.getId());
     assertThat(userRepository.findByOauthProviderAndOauthId("google", "g-ex"))
         .map(UserEntity::getId)

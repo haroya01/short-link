@@ -1,5 +1,6 @@
 package com.example.short_link.post.webhook.application.write;
 
+import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -29,6 +30,7 @@ public class RegisterBlogWebhookUseCase {
 
   private final BlogWebhookRepository repository;
   private final MeterRegistry meterRegistry;
+  private final SecretCipher cipher;
 
   @Transactional
   public IssuedBlogWebhook execute(
@@ -45,7 +47,8 @@ public class RegisterBlogWebhookUseCase {
         events == null || events.isEmpty() ? EnumSet.allOf(BlogInteractionType.class) : events;
     BlogWebhookEntity saved =
         repository.save(
-            new BlogWebhookEntity(userId, url, secret, sanitizeName(name), format, subscribed));
+            new BlogWebhookEntity(
+                userId, url, cipher.encrypt(secret), sanitizeName(name), format, subscribed));
     meterRegistry
         .counter("blog.webhook.registered", "format", format.name().toLowerCase())
         .increment();

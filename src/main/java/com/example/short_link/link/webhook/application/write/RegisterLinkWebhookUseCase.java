@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.application.write;
 
+import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.webhook.application.dto.IssuedWebhook;
@@ -27,6 +28,7 @@ public class RegisterLinkWebhookUseCase {
   private final WebhookOwnership ownership;
   private final LinkWebhookRepository repository;
   private final MeterRegistry meterRegistry;
+  private final SecretCipher cipher;
 
   @Transactional
   public IssuedWebhook execute(RegisterLinkWebhookCommand cmd) {
@@ -42,7 +44,8 @@ public class RegisterLinkWebhookUseCase {
     String sanitizedName = sanitizeName(cmd.name());
     LinkWebhookEntity saved =
         repository.save(
-            new LinkWebhookEntity(link.linkId(), cmd.url(), secret, sanitizedName, format));
+            new LinkWebhookEntity(
+                link.linkId(), cmd.url(), cipher.encrypt(secret), sanitizedName, format));
     meterRegistry
         .counter("link.webhook.registered", "format", format.name().toLowerCase())
         .increment();
