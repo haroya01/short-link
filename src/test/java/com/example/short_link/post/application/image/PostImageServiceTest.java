@@ -168,7 +168,11 @@ class PostImageServiceTest {
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
-        .thenReturn(response(200, "image/png", new byte[] {1, 2, 3, 4}));
+        .thenReturn(
+            response(
+                200,
+                "image/png",
+                new byte[] {(byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A}));
 
     PostImageService.CommitResult result = whenImport().run();
 
@@ -185,12 +189,63 @@ class PostImageServiceTest {
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
-        .thenReturn(response(200, "image/jpeg; charset=binary", new byte[] {1, 2}));
+        .thenReturn(
+            response(
+                200,
+                "image/jpeg; charset=binary",
+                new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}));
 
     PostImageService.CommitResult result = whenImport().run();
 
     assertThat(result.imageUrl()).endsWith(".jpg");
     verify(objectStorage).putObject(anyString(), eq("image/jpeg"), any(byte[].class));
+  }
+
+  @Test
+  void importRehostsGif() {
+    when(props.isConfigured()).thenReturn(true);
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
+    when(props.maxBytes()).thenReturn(5_000_000L);
+    when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
+    when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
+        .thenReturn(response(200, "image/gif", new byte[] {0x47, 0x49, 0x46, 0x38, 0x39, 0x61}));
+
+    PostImageService.CommitResult result = whenImport().run();
+
+    assertThat(result.imageUrl()).endsWith(".gif");
+    verify(objectStorage).putObject(anyString(), eq("image/gif"), any(byte[].class));
+  }
+
+  @Test
+  void importRehostsWebp() {
+    when(props.isConfigured()).thenReturn(true);
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
+    when(props.maxBytes()).thenReturn(5_000_000L);
+    when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
+    when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
+        .thenReturn(
+            response(
+                200,
+                "image/webp",
+                new byte[] {0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50}));
+
+    PostImageService.CommitResult result = whenImport().run();
+
+    assertThat(result.imageUrl()).endsWith(".webp");
+    verify(objectStorage).putObject(anyString(), eq("image/webp"), any(byte[].class));
+  }
+
+  @Test
+  void importRejectsBytesNotMatchingDeclaredType() {
+    when(props.isConfigured()).thenReturn(true);
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
+    when(props.maxBytes()).thenReturn(5_000_000L);
+    // Declares PNG but sends JPEG magic bytes — the magic-byte check must reject the polyglot.
+    when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
+        .thenReturn(response(200, "image/png", new byte[] {(byte) 0xFF, (byte) 0xD8, (byte) 0xFF}));
+
+    whenImport().runExpectingThrow();
+    verify(objectStorage, never()).putObject(anyString(), anyString(), any(byte[].class));
   }
 
   @Test

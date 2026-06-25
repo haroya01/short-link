@@ -2,6 +2,7 @@ package com.example.short_link.campaign.presentation.request;
 
 import com.example.short_link.campaign.application.write.UpdateCampaignPolicyCommand;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import org.hibernate.validator.constraints.URL;
@@ -10,9 +11,15 @@ import org.hibernate.validator.constraints.URL;
 public record CampaignUpdateRequest(
     @Size(max = 255) String name,
     Instant endsAt,
-    @URL @Size(max = 2048) String defaultDestinationUrl,
+    @URL
+        @Pattern(regexp = "^(https?://.*)?$", message = "URL must use http or https")
+        @Size(max = 2048)
+        String defaultDestinationUrl,
     CampaignPostEndAction postEndAction,
-    @URL @Size(max = 2048) String postEndDestinationUrl,
+    @URL
+        @Pattern(regexp = "^(https?://.*)?$", message = "URL must use http or https")
+        @Size(max = 2048)
+        String postEndDestinationUrl,
     @Size(max = 500) String postEndMessage) {
 
   public UpdateCampaignPolicyCommand toCommand(Long campaignId, Long ownerId) {

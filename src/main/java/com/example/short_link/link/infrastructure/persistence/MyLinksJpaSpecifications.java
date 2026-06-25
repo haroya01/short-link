@@ -48,13 +48,20 @@ final class MyLinksJpaSpecifications {
     return (root, query, cb) -> cb.equal(root.get("userId"), userId);
   }
 
+  // LIKE wildcards in user-supplied search text are escaped with `!` so "50%" or "a_b" match
+  // literally instead of acting as wildcards (the post search path escapes the same way).
+  private static String likeContains(String text) {
+    String escaped = text.toLowerCase().replace("!", "!!").replace("%", "!%").replace("_", "!_");
+    return "%" + escaped + "%";
+  }
+
   private static Specification<LinkEntity> matchesQuery(String text) {
     if (text == null || text.isBlank()) return null;
     return (root, query, cb) -> {
-      String like = "%" + text.toLowerCase() + "%";
+      String like = likeContains(text);
       return cb.or(
-          cb.like(cb.lower(root.get("originalUrl").as(String.class)), like),
-          cb.like(cb.lower(root.get("shortCode")), like));
+          cb.like(cb.lower(root.get("originalUrl").as(String.class)), like, '!'),
+          cb.like(cb.lower(root.get("shortCode")), like, '!'));
     };
   }
 
@@ -66,8 +73,9 @@ final class MyLinksJpaSpecifications {
 
   private static Specification<LinkEntity> domainContains(String domain) {
     if (domain == null || domain.isBlank()) return null;
-    String like = "%" + domain.trim().toLowerCase() + "%";
-    return (root, query, cb) -> cb.like(cb.lower(root.get("originalUrl").as(String.class)), like);
+    String like = likeContains(domain.trim());
+    return (root, query, cb) ->
+        cb.like(cb.lower(root.get("originalUrl").as(String.class)), like, '!');
   }
 
   private static Specification<LinkEntity> expiry(LinkExpiryFilter filter, Instant now) {

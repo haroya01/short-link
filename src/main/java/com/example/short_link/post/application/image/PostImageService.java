@@ -153,10 +153,50 @@ public class PostImageService {
           PostErrorCode.PERMISSION_DENIED,
           "image exceeds maxBytes (" + body.length + " > " + maxBytes + ")");
     }
+    if (!magicBytesMatch(contentType, body)) {
+      throw new PostException(
+          PostErrorCode.PERMISSION_DENIED,
+          "fetched bytes are not a valid " + contentType + " image");
+    }
 
     String key = KEY_PREFIX + userId + "/" + postId + "/" + UUID.randomUUID() + "." + ext;
     objectStorage.putObject(key, contentType, body);
     return new CommitResult(publicUrlFor(key), key);
+  }
+
+  /**
+   * The remote server's Content-Type header is attacker-controlled, so confirm the fetched bytes
+   * actually start with the magic signature of the declared type before re-hosting — otherwise a
+   * server could claim {@code image/jpeg} while delivering an SVG/HTML polyglot that executes when
+   * served from our origin.
+   */
+  private static boolean magicBytesMatch(String contentType, byte[] b) {
+    return switch (contentType) {
+      case "image/jpeg" ->
+          b.length >= 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF;
+      case "image/png" ->
+          b.length >= 8
+              && (b[0] & 0xFF) == 0x89
+              && b[1] == 'P'
+              && b[2] == 'N'
+              && b[3] == 'G'
+              && (b[4] & 0xFF) == 0x0D
+              && (b[5] & 0xFF) == 0x0A
+              && (b[6] & 0xFF) == 0x1A
+              && (b[7] & 0xFF) == 0x0A;
+      case "image/gif" -> b.length >= 6 && b[0] == 'G' && b[1] == 'I' && b[2] == 'F' && b[3] == '8';
+      case "image/webp" ->
+          b.length >= 12
+              && b[0] == 'R'
+              && b[1] == 'I'
+              && b[2] == 'F'
+              && b[3] == 'F'
+              && b[8] == 'W'
+              && b[9] == 'E'
+              && b[10] == 'B'
+              && b[11] == 'P';
+      default -> false;
+    };
   }
 
   /**

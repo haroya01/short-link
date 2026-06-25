@@ -1,11 +1,17 @@
 package com.example.short_link.common.web;
 
 import jakarta.servlet.FilterChain;
+import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletInputStream;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -43,13 +49,16 @@ public class BodySizeFilter extends OncePerRequestFilter {
   protected void doFilterInternal(
       HttpServletRequest req, HttpServletResponse res, FilterChain chain)
       throws ServletException, IOException {
-    long contentLength = req.getContentLengthLong();
     long limit = limitFor(req.getRequestURI());
+    long contentLength = req.getContentLengthLong();
     if (contentLength > limit) {
       writeTooLarge(req, res, limit);
       return;
     }
-    chain.doFilter(req, res);
+    // Content-Length can be absent (chunked transfer) or understate the body — cap the actual
+    // stream too so a length-less body can't be read unboundedly into memory. An overrun throws
+    // PayloadTooLargeException, which GlobalExceptionHandler maps to 413.
+    chain.doFilter(new LimitedBodyRequest(req, limit), res);
   }
 
   private static long limitFor(String requestUri) {
@@ -77,5 +86,68 @@ public class BodySizeFilter extends OncePerRequestFilter {
     res.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
     res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
     jsonMapper.writeValue(res.getOutputStream(), body);
+  }
+
+  /** Wraps the request body stream to abort reads that exceed the route's byte cap. */
+  private static final class LimitedBodyRequest extends HttpServletRequestWrapper {
+    private final long limit;
+
+    LimitedBodyRequest(HttpServletRequest request, long limit) {
+      super(request);
+      this.limit = limit;
+    }
+
+    @Override
+    public ServletInputStream getInputStream() throws IOException {
+      ServletInputStream delegate = super.getInputStream();
+      long cap = limit;
+      return new ServletInputStream() {
+        private long count;
+
+        @Override
+        public int read() throws IOException {
+          int b = delegate.read();
+          if (b != -1 && ++count > cap) {
+            throw new PayloadTooLargeException(cap);
+          }
+          return b;
+        }
+
+        @Override
+        public int read(byte[] buf, int off, int len) throws IOException {
+          int n = delegate.read(buf, off, len);
+          if (n > 0) {
+            count += n;
+            if (count > cap) {
+              throw new PayloadTooLargeException(cap);
+            }
+          }
+          return n;
+        }
+
+        @Override
+        public boolean isFinished() {
+          return delegate.isFinished();
+        }
+
+        @Override
+        public boolean isReady() {
+          return delegate.isReady();
+        }
+
+        @Override
+        public void setReadListener(ReadListener listener) {
+          delegate.setReadListener(listener);
+        }
+      };
+    }
+
+    @Override
+    public BufferedReader getReader() throws IOException {
+      String enc = getCharacterEncoding();
+      return new BufferedReader(
+          new InputStreamReader(
+              getInputStream(), enc != null ? enc : StandardCharsets.UTF_8.name()));
+    }
   }
 }

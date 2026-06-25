@@ -37,6 +37,14 @@ management:
       exposure:
         include: health
 
+# API docs map the entire endpoint surface — keep them off the public prod host. The SecurityConfig
+# matcher already gates them to ADMIN; this removes the routes outright.
+springdoc:
+  swagger-ui:
+    enabled: false
+  api-docs:
+    enabled: false
+
 sentry:
   dsn: ${SENTRY_DSN:}
   environment: ${SENTRY_ENVIRONMENT:prod}

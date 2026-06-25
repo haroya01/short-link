@@ -23,9 +23,12 @@ public class DeviceTokenCommandService {
             () -> deviceTokens.save(new DeviceTokenEntity(userId, token, platform)));
   }
 
-  /** 소유자 검증 없이 토큰만으로 지운다 — 토큰을 아는 쪽이 그 기기다(로그아웃 직후 호출). */
+  /** 자기 소유 토큰만 해지한다 — 남의 APNs 토큰을 알아도 못 지우게(푸시 차단 방지). */
   @Transactional
-  public void unregister(String token) {
-    deviceTokens.deleteByToken(token);
+  public void unregister(Long userId, String token) {
+    deviceTokens
+        .findByToken(token)
+        .filter(existing -> existing.getUserId().equals(userId))
+        .ifPresent(existing -> deviceTokens.deleteByToken(token));
   }
 }
