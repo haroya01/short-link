@@ -32,6 +32,6 @@ public class DeviceTokenController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void unregister(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody RegisterDeviceRequest request) {
-    deviceTokens.unregister(request.token());
+    deviceTokens.unregister(userId, request.token());
   }
 }

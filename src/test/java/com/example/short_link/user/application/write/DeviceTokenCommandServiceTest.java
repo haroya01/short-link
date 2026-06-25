@@ -47,9 +47,22 @@ class DeviceTokenCommandServiceTest {
   }
 
   @Test
-  void unregisterDeletesByTokenOnly() {
-    service.unregister("tok-1");
+  void unregisterDeletesWhenCallerOwnsToken() {
+    DeviceTokenEntity existing = new DeviceTokenEntity(1L, "tok-1", "ios");
+    when(deviceTokens.findByToken("tok-1")).thenReturn(Optional.of(existing));
+
+    service.unregister(1L, "tok-1");
 
     verify(deviceTokens).deleteByToken("tok-1");
+  }
+
+  @Test
+  void unregisterIgnoresTokenOwnedByAnotherUser() {
+    DeviceTokenEntity existing = new DeviceTokenEntity(2L, "tok-1", "ios");
+    when(deviceTokens.findByToken("tok-1")).thenReturn(Optional.of(existing));
+
+    service.unregister(1L, "tok-1");
+
+    verify(deviceTokens, never()).deleteByToken(any());
   }
 }

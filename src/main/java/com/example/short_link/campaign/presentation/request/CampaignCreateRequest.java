@@ -4,6 +4,7 @@ import com.example.short_link.campaign.application.write.CreateCampaignCommand;
 import com.example.short_link.campaign.domain.CampaignPostEndAction;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import org.hibernate.validator.constraints.URL;
@@ -17,9 +18,15 @@ public record CampaignCreateRequest(
     @NotBlank @Size(max = 255) String name,
     Instant startsAt,
     @NotNull Instant endsAt,
-    @URL @Size(max = 2048) String defaultDestinationUrl,
+    @URL
+        @Pattern(regexp = "^(https?://.*)?$", message = "URL must use http or https")
+        @Size(max = 2048)
+        String defaultDestinationUrl,
     CampaignPostEndAction postEndAction,
-    @URL @Size(max = 2048) String postEndDestinationUrl,
+    @URL
+        @Pattern(regexp = "^(https?://.*)?$", message = "URL must use http or https")
+        @Size(max = 2048)
+        String postEndDestinationUrl,
     @Size(max = 500) String postEndMessage) {
 
   public CreateCampaignCommand toCommand(Long ownerId) {

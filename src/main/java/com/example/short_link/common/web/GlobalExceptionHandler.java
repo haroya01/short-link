@@ -93,6 +93,12 @@ public class GlobalExceptionHandler {
         HttpStatus.BAD_REQUEST, "malformed request body", "MALFORMED_REQUEST", req);
   }
 
+  @ExceptionHandler(PayloadTooLargeException.class)
+  public ProblemDetail handlePayloadTooLarge(PayloadTooLargeException e, HttpServletRequest req) {
+    return ProblemDetails.of(
+        HttpStatus.PAYLOAD_TOO_LARGE, "request body too large", "PAYLOAD_TOO_LARGE", req);
+  }
+
   /**
    * SSE 클라이언트(특히 {@code /api/v1/links/{code}/stream})가 스트림 도중 끊으면 async 응답이 더는 쓸 수 없는 상태가 되어 {@link
    * AsyncRequestNotUsableException} 이 올라온다. 정상적인 구독 종료라 잘못이 아니다 — 그런데 이게 catch-all {@link

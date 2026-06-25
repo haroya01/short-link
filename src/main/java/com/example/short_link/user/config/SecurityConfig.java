@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -27,6 +28,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -34,6 +36,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
 
@@ -118,6 +121,17 @@ public class SecurityConfig {
       throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(c -> {})
+        // Spring Security already emits nosniff + X-Frame-Options DENY by default; add HSTS
+        // (HTTPS-only) and a referrer policy so links/referrers don't leak across origins.
+        .headers(
+            h ->
+                h.httpStrictTransportSecurity(
+                        hsts -> hsts.includeSubDomains(true).maxAgeInSeconds(31_536_000))
+                    .referrerPolicy(
+                        rp ->
+                            rp.policy(
+                                ReferrerPolicyHeaderWriter.ReferrerPolicy
+                                    .STRICT_ORIGIN_WHEN_CROSS_ORIGIN)))
         .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
         .exceptionHandling(e -> e.authenticationEntryPoint(authenticationEntryPoint))
         .authorizeHttpRequests(
