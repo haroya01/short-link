@@ -19,9 +19,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * GDPR Article 20 (data portability): returns a JSON snapshot of all data we hold about the user.
- * Click events use the masked client_ip (already stored that way), so no de-anonymization happens
- * via export.
+ * GDPR Article 20 (data portability): returns a JSON snapshot of the user's account, links, and
+ * click stats. Blog/social data (posts, comments, profile, notes, follows, email leads, …) is NOT
+ * yet included here — it's available on request via the contact channel in the privacy policy. The
+ * policy's §8 wording must match this scope. Click events use the masked client_ip (already stored
+ * that way), so no de-anonymization happens via export.
  */
 @Service
 @RequiredArgsConstructor
