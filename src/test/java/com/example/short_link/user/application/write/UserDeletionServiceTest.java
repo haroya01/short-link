@@ -112,6 +112,30 @@ class UserDeletionServiceTest {
         "INSERT INTO post_like (post_id, user_id, created_at) VALUES (?, ?, NOW(6))",
         otherPost,
         authorId);
+    // comment_like / note_like the author placed on *other*'s content — these carry a user FK
+    // without ON DELETE CASCADE (V88/V89) and otherwise trip the final users delete forever.
+    jdbc.update(
+        "INSERT INTO comment (post_id, user_id, body, created_at, updated_at)"
+            + " VALUES (?, ?, 'theirs to like', NOW(6), NOW(6))",
+        otherPost,
+        otherId);
+    Long likeableComment = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    jdbc.update(
+        "INSERT INTO comment_like (comment_id, user_id, created_at) VALUES (?, ?, NOW(6))",
+        likeableComment,
+        authorId);
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at) VALUES (?, 'theirs note', NOW(6))", otherId);
+    Long otherNote = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    jdbc.update(
+        "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?, ?, NOW(6))",
+        otherNote,
+        authorId);
+    // web_push_subscription has no users FK at all — it silently orphaned before the eraser.
+    jdbc.update(
+        "INSERT INTO web_push_subscription (user_id, endpoint, p256dh, auth, created_at)"
+            + " VALUES (?, 'https://push.example.com/a', 'p256', 'auth', NOW(6))",
+        authorId);
     jdbc.update(
         "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
         authorId,
@@ -185,6 +209,11 @@ class UserDeletionServiceTest {
         .isZero();
     assertThat(count("SELECT COUNT(*) FROM cta WHERE user_id = ?", authorId)).isZero();
     assertThat(count("SELECT COUNT(*) FROM blog_webhook WHERE user_id = ?", authorId)).isZero();
+    assertThat(count("SELECT COUNT(*) FROM comment_like WHERE user_id = ?", authorId)).isZero();
+    assertThat(count("SELECT COUNT(*) FROM note_like WHERE user_id = ?", authorId)).isZero();
+    assertThat(count("SELECT COUNT(*) FROM note WHERE id = ?", otherNote)).isEqualTo(1);
+    assertThat(count("SELECT COUNT(*) FROM web_push_subscription WHERE user_id = ?", authorId))
+        .isZero();
   }
 
   private long insertPost(Long userId, String slug) {

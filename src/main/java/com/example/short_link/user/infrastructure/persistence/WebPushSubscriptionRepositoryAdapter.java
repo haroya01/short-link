@@ -30,6 +30,11 @@ public class WebPushSubscriptionRepositoryAdapter implements WebPushSubscription
   }
 
   @Override
+  public void deleteByUserId(Long userId) {
+    jpa.deleteByUserId(userId);
+  }
+
+  @Override
   public List<WebPushSubscriptionEntity> findAllByUserId(Long userId) {
     return jpa.findAllByUserId(userId);
   }

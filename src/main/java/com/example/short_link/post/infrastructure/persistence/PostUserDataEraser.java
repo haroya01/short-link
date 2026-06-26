@@ -31,6 +31,15 @@ class PostUserDataEraser implements UserDataEraser {
         "DELETE FROM comment WHERE user_id = :userId"
             + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",
         userId);
+    // comment_like / note_like carry a user FK WITHOUT ON DELETE CASCADE (V88/V89) — the likes this
+    // user placed on *other* people's comments/notes would otherwise trip the final users delete
+    // and
+    // loop the cleanup job forever. Likes on this user's own comments cascade via the comment
+    // delete
+    // above; likes on their own notes cascade via note → users (note carries the cascade, note_like
+    // → note does too), so only the user_id-scoped rows need an explicit purge here.
+    execute("DELETE FROM comment_like WHERE user_id = :userId", userId);
+    execute("DELETE FROM note_like WHERE user_id = :userId", userId);
     execute(
         "DELETE FROM post_like WHERE user_id = :userId"
             + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",

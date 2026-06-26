@@ -15,6 +15,9 @@ public interface JpaWebPushSubscriptionRepository
   @Transactional
   void deleteByEndpoint(String endpoint);
 
+  @Transactional
+  void deleteByUserId(Long userId);
+
   List<WebPushSubscriptionEntity> findAllByUserId(Long userId);
 
   List<WebPushSubscriptionEntity> findAllByUserIdIn(Collection<Long> userIds);
