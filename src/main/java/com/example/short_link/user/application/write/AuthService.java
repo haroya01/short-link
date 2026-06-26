@@ -10,6 +10,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
+import java.time.Instant;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,6 +28,11 @@ public class AuthService {
   private final MobileExchangeCodeStore exchangeCodes;
   private final TwoFactorService twoFactor;
   private final JwtProperties jwtProperties;
+
+  /**
+   * Bump when the Terms/Privacy materially change so new sign-ups record the version they accepted.
+   */
+  private static final String TERMS_VERSION = "2026-06-26";
 
   /**
    * Result of an OAuth login. If the user has 2FA enabled this returns only a short-lived challenge
@@ -77,7 +83,8 @@ public class AuthService {
     UserEntity user =
         userRepository
             .findByOauthProviderAndOauthId(oauthProvider, oauthId)
-            .orElseGet(() -> userRepository.save(new UserEntity(email, oauthProvider, oauthId)));
+            .orElseGet(
+                () -> userRepository.save(newUserWithConsent(email, oauthProvider, oauthId)));
     if (user.isDeleted()) {
       log.info("restoring soft-deleted user {} on OAuth login", user.getId());
       user.restore();
@@ -124,7 +131,14 @@ public class AuthService {
     if (email == null || email.isBlank()) {
       throw new UserException(UserErrorCode.APPLE_EMAIL_REQUIRED);
     }
-    return userRepository.save(new UserEntity(email, "apple", appleSubject));
+    return userRepository.save(newUserWithConsent(email, "apple", appleSubject));
+  }
+
+  /** New account from sign-up — stamps the legal terms version/time accepted via the click-wrap. */
+  private UserEntity newUserWithConsent(String email, String provider, String oauthId) {
+    UserEntity user = new UserEntity(email, provider, oauthId);
+    user.recordTermsConsent(TERMS_VERSION, Instant.now());
+    return user;
   }
 
   @Transactional

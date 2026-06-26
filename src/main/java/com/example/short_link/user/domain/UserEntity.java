@@ -103,6 +103,17 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "is_stats_public", nullable = false)
   private boolean statsPublic = false;
 
+  /**
+   * Which legal terms version the user accepted at sign-up, and when — proof of acceptance for the
+   * click-wrap consent shown on the login/sign-up screen. Null for accounts created before consent
+   * capture existed (they accepted under the prior browse-wrap notice).
+   */
+  @Column(name = "terms_agreed_at")
+  private Instant termsAgreedAt;
+
+  @Column(name = "terms_version", length = 32)
+  private String termsVersion;
+
   @Embedded private StripeBinding stripe = new StripeBinding();
 
   // Hibernate maps an @Embedded to null when every column on it is null — for users without any
@@ -122,6 +133,12 @@ public class UserEntity extends BaseCreatedEntity {
     this.role = Role.USER;
     this.tier = Tier.FREE;
     this.timezone = "Asia/Seoul";
+  }
+
+  /** Record acceptance of the legal terms — called once when the account is created at sign-up. */
+  public void recordTermsConsent(String version, Instant at) {
+    this.termsVersion = version;
+    this.termsAgreedAt = at;
   }
 
   public boolean isAdmin() {
