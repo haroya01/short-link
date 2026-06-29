@@ -36,6 +36,10 @@ public class MarkdownBlocksConverter {
   private static final Pattern LINK_ONLY =
       Pattern.compile("^\\[[^\\]]*\\]\\((https?://[^)\\s]+)\\)$");
   private static final Pattern BARE_URL = Pattern.compile("^(https?://\\S+)$");
+  // A URL path ending in one of the image formats the upload/import pipeline handles — used to send
+  // a standalone bare image URL to an IMAGE block instead of a link-preview EMBED.
+  private static final Pattern IMAGE_EXT =
+      Pattern.compile("\\.(?:jpe?g|png|gif|webp)$", Pattern.CASE_INSENSITIVE);
   private static final Pattern LIST_START = Pattern.compile("^(?:[-*]|\\d+\\.)\\s+.*");
   private static final Pattern LIST_CONT = Pattern.compile("^\\s*(?:[-*]|\\d+\\.)\\s+.*");
   private static final Pattern INDENTED = Pattern.compile("^\\s+\\S.*");
@@ -169,6 +173,19 @@ public class MarkdownBlocksConverter {
           }
           blocks.add(block(PostBlockType.IMAGE, json.writeValueAsString(node)));
         }
+        i++;
+        continue;
+      }
+
+      // A standalone bare image URL (e.g. an external image pasted on its own line) → IMAGE block,
+      // so it renders as the image and not a link-preview card. Must run before the embed check,
+      // which would otherwise claim every standalone http(s) URL.
+      String imageUrl = standaloneImageUrl(line);
+      if (imageUrl != null) {
+        ObjectNode node = json.createObjectNode();
+        node.put("url", imageUrl);
+        node.put("alt", "");
+        blocks.add(block(PostBlockType.IMAGE, json.writeValueAsString(node)));
         i++;
         continue;
       }
@@ -337,6 +354,28 @@ public class MarkdownBlocksConverter {
       URI parsed = new URI(url);
       if (parsed.getHost() == null) return null;
       return url;
+    } catch (Exception e) {
+      return null;
+    }
+  }
+
+  /**
+   * A line that is just a bare (or {@code <autolink>}) URL pointing at an image file (by extension)
+   * → that URL, so a pasted external image renders as an IMAGE block instead of a link-preview
+   * EMBED. A labeled {@code [text](url)} link is deliberately left to the embed path (the author
+   * meant a link, not an image). Mirrors the web's {@code standaloneImageUrl}.
+   */
+  private static String standaloneImageUrl(String line) {
+    String t = line.trim();
+    Matcher m = AUTOLINK.matcher(t);
+    if (!m.matches()) m = BARE_URL.matcher(t);
+    if (!m.matches()) return null;
+    String url = m.group(1);
+    try {
+      URI parsed = new URI(url);
+      if (parsed.getHost() == null) return null;
+      String path = parsed.getPath();
+      return path != null && IMAGE_EXT.matcher(path).find() ? url : null;
     } catch (Exception e) {
       return null;
     }

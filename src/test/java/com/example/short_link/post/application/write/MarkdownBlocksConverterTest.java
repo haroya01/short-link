@@ -157,6 +157,41 @@ class MarkdownBlocksConverterTest {
   }
 
   @Test
+  void standaloneImageUrlBecomesImageNotEmbed() {
+    List<BlockInput> blocks =
+        toBlocks(
+            "https://paiza-webapp.s3.ap-northeast-1.amazonaws.com/studentjoboffer/35546/large-x.jpg");
+    assertThat(blocks).hasSize(1);
+    assertThat(blocks.get(0).type()).isEqualTo(PostBlockType.IMAGE);
+    assertThat(blocks.get(0).content())
+        .isEqualTo(
+            "{\"url\":\"https://paiza-webapp.s3.ap-northeast-1.amazonaws.com/"
+                + "studentjoboffer/35546/large-x.jpg\",\"alt\":\"\"}");
+  }
+
+  @Test
+  void standaloneImageUrlWithQueryStringStillBecomesImage() {
+    assertThat(toBlocks("https://cdn.example.com/a/b.png?v=2&w=800").get(0).type())
+        .isEqualTo(PostBlockType.IMAGE);
+    assertThat(toBlocks("<https://cdn.example.com/a/b.webp>").get(0).type())
+        .isEqualTo(PostBlockType.IMAGE);
+  }
+
+  @Test
+  void labeledLinkToImageStaysEmbedNotImage() {
+    // `[text](…jpg)` is an explicit labeled link — the author meant a link, so keep it an embed.
+    assertThat(toBlocks("[my photo](https://cdn.example.com/a/b.jpg)").get(0).type())
+        .isEqualTo(PostBlockType.EMBED);
+  }
+
+  @Test
+  void standaloneImageUrlRoundTripsAsImageBlock() {
+    List<BlockInput> blocks = toBlocks("https://cdn.example.com/a/b.jpg");
+    assertThat(roundTrip(blocks)).isEqualTo("![](https://cdn.example.com/a/b.jpg)");
+    assertThat(toBlocks(roundTrip(blocks))).isEqualTo(blocks);
+  }
+
+  @Test
   void urlWithSurroundingTextStaysParagraph() {
     assertThat(toBlocks("see https://example.com/article for more").get(0).type())
         .isEqualTo(PostBlockType.PARAGRAPH);
