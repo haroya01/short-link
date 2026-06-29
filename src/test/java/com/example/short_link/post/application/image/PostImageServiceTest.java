@@ -16,7 +16,6 @@ import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.s3.AvatarProperties;
 import com.example.short_link.post.application.write.PostOwnership;
-import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -49,10 +48,6 @@ class PostImageServiceTest {
   @BeforeEach
   void setUp() {
     service = new PostImageService(props, objectStorage, postOwnership, httpFetcher);
-  }
-
-  private PostEntity ownedPost() {
-    return new PostEntity(7L, "p", "P", "ko");
   }
 
   private static HttpFetcher.Response response(int status, String contentType, byte[] body) {
@@ -90,7 +85,6 @@ class PostImageServiceTest {
   @Test
   void presignReturnsUploadUrl() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.presignTtlSeconds()).thenReturn(60L);
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
@@ -108,8 +102,6 @@ class PostImageServiceTest {
   @Test
   void presignRejectsInvalidContentType() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
-
     assertThatThrownBy(() -> service.presignUpload(7L, 42L, "application/pdf"))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
@@ -129,7 +121,6 @@ class PostImageServiceTest {
   @Test
   void commitChecksOwnershipAndSize() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(objectStorage.objectSize("post-images/7/42/uuid.png")).thenReturn(Optional.of(1_000L));
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
@@ -143,8 +134,6 @@ class PostImageServiceTest {
   @Test
   void commitRejectsForeignKey() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
-
     assertThatThrownBy(() -> service.commitUpload(7L, 42L, "post-images/9/99/uuid.png"))
         .isInstanceOf(PostException.class);
   }
@@ -152,7 +141,6 @@ class PostImageServiceTest {
   @Test
   void commitRejectsOversize() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(objectStorage.objectSize("post-images/7/42/uuid.png"))
         .thenReturn(Optional.of(10_000_000L));
     when(props.maxBytes()).thenReturn(5_000_000L);
@@ -164,7 +152,6 @@ class PostImageServiceTest {
   @Test
   void importRehostsExternalImageIntoOwnBucket() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
@@ -185,7 +172,6 @@ class PostImageServiceTest {
   @Test
   void importStripsCharsetFromContentType() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
@@ -204,7 +190,6 @@ class PostImageServiceTest {
   @Test
   void importRehostsGif() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
@@ -219,7 +204,6 @@ class PostImageServiceTest {
   @Test
   void importRehostsWebp() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
@@ -238,7 +222,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsBytesNotMatchingDeclaredType() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     // Declares PNG but sends JPEG magic bytes — the magic-byte check must reject the polyglot.
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
@@ -251,8 +234,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsDisallowedUrl() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
-
     assertThatThrownBy(() -> service.importFromUrl(7L, 42L, "ftp://example.com/a.png"))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
@@ -263,7 +244,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsNonImageContentType() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
         .thenReturn(response(200, "text/html", "<html></html>".getBytes(StandardCharsets.UTF_8)));
@@ -275,7 +255,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsOversizeBody() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(2L);
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
         .thenReturn(response(200, "image/png", new byte[] {1, 2, 3, 4}));
@@ -287,7 +266,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsHttpError() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
         .thenReturn(response(404, "image/png", new byte[0]));
@@ -307,8 +285,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsNullUrl() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
-
     assertThatThrownBy(() -> service.importFromUrl(7L, 42L, null))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
@@ -318,7 +294,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsMissingContentType() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
         .thenReturn(new HttpFetcher.Response(200, Map.of(), new byte[] {1, 2}));
@@ -330,7 +305,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsEmptyBody() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
         .thenReturn(response(200, "image/png", new byte[0]));
@@ -342,7 +316,6 @@ class PostImageServiceTest {
   @Test
   void importWrapsFetchError() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
         .thenThrow(new RuntimeException("connection reset"));
