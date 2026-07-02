@@ -33,7 +33,8 @@ public interface HttpFetcher {
       String bodyContentType,
       Duration connectTimeout,
       Duration readTimeout,
-      int maxBodyBytes) {
+      int maxBodyBytes,
+      boolean followRedirects) {
 
     public Request {
       if (method == null) throw new IllegalArgumentException("method required");
@@ -51,7 +52,31 @@ public interface HttpFetcher {
         Duration readTimeout,
         int maxBodyBytes) {
       return new Request(
-          Method.GET, pinned, headers, null, null, connectTimeout, readTimeout, maxBodyBytes);
+          Method.GET, pinned, headers, null, null, connectTimeout, readTimeout, maxBodyBytes, true);
+    }
+
+    /**
+     * GET that surfaces 3xx to the caller instead of following it. The pinned DNS resolver refuses
+     * any host other than the one already resolved, so a cross-host redirect can never be followed
+     * transparently — callers that need redirects (e.g. 노션 이미지 프록시 → S3) must walk them hop-by-hop,
+     * re-validating each Location through {@link PublicHttpUrlGuard}.
+     */
+    public static Request getNoRedirects(
+        Resolved pinned,
+        Map<String, String> headers,
+        Duration connectTimeout,
+        Duration readTimeout,
+        int maxBodyBytes) {
+      return new Request(
+          Method.GET,
+          pinned,
+          headers,
+          null,
+          null,
+          connectTimeout,
+          readTimeout,
+          maxBodyBytes,
+          false);
     }
 
     public static Request post(
@@ -70,7 +95,8 @@ public interface HttpFetcher {
           bodyContentType,
           connectTimeout,
           readTimeout,
-          maxBodyBytes);
+          maxBodyBytes,
+          true);
     }
 
     public URI uri() {

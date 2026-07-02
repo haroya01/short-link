@@ -40,7 +40,8 @@ public class ApacheHttpFetcher implements HttpFetcher {
         Timeout.ofMilliseconds(
             request.connectTimeout().toMillis() + request.readTimeout().toMillis());
     try (CloseableHttpClient client =
-        PinnedHttpClientFactory.build(request.pinned(), connect, read, total)) {
+        PinnedHttpClientFactory.build(
+            request.pinned(), connect, read, total, request.followRedirects())) {
       HttpUriRequestBase httpReq = buildRequest(request);
       return client.execute(httpReq, response -> readResponse(response, request.maxBodyBytes()));
     } catch (IOException e) {

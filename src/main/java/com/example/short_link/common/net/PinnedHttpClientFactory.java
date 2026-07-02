@@ -27,7 +27,11 @@ public final class PinnedHttpClientFactory {
   private PinnedHttpClientFactory() {}
 
   public static CloseableHttpClient build(
-      Resolved resolved, Timeout connectTimeout, Timeout socketTimeout, Timeout responseTimeout) {
+      Resolved resolved,
+      Timeout connectTimeout,
+      Timeout socketTimeout,
+      Timeout responseTimeout,
+      boolean followRedirects) {
     String pinnedHost = resolved.uri().getHost();
     InetAddress[] pinnedAddrs = resolved.addresses().toArray(new InetAddress[0]);
     DnsResolver pinned =
@@ -55,7 +59,11 @@ public final class PinnedHttpClientFactory {
             .setDnsResolver(pinned)
             .setDefaultConnectionConfig(connConfig)
             .build();
-    RequestConfig reqConfig = RequestConfig.custom().setResponseTimeout(responseTimeout).build();
+    RequestConfig reqConfig =
+        RequestConfig.custom()
+            .setResponseTimeout(responseTimeout)
+            .setRedirectsEnabled(followRedirects)
+            .build();
     return HttpClients.custom()
         .setConnectionManager(connMgr)
         .setConnectionManagerShared(false)
