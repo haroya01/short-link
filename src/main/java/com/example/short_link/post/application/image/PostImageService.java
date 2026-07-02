@@ -59,7 +59,7 @@ public class PostImageService {
   public PresignResult presignUpload(Long userId, Long postId, String contentType) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     require(props.isConfigured());
-    postOwnership.requireOwned(userId, postId);
+    postOwnership.verifyOwned(userId, postId);
     String normalized = contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
     String ext = ALLOWED_TYPES.get(normalized);
     if (ext == null) {
@@ -76,7 +76,7 @@ public class PostImageService {
   public CommitResult commitUpload(Long userId, Long postId, String key) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     require(props.isConfigured());
-    postOwnership.requireOwned(userId, postId);
+    postOwnership.verifyOwned(userId, postId);
     String expectedPrefix = KEY_PREFIX + userId + "/" + postId + "/";
     if (key == null || key.isBlank() || !key.startsWith(expectedPrefix)) {
       throw new PostException(PostErrorCode.PERMISSION_DENIED, "key not owned by user/post");
@@ -108,7 +108,7 @@ public class PostImageService {
   public CommitResult importFromUrl(Long userId, Long postId, String url) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     require(props.isConfigured());
-    postOwnership.requireOwned(userId, postId);
+    postOwnership.verifyOwned(userId, postId);
 
     Resolved resolved =
         PublicHttpUrlGuard.resolve(url == null ? null : url.trim())
