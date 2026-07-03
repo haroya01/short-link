@@ -10,9 +10,11 @@ import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.application.dto.AdminOverview;
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
 import com.example.short_link.admin.application.dto.AdminUserRow;
+import com.example.short_link.admin.application.dto.BlogAdminMetrics;
 import com.example.short_link.admin.application.dto.RecentError;
 import com.example.short_link.admin.application.read.AdminActivityService;
 import com.example.short_link.admin.application.read.AdminAnalyticsService;
+import com.example.short_link.admin.application.read.AdminBlogMetricsService;
 import com.example.short_link.admin.application.read.AdminBrowseService;
 import com.example.short_link.admin.application.read.AdminHealthService;
 import com.example.short_link.admin.application.read.AdminLinkMetricsQueryService;
@@ -47,6 +49,7 @@ public class AdminController {
   private final AdminHealthService healthService;
   private final RecentErrorsService recentErrorsService;
   private final AdminAnalyticsService analyticsService;
+  private final AdminBlogMetricsService blogMetricsService;
   private final AdminBrowseService browseService;
   private final AdminActivityService activityService;
   private final AdminRouteMetricsService routeMetricsService;
@@ -185,6 +188,16 @@ public class AdminController {
   public AdminActiveUsers activeUsers(
       @RequestParam(required = false, defaultValue = "day") String period) {
     return analyticsService.activeUsers(period);
+  }
+
+  /**
+   * Cross-author blog health — lifetime post / read totals, authors active in the last 30 days, the
+   * unresolved-report backlog, and the most-read posts. 5-minute cached like the other admin
+   * aggregates.
+   */
+  @GetMapping("/blog/metrics")
+  public BlogAdminMetrics blogMetrics() {
+    return blogMetricsService.metrics();
   }
 
   /**

@@ -3,6 +3,7 @@ package com.example.short_link.abuse.infrastructure.persistence;
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.AbuseReportStatus;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -32,5 +33,10 @@ class AbuseReportRepositoryAdapter implements AbuseReportRepository {
   @Override
   public List<AbuseReportEntity> findAllByOrderByCreatedAtDesc() {
     return jpa.findAllByOrderByCreatedAtDesc();
+  }
+
+  @Override
+  public List<PostSubjectSnapshot> findPostSubjectSnapshots(Collection<Long> postIds) {
+    return jpa.findPostSubjectSnapshots(postIds);
   }
 }
