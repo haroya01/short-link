@@ -379,4 +379,151 @@ class AdminControllerTest {
         .andExpect(jsonPath("$.items").isArray())
         .andExpect(jsonPath("$.total").isNumber());
   }
+
+  // ─── Full-table browse (users / links) ───────────────────────────────────
+
+  @Test
+  void anonymousReceives401OnBrowse() throws Exception {
+    mvc.perform(get("/api/v1/admin/users")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/v1/admin/users/1")).andExpect(status().isUnauthorized());
+    mvc.perform(get("/api/v1/admin/links")).andExpect(status().isUnauthorized());
+  }
+
+  @Test
+  void plainUserReceives403OnBrowse() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-ubrowse"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+    mvc.perform(get("/api/v1/admin/users").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/admin/users/1").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+    mvc.perform(get("/api/v1/admin/links").header("Authorization", "Bearer " + token))
+        .andExpect(status().isForbidden());
+  }
+
+  @Test
+  void adminBrowsesUsersFiltersBySearchAndRole() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("browse-admin@x.com", "google", "g-bad"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    // A plain user that owns one link — its email is the search term and its linkCount must be 1.
+    UserEntity subject =
+        userRepository.save(new UserEntity("subject-abc@x.com", "google", "g-sabc"));
+    linkRepository.save(new LinkEntity("https://example.com/a", "brwuser1", subject.getId(), null));
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/users?q=subject-abc&size=10")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").isNumber())
+        .andExpect(jsonPath("$.items[?(@.email == 'subject-abc@x.com')].role").value("USER"))
+        .andExpect(jsonPath("$.items[?(@.email == 'subject-abc@x.com')].linkCount").value(1))
+        .andExpect(jsonPath("$.items[?(@.email == 'subject-abc@x.com')].deleted").value(false));
+
+    // role=ADMIN must exclude the plain user.
+    mvc.perform(
+            get("/api/v1/admin/users?q=subject-abc&role=ADMIN")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[?(@.email == 'subject-abc@x.com')]").isEmpty());
+  }
+
+  @Test
+  void adminBrowseUsersRejectsInvalidRole() throws Exception {
+    String token = jwt.createAccessToken(adminId(), "ADMIN");
+    mvc.perform(
+            get("/api/v1/admin/users?role=superuser").header("Authorization", "Bearer " + token))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_ROLE"));
+  }
+
+  @Test
+  void adminReadsUserDetailAnd404sWhenMissing() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("detail-admin@x.com", "google", "g-dad"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    UserEntity subject = userRepository.save(new UserEntity("detail-me@x.com", "google", "g-dme"));
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            get("/api/v1/admin/users/" + subject.getId())
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.email").value("detail-me@x.com"))
+        .andExpect(jsonPath("$.role").value("USER"))
+        .andExpect(jsonPath("$.linkCount").value(0));
+
+    mvc.perform(get("/api/v1/admin/users/999999999").header("Authorization", "Bearer " + token))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("USER_NOT_FOUND"));
+  }
+
+  @Test
+  void adminBrowsesLinksBySearchAndOwner() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("link-admin@x.com", "google", "g-lad"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    LinkEntity link =
+        linkRepository.save(
+            new LinkEntity("https://browse.example.com/x", "brwlink1", admin.getId(), null));
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.linkId())
+            .userAgent("ua")
+            .clientIp("1.1.1.1")
+            .deviceClass("desktop")
+            .bot(false)
+            .build());
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    // Exact short-code match.
+    mvc.perform(get("/api/v1/admin/links?q=brwlink1").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.total").isNumber())
+        .andExpect(
+            jsonPath("$.items[?(@.shortCode == 'brwlink1')].originalUrl")
+                .value("https://browse.example.com/x"))
+        .andExpect(jsonPath("$.items[?(@.shortCode == 'brwlink1')].clickCount").value(1))
+        .andExpect(jsonPath("$.items[?(@.shortCode == 'brwlink1')].status").value("ACTIVE"))
+        .andExpect(
+            jsonPath("$.items[?(@.shortCode == 'brwlink1')].ownerEmail").value("link-admin@x.com"));
+
+    // Destination-URL substring match.
+    mvc.perform(
+            get("/api/v1/admin/links?q=browse.example").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[?(@.shortCode == 'brwlink1')].shortCode").value("brwlink1"));
+
+    // ownerId filter to an unrelated id must drop the link.
+    mvc.perform(
+            get("/api/v1/admin/links?q=brwlink1&ownerId=999999999")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[?(@.shortCode == 'brwlink1')]").isEmpty());
+  }
+
+  @Test
+  void adminBrowseLinksDerivesExpiredStatus() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("exp-admin@x.com", "google", "g-ead"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    linkRepository.save(
+        new LinkEntity(
+            "https://expired.example.com",
+            "brwexp01",
+            admin.getId(),
+            Instant.now().minusSeconds(3600)));
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(get("/api/v1/admin/links?q=brwexp01").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[?(@.shortCode == 'brwexp01')].status").value("EXPIRED"));
+  }
+
+  private Long adminId() {
+    UserEntity admin = userRepository.save(new UserEntity("gen-admin@x.com", "google", "g-gad"));
+    admin.promoteToAdmin();
+    return userRepository.save(admin).getId();
+  }
 }
