@@ -49,7 +49,8 @@ public class PublicProfileVisitController {
         utmMedium,
         utmCampaign,
         utmTerm,
-        utmContent);
+        utmContent,
+        "1".equals(req.getHeader("Sec-GPC")));
     return ResponseEntity.noContent().build();
   }
 }

@@ -140,7 +140,10 @@ public class RecordPostViewUseCase {
           .regionName(geo.region())
           .cityName(geo.city())
           .language(LanguageExtractor.extract(ctx.acceptLanguage()))
-          .visitorHash(VisitorHasher.hash(postId, ctx.clientIp(), ctx.userAgent()))
+          // Sec-GPC(옵트아웃) 신호가 오면 재방문 식별 해시를 만들지 않는다 — 조회 자체는 익명 집계로
+          // 잡히되, 그 방문자는 return-tracking 안 함(§0, 측정 아닌 존중).
+          .visitorHash(
+              ctx.gpc() ? null : VisitorHasher.hash(postId, ctx.clientIp(), ctx.userAgent()))
           .sourceChannel(SourceChannelNormalizer.normalize(ctx.sourceChannel()))
           .build();
     } catch (RuntimeException e) {

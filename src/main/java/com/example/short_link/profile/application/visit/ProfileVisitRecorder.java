@@ -52,7 +52,8 @@ public class ProfileVisitRecorder {
       String utmMedium,
       String utmCampaign,
       String utmTerm,
-      String utmContent) {
+      String utmContent,
+      boolean gpc) {
     UserEntity owner =
         userRepository
             .findByUsername(username.toLowerCase())
@@ -68,7 +69,8 @@ public class ProfileVisitRecorder {
         utmMedium,
         utmCampaign,
         utmTerm,
-        utmContent);
+        utmContent,
+        gpc);
   }
 
   @Transactional
@@ -83,7 +85,8 @@ public class ProfileVisitRecorder {
       String utmMedium,
       String utmCampaign,
       String utmTerm,
-      String utmContent) {
+      String utmContent,
+      boolean gpc) {
     try {
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
       GeoLocation geo = geoIpResolver.resolve(clientIp);
@@ -119,7 +122,9 @@ public class ProfileVisitRecorder {
               .regionName(geo.region())
               .cityName(geo.city())
               .language(LanguageExtractor.extract(acceptLanguage))
-              .visitorHash(VisitorHasher.hash(profileUserId, clientIp, userAgent))
+              // Sec-GPC(옵트아웃) 신호가 오면 재방문 식별 해시를 만들지 않는다 — "측정 위해 수집"이 아니라
+              // "존중 위해 수집"(§0). 방문 자체는 익명 집계로 잡히되, 그 방문자는 return-tracking 안 함.
+              .visitorHash(gpc ? null : VisitorHasher.hash(profileUserId, clientIp, userAgent))
               .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))
               .asn(asnInfo.asn())
               .asnOrg(asnInfo.organization())

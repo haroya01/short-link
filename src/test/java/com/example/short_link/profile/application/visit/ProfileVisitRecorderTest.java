@@ -61,7 +61,8 @@ class ProfileVisitRecorderTest {
         "social",
         "launch",
         null,
-        null);
+        null,
+        false);
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -71,6 +72,7 @@ class ProfileVisitRecorderTest {
     assertThat(e.getUtmSource()).isEqualTo("twitter");
     assertThat(e.isBot()).isFalse();
     assertThat(e.getBotName()).isNull();
+    assertThat(e.getVisitorHash()).hasSize(64);
   }
 
   @Test
@@ -79,7 +81,7 @@ class ProfileVisitRecorderTest {
     when(geoResolver.resolve("1.2.3.4")).thenReturn(GeoLocation.empty());
     when(asnResolver.resolve("1.2.3.4")).thenReturn(new AsnResolver.AsnInfo(15169, "Google", true));
 
-    recorder.record(7L, null, "bot-ua", "1.2.3.4", null, null, null, null, null, null, null);
+    recorder.record(7L, null, "bot-ua", "1.2.3.4", null, null, null, null, null, null, null, false);
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -95,7 +97,7 @@ class ProfileVisitRecorderTest {
         .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(true);
 
-    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null);
+    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -110,7 +112,7 @@ class ProfileVisitRecorderTest {
     when(asnResolver.resolve("1.2.3.4")).thenReturn(new AsnResolver.AsnInfo(16509, "AWS", true));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
-    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null);
+    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -125,7 +127,7 @@ class ProfileVisitRecorderTest {
     when(asnResolver.resolve("1.2.3.4")).thenReturn(new AsnResolver.AsnInfo(0, null, true));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
-    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null);
+    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
     verify(repository).save(cap.capture());
@@ -135,7 +137,7 @@ class ProfileVisitRecorderTest {
   @Test
   void swallowsExceptionAndDoesNotThrow() {
     when(uaClassifier.classify(any())).thenThrow(new RuntimeException("boom"));
-    recorder.record(7L, null, "ua", null, null, null, null, null, null, null, null);
+    recorder.record(7L, null, "ua", null, null, null, null, null, null, null, null, false);
     verify(repository, never()).save(any());
   }
 
@@ -147,9 +149,25 @@ class ProfileVisitRecorderTest {
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
     for (int i = 0; i < 3; i++) {
-      recorder.record(7L, null, "ua", "1.1.1.1", null, null, null, null, null, null, null);
+      recorder.record(7L, null, "ua", "1.1.1.1", null, null, null, null, null, null, null, false);
     }
     verify(repository, times(3)).save(any());
+  }
+
+  @Test
+  void gpcOptOutSkipsVisitorHash() {
+    when(uaClassifier.classify("ua")).thenReturn(uaInfo(false, null));
+    when(geoResolver.resolve("1.2.3.4")).thenReturn(GeoLocation.empty());
+    when(asnResolver.resolve("1.2.3.4"))
+        .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false));
+    when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
+
+    // Sec-GPC 옵트아웃 → 재방문 식별 해시를 만들지 않는다(§0, 측정 아닌 존중).
+    recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, true);
+
+    ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);
+    verify(repository).save(cap.capture());
+    assertThat(cap.getValue().getVisitorHash()).isNull();
   }
 
   private static UserAgentInfo uaInfo(boolean bot, String botName) {

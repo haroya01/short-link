@@ -16,10 +16,11 @@ public record ViewContext(
     String utmMedium,
     String utmCampaign,
     String utmTerm,
-    String utmContent) {
+    String utmContent,
+    boolean gpc) {
 
   private static final ViewContext EMPTY =
-      new ViewContext(null, null, null, null, null, null, null, null, null, null);
+      new ViewContext(null, null, null, null, null, null, null, null, null, null, false);
 
   public static ViewContext empty() {
     return EMPTY;
