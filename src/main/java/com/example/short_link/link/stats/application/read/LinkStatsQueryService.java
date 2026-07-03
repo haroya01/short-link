@@ -45,6 +45,20 @@ public class LinkStatsQueryService {
     return reportAssembler.assemble(link, ownerZone(link.getUserId()));
   }
 
+  /**
+   * The full owner report for any link, for the admin console. There is no ownership gate here on
+   * purpose — {@code /api/v1/admin/**} is already ADMIN-only at the security layer, and the {@link
+   * LinkAccessGuard} likewise treats admins as read-allowed. Reuses the same assembler as the owner
+   * path, reported in the link owner's timezone.
+   */
+  public LinkStats adminStats(ShortCode shortCode) {
+    LinkEntity link =
+        linkRepository
+            .findByShortCode(shortCode)
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
+    return reportAssembler.assemble(link, ownerZone(link.getUserId()));
+  }
+
   private ZoneId ownerZone(Long userId) {
     if (userId == null) return LinkStatsDateSupport.DEFAULT_ZONE;
     return users

@@ -1,6 +1,7 @@
 package com.example.short_link.admin.domain.repository;
 
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.StatPage;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.user.domain.UserEntity;
 import java.time.Instant;
 import java.util.Optional;
@@ -17,7 +18,15 @@ public interface AdminBrowseRepository {
 
   Optional<UserRow> findUser(long userId);
 
-  StatPage<LinkRow> findLinks(String q, Long ownerId, int page, int size);
+  StatPage<LinkRow> findLinks(String q, Long ownerId, LinkSort sort, int page, int size);
+
+  Optional<LinkRow> findLink(ShortCode shortCode);
+
+  /** Ordering for the link browse — newest first, or by lifetime click count first. */
+  enum LinkSort {
+    RECENT,
+    CLICKS
+  }
 
   interface UserRow {
     Long getId();
