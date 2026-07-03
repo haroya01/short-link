@@ -174,7 +174,8 @@ class RecordPostViewUseCaseTest {
             null,
             null,
             null,
-            null));
+            null,
+            false));
 
     ArgumentCaptor<PostViewEventEntity> event = ArgumentCaptor.forClass(PostViewEventEntity.class);
     verify(postViewEventRepository).save(event.capture());
@@ -185,6 +186,7 @@ class RecordPostViewUseCaseTest {
     assertThat(saved.getReferrerHost()).isNotBlank();
     assertThat(saved.isBot()).isFalse();
     assertThat(saved.getViewedAt()).isEqualTo(NOW);
+    assertThat(saved.getVisitorHash()).hasSize(64);
   }
 
   private void stubPublished() {
@@ -198,7 +200,17 @@ class RecordPostViewUseCaseTest {
 
   private ViewContext ctx() {
     return new ViewContext(
-        "https://x.com", "Mozilla/5.0", "1.2.3.4", "ko", "social", "tw", null, null, null, null);
+        "https://x.com",
+        "Mozilla/5.0",
+        "1.2.3.4",
+        "ko",
+        "social",
+        "tw",
+        null,
+        null,
+        null,
+        null,
+        false);
   }
 
   private PostViewEventEntity savedEvent() {
@@ -247,5 +259,33 @@ class RecordPostViewUseCaseTest {
     PostViewEventEntity saved = savedEvent();
     assertThat(saved.getCountryCode()).isNull();
     assertThat(saved.getViewedAt()).isEqualTo(NOW);
+  }
+
+  @Test
+  void gpcOptOutSkipsVisitorHash() {
+    stubPublished();
+    when(userAgentClassifier.classify(any()))
+        .thenReturn(new UserAgentInfo("desktop", "Win", "Chrome", false, null));
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false));
+    when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
+
+    // Sec-GPC 옵트아웃 → 재방문 식별 해시를 만들지 않는다(§0, 측정 아닌 존중).
+    useCase.execute(
+        new RecordPostViewCommand("john", "p"),
+        new ViewContext(
+            "https://x.com",
+            "Mozilla/5.0",
+            "1.2.3.4",
+            "ko",
+            "social",
+            "tw",
+            null,
+            null,
+            null,
+            null,
+            true));
+
+    assertThat(savedEvent().getVisitorHash()).isNull();
   }
 }

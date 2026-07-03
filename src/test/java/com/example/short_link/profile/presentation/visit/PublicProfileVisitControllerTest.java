@@ -1,6 +1,7 @@
 package com.example.short_link.profile.presentation.visit;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -38,7 +39,18 @@ class PublicProfileVisitControllerTest {
     doThrow(new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "nobody"))
         .when(recorder)
         .recordUsername(
-            eq("nobody"), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+            eq("nobody"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            anyBoolean());
 
     mvc.perform(post("/api/v1/public/profiles/nobody/visit")).andExpect(status().isNotFound());
   }
@@ -51,7 +63,18 @@ class PublicProfileVisitControllerTest {
     doNothing()
         .when(recorder)
         .recordUsername(
-            eq("visituser"), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+            eq("visituser"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            anyBoolean());
 
     mvc.perform(
             post("/api/v1/public/profiles/visituser/visit")
@@ -82,7 +105,48 @@ class PublicProfileVisitControllerTest {
             eq("social"),
             eq(null),
             eq(null),
-            eq(null));
+            eq(null),
+            eq(false));
+  }
+
+  @Test
+  void passesGpcOptOutWhenSecGpcHeaderSet() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("g@x.com", "google", "g-gpc"));
+    user.claimUsername("gpcuser");
+    userRepository.save(user);
+    doNothing()
+        .when(recorder)
+        .recordUsername(
+            eq("gpcuser"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            anyBoolean());
+
+    mvc.perform(post("/api/v1/public/profiles/gpcuser/visit").header("Sec-GPC", "1"))
+        .andExpect(status().isNoContent());
+
+    verify(recorder)
+        .recordUsername(
+            eq("gpcuser"),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            any(),
+            eq(true));
   }
 
   @Test
