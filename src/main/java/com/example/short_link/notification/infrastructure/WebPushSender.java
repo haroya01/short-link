@@ -4,6 +4,7 @@ import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
 import com.example.short_link.user.domain.WebPushSubscriptionEntity;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.util.Collection;
@@ -95,12 +96,18 @@ public class WebPushSender implements PushSender {
     }
   }
 
-  /** Service Worker 가 읽는 페이로드 — 제목(행위)·본문(글 제목)·열 url. */
-  private byte[] payload(PushMessage message) {
+  /**
+   * Service Worker 가 읽는 페이로드 — 제목(행위)·본문(글 제목)·열 url, 그리고 APNs 와 같은 라우팅 힌트(type·shortCode). 값이 없는
+   * 힌트 키는 생략한다(구독 SW 는 모르는 키를 무시하므로 추가만 해도 안전).
+   */
+  byte[] payload(PushMessage message) {
     String title = message.body();
     String body = message.subtitle() == null ? "" : message.subtitle();
-    return jsonMapper.writeValueAsBytes(new WebPushPayload(title, body, "/"));
+    return jsonMapper.writeValueAsBytes(
+        new WebPushPayload(title, body, "/", message.type(), message.shortCode()));
   }
 
-  private record WebPushPayload(String title, String body, String url) {}
+  @JsonInclude(JsonInclude.Include.NON_NULL)
+  private record WebPushPayload(
+      String title, String body, String url, String type, String shortCode) {}
 }
