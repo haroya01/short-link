@@ -19,6 +19,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -109,6 +110,52 @@ class ApnsPushSenderTest {
     ApnsPushSender sender = sender(pem(p256()));
     sender.send(1L, new PushSender.PushMessage("kurl", "제목 줄", "본문"));
     sender.send(1L, new PushSender.PushMessage("kurl", null, "부제 없는 본문"));
+  }
+
+  @Test
+  void payloadCarriesRoutingKeysForLinkNotificationWithShortCode() {
+    // shortCode 있는 링크 알림 — aps 형제 최상위 type·shortCode + category="LINK_STATS"(→ 앱의 "통계 보기" 액션).
+    String payload =
+        sender(null)
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl", "/spring", "첫 클릭이 들어왔어요 🎉", "FIRST_CLICK", "spring"));
+
+    JsonNode root = jsonMapper.readTree(payload);
+    assertThat(root.get("type").asString()).isEqualTo("FIRST_CLICK");
+    assertThat(root.get("shortCode").asString()).isEqualTo("spring");
+    assertThat(root.get("aps").get("category").asString()).isEqualTo("LINK_STATS");
+    // 기존 alert/sound 구조는 불변(구버전 앱 호환).
+    JsonNode alert = root.get("aps").get("alert");
+    assertThat(alert.get("title").asString()).isEqualTo("kurl");
+    assertThat(alert.get("subtitle").asString()).isEqualTo("/spring");
+    assertThat(alert.get("body").asString()).isEqualTo("첫 클릭이 들어왔어요 🎉");
+    assertThat(root.get("aps").get("sound").asString()).isEqualTo("default");
+  }
+
+  @Test
+  void payloadOmitsShortCodeAndCategoryForCodelessType() {
+    // 다이제스트처럼 링크 단위가 아닌 알림 — type 은 싣되 shortCode·category 는 생략.
+    String payload =
+        sender(null)
+            .payloadJson(new PushSender.PushMessage("kurl", "어제 요약", "어제 12 클릭", "DIGEST", null));
+
+    JsonNode root = jsonMapper.readTree(payload);
+    assertThat(root.get("type").asString()).isEqualTo("DIGEST");
+    assertThat(root.has("shortCode")).isFalse();
+    assertThat(root.get("aps").has("category")).isFalse();
+  }
+
+  @Test
+  void payloadHasNoRoutingKeysForRoutinglessMessage() {
+    // 블로그 벨 등 라우팅 없는 알림 — 페이로드는 예전과 동일(aps.alert/sound 만).
+    String payload = sender(null).payloadJson(new PushSender.PushMessage("kurl", "글 제목", "좋아합니다"));
+
+    JsonNode root = jsonMapper.readTree(payload);
+    assertThat(root.has("type")).isFalse();
+    assertThat(root.has("shortCode")).isFalse();
+    assertThat(root.get("aps").has("category")).isFalse();
+    assertThat(root.get("aps").get("alert").get("body").asString()).isEqualTo("좋아합니다");
   }
 
   @Test

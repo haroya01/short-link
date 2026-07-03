@@ -32,6 +32,9 @@ import tools.jackson.databind.json.JsonMapper;
 @Slf4j
 public class ApnsPushSender implements PushSender {
 
+  /** 앱이 이 category 에 "통계 보기" 액션 버튼을 묶어 뒀다(UNNotificationCategory) — shortCode 있는 알림에만 단다. */
+  private static final String LINK_STATS_CATEGORY = "LINK_STATS";
+
   private final ApnsProperties props;
   private final DeviceTokenRepository deviceTokens;
   private final JsonMapper jsonMapper;
@@ -110,13 +113,26 @@ public class ApnsPushSender implements PushSender {
     }
   }
 
-  private String payloadJson(PushMessage message) {
+  /**
+   * aps.alert/sound 는 그대로 두고(구버전 앱 호환) 라우팅 힌트만 얹는다: type·shortCode 는 aps 형제 최상위 키로, shortCode 가 있는
+   * 알림만 category="LINK_STATS" 를 달아 앱이 "통계 보기" 액션을 붙인다. 값이 없는 키는 통째로 생략한다.
+   */
+  String payloadJson(PushMessage message) {
     var alert = new java.util.LinkedHashMap<String, Object>();
     alert.put("title", message.title());
     if (message.subtitle() != null) alert.put("subtitle", message.subtitle());
     alert.put("body", message.body());
-    return jsonMapper.writeValueAsString(
-        java.util.Map.of("aps", java.util.Map.of("alert", alert, "sound", "default")));
+
+    var aps = new java.util.LinkedHashMap<String, Object>();
+    aps.put("alert", alert);
+    aps.put("sound", "default");
+    if (message.shortCode() != null) aps.put("category", LINK_STATS_CATEGORY);
+
+    var root = new java.util.LinkedHashMap<String, Object>();
+    root.put("aps", aps);
+    if (message.type() != null) root.put("type", message.type());
+    if (message.shortCode() != null) root.put("shortCode", message.shortCode());
+    return jsonMapper.writeValueAsString(root);
   }
 
   synchronized String jwt() {

@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
@@ -72,5 +74,32 @@ class WebPushSenderTest {
     configured().sendToAll(List.of(), new PushSender.PushMessage("kurl", "글 제목", "새 글"));
 
     verifyNoInteractions(subscriptions);
+  }
+
+  @Test
+  void payloadCarriesRoutingHintsForLinkNotification() {
+    JsonNode root =
+        jsonMapper.readTree(
+            configured()
+                .payload(
+                    new PushSender.PushMessage(
+                        "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring")));
+
+    assertThat(root.get("type").asString()).isEqualTo("FIRST_CLICK");
+    assertThat(root.get("shortCode").asString()).isEqualTo("spring");
+    // 제목=행위(body), 본문=부제(subtitle) 매핑은 그대로.
+    assertThat(root.get("title").asString()).isEqualTo("첫 클릭");
+    assertThat(root.get("body").asString()).isEqualTo("/spring");
+  }
+
+  @Test
+  void payloadOmitsRoutingHintsForRoutinglessMessage() {
+    JsonNode root =
+        jsonMapper.readTree(
+            configured().payload(new PushSender.PushMessage("kurl", "글 제목", "새 글")));
+
+    assertThat(root.has("type")).isFalse();
+    assertThat(root.has("shortCode")).isFalse();
+    assertThat(root.get("title").asString()).isEqualTo("새 글");
   }
 }
