@@ -12,9 +12,29 @@ public record AbuseReportView(
     String status,
     String adminNote,
     Instant createdAt,
-    Instant resolvedAt) {
+    Instant resolvedAt,
+    String subjectTitle,
+    String subjectAuthorHandle,
+    String subjectUrl,
+    boolean subjectRemoved) {
 
+  /** Base view with no subject snapshot — for callers that don't hydrate the reported subject. */
   public static AbuseReportView from(AbuseReportEntity report) {
+    return enriched(report, null, null, null, false);
+  }
+
+  /**
+   * View carrying the reported subject's snapshot — title, author handle, public URL, and whether
+   * it has been taken down — so the moderation queue can show what was reported and link straight
+   * to it. Snapshot fields are null/false when the subject isn't a hydratable post (USER / COMMENT,
+   * or a hard-deleted post), which the client renders as the bare {@code TYPE #id} fallback.
+   */
+  public static AbuseReportView enriched(
+      AbuseReportEntity report,
+      String subjectTitle,
+      String subjectAuthorHandle,
+      String subjectUrl,
+      boolean subjectRemoved) {
     return new AbuseReportView(
         report.getId(),
         report.getReporterUserId(),
@@ -24,6 +44,10 @@ public record AbuseReportView(
         report.getStatus().name(),
         report.getAdminNote(),
         report.getCreatedAt(),
-        report.getResolvedAt());
+        report.getResolvedAt(),
+        subjectTitle,
+        subjectAuthorHandle,
+        subjectUrl,
+        subjectRemoved);
   }
 }

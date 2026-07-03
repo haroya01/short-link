@@ -37,7 +37,7 @@ public class AdminAbuseReportController {
   @PostMapping("/{id}/resolve")
   public AbuseReportView resolve(
       @PathVariable Long id, @Valid @RequestBody ResolveAbuseReportRequest request) {
-    return AbuseReportView.from(
+    return queryService.enrich(
         resolveAbuseReport.execute(
             new ResolveAbuseReportCommand(
                 id,
