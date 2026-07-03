@@ -6,7 +6,8 @@ public enum AdminErrorCode {
   INVALID_ACTIVE_PERIOD(HttpStatus.BAD_REQUEST, "Invalid active-users period: %s"),
   INVALID_DOMAIN(HttpStatus.BAD_REQUEST, "invalid domain: %s"),
   INVALID_ROLE(HttpStatus.BAD_REQUEST, "Invalid role filter: %s"),
-  USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No user with id %s");
+  USER_NOT_FOUND(HttpStatus.NOT_FOUND, "No user with id %s"),
+  LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "No link with code %s");
 
   private final HttpStatus status;
   private final String template;

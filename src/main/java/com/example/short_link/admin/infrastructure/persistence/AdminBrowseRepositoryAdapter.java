@@ -1,6 +1,7 @@
 package com.example.short_link.admin.infrastructure.persistence;
 
 import com.example.short_link.admin.domain.repository.AdminBrowseRepository;
+import com.example.short_link.admin.domain.repository.AdminBrowseRepository.LinkSort;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.StatPage;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.user.domain.UserEntity;
@@ -36,10 +37,21 @@ class AdminBrowseRepositoryAdapter implements AdminBrowseRepository {
   }
 
   @Override
-  public StatPage<LinkRow> findLinks(String q, Long ownerId, int page, int size) {
+  public StatPage<LinkRow> findLinks(String q, Long ownerId, LinkSort sort, int page, int size) {
+    String urlPattern = likePattern(q);
+    ShortCode exactCode = toShortCodeOrNull(q);
+    PageRequest pageable = PageRequest.of(page, size);
     Page<LinkRow> rows =
-        jpa.findLinks(likePattern(q), toShortCodeOrNull(q), ownerId, PageRequest.of(page, size));
+        switch (sort) {
+          case CLICKS -> jpa.findLinksByClicks(urlPattern, exactCode, ownerId, pageable);
+          case RECENT -> jpa.findLinks(urlPattern, exactCode, ownerId, pageable);
+        };
     return new StatPage<>(rows.getContent(), rows.getTotalElements());
+  }
+
+  @Override
+  public Optional<LinkRow> findLink(ShortCode shortCode) {
+    return jpa.findLinkByShortCode(shortCode);
   }
 
   private static String likePattern(String q) {

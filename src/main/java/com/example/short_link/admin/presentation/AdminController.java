@@ -1,14 +1,17 @@
 package com.example.short_link.admin.presentation;
 
 import com.example.short_link.admin.application.dto.AdminActiveUsers;
+import com.example.short_link.admin.application.dto.AdminActivity;
 import com.example.short_link.admin.application.dto.AdminCohort;
 import com.example.short_link.admin.application.dto.AdminHealthMetrics;
 import com.example.short_link.admin.application.dto.AdminLifecycle;
+import com.example.short_link.admin.application.dto.AdminLinkDetail;
 import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.application.dto.AdminOverview;
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
 import com.example.short_link.admin.application.dto.AdminUserRow;
 import com.example.short_link.admin.application.dto.RecentError;
+import com.example.short_link.admin.application.read.AdminActivityService;
 import com.example.short_link.admin.application.read.AdminAnalyticsService;
 import com.example.short_link.admin.application.read.AdminBrowseService;
 import com.example.short_link.admin.application.read.AdminHealthService;
@@ -19,6 +22,7 @@ import com.example.short_link.admin.application.read.RecentErrorsService;
 import com.example.short_link.common.observability.AdminFunnelService;
 import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.common.observability.AdminSystemMetricsService;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.application.dto.WebhookReDetectResult;
 import com.example.short_link.link.webhook.application.write.ReDetectWebhookFormatsUseCase;
 import com.example.short_link.user.application.dto.MintedAccessToken;
@@ -44,6 +48,7 @@ public class AdminController {
   private final RecentErrorsService recentErrorsService;
   private final AdminAnalyticsService analyticsService;
   private final AdminBrowseService browseService;
+  private final AdminActivityService activityService;
   private final AdminRouteMetricsService routeMetricsService;
   private final AdminLinkMetricsQueryService linkMetricsService;
   private final ReDetectWebhookFormatsUseCase reDetectWebhooks;
@@ -104,15 +109,38 @@ public class AdminController {
 
   /**
    * Full link-table browse. {@code q} matches an exact short code or a substring of the destination
-   * URL; {@code ownerId} narrows to one user's links (anonymous links have no owner); newest first.
+   * URL; {@code ownerId} narrows to one user's links (anonymous links have no owner); {@code sort}
+   * is {@code recent} (default, newest first) or {@code clicks} (busiest first).
    */
   @GetMapping("/links")
   public AdminBrowseService.LinksPage links(
       @RequestParam(required = false) String q,
       @RequestParam(required = false) Long ownerId,
+      @RequestParam(required = false) String sort,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return browseService.links(q, ownerId, page, size);
+    return browseService.links(q, ownerId, sort, page, size);
+  }
+
+  /**
+   * Live activity feed for the console: newest links and clicks across all users plus the links
+   * trending in the last 24h. Cheap enough to poll; click rows are PII-minimal (country / referrer
+   * host / device class only — never IP or visitor hash). Declared before {@code /links/{code}} so
+   * the literal path wins the match.
+   */
+  @GetMapping("/links/activity")
+  public AdminActivity linkActivity() {
+    return activityService.activity();
+  }
+
+  /**
+   * One link's full metadata (owner, lifecycle, protection) plus the owner-grade click report —
+   * daily / hourly / referrer / device / country breakdowns — for support and observability. Reuses
+   * the owner stats assembler with the ownership check skipped.
+   */
+  @GetMapping("/links/{code}")
+  public AdminLinkDetail linkDetail(@PathVariable ShortCode code) {
+    return browseService.linkDetail(code);
   }
 
   @GetMapping("/health-metrics")

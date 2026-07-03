@@ -1,13 +1,18 @@
 package com.example.short_link.admin.application.read;
 
+import com.example.short_link.admin.application.dto.AdminLinkDetail;
 import com.example.short_link.admin.application.dto.AdminLinkRow;
 import com.example.short_link.admin.application.dto.AdminUserRow;
 import com.example.short_link.admin.domain.repository.AdminBrowseRepository;
 import com.example.short_link.admin.domain.repository.AdminBrowseRepository.LinkRow;
+import com.example.short_link.admin.domain.repository.AdminBrowseRepository.LinkSort;
 import com.example.short_link.admin.domain.repository.AdminBrowseRepository.UserRow;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.StatPage;
 import com.example.short_link.admin.exception.AdminErrorCode;
 import com.example.short_link.admin.exception.AdminException;
+import com.example.short_link.link.application.dto.LinkStats;
+import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
 import com.example.short_link.user.domain.UserEntity;
 import java.time.Instant;
 import java.util.List;
@@ -29,6 +34,7 @@ public class AdminBrowseService {
   private static final int MAX_SIZE = 100;
 
   private final AdminBrowseRepository repo;
+  private final LinkStatsQueryService linkStatsQueryService;
 
   @Transactional(readOnly = true)
   public UsersPage users(String q, String role, int page, int size) {
@@ -46,11 +52,26 @@ public class AdminBrowseService {
   }
 
   @Transactional(readOnly = true)
-  public LinksPage links(String q, Long ownerId, int page, int size) {
+  public LinksPage links(String q, Long ownerId, String sort, int page, int size) {
     StatPage<LinkRow> rows =
-        repo.findLinks(blankToNull(q), ownerId, clampPage(page), clampSize(size));
+        repo.findLinks(blankToNull(q), ownerId, parseSort(sort), clampPage(page), clampSize(size));
     Instant now = Instant.now();
     return new LinksPage(rows.items().stream().map(r -> toLinkRow(r, now)).toList(), rows.total());
+  }
+
+  /**
+   * Full metadata plus the owner-grade click report for one link. The metadata row and the stats
+   * report are read separately; the stats come from the owner-facing assembler with its ownership
+   * gate skipped (this endpoint is already ADMIN-only).
+   */
+  @Transactional(readOnly = true)
+  public AdminLinkDetail linkDetail(ShortCode shortCode) {
+    LinkRow row =
+        repo.findLink(shortCode)
+            .orElseThrow(
+                () -> new AdminException(AdminErrorCode.LINK_NOT_FOUND, shortCode.value()));
+    LinkStats stats = linkStatsQueryService.adminStats(shortCode);
+    return new AdminLinkDetail(toLinkRow(row, Instant.now()), stats);
   }
 
   private static AdminUserRow toUserRow(UserRow r) {
@@ -105,6 +126,16 @@ public class AdminBrowseService {
       throw new AdminException(AdminErrorCode.INVALID_ROLE, role);
     }
     return upper;
+  }
+
+  private static LinkSort parseSort(String sort) {
+    if (sort == null || sort.isBlank()) {
+      return LinkSort.RECENT;
+    }
+    return switch (sort.trim().toLowerCase(Locale.ROOT)) {
+      case "clicks" -> LinkSort.CLICKS;
+      default -> LinkSort.RECENT;
+    };
   }
 
   private static int clampPage(int page) {

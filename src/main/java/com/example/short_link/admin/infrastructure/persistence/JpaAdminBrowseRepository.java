@@ -71,4 +71,46 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
       @Param("exactCode") ShortCode exactCode,
       @Param("ownerId") Long ownerId,
       Pageable pageable);
+
+  /**
+   * Same projection and filters as {@link #findLinks}, ordered by lifetime click count (busiest
+   * first) with newest as the tie-break. Ordering repeats the correlated count expression rather
+   * than the select alias so it doesn't depend on alias-in-ORDER-BY support.
+   */
+  @Query(
+      value =
+          "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "
+              + "l.userId AS ownerId, u.email AS ownerEmail, "
+              + "(SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id) AS clickCount, "
+              + "l.createdAt AS createdAt, l.expiresAt AS expiresAt, "
+              + "l.maxViews AS maxViews, l.viewCount AS viewCount, "
+              + "CASE WHEN l.passwordHash IS NOT NULL THEN 1 ELSE 0 END AS passwordProtected "
+              + "FROM LinkEntity l LEFT JOIN UserEntity u ON u.id = l.userId "
+              + "WHERE (:ownerId IS NULL OR l.userId = :ownerId) "
+              + "AND (:urlPattern IS NULL OR LOWER(l.originalUrl) LIKE :urlPattern "
+              + "OR (:exactCode IS NOT NULL AND l.shortCode = :exactCode)) "
+              + "ORDER BY (SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id) DESC, "
+              + "l.createdAt DESC",
+      countQuery =
+          "SELECT COUNT(l) FROM LinkEntity l "
+              + "WHERE (:ownerId IS NULL OR l.userId = :ownerId) "
+              + "AND (:urlPattern IS NULL OR LOWER(l.originalUrl) LIKE :urlPattern "
+              + "OR (:exactCode IS NOT NULL AND l.shortCode = :exactCode))")
+  Page<LinkRow> findLinksByClicks(
+      @Param("urlPattern") String urlPattern,
+      @Param("exactCode") ShortCode exactCode,
+      @Param("ownerId") Long ownerId,
+      Pageable pageable);
+
+  /** Single link by exact code, same projection as the browse list — for the admin detail view. */
+  @Query(
+      "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "
+          + "l.userId AS ownerId, u.email AS ownerEmail, "
+          + "(SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId = l.id) AS clickCount, "
+          + "l.createdAt AS createdAt, l.expiresAt AS expiresAt, "
+          + "l.maxViews AS maxViews, l.viewCount AS viewCount, "
+          + "CASE WHEN l.passwordHash IS NOT NULL THEN 1 ELSE 0 END AS passwordProtected "
+          + "FROM LinkEntity l LEFT JOIN UserEntity u ON u.id = l.userId "
+          + "WHERE l.shortCode = :shortCode")
+  Optional<LinkRow> findLinkByShortCode(@Param("shortCode") ShortCode shortCode);
 }
