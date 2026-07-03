@@ -7,8 +7,10 @@ import com.example.short_link.admin.application.dto.AdminLifecycle;
 import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.application.dto.AdminOverview;
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
+import com.example.short_link.admin.application.dto.AdminUserRow;
 import com.example.short_link.admin.application.dto.RecentError;
 import com.example.short_link.admin.application.read.AdminAnalyticsService;
+import com.example.short_link.admin.application.read.AdminBrowseService;
 import com.example.short_link.admin.application.read.AdminHealthService;
 import com.example.short_link.admin.application.read.AdminLinkMetricsQueryService;
 import com.example.short_link.admin.application.read.AdminOverviewService;
@@ -26,6 +28,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,6 +43,7 @@ public class AdminController {
   private final AdminHealthService healthService;
   private final RecentErrorsService recentErrorsService;
   private final AdminAnalyticsService analyticsService;
+  private final AdminBrowseService browseService;
   private final AdminRouteMetricsService routeMetricsService;
   private final AdminLinkMetricsQueryService linkMetricsService;
   private final ReDetectWebhookFormatsUseCase reDetectWebhooks;
@@ -78,6 +82,37 @@ public class AdminController {
   public AdminOverviewService.TopLinksPage topLinksByClicks(
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
     return service.topLinksByClicks(page, size);
+  }
+
+  /**
+   * Full user-table browse. {@code q} matches email / handle case-insensitively; {@code role}
+   * filters by USER / ADMIN; newest first. Page size is capped server-side.
+   */
+  @GetMapping("/users")
+  public AdminBrowseService.UsersPage users(
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) String role,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return browseService.users(q, role, page, size);
+  }
+
+  @GetMapping("/users/{id}")
+  public AdminUserRow user(@PathVariable long id) {
+    return browseService.user(id);
+  }
+
+  /**
+   * Full link-table browse. {@code q} matches an exact short code or a substring of the destination
+   * URL; {@code ownerId} narrows to one user's links (anonymous links have no owner); newest first.
+   */
+  @GetMapping("/links")
+  public AdminBrowseService.LinksPage links(
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) Long ownerId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return browseService.links(q, ownerId, page, size);
   }
 
   @GetMapping("/health-metrics")
