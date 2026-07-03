@@ -7,6 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -38,6 +39,17 @@ public interface JpaCollectionConnectionRepository
 
   List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
       ConnectionBlockType blockType, Long refId);
+
+  /**
+   * 대상 블록(글·하이라이트·노트)이 하드 삭제될 때 그를 가리키던 연결을 일괄 정리 — ref_id 는 FK 없는 다형 참조라 DB 가 대신 지워주지 않는다. 벌크
+   * delete 라 영속성 컨텍스트를 우회한다(삭제 트랜잭션 안에서만 호출).
+   */
+  @Modifying
+  @Query(
+      "delete from CollectionConnectionEntity c"
+          + " where c.blockType = :blockType and c.refId in :refIds")
+  int deleteByBlockTypeAndRefIdIn(
+      @Param("blockType") ConnectionBlockType blockType, @Param("refIds") Collection<Long> refIds);
 
   @Query(
       "select max(c.position) from CollectionConnectionEntity c where c.collectionId = :collectionId")
