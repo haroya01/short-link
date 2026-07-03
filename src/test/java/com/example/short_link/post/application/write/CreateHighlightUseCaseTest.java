@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -15,6 +16,7 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -29,12 +31,15 @@ class CreateHighlightUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private PostHighlightRepository highlightRepository;
   @Mock private PostHighlightReplyRepository replyRepository;
+  @Mock private CollectionConnectionCleaner connectionCleaner;
 
   private CreateHighlightUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new CreateHighlightUseCase(postRepository, highlightRepository, replyRepository);
+    useCase =
+        new CreateHighlightUseCase(
+            postRepository, highlightRepository, replyRepository, connectionCleaner);
   }
 
   private PostEntity publishedPost(long id, long authorId) {
@@ -152,13 +157,15 @@ class CreateHighlightUseCaseTest {
   }
 
   @Test
-  void deleteRemovesOwnHighlight() {
+  void deleteRemovesOwnHighlightAndItsConnections() {
     PostHighlightEntity h = highlight(7L, 5L, 1L);
     when(highlightRepository.findById(7L)).thenReturn(Optional.of(h));
 
     useCase.delete(1L, 7L);
 
     verify(highlightRepository).delete(h);
+    // Curator connections pointing at this highlight go with it — otherwise the count overstates.
+    verify(connectionCleaner).purgeForHighlights(List.of(7L));
   }
 
   @Test
@@ -170,6 +177,7 @@ class CreateHighlightUseCaseTest {
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.HIGHLIGHT_PERMISSION_DENIED);
     verify(highlightRepository, never()).delete(any());
+    verify(connectionCleaner, never()).purgeForHighlights(any());
   }
 
   @Test

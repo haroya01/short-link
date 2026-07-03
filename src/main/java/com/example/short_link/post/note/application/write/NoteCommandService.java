@@ -1,5 +1,6 @@
 package com.example.short_link.post.note.application.write;
 
+import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.post.note.domain.NoteEntity;
@@ -18,6 +19,7 @@ public class NoteCommandService {
 
   private final NoteRepository notes;
   private final NoteLikeRepository likes;
+  private final CollectionConnectionCleaner connectionCleaner;
 
   /** 쓰는 즉시 공개 — 발행 상태 기계 없음. 응답은 피드와 같은 행(작성자 포함). */
   @Transactional
@@ -46,6 +48,9 @@ public class NoteCommandService {
       throw new PostException(PostErrorCode.NOTE_PERMISSION_DENIED);
     }
     likes.deleteAllByNoteId(noteId);
+    // Curator connections pointing at this note have no FK to cascade — drop them so the owning
+    // collection stops counting a block that no longer renders.
+    connectionCleaner.purgeForNote(noteId);
     notes.delete(note);
   }
 
