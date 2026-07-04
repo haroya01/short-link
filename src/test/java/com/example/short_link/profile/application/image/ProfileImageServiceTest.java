@@ -114,6 +114,7 @@ class ProfileImageServiceTest {
     assertThat(out.imageUrl()).isEqualTo("https://cdn.test/profile-images/1/ok.jpg");
     assertThat(out.key()).isEqualTo("profile-images/1/ok.jpg");
     verify(objectStorage, never()).delete(eq("profile-images/1/ok.jpg"));
+    verify(objectStorage).applyImmutableCacheControl("profile-images/1/ok.jpg");
   }
 
   @Test

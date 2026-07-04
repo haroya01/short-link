@@ -65,6 +65,7 @@ public class AvatarService {
           UserErrorCode.INVALID_AVATAR,
           "avatar exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
     }
+    objectStorage.applyImmutableCacheControl(key);
     UserEntity user =
         userRepository
             .findById(userId)
