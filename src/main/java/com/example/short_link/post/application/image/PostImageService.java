@@ -98,6 +98,7 @@ public class PostImageService {
           PostErrorCode.PERMISSION_DENIED,
           "image exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
     }
+    objectStorage.applyImmutableCacheControl(key);
     return new CommitResult(publicUrlFor(key), key);
   }
 

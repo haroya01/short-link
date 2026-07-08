@@ -138,6 +138,7 @@ class PostImageServiceTest {
         service.commitUpload(7L, 42L, "post-images/7/42/uuid.png");
 
     assertThat(result.imageUrl()).isEqualTo("https://cdn.kurl.me/post-images/7/42/uuid.png");
+    verify(objectStorage).applyImmutableCacheControl("post-images/7/42/uuid.png");
   }
 
   @Test

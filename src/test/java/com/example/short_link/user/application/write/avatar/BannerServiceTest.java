@@ -118,6 +118,7 @@ class BannerServiceTest {
     assertThat(r.bannerUrl()).isEqualTo("https://cdn.example.com/banners/1/new.png");
     assertThat(user.getBannerKey()).isEqualTo("banners/1/new.png");
     verify(objectStorage).delete("banners/1/old.png");
+    verify(objectStorage).applyImmutableCacheControl("banners/1/new.png");
   }
 
   @Test
