@@ -10,6 +10,7 @@ import com.example.short_link.post.domain.repository.PostHighlightReplyRepositor
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
 import java.util.Map;
@@ -28,6 +29,7 @@ class PostHighlightQueryServiceTest {
   @Mock private PostHighlightReplyRepository replyRepository;
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
+  @Mock private FollowRepository followRepository;
 
   private PostHighlightQueryService service;
 
@@ -35,7 +37,7 @@ class PostHighlightQueryServiceTest {
   void setUp() {
     service =
         new PostHighlightQueryService(
-            highlightRepository, replyRepository, postRepository, userRepository);
+            highlightRepository, replyRepository, postRepository, userRepository, followRepository);
   }
 
   private PostEntity publishedPost(long id, long authorId) {

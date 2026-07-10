@@ -22,6 +22,10 @@ public interface PostHighlightRepository {
   /** A reader's highlights across all posts, newest first — the "my highlights" library. */
   List<PostHighlightEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
+  /** Highlights by a set of users (e.g. curators the viewer follows), newest first — paged feed. */
+  List<PostHighlightEntity> findByUserIdsOrderByCreatedAtDesc(
+      Collection<Long> userIds, int page, int size);
+
   /** Purge a post's highlights when it's permanently deleted. */
   int deleteAllByPostId(Long postId);
 }

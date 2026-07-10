@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -42,6 +43,15 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
   @Override
   public List<PostHighlightEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId) {
     return jpa.findAllByUserIdOrderByCreatedAtDesc(userId);
+  }
+
+  @Override
+  public List<PostHighlightEntity> findByUserIdsOrderByCreatedAtDesc(
+      Collection<Long> userIds, int page, int size) {
+    if (userIds.isEmpty()) {
+      return List.of();
+    }
+    return jpa.findAllByUserIdInOrderByCreatedAtDesc(userIds, PageRequest.of(page, size));
   }
 
   @Override
