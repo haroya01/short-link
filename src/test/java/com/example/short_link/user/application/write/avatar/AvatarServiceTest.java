@@ -128,6 +128,7 @@ class AvatarServiceTest {
     assertThat(user.getAvatarKey()).isEqualTo("avatars/1/new.jpg");
     verify(objectStorage).delete("avatars/1/old.jpg");
     verify(objectStorage, never()).delete("avatars/1/new.jpg");
+    verify(objectStorage).applyImmutableCacheControl("avatars/1/new.jpg");
   }
 
   @Test

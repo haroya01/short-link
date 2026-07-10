@@ -3,6 +3,8 @@ package com.example.short_link.admin.infrastructure.persistence;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.DailyRow;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkMetricRow;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkStatRow;
+import com.example.short_link.admin.domain.repository.AdminMetricsRepository.RecentClickRow;
+import com.example.short_link.admin.domain.repository.AdminMetricsRepository.RecentLinkRow;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.UserStatRow;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
@@ -97,4 +99,27 @@ public interface JpaAdminMetricsRepository extends JpaRepository<ClickEventEntit
           + "WHERE l.shortCode IN :shortCodes")
   List<LinkMetricRow> linkMetricRowsByShortCodes(
       @Param("shortCodes") Collection<ShortCode> shortCodes);
+
+  @Query(
+      "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "
+          + "u.email AS ownerEmail, l.createdAt AS createdAt "
+          + "FROM LinkEntity l LEFT JOIN UserEntity u ON u.id = l.userId "
+          + "ORDER BY l.createdAt DESC")
+  List<RecentLinkRow> recentLinks(Pageable pageable);
+
+  @Query(
+      "SELECT l.shortCode AS shortCode, c.clickedAt AS clickedAt, "
+          + "c.countryCode AS countryCode, c.referrerHost AS referrerHost, "
+          + "c.deviceClass AS deviceClass "
+          + "FROM ClickEventEntity c JOIN LinkEntity l ON l.id = c.linkId "
+          + "ORDER BY c.clickedAt DESC")
+  List<RecentClickRow> recentClicks(Pageable pageable);
+
+  @Query(
+      "SELECT l.shortCode AS shortCode, COUNT(c) AS count, u.email AS ownerEmail "
+          + "FROM ClickEventEntity c JOIN LinkEntity l ON l.id = c.linkId "
+          + "LEFT JOIN UserEntity u ON u.id = l.userId "
+          + "WHERE c.bot = false AND c.clickedAt >= :since "
+          + "GROUP BY l.shortCode, u.email ORDER BY count DESC")
+  List<LinkStatRow> topLinksByClicksSince(@Param("since") Instant since, Pageable pageable);
 }

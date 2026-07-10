@@ -69,6 +69,7 @@ public class BannerService {
           UserErrorCode.INVALID_AVATAR,
           "banner exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
     }
+    objectStorage.applyImmutableCacheControl(key);
     UserEntity user =
         userRepository
             .findById(userId)

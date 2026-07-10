@@ -138,6 +138,7 @@ class PostImageServiceTest {
         service.commitUpload(7L, 42L, "post-images/7/42/uuid.png");
 
     assertThat(result.imageUrl()).isEqualTo("https://cdn.kurl.me/post-images/7/42/uuid.png");
+    verify(objectStorage).applyImmutableCacheControl("post-images/7/42/uuid.png");
   }
 
   @Test
@@ -338,7 +339,6 @@ class PostImageServiceTest {
   @Test
   void importFollowsCrossHostRedirectRevalidatingEachHop() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(props.publicBaseUrl()).thenReturn("https://cdn.kurl.me");
     // 노션 이미지 프록시 패턴: www.notion.so/image/... → S3 서명 URL 로 cross-host 302.
@@ -371,7 +371,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsRedirectToDisallowedHost() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     String metadataUrl = "http://169.254.169.254/latest/meta-data";
     when(httpFetcher.fetch(any(HttpFetcher.Request.class))).thenReturn(redirect(302, metadataUrl));
@@ -393,7 +392,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsTooManyRedirects() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(httpFetcher.fetch(any(HttpFetcher.Request.class))).thenReturn(redirect(302, IMG_URL));
 
@@ -405,7 +403,6 @@ class PostImageServiceTest {
   @Test
   void importRejectsRedirectMissingLocation() {
     when(props.isConfigured()).thenReturn(true);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(ownedPost());
     when(props.maxBytes()).thenReturn(5_000_000L);
     when(httpFetcher.fetch(any(HttpFetcher.Request.class)))
         .thenReturn(new HttpFetcher.Response(302, Map.of(), new byte[0]));

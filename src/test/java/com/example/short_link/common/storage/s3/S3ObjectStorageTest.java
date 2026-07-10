@@ -12,12 +12,15 @@ import java.net.URI;
 import java.time.Duration;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
+import software.amazon.awssdk.services.s3.model.MetadataDirective;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -114,5 +117,41 @@ class S3ObjectStorageTest {
     assertThatThrownBy(
             () -> storage(true).putObject("post-images/7/42/x.png", "image/png", new byte[] {1}))
         .isInstanceOf(ObjectStorageException.class);
+  }
+
+  @Test
+  void putObjectTagsImmutableCacheControl() {
+    storage(true).putObject("post-images/7/42/x.png", "image/png", new byte[] {1, 2, 3});
+
+    ArgumentCaptor<PutObjectRequest> captor = ArgumentCaptor.forClass(PutObjectRequest.class);
+    verify(s3).putObject(captor.capture(), any(RequestBody.class));
+    assertThat(captor.getValue().cacheControl()).isEqualTo(S3ObjectStorage.IMMUTABLE_CACHE_CONTROL);
+  }
+
+  @Test
+  void applyImmutableCacheControlCopiesInPlacePreservingContentType() {
+    when(s3.headObject(any(HeadObjectRequest.class)))
+        .thenReturn(HeadObjectResponse.builder().contentType("image/webp").build());
+
+    storage(true).applyImmutableCacheControl("avatars/1/x.webp");
+
+    ArgumentCaptor<CopyObjectRequest> captor = ArgumentCaptor.forClass(CopyObjectRequest.class);
+    verify(s3).copyObject(captor.capture());
+    CopyObjectRequest copy = captor.getValue();
+    assertThat(copy.sourceKey()).isEqualTo("avatars/1/x.webp");
+    assertThat(copy.destinationKey()).isEqualTo("avatars/1/x.webp");
+    assertThat(copy.metadataDirective()).isEqualTo(MetadataDirective.REPLACE);
+    assertThat(copy.contentType()).isEqualTo("image/webp");
+    assertThat(copy.cacheControl()).isEqualTo(S3ObjectStorage.IMMUTABLE_CACHE_CONTROL);
+  }
+
+  @Test
+  void applyImmutableCacheControlSwallowsSdkFailure() {
+    when(s3.headObject(any(HeadObjectRequest.class)))
+        .thenThrow(S3Exception.builder().message("boom").build());
+
+    storage(true).applyImmutableCacheControl("avatars/1/x.webp");
+
+    verify(s3, Mockito.never()).copyObject(any(CopyObjectRequest.class));
   }
 }

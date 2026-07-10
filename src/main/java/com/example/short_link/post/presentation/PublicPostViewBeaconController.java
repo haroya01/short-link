@@ -57,6 +57,7 @@ public class PublicPostViewBeaconController {
             utmMedium,
             utmCampaign,
             utmTerm,
-            utmContent));
+            utmContent,
+            "1".equals(req.getHeader("Sec-GPC"))));
   }
 }

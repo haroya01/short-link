@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -8,6 +9,7 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +26,7 @@ public class CreateHighlightUseCase {
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
   private final PostHighlightReplyRepository replyRepository;
+  private final CollectionConnectionCleaner connectionCleaner;
 
   @Transactional
   public HighlightRef execute(CreateHighlightCommand cmd) {
@@ -75,6 +78,9 @@ public class CreateHighlightUseCase {
     // Take the highlight's reply thread with it. The DB FK cascades too, but purging explicitly
     // keeps the cleanup visible at the use-case level (and independent of dialect cascade support).
     replyRepository.deleteAllByHighlightId(highlight.getId());
+    // Curator connections pointing at this highlight have no FK to cascade — drop them here or the
+    // owning collection keeps counting a block that no longer renders.
+    connectionCleaner.purgeForHighlights(List.of(highlight.getId()));
     highlightRepository.delete(highlight);
   }
 

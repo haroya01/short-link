@@ -31,6 +31,7 @@ public class LinkNotificationDispatcher {
     if (!preferences.isEnabled(userId, type)) {
       return;
     }
-    pushSender.send(userId, new PushSender.PushMessage("kurl", subtitle, body));
+    pushSender.send(
+        userId, new PushSender.PushMessage("kurl", subtitle, body, type.name(), shortCode));
   }
 }

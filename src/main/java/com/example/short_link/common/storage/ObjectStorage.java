@@ -25,6 +25,15 @@ public interface ObjectStorage {
   /** Return the object's size in bytes, or empty if it doesn't exist / lookup failed. */
   Optional<Long> objectSize(String key);
 
+  /**
+   * Re-tag an already-uploaded object as immutable-cacheable (long-lived {@code Cache-Control}).
+   * For presigned client uploads, where the PUT itself carries no cache metadata — call after
+   * commit-side validation. Keys here are UUID-based and never rewritten, so "immutable" is safe.
+   * Best-effort: failures are logged, never thrown — cache metadata is an optimization, not a
+   * correctness requirement.
+   */
+  void applyImmutableCacheControl(String key);
+
   /** Delete the object. Throws on adapter failure — caller decides to swallow or propagate. */
   void delete(String key);
 }

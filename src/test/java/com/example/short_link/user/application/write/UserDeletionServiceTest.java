@@ -172,6 +172,16 @@ class UserDeletionServiceTest {
             + " VALUES (?, 'https://example.com/hook', 'whsec-0123456789abcdef',"
             + " 'POST_PUBLISHED', NOW(6))",
         authorId);
+    // link_notification / notification_preference — 링크 알림 피드와 그 타입별 옵트아웃. users FK 에
+    // ON DELETE CASCADE 가 없어 eraser 가 비워주지 않으면 계정 영구삭제 후에도 남는다(방침 §8 삭제 약속).
+    jdbc.update(
+        "INSERT INTO link_notification (recipient_user_id, type, created_at)"
+            + " VALUES (?, 'FIRST_CLICK', NOW(6))",
+        authorId);
+    jdbc.update(
+        "INSERT INTO notification_preference (user_id, type, enabled, created_at)"
+            + " VALUES (?, 'DIGEST', 0, NOW(6))",
+        authorId);
 
     deletionService.hardDelete(authorId);
     // users DELETE 는 flush 시점에야 실행된다 — 강제로 내보내 FK 체크가 실제로 일어나게 한다
@@ -203,6 +213,11 @@ class UserDeletionServiceTest {
                 "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? OR actor_user_id = ?",
                 authorId,
                 authorId))
+        .isZero();
+    assertThat(
+            count("SELECT COUNT(*) FROM link_notification WHERE recipient_user_id = ?", authorId))
+        .isZero();
+    assertThat(count("SELECT COUNT(*) FROM notification_preference WHERE user_id = ?", authorId))
         .isZero();
     assertThat(count("SELECT COUNT(*) FROM series WHERE user_id = ?", authorId)).isZero();
     assertThat(count("SELECT COUNT(*) FROM series_subscription WHERE series_id = ?", seriesId))

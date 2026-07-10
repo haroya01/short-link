@@ -1,14 +1,21 @@
 package com.example.short_link.admin.presentation;
 
 import com.example.short_link.admin.application.dto.AdminActiveUsers;
+import com.example.short_link.admin.application.dto.AdminActivity;
 import com.example.short_link.admin.application.dto.AdminCohort;
 import com.example.short_link.admin.application.dto.AdminHealthMetrics;
 import com.example.short_link.admin.application.dto.AdminLifecycle;
+import com.example.short_link.admin.application.dto.AdminLinkDetail;
 import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.application.dto.AdminOverview;
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
+import com.example.short_link.admin.application.dto.AdminUserRow;
+import com.example.short_link.admin.application.dto.BlogAdminMetrics;
 import com.example.short_link.admin.application.dto.RecentError;
+import com.example.short_link.admin.application.read.AdminActivityService;
 import com.example.short_link.admin.application.read.AdminAnalyticsService;
+import com.example.short_link.admin.application.read.AdminBlogMetricsService;
+import com.example.short_link.admin.application.read.AdminBrowseService;
 import com.example.short_link.admin.application.read.AdminHealthService;
 import com.example.short_link.admin.application.read.AdminLinkMetricsQueryService;
 import com.example.short_link.admin.application.read.AdminOverviewService;
@@ -17,6 +24,7 @@ import com.example.short_link.admin.application.read.RecentErrorsService;
 import com.example.short_link.common.observability.AdminFunnelService;
 import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.common.observability.AdminSystemMetricsService;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.application.dto.WebhookReDetectResult;
 import com.example.short_link.link.webhook.application.write.ReDetectWebhookFormatsUseCase;
 import com.example.short_link.user.application.dto.MintedAccessToken;
@@ -26,6 +34,7 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -40,6 +49,9 @@ public class AdminController {
   private final AdminHealthService healthService;
   private final RecentErrorsService recentErrorsService;
   private final AdminAnalyticsService analyticsService;
+  private final AdminBlogMetricsService blogMetricsService;
+  private final AdminBrowseService browseService;
+  private final AdminActivityService activityService;
   private final AdminRouteMetricsService routeMetricsService;
   private final AdminLinkMetricsQueryService linkMetricsService;
   private final ReDetectWebhookFormatsUseCase reDetectWebhooks;
@@ -78,6 +90,60 @@ public class AdminController {
   public AdminOverviewService.TopLinksPage topLinksByClicks(
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
     return service.topLinksByClicks(page, size);
+  }
+
+  /**
+   * Full user-table browse. {@code q} matches email / handle case-insensitively; {@code role}
+   * filters by USER / ADMIN; newest first. Page size is capped server-side.
+   */
+  @GetMapping("/users")
+  public AdminBrowseService.UsersPage users(
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) String role,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return browseService.users(q, role, page, size);
+  }
+
+  @GetMapping("/users/{id}")
+  public AdminUserRow user(@PathVariable long id) {
+    return browseService.user(id);
+  }
+
+  /**
+   * Full link-table browse. {@code q} matches an exact short code or a substring of the destination
+   * URL; {@code ownerId} narrows to one user's links (anonymous links have no owner); {@code sort}
+   * is {@code recent} (default, newest first) or {@code clicks} (busiest first).
+   */
+  @GetMapping("/links")
+  public AdminBrowseService.LinksPage links(
+      @RequestParam(required = false) String q,
+      @RequestParam(required = false) Long ownerId,
+      @RequestParam(required = false) String sort,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return browseService.links(q, ownerId, sort, page, size);
+  }
+
+  /**
+   * Live activity feed for the console: newest links and clicks across all users plus the links
+   * trending in the last 24h. Cheap enough to poll; click rows are PII-minimal (country / referrer
+   * host / device class only — never IP or visitor hash). Declared before {@code /links/{code}} so
+   * the literal path wins the match.
+   */
+  @GetMapping("/links/activity")
+  public AdminActivity linkActivity() {
+    return activityService.activity();
+  }
+
+  /**
+   * One link's full metadata (owner, lifecycle, protection) plus the owner-grade click report —
+   * daily / hourly / referrer / device / country breakdowns — for support and observability. Reuses
+   * the owner stats assembler with the ownership check skipped.
+   */
+  @GetMapping("/links/{code}")
+  public AdminLinkDetail linkDetail(@PathVariable ShortCode code) {
+    return browseService.linkDetail(code);
   }
 
   @GetMapping("/health-metrics")
@@ -122,6 +188,16 @@ public class AdminController {
   public AdminActiveUsers activeUsers(
       @RequestParam(required = false, defaultValue = "day") String period) {
     return analyticsService.activeUsers(period);
+  }
+
+  /**
+   * Cross-author blog health — lifetime post / read totals, authors active in the last 30 days, the
+   * unresolved-report backlog, and the most-read posts. 5-minute cached like the other admin
+   * aggregates.
+   */
+  @GetMapping("/blog/metrics")
+  public BlogAdminMetrics blogMetrics() {
+    return blogMetricsService.metrics();
   }
 
   /**

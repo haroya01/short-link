@@ -1,5 +1,6 @@
 package com.example.short_link.notification.application.link;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -12,6 +13,7 @@ import com.example.short_link.notification.domain.LinkNotificationEntity;
 import com.example.short_link.notification.domain.LinkNotificationType;
 import com.example.short_link.notification.domain.repository.LinkNotificationRepository;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class LinkNotificationDispatcherTest {
 
@@ -42,5 +44,29 @@ class LinkNotificationDispatcherTest {
     dispatcher.dispatch(null, LinkNotificationType.DIGEST, null, "x", "y");
     verify(repository, never()).save(any());
     verify(pushSender, never()).send(any(), any());
+  }
+
+  @Test
+  void pushMessageCarriesTypeAndShortCode() {
+    when(prefs.isEnabled(7L, LinkNotificationType.FIRST_CLICK)).thenReturn(true);
+    dispatcher.dispatch(7L, LinkNotificationType.FIRST_CLICK, "spring", "/spring", "첫 클릭");
+
+    ArgumentCaptor<PushSender.PushMessage> captor =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    verify(pushSender).send(eq(7L), captor.capture());
+    assertThat(captor.getValue().type()).isEqualTo("FIRST_CLICK");
+    assertThat(captor.getValue().shortCode()).isEqualTo("spring");
+  }
+
+  @Test
+  void pushMessageOmitsShortCodeForCodelessDigest() {
+    when(prefs.isEnabled(7L, LinkNotificationType.DIGEST)).thenReturn(true);
+    dispatcher.dispatch(7L, LinkNotificationType.DIGEST, null, "어제 요약", "어제 12 클릭");
+
+    ArgumentCaptor<PushSender.PushMessage> captor =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    verify(pushSender).send(eq(7L), captor.capture());
+    assertThat(captor.getValue().type()).isEqualTo("DIGEST");
+    assertThat(captor.getValue().shortCode()).isNull();
   }
 }
