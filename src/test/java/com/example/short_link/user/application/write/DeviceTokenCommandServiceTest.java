@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.domain.DeviceTokenEntity;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
+import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,6 +21,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class DeviceTokenCommandServiceTest {
 
   @Mock private DeviceTokenRepository deviceTokens;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private UserRepository userRepository;
+
   @InjectMocks private DeviceTokenCommandService service;
 
   @Test

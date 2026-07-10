@@ -5,9 +5,14 @@ import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
+import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +35,7 @@ public class RecordBlogNotificationUseCase {
   private final JsonMapper jsonMapper;
   private final PushSender pushSender;
   private final UserRepository userRepository;
+  private final MessageSource messageSource;
 
   /** A single notification. {@code payload} is the type's target ref (post / series) or null. */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -37,7 +43,8 @@ public class RecordBlogNotificationUseCase {
       Long recipientUserId, NotificationType type, Long actorUserId, Object payload) {
     String json = payload == null ? null : jsonMapper.writeValueAsString(payload);
     repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
-    pushSender.send(recipientUserId, pushMessage(type, actorUserId, payload));
+    pushSender.send(
+        recipientUserId, pushMessage(type, actorUserId, payload, localeOf(recipientUserId)));
   }
 
   /**
@@ -58,12 +65,22 @@ public class RecordBlogNotificationUseCase {
     for (Long recipientUserId : recipientUserIds) {
       repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
     }
-    pushSender.sendToAll(recipientUserIds, pushMessage(type, actorUserId, post));
+    // 수신자를 로케일별로 묶어 각 언어로 푸시 — 한 번의 조합을 그 로케일 그룹에 보낸다.
+    Map<String, List<Long>> byLocale =
+        userRepository.findAllByIdIn(recipientUserIds).stream()
+            .collect(
+                Collectors.groupingBy(
+                    RecordBlogNotificationUseCase::localeTag,
+                    Collectors.mapping(UserEntity::getId, Collectors.toList())));
+    byLocale.forEach(
+        (tag, ids) ->
+            pushSender.sendToAll(
+                ids, pushMessage(type, actorUserId, post, Locale.forLanguageTag(tag))));
   }
 
-  /** 앱 벨과 같은 문구 — 수신자 로케일을 모르는 동안은 한국어 고정(서비스 1차 시장). */
+  /** 앱 벨과 같은 문구를 수신자 로케일로 — MessageSource 번들(messages_*.properties)에서 렌더한다. */
   private PushSender.PushMessage pushMessage(
-      NotificationType type, Long actorUserId, Object payload) {
+      NotificationType type, Long actorUserId, Object payload, Locale locale) {
     String actor =
         userRepository
             .findById(actorUserId)
@@ -72,15 +89,17 @@ public class RecordBlogNotificationUseCase {
     String subtitle =
         payload instanceof NotificationPostRef ref && ref.title() != null ? ref.title() : null;
     String body =
-        switch (type) {
-          case LIKE -> actor + "님이 글을 좋아합니다";
-          case COMMENT -> actor + "님이 댓글을 남겼습니다";
-          case REPLY -> actor + "님이 답글을 남겼습니다";
-          case FOLLOW -> actor + "님이 팔로우하기 시작했습니다";
-          case SERIES_SUBSCRIBE -> actor + "님이 시리즈를 구독합니다";
-          case NEW_POST -> actor + "님이 새 글을 발행했습니다";
-          case MENTION -> actor + "님이 회원님을 언급했습니다";
-        };
+        messageSource.getMessage("notification.push." + type.name(), new Object[] {actor}, locale);
     return new PushSender.PushMessage("kurl", subtitle, body);
+  }
+
+  /** 수신자의 저장된 선호 로케일(모르면 ko). */
+  private Locale localeOf(Long recipientUserId) {
+    return Locale.forLanguageTag(
+        userRepository.findById(recipientUserId).map(UserEntity::getLocale).orElse("ko"));
+  }
+
+  private static String localeTag(UserEntity user) {
+    return user.getLocale() == null ? "ko" : user.getLocale();
   }
 }

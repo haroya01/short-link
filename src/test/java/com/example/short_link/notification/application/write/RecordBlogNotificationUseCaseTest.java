@@ -18,6 +18,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -32,9 +34,26 @@ class RecordBlogNotificationUseCaseTest {
   private UserRepository userRepository;
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
+  private final MessageSource messageSource = pushMessages();
+
+  /** 실제 messages_*.properties 를 로드해 로컬라이즈를 실측한다. */
+  private static MessageSource pushMessages() {
+    ResourceBundleMessageSource ms = new ResourceBundleMessageSource();
+    ms.setBasename("messages");
+    ms.setDefaultEncoding("UTF-8");
+    return ms;
+  }
+
+  private static UserEntity userWith(long id, String locale) {
+    UserEntity u = org.mockito.Mockito.mock(UserEntity.class);
+    when(u.getId()).thenReturn(id);
+    when(u.getLocale()).thenReturn(locale);
+    return u;
+  }
 
   private RecordBlogNotificationUseCase useCase() {
-    return new RecordBlogNotificationUseCase(repository, jsonMapper, pushSender, userRepository);
+    return new RecordBlogNotificationUseCase(
+        repository, jsonMapper, pushSender, userRepository, messageSource);
   }
 
   @Test
@@ -105,6 +124,26 @@ class RecordBlogNotificationUseCaseTest {
   }
 
   @Test
+  void pushIsLocalizedToRecipientLocale() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    UserEntity actor = org.mockito.Mockito.mock(UserEntity.class);
+    when(actor.getUsername()).thenReturn("yuki");
+    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+    UserEntity recipient = org.mockito.Mockito.mock(UserEntity.class);
+    when(recipient.getLocale()).thenReturn("ja");
+    when(userRepository.findById(9L)).thenReturn(Optional.of(recipient));
+
+    useCase().record(9L, NotificationType.LIKE, 2L, null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().body()).isEqualTo("yukiさんが投稿にいいねしました");
+  }
+
+  @Test
   void pushFallsBackToKurlWhenActorMissingOrNameless() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
@@ -133,6 +172,11 @@ class RecordBlogNotificationUseCaseTest {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
+    UserEntity r7 = userWith(7L, "ko");
+    UserEntity r8 = userWith(8L, "ko");
+    UserEntity r9 = userWith(9L, "ko");
+    when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+        .thenReturn(List.of(r7, r8, r9));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "new-post", "새 글", null);
     useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, 2L, ref);
@@ -159,6 +203,9 @@ class RecordBlogNotificationUseCaseTest {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
+    UserEntity r7 = userWith(7L, "ko");
+    when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+        .thenReturn(List.of(r7));
 
     useCase().recordForEach(List.of(7L), NotificationType.NEW_POST, 2L, null);
     useCase().record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", null, null));
