@@ -33,7 +33,7 @@ class FollowControllerTest {
 
   @Test
   void statusReturnsFollowState() throws Exception {
-    when(followQueryService.status(USER_ID, "bob")).thenReturn(new FollowStatus(true, 5L, 3L));
+    when(followQueryService.status(USER_ID, "bob")).thenReturn(FollowStatus.visible(true, 5L, 3L));
 
     mvc.perform(
             get("/api/v1/users/bob/follow")
@@ -46,7 +46,7 @@ class FollowControllerTest {
 
   @Test
   void followReturnsUpdatedStatus() throws Exception {
-    when(followUseCase.follow(USER_ID, "bob", null)).thenReturn(new FollowStatus(true, 1L, 0L));
+    when(followUseCase.follow(USER_ID, "bob", null)).thenReturn(FollowStatus.visible(true, 1L, 0L));
 
     mvc.perform(
             put("/api/v1/users/bob/follow")
@@ -57,7 +57,7 @@ class FollowControllerTest {
 
   @Test
   void followAttributesSourcePost() throws Exception {
-    when(followUseCase.follow(USER_ID, "bob", 42L)).thenReturn(new FollowStatus(true, 1L, 0L));
+    when(followUseCase.follow(USER_ID, "bob", 42L)).thenReturn(FollowStatus.visible(true, 1L, 0L));
 
     mvc.perform(
             put("/api/v1/users/bob/follow")
@@ -71,13 +71,26 @@ class FollowControllerTest {
 
   @Test
   void unfollowReturnsUpdatedStatus() throws Exception {
-    when(followUseCase.unfollow(USER_ID, "bob")).thenReturn(new FollowStatus(false, 0L, 0L));
+    when(followUseCase.unfollow(USER_ID, "bob")).thenReturn(FollowStatus.visible(false, 0L, 0L));
 
     mvc.perform(
             delete("/api/v1/users/bob/follow")
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.following").value(false));
+  }
+
+  @Test
+  void hiddenCountOmitsCountFieldsFromJson() throws Exception {
+    when(followQueryService.status(USER_ID, "bob")).thenReturn(FollowStatus.hidden(false));
+
+    mvc.perform(
+            get("/api/v1/users/bob/follow")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hideFollowerCount").value(true))
+        .andExpect(jsonPath("$.followerCount").doesNotExist())
+        .andExpect(jsonPath("$.followingCount").doesNotExist());
   }
 
   @Test

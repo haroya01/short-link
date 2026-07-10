@@ -58,6 +58,24 @@ class MyProfileControllerTest {
   }
 
   @Test
+  void updateTogglesHideFollowerCount() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("hfc@x.com", "google", "g-hfc"));
+    String token = jwt.createAccessToken(user.getId(), "USER");
+
+    mvc.perform(
+            put("/api/v1/users/me/profile")
+                .header("Authorization", "Bearer " + token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"hideFollowerCount\":true}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hideFollowerCount").value(true));
+
+    mvc.perform(get("/api/v1/users/me/profile").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hideFollowerCount").value(true));
+  }
+
+  @Test
   void updateRejectsInvalidUsername() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-rej"));
     String token = jwt.createAccessToken(user.getId(), "USER");

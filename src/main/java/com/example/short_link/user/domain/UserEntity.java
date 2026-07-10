@@ -108,6 +108,14 @@ public class UserEntity extends BaseCreatedEntity {
   private boolean statsPublic = false;
 
   /**
+   * When true, the author's follower / following totals are withheld from the public author page —
+   * the follow-status response omits both counts entirely (not shown as zero). Default false, so
+   * counts are public unless the owner opts out from the profile edit screen.
+   */
+  @Column(name = "hide_follower_count", nullable = false)
+  private boolean hideFollowerCount = false;
+
+  /**
    * Which legal terms version the user accepted at sign-up, and when — proof of acceptance for the
    * click-wrap consent shown on the login/sign-up screen. Null for accounts created before consent
    * capture existed (they accepted under the prior browse-wrap notice).
@@ -222,6 +230,10 @@ public class UserEntity extends BaseCreatedEntity {
 
   public void updateStatsPublic(boolean statsPublic) {
     this.statsPublic = statsPublic;
+  }
+
+  public void updateHideFollowerCount(boolean hideFollowerCount) {
+    this.hideFollowerCount = hideFollowerCount;
   }
 
   public void updateAvatar(String url, String key) {

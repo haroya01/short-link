@@ -36,7 +36,7 @@ public class FollowUseCase {
       followRepository.save(new FollowEntity(followerId, target.getId(), sourcePostId));
       events.publishEvent(BlogInteractionEvent.follow(target.getId(), followerId, Instant.now()));
     }
-    return statusOf(true, target.getId());
+    return statusOf(true, target);
   }
 
   @Transactional
@@ -45,14 +45,17 @@ public class FollowUseCase {
     followRepository
         .findByFollowerIdAndFollowingId(followerId, target.getId())
         .ifPresent(followRepository::delete);
-    return statusOf(false, target.getId());
+    return statusOf(false, target);
   }
 
-  private FollowStatus statusOf(boolean following, Long targetId) {
-    return new FollowStatus(
+  private FollowStatus statusOf(boolean following, UserEntity target) {
+    if (target.isHideFollowerCount()) {
+      return FollowStatus.hidden(following);
+    }
+    return FollowStatus.visible(
         following,
-        followRepository.countByFollowingId(targetId),
-        followRepository.countByFollowerId(targetId));
+        followRepository.countByFollowingId(target.getId()),
+        followRepository.countByFollowerId(target.getId()));
   }
 
   private UserEntity requireUser(String username) {

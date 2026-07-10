@@ -68,4 +68,19 @@ class FollowQueryServiceTest {
 
     assertThatThrownBy(() -> service.status(9L, "ghost")).isInstanceOf(UserException.class);
   }
+
+  @Test
+  void hiddenCountOmitsBothTotalsButKeepsFollowingFlag() {
+    UserEntity bob = user(2L, "bob");
+    bob.updateHideFollowerCount(true);
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
+    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(true);
+
+    FollowStatus status = service.status(9L, "bob");
+
+    assertThat(status.hideFollowerCount()).isTrue();
+    assertThat(status.following()).isTrue();
+    assertThat(status.followerCount()).isNull();
+    assertThat(status.followingCount()).isNull();
+  }
 }

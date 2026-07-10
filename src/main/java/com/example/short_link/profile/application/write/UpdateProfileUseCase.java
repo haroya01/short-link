@@ -99,6 +99,9 @@ public class UpdateProfileUseCase {
     if (cmd.socials() != null) {
       user.updateSocials(Socials.normalize(cmd.socials()));
     }
+    if (cmd.hideFollowerCount() != null) {
+      user.updateHideFollowerCount(cmd.hideFollowerCount());
+    }
     // The public-profile cache is keyed by username with a long TTL — without eviction every
     // bio/theme/socials edit keeps serving the stale entry, and a rename leaves the old key alive.
     cacheEviction.evictByUsername(previousUsername);

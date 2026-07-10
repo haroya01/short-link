@@ -55,7 +55,8 @@ class UpdateProfileUseCaseTest {
   void changesBioAndTheme() {
     UserEntity u = userWithId(7L);
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
-    MyProfile p = useCase.execute(new UpdateProfileCommand(7L, null, "new bio", "dark", null));
+    MyProfile p =
+        useCase.execute(new UpdateProfileCommand(7L, null, "new bio", "dark", null, null));
     assertThat(u.getBio()).isEqualTo("new bio");
     assertThat(u.getProfileTheme()).isEqualTo("dark");
     assertThat(p.bio()).isEqualTo("new bio");
@@ -67,7 +68,8 @@ class UpdateProfileUseCaseTest {
     UserEntity u = userWithId(7L);
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
     String big = "x".repeat(300);
-    assertThatThrownBy(() -> useCase.execute(new UpdateProfileCommand(7L, null, big, null, null)))
+    assertThatThrownBy(
+            () -> useCase.execute(new UpdateProfileCommand(7L, null, big, null, null, null)))
         .isInstanceOf(ProfileException.class);
   }
 
@@ -76,7 +78,7 @@ class UpdateProfileUseCaseTest {
     UserEntity u = userWithId(7L);
     u.updateBio("existing");
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
-    useCase.execute(new UpdateProfileCommand(7L, null, "   ", null, null));
+    useCase.execute(new UpdateProfileCommand(7L, null, "   ", null, null, null));
     assertThat(u.getBio()).isNull();
   }
 
@@ -84,10 +86,12 @@ class UpdateProfileUseCaseTest {
   void usernameValidatesFormat() {
     UserEntity u = userWithId(7L);
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
-    assertThatThrownBy(() -> useCase.execute(new UpdateProfileCommand(7L, "AB", null, null, null)))
+    assertThatThrownBy(
+            () -> useCase.execute(new UpdateProfileCommand(7L, "AB", null, null, null, null)))
         .isInstanceOf(ProfileException.class);
     assertThatThrownBy(
-            () -> useCase.execute(new UpdateProfileCommand(7L, "has space", null, null, null)))
+            () ->
+                useCase.execute(new UpdateProfileCommand(7L, "has space", null, null, null, null)))
         .isInstanceOf(ProfileException.class);
   }
 
@@ -96,7 +100,7 @@ class UpdateProfileUseCaseTest {
     UserEntity u = userWithId(7L);
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
     assertThatThrownBy(
-            () -> useCase.execute(new UpdateProfileCommand(7L, "admin", null, null, null)))
+            () -> useCase.execute(new UpdateProfileCommand(7L, "admin", null, null, null, null)))
         .isInstanceOf(ProfileException.class);
   }
 
@@ -107,7 +111,7 @@ class UpdateProfileUseCaseTest {
     when(userRepository.findById(7L)).thenReturn(Optional.of(me));
     when(userRepository.findByUsername("alice")).thenReturn(Optional.of(other));
     assertThatThrownBy(
-            () -> useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null)))
+            () -> useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null, null)))
         .isInstanceOf(ProfileException.class);
   }
 
@@ -122,7 +126,7 @@ class UpdateProfileUseCaseTest {
             any(), any(Instant.class)))
         .thenReturn(Optional.of(hist));
     assertThatThrownBy(
-            () -> useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null)))
+            () -> useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null, null)))
         .isInstanceOf(ProfileException.class);
   }
 
@@ -135,7 +139,7 @@ class UpdateProfileUseCaseTest {
     when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
             any(), any(Instant.class)))
         .thenReturn(Optional.empty());
-    useCase.execute(new UpdateProfileCommand(7L, "  ALICE  ", null, null, null));
+    useCase.execute(new UpdateProfileCommand(7L, "  ALICE  ", null, null, null, null));
     verify(usernameHistoryRepository).save(any(UsernameHistoryEntity.class));
     assertThat(me.getUsername()).isEqualTo("alice");
   }
@@ -145,8 +149,29 @@ class UpdateProfileUseCaseTest {
     UserEntity u = userWithId(7L);
     when(userRepository.findById(7L)).thenReturn(Optional.of(u));
     String socials = "[{\"channel\":\"x\",\"url\":\"https://x.com/me\"}]";
-    useCase.execute(new UpdateProfileCommand(7L, null, null, null, socials));
+    useCase.execute(new UpdateProfileCommand(7L, null, null, null, socials, null));
     assertThat(u.getSocials()).contains("\"x\"");
+  }
+
+  @Test
+  void hideFollowerCountToggleApplied() {
+    UserEntity u = userWithId(7L);
+    when(userRepository.findById(7L)).thenReturn(Optional.of(u));
+    MyProfile hidden = useCase.execute(new UpdateProfileCommand(7L, null, null, null, null, true));
+    assertThat(u.isHideFollowerCount()).isTrue();
+    assertThat(hidden.hideFollowerCount()).isTrue();
+    MyProfile shown = useCase.execute(new UpdateProfileCommand(7L, null, null, null, null, false));
+    assertThat(u.isHideFollowerCount()).isFalse();
+    assertThat(shown.hideFollowerCount()).isFalse();
+  }
+
+  @Test
+  void hideFollowerCountUnchangedWhenOmitted() {
+    UserEntity u = userWithId(7L);
+    u.updateHideFollowerCount(true);
+    when(userRepository.findById(7L)).thenReturn(Optional.of(u));
+    useCase.execute(new UpdateProfileCommand(7L, null, "bio only", null, null, null));
+    assertThat(u.isHideFollowerCount()).isTrue();
   }
 
   @Test
@@ -154,7 +179,7 @@ class UpdateProfileUseCaseTest {
     UserEntity me = userWithId(7L);
     me.claimUsername("bob");
     when(userRepository.findById(7L)).thenReturn(Optional.of(me));
-    useCase.execute(new UpdateProfileCommand(7L, null, "new bio", null, null));
+    useCase.execute(new UpdateProfileCommand(7L, null, "new bio", null, null, null));
     verify(cacheEviction).evictByUsername("bob");
   }
 
@@ -167,7 +192,7 @@ class UpdateProfileUseCaseTest {
     when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
             any(), any(Instant.class)))
         .thenReturn(Optional.empty());
-    useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null));
+    useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null, null));
     verify(cacheEviction).evictByUsername("old");
     verify(cacheEviction).evictByUsername("alice");
   }

@@ -13,7 +13,14 @@ class MyProfileTest {
     List<Social> socials = List.of(new Social("x", "https://x.com/me"));
     MyProfile p =
         new MyProfile(
-            "alice", "bio", "dark", "https://kurl/u/alice", "avatar.png", "banner.png", socials);
+            "alice",
+            "bio",
+            "dark",
+            "https://kurl/u/alice",
+            "avatar.png",
+            "banner.png",
+            socials,
+            true);
     assertThat(p.username()).isEqualTo("alice");
     assertThat(p.bio()).isEqualTo("bio");
     assertThat(p.theme()).isEqualTo("dark");
@@ -21,11 +28,12 @@ class MyProfileTest {
     assertThat(p.avatarUrl()).isEqualTo("avatar.png");
     assertThat(p.bannerUrl()).isEqualTo("banner.png");
     assertThat(p.socials()).hasSize(1);
+    assertThat(p.hideFollowerCount()).isTrue();
   }
 
   @Test
   void nullableFieldsAllowed() {
-    MyProfile p = new MyProfile(null, null, null, null, null, null, List.of());
+    MyProfile p = new MyProfile(null, null, null, null, null, null, List.of(), false);
     assertThat(p.username()).isNull();
     assertThat(p.socials()).isEmpty();
   }
