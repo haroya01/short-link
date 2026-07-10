@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.domain.WebPushSubscriptionEntity;
+import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -20,6 +21,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class WebPushSubscriptionCommandServiceTest {
 
   @Mock private WebPushSubscriptionRepository subscriptions;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private UserRepository userRepository;
+
   @InjectMocks private WebPushSubscriptionCommandService service;
 
   @Test

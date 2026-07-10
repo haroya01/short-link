@@ -57,6 +57,10 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = 64)
   private String timezone = "Asia/Seoul";
 
+  /** 선호 로케일 — 서버가 조합하는 푸시를 이 언어로 렌더(모르면 ko). {@link #updateLocale}로만 바꾼다. */
+  @Column(nullable = false, length = 16)
+  private String locale = "ko";
+
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
@@ -136,6 +140,14 @@ public class UserEntity extends BaseCreatedEntity {
   }
 
   /** Record acceptance of the legal terms — called once when the account is created at sign-up. */
+  private static final java.util.Set<String> SUPPORTED_LOCALES =
+      java.util.Set.of("ko", "ja", "en", "vi", "hi");
+
+  /** 지원 로케일로 클램프(기본 ko) — Accept-Language 로 푸시 구독/기기 등록 때 채운다. */
+  public void updateLocale(String tag) {
+    this.locale = tag != null && SUPPORTED_LOCALES.contains(tag) ? tag : "ko";
+  }
+
   public void recordTermsConsent(String version, Instant at) {
     this.termsVersion = version;
     this.termsAgreedAt = at;
