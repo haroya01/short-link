@@ -10,4 +10,5 @@ public record MyProfile(
     String publicUrl,
     String avatarUrl,
     String bannerUrl,
-    List<Social> socials) {}
+    List<Social> socials,
+    boolean hideFollowerCount) {}

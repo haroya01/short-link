@@ -78,7 +78,7 @@ public class FollowListQueryService {
                     u.getUsername(),
                     u.getBio(),
                     u.getAvatarUrl(),
-                    followerCounts.getOrDefault(u.getId(), 0L),
+                    u.isHideFollowerCount() ? null : followerCounts.getOrDefault(u.getId(), 0L),
                     followedByViewer.contains(u.getId())))
         .toList();
   }

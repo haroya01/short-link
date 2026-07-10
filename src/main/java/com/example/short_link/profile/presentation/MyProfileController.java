@@ -36,7 +36,12 @@ public class MyProfileController {
       @AuthenticationPrincipal Long userId, @Valid @RequestBody MyProfileUpdateRequest request) {
     return updateProfile.execute(
         new UpdateProfileCommand(
-            userId, request.username(), request.bio(), request.theme(), request.socials()));
+            userId,
+            request.username(),
+            request.bio(),
+            request.theme(),
+            request.socials(),
+            request.hideFollowerCount()));
   }
 
   @PutMapping("/order")

@@ -111,4 +111,19 @@ class FollowUseCaseTest {
     assertThat(status.following()).isFalse();
     verify(followRepository).delete(any(FollowEntity.class));
   }
+
+  @Test
+  void followReturnsHiddenStatusWhenTargetHidesCounts() {
+    UserEntity bob = user(2L, "bob");
+    bob.updateHideFollowerCount(true);
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
+    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(false);
+
+    FollowStatus status = useCase.follow(9L, "bob", null);
+
+    assertThat(status.following()).isTrue();
+    assertThat(status.hideFollowerCount()).isTrue();
+    assertThat(status.followerCount()).isNull();
+    assertThat(status.followingCount()).isNull();
+  }
 }

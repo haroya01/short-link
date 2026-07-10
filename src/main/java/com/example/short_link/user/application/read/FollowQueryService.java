@@ -29,7 +29,10 @@ public class FollowQueryService {
     boolean following =
         viewerId != null
             && followRepository.existsByFollowerIdAndFollowingId(viewerId, target.getId());
-    return new FollowStatus(
+    if (target.isHideFollowerCount()) {
+      return FollowStatus.hidden(following);
+    }
+    return FollowStatus.visible(
         following,
         followRepository.countByFollowingId(target.getId()),
         followRepository.countByFollowerId(target.getId()));

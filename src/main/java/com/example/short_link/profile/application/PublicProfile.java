@@ -12,7 +12,8 @@ public record PublicProfile(
     String bannerUrl,
     List<Social> socials,
     List<ProfileEntry> entries,
-    long publishedPostCount) {
+    long publishedPostCount,
+    boolean hideFollowerCount) {
 
   /**
    * Single shape for the rendered public profile feed. The {@code kind} discriminator drives

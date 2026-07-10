@@ -144,7 +144,8 @@ public class ProfileQueryService {
         user.getBannerUrl(),
         Socials.toList(user.getSocials()),
         out,
-        publishedPostCount);
+        publishedPostCount,
+        user.isHideFollowerCount());
   }
 
   public PublicHandlesPage publicHandlesPage(int page, int size) {
