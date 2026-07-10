@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
@@ -165,5 +166,41 @@ class PostHighlightQueryServiceTest {
     MyHighlightView authorMissing = views.get(2);
     assertThat(authorMissing.postUsername()).isNull(); // author 3 not found
     assertThat(authorMissing.postSlug()).isEqualTo("slug-6");
+  }
+
+  @Test
+  void feedIsEmptyWhenViewerFollowsNoOne() {
+    when(followRepository.findFollowingIds(1L)).thenReturn(List.of());
+
+    HighlightFeedView feed = service.feed(1L, 0, 20);
+
+    assertThat(feed.items()).isEmpty();
+    assertThat(feed.hasNext()).isFalse();
+  }
+
+  @Test
+  void feedAssemblesFollowedCuratorHighlightsWithPostRefAndSkipsDeletedPosts() {
+    // 팔로우한 큐레이터(alice, id 1)가 그은 두 구절 — 하나는 살아있는 글(작가 bob), 하나는 소실된 글.
+    when(followRepository.findFollowingIds(1L)).thenReturn(List.of(1L));
+    when(highlightRepository.findByUserIdsOrderByCreatedAtDesc(anyCollection(), anyInt(), anyInt()))
+        .thenReturn(
+            List.of(
+                highlightWithNote(10L, 5L, 1L, "여백의 메모"),
+                highlight(11L, 999L, 1L))); // 글 999 소실 → 스킵
+    when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(publishedPost(5L, 2L)));
+    when(userRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(user(1L, "alice"), user(2L, "bob")));
+    when(replyRepository.countByHighlightIds(anyCollection())).thenReturn(Map.of(10L, 2L));
+
+    HighlightFeedView feed = service.feed(1L, 0, 20);
+
+    assertThat(feed.items()).hasSize(1); // 소실된 글의 하이라이트는 빠진다
+    HighlightFeedItem item = feed.items().get(0);
+    assertThat(item.curator().username()).isEqualTo("alice"); // 누가 칠했나
+    assertThat(item.postAuthorUsername()).isEqualTo("bob"); // 글 작가
+    assertThat(item.postSlug()).isEqualTo("slug-5");
+    assertThat(item.postTitle()).isEqualTo("Title 5");
+    assertThat(item.note()).isEqualTo("여백의 메모");
+    assertThat(item.replyCount()).isEqualTo(2L);
   }
 }
