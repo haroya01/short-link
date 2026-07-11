@@ -127,7 +127,10 @@ class CollectionControllerTest {
                     "COLLECTION",
                     3,
                     Instant.parse("2026-06-12T00:00:00Z"),
-                    List.of("헥사고날로 갈아탄 지 석 달", "좋은 추상은 더 지울 게 없을 때"))));
+                    List.of("헥사고날로 갈아탄 지 석 달", "좋은 추상은 더 지울 게 없을 때"),
+                    "curator",
+                    "https://cdn.kurl.me/a.jpg",
+                    null)));
 
     mvc.perform(
             get("/api/v1/users/me/collections")

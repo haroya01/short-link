@@ -67,6 +67,31 @@ public interface JpaCollectionConnectionRepository
       @Param("collectionIds") Collection<Long> collectionIds);
 
   /**
+   * 컬렉션들 안에서 이 블록 타입 연결들의 1-based 순위 — position 을 그대로 쓰지 않고 (position, id) 정렬로 다시 세어 삭제·재배치로 듬성해진
+   * raw 값에 흔들리지 않게 한다. 여러 컬렉션의 순위를 한 쿼리로(window function) 받아 글마다 세지 않는다(N+1 방지). collectionIds 가 비면
+   * 빈 목록.
+   */
+  @Query(
+      value =
+          "SELECT collection_id AS collectionId, ref_id AS refId, "
+              + "ROW_NUMBER() OVER ("
+              + "  PARTITION BY collection_id ORDER BY position ASC, id ASC) AS position "
+              + "FROM collection_connection "
+              + "WHERE collection_id IN :collectionIds AND block_type = :blockType",
+      nativeQuery = true)
+  List<ConnectionRankProjection> findRanksByCollectionIdInAndBlockType(
+      @Param("collectionIds") Collection<Long> collectionIds, @Param("blockType") String blockType);
+
+  /** 순위 window 쿼리 한 행 — collection_id 안에서 ref_id 의 1-based position. */
+  interface ConnectionRankProjection {
+    Long getCollectionId();
+
+    Long getRefId();
+
+    int getPosition();
+  }
+
+  /**
    * 대상 블록(글·하이라이트·노트)이 하드 삭제될 때 그를 가리키던 연결을 일괄 정리 — ref_id 는 FK 없는 다형 참조라 DB 가 대신 지워주지 않는다. 벌크
    * delete 라 영속성 컨텍스트를 우회한다(삭제 트랜잭션 안에서만 호출).
    */

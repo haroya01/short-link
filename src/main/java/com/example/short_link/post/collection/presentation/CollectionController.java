@@ -59,7 +59,10 @@ public class CollectionController {
         saved.getKind().name(),
         0,
         saved.getUpdatedAt(),
-        List.of());
+        List.of(),
+        null, // 방금 만든 내 컬렉션 에코 — 큐레이터/위치는 "이 글이 속한 길" 조회에서만 채운다.
+        null,
+        null);
   }
 
   @PutMapping("/collections/{id}")
@@ -79,7 +82,10 @@ public class CollectionController {
         saved.getKind().name(),
         (int) queryService.connectionCount(saved.getId()),
         saved.getUpdatedAt(),
-        List.of());
+        List.of(),
+        null, // 방금 수정한 내 컬렉션 에코 — 큐레이터/위치는 "이 글이 속한 길" 조회에서만 채운다.
+        null,
+        null);
   }
 
   @GetMapping("/users/me/collections")
