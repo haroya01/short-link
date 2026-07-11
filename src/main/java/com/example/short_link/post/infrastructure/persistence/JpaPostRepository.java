@@ -156,14 +156,17 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "where p.status = :status group by t order by count(p) desc")
   List<Object[]> findPopularTags(@Param("status") PostStatus status, Pageable pageable);
 
-  // Free-text feed search — now FULLTEXT(ngram) over the derived `search_text` column (title +
-  // excerpt + tags + flattened body blocks), so the query reaches the body, not just the
-  // title/tags.
-  // Two matchers OR'd: (1) MATCH(search_text) AGAINST(:match IN BOOLEAN MODE) — the ngram
-  // body/title match, and (2) the author-handle LIKE subquery kept verbatim (username lives on
-  // `users`, not on a posts column, so it can't ride the FULLTEXT index). `:match` is the operator-
-  // scrubbed query the adapter builds from raw input; `:like` is the pre-lowercased, wildcard-
-  // escaped %…% pattern for the handle subquery. Native because MATCH() is not JPQL.
+  // Free-text feed search — FULLTEXT(ngram) over the derived search text (title + excerpt + tags +
+  // flattened body blocks), so the query reaches the body, not just the title/tags. 그 평문은 posts 컬럼이
+  // 아니라 곁 테이블 post_search_text 에 있다(읽기 경로가 본문 평문을 함께 로드하지 않도록). 검색만 필요할 때 LEFT JOIN 으로
+  // 붙인다 — LEFT 라 곁 행이 없는 글(작가 핸들만 걸린 경우 등)도 계속 노출된다.
+  //
+  // 매처 셋을 OR: (1) MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) — 본문/제목 ngram 매칭,
+  // (2) 작가 핸들 LIKE 서브쿼리(username 은 users 에 있어 FULLTEXT 인덱스를 못 탄다), (3) 짧은 질의 폴백:
+  // :titleLike 가 null 이 아닐 때만 제목·요약 LIKE — ngram 이 두 글자 미만 토큰을 못 잡는 "C++"·한글 한 글자
+  // 질의의 회귀를 막는다(일반 질의는 :titleLike=null 이라 이 가지가 꺼져 매칭 범위·성능에 영향 없음).
+  // `:match` 는 연산자 스크럽된 AGAINST 문자열, `:like` 는 소문자·와일드카드 이스케이프된 %…% 핸들 패턴,
+  // `:titleLike` 는 폴백 시에만 채워지는 제목/요약 %…% 패턴. Native 인 이유는 MATCH() 가 JPQL 이 아니라서.
   //
   // ★ BOOLEAN MODE + 평문 토큰(no +/*/""): ngram+BOOLEAN의 프리픽스 연산자(term*)나
   //   구문("term")은 여러 바이그램으로 쪼개지는 한글 다바이그램 토큰을 깨뜨린다(실측: +"리다이렉트"=0건).
@@ -176,35 +179,43 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       nativeQuery = true,
       value =
           "SELECT p.* FROM posts p "
+              + "LEFT JOIN post_search_text s ON s.post_id = p.id "
               + "WHERE p.status = 'PUBLISHED' AND ("
-              + "MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) "
+              + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
               + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
+              + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
+              + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
               + "AND (:lang IS NULL OR p.language_tag = :lang) "
               + "ORDER BY p.published_at DESC")
   List<PostEntity> searchPublishedRecent(
       @Param("match") String match,
       @Param("like") String like,
+      @Param("titleLike") String titleLike,
       @Param("lang") String lang,
       Pageable pageable);
 
-  // relevance 정렬(새 기본값): MATCH() 관련성 점수 내림차순, 발행 최신을 동점 타이브레이크로. 작가 핸들만 걸린 글은
-  // 점수 0(본문 매칭 없음)이라 관련성 목록의 맨 아래로 밀리되 계속 노출된다 — 예전 검색이 잡던 것을 하나도 빠뜨리지
-  // 않는다.
+  // relevance 정렬(새 기본값): MATCH() 관련성 점수 내림차순, 발행 최신을 동점 타이브레이크로. 작가 핸들만 걸리거나 짧은
+  // 질의 폴백으로만 잡힌 글은 점수 0(본문 매칭 없음)이라 관련성 목록의 맨 아래로 밀리되 계속 노출된다 — 예전 검색이 잡던
+  // 것을 하나도 빠뜨리지 않는다.
   @Query(
       nativeQuery = true,
       value =
           "SELECT p.* FROM posts p "
+              + "LEFT JOIN post_search_text s ON s.post_id = p.id "
               + "WHERE p.status = 'PUBLISHED' AND ("
-              + "MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) "
+              + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
               + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
+              + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
+              + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
               + "AND (:lang IS NULL OR p.language_tag = :lang) "
-              + "ORDER BY MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) DESC, "
+              + "ORDER BY MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) DESC, "
               + "p.published_at DESC")
   List<PostEntity> searchPublishedByRelevance(
       @Param("match") String match,
       @Param("like") String like,
+      @Param("titleLike") String titleLike,
       @Param("lang") String lang,
       Pageable pageable);
 
@@ -216,17 +227,21 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       nativeQuery = true,
       value =
           "SELECT p.* FROM posts p "
+              + "LEFT JOIN post_search_text s ON s.post_id = p.id "
               + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
               + "WHERE p.status = 'PUBLISHED' AND ("
-              + "MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) "
+              + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
               + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
+              + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
+              + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
               + "AND (:lang IS NULL OR p.language_tag = :lang) "
               + "GROUP BY p.id "
               + "ORDER BY COUNT(DISTINCT e.id) DESC, p.published_at DESC")
   List<PostEntity> searchPublishedTrendingSince(
       @Param("match") String match,
       @Param("like") String like,
+      @Param("titleLike") String titleLike,
       @Param("since") Instant since,
       @Param("lang") String lang,
       Pageable pageable);
@@ -235,13 +250,19 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       nativeQuery = true,
       value =
           "SELECT COUNT(*) FROM posts p "
+              + "LEFT JOIN post_search_text s ON s.post_id = p.id "
               + "WHERE p.status = 'PUBLISHED' AND ("
-              + "MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) "
+              + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
               + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
+              + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
+              + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
               + "AND (:lang IS NULL OR p.language_tag = :lang)")
   long countSearchPublished(
-      @Param("match") String match, @Param("like") String like, @Param("lang") String lang);
+      @Param("match") String match,
+      @Param("like") String like,
+      @Param("titleLike") String titleLike,
+      @Param("lang") String lang);
 
   // Authors ranked for the discovery rail — most published posts first, total views as tiebreak.
   // Returns [userId, postCount, totalViews]; the service hydrates authors and drops deleted ones.

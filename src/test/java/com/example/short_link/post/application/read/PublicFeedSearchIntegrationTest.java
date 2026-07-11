@@ -2,12 +2,17 @@ package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.post.application.write.CreatePostCommand;
+import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.application.write.PostSearchTextFlattener;
+import com.example.short_link.post.application.write.PublishPostCommand;
+import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostSearchTextRepository;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -40,8 +45,11 @@ class PublicFeedSearchIntegrationTest {
 
   @Autowired private PublicFeedQueryService service;
   @Autowired private PostRepository postRepository;
+  @Autowired private PostSearchTextRepository postSearchTextRepository;
   @Autowired private PostViewEventRepository postViewEventRepository;
   @Autowired private UserRepository userRepository;
+  @Autowired private CreatePostUseCase createPost;
+  @Autowired private PublishPostUseCase publishPost;
   @Autowired private JdbcTemplate jdbc;
 
   private final PostSearchTextFlattener flattener =
@@ -52,7 +60,10 @@ class PublicFeedSearchIntegrationTest {
     // Committed rows must be cleared between tests (no rollback). Child tables first for the FKs.
     jdbc.update("DELETE FROM post_view_event");
     jdbc.update("DELETE FROM post_block");
+    jdbc.update("DELETE FROM post_search_text");
     jdbc.update("DELETE FROM post_tag");
+    // 실 발행 경로(PublishPostUseCase)를 태우는 테스트는 발행 시 리비전 스냅샷을 남기므로 posts 를 지우기 전에 정리한다.
+    jdbc.update("DELETE FROM post_revision");
     jdbc.update("DELETE FROM posts");
     jdbc.update("DELETE FROM users");
   }
@@ -68,8 +79,9 @@ class PublicFeedSearchIntegrationTest {
     publish(userId, slug, title, excerpt, tags, List.of());
   }
 
-  // Publish with body blocks — persists post_block rows AND the derived search_text, exactly as the
-  // write use cases do, so MATCH(search_text) reaches title + excerpt + tags + body.
+  // Publish with body blocks — persists the derived search text to the post_search_text side table
+  // exactly as the write use cases do (via upsert), so MATCH(search_text) reaches title + excerpt +
+  // tags + body. The side table row is keyed by the saved post's id.
   private void publish(
       long userId,
       String slug,
@@ -80,9 +92,9 @@ class PublicFeedSearchIntegrationTest {
     PostEntity p = new PostEntity(userId, slug, title, "ko");
     p.updateExcerpt(excerpt);
     p.updateTags(tags);
-    p.updateSearchText(flattener.flatten(title, excerpt, tags, blocks));
     p.publish();
-    postRepository.save(p);
+    PostEntity saved = postRepository.save(p);
+    postSearchTextRepository.upsert(saved.getId(), flattener.flatten(title, excerpt, tags, blocks));
   }
 
   private static PostBlockEntity paragraph(String text) {
@@ -179,10 +191,11 @@ class PublicFeedSearchIntegrationTest {
       long userId, String slug, String title, List<String> tags, int lifetimeViews) {
     PostEntity p = new PostEntity(userId, slug, title, "ko");
     p.updateTags(tags);
-    p.updateSearchText(flattener.flatten(title, null, tags, List.of()));
     for (int i = 0; i < lifetimeViews; i++) p.incrementViewCount();
     p.publish();
-    return postRepository.save(p).getId();
+    long id = postRepository.save(p).getId();
+    postSearchTextRepository.upsert(id, flattener.flatten(title, null, tags, List.of()));
+    return id;
   }
 
   private void view(long postId, Instant at) {
@@ -278,5 +291,53 @@ class PublicFeedSearchIntegrationTest {
     assertThat(relevanceSlugs("hexagonal")).containsExactly("r-hex"); // title
     assertThat(relevanceSlugs("frontend")).containsExactly("r-react"); // tag
     assertThat(relevanceSlugs("aliceR")).containsExactly("r-hex"); // author handle
+  }
+
+  // 회귀 방지(create→publish 경로): 제목만 붙이고 본문 블록 편집 없이 그대로 발행한 글도 제목 단어로 검색돼야 한다. 편집
+  // use-case 만 검색 평문을 채우던 시절엔 이런 글이 곁 테이블에 아무 행도 없어 MATCH 0건(구 title LIKE 대비 회귀)이었다.
+  // 실제 use-case(CreatePostUseCase→PublishPostUseCase)를 태워 발행 경로의 refresh 가 회귀를 막는지 증명한다.
+  @Test
+  void publishedWithoutBlockEditIsSearchableByTitleWord() {
+    long author = author("publisher");
+    PostEntity created =
+        createPost.execute(new CreatePostCommand(author, "publish-only", "동시성 제어 깊이 파보기", "ko"));
+    // 블록 교체·메타 수정 없이 곧장 발행 — 예전이라면 search_text 가 NULL 로 남았을 경로.
+    publishPost.execute(new PublishPostCommand(author, created.getId()));
+
+    // 곁 테이블에 발행 시점 refresh 로 행이 생겼고, 제목 단어(부분어 포함)로 잡힌다.
+    Integer rows =
+        jdbc.queryForObject(
+            "SELECT COUNT(*) FROM post_search_text WHERE post_id = ?",
+            Integer.class,
+            created.getId());
+    assertThat(rows).isEqualTo(1);
+    assertThat(relevanceSlugs("동시성")).containsExactly("publish-only");
+    assertThat(relevanceSlugs("제어")).containsExactly("publish-only");
+  }
+
+  // 회귀 방지(짧은 질의): ngram(token size 2) 은 두 글자 미만 토큰을 인덱싱하지 않아 "C++"→"C" 같은 질의는 MATCH
+  // 0건이 된다. 제목·요약 LIKE 폴백이 이런 짧은 질의를 제목에서 잡아, 예전 title LIKE 검색 대비 회귀를 막는다.
+  @Test
+  void shortQueryFallsBackToTitleLike() {
+    long a = author("shorty");
+    publish(a, "cpp", "C++ 메모리 모델 정리", "동시성", List.of("cpp"));
+    publish(a, "rust", "Rust 소유권 이야기", "메모리", List.of("rust"));
+
+    // "C++" 는 스크럽 후 "C"(1자)만 남아 ngram 매칭이 불가능 — 제목 LIKE 폴백으로 잡혀야 한다.
+    assertThat(relevanceSlugs("C++")).containsExactly("cpp");
+    // 폴백이 켜져도 매칭 안 되는 글은 딸려 오지 않는다.
+    assertThat(relevanceSlugs("C++")).doesNotContain("rust");
+  }
+
+  // 짧은 질의 폴백이 "일반 질의" 의 매칭을 넓히지 않는지 — 두 글자 이상 토큰이 하나라도 있으면 폴백은 꺼진다(본문/제목 ngram
+  // 매칭만). 제목에 우연히 부분 문자열이 있어도 폴백 LIKE 로 새 매칭이 생기면 안 된다.
+  @Test
+  void normalQueryDoesNotTriggerTitleLikeFallback() {
+    long a = author("normie");
+    // 본문·제목·태그 어디에도 "인덱스" 없음. 다만 제목에 "인덱" 이라는 부분 문자열은 없다 — 폴백이 꺼져 있으니 0건이어야 한다.
+    publish(a, "db", "데이터 정합성", "트랜잭션 격리", List.of("db"));
+
+    // 두 글자 이상 질의라 폴백 off — 본문/제목 ngram 에 없으면 안 잡힌다(폴백으로 새는지 검증).
+    assertThat(relevanceSlugs("존재하지않는단어")).isEmpty();
   }
 }

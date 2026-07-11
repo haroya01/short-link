@@ -35,4 +35,33 @@ class PostRepositoryAdapterBooleanMatchTest {
     assertThat(PostRepositoryAdapter.booleanMatch("+++ --- ***")).isEmpty();
     assertThat(PostRepositoryAdapter.booleanMatch("   ")).isEmpty();
   }
+
+  @Test
+  void titleLikeFallbackEngagesOnlyForAllShortTerms() {
+    // 모든 토큰이 두 글자 미만 → ngram 이 못 잡으므로 제목/요약 LIKE 폴백을 켠다(원문 이스케이프한 %…%).
+    assertThat(PostRepositoryAdapter.titleLikeFallback("C++")).isEqualTo("%c++%");
+    assertThat(PostRepositoryAdapter.titleLikeFallback("가")).isEqualTo("%가%");
+  }
+
+  @Test
+  void titleLikeFallbackOffWhenAnyTermLongEnough() {
+    // 두 글자 이상 토큰이 하나라도 있으면 ngram 이 잡을 수 있으니 폴백은 꺼둔다(null = 쿼리 가지 off).
+    assertThat(PostRepositoryAdapter.titleLikeFallback("리다이렉트")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("C++ 성능")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("ab")).isNull();
+  }
+
+  @Test
+  void titleLikeFallbackNullForOperatorOnlyQuery() {
+    // 스크럽 후 잡을 자연어가 없으면 폴백해도 소용없으니 끈다.
+    assertThat(PostRepositoryAdapter.titleLikeFallback("+++")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("   ")).isNull();
+  }
+
+  @Test
+  void titleLikeFallbackEscapesWildcards() {
+    // 짧은 질의라도 %/_ 는 리터럴로 — '모두 매칭' 으로 새지 않게 이스케이프한다.
+    assertThat(PostRepositoryAdapter.titleLikeFallback("%")).isEqualTo("%!%%");
+    assertThat(PostRepositoryAdapter.titleLikeFallback("_")).isEqualTo("%!_%");
+  }
 }

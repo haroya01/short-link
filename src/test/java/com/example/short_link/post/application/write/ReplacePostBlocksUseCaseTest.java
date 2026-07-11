@@ -2,6 +2,8 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -9,6 +11,7 @@ import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
+import com.example.short_link.post.domain.repository.PostSearchTextRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
@@ -26,13 +29,15 @@ class ReplacePostBlocksUseCaseTest {
 
   @Mock private PostOwnership postOwnership;
   @Mock private PostBlockRepository postBlockRepository;
+  @Mock private PostSearchTextRepository postSearchTextRepository;
 
   private ReplacePostBlocksUseCase useCase;
 
   @BeforeEach
   void setUp() {
     PostSearchTextUpdater searchTextUpdater =
-        new PostSearchTextUpdater(postBlockRepository, JsonMapper.builder().build());
+        new PostSearchTextUpdater(
+            postBlockRepository, postSearchTextRepository, JsonMapper.builder().build());
     useCase = new ReplacePostBlocksUseCase(postOwnership, postBlockRepository, searchTextUpdater);
   }
 
@@ -75,8 +80,10 @@ class ReplacePostBlocksUseCaseTest {
 
     assertThat(result).isSameAs(persisted);
 
-    // 파생 검색 컬럼이 제목 + 본문(문단 텍스트)까지 담겼는지 — 본문이 인덱싱되는 게 이 업그레이드의 핵심.
-    assertThat(post.getSearchText()).contains("My Post").contains("Hello");
+    // 파생 검색 평문이 제목 + 본문(문단 텍스트)까지 담겨 곁 테이블에 upsert 되는지 — 본문이 인덱싱되는 게 이 업그레이드의 핵심.
+    ArgumentCaptor<String> searchText = ArgumentCaptor.forClass(String.class);
+    verify(postSearchTextRepository).upsert(any(), searchText.capture());
+    assertThat(searchText.getValue()).contains("My Post").contains("Hello");
   }
 
   @Test
@@ -89,8 +96,8 @@ class ReplacePostBlocksUseCaseTest {
 
     verify(postBlockRepository).deleteAllByPostId(42L);
     assertThat(result).isEmpty();
-    // 본문을 비워도 검색 컬럼은 제목으로 다시 채워진다(예전 본문 잔재 없음).
-    assertThat(post.getSearchText()).isEqualTo("My Post");
+    // 본문을 비워도 검색 평문은 제목으로 다시 채워져 upsert 된다(예전 본문 잔재 없음).
+    verify(postSearchTextRepository).upsert(any(), eq("My Post"));
   }
 
   @Test

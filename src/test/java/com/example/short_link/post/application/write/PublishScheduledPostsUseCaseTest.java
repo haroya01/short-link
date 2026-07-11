@@ -25,12 +25,13 @@ class PublishScheduledPostsUseCaseTest {
 
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionCapture postRevisionCapture;
+  @Mock private PostSearchTextUpdater searchTextUpdater;
   @Mock private ProfileCacheInvalidator cacheEviction;
   @Mock private ApplicationEventPublisher events;
 
   private PublishScheduledPostsUseCase useCase() {
     return new PublishScheduledPostsUseCase(
-        postRepository, postRevisionCapture, cacheEviction, events);
+        postRepository, postRevisionCapture, searchTextUpdater, cacheEviction, events);
   }
 
   private static PostEntity scheduledPost(String slug) {
@@ -52,6 +53,8 @@ class PublishScheduledPostsUseCaseTest {
     assertThat(b.getStatus()).isEqualTo(PostStatus.PUBLISHED);
     verify(postRepository, times(2)).save(any(PostEntity.class));
     verify(postRevisionCapture, times(2)).capture(any(PostEntity.class));
+    // 예약만 걸고 블록 편집 없이 자동 발행되는 글도 검색 평문이 채워지도록 발행마다 refresh 한다.
+    verify(searchTextUpdater, times(2)).refresh(any(PostEntity.class));
     // Each scheduled post is going public for the first time → one fan-out event apiece.
     verify(events, times(2)).publishEvent(any(PostPublishedEvent.class));
   }

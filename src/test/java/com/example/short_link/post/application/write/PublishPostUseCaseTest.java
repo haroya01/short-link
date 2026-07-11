@@ -25,6 +25,7 @@ class PublishPostUseCaseTest {
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionCapture postRevisionCapture;
+  @Mock private PostSearchTextUpdater searchTextUpdater;
   @Mock private ProfileCacheInvalidator cacheEviction;
   @Mock private ApplicationEventPublisher events;
 
@@ -34,7 +35,12 @@ class PublishPostUseCaseTest {
   void setUp() {
     useCase =
         new PublishPostUseCase(
-            postOwnership, postRepository, postRevisionCapture, cacheEviction, events);
+            postOwnership,
+            postRepository,
+            postRevisionCapture,
+            searchTextUpdater,
+            cacheEviction,
+            events);
   }
 
   @Test
@@ -48,6 +54,8 @@ class PublishPostUseCaseTest {
     assertThat(result.getStatus()).isEqualTo(PostStatus.PUBLISHED);
     assertThat(result.getPublishedAt()).isNotNull();
     verify(postRevisionCapture).capture(result);
+    // 발행 시점에도 검색 평문을 채워 "제목만 붙이고 블록 편집 없이 발행" 한 글이 본문·제목 검색에서 누락되지 않게 한다.
+    verify(searchTextUpdater).refresh(result);
     // First publish fans out to followers via PostPublishedEvent.
     ArgumentCaptor<PostPublishedEvent> evt = ArgumentCaptor.forClass(PostPublishedEvent.class);
     verify(events).publishEvent(evt.capture());
