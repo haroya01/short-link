@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.application.read;
 
+import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
@@ -20,8 +21,10 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
@@ -79,6 +82,74 @@ public class CollectionQueryService {
                     c.getUpdatedAt(),
                     List.of()))
         .toList();
+  }
+
+  /**
+   * "이 글들이 각각 속한 길" — 여러 블록(피드가 보이는 카드 id 들)을 담은 *공개* 컬렉션들을 refId 별로(각 최근순). 단건 {@link
+   * #publicCollectionsContaining} 을 카드 수만큼 부르지 않게 한 올로 묶은 벌크판: 역연결·컬렉션·count 를 각각 한 쿼리로만 친다(N+1
+   * 없음). 빈/없는 refId 는 빈 목록으로 채워 돌려준다(응답에 요청한 모든 refId 가 있게).
+   */
+  public Map<Long, List<CollectionSummaryView>> publicCollectionsContainingBatch(
+      ConnectionBlockType blockType, List<Long> refIds) {
+    List<Long> distinctRefIds = refIds.stream().filter(Objects::nonNull).distinct().toList();
+    // 모든 refId 를 빈 목록으로 먼저 채운다 — 요청한 카드가 응답에서 빠지지 않게(§0 조용히: 없으면 빈 올).
+    Map<Long, List<CollectionSummaryView>> result = new LinkedHashMap<>();
+    for (Long refId : distinctRefIds) result.put(refId, List.of());
+    if (distinctRefIds.isEmpty()) return result;
+
+    // 1) 역연결 한 쿼리 — 이 블록들을 담은 모든 연결. refId → 담은 컬렉션 id 들(중복 제거).
+    List<CollectionConnectionEntity> connections =
+        connectionRepository.findAllByBlockTypeAndRefIdIn(blockType, distinctRefIds);
+    if (connections.isEmpty()) return result;
+
+    // 2) 컬렉션 한 쿼리 — 등장한 컬렉션들을 벌크로 받아 PUBLIC 만 남긴다.
+    Set<Long> allCollectionIds =
+        connections.stream()
+            .map(CollectionConnectionEntity::getCollectionId)
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+    Map<Long, CollectionEntity> publicById =
+        collectionRepository.findAllByIdIn(allCollectionIds).stream()
+            .filter(c -> c.getVisibility() == CollectionVisibility.PUBLIC)
+            .collect(Collectors.toMap(CollectionEntity::getId, Function.identity()));
+    if (publicById.isEmpty()) return result;
+
+    // 3) count 한 쿼리 — 공개 컬렉션들의 담긴 수를 group-by 로.
+    Map<Long, Integer> countById =
+        connectionRepository.countByCollectionIdIn(publicById.keySet()).stream()
+            .collect(
+                Collectors.toMap(CollectionConnectionCount::collectionId, c -> (int) c.count()));
+
+    // refId 별로 공개 컬렉션을 모아 요약 뷰로(최근순). 컬렉션 조회는 모두 메모리 맵 — 추가 쿼리 없음.
+    Map<Long, List<CollectionEntity>> collectionsByRef = new LinkedHashMap<>();
+    for (CollectionConnectionEntity conn : connections) {
+      CollectionEntity collection = publicById.get(conn.getCollectionId());
+      if (collection == null) continue; // 비공개·사라진 컬렉션은 건너뛴다.
+      List<CollectionEntity> bucket =
+          collectionsByRef.computeIfAbsent(conn.getRefId(), k -> new ArrayList<>());
+      if (bucket.stream().noneMatch(c -> c.getId().equals(collection.getId()))) {
+        bucket.add(collection); // 같은 컬렉션이 한 글에 두 번 세지 않게(다형 refId 중복 방지).
+      }
+    }
+
+    collectionsByRef.forEach(
+        (refId, collections) ->
+            result.put(
+                refId,
+                collections.stream()
+                    .sorted(Comparator.comparing(CollectionEntity::getUpdatedAt).reversed())
+                    .map(
+                        c ->
+                            new CollectionSummaryView(
+                                c.getId(),
+                                c.getTitle(),
+                                c.getDescription(),
+                                c.getVisibility().name(),
+                                c.getKind().name(),
+                                countById.getOrDefault(c.getId(), 0),
+                                c.getUpdatedAt(),
+                                List.of()))
+                    .toList()));
+    return result;
   }
 
   public static final int PREVIEW_PER_COLLECTION = 2;

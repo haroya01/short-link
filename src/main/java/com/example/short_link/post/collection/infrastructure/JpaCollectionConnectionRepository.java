@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.infrastructure;
 
+import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
@@ -50,6 +51,20 @@ public interface JpaCollectionConnectionRepository
 
   List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
       ConnectionBlockType blockType, Long refId);
+
+  List<CollectionConnectionEntity> findAllByBlockTypeAndRefIdIn(
+      ConnectionBlockType blockType, Collection<Long> refIds);
+
+  @Query(
+      """
+      select new com.example.short_link.post.collection.domain.CollectionConnectionCount(
+          c.collectionId, count(c))
+      from CollectionConnectionEntity c
+      where c.collectionId in :collectionIds
+      group by c.collectionId
+      """)
+  List<CollectionConnectionCount> countByCollectionIdIn(
+      @Param("collectionIds") Collection<Long> collectionIds);
 
   /**
    * 대상 블록(글·하이라이트·노트)이 하드 삭제될 때 그를 가리키던 연결을 일괄 정리 — ref_id 는 FK 없는 다형 참조라 DB 가 대신 지워주지 않는다. 벌크
