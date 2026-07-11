@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionKind;
@@ -23,6 +24,7 @@ import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -114,6 +116,79 @@ class CollectionQueryServiceTest {
         .thenReturn(List.of());
 
     assertThat(service.publicCollectionsContaining(ConnectionBlockType.POST, 99L)).isEmpty();
+  }
+
+  private CollectionConnectionEntity conn(long collectionId, ConnectionBlockType type, long refId) {
+    return new CollectionConnectionEntity(collectionId, type, refId, null, 0);
+  }
+
+  @Test
+  void batchGroupsPublicCollectionsPerPost_oneQueryEach() {
+    // p5 → 공개 C10 + 비공개 C11, p6 → 공개 C10(같은 컬렉션에도 담김), p7 → 아무 컬렉션에도 없음.
+    when(connectionRepository.findAllByBlockTypeAndRefIdIn(
+            ConnectionBlockType.POST, List.of(5L, 6L, 7L)))
+        .thenReturn(
+            List.of(
+                conn(10L, ConnectionBlockType.POST, 5L),
+                conn(11L, ConnectionBlockType.POST, 5L),
+                conn(10L, ConnectionBlockType.POST, 6L)));
+    when(collectionRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(
+            List.of(
+                collection(10L, 1L, CollectionVisibility.PUBLIC),
+                collection(11L, 1L, CollectionVisibility.PRIVATE)));
+    when(connectionRepository.countByCollectionIdIn(anyCollection()))
+        .thenReturn(List.of(new CollectionConnectionCount(10L, 4L)));
+
+    Map<Long, List<CollectionSummaryView>> result =
+        service.publicCollectionsContainingBatch(ConnectionBlockType.POST, List.of(5L, 6L, 7L));
+
+    // 요청한 세 글 모두 응답에 있고, 비공개 C11 은 빠진다.
+    assertThat(result).containsOnlyKeys(5L, 6L, 7L);
+    assertThat(result.get(5L)).extracting(CollectionSummaryView::id).containsExactly(10L);
+    assertThat(result.get(5L).get(0).count()).isEqualTo(4);
+    assertThat(result.get(6L)).extracting(CollectionSummaryView::id).containsExactly(10L);
+    assertThat(result.get(7L)).isEmpty(); // 어느 공개 컬렉션에도 없음 → 빈 올.
+  }
+
+  @Test
+  void batchEmptyIdsReturnsEmptyMap_noQueries() {
+    Map<Long, List<CollectionSummaryView>> result =
+        service.publicCollectionsContainingBatch(ConnectionBlockType.POST, List.of());
+
+    assertThat(result).isEmpty();
+  }
+
+  @Test
+  void batchAllPrivateYieldsEmptyListsPerRequestedId() {
+    when(connectionRepository.findAllByBlockTypeAndRefIdIn(ConnectionBlockType.POST, List.of(5L)))
+        .thenReturn(List.of(conn(11L, ConnectionBlockType.POST, 5L)));
+    when(collectionRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(collection(11L, 1L, CollectionVisibility.PRIVATE)));
+
+    Map<Long, List<CollectionSummaryView>> result =
+        service.publicCollectionsContainingBatch(ConnectionBlockType.POST, List.of(5L));
+
+    // 담긴 컬렉션이 전부 비공개면 요청한 id 는 빈 목록으로 남는다(빠지지 않음).
+    assertThat(result).containsOnlyKeys(5L);
+    assertThat(result.get(5L)).isEmpty();
+  }
+
+  @Test
+  void batchDeduplicatesRequestedIds() {
+    when(connectionRepository.findAllByBlockTypeAndRefIdIn(ConnectionBlockType.POST, List.of(5L)))
+        .thenReturn(List.of(conn(10L, ConnectionBlockType.POST, 5L)));
+    when(collectionRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    when(connectionRepository.countByCollectionIdIn(anyCollection()))
+        .thenReturn(List.of(new CollectionConnectionCount(10L, 1L)));
+
+    Map<Long, List<CollectionSummaryView>> result =
+        service.publicCollectionsContainingBatch(ConnectionBlockType.POST, List.of(5L, 5L, 5L));
+
+    // 중복 id 는 한 번만 조회된다(distinct).
+    assertThat(result).containsOnlyKeys(5L);
+    assertThat(result.get(5L)).extracting(CollectionSummaryView::id).containsExactly(10L);
   }
 
   private CollectionConnectionEntity conn(long id, ConnectionBlockType type, long refId, int pos) {

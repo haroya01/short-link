@@ -2,6 +2,7 @@ package com.example.short_link.post.collection.infrastructure;
 
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.repository.CollectionRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +22,12 @@ class CollectionRepositoryAdapter implements CollectionRepository {
   @Override
   public Optional<CollectionEntity> findById(Long id) {
     return jpa.findById(id);
+  }
+
+  @Override
+  public List<CollectionEntity> findAllByIdIn(Collection<Long> ids) {
+    if (ids.isEmpty()) return List.of();
+    return jpa.findAllByIdIn(ids);
   }
 
   @Override

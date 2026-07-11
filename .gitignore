@@ -40,6 +40,12 @@ out/
 .env
 .env.*
 !.env.example
+*.p8
+*.pem
+*.key
+*.jks
+*.p12
+*.keystore
 
 ### Local agent state ###
 .claude/

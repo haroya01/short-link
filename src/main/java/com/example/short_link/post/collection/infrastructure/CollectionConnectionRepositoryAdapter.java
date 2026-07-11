@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.infrastructure;
 
+import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
@@ -74,6 +75,19 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   public List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
       ConnectionBlockType blockType, Long refId) {
     return jpa.findAllByBlockTypeAndRefId(blockType, refId);
+  }
+
+  @Override
+  public List<CollectionConnectionEntity> findAllByBlockTypeAndRefIdIn(
+      ConnectionBlockType blockType, Collection<Long> refIds) {
+    if (refIds.isEmpty()) return List.of();
+    return jpa.findAllByBlockTypeAndRefIdIn(blockType, refIds);
+  }
+
+  @Override
+  public List<CollectionConnectionCount> countByCollectionIdIn(Collection<Long> collectionIds) {
+    if (collectionIds.isEmpty()) return List.of();
+    return jpa.countByCollectionIdIn(collectionIds);
   }
 
   @Override

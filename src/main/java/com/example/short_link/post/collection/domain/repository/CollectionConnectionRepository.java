@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.domain.repository;
 
+import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
@@ -39,6 +40,16 @@ public interface CollectionConnectionRepository {
   /** 이 블록(글·하이라이트·노트)을 담은 모든 연결 — "이 문장이 속한 길" 역조회. */
   List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
       ConnectionBlockType blockType, Long refId);
+
+  /**
+   * 여러 블록을 담은 모든 연결 — "이 문장이 속한 길"의 벌크판(피드가 보이는 카드 id 를 모아 한 번에). refIds 가 비면 빈 목록. 단건 역조회를 카드 수만큼
+   * 반복하지 않게 in :refIds 한 쿼리로 묶는다.
+   */
+  List<CollectionConnectionEntity> findAllByBlockTypeAndRefIdIn(
+      ConnectionBlockType blockType, Collection<Long> refIds);
+
+  /** 컬렉션별 담긴 연결 수를 한 쿼리로 — 카드마다 count 를 세지 않게(N+1 방지). collectionIds 가 비면 빈 목록. */
+  List<CollectionConnectionCount> countByCollectionIdIn(Collection<Long> collectionIds);
 
   /** Highest position in a collection (for append), or null when empty. */
   Integer findMaxPositionByCollectionId(Long collectionId);
