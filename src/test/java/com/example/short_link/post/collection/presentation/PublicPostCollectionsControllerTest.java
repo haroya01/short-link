@@ -46,15 +46,22 @@ class PublicPostCollectionsControllerTest {
                     "COLLECTION",
                     4,
                     Instant.parse("2026-06-12T00:00:00Z"),
-                    List.of())));
+                    List.of(),
+                    "curator",
+                    "https://cdn.kurl.me/a.jpg",
+                    2)));
 
     // 미로그인(헤더 없음)에도 200 — GET /api/v1/public/** 은 permitAll. 글 타입으로 조회된다.
+    // "@큐레이터의 길 · N편 중 M번째"로 읽히도록 curatorUsername·position·count(=분모)가 함께 실린다.
     mvc.perform(get("/api/v1/public/posts/5/collections"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(10))
         .andExpect(jsonPath("$[0].title").value("느린 사고"))
         .andExpect(jsonPath("$[0].visibility").value("PUBLIC"))
-        .andExpect(jsonPath("$[0].count").value(4));
+        .andExpect(jsonPath("$[0].count").value(4))
+        .andExpect(jsonPath("$[0].curatorUsername").value("curator"))
+        .andExpect(jsonPath("$[0].curatorAvatarUrl").value("https://cdn.kurl.me/a.jpg"))
+        .andExpect(jsonPath("$[0].position").value(2));
 
     verify(queryService).publicCollectionsContaining(ConnectionBlockType.POST, 5L);
   }
@@ -80,7 +87,10 @@ class PublicPostCollectionsControllerTest {
             "COLLECTION",
             4,
             Instant.parse("2026-06-12T00:00:00Z"),
-            List.of());
+            List.of(),
+            "curator",
+            "https://cdn.kurl.me/a.jpg",
+            3);
     when(queryService.publicCollectionsContainingBatch(
             ConnectionBlockType.POST, List.of(5L, 6L, 7L)))
         .thenReturn(Map.of(5L, List.of(view), 6L, List.of(), 7L, List.of()));
@@ -93,6 +103,10 @@ class PublicPostCollectionsControllerTest {
         .andExpect(jsonPath("$[0].collections[0].id").value(10))
         .andExpect(jsonPath("$[0].collections[0].visibility").value("PUBLIC"))
         .andExpect(jsonPath("$[0].collections[0].count").value(4))
+        .andExpect(jsonPath("$[0].collections[0].curatorUsername").value("curator"))
+        .andExpect(
+            jsonPath("$[0].collections[0].curatorAvatarUrl").value("https://cdn.kurl.me/a.jpg"))
+        .andExpect(jsonPath("$[0].collections[0].position").value(3))
         .andExpect(jsonPath("$[1].postId").value(6))
         .andExpect(jsonPath("$[1].collections.length()").value(0))
         .andExpect(jsonPath("$[2].postId").value(7))

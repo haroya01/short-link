@@ -2,6 +2,7 @@ package com.example.short_link.post.collection.application.read;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
+import com.example.short_link.post.collection.domain.CollectionConnectionRank;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
@@ -56,7 +57,8 @@ public class CollectionQueryService {
 
   /**
    * "이 문장이 속한 길/컬렉션" — 이 블록(하이라이트 등)을 담은 *공개* 컬렉션들(최근순). 비공개·링크공유는 빼서 누구나(미로그인 포함) 안전히 본다. A 척추의 발견
-   * 고리 — 한 문장에서 그것이 엮인 길들로.
+   * 고리 — 한 문장에서 그것이 엮인 길들로. 각 컬렉션엔 소유자(큐레이터)와 이 블록이 그 길에서 몇 번째인지(1-based position, 분모는 count)를 실어
+   * "카테고리"가 아니라 "@큐레이터의 길 · N편 중 M번째"로 읽히게 한다.
    */
   public List<CollectionSummaryView> publicCollectionsContaining(
       ConnectionBlockType blockType, Long refId) {
@@ -65,11 +67,21 @@ public class CollectionQueryService {
             .map(CollectionConnectionEntity::getCollectionId)
             .distinct()
             .toList();
-    return collectionIds.stream()
-        .map(collectionRepository::findById)
-        .flatMap(Optional::stream)
-        .filter(c -> c.getVisibility() == CollectionVisibility.PUBLIC)
-        .sorted(Comparator.comparing(CollectionEntity::getUpdatedAt).reversed())
+    List<CollectionEntity> publicCollections =
+        collectionIds.stream()
+            .map(collectionRepository::findById)
+            .flatMap(Optional::stream)
+            .filter(c -> c.getVisibility() == CollectionVisibility.PUBLIC)
+            .sorted(Comparator.comparing(CollectionEntity::getUpdatedAt).reversed())
+            .toList();
+    if (publicCollections.isEmpty()) return List.of();
+
+    Set<Long> ids =
+        publicCollections.stream().map(CollectionEntity::getId).collect(Collectors.toSet());
+    Map<Long, Curator> curators = curatorsFor(publicCollections);
+    Map<Long, Integer> positionByCollection = positionsFor(blockType, refId, ids);
+
+    return publicCollections.stream()
         .map(
             c ->
                 new CollectionSummaryView(
@@ -80,8 +92,39 @@ public class CollectionQueryService {
                     c.getKind().name(),
                     (int) connectionRepository.countByCollectionId(c.getId()),
                     c.getUpdatedAt(),
-                    List.of()))
+                    List.of(),
+                    curators.getOrDefault(c.getOwnerId(), Curator.EMPTY).username(),
+                    curators.getOrDefault(c.getOwnerId(), Curator.EMPTY).avatarUrl(),
+                    positionByCollection.get(c.getId())))
         .toList();
+  }
+
+  /** 큐레이터 한 줄 — 컬렉션 소유자의 표시 핸들·아바타. 없는 유저는 EMPTY(둘 다 null). */
+  private record Curator(String username, String avatarUrl) {
+    static final Curator EMPTY = new Curator(null, null);
+  }
+
+  /** 컬렉션들의 소유자(큐레이터)를 한 쿼리로(N+1 방지) — ownerId → 핸들·아바타. */
+  private Map<Long, Curator> curatorsFor(List<CollectionEntity> collections) {
+    Set<Long> ownerIds =
+        collections.stream().map(CollectionEntity::getOwnerId).collect(Collectors.toSet());
+    if (ownerIds.isEmpty()) return Map.of();
+    return userRepository.findAllByIdIn(ownerIds).stream()
+        .collect(
+            Collectors.toMap(
+                UserEntity::getId, u -> new Curator(u.getUsername(), u.getAvatarUrl())));
+  }
+
+  /** 컬렉션들 안에서 이 (blockType, refId) 의 1-based position 을 한 쿼리로 — collectionId → position. */
+  private Map<Long, Integer> positionsFor(
+      ConnectionBlockType blockType, Long refId, Set<Long> collectionIds) {
+    return connectionRepository
+        .findRanksByCollectionIdsAndBlockType(collectionIds, blockType)
+        .stream()
+        .filter(r -> refId.equals(r.refId()))
+        .collect(
+            Collectors.toMap(
+                CollectionConnectionRank::collectionId, CollectionConnectionRank::position));
   }
 
   /**
@@ -119,6 +162,18 @@ public class CollectionQueryService {
             .collect(
                 Collectors.toMap(CollectionConnectionCount::collectionId, c -> (int) c.count()));
 
+    // 4) 큐레이터 한 쿼리 — 공개 컬렉션 소유자들을 벌크로(ownerId → 핸들·아바타). N+1 방지.
+    Map<Long, Curator> curators = curatorsFor(List.copyOf(publicById.values()));
+
+    // 5) 순위 한 쿼리 — 공개 컬렉션들 안 이 블록 타입 연결의 1-based position 을 (collectionId, refId) 키로. N+1 방지.
+    Map<Long, Map<Long, Integer>> positionByCollectionAndRef = new LinkedHashMap<>();
+    for (CollectionConnectionRank rank :
+        connectionRepository.findRanksByCollectionIdsAndBlockType(publicById.keySet(), blockType)) {
+      positionByCollectionAndRef
+          .computeIfAbsent(rank.collectionId(), k -> new LinkedHashMap<>())
+          .put(rank.refId(), rank.position());
+    }
+
     // refId 별로 공개 컬렉션을 모아 요약 뷰로(최근순). 컬렉션 조회는 모두 메모리 맵 — 추가 쿼리 없음.
     Map<Long, List<CollectionEntity>> collectionsByRef = new LinkedHashMap<>();
     for (CollectionConnectionEntity conn : connections) {
@@ -147,7 +202,12 @@ public class CollectionQueryService {
                                 c.getKind().name(),
                                 countById.getOrDefault(c.getId(), 0),
                                 c.getUpdatedAt(),
-                                List.of()))
+                                List.of(),
+                                curators.getOrDefault(c.getOwnerId(), Curator.EMPTY).username(),
+                                curators.getOrDefault(c.getOwnerId(), Curator.EMPTY).avatarUrl(),
+                                positionByCollectionAndRef
+                                    .getOrDefault(c.getId(), Map.of())
+                                    .get(refId)))
                     .toList()));
     return result;
   }
@@ -161,6 +221,11 @@ public class CollectionQueryService {
         collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(userId);
     Map<Long, List<String>> previews =
         previewByCollection(collections.stream().map(CollectionEntity::getId).toList());
+    Curator owner =
+        userRepository
+            .findById(userId)
+            .map(u -> new Curator(u.getUsername(), u.getAvatarUrl()))
+            .orElse(Curator.EMPTY);
     return collections.stream()
         .map(
             c ->
@@ -172,7 +237,10 @@ public class CollectionQueryService {
                     c.getKind().name(),
                     (int) connectionRepository.countByCollectionId(c.getId()),
                     c.getUpdatedAt(),
-                    previews.getOrDefault(c.getId(), List.of())))
+                    previews.getOrDefault(c.getId(), List.of()),
+                    owner.username(),
+                    owner.avatarUrl(),
+                    null)) // 대상 글이 없는 목록판 — position 없음.
         .toList();
   }
 
@@ -184,6 +252,7 @@ public class CollectionQueryService {
   public List<CollectionSummaryView> listPublicByUsername(String username) {
     Optional<UserEntity> user = userRepository.findByUsername(username);
     if (user.isEmpty()) return List.of();
+    Curator owner = new Curator(user.get().getUsername(), user.get().getAvatarUrl());
     List<CollectionEntity> collections =
         collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(user.get().getId()).stream()
             .filter(c -> c.getVisibility() == CollectionVisibility.PUBLIC)
@@ -201,7 +270,10 @@ public class CollectionQueryService {
                     c.getKind().name(),
                     (int) connectionRepository.countByCollectionId(c.getId()),
                     c.getUpdatedAt(),
-                    previews.getOrDefault(c.getId(), List.of())))
+                    previews.getOrDefault(c.getId(), List.of()),
+                    owner.username(),
+                    owner.avatarUrl(),
+                    null)) // 대상 글이 없는 목록판 — position 없음.
         .toList();
   }
 

@@ -3,10 +3,12 @@ package com.example.short_link.post.collection.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
+import com.example.short_link.post.collection.domain.CollectionConnectionRank;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
@@ -99,15 +101,22 @@ class CollectionQueryServiceTest {
     when(collectionRepository.findById(21L))
         .thenReturn(Optional.of(collection(21L, 1L, CollectionVisibility.PRIVATE)));
     when(connectionRepository.countByCollectionId(20L)).thenReturn(4L);
+    // 큐레이터(소유자 1) 벌크 조회 + 컬렉션 20 안에서 글 5 의 1-based position(3번째).
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "curator")));
+    when(connectionRepository.findRanksByCollectionIdsAndBlockType(
+            anyCollection(), eq(ConnectionBlockType.POST)))
+        .thenReturn(List.of(new CollectionConnectionRank(20L, 5L, 3)));
 
     List<CollectionSummaryView> result =
         service.publicCollectionsContaining(ConnectionBlockType.POST, 5L);
 
-    // 글(POST) 타입으로도 비공개(21)는 빠지고 공개(20)만 흐른다.
+    // 글(POST) 타입으로도 비공개(21)는 빠지고 공개(20)만 흐른다. 큐레이터·위치가 함께 실린다.
     assertThat(result).hasSize(1);
     assertThat(result.get(0).id()).isEqualTo(20L);
     assertThat(result.get(0).visibility()).isEqualTo("PUBLIC");
     assertThat(result.get(0).count()).isEqualTo(4);
+    assertThat(result.get(0).curatorUsername()).isEqualTo("curator");
+    assertThat(result.get(0).position()).isEqualTo(3); // "4편 중 3번째"
   }
 
   @Test
@@ -139,6 +148,14 @@ class CollectionQueryServiceTest {
                 collection(11L, 1L, CollectionVisibility.PRIVATE)));
     when(connectionRepository.countByCollectionIdIn(anyCollection()))
         .thenReturn(List.of(new CollectionConnectionCount(10L, 4L)));
+    // 공개 C10 소유자(큐레이터 1) 벌크 조회 + C10 안에서 글 5·6 의 1-based position.
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "curator")));
+    when(connectionRepository.findRanksByCollectionIdsAndBlockType(
+            anyCollection(), eq(ConnectionBlockType.POST)))
+        .thenReturn(
+            List.of(
+                new CollectionConnectionRank(10L, 5L, 1),
+                new CollectionConnectionRank(10L, 6L, 2)));
 
     Map<Long, List<CollectionSummaryView>> result =
         service.publicCollectionsContainingBatch(ConnectionBlockType.POST, List.of(5L, 6L, 7L));
@@ -147,7 +164,11 @@ class CollectionQueryServiceTest {
     assertThat(result).containsOnlyKeys(5L, 6L, 7L);
     assertThat(result.get(5L)).extracting(CollectionSummaryView::id).containsExactly(10L);
     assertThat(result.get(5L).get(0).count()).isEqualTo(4);
+    // 같은 컬렉션 C10 이지만 글마다 다른 위치가 실린다(글 5 = 1번째, 글 6 = 2번째).
+    assertThat(result.get(5L).get(0).curatorUsername()).isEqualTo("curator");
+    assertThat(result.get(5L).get(0).position()).isEqualTo(1);
     assertThat(result.get(6L)).extracting(CollectionSummaryView::id).containsExactly(10L);
+    assertThat(result.get(6L).get(0).position()).isEqualTo(2);
     assertThat(result.get(7L)).isEmpty(); // 어느 공개 컬렉션에도 없음 → 빈 올.
   }
 

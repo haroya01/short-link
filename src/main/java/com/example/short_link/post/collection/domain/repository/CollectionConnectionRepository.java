@@ -2,6 +2,7 @@ package com.example.short_link.post.collection.domain.repository;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
+import com.example.short_link.post.collection.domain.CollectionConnectionRank;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
 import com.example.short_link.post.collection.domain.repository.projection.CurationGraphProjections.CooccurrenceRow;
@@ -50,6 +51,13 @@ public interface CollectionConnectionRepository {
 
   /** 컬렉션별 담긴 연결 수를 한 쿼리로 — 카드마다 count 를 세지 않게(N+1 방지). collectionIds 가 비면 빈 목록. */
   List<CollectionConnectionCount> countByCollectionIdIn(Collection<Long> collectionIds);
+
+  /**
+   * 컬렉션들 안에서 이 블록 타입 연결들의 1-based 순위 — (position, id) 정렬로 다시 세어 삭제·재배치로 듬성해진 raw position 값에 흔들리지
+   * 않게 한다. 여러 컬렉션의 순위를 한 쿼리로 받아 "N편 중 M번째"를 글마다 세지 않는다(N+1 방지). collectionIds 가 비면 빈 목록.
+   */
+  List<CollectionConnectionRank> findRanksByCollectionIdsAndBlockType(
+      Collection<Long> collectionIds, ConnectionBlockType blockType);
 
   /** Highest position in a collection (for append), or null when empty. */
   Integer findMaxPositionByCollectionId(Long collectionId);

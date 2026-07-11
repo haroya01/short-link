@@ -2,6 +2,7 @@ package com.example.short_link.post.collection.infrastructure;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
+import com.example.short_link.post.collection.domain.CollectionConnectionRank;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -88,6 +89,15 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   public List<CollectionConnectionCount> countByCollectionIdIn(Collection<Long> collectionIds) {
     if (collectionIds.isEmpty()) return List.of();
     return jpa.countByCollectionIdIn(collectionIds);
+  }
+
+  @Override
+  public List<CollectionConnectionRank> findRanksByCollectionIdsAndBlockType(
+      Collection<Long> collectionIds, ConnectionBlockType blockType) {
+    if (collectionIds.isEmpty()) return List.of();
+    return jpa.findRanksByCollectionIdInAndBlockType(collectionIds, blockType.name()).stream()
+        .map(r -> new CollectionConnectionRank(r.getCollectionId(), r.getRefId(), r.getPosition()))
+        .toList();
   }
 
   @Override

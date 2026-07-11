@@ -100,6 +100,71 @@ class PublicPostCollectionsBatchIntegrationTest {
     CollectionSummaryView pubAView =
         result.get(p2).stream().filter(v -> v.id().equals(pubA)).findFirst().orElseThrow();
     assertThat(pubAView.count()).isEqualTo(2);
+
+    // 큐레이터(소유자) 핸들이 실린다 — "카테고리"가 아니라 "@큐레이터의 길".
+    assertThat(pubAView.curatorUsername()).isEqualTo("alice-batch");
+
+    // 위치는 정렬된 연결 안 1-based 자리 — pubA{p1=0, p2=1} 이므로 p1=1번째, p2=2번째.
+    Integer p1PosInPubA =
+        result.get(p1).stream()
+            .filter(v -> v.id().equals(pubA))
+            .findFirst()
+            .orElseThrow()
+            .position();
+    assertThat(p1PosInPubA).isEqualTo(1);
+    assertThat(pubAView.position()).isEqualTo(2); // p2 는 pubA 에서 2번째
+
+    // 같은 글 p1 이 다른 컬렉션 pubB 에서는 1번째(pubB 에 홀로).
+    Integer p1PosInPubB =
+        result.get(p1).stream()
+            .filter(v -> v.id().equals(pubB))
+            .findFirst()
+            .orElseThrow()
+            .position();
+    assertThat(p1PosInPubB).isEqualTo(1);
+  }
+
+  @Test
+  void batch_positionCountsByOrder_notByRawSparsePositionValue() {
+    Long bob = user("bob-sparse", "bsp");
+    Long first = post(bob, "sparse-first");
+    Long target = post(bob, "sparse-target");
+
+    // 삭제·재배치로 raw position 이 듬성해진 상황(0, 그리고 5) — 값 5 를 그대로 쓰면 안 되고 순서로 2번째여야 한다.
+    Long col = collection(bob, "sparse-col", CollectionVisibility.PUBLIC);
+    connect(col, first, 0);
+    connect(col, target, 5);
+
+    Map<Long, List<CollectionSummaryView>> result =
+        service.publicCollectionsContainingBatch(ConnectionBlockType.POST, List.of(target));
+
+    CollectionSummaryView view =
+        result.get(target).stream().filter(v -> v.id().equals(col)).findFirst().orElseThrow();
+    // raw position=5 이지만 정렬 순위는 2 — position 은 값이 아니라 순서다.
+    assertThat(view.position()).isEqualTo(2);
+    assertThat(view.count()).isEqualTo(2); // 분모
+  }
+
+  @Test
+  void single_carriesCuratorAndPosition() {
+    Long carol = user("carol-single", "csg");
+    Long a = post(carol, "single-a");
+    Long b = post(carol, "single-b");
+    Long target = post(carol, "single-target");
+
+    Long col = collection(carol, "single-col", CollectionVisibility.PUBLIC);
+    connect(col, a, 0);
+    connect(col, b, 1);
+    connect(col, target, 2);
+
+    List<CollectionSummaryView> views =
+        service.publicCollectionsContaining(ConnectionBlockType.POST, target);
+
+    CollectionSummaryView view =
+        views.stream().filter(v -> v.id().equals(col)).findFirst().orElseThrow();
+    assertThat(view.curatorUsername()).isEqualTo("carol-single");
+    assertThat(view.position()).isEqualTo(3); // "3편 중 3번째"
+    assertThat(view.count()).isEqualTo(3);
   }
 
   @Test
