@@ -1,6 +1,7 @@
 package com.example.short_link.notification.application.write;
 
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -36,11 +37,19 @@ public class RecordBlogNotificationUseCase {
   private final PushSender pushSender;
   private final UserRepository userRepository;
   private final MessageSource messageSource;
+  private final BlogNotificationPreferenceService preferenceService;
 
-  /** A single notification. {@code payload} is the type's target ref (post / series) or null. */
+  /**
+   * A single notification. {@code payload} is the type's target ref (post / series) or null.
+   * Skipped entirely — no bell row, no push — when the recipient has muted this type; an absent
+   * preference is on, so existing behavior is unchanged.
+   */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
       Long recipientUserId, NotificationType type, Long actorUserId, Object payload) {
+    if (!preferenceService.isEnabled(recipientUserId, type)) {
+      return;
+    }
     String json = payload == null ? null : jsonMapper.writeValueAsString(payload);
     repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
     pushSender.send(
@@ -50,7 +59,9 @@ public class RecordBlogNotificationUseCase {
   /**
    * Fan-out: one row per recipient sharing the same type/actor/post — a followed author's new post
    * landing in every follower's bell. The post ref is serialized once and reused across the
-   * inserts.
+   * inserts. Recipients who muted this type are dropped up front by one bulk query (no per-follower
+   * lookup); an absent preference is on, so a follower who never touched settings still receives
+   * it.
    */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void recordForEach(
@@ -61,13 +72,17 @@ public class RecordBlogNotificationUseCase {
     if (recipientUserIds.isEmpty()) {
       return;
     }
+    List<Long> enabledRecipients = preferenceService.filterEnabled(recipientUserIds, type);
+    if (enabledRecipients.isEmpty()) {
+      return;
+    }
     String json = post == null ? null : jsonMapper.writeValueAsString(post);
-    for (Long recipientUserId : recipientUserIds) {
+    for (Long recipientUserId : enabledRecipients) {
       repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
     }
     // 수신자를 로케일별로 묶어 각 언어로 푸시 — 한 번의 조합을 그 로케일 그룹에 보낸다.
     Map<String, List<Long>> byLocale =
-        userRepository.findAllByIdIn(recipientUserIds).stream()
+        userRepository.findAllByIdIn(enabledRecipients).stream()
             .collect(
                 Collectors.groupingBy(
                     RecordBlogNotificationUseCase::localeTag,
