@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +16,7 @@ import com.example.short_link.notification.domain.repository.BlogNotificationPre
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.dao.DataIntegrityViolationException;
 
 class BlogNotificationPreferenceServiceTest {
 
@@ -69,6 +71,26 @@ class BlogNotificationPreferenceServiceTest {
     service.setEnabled(1L, NotificationType.MENTION, false);
 
     verify(repo).save(any(BlogNotificationPreferenceEntity.class));
+  }
+
+  @Test
+  void setEnabledRecoversFromConcurrentInsertRaceByReReadingAndUpdating() {
+    // Two toggles miss the same absent row and both insert; the loser's save trips the (user, type)
+    // unique key. The service catches it, re-reads the winner's row, and updates it in place —
+    // no 500 for the double-tapper.
+    BlogNotificationPreferenceEntity winnerRow =
+        new BlogNotificationPreferenceEntity(1L, NotificationType.LIKE, true);
+    when(repo.findByUserIdAndType(1L, NotificationType.LIKE))
+        .thenReturn(Optional.empty()) // first read: nobody there yet
+        .thenReturn(Optional.of(winnerRow)); // re-read after the race: winner's row
+    when(repo.save(any(BlogNotificationPreferenceEntity.class)))
+        .thenThrow(new DataIntegrityViolationException("uk_blog_notification_preference"));
+
+    service.setEnabled(1L, NotificationType.LIKE, false);
+
+    // Settled on the winner's row with the requested value; no exception propagated.
+    assertThat(winnerRow.isEnabled()).isFalse();
+    verify(repo, times(2)).findByUserIdAndType(1L, NotificationType.LIKE);
   }
 
   @Test

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,13 +43,27 @@ public class BlogNotificationPreferenceService {
     return result;
   }
 
+  /**
+   * Upsert the opt-out for one (user, type). Find-then-insert races two concurrent toggles (e.g. a
+   * double-tap) onto the same absent row: both miss the read, both insert, and the second trips the
+   * {@code (user_id, type)} unique key. We catch that and re-read to update in place, so the loser
+   * settles on the winner's row instead of surfacing a 500.
+   */
   @Transactional
   public void setEnabled(Long userId, NotificationType type, boolean enabled) {
     repository
         .findByUserIdAndType(userId, type)
         .ifPresentOrElse(
-            row -> row.setEnabled(enabled),
-            () -> repository.save(new BlogNotificationPreferenceEntity(userId, type, enabled)));
+            row -> row.setEnabled(enabled), () -> insertOrUpdate(userId, type, enabled));
+  }
+
+  private void insertOrUpdate(Long userId, NotificationType type, boolean enabled) {
+    try {
+      repository.save(new BlogNotificationPreferenceEntity(userId, type, enabled));
+    } catch (DataIntegrityViolationException raced) {
+      // A concurrent insert won the unique key — settle on its row.
+      repository.findByUserIdAndType(userId, type).ifPresent(row -> row.setEnabled(enabled));
+    }
   }
 
   /**

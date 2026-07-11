@@ -11,5 +11,5 @@ CREATE TABLE blog_notification_preference (
     CONSTRAINT uk_blog_notification_preference UNIQUE (user_id, type)
 );
 
--- 한 사용자의 알림 설정 조회용.
-CREATE INDEX idx_blog_notification_preference_user ON blog_notification_preference (user_id);
+-- 한 사용자의 알림 설정 조회는 UNIQUE(user_id, type) 의 leftmost prefix(user_id)로 이미 커버되므로
+-- 별도 user_id 인덱스는 두지 않는다(중복 인덱스 제거).
