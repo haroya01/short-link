@@ -23,7 +23,7 @@ public class PublicFeedController {
 
   @GetMapping
   public PublicFeedView feed(
-      @RequestParam(defaultValue = "recent") String sort,
+      @RequestParam(required = false) String sort,
       @RequestParam(required = false) String tag,
       @RequestParam(required = false) String q,
       @RequestParam(required = false) String lang,
@@ -34,11 +34,15 @@ public class PublicFeedController {
     // lang (e.g. ko/ja/en) narrows the feed/search to one post language; null/blank = all
     // languages.
     if (q != null && !q.isBlank()) {
-      return publicFeedQueryService.search(q.trim(), sort, lang, safePage, safeSize);
+      // 검색은 관련성이 기본(sort 미지정 시) — recent/trending 은 명시 옵트인으로 그대로 유지.
+      return publicFeedQueryService.search(
+          q.trim(), sort == null ? "relevance" : sort, lang, safePage, safeSize);
     }
+    // 브라우즈 피드는 예전대로 최신순이 기본.
+    String browseSort = sort == null ? "recent" : sort;
     if (tag != null && !tag.isBlank()) {
       return publicFeedQueryService.feedByTag(tag.trim(), safePage, safeSize);
     }
-    return publicFeedQueryService.feed(sort, lang, safePage, safeSize);
+    return publicFeedQueryService.feed(browseSort, lang, safePage, safeSize);
   }
 }

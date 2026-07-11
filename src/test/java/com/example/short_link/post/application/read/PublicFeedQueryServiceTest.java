@@ -104,15 +104,28 @@ class PublicFeedQueryServiceTest {
   }
 
   @Test
-  void searchUsesRecentQueryByDefault() {
+  void searchUsesRelevanceQueryByDefault() {
+    when(postRepository.searchPublishedByRelevance("spring", null, 0, 20))
+        .thenReturn(List.of(post(1L, "a")));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+    when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
+
+    // relevance = 새 기본값(sort 미인식/relevance 모두 관련성 쿼리로).
+    PublicFeedView view = service.search("spring", "relevance", null, 0, 20);
+
+    assertThat(view.items()).hasSize(1);
+    assertThat(view.items().get(0).slug()).isEqualTo("a");
+    verify(postRepository).searchPublishedByRelevance("spring", null, 0, 20);
+  }
+
+  @Test
+  void searchUsesRecentQueryWhenSortRecent() {
     when(postRepository.searchPublished("spring", null, 0, 20)).thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
 
-    PublicFeedView view = service.search("spring", "recent", null, 0, 20);
+    service.search("spring", "recent", null, 0, 20);
 
-    assertThat(view.items()).hasSize(1);
-    assertThat(view.items().get(0).slug()).isEqualTo("a");
     verify(postRepository).searchPublished("spring", null, 0, 20);
   }
 

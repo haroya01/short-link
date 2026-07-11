@@ -31,6 +31,7 @@ public class RestorePostRevisionUseCase {
   private final PostRepository postRepository;
   private final PostRevisionRepository postRevisionRepository;
   private final PostBlockRepository postBlockRepository;
+  private final PostSearchTextUpdater searchTextUpdater;
 
   @Transactional
   public PostEntity execute(RestorePostRevisionCommand cmd) {
@@ -67,6 +68,8 @@ public class RestorePostRevisionUseCase {
     }
 
     post.markEdited();
+    // 제목·요약과 본문이 스냅샷 상태로 되돌았으니 파생 검색 컬럼도 그에 맞춰 다시 채운다(저장된 블록 재조회).
+    searchTextUpdater.refresh(post);
     return postRepository.save(post);
   }
 

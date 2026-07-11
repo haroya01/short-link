@@ -164,21 +164,28 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> searchPublishedByRelevance(
+      String query, String lang, int page, int size) {
+    return jpa.searchPublishedByRelevance(
+        booleanMatch(query), likePattern(query), normLang(lang), PageRequest.of(page, size));
+  }
+
+  @Override
   public List<PostEntity> searchPublished(String query, String lang, int page, int size) {
-    return jpa.searchPublished(
-        likePattern(query), PostStatus.PUBLISHED, normLang(lang), PageRequest.of(page, size));
+    return jpa.searchPublishedRecent(
+        booleanMatch(query), likePattern(query), normLang(lang), PageRequest.of(page, size));
   }
 
   @Override
   public List<PostEntity> searchPublishedTrending(String query, String lang, int page, int size) {
     Instant since = Instant.now().minus(TRENDING_WINDOW);
     return jpa.searchPublishedTrendingSince(
-        likePattern(query), since, normLang(lang), PageRequest.of(page, size));
+        booleanMatch(query), likePattern(query), since, normLang(lang), PageRequest.of(page, size));
   }
 
   @Override
   public long countSearchPublished(String query, String lang) {
-    return jpa.countSearchPublished(likePattern(query), PostStatus.PUBLISHED, normLang(lang));
+    return jpa.countSearchPublished(booleanMatch(query), likePattern(query), normLang(lang));
   }
 
   /**
@@ -196,6 +203,17 @@ class PostRepositoryAdapter implements PostRepository {
   private static String likePattern(String query) {
     String escaped = query.toLowerCase().replace("!", "!!").replace("%", "!%").replace("_", "!_");
     return "%" + escaped + "%";
+  }
+
+  // Normalize raw user input into the AGAINST string for FULLTEXT BOOLEAN MODE. We strip the
+  // operator characters (+ - > < ( ) ~ * " @) so a stray operator can't hijack the query or
+  // become an unbalanced token, and collapse whitespace, leaving PLAIN space-separated terms.
+  // Plain (no +/*/quote) BOOLEAN terms are the one form that matches both Korean and English
+  // precisely under the ngram parser: a term's bigrams are required as a group (real substring
+  // match), unlike NATURAL mode which over-matches on any shared bigram. An empty result (query
+  // was only operators/punctuation) stays empty — AGAINST('') matches zero rows without error.
+  static String booleanMatch(String query) {
+    return query.replaceAll("[+\\-><()~*\"@]", " ").replaceAll("\\s+", " ").trim();
   }
 
   @Override

@@ -156,68 +156,92 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "where p.status = :status group by t order by count(p) desc")
   List<Object[]> findPopularTags(@Param("status") PostStatus status, Pageable pageable);
 
-  // Free-text feed search. Matches title / excerpt / any tag / author handle, newest first. `q` is
-  // a
-  // pre-lowercased, wildcard-escaped LIKE pattern (already wrapped in %…%) built by the adapter, so
-  // the query only LIKEs it. The author match is a subquery against UserEntity because a post holds
-  // a
-  // raw userId, not an association — deleted authors are excluded there. `distinct` collapses the
-  // row
-  // fan-out from the tag join.
+  // Free-text feed search — now FULLTEXT(ngram) over the derived `search_text` column (title +
+  // excerpt + tags + flattened body blocks), so the query reaches the body, not just the
+  // title/tags.
+  // Two matchers OR'd: (1) MATCH(search_text) AGAINST(:match IN BOOLEAN MODE) — the ngram
+  // body/title match, and (2) the author-handle LIKE subquery kept verbatim (username lives on
+  // `users`, not on a posts column, so it can't ride the FULLTEXT index). `:match` is the operator-
+  // scrubbed query the adapter builds from raw input; `:like` is the pre-lowercased, wildcard-
+  // escaped %…% pattern for the handle subquery. Native because MATCH() is not JPQL.
+  //
+  // ★ BOOLEAN MODE + 평문 토큰(no +/*/""): ngram+BOOLEAN의 프리픽스 연산자(term*)나
+  //   구문("term")은 여러 바이그램으로 쪼개지는 한글 다바이그램 토큰을 깨뜨린다(실측: +"리다이렉트"=0건).
+  //   반대로 NATURAL 모드는 한글은 잘 잡지만 영어는 흔한 바이그램(en,nt,on…) 하나만 겹쳐도 오매칭(실측:
+  //   "frontend"가 세 글 모두 매칭). 연산자 없는 평문 BOOLEAN 항(implicit 바이그램 그룹)만이 한/영
+  //   단어 둘 다 정확히 부분일치하고 관련성 점수도 준다(다단어는 "많이 겹칠수록 상위" OR 랭킹).
+  //
+  // recent 정렬: 관련성 무시, 최신순 — 예전 recent 검색과 정렬 계약 동일(본문까지 잡히는 것만 넓어졌다).
   @Query(
-      "select distinct p from PostEntity p left join p.tags t "
-          + "where p.status = :status and ("
-          + "lower(p.title) like :q escape '!' "
-          + "or lower(p.excerpt) like :q escape '!' "
-          + "or lower(t) like :q escape '!' "
-          + "or p.userId in (select u.id from UserEntity u "
-          + "where lower(u.username) like :q escape '!' and u.deletedAt is null)) "
-          + "and (:lang is null or p.languageTag = :lang) "
-          + "order by p.publishedAt desc")
-  List<PostEntity> searchPublished(
-      @Param("q") String q,
-      @Param("status") PostStatus status,
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p "
+              + "WHERE p.status = 'PUBLISHED' AND ("
+              + "MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) "
+              + "OR p.user_id IN (SELECT u.id FROM users u "
+              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "AND (:lang IS NULL OR p.language_tag = :lang) "
+              + "ORDER BY p.published_at DESC")
+  List<PostEntity> searchPublishedRecent(
+      @Param("match") String match,
+      @Param("like") String like,
       @Param("lang") String lang,
       Pageable pageable);
 
-  // Same match as searchPublished, but ranked by recent-window views (newest as tiebreak) so the
-  // trending sort means the same thing inside search as it does on the main feed. Native to mirror
-  // findPublishedTrendingSince: LEFT JOIN post_view_event for the windowed COUNT, LEFT JOIN
-  // post_tag
-  // for the tag match. COUNT(DISTINCT e.id) so the tag-join fan-out can't inflate the view count.
-  // `q` is the pre-lowercased, wildcard-escaped %…% LIKE pattern built by the adapter.
+  // relevance 정렬(새 기본값): MATCH() 관련성 점수 내림차순, 발행 최신을 동점 타이브레이크로. 작가 핸들만 걸린 글은
+  // 점수 0(본문 매칭 없음)이라 관련성 목록의 맨 아래로 밀리되 계속 노출된다 — 예전 검색이 잡던 것을 하나도 빠뜨리지
+  // 않는다.
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p "
+              + "WHERE p.status = 'PUBLISHED' AND ("
+              + "MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) "
+              + "OR p.user_id IN (SELECT u.id FROM users u "
+              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "AND (:lang IS NULL OR p.language_tag = :lang) "
+              + "ORDER BY MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) DESC, "
+              + "p.published_at DESC")
+  List<PostEntity> searchPublishedByRelevance(
+      @Param("match") String match,
+      @Param("like") String like,
+      @Param("lang") String lang,
+      Pageable pageable);
+
+  // Same match, ranked by recent-window views (newest as tiebreak) so the trending sort means the
+  // same thing inside search as on the main feed. Mirrors findPublishedTrendingSince: LEFT JOIN
+  // post_view_event for the windowed COUNT. COUNT(DISTINCT e.id) so multiple view rows aggregate
+  // correctly; GROUP BY p.id collapses them to one row per post.
   @Query(
       nativeQuery = true,
       value =
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
-              + "LEFT JOIN post_tag t ON t.post_id = p.id "
               + "WHERE p.status = 'PUBLISHED' AND ("
-              + "LOWER(p.title) LIKE :q ESCAPE '!' "
-              + "OR LOWER(p.excerpt) LIKE :q ESCAPE '!' "
-              + "OR LOWER(t.tag) LIKE :q ESCAPE '!' "
+              + "MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) "
               + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :q ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL)) "
               + "AND (:lang IS NULL OR p.language_tag = :lang) "
               + "GROUP BY p.id "
               + "ORDER BY COUNT(DISTINCT e.id) DESC, p.published_at DESC")
   List<PostEntity> searchPublishedTrendingSince(
-      @Param("q") String q,
+      @Param("match") String match,
+      @Param("like") String like,
       @Param("since") Instant since,
       @Param("lang") String lang,
       Pageable pageable);
 
   @Query(
-      "select count(distinct p) from PostEntity p left join p.tags t "
-          + "where p.status = :status and ("
-          + "lower(p.title) like :q escape '!' "
-          + "or lower(p.excerpt) like :q escape '!' "
-          + "or lower(t) like :q escape '!' "
-          + "or p.userId in (select u.id from UserEntity u "
-          + "where lower(u.username) like :q escape '!' and u.deletedAt is null)) "
-          + "and (:lang is null or p.languageTag = :lang)")
+      nativeQuery = true,
+      value =
+          "SELECT COUNT(*) FROM posts p "
+              + "WHERE p.status = 'PUBLISHED' AND ("
+              + "MATCH(p.search_text) AGAINST(:match IN BOOLEAN MODE) "
+              + "OR p.user_id IN (SELECT u.id FROM users u "
+              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL)) "
+              + "AND (:lang IS NULL OR p.language_tag = :lang)")
   long countSearchPublished(
-      @Param("q") String q, @Param("status") PostStatus status, @Param("lang") String lang);
+      @Param("match") String match, @Param("like") String like, @Param("lang") String lang);
 
   // Authors ranked for the discovery rail — most published posts first, total views as tiebreak.
   // Returns [userId, postCount, totalViews]; the service hydrates authors and drops deleted ones.

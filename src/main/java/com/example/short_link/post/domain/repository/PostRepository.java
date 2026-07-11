@@ -87,12 +87,16 @@ public interface PostRepository {
   long countPublishedByTag(String tag);
 
   /**
-   * Published posts matching free text in title / excerpt / tags / author handle, newest first.
-   * {@code lang} (null/blank = all) filters to one post language.
+   * Published posts matching free text via FULLTEXT(ngram) over the derived search text (title +
+   * excerpt + tags + body) OR the author handle, ranked by relevance (best match first) — the
+   * default search sort. {@code lang} (null/blank = all) filters to one post language.
    */
+  List<PostEntity> searchPublishedByRelevance(String query, String lang, int page, int size);
+
+  /** Same match as {@link #searchPublishedByRelevance} but newest first — the recent sort. */
   List<PostEntity> searchPublished(String query, String lang, int page, int size);
 
-  /** Same match as {@link #searchPublished} but ranked by view count — the trending sort. */
+  /** Same match but ranked by recent-window view count — the trending sort. */
   List<PostEntity> searchPublishedTrending(String query, String lang, int page, int size);
 
   long countSearchPublished(String query, String lang);

@@ -75,6 +75,14 @@ public class PostEntity extends BaseTimeEntity {
   @Column(length = 500)
   private String excerpt;
 
+  /**
+   * 파생 검색 평문 — 제목·요약·태그·본문 블록을 사람이 읽는 자연어로 펼쳐 담는다. FULLTEXT(ngram) 인덱스가 이 한 컬럼을 훑어 본문까지 검색되게 한다. 저작
+   * 소스가 아니라 파생 캐시라, 제목·요약·태그·본문 중 무엇이든 바뀌는 쓰기 경로에서 {@link
+   * com.example.short_link.post.application.write.PostSearchTextUpdater} 가 다시 채운다.
+   */
+  @Column(name = "search_text", columnDefinition = "TEXT")
+  private String searchText;
+
   @Column(name = "og_image_url", length = 512)
   private String ogImageUrl;
 
@@ -172,6 +180,14 @@ public class PostEntity extends BaseTimeEntity {
 
   public void updateExcerpt(String excerpt) {
     this.excerpt = excerpt;
+  }
+
+  /**
+   * 파생 검색 컬럼을 갈아끼운다. 저작 필드가 아니라 title/excerpt/tags/블록에서 재계산되는 캐시라, {@link #markEdited()} 같은 편집 시각
+   * 도장은 찍지 않는다.
+   */
+  public void updateSearchText(String searchText) {
+    this.searchText = searchText;
   }
 
   public void updateOgImage(String url, String key) {

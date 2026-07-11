@@ -36,9 +36,16 @@ class RestorePostRevisionUseCaseTest {
 
   @BeforeEach
   void setUp() {
+    PostSearchTextUpdater searchTextUpdater =
+        new PostSearchTextUpdater(
+            postBlockRepository, tools.jackson.databind.json.JsonMapper.builder().build());
     useCase =
         new RestorePostRevisionUseCase(
-            postOwnership, postRepository, postRevisionRepository, postBlockRepository);
+            postOwnership,
+            postRepository,
+            postRevisionRepository,
+            postBlockRepository,
+            searchTextUpdater);
   }
 
   private PostRevisionEntity revision(int version, String json) {

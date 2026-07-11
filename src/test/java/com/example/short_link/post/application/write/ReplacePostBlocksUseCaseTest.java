@@ -19,6 +19,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 class ReplacePostBlocksUseCaseTest {
@@ -30,7 +31,9 @@ class ReplacePostBlocksUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new ReplacePostBlocksUseCase(postOwnership, postBlockRepository);
+    PostSearchTextUpdater searchTextUpdater =
+        new PostSearchTextUpdater(postBlockRepository, JsonMapper.builder().build());
+    useCase = new ReplacePostBlocksUseCase(postOwnership, postBlockRepository, searchTextUpdater);
   }
 
   @Test
@@ -71,6 +74,9 @@ class ReplacePostBlocksUseCaseTest {
     assertThat(built.get(2).getBlockOrder()).isEqualTo(2);
 
     assertThat(result).isSameAs(persisted);
+
+    // 파생 검색 컬럼이 제목 + 본문(문단 텍스트)까지 담겼는지 — 본문이 인덱싱되는 게 이 업그레이드의 핵심.
+    assertThat(post.getSearchText()).contains("My Post").contains("Hello");
   }
 
   @Test
@@ -83,6 +89,8 @@ class ReplacePostBlocksUseCaseTest {
 
     verify(postBlockRepository).deleteAllByPostId(42L);
     assertThat(result).isEmpty();
+    // 본문을 비워도 검색 컬럼은 제목으로 다시 채워진다(예전 본문 잔재 없음).
+    assertThat(post.getSearchText()).isEqualTo("My Post");
   }
 
   @Test
