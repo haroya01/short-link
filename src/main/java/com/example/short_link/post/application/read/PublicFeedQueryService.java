@@ -59,13 +59,19 @@ public class PublicFeedQueryService {
   }
 
   /**
-   * Free-text search across title / excerpt / tags / author handle. {@code sort} = recent|trending.
+   * Free-text search via FULLTEXT(ngram) across title / excerpt / tags / body / author handle.
+   * {@code sort} = relevance (default) | recent | trending. Relevance ranks by MATCH() score;
+   * recent by publish date; trending by recent-window views.
    */
   public PublicFeedView search(String query, String sort, String lang, int page, int size) {
-    List<PostEntity> posts =
-        "trending".equalsIgnoreCase(sort)
-            ? postRepository.searchPublishedTrending(query, lang, page, size)
-            : postRepository.searchPublished(query, lang, page, size);
+    List<PostEntity> posts;
+    if ("trending".equalsIgnoreCase(sort)) {
+      posts = postRepository.searchPublishedTrending(query, lang, page, size);
+    } else if ("recent".equalsIgnoreCase(sort)) {
+      posts = postRepository.searchPublished(query, lang, page, size);
+    } else {
+      posts = postRepository.searchPublishedByRelevance(query, lang, page, size);
+    }
     return assemble(posts, postRepository.countSearchPublished(query, lang), page, size);
   }
 

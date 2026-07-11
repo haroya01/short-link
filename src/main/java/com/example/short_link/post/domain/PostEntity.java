@@ -75,6 +75,10 @@ public class PostEntity extends BaseTimeEntity {
   @Column(length = 500)
   private String excerpt;
 
+  // 파생 검색 평문(search_text)은 posts 컬럼이 아니라 곁 테이블 post_search_text 에 있다. 이 컬럼은 FULLTEXT 인덱스만
+  // 훑는 파생 캐시일 뿐 응답에 실리지 않는데, posts 에 두면 피드·상세 등 모든 PostEntity 로드가 최대 수십 KB 본문 평문을 함께
+  // 끌어오기 때문이다. 쓰기는 PostSearchTextUpdater, 읽기(검색)는 네이티브 쿼리의 JOIN 이 담당한다.
+
   @Column(name = "og_image_url", length = 512)
   private String ogImageUrl;
 

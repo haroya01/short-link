@@ -12,6 +12,7 @@ import com.example.short_link.post.domain.PostRevisionEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostRevisionRepository;
+import com.example.short_link.post.domain.repository.PostSearchTextRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,15 +31,25 @@ class RestorePostRevisionUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionRepository postRevisionRepository;
   @Mock private PostBlockRepository postBlockRepository;
+  @Mock private PostSearchTextRepository postSearchTextRepository;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
   private RestorePostRevisionUseCase useCase;
 
   @BeforeEach
   void setUp() {
+    PostSearchTextUpdater searchTextUpdater =
+        new PostSearchTextUpdater(
+            postBlockRepository,
+            postSearchTextRepository,
+            tools.jackson.databind.json.JsonMapper.builder().build());
     useCase =
         new RestorePostRevisionUseCase(
-            postOwnership, postRepository, postRevisionRepository, postBlockRepository);
+            postOwnership,
+            postRepository,
+            postRevisionRepository,
+            postBlockRepository,
+            searchTextUpdater);
   }
 
   private PostRevisionEntity revision(int version, String json) {

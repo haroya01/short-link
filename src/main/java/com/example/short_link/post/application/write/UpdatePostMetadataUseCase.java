@@ -14,6 +14,7 @@ public class UpdatePostMetadataUseCase {
 
   private final PostOwnership postOwnership;
   private final PostRepository postRepository;
+  private final PostSearchTextUpdater searchTextUpdater;
 
   @Transactional
   public PostEntity execute(UpdatePostMetadataCommand cmd) {
@@ -26,6 +27,8 @@ public class UpdatePostMetadataUseCase {
       // updateSlug 가 frozen 상태에서 PostException(SLUG_FROZEN) throw
       post.updateSlug(cmd.slug());
     }
+    // 제목·요약·태그는 검색 평문(search_text)의 재료 — 이 중 하나라도 바뀌면 파생 컬럼을 다시 채운다.
+    boolean searchFieldChanged = cmd.title() != null || cmd.excerpt() != null || cmd.tags() != null;
     if (cmd.title() != null) {
       post.updateTitle(cmd.title());
     }
@@ -47,6 +50,10 @@ public class UpdatePostMetadataUseCase {
     }
 
     post.markEdited();
+    if (searchFieldChanged) {
+      // 저장된 본문 블록을 다시 읽어 새 메타와 합쳐 재계산(og-image·slug 만 바뀐 편집엔 조회를 아낀다).
+      searchTextUpdater.refresh(post);
+    }
     return postRepository.save(post);
   }
 }

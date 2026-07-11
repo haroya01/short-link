@@ -6,7 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostSearchTextRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
@@ -15,18 +17,24 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 class UpdatePostMetadataUseCaseTest {
 
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
+  @Mock private PostBlockRepository postBlockRepository;
+  @Mock private PostSearchTextRepository postSearchTextRepository;
 
   private UpdatePostMetadataUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new UpdatePostMetadataUseCase(postOwnership, postRepository);
+    PostSearchTextUpdater searchTextUpdater =
+        new PostSearchTextUpdater(
+            postBlockRepository, postSearchTextRepository, JsonMapper.builder().build());
+    useCase = new UpdatePostMetadataUseCase(postOwnership, postRepository, searchTextUpdater);
   }
 
   private PostEntity ownedPost() {

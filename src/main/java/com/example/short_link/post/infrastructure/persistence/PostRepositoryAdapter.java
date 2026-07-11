@@ -164,21 +164,42 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> searchPublishedByRelevance(
+      String query, String lang, int page, int size) {
+    return jpa.searchPublishedByRelevance(
+        booleanMatch(query),
+        likePattern(query),
+        titleLikeFallback(query),
+        normLang(lang),
+        PageRequest.of(page, size));
+  }
+
+  @Override
   public List<PostEntity> searchPublished(String query, String lang, int page, int size) {
-    return jpa.searchPublished(
-        likePattern(query), PostStatus.PUBLISHED, normLang(lang), PageRequest.of(page, size));
+    return jpa.searchPublishedRecent(
+        booleanMatch(query),
+        likePattern(query),
+        titleLikeFallback(query),
+        normLang(lang),
+        PageRequest.of(page, size));
   }
 
   @Override
   public List<PostEntity> searchPublishedTrending(String query, String lang, int page, int size) {
     Instant since = Instant.now().minus(TRENDING_WINDOW);
     return jpa.searchPublishedTrendingSince(
-        likePattern(query), since, normLang(lang), PageRequest.of(page, size));
+        booleanMatch(query),
+        likePattern(query),
+        titleLikeFallback(query),
+        since,
+        normLang(lang),
+        PageRequest.of(page, size));
   }
 
   @Override
   public long countSearchPublished(String query, String lang) {
-    return jpa.countSearchPublished(likePattern(query), PostStatus.PUBLISHED, normLang(lang));
+    return jpa.countSearchPublished(
+        booleanMatch(query), likePattern(query), titleLikeFallback(query), normLang(lang));
   }
 
   /**
@@ -196,6 +217,39 @@ class PostRepositoryAdapter implements PostRepository {
   private static String likePattern(String query) {
     String escaped = query.toLowerCase().replace("!", "!!").replace("%", "!%").replace("_", "!_");
     return "%" + escaped + "%";
+  }
+
+  // Normalize raw user input into the AGAINST string for FULLTEXT BOOLEAN MODE. We strip the
+  // operator characters (+ - > < ( ) ~ * " @) so a stray operator can't hijack the query or
+  // become an unbalanced token, and collapse whitespace, leaving PLAIN space-separated terms.
+  // Plain (no +/*/quote) BOOLEAN terms are the one form that matches both Korean and English
+  // precisely under the ngram parser: a term's bigrams are required as a group (real substring
+  // match), unlike NATURAL mode which over-matches on any shared bigram. An empty result (query
+  // was only operators/punctuation) stays empty — AGAINST('') matches zero rows without error.
+  static String booleanMatch(String query) {
+    return query.replaceAll("[+\\-><()~*\"@]", " ").replaceAll("\\s+", " ").trim();
+  }
+
+  // ngram(token size 2) 은 두 글자 미만 토큰을 인덱싱하지 않는다 — "C++"→"C", 한글 한 글자 질의는 MATCH 가 0건이 되어
+  // 예전 title LIKE 검색 대비 회귀가 된다. 스크럽·정규화 후 남은 모든 토큰이 2자 미만(또는 아예 비었으면)일 때에 한해
+  // 제목·요약 LIKE 폴백을 켜, 짧은 질의도 최소한 제목/요약에서는 잡히게 한다. 폴백이 필요 없으면 null 을 넘겨(쿼리에서 IS NULL
+  // 로 가지 자체를 꺼) 일반 질의의 매칭 범위·성능에 영향을 주지 않는다.
+  static String titleLikeFallback(String query) {
+    String scrubbed = booleanMatch(query);
+    if (scrubbed.isEmpty()) {
+      // 연산자·구두점만 있어 매칭할 자연어가 없으면 폴백해도 잡을 게 없다.
+      return null;
+    }
+    boolean allTermsTooShort = true;
+    for (String term : scrubbed.split(" ")) {
+      if (term.length() >= 2) {
+        allTermsTooShort = false;
+        break;
+      }
+    }
+    // 폴백은 "짧은 질의라 ngram 이 못 잡는" 경우에만. 원문(스크럽 전)을 이스케이프해 %…% 로 감싼다 — 짧은 질의라도
+    // 사용자가 친 그대로(예: "C++")를 제목/요약에서 부분일치로 찾는다.
+    return allTermsTooShort ? likePattern(query) : null;
   }
 
   @Override

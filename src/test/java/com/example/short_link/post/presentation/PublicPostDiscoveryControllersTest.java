@@ -57,10 +57,21 @@ class PublicPostDiscoveryControllersTest {
   }
 
   @Test
-  void feedWithQueryRoutesToSearch() throws Exception {
-    when(publicFeedQueryService.search("hello", "recent", null, 0, 20)).thenReturn(emptyFeed());
+  void feedWithQueryDefaultsToRelevanceSort() throws Exception {
+    // sort 미지정 검색 → 관련성 기본. (브라우즈 피드는 여전히 recent 기본 — 아래 별도 검증.)
+    when(publicFeedQueryService.search("hello", "relevance", null, 0, 20)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("q", " hello ")).andExpect(status().isOk());
+
+    verify(publicFeedQueryService).search("hello", "relevance", null, 0, 20);
+  }
+
+  @Test
+  void feedWithQueryHonorsExplicitSort() throws Exception {
+    when(publicFeedQueryService.search("hello", "recent", null, 0, 20)).thenReturn(emptyFeed());
+
+    mvc.perform(get("/api/v1/public/posts").param("q", "hello").param("sort", "recent"))
+        .andExpect(status().isOk());
 
     verify(publicFeedQueryService).search("hello", "recent", null, 0, 20);
   }

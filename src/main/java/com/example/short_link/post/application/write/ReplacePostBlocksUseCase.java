@@ -15,6 +15,7 @@ public class ReplacePostBlocksUseCase {
 
   private final PostOwnership postOwnership;
   private final PostBlockRepository postBlockRepository;
+  private final PostSearchTextUpdater searchTextUpdater;
 
   @Transactional
   public List<PostBlockEntity> execute(ReplacePostBlocksCommand cmd) {
@@ -25,6 +26,8 @@ public class ReplacePostBlocksUseCase {
     post.markEdited();
     postBlockRepository.deleteAllByPostId(cmd.postId());
     if (cmd.blocks().isEmpty()) {
+      // 본문이 비었어도 검색 컬럼은 제목·요약·태그로 다시 채워야 한다(예전 본문 잔재가 남지 않게).
+      searchTextUpdater.refresh(post, List.of());
       return List.of();
     }
     List<PostBlockEntity> entities = new ArrayList<>(cmd.blocks().size());
@@ -35,6 +38,10 @@ public class ReplacePostBlocksUseCase {
     // One multi-row INSERT instead of saveAll's per-row INSERTs (IDENTITY ids can't be batched),
     // then re-read so callers still receive the persisted blocks with their generated ids.
     postBlockRepository.insertAll(entities);
-    return postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId());
+    List<PostBlockEntity> persisted =
+        postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId());
+    // 방금 심은 블록을 그대로 넘겨 파생 검색 컬럼을 갱신 — 재조회 없이 본문까지 인덱싱된다.
+    searchTextUpdater.refresh(post, persisted);
+    return persisted;
   }
 }

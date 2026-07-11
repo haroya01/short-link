@@ -26,6 +26,7 @@ public class PublishScheduledPostsUseCase {
 
   private final PostRepository postRepository;
   private final PostRevisionCapture postRevisionCapture;
+  private final PostSearchTextUpdater searchTextUpdater;
   private final ProfileCacheInvalidator cacheEviction;
   private final ApplicationEventPublisher events;
 
@@ -40,6 +41,9 @@ public class PublishScheduledPostsUseCase {
         post.publish();
         postRepository.save(post);
         postRevisionCapture.capture(post);
+        // 예약 발행도 수동 발행과 같은 이유로 검색 평문을 채운다 — 예약만 걸고 블록 편집 없이 자동 발행되는 글이
+        // 곁 테이블에 누락되지 않도록(본문·제목 검색 회귀 방지). upsert 라 이미 채워진 글에도 무해하다.
+        searchTextUpdater.refresh(post);
         // Auto-publish flips hasBlog false→true just like a manual publish; evict the profile.
         cacheEviction.evictByUserId(post.getUserId());
         if (firstPublish) {
