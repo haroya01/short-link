@@ -85,6 +85,37 @@ class CollectionQueryServiceTest {
     assertThat(result.get(0).kind()).isEqualTo("COLLECTION");
   }
 
+  @Test
+  void publicCollectionsContainingPostReturnsOnlyPublic() {
+    when(connectionRepository.findAllByBlockTypeAndRefId(ConnectionBlockType.POST, 5L))
+        .thenReturn(
+            List.of(
+                new CollectionConnectionEntity(20L, ConnectionBlockType.POST, 5L, null, 0),
+                new CollectionConnectionEntity(21L, ConnectionBlockType.POST, 5L, null, 0)));
+    when(collectionRepository.findById(20L))
+        .thenReturn(Optional.of(collection(20L, 1L, CollectionVisibility.PUBLIC)));
+    when(collectionRepository.findById(21L))
+        .thenReturn(Optional.of(collection(21L, 1L, CollectionVisibility.PRIVATE)));
+    when(connectionRepository.countByCollectionId(20L)).thenReturn(4L);
+
+    List<CollectionSummaryView> result =
+        service.publicCollectionsContaining(ConnectionBlockType.POST, 5L);
+
+    // 글(POST) 타입으로도 비공개(21)는 빠지고 공개(20)만 흐른다.
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).id()).isEqualTo(20L);
+    assertThat(result.get(0).visibility()).isEqualTo("PUBLIC");
+    assertThat(result.get(0).count()).isEqualTo(4);
+  }
+
+  @Test
+  void publicCollectionsContainingEmptyWhenNoConnections() {
+    when(connectionRepository.findAllByBlockTypeAndRefId(ConnectionBlockType.POST, 99L))
+        .thenReturn(List.of());
+
+    assertThat(service.publicCollectionsContaining(ConnectionBlockType.POST, 99L)).isEmpty();
+  }
+
   private CollectionConnectionEntity conn(long id, ConnectionBlockType type, long refId, int pos) {
     CollectionConnectionEntity c = new CollectionConnectionEntity(10L, type, refId, "왜", pos);
     ReflectionTestUtils.setField(c, "id", id);

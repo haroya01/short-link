@@ -32,6 +32,17 @@ public interface JpaCollectionConnectionRepository
   List<DiscoverConnectionRow> findPublicConnectionsByOwners(
       @Param("ownerIds") Collection<Long> ownerIds, Pageable pageable);
 
+  @Query(
+      """
+      select new com.example.short_link.post.collection.domain.DiscoverConnectionRow(
+          c.id, c.blockType, c.refId, c.why, c.createdAt, col.id, col.title, col.kind, col.ownerId)
+      from CollectionConnectionEntity c, CollectionEntity col
+      where c.collectionId = col.id
+        and col.visibility = com.example.short_link.post.collection.domain.CollectionVisibility.PUBLIC
+      order by c.createdAt desc
+      """)
+  List<DiscoverConnectionRow> findRecentPublicConnections(Pageable pageable);
+
   long countByCollectionId(Long collectionId);
 
   boolean existsByCollectionIdAndBlockTypeAndRefId(

@@ -55,6 +55,11 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   }
 
   @Override
+  public List<DiscoverConnectionRow> findRecentPublicConnections(int page, int size) {
+    return jpa.findRecentPublicConnections(PageRequest.of(page, size));
+  }
+
+  @Override
   public long countByCollectionId(Long collectionId) {
     return jpa.countByCollectionId(collectionId);
   }

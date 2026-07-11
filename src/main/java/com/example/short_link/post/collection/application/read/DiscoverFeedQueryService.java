@@ -47,7 +47,20 @@ public class DiscoverFeedQueryService {
 
     List<DiscoverConnectionRow> rows =
         connectionRepository.findPublicConnectionsByOwners(followingIds, page, size);
+    return assemble(rows, page, size);
+  }
 
+  /**
+   * 공개 발견 피드(비로그인 첫 표면) — 전역의 *공개* 컬렉션에 최근 이어진 연결을 최신순으로. 팔로우 게이트 없이(viewer-무관) 개인화판과 같은 블록·큐레이터 일괄
+   * 해석을 재사용한다. 사람의 큐레이션을 그대로 흘리며, 대상이 사라진 연결은 건너뛴다.
+   */
+  public DiscoverFeedView publicFeed(int page, int size) {
+    List<DiscoverConnectionRow> rows = connectionRepository.findRecentPublicConnections(page, size);
+    return assemble(rows, page, size);
+  }
+
+  /** rows → view 조립(viewer-무관). 블록·큐레이터를 일괄 해석하고 대상 소실 연결은 건너뛴다. */
+  private DiscoverFeedView assemble(List<DiscoverConnectionRow> rows, int page, int size) {
     Map<Long, PostHighlightEntity> highlights =
         bulk(
             highlightRepository.findAllByIdIn(refIds(rows, "HIGHLIGHT")),

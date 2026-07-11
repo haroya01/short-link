@@ -155,4 +155,45 @@ class DiscoverFeedQueryServiceTest {
     assertThat(feed.items().get(0).body()).isEqualTo("보이는 노트");
     assertThat(feed.hasNext()).isTrue(); // 2 rows == requested size 2
   }
+
+  @Test
+  void publicFeedResolvesGloballyWithoutFollowGate() {
+    when(connectionRepository.findRecentPublicConnections(0, 20))
+        .thenReturn(
+            List.of(
+                row(100L, ConnectionBlockType.POST, 5L, 2L),
+                row(101L, ConnectionBlockType.NOTE, 7L, 3L)));
+    NoteEntity note = new NoteEntity(3L, "더 나은 질문을 기다리는 일");
+    ReflectionTestUtils.setField(note, "id", 7L);
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(note));
+    when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(post(5L, 4L)));
+    when(userRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(user(2L, "minji"), user(3L, "sori"), user(4L, "author")));
+
+    DiscoverFeedView feed = service.publicFeed(0, 20);
+
+    // 팔로우와 무관하게 전역 공개 연결이 흐른다 — followRepository 는 건드리지 않는다.
+    assertThat(feed.items()).hasSize(2);
+    assertThat(feed.hasNext()).isFalse(); // 2 < 20
+    assertThat(feed.items().get(0).blockType()).isEqualTo("POST");
+    assertThat(feed.items().get(0).curator().username()).isEqualTo("minji");
+    assertThat(feed.items().get(0).title()).isEqualTo("Title 5");
+    assertThat(feed.items().get(1).blockType()).isEqualTo("NOTE");
+    assertThat(feed.items().get(1).body()).isEqualTo("더 나은 질문을 기다리는 일");
+    verifyNoInteractions(followRepository);
+  }
+
+  @Test
+  void publicFeedEmptyWhenNoPublicConnectionsAndFlagsHasNext() {
+    when(connectionRepository.findRecentPublicConnections(3, 10)).thenReturn(List.of());
+
+    DiscoverFeedView feed = service.publicFeed(3, 10);
+
+    assertThat(feed.items()).isEmpty();
+    assertThat(feed.page()).isEqualTo(3);
+    assertThat(feed.size()).isEqualTo(10);
+    assertThat(feed.hasNext()).isFalse(); // 0 rows != size 10
+    verifyNoInteractions(followRepository);
+  }
 }
