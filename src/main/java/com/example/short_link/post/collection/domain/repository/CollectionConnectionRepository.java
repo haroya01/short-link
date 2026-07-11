@@ -15,6 +15,9 @@ public interface CollectionConnectionRepository {
   List<DiscoverConnectionRow> findPublicConnectionsByOwners(
       Collection<Long> ownerIds, int page, int size);
 
+  /** 공개 발견 피드 — 전역의 *공개* 컬렉션에 최근 이어진 연결(최신순 한 페이지). 큐레이터 제한 없음(비로그인 첫 표면용). */
+  List<DiscoverConnectionRow> findRecentPublicConnections(int page, int size);
+
   CollectionConnectionEntity save(CollectionConnectionEntity connection);
 
   Optional<CollectionConnectionEntity> findById(Long id);
