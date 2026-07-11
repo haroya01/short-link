@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -33,6 +34,9 @@ class RecordBlogNotificationUseCaseTest {
   @Mock(strictness = Mock.Strictness.LENIENT)
   private UserRepository userRepository;
 
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private BlogNotificationPreferenceService preferenceService;
+
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final MessageSource messageSource = pushMessages();
 
@@ -51,9 +55,22 @@ class RecordBlogNotificationUseCaseTest {
     return u;
   }
 
+  /** Default: every type enabled for every recipient — existing behavior is preference-free. */
+  @org.junit.jupiter.api.BeforeEach
+  void defaultsToEveryTypeEnabled() {
+    when(preferenceService.isEnabled(
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(NotificationType.class)))
+        .thenReturn(true);
+    when(preferenceService.filterEnabled(
+            org.mockito.ArgumentMatchers.anyList(),
+            org.mockito.ArgumentMatchers.any(NotificationType.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+  }
+
   private RecordBlogNotificationUseCase useCase() {
     return new RecordBlogNotificationUseCase(
-        repository, jsonMapper, pushSender, userRepository, messageSource);
+        repository, jsonMapper, pushSender, userRepository, messageSource, preferenceService);
   }
 
   @Test
@@ -221,5 +238,66 @@ class RecordBlogNotificationUseCaseTest {
     org.mockito.Mockito.verify(pushSender)
         .send(org.mockito.ArgumentMatchers.eq(9L), single.capture());
     assertThat(single.getValue().subtitle()).isNull();
+  }
+
+  @Test
+  void mutedRecipientGetsNoBellRowAndNoPush() {
+    when(preferenceService.isEnabled(9L, NotificationType.LIKE)).thenReturn(false);
+
+    useCase().record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", "t", null));
+
+    org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
+  }
+
+  @Test
+  void mutingOneTypeLeavesOthersDelivered() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L)).thenReturn(Optional.empty());
+    when(preferenceService.isEnabled(9L, NotificationType.FOLLOW)).thenReturn(false);
+
+    RecordBlogNotificationUseCase useCase = useCase();
+    useCase.record(9L, NotificationType.FOLLOW, 2L, null);
+    useCase.record(9L, NotificationType.COMMENT, 2L, null);
+
+    ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
+    org.mockito.Mockito.verify(repository).save(saved.capture());
+    assertThat(saved.getValue().getType()).isEqualTo(NotificationType.COMMENT);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(1))
+        .send(org.mockito.ArgumentMatchers.eq(9L), org.mockito.ArgumentMatchers.any());
+  }
+
+  @Test
+  void fanOutSkipsFollowersWhoMutedNewPost() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L)).thenReturn(Optional.empty());
+    UserEntity r7 = userWith(7L, "ko");
+    UserEntity r9 = userWith(9L, "ko");
+    when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+        .thenReturn(List.of(r7, r9));
+    // 8 muted NEW_POST; the filtered list keeps 7 and 9 in order.
+    when(preferenceService.filterEnabled(List.of(7L, 8L, 9L), NotificationType.NEW_POST))
+        .thenReturn(List.of(7L, 9L));
+
+    NotificationPostRef ref = new NotificationPostRef(10L, "new-post", "새 글", null);
+    useCase().recordForEach(List.of(7L, 8L, 9L), NotificationType.NEW_POST, 2L, ref);
+
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(2))
+        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(
+            org.mockito.ArgumentMatchers.eq(List.of(7L, 9L)),
+            org.mockito.ArgumentMatchers.any(PushSender.PushMessage.class));
+  }
+
+  @Test
+  void fanOutIsSilentWhenEveryFollowerMutedNewPost() {
+    when(preferenceService.filterEnabled(List.of(7L, 8L), NotificationType.NEW_POST))
+        .thenReturn(List.of());
+
+    useCase().recordForEach(List.of(7L, 8L), NotificationType.NEW_POST, 2L, null);
+
+    org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
   }
 }

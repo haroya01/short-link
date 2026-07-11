@@ -2,6 +2,8 @@ package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.HighlightMentionEvent;
 import com.example.short_link.common.event.HighlightReplyEvent;
+import com.example.short_link.common.notification.BlogNotificationKind;
+import com.example.short_link.common.notification.BlogNotificationMuteReader;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.domain.PostEntity;
@@ -36,6 +38,7 @@ public class CreateHighlightReplyUseCase {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final ApplicationEventPublisher events;
+  private final BlogNotificationMuteReader muteReader;
 
   @Transactional
   public HighlightReplyView execute(CreateHighlightReplyCommand cmd) {
@@ -51,8 +54,12 @@ public class CreateHighlightReplyUseCase {
 
     Long actorId = cmd.userId();
     Long highlightAuthorId = highlight.getUserId();
-    // Everyone this one reply has already notified — so a @-mention of the same person collapses
-    // into the REPLY they already get (one notice per person).
+    // Everyone this one reply will actually deliver a REPLY to — so a @-mention of the same person
+    // collapses into the notice they already get (one notice per person). Someone who muted REPLY
+    // is
+    // left un-folded, so their explicit @-mention still fires (then subject to their MENTION
+    // opt-out
+    // at record time); the REPLY itself is dropped downstream.
     Set<Long> notified = new HashSet<>();
 
     // REPLY and MENTION links point at the post, whose owner may not be the recipient — so both
@@ -79,11 +86,14 @@ public class CreateHighlightReplyUseCase {
               post.getTitle(),
               ownerUsername,
               saved.getCreatedAt()));
-      notified.add(highlightAuthorId);
+      if (!muteReader.isMuted(highlightAuthorId, BlogNotificationKind.REPLY)) {
+        notified.add(highlightAuthorId);
+      }
     }
 
-    // @-mentions — one notice per mentioned user, skipping self, unknown handles, and anyone the
-    // REPLY above already notified (notified.add returns false → skip).
+    // @-mentions — one notice per mentioned user, skipping self, unknown handles, and anyone who
+    // will actually receive the REPLY above (notified.add returns false → skip). Someone who muted
+    // REPLY was left out of `notified`, so their explicit mention still fires here.
     if (post != null) {
       for (String handle : mentionedHandles) {
         Long mentionedId =

@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
+import com.example.short_link.common.notification.BlogNotificationKind;
+import com.example.short_link.common.notification.BlogNotificationMuteReader;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -35,12 +37,15 @@ class CreateCommentUseCaseTest {
   @Mock private CommentRepository commentRepository;
   @Mock private UserRepository userRepository;
   @Mock private org.springframework.context.ApplicationEventPublisher events;
+  @Mock private BlogNotificationMuteReader muteReader;
 
   private CreateCommentUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new CreateCommentUseCase(postRepository, commentRepository, userRepository, events);
+    useCase =
+        new CreateCommentUseCase(
+            postRepository, commentRepository, userRepository, events, muteReader);
   }
 
   private PostEntity publishedPost() {
@@ -205,6 +210,51 @@ class CreateCommentUseCaseTest {
     useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"));
 
     // Owner would get COMMENT and a MENTION — collapse to the single COMMENT notice.
+    ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(1)).publishEvent(evt.capture());
+    assertThat(evt.getValue()).isInstanceOf(BlogInteractionEvent.class);
+  }
+
+  @Test
+  void mentioningSomeoneWhoMutedCommentStillFiresTheirMention() {
+    // The owner (7) muted COMMENT but keeps MENTION on. A COMMENT collapse would drop their bell
+    // entirely — so an explicit @-mention of them must NOT fold into a notice they won't receive.
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
+    when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
+    when(userRepository.findByUsername("olivia")).thenReturn(Optional.of(userWithId(7L, "olivia")));
+    when(muteReader.isMuted(7L, BlogNotificationKind.COMMENT)).thenReturn(true);
+
+    useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"));
+
+    // Both events still publish (COMMENT is dropped downstream by the mute; the MENTION survives so
+    // the explicitly-mentioned owner is reachable through their still-on MENTION preference).
+    ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(2)).publishEvent(evt.capture());
+    CommentMentionEvent mention =
+        evt.getAllValues().stream()
+            .filter(e -> e instanceof CommentMentionEvent)
+            .map(e -> (CommentMentionEvent) e)
+            .findFirst()
+            .orElseThrow();
+    assertThat(mention.recipientUserId()).isEqualTo(7L);
+    assertThat(mention.actorUserId()).isEqualTo(9L);
+  }
+
+  @Test
+  void mentioningTheOwnerWithoutAnyMuteFiresExactlyOneCommentNotice() {
+    // Symmetric guard: with no mute, the owner's COMMENT is delivered, so their @-mention collapses
+    // into it — exactly one event, no COMMENT+MENTION duplicate.
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
+    when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
+    when(userRepository.findByUsername("olivia")).thenReturn(Optional.of(userWithId(7L, "olivia")));
+    when(muteReader.isMuted(7L, BlogNotificationKind.COMMENT)).thenReturn(false);
+
+    useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"));
+
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(1)).publishEvent(evt.capture());
     assertThat(evt.getValue()).isInstanceOf(BlogInteractionEvent.class);

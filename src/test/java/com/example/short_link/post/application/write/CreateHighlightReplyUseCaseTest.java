@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.HighlightMentionEvent;
 import com.example.short_link.common.event.HighlightReplyEvent;
+import com.example.short_link.common.notification.BlogNotificationKind;
+import com.example.short_link.common.notification.BlogNotificationMuteReader;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -38,6 +40,7 @@ class CreateHighlightReplyUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
   @Mock private ApplicationEventPublisher events;
+  @Mock private BlogNotificationMuteReader muteReader;
 
   private CreateHighlightReplyUseCase useCase;
 
@@ -45,7 +48,12 @@ class CreateHighlightReplyUseCaseTest {
   void setUp() {
     useCase =
         new CreateHighlightReplyUseCase(
-            highlightRepository, replyRepository, postRepository, userRepository, events);
+            highlightRepository,
+            replyRepository,
+            postRepository,
+            userRepository,
+            events,
+            muteReader);
   }
 
   /** Highlight 50 on post 42, authored by {@code authorId}. */
@@ -157,5 +165,34 @@ class CreateHighlightReplyUseCaseTest {
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(1)).publishEvent(evt.capture());
     assertThat(evt.getValue()).isInstanceOf(HighlightReplyEvent.class);
+  }
+
+  @Test
+  void mentioningTheHighlightAuthorWhoMutedReplyStillFiresTheirMention() {
+    // Author 3 muted REPLY but keeps MENTION on. A REPLY collapse would drop their bell entirely —
+    // so an explicit @-mention of them must NOT fold into a notice they won't receive.
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L))); // author 3
+    when(replyRepository.save(any(PostHighlightReplyEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(userRepository.findById(7L)).thenReturn(Optional.of(userWithId(7L, "olivia")));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
+    when(userRepository.findByUsername("dan")).thenReturn(Optional.of(userWithId(3L, "dan")));
+    when(muteReader.isMuted(3L, BlogNotificationKind.REPLY)).thenReturn(true);
+
+    useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "thanks @dan"));
+
+    // Both events publish (REPLY dropped downstream by the mute; MENTION survives so the explicitly
+    // mentioned author is reachable through their still-on MENTION preference).
+    ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(2)).publishEvent(evt.capture());
+    HighlightMentionEvent mention =
+        evt.getAllValues().stream()
+            .filter(e -> e instanceof HighlightMentionEvent)
+            .map(e -> (HighlightMentionEvent) e)
+            .findFirst()
+            .orElseThrow();
+    assertThat(mention.recipientUserId()).isEqualTo(3L);
+    assertThat(mention.actorUserId()).isEqualTo(9L);
   }
 }
