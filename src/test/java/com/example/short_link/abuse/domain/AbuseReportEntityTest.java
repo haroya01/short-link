@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 class AbuseReportEntityTest {
 
   private AbuseReportEntity sample() {
-    return new AbuseReportEntity(7L, AbuseSubjectType.POST, 42L, "spam");
+    return new AbuseReportEntity(7L, AbuseSubjectType.POST, 42L, AbuseReason.SPAM, "링크 도배");
   }
 
   @Test
@@ -19,10 +19,19 @@ class AbuseReportEntityTest {
   }
 
   @Test
-  void anonymousAllowed() {
-    AbuseReportEntity r = new AbuseReportEntity(null, AbuseSubjectType.USER, 1L, null);
+  void carriesHybridReason() {
+    AbuseReportEntity r = sample();
+    assertThat(r.getReasonCode()).isEqualTo(AbuseReason.SPAM);
+    assertThat(r.getDetail()).isEqualTo("링크 도배");
+  }
+
+  @Test
+  void anonymousAllowedWithoutDetail() {
+    AbuseReportEntity r =
+        new AbuseReportEntity(null, AbuseSubjectType.USER, 1L, AbuseReason.HARASSMENT, null);
     assertThat(r.getReporterUserId()).isNull();
-    assertThat(r.getReason()).isNull();
+    assertThat(r.getReasonCode()).isEqualTo(AbuseReason.HARASSMENT);
+    assertThat(r.getDetail()).isNull();
   }
 
   @Test

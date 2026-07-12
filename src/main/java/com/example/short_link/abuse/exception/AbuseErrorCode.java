@@ -4,7 +4,12 @@ import org.springframework.http.HttpStatus;
 
 public enum AbuseErrorCode {
   ABUSE_REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "abuse report not found: %s"),
-  ALREADY_RESOLVED(HttpStatus.CONFLICT, "report already resolved: %s");
+  ALREADY_RESOLVED(HttpStatus.CONFLICT, "report already resolved: %s"),
+  SUBJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "reported subject not found: %s"),
+  DUPLICATE_REPORT(HttpStatus.CONFLICT, "you already have an open report for this subject"),
+  ACTION_SUBJECT_MISMATCH(HttpStatus.BAD_REQUEST, "action does not apply to this subject type: %s"),
+  SUSPEND_REQUIRES_EXPIRY(
+      HttpStatus.BAD_REQUEST, "SUSPEND_USER requires suspendUntil in the future");
 
   private final HttpStatus status;
   private final String template;

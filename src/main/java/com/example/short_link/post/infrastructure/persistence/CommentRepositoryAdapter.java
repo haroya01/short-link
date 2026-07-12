@@ -30,12 +30,12 @@ class CommentRepositoryAdapter implements CommentRepository {
 
   @Override
   public List<CommentEntity> findAllByPostIdOrderByCreatedAtAsc(Long postId) {
-    return jpa.findAllByPostIdOrderByCreatedAtAsc(postId);
+    return jpa.findAllByPostIdAndDeletedAtIsNullOrderByCreatedAtAsc(postId);
   }
 
   @Override
   public List<CommentEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId) {
-    return jpa.findAllByUserIdOrderByCreatedAtDesc(userId);
+    return jpa.findAllByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId);
   }
 
   @Override

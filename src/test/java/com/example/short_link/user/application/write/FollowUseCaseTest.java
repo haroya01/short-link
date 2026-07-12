@@ -10,8 +10,10 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.user.application.read.FollowStatus;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,13 +28,14 @@ class FollowUseCaseTest {
 
   @Mock private UserRepository userRepository;
   @Mock private FollowRepository followRepository;
+  @Mock private BlockRepository blockRepository;
   @Mock private org.springframework.context.ApplicationEventPublisher events;
 
   private FollowUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new FollowUseCase(userRepository, followRepository, events);
+    useCase = new FollowUseCase(userRepository, followRepository, blockRepository, events);
   }
 
   private UserEntity user(long id, String username) {
@@ -96,6 +99,19 @@ class FollowUseCaseTest {
     when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> useCase.follow(9L, "ghost", null)).isInstanceOf(UserException.class);
+  }
+
+  @Test
+  void followRejectedWhenTargetBlockedFollower() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    // 대상(2)이 팔로워(9)를 차단한 상태.
+    when(blockRepository.existsByBlockerIdAndBlockedId(2L, 9L)).thenReturn(true);
+
+    assertThatThrownBy(() -> useCase.follow(9L, "bob", null))
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.BLOCKED_TARGET);
+    verify(followRepository, never()).save(any());
   }
 
   @Test

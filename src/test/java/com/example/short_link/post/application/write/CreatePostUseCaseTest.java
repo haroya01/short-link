@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -20,12 +21,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class CreatePostUseCaseTest {
 
   @Mock private PostRepository postRepository;
+  @Mock private UserModerationGuard moderationGuard;
 
   private CreatePostUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new CreatePostUseCase(postRepository);
+    useCase = new CreatePostUseCase(postRepository, moderationGuard);
   }
 
   @Test
