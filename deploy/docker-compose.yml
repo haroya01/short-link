@@ -89,6 +89,11 @@ services:
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-prod}
       SENTRY_RELEASE: ${APP_IMAGE_TAG:-latest}
+      # APNs — 비어 있으면 발송기는 no-op(키는 .env 에만, .p8 은 한 줄로 넣는다).
+      APNS_TEAM_ID: ${APNS_TEAM_ID:-}
+      APNS_KEY_ID: ${APNS_KEY_ID:-}
+      APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
+      APNS_PRODUCTION: ${APNS_PRODUCTION:-false}
     networks: [internal]
 
   nginx:
