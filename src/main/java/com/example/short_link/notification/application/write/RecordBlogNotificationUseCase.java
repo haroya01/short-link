@@ -1,5 +1,6 @@
 package com.example.short_link.notification.application.write;
 
+import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.PushSender;
@@ -57,18 +58,16 @@ public class RecordBlogNotificationUseCase {
   }
 
   /**
-   * Fan-out: one row per recipient sharing the same type/actor/post — a followed author's new post
-   * landing in every follower's bell. The post ref is serialized once and reused across the
-   * inserts. Recipients who muted this type are dropped up front by one bulk query (no per-follower
-   * lookup); an absent preference is on, so a follower who never touched settings still receives
-   * it.
+   * Fan-out: one row per recipient sharing the same type/actor/target — a followed author's new
+   * post landing in every follower's bell, or a grown path reaching each of its prior contributors.
+   * The target ref ({@link NotificationPostRef} or {@link NotificationCollectionRef}) is serialized
+   * once and reused across the inserts. Recipients who muted this type are dropped up front by one
+   * bulk query (no per-follower lookup); an absent preference is on, so a follower who never
+   * touched settings still receives it.
    */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void recordForEach(
-      List<Long> recipientUserIds,
-      NotificationType type,
-      Long actorUserId,
-      NotificationPostRef post) {
+      List<Long> recipientUserIds, NotificationType type, Long actorUserId, Object payload) {
     if (recipientUserIds.isEmpty()) {
       return;
     }
@@ -76,7 +75,7 @@ public class RecordBlogNotificationUseCase {
     if (enabledRecipients.isEmpty()) {
       return;
     }
-    String json = post == null ? null : jsonMapper.writeValueAsString(post);
+    String json = payload == null ? null : jsonMapper.writeValueAsString(payload);
     for (Long recipientUserId : enabledRecipients) {
       repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
     }
@@ -90,7 +89,7 @@ public class RecordBlogNotificationUseCase {
     byLocale.forEach(
         (tag, ids) ->
             pushSender.sendToAll(
-                ids, pushMessage(type, actorUserId, post, Locale.forLanguageTag(tag))));
+                ids, pushMessage(type, actorUserId, payload, Locale.forLanguageTag(tag))));
   }
 
   /** 앱 벨과 같은 문구를 수신자 로케일로 — MessageSource 번들(messages_*.properties)에서 렌더한다. */
@@ -101,11 +100,21 @@ public class RecordBlogNotificationUseCase {
             .findById(actorUserId)
             .map(user -> user.getUsername() == null ? "kurl" : user.getUsername())
             .orElse("kurl");
-    String subtitle =
-        payload instanceof NotificationPostRef ref && ref.title() != null ? ref.title() : null;
+    String subtitle = subtitleOf(payload);
     String body =
         messageSource.getMessage("notification.push." + type.name(), new Object[] {actor}, locale);
     return new PushSender.PushMessage("kurl", subtitle, body);
+  }
+
+  /** The push subtitle: a post's title, or a collection's name for a graph notice, else none. */
+  private static String subtitleOf(Object payload) {
+    if (payload instanceof NotificationPostRef ref && ref.title() != null) {
+      return ref.title();
+    }
+    if (payload instanceof NotificationCollectionRef ref && ref.collectionName() != null) {
+      return ref.collectionName();
+    }
+    return null;
   }
 
   /** 수신자의 저장된 선호 로케일(모르면 ko). */

@@ -1,5 +1,6 @@
 package com.example.short_link.notification.application.read;
 
+import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationListResult;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
@@ -58,13 +59,26 @@ public class NotificationQueryService {
   private NotificationView toView(NotificationEntity row, Map<Long, NotificationActor> actors) {
     NotificationActor actor =
         row.getActorUserId() == null ? null : actors.get(row.getActorUserId());
-    boolean isSeries = row.getType() == NotificationType.SERIES_SUBSCRIBE;
-    NotificationPostRef post =
-        isSeries ? null : decode(row.getPayload(), NotificationPostRef.class);
+    // The payload shape follows the type: a series ref for SERIES_SUBSCRIBE, a collection ref for
+    // the graph notices (CONNECTED / PATH_GREW), else a post ref (LIKE/COMMENT/REPLY/NEW_POST; null
+    // for FOLLOW). Only the matching field is decoded so the others stay null.
+    NotificationType type = row.getType();
     NotificationSeriesRef series =
-        isSeries ? decode(row.getPayload(), NotificationSeriesRef.class) : null;
+        type == NotificationType.SERIES_SUBSCRIBE
+            ? decode(row.getPayload(), NotificationSeriesRef.class)
+            : null;
+    NotificationCollectionRef collection =
+        isCollectionType(type) ? decode(row.getPayload(), NotificationCollectionRef.class) : null;
+    NotificationPostRef post =
+        series == null && collection == null
+            ? decode(row.getPayload(), NotificationPostRef.class)
+            : null;
     return new NotificationView(
-        row.getId(), row.getType(), actor, post, series, row.isRead(), row.getCreatedAt());
+        row.getId(), type, actor, post, series, collection, row.isRead(), row.getCreatedAt());
+  }
+
+  private static boolean isCollectionType(NotificationType type) {
+    return type == NotificationType.CONNECTED || type == NotificationType.PATH_GREW;
   }
 
   private <T> T decode(String payload, Class<T> type) {

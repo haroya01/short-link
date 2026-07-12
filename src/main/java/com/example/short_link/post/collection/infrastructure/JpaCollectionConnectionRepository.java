@@ -46,9 +46,6 @@ public interface JpaCollectionConnectionRepository
 
   long countByCollectionId(Long collectionId);
 
-  boolean existsByCollectionIdAndBlockTypeAndRefId(
-      Long collectionId, ConnectionBlockType blockType, Long refId);
-
   List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
       ConnectionBlockType blockType, Long refId);
 
@@ -101,10 +98,6 @@ public interface JpaCollectionConnectionRepository
           + " where c.blockType = :blockType and c.refId in :refIds")
   int deleteByBlockTypeAndRefIdIn(
       @Param("blockType") ConnectionBlockType blockType, @Param("refIds") Collection<Long> refIds);
-
-  @Query(
-      "select max(c.position) from CollectionConnectionEntity c where c.collectionId = :collectionId")
-  Integer findMaxPositionByCollectionId(@Param("collectionId") Long collectionId);
 
   // 공동 등장 — 이 블록이 놓인 *공개* 컬렉션에 함께 놓인 다른 블록들(자기 자신 제외).
   // 사람이 손으로 엮은 간선만 — sharedCount 큰 순 = 같은 길에 더 자주 함께 놓인 것. §0: PUBLIC 만.

@@ -35,9 +35,6 @@ public interface CollectionConnectionRepository {
 
   long countByCollectionId(Long collectionId);
 
-  boolean existsByCollectionIdAndBlockTypeAndRefId(
-      Long collectionId, ConnectionBlockType blockType, Long refId);
-
   /** 이 블록(글·하이라이트·노트)을 담은 모든 연결 — "이 문장이 속한 길" 역조회. */
   List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
       ConnectionBlockType blockType, Long refId);
@@ -58,9 +55,6 @@ public interface CollectionConnectionRepository {
    */
   List<CollectionConnectionRank> findRanksByCollectionIdsAndBlockType(
       Collection<Long> collectionIds, ConnectionBlockType blockType);
-
-  /** Highest position in a collection (for append), or null when empty. */
-  Integer findMaxPositionByCollectionId(Long collectionId);
 
   /** 공동 등장 — 이 블록과 같은 공개 컬렉션에 함께 놓인 블록들(자기 제외), 함께 놓인 컬렉션 수 큰 순. */
   List<CooccurrenceRow> findCooccurring(ConnectionBlockType blockType, Long refId, int limit);

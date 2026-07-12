@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.CollectionConnectedEvent;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionKind;
@@ -27,8 +28,10 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +42,7 @@ class CollectionCommandServiceTest {
   @Mock private PostRepository postRepository;
   @Mock private PostHighlightRepository highlightRepository;
   @Mock private NoteRepository noteRepository;
+  @Mock private ApplicationEventPublisher events;
 
   private CollectionCommandService service;
 
@@ -50,7 +54,8 @@ class CollectionCommandServiceTest {
             connectionRepository,
             postRepository,
             highlightRepository,
-            noteRepository);
+            noteRepository,
+            events);
   }
 
   private CollectionEntity collection(long id, long ownerId, CollectionVisibility visibility) {
@@ -172,6 +177,11 @@ class CollectionCommandServiceTest {
 
   // ---- connect ----
 
+  private CollectionConnectionEntity connection(
+      long refId, ConnectionBlockType type, int position) {
+    return new CollectionConnectionEntity(10L, type, refId, null, position);
+  }
+
   @Test
   void connectAppendsAtNextPositionAfterValidatingTarget() {
     when(collectionRepository.findById(10L))
@@ -179,16 +189,19 @@ class CollectionCommandServiceTest {
     PostEntity post = new PostEntity(2L, "slug", "Title", "ko");
     ReflectionTestUtils.setField(post, "id", 5L);
     when(postRepository.findById(5L)).thenReturn(Optional.of(post));
-    when(connectionRepository.existsByCollectionIdAndBlockTypeAndRefId(
-            10L, ConnectionBlockType.POST, 5L))
-        .thenReturn(false);
-    when(connectionRepository.findMaxPositionByCollectionId(10L)).thenReturn(3);
+    // The path already has three blocks; the new block appends after the highest position.
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(
+            List.of(
+                connection(101L, ConnectionBlockType.POST, 1),
+                connection(102L, ConnectionBlockType.POST, 3),
+                connection(103L, ConnectionBlockType.NOTE, 2)));
     when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
     CollectionConnectionEntity saved =
         service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, "  좋은 글  "));
 
-    assertThat(saved.getPosition()).isEqualTo(4); // max 3 + 1
+    assertThat(saved.getPosition()).isEqualTo(4); // max position 3 + 1
     assertThat(saved.getBlockType()).isEqualTo(ConnectionBlockType.POST);
     assertThat(saved.getWhy()).isEqualTo("좋은 글"); // stripped
   }
@@ -200,10 +213,7 @@ class CollectionCommandServiceTest {
     NoteEntity note = new NoteEntity(1L, "생각");
     ReflectionTestUtils.setField(note, "id", 7L);
     when(noteRepository.findById(7L)).thenReturn(Optional.of(note));
-    when(connectionRepository.existsByCollectionIdAndBlockTypeAndRefId(
-            10L, ConnectionBlockType.NOTE, 7L))
-        .thenReturn(false);
-    when(connectionRepository.findMaxPositionByCollectionId(10L)).thenReturn(null);
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L)).thenReturn(List.of());
     when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
     CollectionConnectionEntity saved =
@@ -220,9 +230,6 @@ class CollectionCommandServiceTest {
     PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 0, 3, "q", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findById(9L)).thenReturn(Optional.of(hl));
-    when(connectionRepository.existsByCollectionIdAndBlockTypeAndRefId(
-            10L, ConnectionBlockType.HIGHLIGHT, 9L))
-        .thenReturn(true);
     CollectionConnectionEntity existing =
         new CollectionConnectionEntity(10L, ConnectionBlockType.HIGHLIGHT, 9L, "old", 2);
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
@@ -233,6 +240,145 @@ class CollectionCommandServiceTest {
 
     assertThat(result).isSameAs(existing);
     verify(connectionRepository, never()).save(any());
+    // Re-connecting an already-present block is idempotent: no graph notice fires.
+    verify(events, never()).publishEvent(any());
+  }
+
+  // ---- connect → graph notification event ----
+
+  private PostEntity post(long id, long authorId) {
+    PostEntity p = new PostEntity(authorId, "s" + id, "T" + id, "ko");
+    ReflectionTestUtils.setField(p, "id", id);
+    return p;
+  }
+
+  private PostHighlightEntity highlight(long id, long authorId, long postId) {
+    PostHighlightEntity h = new PostHighlightEntity(postId, authorId, 0, 0, 0, 3, "q", null);
+    ReflectionTestUtils.setField(h, "id", id);
+    return h;
+  }
+
+  private CollectionConnectedEvent capturePublishedEvent() {
+    ArgumentCaptor<CollectionConnectedEvent> captor =
+        ArgumentCaptor.forClass(CollectionConnectedEvent.class);
+    verify(events).publishEvent(captor.capture());
+    return captor.getValue();
+  }
+
+  @Test
+  void connectingPostPublishesEventWithAuthorAndDedupedPriorContributors() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    // Curator 1 weaves post 5 (by author 2) into a path already holding posts by authors 3, 4, 3.
+    when(postRepository.findById(5L)).thenReturn(Optional.of(post(5L, 2L)));
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(
+            List.of(
+                connection(101L, ConnectionBlockType.POST, 0),
+                connection(102L, ConnectionBlockType.POST, 1),
+                connection(103L, ConnectionBlockType.POST, 2)));
+    when(postRepository.findAllByIdIn(List.of(101L, 102L, 103L)))
+        .thenReturn(List.of(post(101L, 3L), post(102L, 4L), post(103L, 3L)));
+    when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, null));
+
+    CollectionConnectedEvent event = capturePublishedEvent();
+    assertThat(event.actorUserId()).isEqualTo(1L);
+    assertThat(event.collectionId()).isEqualTo(10L);
+    assertThat(event.collectionName()).isEqualTo("느린 사고");
+    assertThat(event.connectedPostId()).isEqualTo(5L); // a post occasions itself
+    assertThat(event.connectedAuthorUserId()).isEqualTo(2L);
+    // 3 appears twice among prior blocks → deduped to one; order preserved.
+    assertThat(event.priorContributorUserIds()).containsExactly(3L, 4L);
+  }
+
+  @Test
+  void priorContributorsExcludeTheWovenAuthorAndTheCurator() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    // Curator 1 weaves post 5 (by author 2); the path already holds work by 2, by 1, and by 9.
+    when(postRepository.findById(5L)).thenReturn(Optional.of(post(5L, 2L)));
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(
+            List.of(
+                connection(101L, ConnectionBlockType.POST, 0),
+                connection(102L, ConnectionBlockType.POST, 1),
+                connection(103L, ConnectionBlockType.POST, 2)));
+    when(postRepository.findAllByIdIn(List.of(101L, 102L, 103L)))
+        .thenReturn(List.of(post(101L, 2L), post(102L, 1L), post(103L, 9L)));
+    when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, null));
+
+    CollectionConnectedEvent event = capturePublishedEvent();
+    // 2 (woven author) and 1 (curator) drop out; only 9 remains.
+    assertThat(event.priorContributorUserIds()).containsExactly(9L);
+  }
+
+  @Test
+  void connectingHighlightUsesHighlighterAsAuthorAndItsPostAsOccasion() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    // Highlight 5 was made by reader 8 on post 77 — the highlighter is the author to notify.
+    when(highlightRepository.findById(5L)).thenReturn(Optional.of(highlight(5L, 8L, 77L)));
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L)).thenReturn(List.of());
+    when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.HIGHLIGHT, 5L, null));
+
+    CollectionConnectedEvent event = capturePublishedEvent();
+    assertThat(event.connectedAuthorUserId()).isEqualTo(8L);
+    assertThat(event.connectedPostId()).isEqualTo(77L); // the post the highlight sits on
+    assertThat(event.priorContributorUserIds()).isEmpty();
+  }
+
+  @Test
+  void connectingHighlightResolvesPriorContributorsFromHighlightAuthorsInBulk() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    when(postRepository.findById(5L)).thenReturn(Optional.of(post(5L, 2L)));
+    // The path already holds a post (by 3) and two highlights (by 4 and 4).
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(
+            List.of(
+                connection(201L, ConnectionBlockType.POST, 0),
+                connection(202L, ConnectionBlockType.HIGHLIGHT, 1),
+                connection(203L, ConnectionBlockType.HIGHLIGHT, 2)));
+    when(postRepository.findAllByIdIn(List.of(201L))).thenReturn(List.of(post(201L, 3L)));
+    when(highlightRepository.findAllByIdIn(List.of(202L, 203L)))
+        .thenReturn(List.of(highlight(202L, 4L, 77L), highlight(203L, 4L, 78L)));
+    when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, null));
+
+    CollectionConnectedEvent event = capturePublishedEvent();
+    // Post author 3 + highlight author 4 (deduped across the two highlights).
+    assertThat(event.priorContributorUserIds()).containsExactly(3L, 4L);
+  }
+
+  @Test
+  void connectingNoteHasNoConnectedAuthorAndNotesDoNotContributeToPathGrew() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    NoteEntity note = new NoteEntity(1L, "생각");
+    ReflectionTestUtils.setField(note, "id", 5L);
+    when(noteRepository.findById(5L)).thenReturn(Optional.of(note));
+    // The path already holds a post (by 3) and a note — the note must not become a contributor.
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(
+            List.of(
+                connection(301L, ConnectionBlockType.POST, 0),
+                connection(302L, ConnectionBlockType.NOTE, 1)));
+    when(postRepository.findAllByIdIn(List.of(301L))).thenReturn(List.of(post(301L, 3L)));
+    when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+    service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.NOTE, 5L, null));
+
+    CollectionConnectedEvent event = capturePublishedEvent();
+    assertThat(event.connectedAuthorUserId()).isNull(); // a note's author is its curator
+    assertThat(event.connectedPostId()).isNull(); // a note has no post
+    assertThat(event.priorContributorUserIds()).containsExactly(3L); // note 302 excluded
   }
 
   @Test

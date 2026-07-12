@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationListResult;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationView;
@@ -44,6 +45,7 @@ class NotificationControllerTest {
             new NotificationActor(2L, "alice", "a.png"),
             new NotificationPostRef(10L, "my-post", "Hi", null),
             null,
+            null,
             false,
             Instant.parse("2026-06-07T00:00:00Z"));
     when(queryService.list(eq(USER_ID), isNull(), eq(20)))
@@ -56,6 +58,32 @@ class NotificationControllerTest {
         .andExpect(jsonPath("$.items[0].actorUsername").value("alice"))
         .andExpect(jsonPath("$.items[0].postSlug").value("my-post"))
         .andExpect(jsonPath("$.hasMore").value(false));
+  }
+
+  @Test
+  void listExposesCollectionFieldsForGraphNotice() throws Exception {
+    NotificationView view =
+        new NotificationView(
+            6L,
+            NotificationType.CONNECTED,
+            new NotificationActor(2L, "alice", "a.png"),
+            null,
+            null,
+            new NotificationCollectionRef(42L, "긴 여름의 독서", 10L),
+            false,
+            Instant.parse("2026-07-10T00:00:00Z"));
+    when(queryService.list(eq(USER_ID), isNull(), eq(20)))
+        .thenReturn(new NotificationListResult(List.of(view), null, false));
+
+    mvc.perform(
+            get("/api/v1/notifications").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].type").value("CONNECTED"))
+        .andExpect(jsonPath("$.items[0].collectionId").value(42))
+        .andExpect(jsonPath("$.items[0].collectionName").value("긴 여름의 독서"))
+        // The occasioning post surfaces on the shared postId field for a preview.
+        .andExpect(jsonPath("$.items[0].postId").value(10))
+        .andExpect(jsonPath("$.items[0].postSlug").doesNotExist());
   }
 
   @Test

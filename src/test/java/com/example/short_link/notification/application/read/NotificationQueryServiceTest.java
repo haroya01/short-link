@@ -77,6 +77,44 @@ class NotificationQueryServiceTest {
   }
 
   @Test
+  void decodesCollectionPayloadForGraphNoticesAndLeavesPostNull() {
+    NotificationEntity connected =
+        entity(
+            6L,
+            NotificationType.CONNECTED,
+            2L,
+            "{\"collectionId\":42,\"collectionName\":\"긴 여름의 독서\",\"postId\":10}");
+    NotificationEntity pathGrew =
+        entity(
+            7L,
+            NotificationType.PATH_GREW,
+            3L,
+            "{\"collectionId\":42,\"collectionName\":\"긴 여름의 독서\",\"postId\":null}");
+    when(repository.findPageForRecipient(eq(RECIPIENT), isNull(), anyInt()))
+        .thenReturn(List.of(connected, pathGrew));
+    when(actorReader.resolve(Set.of(2L, 3L)))
+        .thenReturn(
+            Map.of(
+                2L, new NotificationActor(2L, "alice", null),
+                3L, new NotificationActor(3L, "bob", null)));
+
+    NotificationListResult result = service().list(RECIPIENT, null, 20);
+
+    var first = result.items().get(0);
+    assertThat(first.type()).isEqualTo(NotificationType.CONNECTED);
+    assertThat(first.collection().collectionId()).isEqualTo(42L);
+    assertThat(first.collection().collectionName()).isEqualTo("긴 여름의 독서");
+    assertThat(first.collection().postId()).isEqualTo(10L);
+    assertThat(first.post()).isNull();
+    assertThat(first.series()).isNull();
+    var second = result.items().get(1);
+    assertThat(second.type()).isEqualTo(NotificationType.PATH_GREW);
+    assertThat(second.collection().collectionId()).isEqualTo(42L);
+    assertThat(second.collection().postId()).isNull();
+    assertThat(second.post()).isNull();
+  }
+
+  @Test
   void overFetchesByOneAndExposesCursorWhenMorePagesExist() {
     NotificationEntity a = entity(5L, NotificationType.FOLLOW, 2L, null);
     NotificationEntity b = entity(4L, NotificationType.FOLLOW, 2L, null);

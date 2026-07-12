@@ -67,12 +67,6 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   }
 
   @Override
-  public boolean existsByCollectionIdAndBlockTypeAndRefId(
-      Long collectionId, ConnectionBlockType blockType, Long refId) {
-    return jpa.existsByCollectionIdAndBlockTypeAndRefId(collectionId, blockType, refId);
-  }
-
-  @Override
   public List<CollectionConnectionEntity> findAllByBlockTypeAndRefId(
       ConnectionBlockType blockType, Long refId) {
     return jpa.findAllByBlockTypeAndRefId(blockType, refId);
@@ -98,11 +92,6 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
     return jpa.findRanksByCollectionIdInAndBlockType(collectionIds, blockType.name()).stream()
         .map(r -> new CollectionConnectionRank(r.getCollectionId(), r.getRefId(), r.getPosition()))
         .toList();
-  }
-
-  @Override
-  public Integer findMaxPositionByCollectionId(Long collectionId) {
-    return jpa.findMaxPositionByCollectionId(collectionId);
   }
 
   @Override
