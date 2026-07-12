@@ -3,6 +3,7 @@ package com.example.short_link.notification.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.PushSender;
@@ -111,14 +112,16 @@ class RecordBlogNotificationUseCaseTest {
     when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
 
     Map<NotificationType, String> expected =
-        Map.of(
-            NotificationType.LIKE, "yuki님이 글을 좋아합니다",
-            NotificationType.COMMENT, "yuki님이 댓글을 남겼습니다",
-            NotificationType.REPLY, "yuki님이 답글을 남겼습니다",
-            NotificationType.FOLLOW, "yuki님이 팔로우하기 시작했습니다",
-            NotificationType.SERIES_SUBSCRIBE, "yuki님이 시리즈를 구독합니다",
-            NotificationType.NEW_POST, "yuki님이 새 글을 발행했습니다",
-            NotificationType.MENTION, "yuki님이 회원님을 언급했습니다");
+        Map.ofEntries(
+            Map.entry(NotificationType.LIKE, "yuki님이 글을 좋아합니다"),
+            Map.entry(NotificationType.COMMENT, "yuki님이 댓글을 남겼습니다"),
+            Map.entry(NotificationType.REPLY, "yuki님이 답글을 남겼습니다"),
+            Map.entry(NotificationType.FOLLOW, "yuki님이 팔로우하기 시작했습니다"),
+            Map.entry(NotificationType.SERIES_SUBSCRIBE, "yuki님이 시리즈를 구독합니다"),
+            Map.entry(NotificationType.NEW_POST, "yuki님이 새 글을 발행했습니다"),
+            Map.entry(NotificationType.MENTION, "yuki님이 회원님을 언급했습니다"),
+            Map.entry(NotificationType.CONNECTED, "yuki님이 회원님의 글을 컬렉션에 엮었습니다"),
+            Map.entry(NotificationType.PATH_GREW, "yuki님이 회원님이 속한 컬렉션에 새로 엮었습니다"));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "my-post", "글 제목", null);
     for (NotificationType type : NotificationType.values()) {
@@ -299,5 +302,100 @@ class RecordBlogNotificationUseCaseTest {
     useCase().recordForEach(List.of(7L, 8L), NotificationType.NEW_POST, 2L, null);
 
     org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
+  }
+
+  @Test
+  void connectedSerializesCollectionRefAndSubtitlesWithCollectionName() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    UserEntity actor = org.mockito.Mockito.mock(UserEntity.class);
+    when(actor.getUsername()).thenReturn("yuki");
+    when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.CONNECTED,
+            2L,
+            new NotificationCollectionRef(42L, "긴 여름의 독서", 10L));
+
+    ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
+    org.mockito.Mockito.verify(repository).save(saved.capture());
+    assertThat(saved.getValue().getType()).isEqualTo(NotificationType.CONNECTED);
+    assertThat(saved.getValue().getPayload())
+        .contains("\"collectionId\":42")
+        .contains("\"collectionName\":\"긴 여름의 독서\"")
+        .contains("\"postId\":10");
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().subtitle()).isEqualTo("긴 여름의 독서");
+    assertThat(pushed.getValue().body()).isEqualTo("yuki님이 회원님의 글을 컬렉션에 엮었습니다");
+  }
+
+  @Test
+  void pathGrewFanOutSerializesCollectionRefAndSubtitlesWithCollectionName() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L)).thenReturn(Optional.empty());
+    UserEntity r7 = userWith(7L, "ko");
+    UserEntity r9 = userWith(9L, "ko");
+    when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+        .thenReturn(List.of(r7, r9));
+
+    useCase()
+        .recordForEach(
+            List.of(7L, 9L),
+            NotificationType.PATH_GREW,
+            2L,
+            new NotificationCollectionRef(42L, "긴 여름의 독서", null));
+
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(2))
+        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 9L)), pushed.capture());
+    assertThat(pushed.getValue().subtitle()).isEqualTo("긴 여름의 독서");
+    assertThat(pushed.getValue().body()).isEqualTo("kurl님이 회원님이 속한 컬렉션에 새로 엮었습니다");
+  }
+
+  @Test
+  void mutedRecipientGetsNoConnectedBellRowOrPush() {
+    when(preferenceService.isEnabled(9L, NotificationType.CONNECTED)).thenReturn(false);
+
+    useCase()
+        .record(9L, NotificationType.CONNECTED, 2L, new NotificationCollectionRef(42L, "c", 10L));
+
+    org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
+  }
+
+  @Test
+  void pathGrewFanOutSkipsContributorsWhoMutedIt() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L)).thenReturn(Optional.empty());
+    UserEntity r7 = userWith(7L, "ko");
+    when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+        .thenReturn(List.of(r7));
+    // 9 muted PATH_GREW; the filtered list keeps 7.
+    when(preferenceService.filterEnabled(List.of(7L, 9L), NotificationType.PATH_GREW))
+        .thenReturn(List.of(7L));
+
+    useCase()
+        .recordForEach(
+            List.of(7L, 9L),
+            NotificationType.PATH_GREW,
+            2L,
+            new NotificationCollectionRef(42L, "c", null));
+
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.times(1))
+        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(
+            org.mockito.ArgumentMatchers.eq(List.of(7L)),
+            org.mockito.ArgumentMatchers.any(PushSender.PushMessage.class));
   }
 }
