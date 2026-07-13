@@ -16,11 +16,6 @@ class JwtClickStreamTokenService implements ClickStreamTokenService {
   }
 
   @Override
-  public Long parseLegacyAccessToken(String token) {
-    return jwt.parseAccessToken(token);
-  }
-
-  @Override
   public String createStreamToken(Long userId, String shortCode) {
     return jwt.createStreamToken(userId, shortCode);
   }

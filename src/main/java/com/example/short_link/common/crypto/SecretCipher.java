@@ -1,4 +1,4 @@
-package com.example.short_link.user.application.twofactor;
+package com.example.short_link.common.crypto;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -8,15 +8,18 @@ import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * AES-GCM at-rest encryption for sensitive user secrets (TOTP). Reads the master key from {@code
- * TWOFA_AES_KEY} (base64-encoded 32 bytes). If unset — only acceptable in dev — secrets are stored
- * unencrypted with a {@code plain:} prefix so we can roll over later by re-encrypting at read time.
+ * AES-GCM at-rest encryption for sensitive secrets (TOTP seeds, webhook signing secrets). Reads the
+ * master key from {@code TWOFA_AES_KEY} (base64-encoded 32 bytes). If unset — only acceptable in
+ * dev — values are stored unencrypted with a {@code plain:} prefix so we can roll over later by
+ * re-encrypting at read time.
  *
  * <p>Output format: {@code v1:<base64(iv|ciphertext|tag)>} for encrypted, {@code plain:<value>} for
- * dev fallback. The version prefix lets us migrate algorithms without losing existing rows.
+ * the dev fallback. The version prefix lets us migrate algorithms without losing existing rows; a
+ * value with neither prefix is treated as a pre-encryption plaintext row and returned verbatim.
  */
 @Slf4j
 @Component
@@ -31,12 +34,11 @@ public class SecretCipher {
 
   private final SecretKeySpec key;
 
-  public SecretCipher(TwoFactorProperties props) {
-    String base64Key = props.aesKey();
-    if (base64Key.isBlank()) {
+  public SecretCipher(@Value("${short-link.twofa.aes-key:}") String base64Key) {
+    if (base64Key == null || base64Key.isBlank()) {
       log.warn(
-          "TWOFA_AES_KEY not set — 2FA secrets will be stored unencrypted. Set the env var in"
-              + " production.");
+          "TWOFA_AES_KEY not set — TOTP and webhook secrets will be stored unencrypted. Set the env"
+              + " var in production.");
       this.key = null;
     } else {
       byte[] decoded = Base64.getDecoder().decode(base64Key);
@@ -67,7 +69,7 @@ public class SecretCipher {
     if (stored == null) return null;
     if (stored.startsWith(PREFIX_PLAIN)) return stored.substring(PREFIX_PLAIN.length());
     if (!stored.startsWith(PREFIX_V1)) {
-      // backwards-compat: pre-prefix rows were base32 secrets in plaintext
+      // backwards-compat: pre-prefix rows were stored as plaintext
       return stored;
     }
     if (key == null) {

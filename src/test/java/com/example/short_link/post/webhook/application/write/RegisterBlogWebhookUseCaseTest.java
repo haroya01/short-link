@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -28,7 +29,7 @@ class RegisterBlogWebhookUseCaseTest {
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
 
   private RegisterBlogWebhookUseCase useCase() {
-    return new RegisterBlogWebhookUseCase(repository, registry);
+    return new RegisterBlogWebhookUseCase(repository, registry, new SecretCipher(""));
   }
 
   @Test

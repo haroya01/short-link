@@ -1,9 +1,11 @@
 package com.example.short_link.link.access.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
+import com.example.short_link.common.web.ClientIp;
 import com.example.short_link.link.access.application.LinkProtectionService;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.access.application.TurnstileVerifier;
+import com.example.short_link.link.access.infrastructure.LinkPasswordAttemptLimiter;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
@@ -34,6 +36,7 @@ public class PasswordUnlockController {
 
   private final LinkLookupQueryService lookup;
   private final LinkProtectionService protectionService;
+  private final LinkPasswordAttemptLimiter attemptLimiter;
   private final LinkRedirectFlow flow;
   private final TurnstileProperties turnstile;
   private final TurnstileVerifier turnstileVerifier;
@@ -58,16 +61,26 @@ public class PasswordUnlockController {
         return LinkHtmlRenderer.passwordPromptResponse(
             HttpStatus.UNAUTHORIZED, shortCode, false, turnstile.siteKey());
       }
+      String clientIp = ClientIp.of(req);
+      // Per-link brute-force lockout: the global per-IP limit is too loose to stop a focused
+      // password-guessing run against one short link. Too many misses from one IP = cooldown.
+      if (attemptLimiter.isLockedOut(shortCode.value(), clientIp)) {
+        outcome = "locked_out";
+        return LinkHtmlRenderer.passwordPromptResponse(
+            HttpStatus.TOO_MANY_REQUESTS, shortCode, true, turnstile.siteKey());
+      }
       CachedLink link = lookup.findActiveLink(shortCode);
       LinkEntity entity =
           lookup
               .findEntity(shortCode)
               .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
       if (entity.hasPassword() && !protectionService.checkPassword(entity, password)) {
+        attemptLimiter.recordFailure(shortCode.value(), clientIp);
         outcome = "password_required";
         return LinkHtmlRenderer.passwordPromptResponse(
             HttpStatus.UNAUTHORIZED, shortCode, true, turnstile.siteKey());
       }
+      attemptLimiter.reset(shortCode.value(), clientIp);
       RedirectOutcome result =
           flow.execute(link, entity, referrer, userAgent, acceptLanguage, src, req);
       ResponseEntity<?> response = renderUnlock(result);

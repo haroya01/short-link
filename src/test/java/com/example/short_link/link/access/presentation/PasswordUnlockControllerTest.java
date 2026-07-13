@@ -12,6 +12,7 @@ import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.access.application.LinkProtectionService;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.access.application.TurnstileVerifier;
+import com.example.short_link.link.access.infrastructure.LinkPasswordAttemptLimiter;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
 import com.example.short_link.link.domain.LinkEntity;
@@ -35,8 +36,10 @@ class PasswordUnlockControllerTest {
   // Turnstile unconfigured (empty secret) → verifier is a no-op, so the gate behaves as before.
   private final TurnstileProperties turnstile = new TurnstileProperties("", "");
   private final TurnstileVerifier turnstileVerifier = new TurnstileVerifier(turnstile);
+  private final LinkPasswordAttemptLimiter attemptLimiter = mock(LinkPasswordAttemptLimiter.class);
   private final PasswordUnlockController controller =
-      new PasswordUnlockController(lookup, protectionService, flow, turnstile, turnstileVerifier);
+      new PasswordUnlockController(
+          lookup, protectionService, attemptLimiter, flow, turnstile, turnstileVerifier);
 
   private static final ShortCode CODE = new ShortCode("abc123");
 
@@ -195,5 +198,18 @@ class PasswordUnlockControllerTest {
     assertThatThrownBy(() -> controller.unlock(CODE, "x", null, null, null, null, null, req))
         .isInstanceOf(LinkException.class);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("error");
+  }
+
+  @Test
+  void lockedOutIpGets429WithoutCheckingPassword() {
+    when(attemptLimiter.isLockedOut(any(), any())).thenReturn(true);
+
+    MockHttpServletRequest req = request();
+    ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);
+
+    assertThat(response.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+    assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("locked_out");
+    verify(protectionService, never()).checkPassword(any(), any());
+    verify(lookup, never()).findActiveLink(any());
   }
 }

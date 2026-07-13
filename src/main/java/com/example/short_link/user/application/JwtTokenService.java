@@ -87,14 +87,6 @@ public class JwtTokenService {
     return new RefreshToken(token, jti);
   }
 
-  public Long parseAccessToken(String token) {
-    Claims claims = parseClaims(token);
-    if (!TYPE_ACCESS.equals(claims.get(CLAIM_TYPE))) {
-      throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected access token");
-    }
-    return Long.valueOf(claims.getSubject());
-  }
-
   public ParsedAccess parseAccessTokenDetailed(String token) {
     Claims claims = parseClaims(token);
     if (!TYPE_ACCESS.equals(claims.get(CLAIM_TYPE))) {
@@ -116,7 +108,7 @@ public class JwtTokenService {
    * Short-lived token issued after primary auth succeeds for a 2FA-enabled user. The frontend holds
    * it while the user enters their TOTP code; on success it's exchanged for a real access token.
    * Cannot be used as an access token (different {@code type} claim) so it won't pass {@link
-   * #parseAccessToken}.
+   * #parseAccessTokenDetailed}.
    */
   public String createTwoFactorChallengeToken(Long userId) {
     Instant now = Instant.now();

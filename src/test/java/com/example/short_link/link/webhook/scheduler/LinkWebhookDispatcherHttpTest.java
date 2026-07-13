@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
@@ -57,7 +58,7 @@ class LinkWebhookDispatcherHttpTest {
   void blocksWhenUrlNotPublic() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
     WebhookHttpDeliveryClient client =
-        new WebhookHttpDeliveryClient(registry, mock(HttpFetcher.class));
+        new WebhookHttpDeliveryClient(registry, mock(HttpFetcher.class), new SecretCipher(""));
     LinkWebhookEntity hook =
         new LinkWebhookEntity(
             new LinkId(1L), "http://localhost/hook", "secret", "n", WebhookFormat.GENERIC);
@@ -73,7 +74,7 @@ class LinkWebhookDispatcherHttpTest {
   void failsToSignWhenSecretInvalid() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
     WebhookHttpDeliveryClient client =
-        new WebhookHttpDeliveryClient(registry, mock(HttpFetcher.class));
+        new WebhookHttpDeliveryClient(registry, mock(HttpFetcher.class), new SecretCipher(""));
     LinkWebhookEntity hook =
         new LinkWebhookEntity(
             new LinkId(1L), "https://example.com/hook", null, "n", WebhookFormat.GENERIC);
@@ -89,7 +90,8 @@ class LinkWebhookDispatcherHttpTest {
 
   private static Probe run(HttpFetcher fetcher) {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    WebhookHttpDeliveryClient client = new WebhookHttpDeliveryClient(registry, fetcher);
+    WebhookHttpDeliveryClient client =
+        new WebhookHttpDeliveryClient(registry, fetcher, new SecretCipher(""));
     LinkWebhookEntity hook =
         new LinkWebhookEntity(new LinkId(1L), URL, "secret", "test", WebhookFormat.GENERIC);
     TestEntities.withId(hook, 99L);

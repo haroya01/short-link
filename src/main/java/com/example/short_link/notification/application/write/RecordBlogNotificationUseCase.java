@@ -33,12 +33,15 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class RecordBlogNotificationUseCase {
 
+  private static final int FANOUT_CHUNK = 500;
+
   private final NotificationRepository repository;
   private final JsonMapper jsonMapper;
   private final PushSender pushSender;
   private final UserRepository userRepository;
   private final MessageSource messageSource;
   private final BlogNotificationPreferenceService preferenceService;
+  private final NotificationFanoutWriter fanoutWriter;
 
   /**
    * A single notification. {@code payload} is the type's target ref (post / series) or null.
@@ -64,8 +67,13 @@ public class RecordBlogNotificationUseCase {
    * once and reused across the inserts. Recipients who muted this type are dropped up front by one
    * bulk query (no per-follower lookup); an absent preference is on, so a follower who never
    * touched settings still receives it.
+   *
+   * <p>Runs off the request thread (the caller is an after-commit async listener); the surviving
+   * recipients are chunked into separate transactions so a popular author's fan-out never holds one
+   * DB connection open across the whole batch (the 2026-06 pool-exhaustion failure mode). Every
+   * enabled follower is still notified — chunking bounds connection-hold, it does not cap the
+   * audience.
    */
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void recordForEach(
       List<Long> recipientUserIds, NotificationType type, Long actorUserId, Object payload) {
     if (recipientUserIds.isEmpty()) {
@@ -76,8 +84,10 @@ public class RecordBlogNotificationUseCase {
       return;
     }
     String json = payload == null ? null : jsonMapper.writeValueAsString(payload);
-    for (Long recipientUserId : enabledRecipients) {
-      repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
+    for (int i = 0; i < enabledRecipients.size(); i += FANOUT_CHUNK) {
+      List<Long> chunk =
+          enabledRecipients.subList(i, Math.min(i + FANOUT_CHUNK, enabledRecipients.size()));
+      fanoutWriter.persistChunk(chunk, type, actorUserId, json);
     }
     // 수신자를 로케일별로 묶어 각 언어로 푸시 — 한 번의 조합을 그 로케일 그룹에 보낸다.
     Map<String, List<Long>> byLocale =

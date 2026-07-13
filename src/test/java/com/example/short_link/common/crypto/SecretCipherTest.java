@@ -1,4 +1,4 @@
-package com.example.short_link.user.application.twofactor;
+package com.example.short_link.common.crypto;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -10,7 +10,7 @@ class SecretCipherTest {
 
   @Test
   void plainModeRoundTripsPrefixed() {
-    SecretCipher cipher = new SecretCipher(new TwoFactorProperties("", "kurl.me"));
+    SecretCipher cipher = new SecretCipher("");
     String stored = cipher.encrypt("JBSWY3DPEHPK3PXP");
     assertThat(stored).startsWith("plain:");
     assertThat(cipher.decrypt(stored)).isEqualTo("JBSWY3DPEHPK3PXP");
@@ -20,9 +20,7 @@ class SecretCipherTest {
   void aesModeRoundTrips() {
     byte[] key = new byte[32];
     new SecureRandom().nextBytes(key);
-    SecretCipher cipher =
-        new SecretCipher(
-            new TwoFactorProperties(Base64.getEncoder().encodeToString(key), "kurl.me"));
+    SecretCipher cipher = new SecretCipher(Base64.getEncoder().encodeToString(key));
     String stored = cipher.encrypt("JBSWY3DPEHPK3PXP");
     assertThat(stored).startsWith("v1:");
     assertThat(cipher.decrypt(stored)).isEqualTo("JBSWY3DPEHPK3PXP");
@@ -30,7 +28,7 @@ class SecretCipherTest {
 
   @Test
   void unprefixedLegacyRowReturnedAsIs() {
-    SecretCipher cipher = new SecretCipher(new TwoFactorProperties("", "kurl.me"));
+    SecretCipher cipher = new SecretCipher("");
     assertThat(cipher.decrypt("JBSWY3DPEHPK3PXP")).isEqualTo("JBSWY3DPEHPK3PXP");
   }
 
@@ -38,9 +36,7 @@ class SecretCipherTest {
   void aesProducesDistinctCiphertextEachCall() {
     byte[] key = new byte[32];
     new SecureRandom().nextBytes(key);
-    SecretCipher cipher =
-        new SecretCipher(
-            new TwoFactorProperties(Base64.getEncoder().encodeToString(key), "kurl.me"));
+    SecretCipher cipher = new SecretCipher(Base64.getEncoder().encodeToString(key));
     String a = cipher.encrypt("hello");
     String b = cipher.encrypt("hello");
     assertThat(a).isNotEqualTo(b);

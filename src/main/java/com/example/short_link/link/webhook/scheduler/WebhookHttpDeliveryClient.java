@@ -1,5 +1,6 @@
 package com.example.short_link.link.webhook.scheduler;
 
+import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.webhook.WebhookSender;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
@@ -21,12 +22,19 @@ class WebhookHttpDeliveryClient {
 
   private final MeterRegistry meterRegistry;
   private final HttpFetcher httpFetcher;
+  private final SecretCipher cipher;
 
   void deliver(LinkWebhookEntity hook, String body, String eventType) {
     boolean signed = hook.getFormat() == WebhookFormat.GENERIC;
     WebhookSender.Result result =
         WebhookSender.send(
-            httpFetcher, meterRegistry, hook.getUrl(), hook.getSecret(), signed, body, eventType);
+            httpFetcher,
+            meterRegistry,
+            hook.getUrl(),
+            cipher.decrypt(hook.getSecret()),
+            signed,
+            body,
+            eventType);
     switch (result.outcome()) {
       case OK -> {
         hook.recordSuccess(result.statusCode());

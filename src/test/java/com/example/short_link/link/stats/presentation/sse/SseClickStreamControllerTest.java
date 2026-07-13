@@ -44,17 +44,10 @@ class SseClickStreamControllerTest {
   }
 
   @Test
-  void invalidTokenReturns401EmitterAndCompletes() {
-    when(tokens.parseLegacyAccessToken("bad")).thenThrow(new RuntimeException("nope"));
-    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, "bad", null, response);
-    verify(response).setStatus(401);
-    assertThat(emitter).isNotNull();
-  }
-
-  @Test
   void missingLinkThrowsLinkNotFound() {
+    when(tokens.parseStreamToken("stok", "abc")).thenReturn(7L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.empty());
-    assertThatThrownBy(() -> controller.stream(new ShortCode("abc"), null, "tok", null, response))
+    assertThatThrownBy(() -> controller.stream(new ShortCode("abc"), "stok", null, response))
         .isInstanceOf(LinkException.class);
   }
 
@@ -62,10 +55,10 @@ class SseClickStreamControllerTest {
   void deniedAccessThrowsNotOwned() {
     LinkEntity link = new LinkEntity("https://x", "abc", 99L, null);
     TestEntities.withId(link, 1L);
-    when(tokens.parseLegacyAccessToken("tok")).thenReturn(7L);
+    when(tokens.parseStreamToken("stok", "abc")).thenReturn(7L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(false);
-    assertThatThrownBy(() -> controller.stream(new ShortCode("abc"), null, "tok", null, response))
+    assertThatThrownBy(() -> controller.stream(new ShortCode("abc"), "stok", null, response))
         .isInstanceOf(LinkException.class);
   }
 
@@ -73,26 +66,13 @@ class SseClickStreamControllerTest {
   void registryRejectsReturns429FailFast() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
     TestEntities.withId(link, 1L);
-    when(tokens.parseLegacyAccessToken("tok")).thenReturn(7L);
+    when(tokens.parseStreamToken("stok", "abc")).thenReturn(7L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(accessGuard.canView(7L, link)).thenReturn(true);
     when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(false);
-    SseEmitter out = controller.stream(new ShortCode("abc"), null, "tok", null, response);
+    SseEmitter out = controller.stream(new ShortCode("abc"), "stok", null, response);
     verify(response).setStatus(429);
     assertThat(out).isNotNull();
-  }
-
-  @Test
-  void acceptedConnectionSendsReadyAndCounts() {
-    LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
-    TestEntities.withId(link, 1L);
-    when(tokens.parseLegacyAccessToken("tok")).thenReturn(7L);
-    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
-    when(accessGuard.canView(7L, link)).thenReturn(true);
-    when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(true);
-    SseEmitter out = controller.stream(new ShortCode("abc"), null, "tok", null, response);
-    assertThat(out).isNotNull();
-    assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);
   }
 
   @Test
@@ -104,7 +84,7 @@ class SseClickStreamControllerTest {
     when(accessGuard.canView(7L, link)).thenReturn(true);
     when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(true);
 
-    SseEmitter out = controller.stream(new ShortCode("abc"), "stok", null, null, response);
+    SseEmitter out = controller.stream(new ShortCode("abc"), "stok", null, response);
 
     assertThat(out).isNotNull();
     assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);
@@ -114,8 +94,7 @@ class SseClickStreamControllerTest {
   void invalidStreamTokenReturns401EmitterAndCompletes() {
     when(tokens.parseStreamToken("bad-stream", "abc")).thenThrow(new RuntimeException("nope"));
 
-    SseEmitter emitter =
-        controller.stream(new ShortCode("abc"), "bad-stream", null, null, response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), "bad-stream", null, response);
 
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
@@ -123,14 +102,14 @@ class SseClickStreamControllerTest {
 
   @Test
   void noTokenAndNoClaimReturns401() {
-    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, null, null, response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, null, response);
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
   }
 
   @Test
   void blankParamsTreatedAsMissing() {
-    SseEmitter emitter = controller.stream(new ShortCode("abc"), "", "  ", "", response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), "", "", response);
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
   }
@@ -143,7 +122,7 @@ class SseClickStreamControllerTest {
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
     when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(true);
 
-    SseEmitter out = controller.stream(new ShortCode("abc"), null, null, "ctok", response);
+    SseEmitter out = controller.stream(new ShortCode("abc"), null, "ctok", response);
 
     assertThat(out).isNotNull();
     assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);
@@ -156,8 +135,7 @@ class SseClickStreamControllerTest {
     TestEntities.withId(link, 1L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
 
-    SseEmitter emitter =
-        controller.stream(new ShortCode("abc"), null, null, "wrong-ctok", response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, "wrong-ctok", response);
 
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
@@ -169,7 +147,7 @@ class SseClickStreamControllerTest {
     TestEntities.withId(link, 1L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
 
-    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, null, "ctok", response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, "ctok", response);
 
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
@@ -181,30 +159,14 @@ class SseClickStreamControllerTest {
     TestEntities.withId(link, 1L);
     when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
 
-    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, null, "anything", response);
+    SseEmitter emitter = controller.stream(new ShortCode("abc"), null, "anything", response);
 
     verify(response).setStatus(401);
     assertThat(emitter).isNotNull();
   }
 
   @Test
-  void bothTokensProvidedPrefersJwt() {
-    LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
-    TestEntities.withId(link, 1L);
-    when(tokens.parseLegacyAccessToken("tok")).thenReturn(7L);
-    when(lookup.findEntity(new ShortCode("abc"))).thenReturn(Optional.of(link));
-    when(accessGuard.canView(7L, link)).thenReturn(true);
-    when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(true);
-
-    SseEmitter out =
-        controller.stream(new ShortCode("abc"), null, "tok", "ignored-claim", response);
-
-    assertThat(out).isNotNull();
-    assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);
-  }
-
-  @Test
-  void streamTokenTakesPrecedenceOverLegacyJwtAndClaimToken() {
+  void streamTokenTakesPrecedenceOverClaimToken() {
     LinkEntity link = new LinkEntity("https://x", "abc", 7L, null);
     TestEntities.withId(link, 1L);
     when(tokens.parseStreamToken("stok", "abc")).thenReturn(7L);
@@ -212,8 +174,7 @@ class SseClickStreamControllerTest {
     when(accessGuard.canView(7L, link)).thenReturn(true);
     when(registry.register(eq(new LinkId(1L)), any(SseEmitter.class))).thenReturn(true);
 
-    SseEmitter out =
-        controller.stream(new ShortCode("abc"), "stok", "ignored-jwt", "ignored-claim", response);
+    SseEmitter out = controller.stream(new ShortCode("abc"), "stok", "ignored-claim", response);
 
     assertThat(out).isNotNull();
     assertThat(meterRegistry.counter("sse.click_stream.connected").count()).isEqualTo(1.0);

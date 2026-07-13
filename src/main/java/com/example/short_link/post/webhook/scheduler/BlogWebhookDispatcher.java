@@ -1,5 +1,6 @@
 package com.example.short_link.post.webhook.scheduler;
 
+import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.webhook.WebhookSender;
@@ -36,6 +37,7 @@ public class BlogWebhookDispatcher {
   private final JsonMapper jsonMapper;
   private final HttpFetcher httpFetcher;
   private final MeterRegistry meterRegistry;
+  private final SecretCipher cipher;
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -65,7 +67,7 @@ public class BlogWebhookDispatcher {
             httpFetcher,
             meterRegistry,
             hook.getUrl(),
-            hook.getSecret(),
+            cipher.decrypt(hook.getSecret()),
             hook.signed(),
             body,
             eventType);
