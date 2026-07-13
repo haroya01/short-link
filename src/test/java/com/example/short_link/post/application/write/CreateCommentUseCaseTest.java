@@ -12,6 +12,8 @@ import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
+import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -38,6 +40,8 @@ class CreateCommentUseCaseTest {
   @Mock private UserRepository userRepository;
   @Mock private org.springframework.context.ApplicationEventPublisher events;
   @Mock private BlogNotificationMuteReader muteReader;
+  @Mock private UserModerationGuard moderationGuard;
+  @Mock private UserBlockChecker blockChecker;
 
   private CreateCommentUseCase useCase;
 
@@ -45,7 +49,13 @@ class CreateCommentUseCaseTest {
   void setUp() {
     useCase =
         new CreateCommentUseCase(
-            postRepository, commentRepository, userRepository, events, muteReader);
+            postRepository,
+            commentRepository,
+            userRepository,
+            events,
+            muteReader,
+            moderationGuard,
+            blockChecker);
   }
 
   private PostEntity publishedPost() {
@@ -102,6 +112,19 @@ class CreateCommentUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+  }
+
+  @Test
+  void rejectsWhenPostAuthorBlockedCommenter() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    // 글 작성자(7)가 댓글 작성자(9)를 차단한 상태.
+    when(blockChecker.isBlocked(7L, 9L)).thenReturn(true);
+
+    assertThatThrownBy(() -> useCase.execute(new CreateCommentCommand(9L, 42L, null, "hi")))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.COMMENT_BLOCKED);
+    verify(commentRepository, org.mockito.Mockito.never()).save(any());
   }
 
   @Test

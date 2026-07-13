@@ -4,6 +4,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.abuse.domain.AbuseReason;
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
@@ -58,7 +59,7 @@ class AdminBlogMetricsTest {
         .setParameter("id", post.getId())
         .executeUpdate();
     abuseReportRepository.save(
-        new AbuseReportEntity(null, AbuseSubjectType.POST, post.getId(), "테스트"));
+        new AbuseReportEntity(null, AbuseSubjectType.POST, post.getId(), AbuseReason.OTHER, "테스트"));
 
     UserEntity admin =
         userRepository.save(new UserEntity("bm-admin@x.com", "google", "g-bm-admin"));

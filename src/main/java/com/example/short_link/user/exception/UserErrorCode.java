@@ -16,7 +16,11 @@ public enum UserErrorCode {
   APPLE_EMAIL_REQUIRED(
       HttpStatus.BAD_REQUEST, "Apple sign-in did not include an email for a new account"),
   TWO_FACTOR_STATE(HttpStatus.CONFLICT, "%s"),
-  INVALID_TOKEN_TYPE(HttpStatus.UNAUTHORIZED, "%s");
+  INVALID_TOKEN_TYPE(HttpStatus.UNAUTHORIZED, "%s"),
+  ACCOUNT_BANNED(HttpStatus.FORBIDDEN, "account is banned"),
+  ACCOUNT_SUSPENDED(HttpStatus.FORBIDDEN, "account is suspended"),
+  BLOCKED_BY_AUTHOR(HttpStatus.FORBIDDEN, "you can't interact with this author"),
+  BLOCKED_TARGET(HttpStatus.FORBIDDEN, "this author has blocked you");
 
   private final HttpStatus status;
   private final String template;

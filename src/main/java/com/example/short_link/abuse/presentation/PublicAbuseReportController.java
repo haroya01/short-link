@@ -34,6 +34,7 @@ public class PublicAbuseReportController {
             userId,
             AbuseSubjectType.valueOf(request.subjectType().toUpperCase()),
             request.subjectId(),
-            request.reason()));
+            request.resolvedReasonCode(),
+            request.resolvedDetail()));
   }
 }

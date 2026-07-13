@@ -4,6 +4,7 @@ import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.user.application.read.FollowStatus;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -21,6 +22,7 @@ public class FollowUseCase {
 
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
+  private final BlockRepository blockRepository;
   private final ApplicationEventPublisher events;
 
   @Transactional
@@ -28,6 +30,10 @@ public class FollowUseCase {
     UserEntity target = requireUser(targetUsername);
     if (target.getId().equals(followerId)) {
       throw new UserException(UserErrorCode.CANNOT_FOLLOW_SELF);
+    }
+    // 차단 서버집행: 대상이 팔로워를 차단했다면 팔로우 거부.
+    if (blockRepository.existsByBlockerIdAndBlockedId(target.getId(), followerId)) {
+      throw new UserException(UserErrorCode.BLOCKED_TARGET);
     }
     // Attribute only the edge that actually gets created — a re-follow of someone you already
     // follow leaves the original (and its original source) untouched, so the metric isn't inflated

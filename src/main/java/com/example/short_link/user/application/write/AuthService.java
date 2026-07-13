@@ -218,6 +218,12 @@ public class AuthService {
   }
 
   private IssuedTokens issue(UserEntity user) {
+    // 영구 차단(BANNED) 계정은 세션 발급을 막는다 — 모든 로그인·토큰 교환·리프레시 경로가 이 지점을 지난다.
+    // 임시 정지(SUSPENDED)는 로그인은 허용하고 쓰기 게이트(UserModerationGuard)에서만 막아, 사용자가
+    // 상태를 확인·소명할 수 있게 한다.
+    if (user.isBanned()) {
+      throw new UserException(UserErrorCode.ACCOUNT_BANNED);
+    }
     String access = jwt.createAccessToken(user.getId(), user.getRole().name());
     RefreshToken refresh = jwt.createRefreshToken(user.getId());
     refreshStore.save(user.getId(), refresh.jti(), jwt.refreshTtl());

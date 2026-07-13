@@ -33,6 +33,16 @@ public class UserEntity extends BaseCreatedEntity {
     PRO
   }
 
+  /**
+   * 관리자 모더레이션 제재 상태. ACTIVE 기본, SUSPENDED 는 {@code suspendedUntil} 까지 쓰기 차단(로그인 허용), BANNED 는
+   * 영구(로그인·쓰기 차단). abuse 슬라이스의 {@code UserModerationPort} 로만 전이된다.
+   */
+  public enum ModerationStatus {
+    ACTIVE,
+    SUSPENDED,
+    BANNED
+  }
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -114,6 +124,15 @@ public class UserEntity extends BaseCreatedEntity {
    */
   @Column(name = "hide_follower_count", nullable = false)
   private boolean hideFollowerCount = false;
+
+  /** 제재 상태 — 관리자 모더레이션에서만 바뀐다. 기본 ACTIVE. */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "moderation_status", nullable = false, length = 16)
+  private ModerationStatus moderationStatus = ModerationStatus.ACTIVE;
+
+  /** SUSPENDED 만료시각 — 이 시각을 지나면 쓰기 게이트가 자동 통과시킨다. BANNED/ACTIVE 면 null. */
+  @Column(name = "suspended_until")
+  private Instant suspendedUntil;
 
   /**
    * Which legal terms version the user accepted at sign-up, and when — proof of acceptance for the
@@ -286,5 +305,33 @@ public class UserEntity extends BaseCreatedEntity {
 
   public void restore() {
     this.deletedAt = null;
+  }
+
+  /** 임시 정지 — {@code until} 까지 쓰기 차단. 로그인은 허용한다. */
+  public void suspend(Instant until) {
+    this.moderationStatus = ModerationStatus.SUSPENDED;
+    this.suspendedUntil = until;
+  }
+
+  /** 영구 차단 — 로그인·쓰기 모두 차단. 정지 만료시각은 의미가 없으므로 비운다. */
+  public void ban() {
+    this.moderationStatus = ModerationStatus.BANNED;
+    this.suspendedUntil = null;
+  }
+
+  public boolean isBanned() {
+    return moderationStatus == ModerationStatus.BANNED;
+  }
+
+  /** 지금 시점 기준으로 정지 중인지 — 만료시각이 지났으면 정지 아님(자동 해제). */
+  public boolean isSuspendedAt(Instant now) {
+    return moderationStatus == ModerationStatus.SUSPENDED
+        && suspendedUntil != null
+        && suspendedUntil.isAfter(now);
+  }
+
+  /** 지금 콘텐츠를 생성할 수 있는지 — BANNED 이거나 만료 전 SUSPENDED 면 false. */
+  public boolean canWriteAt(Instant now) {
+    return !isBanned() && !isSuspendedAt(now);
   }
 }

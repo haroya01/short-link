@@ -39,8 +39,14 @@ public class AbuseReportEntity extends BaseCreatedEntity {
   @Column(name = "subject_id", nullable = false)
   private Long subjectId;
 
-  @Column(length = 2000)
-  private String reason;
+  /** 정형 사유 코드(iOS/웹 6종). legacy 신고엔 없어 null 허용. */
+  @Enumerated(EnumType.STRING)
+  @Column(name = "reason_code", length = 16)
+  private AbuseReason reasonCode;
+
+  /** 자유서술 상세 — 기존 free-text {@code reason} 컬럼을 그대로 재사용(데이터 이관 없음). 최대 2000자. */
+  @Column(name = "reason", length = 2000)
+  private String detail;
 
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
@@ -53,11 +59,16 @@ public class AbuseReportEntity extends BaseCreatedEntity {
   private String adminNote;
 
   public AbuseReportEntity(
-      Long reporterUserId, AbuseSubjectType subjectType, Long subjectId, String reason) {
+      Long reporterUserId,
+      AbuseSubjectType subjectType,
+      Long subjectId,
+      AbuseReason reasonCode,
+      String detail) {
     this.reporterUserId = reporterUserId;
     this.subjectType = subjectType;
     this.subjectId = subjectId;
-    this.reason = reason;
+    this.reasonCode = reasonCode;
+    this.detail = detail;
     this.status = AbuseReportStatus.OPEN;
   }
 

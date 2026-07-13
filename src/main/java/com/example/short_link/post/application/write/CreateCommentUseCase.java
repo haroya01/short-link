@@ -5,6 +5,8 @@ import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
+import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.domain.CommentEntity;
@@ -32,15 +34,23 @@ public class CreateCommentUseCase {
   private final UserRepository userRepository;
   private final ApplicationEventPublisher events;
   private final BlogNotificationMuteReader muteReader;
+  private final UserModerationGuard moderationGuard;
+  private final UserBlockChecker blockChecker;
 
   @Transactional
   public CommentView execute(CreateCommentCommand cmd) {
+    // 제재(BANNED/현재 SUSPENDED) 유저는 댓글을 달 수 없다.
+    moderationGuard.requireCanWrite(cmd.userId());
     PostEntity post =
         postRepository
             .findById(cmd.postId())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, cmd.postId()));
     if (!post.isPublished()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, cmd.postId());
+    }
+    // 차단 서버집행: 글 작성자가 댓글 작성자를 차단했다면 상호작용 거부.
+    if (blockChecker.isBlocked(post.getUserId(), cmd.userId())) {
+      throw new PostException(PostErrorCode.COMMENT_BLOCKED).with("postId", cmd.postId());
     }
 
     CommentEntity parent = null;

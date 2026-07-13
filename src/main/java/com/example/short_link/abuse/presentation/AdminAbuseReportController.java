@@ -5,10 +5,12 @@ import com.example.short_link.abuse.application.read.AbuseReportView;
 import com.example.short_link.abuse.application.write.ResolveAbuseReportCommand;
 import com.example.short_link.abuse.application.write.ResolveAbuseReportUseCase;
 import com.example.short_link.abuse.domain.AbuseReportStatus;
+import com.example.short_link.abuse.domain.ModerationAction;
 import com.example.short_link.abuse.presentation.request.ResolveAbuseReportRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -36,12 +38,21 @@ public class AdminAbuseReportController {
 
   @PostMapping("/{id}/resolve")
   public AbuseReportView resolve(
-      @PathVariable Long id, @Valid @RequestBody ResolveAbuseReportRequest request) {
+      @AuthenticationPrincipal Long adminUserId,
+      @PathVariable Long id,
+      @Valid @RequestBody ResolveAbuseReportRequest request) {
+    ModerationAction action =
+        request.action() == null || request.action().isBlank()
+            ? ModerationAction.NONE
+            : ModerationAction.valueOf(request.action().toUpperCase());
     return queryService.enrich(
         resolveAbuseReport.execute(
             new ResolveAbuseReportCommand(
                 id,
+                adminUserId,
                 ResolveAbuseReportCommand.Resolution.valueOf(request.resolution().toUpperCase()),
+                action,
+                request.suspendUntil(),
                 request.adminNote())));
   }
 }
