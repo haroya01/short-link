@@ -40,8 +40,8 @@ dependencies {
 	implementation 'com.maxmind.geoip2:geoip2:4.2.1'
 	implementation 'org.apache.commons:commons-compress:1.27.1'
 	implementation 'org.jsoup:jsoup:1.18.1'
-	implementation 'com.google.zxing:core:3.5.3'
-	implementation 'com.google.zxing:javase:3.5.3'
+	implementation 'com.google.zxing:core:3.5.4'
+	implementation 'com.google.zxing:javase:3.5.4'
 	implementation 'nl.martijndwars:web-push:5.1.1'
 	// web-push 5.1.1 declares BouncyCastle as provided — pull it explicitly (VAPID key parsing / ECDH).
 	implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
