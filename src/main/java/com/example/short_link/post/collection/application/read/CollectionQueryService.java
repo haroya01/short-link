@@ -95,7 +95,8 @@ public class CollectionQueryService {
                     List.of(),
                     curators.getOrDefault(c.getOwnerId(), Curator.EMPTY).username(),
                     curators.getOrDefault(c.getOwnerId(), Curator.EMPTY).avatarUrl(),
-                    positionByCollection.get(c.getId())))
+                    positionByCollection.get(c.getId()),
+                    null))
         .toList();
   }
 
@@ -207,7 +208,8 @@ public class CollectionQueryService {
                                 curators.getOrDefault(c.getOwnerId(), Curator.EMPTY).avatarUrl(),
                                 positionByCollectionAndRef
                                     .getOrDefault(c.getId(), Map.of())
-                                    .get(refId)))
+                                    .get(refId),
+                                null))
                     .toList()));
     return result;
   }
@@ -215,12 +217,27 @@ public class CollectionQueryService {
   public static final int PREVIEW_PER_COLLECTION = 2;
   private static final int PREVIEW_LABEL_MAX = 40;
 
-  /** The viewer's own collections, most recently touched first, each with a recent-item preview. */
-  public List<CollectionSummaryView> listMine(Long userId) {
+  /**
+   * The viewer's own collections, most recently touched first, each with a recent-item preview.
+   *
+   * <p>연결 시트가 특정 블록(blockType×refId)을 기준으로 물으면 각 컬렉션에 그 블록의 기존 연결 PK 를 함께 싣는다 — "이미 담김"을 표시해, 같은
+   * 컬렉션에 다시 이으며 새로 쓴 "왜"를 조용히 잃는 사고를 구조적으로 막는다. 블록 없이(null) 부르면 그냥 내 목록이다.
+   */
+  public List<CollectionSummaryView> listMine(
+      Long userId, ConnectionBlockType blockType, Long refId) {
     List<CollectionEntity> collections =
         collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(userId);
     Map<Long, List<String>> previews =
         previewByCollection(collections.stream().map(CollectionEntity::getId).toList());
+    Map<Long, Long> connectionByCollection =
+        (blockType == null || refId == null)
+            ? Map.of()
+            : connectionRepository.findAllByBlockTypeAndRefId(blockType, refId).stream()
+                .collect(
+                    Collectors.toMap(
+                        CollectionConnectionEntity::getCollectionId,
+                        CollectionConnectionEntity::getId,
+                        (a, b) -> a));
     Curator owner =
         userRepository
             .findById(userId)
@@ -240,7 +257,8 @@ public class CollectionQueryService {
                     previews.getOrDefault(c.getId(), List.of()),
                     owner.username(),
                     owner.avatarUrl(),
-                    null)) // 대상 글이 없는 목록판 — position 없음.
+                    null, // 대상 글이 없는 목록판 — position 없음.
+                    connectionByCollection.get(c.getId())))
         .toList();
   }
 
@@ -273,7 +291,8 @@ public class CollectionQueryService {
                     previews.getOrDefault(c.getId(), List.of()),
                     owner.username(),
                     owner.avatarUrl(),
-                    null)) // 대상 글이 없는 목록판 — position 없음.
+                    null, // 대상 글이 없는 목록판 — position 없음.
+                    null))
         .toList();
   }
 

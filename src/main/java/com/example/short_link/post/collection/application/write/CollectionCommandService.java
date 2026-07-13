@@ -92,7 +92,7 @@ public class CollectionCommandService {
     return collection;
   }
 
-  /** 블록을 컬렉션에 잇는다. 이미 이어져 있으면 그대로 둔다(멱등). */
+  /** 블록을 컬렉션에 잇는다. 이미 이어져 있으면 멱등 — 단, 새로 쓴 "왜"가 오면 그걸로 바꾼다(조용한 유실 방지). */
   @Transactional
   public CollectionConnectionEntity connect(ConnectBlockCommand cmd) {
     CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
@@ -109,6 +109,8 @@ public class CollectionCommandService {
             .findFirst()
             .orElse(null);
     if (already != null) {
+      String rewritten = clampNullable(cmd.why(), CollectionConnectionEntity.MAX_WHY);
+      if (rewritten != null && !rewritten.isBlank()) already.rewriteWhy(rewritten);
       return already;
     }
 

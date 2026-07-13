@@ -239,9 +239,31 @@ class CollectionCommandServiceTest {
         service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.HIGHLIGHT, 9L, "new"));
 
     assertThat(result).isSameAs(existing);
+    // 멱등이되 목소리는 갱신 — 새로 쓴 "왜"가 조용히 버려지지 않는다.
+    assertThat(result.getWhy()).isEqualTo("new");
     verify(connectionRepository, never()).save(any());
     // Re-connecting an already-present block is idempotent: no graph notice fires.
     verify(events, never()).publishEvent(any());
+  }
+
+  @Test
+  void reconnectWithoutWhyKeepsExistingWhy() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
+    PostHighlightEntity hl = new PostHighlightEntity(6L, 1L, 0, 0, 0, 3, "q", null);
+    ReflectionTestUtils.setField(hl, "id", 9L);
+    when(highlightRepository.findById(9L)).thenReturn(Optional.of(hl));
+    CollectionConnectionEntity existing =
+        new CollectionConnectionEntity(10L, ConnectionBlockType.HIGHLIGHT, 9L, "old", 2);
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(List.of(existing));
+
+    CollectionConnectionEntity result =
+        service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.HIGHLIGHT, 9L, "  "));
+
+    // 빈/공백 "왜"는 갱신이 아니다 — 기존 목소리를 지우지 않는다.
+    assertThat(result.getWhy()).isEqualTo("old");
+    verify(connectionRepository, never()).save(any());
   }
 
   // ---- connect → graph notification event ----
