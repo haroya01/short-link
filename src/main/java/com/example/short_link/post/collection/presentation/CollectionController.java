@@ -8,6 +8,7 @@ import com.example.short_link.post.collection.application.write.ConnectBlockComm
 import com.example.short_link.post.collection.application.write.CreateCollectionCommand;
 import com.example.short_link.post.collection.application.write.EditCollectionCommand;
 import com.example.short_link.post.collection.domain.CollectionEntity;
+import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.presentation.request.ConnectBlockRequest;
 import com.example.short_link.post.collection.presentation.request.CreateCollectionRequest;
 import com.example.short_link.post.collection.presentation.request.EditCollectionRequest;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -62,6 +64,7 @@ public class CollectionController {
         List.of(),
         null, // 방금 만든 내 컬렉션 에코 — 큐레이터/위치는 "이 글이 속한 길" 조회에서만 채운다.
         null,
+        null,
         null);
   }
 
@@ -85,12 +88,16 @@ public class CollectionController {
         List.of(),
         null, // 방금 수정한 내 컬렉션 에코 — 큐레이터/위치는 "이 글이 속한 길" 조회에서만 채운다.
         null,
+        null,
         null);
   }
 
   @GetMapping("/users/me/collections")
-  public List<CollectionSummaryView> myCollections(@AuthenticationPrincipal Long userId) {
-    return queryService.listMine(userId);
+  public List<CollectionSummaryView> myCollections(
+      @AuthenticationPrincipal Long userId,
+      @RequestParam(required = false) ConnectionBlockType blockType,
+      @RequestParam(required = false) Long refId) {
+    return queryService.listMine(userId, blockType, refId);
   }
 
   @GetMapping("/collections/{id}")

@@ -59,4 +59,9 @@ public class CollectionConnectionEntity extends BaseCreatedEntity {
   public void reposition(int position) {
     this.position = position;
   }
+
+  /** 같은 블록을 다시 이으며 새로 쓴 "왜" — 멱등 반환 대신 목소리를 갱신한다(조용한 유실 방지). */
+  public void rewriteWhy(String why) {
+    this.why = why;
+  }
 }

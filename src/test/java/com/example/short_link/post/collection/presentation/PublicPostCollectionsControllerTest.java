@@ -49,7 +49,8 @@ class PublicPostCollectionsControllerTest {
                     List.of(),
                     "curator",
                     "https://cdn.kurl.me/a.jpg",
-                    2)));
+                    2,
+                    null)));
 
     // 미로그인(헤더 없음)에도 200 — GET /api/v1/public/** 은 permitAll. 글 타입으로 조회된다.
     // "@큐레이터의 길 · N편 중 M번째"로 읽히도록 curatorUsername·position·count(=분모)가 함께 실린다.
@@ -90,7 +91,8 @@ class PublicPostCollectionsControllerTest {
             List.of(),
             "curator",
             "https://cdn.kurl.me/a.jpg",
-            3);
+            3,
+            null);
     when(queryService.publicCollectionsContainingBatch(
             ConnectionBlockType.POST, List.of(5L, 6L, 7L)))
         .thenReturn(Map.of(5L, List.of(view), 6L, List.of(), 7L, List.of()));

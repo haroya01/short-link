@@ -18,6 +18,7 @@ import com.example.short_link.post.collection.application.write.CollectionComman
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
+import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.post.presentation.PostExceptionHandler;
@@ -116,7 +117,7 @@ class CollectionControllerTest {
 
   @Test
   void myCollectionsReturnsList() throws Exception {
-    when(query.listMine(USER_ID))
+    when(query.listMine(USER_ID, null, null))
         .thenReturn(
             List.of(
                 new CollectionSummaryView(
@@ -130,6 +131,7 @@ class CollectionControllerTest {
                     List.of("헥사고날로 갈아탄 지 석 달", "좋은 추상은 더 지울 게 없을 때"),
                     "curator",
                     "https://cdn.kurl.me/a.jpg",
+                    null,
                     null)));
 
     mvc.perform(
@@ -139,6 +141,35 @@ class CollectionControllerTest {
         .andExpect(jsonPath("$[0].id").value(10))
         .andExpect(jsonPath("$[0].count").value(3))
         .andExpect(jsonPath("$[0].preview[0]").value("헥사고날로 갈아탄 지 석 달"));
+  }
+
+  @Test
+  void myCollectionsWithBlockParamsCarriesConnectionId() throws Exception {
+    when(query.listMine(USER_ID, ConnectionBlockType.POST, 77L))
+        .thenReturn(
+            List.of(
+                new CollectionSummaryView(
+                    10L,
+                    "느린 사고",
+                    null,
+                    "PUBLIC",
+                    "COLLECTION",
+                    3,
+                    Instant.parse("2026-06-12T00:00:00Z"),
+                    List.of(),
+                    "curator",
+                    null,
+                    null,
+                    501L)));
+
+    // 연결 시트가 "이미 담김"을 그리도록 — 블록 기준 조회에 그 연결의 PK 가 실린다.
+    mvc.perform(
+            get("/api/v1/users/me/collections")
+                .param("blockType", "POST")
+                .param("refId", "77")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].connectionId").value(501));
   }
 
   @Test
