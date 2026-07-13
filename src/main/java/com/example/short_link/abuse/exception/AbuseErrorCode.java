@@ -9,7 +9,8 @@ public enum AbuseErrorCode {
   DUPLICATE_REPORT(HttpStatus.CONFLICT, "you already have an open report for this subject"),
   ACTION_SUBJECT_MISMATCH(HttpStatus.BAD_REQUEST, "action does not apply to this subject type: %s"),
   SUSPEND_REQUIRES_EXPIRY(
-      HttpStatus.BAD_REQUEST, "SUSPEND_USER requires suspendUntil in the future");
+      HttpStatus.BAD_REQUEST, "SUSPEND_USER requires suspendUntil in the future"),
+  REASON_REQUIRED(HttpStatus.BAD_REQUEST, "reasonCode (or legacy reason) is required");
 
   private final HttpStatus status;
   private final String template;

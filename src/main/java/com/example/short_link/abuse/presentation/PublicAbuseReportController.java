@@ -2,7 +2,6 @@ package com.example.short_link.abuse.presentation;
 
 import com.example.short_link.abuse.application.write.SubmitAbuseReportCommand;
 import com.example.short_link.abuse.application.write.SubmitAbuseReportUseCase;
-import com.example.short_link.abuse.domain.AbuseReason;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.presentation.request.SubmitAbuseReportRequest;
 import jakarta.validation.Valid;
@@ -35,7 +34,7 @@ public class PublicAbuseReportController {
             userId,
             AbuseSubjectType.valueOf(request.subjectType().toUpperCase()),
             request.subjectId(),
-            AbuseReason.valueOf(request.reasonCode().toUpperCase()),
-            request.detail()));
+            request.resolvedReasonCode(),
+            request.resolvedDetail()));
   }
 }
