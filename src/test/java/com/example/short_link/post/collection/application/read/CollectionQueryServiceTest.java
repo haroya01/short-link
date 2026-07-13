@@ -250,7 +250,7 @@ class CollectionQueryServiceTest {
     when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(note));
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
 
-    List<CollectionSummaryView> views = service.listMine(1L);
+    List<CollectionSummaryView> views = service.listMine(1L, null, null);
 
     assertThat(views).hasSize(1);
     assertThat(views.get(0).id()).isEqualTo(10L);
@@ -277,7 +277,7 @@ class CollectionQueryServiceTest {
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of()); // 999 없음
     when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
 
-    List<CollectionSummaryView> views = service.listMine(1L);
+    List<CollectionSummaryView> views = service.listMine(1L, null, null);
 
     assertThat(views.get(0).preview()).hasSize(1); // 사라진 글 행은 빠짐
     assertThat(views.get(0).preview().get(0)).endsWith("…").hasSize(41); // 40자 + …
