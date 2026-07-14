@@ -309,6 +309,19 @@ class PostWriteStressTest {
     assertThat(getMarkdown(token, id)).isEqualTo(last);
   }
 
+  // MARK: CRLF 붙여넣기 — \r 가 블록 본문에 새면 안 된다(프론트 markdown-to-blocks 와 미러)
+
+  @Test
+  void crlfPasteIsNormalizedAndStable() throws Exception {
+    String token = token("g-st-crlf");
+    long id = createDraft(token, "st-crlf");
+
+    String canonical = putMarkdown(token, id, "# 제목\r\n\r\n본문 줄\r\n둘째 줄");
+    assertThat(canonical).doesNotContain("\r");
+    assertThat(getMarkdown(token, id)).isEqualTo(canonical);
+    assertThat(putMarkdown(token, id, canonical)).isEqualTo(canonical);
+  }
+
   // MARK: 유니코드 가혹 — ZWJ 가족·결합자·RTL 이 모든 블록 종류를 통과
 
   @Test

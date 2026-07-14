@@ -57,7 +57,9 @@ public class MarkdownBlocksConverter {
     if (markdown == null || markdown.isBlank()) {
       return List.of();
     }
-    String[] lines = markdown.split("\n", -1);
+    // Normalize CRLF pastes (Windows / external editors) — otherwise a stray \r rides every line
+    // into block contents and line-head matching. Mirrored in the frontend markdown-to-blocks.ts.
+    String[] lines = markdown.replace("\r\n", "\n").split("\n", -1);
     List<ReplacePostBlocksCommand.BlockInput> blocks = new ArrayList<>();
     int i = 0;
 
