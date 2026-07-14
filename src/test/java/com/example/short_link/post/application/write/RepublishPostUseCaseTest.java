@@ -22,13 +22,15 @@ class RepublishPostUseCaseTest {
 
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
+  @Mock private PostRevisionCapture postRevisionCapture;
   @Mock private ProfileCacheInvalidator cacheEviction;
 
   private RepublishPostUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new RepublishPostUseCase(postOwnership, postRepository, cacheEviction);
+    useCase =
+        new RepublishPostUseCase(postOwnership, postRepository, postRevisionCapture, cacheEviction);
   }
 
   @Test
