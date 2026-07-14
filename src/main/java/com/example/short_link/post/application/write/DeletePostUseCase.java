@@ -12,12 +12,16 @@ import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostReadRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostRevisionRepository;
+import com.example.short_link.post.exception.PostErrorCode;
+import com.example.short_link.post.exception.PostException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class DeletePostUseCase {
 
@@ -41,6 +45,25 @@ public class DeletePostUseCase {
   @Transactional
   public void execute(DeletePostCommand cmd) {
     PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    deleteCascade(post);
+  }
+
+  /**
+   * Admin removal of any author's post — same cascade as the owner path, no ownership gate on
+   * purpose ({@code /api/v1/admin/**} is ADMIN-only at the security layer, mirroring {@code
+   * UnpublishPostUseCase#adminExecute}). {@code adminUserId} is recorded for the audit trail only.
+   */
+  @Transactional
+  public void adminExecute(Long adminUserId, Long postId) {
+    log.info("admin post delete: adminUserId={}, postId={}", adminUserId, postId);
+    PostEntity post =
+        postRepository
+            .findById(postId)
+            .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId));
+    deleteCascade(post);
+  }
+
+  private void deleteCascade(PostEntity post) {
     List<Long> highlightIds =
         postHighlightRepository
             .findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(post.getId())

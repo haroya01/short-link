@@ -4,11 +4,14 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class UpdatePostMetadataUseCase {
 
@@ -52,6 +55,33 @@ public class UpdatePostMetadataUseCase {
     post.markEdited();
     if (searchFieldChanged) {
       // 저장된 본문 블록을 다시 읽어 새 메타와 합쳐 재계산(og-image·slug 만 바뀐 편집엔 조회를 아낀다).
+      searchTextUpdater.refresh(post);
+    }
+    return postRepository.save(post);
+  }
+
+  /**
+   * Admin moderation edit of any author's post — title and tags only (the fields moderation
+   * actually rewrites; body/slug/cover/excerpt stay the author's). No ownership gate on purpose —
+   * {@code /api/v1/admin/**} is ADMIN-only at the security layer, mirroring {@code
+   * UnpublishPostUseCase#adminExecute}. {@code adminUserId} is recorded for the audit trail only.
+   */
+  @Transactional
+  public PostEntity adminExecute(Long adminUserId, Long postId, String title, List<String> tags) {
+    log.info("admin post metadata edit: adminUserId={}, postId={}", adminUserId, postId);
+    PostEntity post =
+        postRepository
+            .findById(postId)
+            .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId));
+    boolean searchFieldChanged = title != null || tags != null;
+    if (title != null) {
+      post.updateTitle(title);
+    }
+    if (tags != null) {
+      post.updateTags(tags);
+    }
+    post.markEdited();
+    if (searchFieldChanged) {
       searchTextUpdater.refresh(post);
     }
     return postRepository.save(post);
