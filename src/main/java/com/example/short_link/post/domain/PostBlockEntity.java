@@ -35,7 +35,8 @@ public class PostBlockEntity extends BaseTimeEntity {
    * key}. CTA_REF: JSON {ctaId} pointing to the CTA library entity. LIST_BULLET/LIST_NUMBERED: JSON
    * array of items. EMBED: JSON {provider, url, html}. DIVIDER: null.
    */
-  @Column(columnDefinition = "TEXT")
+  // V114: TEXT(65,535바이트)는 블록당 100,000자 가드보다 작아 긴 블록 저장이 컬럼에서 터졌다.
+  @Column(columnDefinition = "MEDIUMTEXT")
   private String content;
 
   @Column(name = "block_order", nullable = false)
