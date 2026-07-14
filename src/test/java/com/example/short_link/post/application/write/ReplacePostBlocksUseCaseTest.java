@@ -108,8 +108,11 @@ class ReplacePostBlocksUseCaseTest {
                 i -> new ReplacePostBlocksCommand.BlockInput(PostBlockType.PARAGRAPH, "block " + i))
             .toList();
 
+    // 본문 한도는 사용자가 볼 사유라 PostException(BODY_LIMIT) — 익명 IllegalArgument 가 아니다.
     assertThatThrownBy(() -> new ReplacePostBlocksCommand(7L, 42L, tooMany))
-        .isInstanceOf(IllegalArgumentException.class);
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.BODY_LIMIT);
   }
 
   @Test
