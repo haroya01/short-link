@@ -177,6 +177,11 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/links/*/public-stats", "/api/v1/links/*/stream")
                     .permitAll()
+                    // 컬렉션 상세는 공유 가능한 단위 — 공개 컬렉션은 비로그인도 읽는다. 컨트롤러가
+                    // null principal 을 받아 isVisibleTo()로 비공개를 404 로 감춘다(정보 누출 없음).
+                    // 단일 세그먼트 매처라 /collections/{id}/connections 등 쓰기 경로는 안 열린다.
+                    .requestMatchers(GET, "/api/v1/collections/*")
+                    .permitAll()
                     // Author follower count is public; following-state needs auth but the
                     // controller reads a null principal for anonymous viewers. PUT/DELETE stay
                     // authenticated via anyRequest().
