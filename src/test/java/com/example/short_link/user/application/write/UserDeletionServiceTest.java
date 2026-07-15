@@ -182,6 +182,12 @@ class UserDeletionServiceTest {
         "INSERT INTO notification_preference (user_id, type, enabled, created_at)"
             + " VALUES (?, 'DIGEST', 0, NOW(6))",
         authorId);
+    // blog_notification_preference — 블로그 벨 알림 옵트아웃(V108). users FK 가 아예 없어 eraser 가
+    // 안 비우면 영구삭제 후 고아 행으로 남는다(link_notification 짝과 같은 클래스의 회귀 가드).
+    jdbc.update(
+        "INSERT INTO blog_notification_preference (user_id, type, enabled, created_at)"
+            + " VALUES (?, 'MENTION', 0, NOW(6))",
+        authorId);
 
     deletionService.hardDelete(authorId);
     // users DELETE 는 flush 시점에야 실행된다 — 강제로 내보내 FK 체크가 실제로 일어나게 한다
@@ -218,6 +224,9 @@ class UserDeletionServiceTest {
             count("SELECT COUNT(*) FROM link_notification WHERE recipient_user_id = ?", authorId))
         .isZero();
     assertThat(count("SELECT COUNT(*) FROM notification_preference WHERE user_id = ?", authorId))
+        .isZero();
+    assertThat(
+            count("SELECT COUNT(*) FROM blog_notification_preference WHERE user_id = ?", authorId))
         .isZero();
     assertThat(count("SELECT COUNT(*) FROM series WHERE user_id = ?", authorId)).isZero();
     assertThat(count("SELECT COUNT(*) FROM series_subscription WHERE series_id = ?", seriesId))
