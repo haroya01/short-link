@@ -37,9 +37,15 @@ import com.example.short_link.post.presentation.request.UpdatePostRequest;
 import com.example.short_link.post.presentation.response.PostMarkdownResponse;
 import com.example.short_link.post.presentation.response.PreviewTokenResponse;
 import jakarta.validation.Valid;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -91,6 +97,43 @@ public class PostController {
   @GetMapping
   public List<PostView> listMine(@AuthenticationPrincipal Long userId) {
     return postQueryService.listMyPosts(userId);
+  }
+
+  /**
+   * 내 글 전부를 마크다운 zip 한 방으로 — "언제든 들고 나갈 수 있다"의 계정 단위 완성(글 단위 내보내기·공개 마크다운 URL 의 마지막 조각). 초안·예약·내림까지
+   * 전 상태 포함(내 데이터 전부), 파일마다 frontmatter(title/slug/status/tags/published) + 본문, 파일명은 유저당 유일한
+   * slug.md. 개인 블로그 규모(수백 편·글당 200k 자 캡)라 메모리 조립로 충분하다. API 키로도 호출 가능.
+   */
+  @GetMapping(value = "/export", produces = "application/zip")
+  public ResponseEntity<byte[]> exportAll(@AuthenticationPrincipal Long userId) throws IOException {
+    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+    try (ZipOutputStream zip = new ZipOutputStream(buffer, StandardCharsets.UTF_8)) {
+      for (PostView post : postQueryService.listMyPosts(userId)) {
+        String markdown = markdownBlocks.toMarkdown(postQueryService.listBlocks(userId, post.id()));
+        zip.putNextEntry(new ZipEntry(post.slug() + ".md"));
+        zip.write(exportDocument(post, markdown).getBytes(StandardCharsets.UTF_8));
+        zip.closeEntry();
+      }
+    }
+    return ResponseEntity.ok()
+        .header("Content-Disposition", "attachment; filename=\"kurl-export.zip\"")
+        .body(buffer.toByteArray());
+  }
+
+  /** 재발행에 필요한 최소 메타만 frontmatter 로 — 에디터의 .md 내보내기와 같은 문법. */
+  private static String exportDocument(PostView post, String markdown) {
+    StringBuilder head = new StringBuilder("---\n");
+    head.append("title: \"").append(post.title().replace("\"", "\\\"")).append("\"\n");
+    head.append("slug: ").append(post.slug()).append('\n');
+    head.append("status: ").append(post.status()).append('\n');
+    if (post.tags() != null && !post.tags().isEmpty()) {
+      head.append("tags: [").append(String.join(", ", post.tags())).append("]\n");
+    }
+    if (post.publishedAt() != null) {
+      head.append("published: ").append(post.publishedAt()).append('\n');
+    }
+    head.append("---\n\n");
+    return head + markdown + "\n";
   }
 
   @GetMapping("/{id}")

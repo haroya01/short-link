@@ -445,4 +445,48 @@ class PostControllerTest {
                 .content("{\"postIds\":[]}"))
         .andExpect(status().isUnauthorized());
   }
+
+  @Test
+  void exportAllZipsEveryPostAsFrontmatterMarkdown() throws Exception {
+    PostView v1 = PostView.from(new PostEntity(USER_ID, "post-1", "Post 1", "ko"));
+    PostView v2 = PostView.from(new PostEntity(USER_ID, "post-2", "Post 2", "ja"));
+    when(postQueryService.listMyPosts(USER_ID)).thenReturn(List.of(v1, v2));
+    when(postQueryService.listBlocks(eq(USER_ID), any())).thenReturn(List.of());
+    when(markdownBlocks.toMarkdown(any())).thenReturn("본문");
+
+    byte[] zipBytes =
+        mvc.perform(
+                get("/api/v1/posts/export")
+                    .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+            .andExpect(status().isOk())
+            .andExpect(
+                org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                    .string("Content-Disposition", "attachment; filename=\"kurl-export.zip\""))
+            .andReturn()
+            .getResponse()
+            .getContentAsByteArray();
+
+    var entries = new java.util.LinkedHashMap<String, String>();
+    try (var zip =
+        new java.util.zip.ZipInputStream(
+            new java.io.ByteArrayInputStream(zipBytes), java.nio.charset.StandardCharsets.UTF_8)) {
+      java.util.zip.ZipEntry entry;
+      while ((entry = zip.getNextEntry()) != null) {
+        entries.put(
+            entry.getName(),
+            new String(zip.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+      }
+    }
+    org.assertj.core.api.Assertions.assertThat(entries.keySet())
+        .containsExactly("post-1.md", "post-2.md");
+    org.assertj.core.api.Assertions.assertThat(entries.get("post-1.md"))
+        .contains("title: \"Post 1\"")
+        .contains("slug: post-1")
+        .contains("본문");
+  }
+
+  @Test
+  void anonymousExportIs401() throws Exception {
+    mvc.perform(get("/api/v1/posts/export")).andExpect(status().isUnauthorized());
+  }
 }
