@@ -1,7 +1,10 @@
 package com.example.short_link.post.presentation;
 
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -11,6 +14,7 @@ import com.example.short_link.post.application.read.PublicPostDetail;
 import com.example.short_link.post.application.read.PublicPostListItem;
 import com.example.short_link.post.application.read.PublicPostListView;
 import com.example.short_link.post.application.read.PublicPostQueryService;
+import com.example.short_link.post.application.write.MarkdownBlocksConverter;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.profile.exception.ProfileErrorCode;
@@ -32,6 +36,8 @@ class PublicPostControllerTest {
   @Autowired private MockMvc mvc;
 
   @MockitoBean private PublicPostQueryService publicPostQueryService;
+  // 직렬화 자체는 마크다운 왕복 테스트가 소유 — 슬라이스에선 플레인 텍스트 응답 계약만 본다.
+  @MockitoBean private MarkdownBlocksConverter markdownBlocks;
 
   private static final Instant NOW = Instant.parse("2026-01-01T00:00:00Z");
 
@@ -113,5 +119,33 @@ class PublicPostControllerTest {
     mvc.perform(get("/api/v1/public/profiles/john/posts/gone"))
         .andExpect(status().isGone())
         .andExpect(jsonPath("$.code").value("POST_GONE"));
+  }
+
+  @Test
+  void publicMarkdownServesPlainMarkdownWithFilename() throws Exception {
+    PublicPostDetail detail =
+        new PublicPostDetail(
+            new PublicAuthorView(7L, "john", "Bio", null),
+            new PublicPostListItem(
+                10L, "first-post", "First", "Excerpt", null, "ko", List.of(), 0L, NOW, null, false),
+            List.of(new PublicPostBlockView("PARAGRAPH", "Hello **world**", 0, null)),
+            null);
+    when(publicPostQueryService.findPublicPost("john", "first-post")).thenReturn(detail);
+    when(markdownBlocks.toMarkdown(anyList())).thenReturn("Hello **world**\n");
+
+    mvc.perform(get("/api/v1/public/profiles/john/posts/first-post/markdown"))
+        .andExpect(status().isOk())
+        .andExpect(content().contentTypeCompatibleWith("text/markdown"))
+        .andExpect(header().string("Content-Disposition", "inline; filename=\"first-post.md\""))
+        .andExpect(content().string("Hello **world**\n"));
+  }
+
+  @Test
+  void publicMarkdownForDraftReturns404() throws Exception {
+    when(publicPostQueryService.findPublicPost("john", "draft"))
+        .thenThrow(new PostException(PostErrorCode.POST_NOT_FOUND, "draft"));
+
+    mvc.perform(get("/api/v1/public/profiles/john/posts/draft/markdown"))
+        .andExpect(status().isNotFound());
   }
 }
