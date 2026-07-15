@@ -1,0 +1,59 @@
+name: Unpublish junk posts (temp, scoped write)
+
+# 임시·범위한정 쓰기. 출시 전 피드 정리 — honggildong 계정의 테스트 발행글 10편을
+# 발행취소(UNPUBLISHED)로 내린다. 앱의 발행취소와 같은 효과: status 플립(본문·리비전 보존,
+# publishedAt 유지, 재발행 가능) + 프로필 캐시 키 삭제. 대상은 slug 화이트리스트로 고정.
+# 기본은 드라이런(조회만). 실제 실행은 confirm=unpublish-10 + dry_run=no. 실행 후 이 파일은 제거한다.
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "실행 확인 문자열 (unpublish-10 이어야 함)"
+        default: ""
+      dry_run:
+        description: "yes = 조회만 / no = 실제 발행취소"
+        default: "yes"
+
+permissions:
+  contents: read
+
+jobs:
+  unpublish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unpublish listed junk posts on EC2 DB
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ vars.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          envs: CONFIRM,DRY_RUN
+          script_stop: false
+          script: |
+            cd ~/short-link/deploy
+            SLUGS="'p-1784004825-630','draft-wh4gjel','p-1783003261-501','p-1782112312-551','p-1781575285','draft-iylwtu7','draft-y8pj04m','draft-2n4nbew','draft-dq0yeoe','draft-karrijw'"
+
+            echo "================ BEFORE (대상 행) ================"
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -e "SELECT p.id, p.slug, p.status, LEFT(p.title,24) title FROM posts p JOIN users u ON u.id=p.user_id WHERE u.username='\''honggildong'\'' AND p.slug IN ('"$SLUGS"') ORDER BY p.id;"' 2>&1 | tail -c 3000
+
+            if [ "$CONFIRM" != "unpublish-10" ] || [ "$DRY_RUN" != "no" ]; then
+              echo "== 드라이런 종료 (confirm='$CONFIRM', dry_run='$DRY_RUN') — 아무것도 바꾸지 않음 =="
+              exit 0
+            fi
+
+            echo "================ UPDATE 실행 ================"
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -e "UPDATE posts p JOIN users u ON u.id=p.user_id SET p.status='\''UNPUBLISHED'\'' WHERE u.username='\''honggildong'\'' AND p.status='\''PUBLISHED'\'' AND p.slug IN ('"$SLUGS"'); SELECT ROW_COUNT() AS unpublished_rows;"' 2>&1 | tail -c 500
+
+            echo "================ AFTER (대상 행) ================"
+            docker compose exec -T mysql sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD" "${MYSQL_DATABASE:-short_link}" -e "SELECT p.slug, p.status FROM posts p JOIN users u ON u.id=p.user_id WHERE u.username='\''honggildong'\'' AND p.slug IN ('"$SLUGS"') ORDER BY p.id;"' 2>&1 | tail -c 2000
+
+            echo "================ 프로필 캐시 키 삭제 ================"
+            docker compose exec -T redis redis-cli DEL "public-profile::honggildong" || true
+
+            echo "================ 공개 피드 재확인 ================"
+            sleep 2
+            curl -s "https://kurl.me/api/v1/public/posts?sort=recent&page=0&size=50" | head -c 1200
+        env:
+          CONFIRM: ${{ github.event.inputs.confirm }}
+          DRY_RUN: ${{ github.event.inputs.dry_run }}
