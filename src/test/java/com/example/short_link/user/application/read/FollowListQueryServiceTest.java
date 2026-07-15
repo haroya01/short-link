@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import java.time.Instant;
 import java.util.List;
@@ -138,5 +139,50 @@ class FollowListQueryServiceTest {
 
     assertThatThrownBy(() -> service.followers(9L, "ghost", 0, 20))
         .isInstanceOf(UserException.class);
+  }
+
+  private UserEntity hidingUser(long id, String username) {
+    UserEntity u = user(id, username);
+    u.updateHideFollowerCount(true);
+    return u;
+  }
+
+  @Test
+  void hiddenCountsLockBothListsForOtherViewers() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(hidingUser(2L, "bob")));
+
+    assertThatThrownBy(() -> service.followers(9L, "bob", 0, 20))
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.FOLLOW_LIST_HIDDEN);
+    assertThatThrownBy(() -> service.following(9L, "bob", 0, 20))
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.FOLLOW_LIST_HIDDEN);
+    verify(followRepository, never()).findFollowerIds(2L, 0, 20);
+  }
+
+  @Test
+  void hiddenCountsLockListsForAnonymousViewers() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(hidingUser(2L, "bob")));
+
+    assertThatThrownBy(() -> service.followers(null, "bob", 0, 20))
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.FOLLOW_LIST_HIDDEN);
+  }
+
+  @Test
+  void ownerStillSeesTheirOwnListsWhenHidden() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(hidingUser(2L, "bob")));
+    when(followRepository.findFollowerIds(2L, 0, 20)).thenReturn(List.of(10L));
+    when(followRepository.countByFollowingId(2L)).thenReturn(1L);
+    when(userRepository.findAllByIdIn(List.of(10L))).thenReturn(List.of(user(10L, "alice")));
+    when(followRepository.countFollowersByIdIn(anyCollection())).thenReturn(Map.of(10L, 7L));
+    when(followRepository.findFollowedAmong(eq(2L), anyCollection())).thenReturn(List.of());
+
+    FollowListView view = service.followers(2L, "bob", 0, 20);
+
+    assertThat(view.items()).extracting(FollowUserView::id).containsExactly(10L);
   }
 }
