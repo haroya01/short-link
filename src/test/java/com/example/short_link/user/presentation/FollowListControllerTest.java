@@ -12,6 +12,8 @@ import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import com.example.short_link.user.application.read.FollowListQueryService;
 import com.example.short_link.user.application.read.FollowListView;
 import com.example.short_link.user.application.read.FollowUserView;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,6 +58,17 @@ class FollowListControllerTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items[0].followerCount").value(7));
+  }
+
+  @Test
+  void hiddenListsSurfaceAs403() throws Exception {
+    when(followListQueryService.followers(USER_ID, "bob", 0, 20))
+        .thenThrow(new UserException(UserErrorCode.FOLLOW_LIST_HIDDEN));
+
+    mvc.perform(
+            get("/api/v1/users/bob/followers")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isForbidden());
   }
 
   @Test
