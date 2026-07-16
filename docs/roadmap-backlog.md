@@ -36,6 +36,30 @@ grouped by axis. Not committing anyone to anything — a place to choose from.
   catch regressions every run.
 - **Backend perf** — the full-review HIGH items + candidates #9–#18 (see `perf-notes/`).
 
+### Correctness / concurrency (confirmed defects — good "found & fixed" stories)
+
+Both surfaced while deriving interview questions from the redirect + auth hot paths
+(see `docs/interview/`). Small diffs, high signal.
+
+- **Refresh rotation race — `exists → delete` is not atomic.** `AuthService.refresh()` gates on
+  `refreshStore.exists(userId, jti)` then *separately* `delete()`s. Two concurrent refreshes with
+  the same `jti` (two subdomains `blog.` + apex, or two tabs) both pass `exists` before either
+  deletes → both take the live-session branch → **one refresh token yields two valid sessions**
+  (one-time-use broken), and reuse-detection is blind in the race window. The grace marker only
+  covers the *sequential* replay, not this *simultaneous* one. **Fix:** gate on the atomic result of
+  the delete, not a prior `exists` — `RedisRefreshTokenStore.delete` returns `void` today; have it
+  return the `DEL` count (`redis.delete` → `Long`) so only the request whose delete returns 1 is the
+  rotator; the loser falls through to the grace/reissue branch. (`GETDEL` / Lua = same idea.)
+- **Prefetch & blocked-country burn a capped view.** `LinkRedirectFlow.execute()` runs
+  `enforceViewLimit()` (atomic increment, committed) *before* the country-block check and *before*
+  the prefetch classification. So a browser prefetch or a blocked-country hit consumes one of the
+  `maxViews` slots even though no human was ever redirected — inconsistent with the stats path,
+  which excludes prefetch from human clicks using the same `Sec-Purpose`/`Purpose`/`X-moz` signal.
+  **Fix:** classify prefetch + resolve the country block *before* incrementing, and only spend a
+  view on a real, non-prefetch, allowed redirect. Ordering caveat: keep the increment itself atomic
+  (`UPDATE … WHERE view_count < max_views`) — deferring it past the redirect decision reopens the
+  oversell race.
+
 ---
 
 Suggested order if optimising for portfolio: **recommendations v2** (infra-free, big perceived win,
