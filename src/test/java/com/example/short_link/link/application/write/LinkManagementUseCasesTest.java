@@ -7,6 +7,7 @@ import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -91,6 +92,31 @@ class LinkManagementUseCasesTest {
                         null,
                         null)))
         .isInstanceOf(LinkException.class);
+  }
+
+  @Test
+  void updateToOwnShortLinkHostThrowsAndKeepsUrl() {
+    UserEntity user = userRepository.save(new UserEntity("u@x.com", "google", "g-lmu4"));
+    linkRepository.save(new LinkEntity("https://old.com", "lmu0004", user.getId(), null));
+
+    // 테스트 프로파일 base-url(http://localhost:8080)의 호스트로 갱신 시도 — 생성 경로와 같은
+    // 자기참조 거부를 타야 갱신으로 리다이렉트 루프를 만드는 우회가 막힌다.
+    assertThatThrownBy(
+            () ->
+                updateLink.execute(
+                    new UpdateLinkCommand(
+                        user.getId(),
+                        new ShortCode("lmu0004"),
+                        "http://localhost:8080/abc123",
+                        null,
+                        null,
+                        null)))
+        .isInstanceOfSatisfying(
+            LinkException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.SELF_REFERENCING_URL));
+
+    LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("lmu0004")).orElseThrow();
+    assertThat(reloaded.getOriginalUrl()).isEqualTo("https://old.com");
   }
 
   @Test

@@ -48,7 +48,8 @@ class LinkCreationServiceQuotaTest {
             new CreateLinkValidator(
                 (BlockedDomainChecker) mockBlockedDomainService(),
                 safety,
-                (MeterRegistry) new SimpleMeterRegistry()),
+                (MeterRegistry) new SimpleMeterRegistry(),
+                "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
             noopTx(),
             200L);
@@ -80,7 +81,8 @@ class LinkCreationServiceQuotaTest {
             new CreateLinkValidator(
                 (BlockedDomainChecker) mockBlockedDomainService(),
                 safety,
-                (MeterRegistry) new SimpleMeterRegistry()),
+                (MeterRegistry) new SimpleMeterRegistry(),
+                "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
             noopTx(),
             200L);
@@ -112,7 +114,8 @@ class LinkCreationServiceQuotaTest {
             new CreateLinkValidator(
                 (BlockedDomainChecker) mockBlockedDomainService(),
                 safety,
-                (MeterRegistry) new SimpleMeterRegistry()),
+                (MeterRegistry) new SimpleMeterRegistry(),
+                "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
             noopTx(),
             200L);
@@ -141,7 +144,8 @@ class LinkCreationServiceQuotaTest {
             new CreateLinkValidator(
                 (BlockedDomainChecker) mockBlockedDomainService(),
                 safety,
-                (MeterRegistry) new SimpleMeterRegistry()),
+                (MeterRegistry) new SimpleMeterRegistry(),
+                "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
             noopTx(),
             200L);
@@ -182,7 +186,8 @@ class LinkCreationServiceQuotaTest {
             new CreateLinkValidator(
                 (BlockedDomainChecker) mockBlockedDomainService(),
                 safety,
-                (MeterRegistry) new SimpleMeterRegistry()),
+                (MeterRegistry) new SimpleMeterRegistry(),
+                "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
             noopTx(),
             200L);

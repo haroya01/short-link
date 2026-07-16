@@ -71,6 +71,28 @@ class ImportLinksFromCsvUseCaseTest {
   }
 
   @Test
+  void rejectsOwnShortLinkRowsWithoutFailingTheBatch() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("bulk5@example.com", "google", "g-bulk5"));
+    // 두 번째 행은 테스트 프로파일 base-url(http://localhost:8080)의 호스트 — CSV 임포트도
+    // 단건 생성과 같은 자기참조 거부를 탄다.
+    String csv =
+        """
+        url
+        https://example.com/fine
+        http://localhost:8080/abc123
+        """;
+
+    BulkImportResult result =
+        useCase.execute(
+            new ImportLinksFromCsvCommand(
+                user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
+
+    assertThat(result.ok()).isEqualTo(1);
+    assertThat(result.failed()).isEqualTo(1);
+    assertThat(result.rows().get(1).error()).contains("SELF_REFERENCING_URL");
+  }
+
+  @Test
   void rejectsBatchTooLarge() {
     UserEntity user = userRepository.save(new UserEntity("bulk3@example.com", "google", "g-bulk3"));
     StringBuilder csv = new StringBuilder("url\n");

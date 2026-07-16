@@ -20,6 +20,7 @@ public enum LinkErrorCode {
       HttpStatus.INTERNAL_SERVER_ERROR,
       "Failed to generate unique short code after multiple attempts"),
   MALICIOUS_URL(HttpStatus.BAD_REQUEST, "malicious url rejected (sha256_prefix=%s)"),
+  SELF_REFERENCING_URL(HttpStatus.BAD_REQUEST, "url points back at the short link service: %s"),
   BULK_IMPORT_TOO_LARGE(
       HttpStatus.PAYLOAD_TOO_LARGE, "bulk import too large: %d rows (limit %d)", "rows", "limit"),
   INVALID_CURSOR(HttpStatus.BAD_REQUEST, "Invalid cursor"),
