@@ -47,7 +47,7 @@ class PublicConnectionFeedControllerTest {
             null,
             null);
     when(discoverFeedQuery.publicFeed(0, 20))
-        .thenReturn(new DiscoverFeedView(List.of(item), 0, 20, false));
+        .thenReturn(new DiscoverFeedView(List.of(item), 0, 20, false, "global"));
 
     // 미로그인(헤더 없음)에도 200 — GET /api/v1/public/** 은 permitAll.
     mvc.perform(get("/api/v1/public/feed/connections"))
@@ -57,13 +57,14 @@ class PublicConnectionFeedControllerTest {
         .andExpect(jsonPath("$.items[0].blockType").value("POST"))
         .andExpect(jsonPath("$.items[0].title").value("헥사고날로 갈아탄 지 석 달"))
         .andExpect(jsonPath("$.page").value(0))
-        .andExpect(jsonPath("$.hasNext").value(false));
+        .andExpect(jsonPath("$.hasNext").value(false))
+        .andExpect(jsonPath("$.source").value("global"));
   }
 
   @Test
   void passesPagingParams() throws Exception {
     when(discoverFeedQuery.publicFeed(2, 10))
-        .thenReturn(new DiscoverFeedView(List.of(), 2, 10, false));
+        .thenReturn(new DiscoverFeedView(List.of(), 2, 10, false, "global"));
 
     mvc.perform(get("/api/v1/public/feed/connections").param("page", "2").param("size", "10"))
         .andExpect(status().isOk());
@@ -74,7 +75,7 @@ class PublicConnectionFeedControllerTest {
   @Test
   void emptyFeedReturnsEmptyItems() throws Exception {
     when(discoverFeedQuery.publicFeed(0, 20))
-        .thenReturn(new DiscoverFeedView(List.of(), 0, 20, false));
+        .thenReturn(new DiscoverFeedView(List.of(), 0, 20, false, "global"));
 
     mvc.perform(get("/api/v1/public/feed/connections"))
         .andExpect(status().isOk())

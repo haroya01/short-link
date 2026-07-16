@@ -60,12 +60,17 @@ public class PostHighlightController {
     return highlightQuery.listMine(userId);
   }
 
-  /** "남들 하이라이트" 피드 — 팔로우한 큐레이터가 최근 칠한 공개 구절(최신순, 페이지). */
+  /**
+   * "남들 하이라이트" 피드 — 팔로우한 큐레이터가 최근 칠한 공개 구절(최신순, 페이지). 팔로우가 없거나 첫 페이지가 비면 전역 공개 하이라이트로 폴백하고(응답
+   * source 로 구분), {@code scope=global} 이면 페이지네이션 고정을 위해 무조건 전역 피드를 준다.
+   */
   @GetMapping("/highlights/feed")
   public HighlightFeedView highlightFeed(
       @AuthenticationPrincipal Long userId,
       @RequestParam(defaultValue = "0") int page,
-      @RequestParam(defaultValue = "20") int size) {
-    return highlightQuery.feed(userId, Math.max(page, 0), Math.min(Math.max(size, 1), 50));
+      @RequestParam(defaultValue = "20") int size,
+      @RequestParam(required = false) String scope) {
+    return highlightQuery.feed(
+        userId, Math.max(page, 0), Math.min(Math.max(size, 1), 50), "global".equals(scope));
   }
 }
