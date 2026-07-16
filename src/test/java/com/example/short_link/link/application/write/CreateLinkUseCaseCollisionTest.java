@@ -47,7 +47,8 @@ class LinkCreationServiceCollisionTest {
             new CreateLinkValidator(
                 (BlockedDomainChecker) blockedDomain,
                 safetyChecker,
-                (MeterRegistry) new SimpleMeterRegistry()),
+                (MeterRegistry) new SimpleMeterRegistry(),
+                "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
             noopTransactionManager(),
             200L);
