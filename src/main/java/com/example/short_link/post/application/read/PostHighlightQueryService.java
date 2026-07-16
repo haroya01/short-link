@@ -101,17 +101,37 @@ public class PostHighlightQueryService {
 
   /**
    * "남들 하이라이트" 피드 — 팔로우한 큐레이터가 최근 칠한 공개 구절을 최신순으로. 대상 글·큐레이터·작가·답글수를 일괄 해석(N+1 없이) 하고, 대상 글이 사라진
-   * 하이라이트는 건너뛴다. 팔로우가 없으면 빈 피드(콜드스타트는 클라 안내).
+   * 하이라이트는 건너뛴다. 팔로우가 없거나 팔로우들의 활동이 없어 첫 페이지가 비면 전역 공개 하이라이트로 폴백한다 — 콜드스타트에도 빈 화면을 주지 않는다(응답 {@code
+   * source} 로 구분, 1페이지 이후의 빈 결과는 정상 종료라 폴백하지 않는다). {@code forceGlobal} 은 폴백으로 넘어간 클라이언트가 페이지네이션을 전역
+   * 기준으로 고정할 때 쓴다.
    */
-  public HighlightFeedView feed(Long userId, int page, int size) {
+  public HighlightFeedView feed(Long userId, int page, int size, boolean forceGlobal) {
+    if (forceGlobal) {
+      return globalFeed(page, size);
+    }
     List<Long> followingIds = followRepository.findFollowingIds(userId);
     if (followingIds.isEmpty()) {
-      return new HighlightFeedView(List.of(), page, size, false);
+      return globalFeed(page, size);
     }
 
     List<PostHighlightEntity> highlights =
         highlightRepository.findByUserIdsOrderByCreatedAtDesc(followingIds, page, size);
+    if (highlights.isEmpty() && page == 0) {
+      return globalFeed(page, size);
+    }
+    return assemble(highlights, page, size, HighlightFeedView.SOURCE_FOLLOWING);
+  }
 
+  /** 전역 공개 하이라이트(발행 글 위의 구절만) — 팔로우 그래프와 무관한 콜드스타트 폴백 흐름. */
+  private HighlightFeedView globalFeed(int page, int size) {
+    List<PostHighlightEntity> highlights =
+        highlightRepository.findRecentOnPublishedPosts(page, size);
+    return assemble(highlights, page, size, HighlightFeedView.SOURCE_GLOBAL);
+  }
+
+  /** highlights → view 조립. 대상 글·큐레이터·작가·답글수를 일괄 해석하고 대상 글이 사라진 구절은 건너뛴다. */
+  private HighlightFeedView assemble(
+      List<PostHighlightEntity> highlights, int page, int size, String source) {
     List<Long> postIds =
         highlights.stream().map(PostHighlightEntity::getPostId).distinct().toList();
     Map<Long, PostEntity> posts =
@@ -158,6 +178,6 @@ public class PostHighlightQueryService {
             .filter(Objects::nonNull)
             .toList();
 
-    return new HighlightFeedView(items, page, size, highlights.size() == size);
+    return new HighlightFeedView(items, page, size, highlights.size() == size, source);
   }
 }

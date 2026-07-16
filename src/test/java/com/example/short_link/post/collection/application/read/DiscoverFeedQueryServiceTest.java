@@ -3,6 +3,8 @@ package com.example.short_link.post.collection.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -79,15 +81,70 @@ class DiscoverFeedQueryServiceTest {
     return u;
   }
 
+  // 팔로우 0 = 콜드스타트 — 빈 화면 대신 전역 공개 피드로 폴백한다(source=global).
   @Test
-  void emptyWhenViewerFollowsNoOne() {
+  void fallsBackToGlobalWhenViewerFollowsNoOne() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of());
+    when(connectionRepository.findRecentPublicConnections(0, 20))
+        .thenReturn(List.of(row(100L, ConnectionBlockType.NOTE, 7L, 3L)));
+    NoteEntity note = new NoteEntity(3L, "전역에서 온 노트");
+    ReflectionTestUtils.setField(note, "id", 7L);
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(note));
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(3L, "sori")));
 
-    DiscoverFeedView feed = service.feed(1L, 0, 20);
+    DiscoverFeedView feed = service.feed(1L, 0, 20, false);
 
+    assertThat(feed.source()).isEqualTo("global");
+    assertThat(feed.items()).hasSize(1);
+    assertThat(feed.items().get(0).body()).isEqualTo("전역에서 온 노트");
+    verify(connectionRepository, never())
+        .findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt());
+  }
+
+  // 팔로우는 있는데 그들의 공개 연결이 0 — 첫 페이지만 전역으로 폴백한다.
+  @Test
+  void fallsBackToGlobalOnFirstPageWhenFollowedCuratorsAreQuiet() {
+    when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
+    when(connectionRepository.findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt()))
+        .thenReturn(List.of());
+    when(connectionRepository.findRecentPublicConnections(0, 20))
+        .thenReturn(List.of(row(100L, ConnectionBlockType.NOTE, 7L, 3L)));
+    NoteEntity note = new NoteEntity(3L, "전역에서 온 노트");
+    ReflectionTestUtils.setField(note, "id", 7L);
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(note));
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(3L, "sori")));
+
+    DiscoverFeedView feed = service.feed(1L, 0, 20, false);
+
+    assertThat(feed.source()).isEqualTo("global");
+    assertThat(feed.items()).hasSize(1);
+  }
+
+  // 1페이지 이후의 빈 결과는 개인화 피드의 정상 종료 — 전역을 섞으면 페이지가 오염되므로 폴백하지 않는다.
+  @Test
+  void doesNotFallBackBeyondFirstPage() {
+    when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
+    when(connectionRepository.findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt()))
+        .thenReturn(List.of());
+
+    DiscoverFeedView feed = service.feed(1L, 1, 20, false);
+
+    assertThat(feed.source()).isEqualTo("following");
     assertThat(feed.items()).isEmpty();
     assertThat(feed.hasNext()).isFalse();
-    verifyNoInteractions(connectionRepository);
+    verify(connectionRepository, never()).findRecentPublicConnections(anyInt(), anyInt());
+  }
+
+  // scope=global 고정 — 팔로우 그래프를 아예 묻지 않고 전역 페이지네이션을 이어간다.
+  @Test
+  void forceGlobalPinsGlobalFeedRegardlessOfFollowGraph() {
+    when(connectionRepository.findRecentPublicConnections(2, 10)).thenReturn(List.of());
+
+    DiscoverFeedView feed = service.feed(1L, 2, 10, true);
+
+    assertThat(feed.source()).isEqualTo("global");
+    assertThat(feed.items()).isEmpty();
+    verifyNoInteractions(followRepository);
   }
 
   @Test
@@ -112,10 +169,11 @@ class DiscoverFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(user(2L, "minji"), user(3L, "sori"), user(4L, "author")));
 
-    DiscoverFeedView feed = service.feed(1L, 0, 20);
+    DiscoverFeedView feed = service.feed(1L, 0, 20, false);
 
     assertThat(feed.items()).hasSize(3);
     assertThat(feed.hasNext()).isFalse(); // 3 < 20
+    assertThat(feed.source()).isEqualTo("following"); // 개인화가 채워졌으니 폴백 없음
     DiscoverConnectionView postItem = feed.items().get(0);
     assertThat(postItem.curator().username()).isEqualTo("minji");
     assertThat(postItem.blockType()).isEqualTo("POST");
@@ -149,7 +207,7 @@ class DiscoverFeedQueryServiceTest {
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(2L, "minji")));
 
-    DiscoverFeedView feed = service.feed(1L, 0, 2);
+    DiscoverFeedView feed = service.feed(1L, 0, 2, false);
 
     assertThat(feed.items()).hasSize(1); // 999-owned row skipped
     assertThat(feed.items().get(0).body()).isEqualTo("보이는 노트");
@@ -176,6 +234,7 @@ class DiscoverFeedQueryServiceTest {
     // 팔로우와 무관하게 전역 공개 연결이 흐른다 — followRepository 는 건드리지 않는다.
     assertThat(feed.items()).hasSize(2);
     assertThat(feed.hasNext()).isFalse(); // 2 < 20
+    assertThat(feed.source()).isEqualTo("global");
     assertThat(feed.items().get(0).blockType()).isEqualTo("POST");
     assertThat(feed.items().get(0).curator().username()).isEqualTo("minji");
     assertThat(feed.items().get(0).title()).isEqualTo("Title 5");
@@ -194,6 +253,7 @@ class DiscoverFeedQueryServiceTest {
     assertThat(feed.page()).isEqualTo(3);
     assertThat(feed.size()).isEqualTo(10);
     assertThat(feed.hasNext()).isFalse(); // 0 rows != size 10
+    assertThat(feed.source()).isEqualTo("global");
     verifyNoInteractions(followRepository);
   }
 }

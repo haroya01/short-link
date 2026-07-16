@@ -49,8 +49,8 @@ class DiscoverFeedControllerTest {
             "honggildong",
             null,
             null);
-    when(discoverFeedQuery.feed(USER_ID, 0, 20))
-        .thenReturn(new DiscoverFeedView(List.of(item), 0, 20, false));
+    when(discoverFeedQuery.feed(USER_ID, 0, 20, false))
+        .thenReturn(new DiscoverFeedView(List.of(item), 0, 20, false, "following"));
 
     mvc.perform(
             get("/api/v1/feed/connections")
@@ -60,13 +60,14 @@ class DiscoverFeedControllerTest {
         .andExpect(jsonPath("$.items[0].collectionTitle").value("느린 사고"))
         .andExpect(jsonPath("$.items[0].blockType").value("POST"))
         .andExpect(jsonPath("$.items[0].title").value("헥사고날로 갈아탄 지 석 달"))
-        .andExpect(jsonPath("$.hasNext").value(false));
+        .andExpect(jsonPath("$.hasNext").value(false))
+        .andExpect(jsonPath("$.source").value("following"));
   }
 
   @Test
   void passesPagingParams() throws Exception {
-    when(discoverFeedQuery.feed(USER_ID, 2, 10))
-        .thenReturn(new DiscoverFeedView(List.of(), 2, 10, false));
+    when(discoverFeedQuery.feed(USER_ID, 2, 10, false))
+        .thenReturn(new DiscoverFeedView(List.of(), 2, 10, false, "following"));
 
     mvc.perform(
             get("/api/v1/feed/connections")
@@ -75,7 +76,24 @@ class DiscoverFeedControllerTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk());
 
-    verify(discoverFeedQuery).feed(USER_ID, 2, 10);
+    verify(discoverFeedQuery).feed(USER_ID, 2, 10, false);
+  }
+
+  // scope=global — 폴백으로 넘어간 클라이언트가 전역 페이지네이션을 고정해서 이어간다.
+  @Test
+  void scopeGlobalPinsGlobalFeed() throws Exception {
+    when(discoverFeedQuery.feed(USER_ID, 1, 20, true))
+        .thenReturn(new DiscoverFeedView(List.of(), 1, 20, false, "global"));
+
+    mvc.perform(
+            get("/api/v1/feed/connections")
+                .param("page", "1")
+                .param("scope", "global")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.source").value("global"));
+
+    verify(discoverFeedQuery).feed(USER_ID, 1, 20, true);
   }
 
   @Test

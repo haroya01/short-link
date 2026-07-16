@@ -55,6 +55,11 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
   }
 
   @Override
+  public List<PostHighlightEntity> findRecentOnPublishedPosts(int page, int size) {
+    return jpa.findRecentOnPublishedPosts(PageRequest.of(page, size));
+  }
+
+  @Override
   public int deleteAllByPostId(Long postId) {
     return jpa.deleteAllByPostId(postId);
   }

@@ -25,7 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 발견 = 큐레이터의 연결을 따라가기(§0). 내가 팔로우한 사람들의 *공개* 컬렉션에 최근 이어진 연결을 최신순으로 흘린다 — 알고리즘 랭킹이 아니라 사람의 큐레이션.
- * 블록·큐레이터를 일괄 해석(N+1 없이) 하고, 대상이 사라진 연결은 건너뛴다. 팔로우가 없으면 빈 피드(콜드스타트는 클라가 안내).
+ * 블록·큐레이터를 일괄 해석(N+1 없이) 하고, 대상이 사라진 연결은 건너뛴다. 팔로우가 없거나 팔로우들의 활동이 없어 첫 페이지가 비면 전역 공개 피드로 폴백한다 —
+ * 콜드스타트에도 빈 화면을 주지 않는다(응답 {@code source} 로 구분, 1페이지 이후의 빈 결과는 정상 종료라 폴백하지 않는다).
  */
 @Service
 @RequiredArgsConstructor
@@ -39,28 +40,39 @@ public class DiscoverFeedQueryService {
   private final NoteRepository noteRepository;
   private final UserRepository userRepository;
 
-  public DiscoverFeedView feed(Long viewerId, int page, int size) {
+  public DiscoverFeedView feed(Long viewerId, int page, int size, boolean forceGlobal) {
+    if (forceGlobal) {
+      return globalFeed(page, size);
+    }
     List<Long> followingIds = followRepository.findFollowingIds(viewerId);
     if (followingIds.isEmpty()) {
-      return new DiscoverFeedView(List.of(), page, size, false);
+      return globalFeed(page, size);
     }
 
     List<DiscoverConnectionRow> rows =
         connectionRepository.findPublicConnectionsByOwners(followingIds, page, size);
-    return assemble(rows, page, size);
+    if (rows.isEmpty() && page == 0) {
+      return globalFeed(page, size);
+    }
+    return assemble(rows, page, size, DiscoverFeedView.SOURCE_FOLLOWING);
   }
 
   /**
-   * 공개 발견 피드(비로그인 첫 표면) — 전역의 *공개* 컬렉션에 최근 이어진 연결을 최신순으로. 팔로우 게이트 없이(viewer-무관) 개인화판과 같은 블록·큐레이터 일괄
-   * 해석을 재사용한다. 사람의 큐레이션을 그대로 흘리며, 대상이 사라진 연결은 건너뛴다.
+   * 공개 발견 피드(비로그인 첫 표면이자 콜드스타트 폴백) — 전역의 *공개* 컬렉션에 최근 이어진 연결을 최신순으로. 팔로우 게이트 없이(viewer-무관) 개인화판과 같은
+   * 블록·큐레이터 일괄 해석을 재사용한다. 사람의 큐레이션을 그대로 흘리며, 대상이 사라진 연결은 건너뛴다.
    */
   public DiscoverFeedView publicFeed(int page, int size) {
+    return globalFeed(page, size);
+  }
+
+  private DiscoverFeedView globalFeed(int page, int size) {
     List<DiscoverConnectionRow> rows = connectionRepository.findRecentPublicConnections(page, size);
-    return assemble(rows, page, size);
+    return assemble(rows, page, size, DiscoverFeedView.SOURCE_GLOBAL);
   }
 
   /** rows → view 조립(viewer-무관). 블록·큐레이터를 일괄 해석하고 대상 소실 연결은 건너뛴다. */
-  private DiscoverFeedView assemble(List<DiscoverConnectionRow> rows, int page, int size) {
+  private DiscoverFeedView assemble(
+      List<DiscoverConnectionRow> rows, int page, int size, String source) {
     Map<Long, PostHighlightEntity> highlights =
         bulk(
             highlightRepository.findAllByIdIn(refIds(rows, "HIGHLIGHT")),
@@ -86,7 +98,7 @@ public class DiscoverFeedQueryService {
       if (view != null) items.add(view);
     }
 
-    return new DiscoverFeedView(items, page, size, rows.size() == size);
+    return new DiscoverFeedView(items, page, size, rows.size() == size, source);
   }
 
   private DiscoverConnectionView resolve(

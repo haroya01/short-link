@@ -26,6 +26,12 @@ public interface PostHighlightRepository {
   List<PostHighlightEntity> findByUserIdsOrderByCreatedAtDesc(
       Collection<Long> userIds, int page, int size);
 
+  /**
+   * 전역 공개 하이라이트 — *발행된* 글 위의 구절만 최신순, 페이지. 팔로우 그래프와 무관한 하이라이트 피드의 콜드스타트 폴백(scope=global 고정 포함)이 쓴다.
+   * 초안·비공개 상태 글의 구절은 새지 않는다.
+   */
+  List<PostHighlightEntity> findRecentOnPublishedPosts(int page, int size);
+
   /** Purge a post's highlights when it's permanently deleted. */
   int deleteAllByPostId(Long postId);
 }

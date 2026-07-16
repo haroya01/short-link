@@ -1,12 +1,14 @@
 package com.example.short_link.post.presentation;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.read.HighlightFeedView;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.application.read.MyHighlightView;
 import com.example.short_link.post.application.read.PostHighlightQueryService;
@@ -132,5 +134,35 @@ class PostHighlightControllerTest {
         .andExpect(jsonPath("$[0].id").value(10))
         .andExpect(jsonPath("$[0].postSlug").value("slug-5"))
         .andExpect(jsonPath("$[0].note").value("내 메모"));
+  }
+
+  @Test
+  void highlightFeedDefaultsToPersonalizedScope() throws Exception {
+    when(highlightQuery.feed(USER_ID, 0, 20, false))
+        .thenReturn(new HighlightFeedView(List.of(), 0, 20, false, "following"));
+
+    mvc.perform(
+            get("/api/v1/highlights/feed").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.source").value("following"));
+
+    verify(highlightQuery).feed(USER_ID, 0, 20, false);
+  }
+
+  // scope=global — 폴백으로 넘어간 클라이언트가 전역 페이지네이션을 고정해서 이어간다.
+  @Test
+  void highlightFeedScopeGlobalPinsGlobalFeed() throws Exception {
+    when(highlightQuery.feed(USER_ID, 1, 20, true))
+        .thenReturn(new HighlightFeedView(List.of(), 1, 20, false, "global"));
+
+    mvc.perform(
+            get("/api/v1/highlights/feed")
+                .param("page", "1")
+                .param("scope", "global")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.source").value("global"));
+
+    verify(highlightQuery).feed(USER_ID, 1, 20, true);
   }
 }
