@@ -29,9 +29,15 @@ public class MarkdownBlocksConverter {
   private static final Pattern FENCE = Pattern.compile("^(`{3,}|~{3,})(.*)$");
   private static final Pattern HEADING = Pattern.compile("^(#{1,3})\\s+(.+)$");
   private static final Pattern QUOTE = Pattern.compile("^>\\s*(.*)$");
-  // 표준 마크다운 image title `![alt](url "캡션")` 의 title 을 캡션으로 분리 캡처(group 3).
+  // 표준 마크다운 image title `![alt](url "캡션")` 의 title 을 캡션으로 분리 캡처(group 3). The title
+  // allows escaped quotes (`\"`) — the web editor backslash-escapes a `"` inside the caption, so a
+  // caption like `she said "hi"` serializes as `"she said \"hi\""`; without honoring the escape the
+  // whole image match failed and the image fell back to a literal-text PARAGRAPH.
   private static final Pattern IMAGE =
-      Pattern.compile("!\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+\"([^\"]*)\")?\\)");
+      Pattern.compile("!\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+\"((?:[^\"\\\\]|\\\\.)*)\")?\\)");
+  // Backslash escapes inside an image title (`\"` → `"`, `\\` → `\`), undone when reading a caption
+  // back out. Mirrors the web's unescapeTitle.
+  private static final Pattern TITLE_ESCAPE = Pattern.compile("\\\\([\"\\\\])");
   private static final Pattern AUTOLINK = Pattern.compile("^<(https?://[^>\\s]+)>$");
   private static final Pattern LINK_ONLY =
       Pattern.compile("^\\[[^\\]]*\\]\\((https?://[^)\\s]+)\\)$");
@@ -170,8 +176,11 @@ public class MarkdownBlocksConverter {
           if (width != null) {
             node.put("width", width);
           }
-          if (im[2] != null && !im[2].isBlank()) {
-            node.put("caption", im[2].trim());
+          if (im[2] != null) {
+            String caption = unescapeTitle(im[2]).trim();
+            if (!caption.isEmpty()) {
+              node.put("caption", caption);
+            }
           }
           blocks.add(block(PostBlockType.IMAGE, json.writeValueAsString(node)));
         }
@@ -230,6 +239,7 @@ public class MarkdownBlocksConverter {
           && !lines[i].startsWith("~~~")
           && !isTableStart(lines[i], i + 1 < lines.length ? lines[i + 1] : null)
           && !PARA_BREAK.matcher(lines[i]).matches()
+          && standaloneImageUrl(lines[i]) == null
           && standaloneEmbedUrl(lines[i]) == null) {
         paraLines.add(lines[i]);
         i++;
@@ -268,7 +278,12 @@ public class MarkdownBlocksConverter {
             String marked = width != null ? "«" + width + "» " + alt : alt;
             String caption =
                 node.path("caption").isString() ? node.path("caption").stringValue() : "";
-            String title = caption.isBlank() ? "" : " \"" + caption.replace("\"", "'") + "\"";
+            // 캡션은 표준 image title 로 — `"`/`\` 는 이스케이프해 title 을 깨지 않고 그대로 왕복시킨다
+            // (파싱이 로드 시 `\"` 를 다시 `"` 로 읽어 원문 그대로 복원된다). 웹 직렬화와 동일.
+            String title =
+                caption.isBlank()
+                    ? ""
+                    : " \"" + caption.trim().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
             parts.add("![" + marked + "](" + node.path("url").stringValue() + title + ")");
           }
         }
@@ -381,6 +396,11 @@ public class MarkdownBlocksConverter {
     } catch (Exception e) {
       return null;
     }
+  }
+
+  /** Undo the image-title escaping ({@code \"} → {@code "}, {@code \\} → {@code \}). */
+  private static String unescapeTitle(String s) {
+    return TITLE_ESCAPE.matcher(s).replaceAll("$1");
   }
 
   private JsonNode readTreeOrNull(String content) {
