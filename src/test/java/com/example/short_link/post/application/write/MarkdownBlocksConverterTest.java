@@ -109,11 +109,39 @@ class MarkdownBlocksConverterTest {
   }
 
   @Test
-  void serializesCaptionWithQuoteUsingSingleQuote() {
-    // 캡션 안의 " 는 image title 을 깨므로 ' 로 치환해 직렬화한다(방어적 경로).
+  void serializesCaptionWithQuoteByEscaping() {
+    // 캡션 안의 " 는 ' 로 뭉개지 않고 `\"` 로 이스케이프해 직렬화한다 — 원문 그대로 왕복(웹과 동일).
     String content = "{\"url\":\"https://cdn/x.png\",\"alt\":\"\",\"caption\":\"그가 \\\"진심\\\"\"}";
     String md = roundTrip(List.of(new BlockInput(PostBlockType.IMAGE, content)));
-    assertThat(md).isEqualTo("![](https://cdn/x.png \"그가 '진심'\")");
+    assertThat(md).isEqualTo("![](https://cdn/x.png \"그가 \\\"진심\\\"\")");
+    assertThat(toBlocks(md).get(0).content()).isEqualTo(content);
+  }
+
+  @Test
+  void keepsImageWhoseCaptionContainsDoubleQuote() {
+    // 웹 에디터(tiptap-markdown)는 캡션 안 `"` 를 `\"` 로 이스케이프한다. 예전 title 그룹([^"]*)은 첫
+    // 내부 따옴표에서 끊겨 이미지 매치 전체가 실패했고, 이미지가 통째로 literal-text PARAGRAPH 로
+    // 강등돼 캡션과 이미지를 둘 다 잃었다.
+    String md = "![p](https://cdn/x.png \"she said \\\"hi\\\"\")";
+    List<BlockInput> blocks = toBlocks(md);
+    assertThat(blocks).hasSize(1);
+    assertThat(blocks.get(0).type()).isEqualTo(PostBlockType.IMAGE);
+    assertThat(blocks.get(0).content())
+        .isEqualTo(
+            "{\"url\":\"https://cdn/x.png\",\"alt\":\"p\",\"caption\":\"she said \\\"hi\\\"\"}");
+    // 왕복: 블록 캡션이 같은 markdown 으로 재이스케이프되고, 다시 같은 블록으로 파싱된다.
+    assertThat(roundTrip(blocks)).isEqualTo(md);
+    assertThat(toBlocks(roundTrip(blocks))).isEqualTo(blocks);
+  }
+
+  @Test
+  void roundTripsCaptionWithBackslash() {
+    // 백슬래시도 title 이스케이프 대상(`\\`) — 따옴표와 섞여도 원문 그대로 왕복한다.
+    String content =
+        "{\"url\":\"https://cdn/x.png\",\"alt\":\"\",\"caption\":\"C:\\\\temp \\\"raw\\\"\"}";
+    String md = roundTrip(List.of(new BlockInput(PostBlockType.IMAGE, content)));
+    assertThat(md).isEqualTo("![](https://cdn/x.png \"C:\\\\temp \\\"raw\\\"\")");
+    assertThat(toBlocks(md).get(0).content()).isEqualTo(content);
   }
 
   @Test
@@ -202,6 +230,17 @@ class MarkdownBlocksConverterTest {
     List<BlockInput> blocks = toBlocks("intro line\nhttps://youtu.be/dQw4w9WgXcQ\noutro line");
     assertThat(blocks.stream().map(BlockInput::type))
         .containsExactly(PostBlockType.PARAGRAPH, PostBlockType.EMBED, PostBlockType.PARAGRAPH);
+  }
+
+  @Test
+  void splitsBareImageUrlOutOfPrecedingParagraph() {
+    // 문단 연속 가드가 bare 이미지 URL 도 검사한다 — 앞 문단에 흡수되지 않고 제 IMAGE 블록으로,
+    // 분할 지점이 웹 파서와 동일하다.
+    List<BlockInput> blocks = toBlocks("intro line\nhttps://cdn.example.com/a/b.png\noutro line");
+    assertThat(blocks.stream().map(BlockInput::type))
+        .containsExactly(PostBlockType.PARAGRAPH, PostBlockType.IMAGE, PostBlockType.PARAGRAPH);
+    assertThat(blocks.get(0).content()).isEqualTo("intro line");
+    assertThat(blocks.get(2).content()).isEqualTo("outro line");
   }
 
   @Test
