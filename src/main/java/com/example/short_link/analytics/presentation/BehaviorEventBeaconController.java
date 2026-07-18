@@ -3,6 +3,7 @@ package com.example.short_link.analytics.presentation;
 import com.example.short_link.analytics.application.write.BehaviorContext;
 import com.example.short_link.analytics.application.write.BehaviorEventCommand;
 import com.example.short_link.analytics.application.write.RecordBehaviorEventsUseCase;
+import com.example.short_link.analytics.presentation.request.BehaviorEventsRequest;
 import com.example.short_link.common.web.ClientIp;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
@@ -74,16 +75,5 @@ public class BehaviorEventBeaconController {
         parsed.sessionId(),
         batch,
         new BehaviorContext(userAgent, ClientIp.of(req), "1".equals(req.getHeader("Sec-GPC"))));
-  }
-
-  record BehaviorEventsRequest(String sessionId, List<Item> events) {
-
-    record Item(
-        String name,
-        Long postId,
-        String targetType,
-        String targetId,
-        Integer depthPct,
-        Long dwellMs) {}
   }
 }

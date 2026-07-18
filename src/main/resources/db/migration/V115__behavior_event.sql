@@ -10,7 +10,7 @@ CREATE TABLE behavior_event (
     post_id      BIGINT      NULL,
     target_type  VARCHAR(32) NULL,
     target_id    VARCHAR(64) NULL,
-    depth_pct    SMALLINT    NULL,
+    depth_pct    INT         NULL,
     dwell_ms     BIGINT      NULL,
     device_class VARCHAR(32) NULL,
     is_bot       BOOLEAN     NOT NULL DEFAULT FALSE,
