@@ -104,6 +104,10 @@ public class PostViewEventEntity {
   @Column(name = "source_channel", length = 64)
   private String sourceChannel;
 
+  /** 행동 이벤트(behavior_event)와 퍼널 조인용 탭 수명 세션 — V115 이전 행과 sid 없는 비콘은 NULL. */
+  @Column(name = "session_id", length = 40)
+  private String sessionId;
+
   /** Back-compat: a bare view (no dimensions) — used where enrichment context isn't available. */
   public PostViewEventEntity(Long postId, Instant viewedAt) {
     this.postId = postId;

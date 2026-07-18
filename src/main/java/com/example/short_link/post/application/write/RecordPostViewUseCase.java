@@ -145,6 +145,7 @@ public class RecordPostViewUseCase {
           .visitorHash(
               ctx.gpc() ? null : VisitorHasher.hash(postId, ctx.clientIp(), ctx.userAgent()))
           .sourceChannel(SourceChannelNormalizer.normalize(ctx.sourceChannel()))
+          .sessionId(ctx.sessionId())
           .build();
     } catch (RuntimeException e) {
       log.warn("post view enrichment failed for postId={}", postId, e);

@@ -175,7 +175,8 @@ class RecordPostViewUseCaseTest {
             null,
             null,
             null,
-            false));
+            false,
+            null));
 
     ArgumentCaptor<PostViewEventEntity> event = ArgumentCaptor.forClass(PostViewEventEntity.class);
     verify(postViewEventRepository).save(event.capture());
@@ -210,7 +211,8 @@ class RecordPostViewUseCaseTest {
         null,
         null,
         null,
-        false);
+        false,
+        null);
   }
 
   private PostViewEventEntity savedEvent() {
@@ -284,7 +286,8 @@ class RecordPostViewUseCaseTest {
             null,
             null,
             null,
-            true));
+            true,
+            null));
 
     assertThat(savedEvent().getVisitorHash()).isNull();
   }

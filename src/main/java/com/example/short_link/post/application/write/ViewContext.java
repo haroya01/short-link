@@ -17,10 +17,11 @@ public record ViewContext(
     String utmCampaign,
     String utmTerm,
     String utmContent,
-    boolean gpc) {
+    boolean gpc,
+    String sessionId) {
 
   private static final ViewContext EMPTY =
-      new ViewContext(null, null, null, null, null, null, null, null, null, null, false);
+      new ViewContext(null, null, null, null, null, null, null, null, null, null, false, null);
 
   public static ViewContext empty() {
     return EMPTY;

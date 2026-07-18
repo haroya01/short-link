@@ -117,6 +117,10 @@ short-link:
     retention-days: ${AUDIT_LOG_RETENTION_DAYS:180}
     cleanup-cron: ${AUDIT_LOG_CLEANUP_CRON:0 45 4 * * *}
     cleanup-enabled: ${AUDIT_LOG_CLEANUP_ENABLED:true}
+  behavior-analytics:
+    retention-days: ${BEHAVIOR_EVENT_RETENTION_DAYS:90}
+    cleanup-cron: ${BEHAVIOR_EVENT_CLEANUP_CRON:0 50 4 * * *}
+    cleanup-enabled: ${BEHAVIOR_EVENT_CLEANUP_ENABLED:true}
   user-deletion:
     grace-days: ${USER_DELETION_GRACE_DAYS:30}
     cleanup-cron: ${USER_DELETION_CLEANUP_CRON:0 30 5 * * *}
