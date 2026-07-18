@@ -54,9 +54,10 @@ class WebPushSubscriptionCommandServiceTest {
   }
 
   @Test
-  void unsubscribeDeletesByEndpointOnly() {
-    service.unsubscribe("ep-1");
+  void unsubscribeDeletesOnlyOwnEndpoint() {
+    service.unsubscribe(7L, "ep-1");
 
-    verify(subscriptions).deleteByEndpoint("ep-1");
+    // 자기 소유(userId=7)의 endpoint 만 지운다 — endpoint 만으로 남의 구독을 못 지우게.
+    verify(subscriptions).deleteByUserIdAndEndpoint(7L, "ep-1");
   }
 }

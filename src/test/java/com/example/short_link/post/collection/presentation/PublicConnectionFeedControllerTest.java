@@ -72,6 +72,18 @@ class PublicConnectionFeedControllerTest {
     verify(discoverFeedQuery).publicFeed(2, 10);
   }
 
+  // ?size=2000000 같은 익명 요청도 상한(50)으로 묶어 대형 쿼리·팬아웃으로 번지지 않게 한다.
+  @Test
+  void clampsOversizedPageSize() throws Exception {
+    when(discoverFeedQuery.publicFeed(0, 50))
+        .thenReturn(new DiscoverFeedView(List.of(), 0, 50, false, "global"));
+
+    mvc.perform(get("/api/v1/public/feed/connections").param("size", "2000000"))
+        .andExpect(status().isOk());
+
+    verify(discoverFeedQuery).publicFeed(0, 50);
+  }
+
   @Test
   void emptyFeedReturnsEmptyItems() throws Exception {
     when(discoverFeedQuery.publicFeed(0, 20))

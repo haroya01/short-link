@@ -31,9 +31,9 @@ public class WebPushSubscriptionCommandService {
         .ifPresent(u -> u.updateLocale(LocaleContextHolder.getLocale().getLanguage()));
   }
 
-  /** 소유자 검증 없이 endpoint 만으로 지운다 — endpoint 를 아는 쪽이 그 브라우저다. */
+  /** 자기 소유(userId) 의 endpoint 만 지운다 — 남의 구독을 endpoint 만으로 해제(무력화)하지 못하게. */
   @Transactional
-  public void unsubscribe(String endpoint) {
-    subscriptions.deleteByEndpoint(endpoint);
+  public void unsubscribe(Long userId, String endpoint) {
+    subscriptions.deleteByUserIdAndEndpoint(userId, endpoint);
   }
 }

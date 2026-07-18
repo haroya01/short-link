@@ -74,6 +74,12 @@ class DiscoverFeedQueryServiceTest {
     return p;
   }
 
+  private PostEntity draftPost(long id, long authorId) {
+    PostEntity p = new PostEntity(authorId, "slug-" + id, "Title " + id, "ko");
+    ReflectionTestUtils.setField(p, "id", id); // status 는 DRAFT 그대로 — 미발행.
+    return p;
+  }
+
   private UserEntity user(long id, String username) {
     UserEntity u = new UserEntity("u" + id + "@x.com", "google", "g-" + id);
     u.claimUsername(username);
@@ -241,6 +247,27 @@ class DiscoverFeedQueryServiceTest {
     assertThat(feed.items().get(1).blockType()).isEqualTo("NOTE");
     assertThat(feed.items().get(1).body()).isEqualTo("더 나은 질문을 기다리는 일");
     verifyNoInteractions(followRepository);
+  }
+
+  // 미발행 글(초안·비공개·관리자 차단)은 공개 발견 피드에서 빠진다 — 담김 연결이 남아 있어도 메타(제목·발췌·슬러그)가 새지 않게.
+  @Test
+  void publicFeedHidesUnpublishedPosts() {
+    when(connectionRepository.findRecentPublicConnections(0, 20))
+        .thenReturn(
+            List.of(
+                row(100L, ConnectionBlockType.POST, 5L, 2L),
+                row(101L, ConnectionBlockType.POST, 6L, 2L)));
+    when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(postRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(post(5L, 4L), draftPost(6L, 4L)));
+    when(userRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(user(2L, "minji"), user(4L, "author")));
+
+    DiscoverFeedView feed = service.publicFeed(0, 20);
+
+    assertThat(feed.items()).hasSize(1); // 초안 글(6)은 빠지고 발행 글(5)만.
+    assertThat(feed.items().get(0).title()).isEqualTo("Title 5");
   }
 
   @Test

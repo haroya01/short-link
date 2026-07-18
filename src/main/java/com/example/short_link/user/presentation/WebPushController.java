@@ -31,7 +31,7 @@ public class WebPushController {
 
   @DeleteMapping
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void unsubscribe(@RequestParam String endpoint) {
-    subscriptions.unsubscribe(endpoint);
+  public void unsubscribe(@AuthenticationPrincipal Long userId, @RequestParam String endpoint) {
+    subscriptions.unsubscribe(userId, endpoint);
   }
 }

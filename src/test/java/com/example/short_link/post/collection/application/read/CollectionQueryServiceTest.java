@@ -225,6 +225,12 @@ class CollectionQueryServiceTest {
     return p;
   }
 
+  private PostEntity draftPost(long id, long authorId) {
+    PostEntity p = new PostEntity(authorId, "slug-" + id, "Title " + id, "ko");
+    ReflectionTestUtils.setField(p, "id", id); // status 는 DRAFT 그대로 — 미발행.
+    return p;
+  }
+
   private UserEntity user(long id, String username) {
     UserEntity u = new UserEntity("u" + id + "@x.com", "google", "g-" + id);
     u.claimUsername(username);
@@ -346,6 +352,59 @@ class CollectionQueryServiceTest {
     ConnectionView noteView = view.connections().get(2);
     assertThat(noteView.blockType()).isEqualTo("NOTE");
     assertThat(noteView.body()).isEqualTo("더 나은 질문을 기다리는 일");
+  }
+
+  // 미발행 글(초안·비공개·관리자 차단)은 공개 컬렉션 상세에서 빠진다 — 담김 연결이 남아 있어도 메타(제목·발췌·슬러그)와
+  // 그 원문을 가리키는 하이라이트 인용까지 새지 않게. 단건 공개 read 가 미발행을 숨기는 것과 같은 규칙.
+  @Test
+  void detailHidesUnpublishedConnectedPosts() {
+    when(collectionRepository.findById(10L))
+        .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    // POST(발행 5) | POST(초안 6) | HIGHLIGHT(hl 9 → 초안 원문 8)
+    when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
+        .thenReturn(
+            List.of(
+                conn(100L, ConnectionBlockType.POST, 5L, 0),
+                conn(101L, ConnectionBlockType.POST, 6L, 1),
+                conn(102L, ConnectionBlockType.HIGHLIGHT, 9L, 2)));
+    PostHighlightEntity hl = new PostHighlightEntity(8L, 3L, 0, 0, 0, 3, "차단된 글의 인용", null);
+    ReflectionTestUtils.setField(hl, "id", 9L);
+    when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(postRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(post(5L, 2L), draftPost(6L, 2L), draftPost(8L, 3L)));
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(2L, "alice")));
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user(1L, "curator")));
+
+    CollectionDetailView view = service.detail(1L, 10L);
+
+    // 발행 글(5)만 남고, 초안 글(6)과 초안 원문을 가리키는 하이라이트(9)는 인용째로 빠진다.
+    assertThat(view.connections()).hasSize(1);
+    assertThat(view.connections().get(0).blockType()).isEqualTo("POST");
+    assertThat(view.connections().get(0).title()).isEqualTo("Title 5");
+  }
+
+  // 공개 표면(다른 큐레이터의 공개 컬렉션)의 프리뷰 라벨엔 미발행 글 제목이 새지 않는다.
+  @Test
+  void listPublicByUsernameHidesUnpublishedPreviewLabels() {
+    when(userRepository.findByUsername("curator")).thenReturn(Optional.of(user(1L, "curator")));
+    when(collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(1L))
+        .thenReturn(List.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
+    when(connectionRepository.countByCollectionId(10L)).thenReturn(2L);
+    when(connectionRepository.findAllByCollectionIdInOrderByPositionDesc(anyCollection()))
+        .thenReturn(
+            List.of(
+                conn(100L, ConnectionBlockType.POST, 5L, 1),
+                conn(101L, ConnectionBlockType.POST, 6L, 0)));
+    when(postRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(post(5L, 1L), draftPost(6L, 1L)));
+    when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+
+    List<CollectionSummaryView> result = service.listPublicByUsername("curator");
+
+    assertThat(result).hasSize(1);
+    assertThat(result.get(0).preview()).containsExactly("Title 5"); // 초안(6) 제목은 빠짐.
   }
 
   @Test

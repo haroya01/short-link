@@ -11,7 +11,11 @@ public interface WebPushSubscriptionRepository {
 
   WebPushSubscriptionEntity save(WebPushSubscriptionEntity entity);
 
+  /** 발송 실패(구독 만료/브라우저 해제)로 죽은 구독을 서버가 정리 — 소유자 무관, endpoint 로 단건 삭제. */
   void deleteByEndpoint(String endpoint);
+
+  /** 사용자 요청 구독해제 — 자기 소유(userId) 의 endpoint 만 지운다. 남의 구독을 endpoint 만으로 못 지우게. */
+  void deleteByUserIdAndEndpoint(Long userId, String endpoint);
 
   /** Purge every subscription a user owns — called on account hard delete (V99 has no users FK). */
   void deleteByUserId(Long userId);
