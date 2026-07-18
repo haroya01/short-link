@@ -34,6 +34,7 @@ public class PublicPostViewBeaconController {
       @PathVariable String slug,
       @RequestParam(value = "src", required = false) String src,
       @RequestParam(value = "ref", required = false) String ref,
+      @RequestParam(value = "sid", required = false) String sid,
       @RequestParam(value = "utm_source", required = false) String utmSource,
       @RequestParam(value = "utm_medium", required = false) String utmMedium,
       @RequestParam(value = "utm_campaign", required = false) String utmCampaign,
@@ -58,6 +59,9 @@ public class PublicPostViewBeaconController {
             utmCampaign,
             utmTerm,
             utmContent,
-            "1".equals(req.getHeader("Sec-GPC"))));
+            "1".equals(req.getHeader("Sec-GPC")),
+            // 행동 비콘(behavior_event)과 같은 세션으로 조인되는 탭 수명 임시 ID — 유입 레퍼러가
+            // 붙은 도달 이벤트가 퍼널의 진입점이 된다.
+            sid));
   }
 }

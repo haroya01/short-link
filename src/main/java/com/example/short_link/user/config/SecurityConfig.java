@@ -173,6 +173,7 @@ public class SecurityConfig {
                         "/api/v1/public/email-leads",
                         "/api/v1/public/profiles/*/visit",
                         "/api/v1/public/profiles/*/posts/*/view",
+                        "/api/v1/public/behavior-events",
                         "/api/v1/public/abuse-reports")
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/links/*/public-stats", "/api/v1/links/*/stream")

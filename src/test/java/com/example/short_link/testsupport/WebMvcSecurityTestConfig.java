@@ -74,6 +74,8 @@ public class WebMvcSecurityTestConfig {
       String uri = request.getRequestURI();
       return ("POST".equals(method) && "/api/v1/billing/webhook".equals(uri))
           || ("POST".equals(method) && "/api/v1/auth/dev-login".equals(uri))
+          // 행동 비콘은 프로드 SecurityConfig 도 익명 POST 를 연다 — 슬라이스도 같은 계약.
+          || ("POST".equals(method) && "/api/v1/public/behavior-events".equals(uri))
           || ("GET".equals(method) && "/actuator/health".equals(uri))
           || ("GET".equals(method) && uri.startsWith("/api/v1/public/"));
     }
