@@ -17,11 +17,14 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PublicConnectionFeedController {
 
+  private static final int MAX_PAGE_SIZE = 50;
+
   private final DiscoverFeedQueryService discoverFeedQuery;
 
   @GetMapping("/feed/connections")
   public DiscoverFeedView connections(
       @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-    return discoverFeedQuery.publicFeed(page, size);
+    // 익명 표면 — size 를 상한으로 묶어 ?size=2000000 같은 요청이 대형 쿼리·팬아웃으로 번지지 않게 한다(형제 피드와 같은 상한).
+    return discoverFeedQuery.publicFeed(Math.max(page, 0), Math.clamp(size, 1, MAX_PAGE_SIZE));
   }
 }

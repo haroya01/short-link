@@ -82,7 +82,12 @@ public class DiscoverFeedQueryService {
 
     Set<Long> postIds = new HashSet<>(refIds(rows, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
-    Map<Long, PostEntity> posts = bulk(postRepository.findAllByIdIn(postIds), PostEntity::getId);
+    // 발행된 글만 남긴다 — 초안·비공개·관리자 차단 글은 여기서 빠지고, 아래 null-가드가 그 연결을 흐름에서 뺀다.
+    // 단건 공개 read 가 미발행을 숨기는 것과 같은 규칙(viewer 무관).
+    Map<Long, PostEntity> posts =
+        postRepository.findAllByIdIn(postIds).stream()
+            .filter(PostEntity::isPublished)
+            .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 
     // 큐레이터(컬렉션 주인) + 블록 작가 — 한 번에.
     Set<Long> userIds =
@@ -129,14 +134,15 @@ public class DiscoverFeedQueryService {
         PostHighlightEntity hl = highlights.get(row.refId());
         if (hl == null) yield null;
         PostEntity post = posts.get(hl.getPostId());
-        UserEntity author = post == null ? null : users.get(post.getUserId());
+        if (post == null) yield null; // 원문이 미발행·차단 — 하이라이트 인용째로 흐름에서 뺀다.
+        UserEntity author = users.get(post.getUserId());
         yield view(
             row,
             curatorView,
             "HIGHLIGHT",
-            post == null ? null : post.getTitle(),
+            post.getTitle(),
             null,
-            post == null ? null : post.getSlug(),
+            post.getSlug(),
             author == null ? null : author.getUsername(),
             hl.getQuote(),
             null);

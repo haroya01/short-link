@@ -228,7 +228,7 @@ public class CollectionQueryService {
     List<CollectionEntity> collections =
         collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(userId);
     Map<Long, List<String>> previews =
-        previewByCollection(collections.stream().map(CollectionEntity::getId).toList());
+        previewByCollection(collections.stream().map(CollectionEntity::getId).toList(), false);
     Map<Long, Long> connectionByCollection =
         (blockType == null || refId == null)
             ? Map.of()
@@ -276,7 +276,7 @@ public class CollectionQueryService {
             .filter(c -> c.getVisibility() == CollectionVisibility.PUBLIC)
             .toList();
     Map<Long, List<String>> previews =
-        previewByCollection(collections.stream().map(CollectionEntity::getId).toList());
+        previewByCollection(collections.stream().map(CollectionEntity::getId).toList(), true);
     return collections.stream()
         .map(
             c ->
@@ -296,8 +296,14 @@ public class CollectionQueryService {
         .toList();
   }
 
-  /** 컬렉션마다 최근 항목 라벨 몇 개 — "안에 뭐가 들었는지" 떠올리게(어디 넣을지 결정 보조). */
-  private Map<Long, List<String>> previewByCollection(List<Long> collectionIds) {
+  /**
+   * 컬렉션마다 최근 항목 라벨 몇 개 — "안에 뭐가 들었는지" 떠올리게(어디 넣을지 결정 보조).
+   *
+   * <p>{@code publishedOnly} 는 공개 표면(다른 큐레이터의 공개 컬렉션)에서만 켠다: 미발행 글의 제목·하이라이트 인용이 프리뷰 라벨로 새지 않게 발행분만
+   * 라벨링한다. 내 관리 목록(listMine)은 끄고 내가 담은 초안도 떠올릴 수 있게 둔다.
+   */
+  private Map<Long, List<String>> previewByCollection(
+      List<Long> collectionIds, boolean publishedOnly) {
     if (collectionIds.isEmpty()) return Map.of();
 
     // 최신순(position desc)으로 받아 컬렉션별 상위 N 만 남긴다.
@@ -311,12 +317,29 @@ public class CollectionQueryService {
 
     List<CollectionConnectionEntity> top =
         topByCollection.values().stream().flatMap(List::stream).toList();
-    Map<Long, PostEntity> posts =
-        bulk(postRepository.findAllByIdIn(previewRefIds(top, "POST")), PostEntity::getId);
+    List<PostEntity> previewPosts = postRepository.findAllByIdIn(previewRefIds(top, "POST"));
+    if (publishedOnly) {
+      previewPosts = previewPosts.stream().filter(PostEntity::isPublished).toList();
+    }
+    Map<Long, PostEntity> posts = bulk(previewPosts, PostEntity::getId);
     Map<Long, PostHighlightEntity> highlights =
         bulk(
             highlightRepository.findAllByIdIn(previewRefIds(top, "HIGHLIGHT")),
             PostHighlightEntity::getId);
+    if (publishedOnly && !highlights.isEmpty()) {
+      // 하이라이트도 원문이 발행된 것만 라벨링한다 — 차단된 글의 인용이 프리뷰로 새지 않게.
+      Set<Long> publishedParents =
+          postRepository
+              .findAllByIdIn(
+                  highlights.values().stream()
+                      .map(PostHighlightEntity::getPostId)
+                      .collect(Collectors.toSet()))
+              .stream()
+              .filter(PostEntity::isPublished)
+              .map(PostEntity::getId)
+              .collect(Collectors.toSet());
+      highlights.values().removeIf(h -> !publishedParents.contains(h.getPostId()));
+    }
     Map<Long, NoteEntity> notes =
         bulk(noteRepository.findAllByIdIn(previewRefIds(top, "NOTE")), NoteEntity::getId);
 
@@ -390,7 +413,12 @@ public class CollectionQueryService {
     // 글은 직접 연결(POST)과 하이라이트의 원문(HIGHLIGHT→postId) 둘 다에서 모은다.
     Set<Long> postIds = new HashSet<>(refIds(connections, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
-    Map<Long, PostEntity> posts = bulk(postRepository.findAllByIdIn(postIds), PostEntity::getId);
+    // 발행된 글만 남긴다 — 초안·비공개·관리자 차단 글은 빠지고, 아래 null-가드가 그 연결을 상세에서 뺀다.
+    // 단건 공개 read 가 미발행을 숨기는 것과 같은 규칙(공개 컬렉션은 누구나 보므로 viewer 무관).
+    Map<Long, PostEntity> posts =
+        postRepository.findAllByIdIn(postIds).stream()
+            .filter(PostEntity::isPublished)
+            .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 
     Set<Long> authorIds =
         posts.values().stream().map(PostEntity::getUserId).collect(Collectors.toSet());
@@ -421,14 +449,15 @@ public class CollectionQueryService {
               PostHighlightEntity hl = highlights.get(c.getRefId());
               if (hl == null) yield null;
               PostEntity post = posts.get(hl.getPostId());
-              UserEntity author = post == null ? null : authors.get(post.getUserId());
+              if (post == null) yield null; // 원문이 미발행·차단 — 하이라이트 인용째로 상세에서 뺀다.
+              UserEntity author = authors.get(post.getUserId());
               yield ConnectionView.highlight(
                   c.getId(),
                   c.getWhy(),
                   c.getCreatedAt(),
                   hl.getQuote(),
-                  post == null ? null : post.getTitle(),
-                  post == null ? null : post.getSlug(),
+                  post.getTitle(),
+                  post.getSlug(),
                   author == null ? null : author.getUsername());
             }
             case NOTE -> {
