@@ -64,7 +64,7 @@ jobs:
           host: ${{ vars.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: GHCR_TOKEN
+          envs: GHCR_TOKEN,APNS_TEAM_ID,APNS_KEY_ID,APNS_PRIVATE_KEY
           script_stop: true
           script: |
             set -e
@@ -76,6 +76,21 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             cd deploy
+            # APNs 푸시 설정을 서버 .env 에 upsert — 값은 GH Actions 시크릿에서 온다(로그 미출력).
+            # docker-compose 가 이 .env 를 읽어 컨테이너 env(APNS_*)로 넣고, ApnsPushSender 가
+            # BEGIN/END·공백을 벗겨 PKCS8 로 디코드한다(그래서 base64 한 줄이면 충분). production=true 로
+            # TestFlight/스토어 토큰이 실제 게이트웨이(api.push.apple.com)로 간다.
+            set_env() {
+              local k="$1" v="$2" f=.env
+              touch "$f"
+              grep -v "^${k}=" "$f" > "$f.tmp" 2>/dev/null || true
+              printf '%s=%s\n' "$k" "$v" >> "$f.tmp"
+              mv "$f.tmp" "$f"
+            }
+            set_env APNS_TEAM_ID "$APNS_TEAM_ID"
+            set_env APNS_KEY_ID "$APNS_KEY_ID"
+            set_env APNS_PRIVATE_KEY "$APNS_PRIVATE_KEY"
+            set_env APNS_PRODUCTION true
             # GHCR package is private; auth before pull, then drop the token from the EC2's
             # docker config so the credential isn't sitting on disk after we're done.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u haroya01 --password-stdin
@@ -111,6 +126,9 @@ jobs:
             docker compose ps
         env:
           GHCR_TOKEN: ${{ secrets.GHCR_RO_TOKEN }}
+          APNS_TEAM_ID: ${{ secrets.APNS_TEAM_ID }}
+          APNS_KEY_ID: ${{ secrets.APNS_KEY_ID }}
+          APNS_PRIVATE_KEY: ${{ secrets.APNS_PRIVATE_KEY }}
 
       - name: Notify Discord — deploy success
         if: success()
