@@ -32,7 +32,7 @@ public class AuthService {
   /**
    * Bump when the Terms/Privacy materially change so new sign-ups record the version they accepted.
    */
-  private static final String TERMS_VERSION = "2026-06-26";
+  private static final String TERMS_VERSION = "2026-07-21";
 
   /**
    * Result of an OAuth login. If the user has 2FA enabled this returns only a short-lived challenge
