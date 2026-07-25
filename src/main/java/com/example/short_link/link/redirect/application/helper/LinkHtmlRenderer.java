@@ -67,9 +67,9 @@ public final class LinkHtmlRenderer {
     return "<svg class=\""
         + cls
         + "\" viewBox=\"0 0 28 18\" fill=\"currentColor\" aria-hidden=\"true\">"
-        + "<rect x=\"6\" y=\"1\" width=\"20\" height=\"3.4\" rx=\"1.7\"/>"
-        + "<rect x=\"0\" y=\"7.3\" width=\"28\" height=\"3.4\" rx=\"1.7\"/>"
-        + "<rect x=\"9\" y=\"13.6\" width=\"17\" height=\"3.4\" rx=\"1.7\"/></svg>";
+        + "<rect x=\"6\" y=\"1\" width=\"20\" height=\"3.4\" rx=\"1.0\"/>"
+        + "<rect x=\"0\" y=\"7.3\" width=\"28\" height=\"3.4\" rx=\"1.0\"/>"
+        + "<rect x=\"9\" y=\"13.6\" width=\"17\" height=\"3.4\" rx=\"1.0\"/></svg>";
   }
 
   private static String page(String title, String inner) {
