@@ -100,12 +100,12 @@ public class OgCardImageRenderer {
   }
 
   // Mirrors components/logo.tsx Mark (viewBox 28×18). AWT roundRect arc args are diameters, so
-  // the SVG rx=1.7 (radius) becomes 3.4 here. Returns the on-screen mark width for layout.
+  // the SVG rx=1.0 (radius) becomes 2.0 here. Returns the on-screen mark width for layout.
   private static int drawMark(Graphics2D g, int originX, int originY, int markHeight) {
     double s = markHeight / 18.0;
     g.setColor(BRAND_PRIMARY);
     int barH = (int) Math.round(3.4 * s);
-    int arc = (int) Math.round(3.4 * s);
+    int arc = (int) Math.round(2.0 * s);
     g.fillRoundRect(
         originX + (int) Math.round(6 * s),
         originY + (int) Math.round(1 * s),
