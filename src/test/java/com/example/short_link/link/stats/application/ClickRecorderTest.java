@@ -55,6 +55,46 @@ class ClickRecorderTest {
     assertThatNoException().isThrownBy(() -> recorder.record(ctx(null, "1.2.3.4", null)));
   }
 
+  /**
+   * A person browsing behind iCloud Private Relay exits through Cloudflare with an ordinary Safari
+   * UA. Classifying that as a datacenter bot removed real readers from the human numbers, which is
+   * what "someone opened my link and the stats didn't move" was. Relay egress must stay human.
+   */
+  @Test
+  void privacyRelayEgressIsRecordedAsHumanNotBot() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    when(asnResolver.resolve(any()))
+        .thenReturn(new AsnResolver.AsnInfo(13335, "Cloudflare, Inc.", false, true));
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+    recorder.record(ctx(null, "104.28.0.1", null));
+
+    assertThat(captor.getValue().isBot()).isFalse();
+    assertThat(captor.getValue().getBotName()).isNull();
+    // The ASN is still stored, so the breakdown can show the traffic came through a relay.
+    assertThat(captor.getValue().getAsnOrg()).isEqualTo("Cloudflare, Inc.");
+  }
+
+  /**
+   * Hosting egress (AWS and friends) with a browser-looking UA stays a bot — that guard is intact.
+   */
+  @Test
+  void datacenterEgressIsStillRecordedAsBot() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    when(asnResolver.resolve(any()))
+        .thenReturn(new AsnResolver.AsnInfo(16509, "Amazon.com, Inc.", true, false));
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+    recorder.record(ctx(null, "52.94.236.1", null));
+
+    assertThat(captor.getValue().isBot()).isTrue();
+    assertThat(captor.getValue().getBotName()).isEqualTo("datacenter:Amazon.com, Inc.");
+  }
+
   @Test
   void normalizesReferrerBeforeSaving() {
     when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
