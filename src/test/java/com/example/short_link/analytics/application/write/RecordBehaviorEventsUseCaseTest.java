@@ -56,7 +56,7 @@ class RecordBehaviorEventsUseCaseTest {
     when(userAgentClassifier.classify(any()))
         .thenReturn(new UserAgentInfo("mobile", "iOS", "Safari", false, null));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
-    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false));
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false, false));
   }
 
   private BehaviorContext ctx() {
