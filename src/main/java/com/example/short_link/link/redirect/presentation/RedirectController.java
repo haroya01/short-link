@@ -163,7 +163,8 @@ public class RedirectController {
                 userAgent,
                 LinkRedirectSupport.clientIp(req),
                 acceptLanguage)
-            .withSourceChannel(src),
+            .withSourceChannel(src)
+            .withFetchSite(LinkRedirectSupport.fetchSite(req)),
         crawlerLabel);
     LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
     if (entity == null) {

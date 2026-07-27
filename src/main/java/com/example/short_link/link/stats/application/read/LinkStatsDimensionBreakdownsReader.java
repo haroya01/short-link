@@ -1,5 +1,6 @@
 package com.example.short_link.link.stats.application.read;
 
+import com.example.short_link.common.post.PostTitleReader;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.classifier.application.ReferrerChannelClassifier;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
@@ -23,6 +24,7 @@ class LinkStatsDimensionBreakdownsReader {
   private final ClickTotalsReadRepository clickTotals;
   private final ReferrerChannelClassifier channelClassifier;
   private final LinkDestinationRepository destinationRepository;
+  private final PostTitleReader postTitles;
 
   ChannelBreakdowns channels(LinkId linkId) {
     List<LinkStats.ReferrerClick> referrers =
@@ -83,11 +85,43 @@ class LinkStatsDimensionBreakdownsReader {
         clickDimensions.findTopUtmContentClicks(linkId.value(), TOP_SIZE).stream()
             .map(r -> new LinkStats.UtmContentClick(r.getContent(), r.getCount()))
             .toList();
+    List<LinkStats.UtmTermClick> terms =
+        clickDimensions.findTopUtmTermClicks(linkId.value(), TOP_SIZE).stream()
+            .map(r -> new LinkStats.UtmTermClick(r.getTerm(), r.getCount()))
+            .toList();
     List<LinkStats.SourceChannelClick> sourceChannels =
         clickDimensions.findTopSourceChannelClicks(linkId.value(), TOP_SIZE).stream()
             .map(r -> new LinkStats.SourceChannelClick(r.getSource(), r.getCount()))
             .toList();
-    return new UtmBreakdowns(campaigns, sources, mediums, contents, sourceChannels);
+    return new UtmBreakdowns(campaigns, sources, mediums, contents, terms, sourceChannels);
+  }
+
+  /** 인앱 브라우저별 사람 클릭. 일반 브라우저(client_app IS NULL)는 애초에 행이 없다. */
+  List<LinkStats.ClientAppClick> clientApps(LinkId linkId) {
+    return clickDimensions.findTopClientAppClicks(linkId.value(), TOP_SIZE).stream()
+        .map(r -> new LinkStats.ClientAppClick(r.getApp(), r.getCount()))
+        .toList();
+  }
+
+  /** Sec-Fetch-Site 값별 사람 클릭. 헤더를 안 보낸 클릭은 행이 없다(모르는 걸 direct 로 뭉개지 않는다). */
+  List<LinkStats.FetchSiteClick> fetchSites(LinkId linkId) {
+    return clickDimensions.findTopFetchSiteClicks(linkId.value(), TOP_SIZE).stream()
+        .map(r -> new LinkStats.FetchSiteClick(r.getFetchSite(), r.getCount()))
+        .toList();
+  }
+
+  /**
+   * 링크를 품고 있던 글별 사람 클릭. 제목은 link 슬라이스가 post 를 직접 알면 슬라이스 그래프에 사이클이 생기므로 common 중립 포트({@link
+   * PostTitleReader})로 한 번에 batch 조회해 붙인다. 지워진 글은 제목만 null 이고 클릭 수는 남긴다.
+   */
+  List<LinkStats.PostClick> postClicks(LinkId linkId) {
+    var rows = clickDimensions.findTopPostClicks(linkId.value(), TOP_SIZE);
+    if (rows.isEmpty()) return List.of();
+    Map<Long, String> titles =
+        postTitles.findTitlesByIds(rows.stream().map(r -> r.getPostId()).toList());
+    return rows.stream()
+        .map(r -> new LinkStats.PostClick(r.getPostId(), titles.get(r.getPostId()), r.getCount()))
+        .toList();
   }
 
   GeoBreakdowns geo(LinkId linkId) {
@@ -164,6 +198,7 @@ class LinkStatsDimensionBreakdownsReader {
       List<LinkStats.UtmSourceClick> sources,
       List<LinkStats.UtmMediumClick> mediums,
       List<LinkStats.UtmContentClick> contents,
+      List<LinkStats.UtmTermClick> terms,
       List<LinkStats.SourceChannelClick> sourceChannels) {}
 
   record GeoBreakdowns(

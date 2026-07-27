@@ -18,7 +18,8 @@ public record ClickContext(
     String sourceChannel,
     Long destinationId,
     Long postId,
-    boolean gpc) {
+    boolean gpc,
+    String fetchSite) {
 
   public static ClickContext of(
       LinkId linkId,
@@ -37,7 +38,8 @@ public record ClickContext(
         null,
         null,
         null,
-        false);
+        false,
+        null);
   }
 
   public ClickContext withSourceChannel(String sourceChannel) {
@@ -51,7 +53,8 @@ public record ClickContext(
         sourceChannel,
         destinationId,
         postId,
-        gpc);
+        gpc,
+        fetchSite);
   }
 
   public ClickContext withDestination(Long destinationId) {
@@ -65,7 +68,8 @@ public record ClickContext(
         sourceChannel,
         destinationId,
         postId,
-        gpc);
+        gpc,
+        fetchSite);
   }
 
   public ClickContext withPostId(Long postId) {
@@ -79,7 +83,8 @@ public record ClickContext(
         sourceChannel,
         destinationId,
         postId,
-        gpc);
+        gpc,
+        fetchSite);
   }
 
   /// Global Privacy Control(Sec-GPC: 1) 신호 — 옵트아웃 시 재방문 식별(visitorHash)을 끈다.
@@ -94,6 +99,24 @@ public record ClickContext(
         sourceChannel,
         destinationId,
         postId,
+        value,
+        fetchSite);
+  }
+
+  /// Sec-Fetch-Site — 레퍼러가 지워진 클릭에서도 "직접 열었나(none) vs 링크를 눌렀나(cross-site)" 를 가른다.
+  /// 브라우저가 표준으로 보내는 저엔트로피 값이라 방문자를 특정하지 않는다. 저장만 하고 봇 판정엔 쓰지 않는다.
+  public ClickContext withFetchSite(String value) {
+    return new ClickContext(
+        linkId,
+        originalUrl,
+        referrer,
+        userAgent,
+        clientIp,
+        acceptLanguage,
+        sourceChannel,
+        destinationId,
+        postId,
+        gpc,
         value);
   }
 }
