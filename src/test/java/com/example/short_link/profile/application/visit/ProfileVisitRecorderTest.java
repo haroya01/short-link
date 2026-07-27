@@ -47,7 +47,7 @@ class ProfileVisitRecorderTest {
     when(uaClassifier.classify("ua")).thenReturn(uaInfo(false, null));
     when(geoResolver.resolve("1.2.3.4")).thenReturn(new GeoLocation("KR", "Seoul", "Gangnam"));
     when(asnResolver.resolve("1.2.3.4"))
-        .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false));
+        .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
     recorder.record(
@@ -79,7 +79,8 @@ class ProfileVisitRecorderTest {
   void marksAsBotWhenUaBotPositive() {
     when(uaClassifier.classify("bot-ua")).thenReturn(uaInfo(true, "Googlebot"));
     when(geoResolver.resolve("1.2.3.4")).thenReturn(GeoLocation.empty());
-    when(asnResolver.resolve("1.2.3.4")).thenReturn(new AsnResolver.AsnInfo(15169, "Google", true));
+    when(asnResolver.resolve("1.2.3.4"))
+        .thenReturn(new AsnResolver.AsnInfo(15169, "Google", true, false));
 
     recorder.record(7L, null, "bot-ua", "1.2.3.4", null, null, null, null, null, null, null, false);
 
@@ -94,7 +95,7 @@ class ProfileVisitRecorderTest {
     when(uaClassifier.classify("ua")).thenReturn(uaInfo(false, null));
     when(geoResolver.resolve("1.2.3.4")).thenReturn(GeoLocation.empty());
     when(asnResolver.resolve("1.2.3.4"))
-        .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false));
+        .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(true);
 
     recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
@@ -109,7 +110,8 @@ class ProfileVisitRecorderTest {
   void marksAsDatacenterBotWhenAsnSaysSo() {
     when(uaClassifier.classify("ua")).thenReturn(uaInfo(false, null));
     when(geoResolver.resolve("1.2.3.4")).thenReturn(GeoLocation.empty());
-    when(asnResolver.resolve("1.2.3.4")).thenReturn(new AsnResolver.AsnInfo(16509, "AWS", true));
+    when(asnResolver.resolve("1.2.3.4"))
+        .thenReturn(new AsnResolver.AsnInfo(16509, "AWS", true, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
     recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
@@ -124,7 +126,7 @@ class ProfileVisitRecorderTest {
   void datacenterBotFallsBackWhenOrgMissing() {
     when(uaClassifier.classify("ua")).thenReturn(uaInfo(false, null));
     when(geoResolver.resolve("1.2.3.4")).thenReturn(GeoLocation.empty());
-    when(asnResolver.resolve("1.2.3.4")).thenReturn(new AsnResolver.AsnInfo(0, null, true));
+    when(asnResolver.resolve("1.2.3.4")).thenReturn(new AsnResolver.AsnInfo(0, null, true, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
     recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, false);
@@ -145,7 +147,7 @@ class ProfileVisitRecorderTest {
   void everyInvocationIndependentlyEnrichedAndSaved() {
     when(uaClassifier.classify(any())).thenReturn(uaInfo(false, null));
     when(geoResolver.resolve(any())).thenReturn(GeoLocation.empty());
-    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, null, false));
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, null, false, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
     for (int i = 0; i < 3; i++) {
@@ -159,7 +161,7 @@ class ProfileVisitRecorderTest {
     when(uaClassifier.classify("ua")).thenReturn(uaInfo(false, null));
     when(geoResolver.resolve("1.2.3.4")).thenReturn(GeoLocation.empty());
     when(asnResolver.resolve("1.2.3.4"))
-        .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false));
+        .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
     // Sec-GPC 옵트아웃 → 재방문 식별 해시를 만들지 않는다(§0, 측정 아닌 존중).

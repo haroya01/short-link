@@ -159,7 +159,7 @@ class RecordPostViewUseCaseTest {
     when(userAgentClassifier.classify(any()))
         .thenReturn(new UserAgentInfo("mobile", "iOS", "Safari", false, null));
     when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("KR", "Seoul", "Seoul"));
-    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false));
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
     useCase.execute(
@@ -227,7 +227,7 @@ class RecordPostViewUseCaseTest {
     when(userAgentClassifier.classify(any()))
         .thenReturn(new UserAgentInfo("desktop", "Win", "Chrome", false, null));
     when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("US", null, null));
-    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false));
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(true);
 
     useCase.execute(new RecordPostViewCommand("john", "p"), ctx());
@@ -242,7 +242,8 @@ class RecordPostViewUseCaseTest {
     when(userAgentClassifier.classify(any()))
         .thenReturn(new UserAgentInfo("desktop", "Win", "Chrome", false, null));
     when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("US", null, null));
-    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(15169, "GOOGLE", true));
+    when(asnResolver.resolve(any()))
+        .thenReturn(new AsnResolver.AsnInfo(15169, "GOOGLE", true, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
     useCase.execute(new RecordPostViewCommand("john", "p"), ctx());
@@ -269,7 +270,7 @@ class RecordPostViewUseCaseTest {
     when(userAgentClassifier.classify(any()))
         .thenReturn(new UserAgentInfo("desktop", "Win", "Chrome", false, null));
     when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
-    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false));
+    when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
     // Sec-GPC 옵트아웃 → 재방문 식별 해시를 만들지 않는다(§0, 측정 아닌 존중).
