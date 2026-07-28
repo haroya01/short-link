@@ -19,6 +19,22 @@ public final class LinkRedirectSupport {
     return ClientIp.of(req);
   }
 
+  /**
+   * The request's {@code Sec-Fetch-Site} value, or null when absent. Only the four values the fetch
+   * metadata spec defines are kept — anything else is a forged or garbage header and is dropped
+   * rather than stored. Read here (not as a {@code @RequestHeader}) so both the redirect flow and
+   * the preview branch get it the same way {@code Sec-GPC} is read.
+   */
+  public static String fetchSite(HttpServletRequest req) {
+    String raw = req.getHeader("Sec-Fetch-Site");
+    if (raw == null) return null;
+    String value = raw.trim().toLowerCase();
+    return switch (value) {
+      case "none", "cross-site", "same-site", "same-origin" -> value;
+      default -> null;
+    };
+  }
+
   public static String normalizeOs(String osName) {
     if (osName == null) return null;
     String lower = osName.toLowerCase();

@@ -6,6 +6,7 @@ import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.application.dto.UtmParams;
 import com.example.short_link.link.classifier.application.AsnResolver;
 import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.ClientAppClassifier;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.classifier.application.helper.IpMasker;
@@ -33,6 +34,7 @@ public class ClickRecorder {
 
   private final ClickEventRepository repository;
   private final UserAgentClassifier userAgentClassifier;
+  private final ClientAppClassifier clientAppClassifier;
   private final GeoIpResolver geoIpResolver;
   private final AsnResolver asnResolver;
   private final BotHeuristic botHeuristic;
@@ -95,6 +97,9 @@ public class ClickRecorder {
               .postId(ctx.postId())
               .asn(asnInfo.asn())
               .asnOrg(asnInfo.organization())
+              // 인앱 브라우저 이름은 사람/봇과 별개 축이다 — 위 classifyBot 결과에 절대 섞지 않는다.
+              .clientApp(clientAppClassifier.classify(ctx.userAgent()))
+              .fetchSite(ctx.fetchSite())
               .build();
       ClickEventEntity saved = repository.save(event);
       events.publishEvent(

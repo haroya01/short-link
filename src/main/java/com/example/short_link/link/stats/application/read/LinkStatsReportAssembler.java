@@ -32,8 +32,12 @@ class LinkStatsReportAssembler {
     LinkStatsDimensionBreakdownsReader.UtmBreakdowns utm = dimensionsReader.utm(linkId);
     LinkStatsDimensionBreakdownsReader.GeoBreakdowns geo = dimensionsReader.geo(linkId);
     List<LinkStats.DestinationClick> destinations = dimensionsReader.destinations(link);
+    List<LinkStats.ClientAppClick> clientApps = dimensionsReader.clientApps(linkId);
+    List<LinkStats.FetchSiteClick> fetchSites = dimensionsReader.fetchSites(linkId);
+    List<LinkStats.PostClick> postClicks = dimensionsReader.postClicks(linkId);
     LinkStats.ReturnRate returnRate = lifecycleReader.returnRate(linkId);
     LinkStats.Lifecycle lifecycle = lifecycleReader.lifecycle(linkId);
+    List<LinkStats.ChannelDepth> channelDepth = lifecycleReader.channelDepth(linkId);
 
     List<LinkStats.Insight> insights =
         new java.util.ArrayList<>(
@@ -50,6 +54,9 @@ class LinkStatsReportAssembler {
     if (totals.total() >= 10) {
       lifecycleReader.channelJump(linkId).ifPresent(insights::add);
     }
+    // 인앱 비중·채널 충성도도 같은 자리에서 — 이미 읽어 둔 브레이크다운으로 만드는 규칙이라 추가 쿼리가 없다.
+    insightsCalculator.inAppBrowser(clientApps, totals.human()).ifPresent(insights::add);
+    insightsCalculator.channelLoyalty(channelDepth).ifPresent(insights::add);
 
     return new LinkStats(
         link.getShortCode(),
@@ -82,7 +89,12 @@ class LinkStatsReportAssembler {
         utm.sources(),
         utm.mediums(),
         utm.contents(),
+        utm.terms(),
         utm.sourceChannels(),
+        clientApps,
+        fetchSites,
+        postClicks,
+        channelDepth,
         destinations,
         geo.countries(),
         geo.regions(),

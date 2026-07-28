@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.domain.repository.ClickLifecycleReadRepository;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ChannelDepthRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReturnRateRow;
@@ -27,5 +28,10 @@ class ClickLifecycleReadRepositoryAdapter implements ClickLifecycleReadRepositor
   @Override
   public List<HostFirstSeenRow> findFirstSeenByReferrerHost(Long linkId) {
     return jpa.findFirstSeenByReferrerHost(linkId);
+  }
+
+  @Override
+  public List<ChannelDepthRow> findChannelDepth(Long linkId, int limit) {
+    return jpa.findChannelDepth(linkId, limit);
   }
 }

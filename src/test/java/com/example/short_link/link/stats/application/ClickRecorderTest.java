@@ -11,6 +11,7 @@ import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
 import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.ClientAppClassifier;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.domain.LinkId;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -30,6 +32,7 @@ class ClickRecorderTest {
 
   @Mock private ClickEventRepository repository;
   @Mock private UserAgentClassifier userAgentClassifier;
+  @Spy private ClientAppClassifier clientAppClassifier;
   @Mock private GeoIpResolver geoIpResolver;
   @Mock private AsnResolver asnResolver;
   @Mock private BotHeuristic botHeuristic;
@@ -93,6 +96,77 @@ class ClickRecorderTest {
 
     assertThat(captor.getValue().isBot()).isTrue();
     assertThat(captor.getValue().getBotName()).isEqualTo("datacenter:Amazon.com, Inc.");
+  }
+
+  /**
+   * 인앱 브라우저는 사람이다 — client_app 이 채워져도 봇 판정은 그대로 false 다. 두 축을 섞으면 카카오톡으로 링크를 연 독자가 통계에서 사라진다(프라이버시
+   * 릴레이 때 실제로 났던 사고와 같은 모양).
+   */
+  @Test
+  void inAppBrowserIsStoredAsClientAppAndStaysHuman() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+    String kakao =
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like"
+            + " Gecko) Mobile/15E148 KAKAOTALK 10.4.5";
+
+    recorder.record(
+        new ClickContext(
+            new LinkId(1L),
+            "https://example.com",
+            null,
+            kakao,
+            "1.2.3.4",
+            null,
+            null,
+            null,
+            null,
+            false,
+            null));
+
+    assertThat(captor.getValue().getClientApp()).isEqualTo("kakaotalk");
+    assertThat(captor.getValue().isBot()).isFalse();
+    assertThat(captor.getValue().getBotName()).isNull();
+  }
+
+  @Test
+  void ordinaryBrowserLeavesClientAppNull() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+    recorder.record(ctx(null, "1.2.3.4", null));
+
+    assertThat(captor.getValue().getClientApp()).isNull();
+  }
+
+  /** Sec-Fetch-Site 는 저장만 — 봇 판정에 쓰지 않는다. */
+  @Test
+  void storesFetchSiteWithoutTouchingBotClassification() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+    recorder.record(ctx(null, "1.2.3.4", null).withFetchSite("none"));
+
+    assertThat(captor.getValue().getFetchSite()).isEqualTo("none");
+    assertThat(captor.getValue().isBot()).isFalse();
+  }
+
+  @Test
+  void fetchSiteStaysNullWhenTheBrowserSendsNothing() {
+    when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
+    when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    ArgumentCaptor<ClickEventEntity> captor = ArgumentCaptor.forClass(ClickEventEntity.class);
+    when(repository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+    recorder.record(ctx(null, "1.2.3.4", null));
+
+    assertThat(captor.getValue().getFetchSite()).isNull();
   }
 
   @Test

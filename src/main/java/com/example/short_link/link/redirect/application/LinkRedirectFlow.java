@@ -105,7 +105,8 @@ public class LinkRedirectFlow {
             .withSourceChannel(src)
             .withDestination(picked.destinationId())
             .withPostId(postId)
-            .withGpc("1".equals(req.getHeader("Sec-GPC")));
+            .withGpc("1".equals(req.getHeader("Sec-GPC")))
+            .withFetchSite(LinkRedirectSupport.fetchSite(req));
     // 브라우저 프리페치는 사람이 연 게 아니다 — Sec-Fetch(Sec-Purpose/Purpose/X-moz)로 가려 프리뷰로 집계해
     // 사람 클릭에서 뺀다(정직성). 진짜 클릭만 humanClicks 로 남는다.
     if (isPrefetch(req)) {

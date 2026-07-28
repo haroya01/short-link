@@ -4,11 +4,14 @@ import com.example.short_link.link.stats.domain.repository.projection.ClickProje
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BotClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BrowserClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CityClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ClientAppClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CountryClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DestinationClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DeviceClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.FetchSiteClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LanguageClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.OsClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.PostClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReferrerClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReferrerHostClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.RegionClickRow;
@@ -17,6 +20,7 @@ import com.example.short_link.link.stats.domain.repository.projection.ClickProje
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmContentClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmMediumClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmTermClickRow;
 import java.util.List;
 
 public interface ClickDimensionReader {
@@ -40,7 +44,15 @@ public interface ClickDimensionReader {
 
   List<UtmContentClickRow> findTopUtmContentClicks(Long linkId, int limit);
 
+  List<UtmTermClickRow> findTopUtmTermClicks(Long linkId, int limit);
+
   List<SourceChannelClickRow> findTopSourceChannelClicks(Long linkId, int limit);
+
+  List<ClientAppClickRow> findTopClientAppClicks(Long linkId, int limit);
+
+  List<FetchSiteClickRow> findTopFetchSiteClicks(Long linkId, int limit);
+
+  List<PostClickRow> findTopPostClicks(Long linkId, int limit);
 
   List<DestinationClickRow> findDestinationClicks(Long linkId);
 

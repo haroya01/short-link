@@ -118,6 +118,22 @@ public class ClickEventEntity {
   @Column(name = "asn_org", length = 200)
   private String asnOrg;
 
+  /**
+   * In-app browser this click was opened in (kakaotalk, instagram, …), derived from the user agent
+   * at write time. Null for an ordinary browser. Independent of {@link #bot} — an in-app browser is
+   * a person.
+   */
+  @Column(name = "client_app", length = 32)
+  private String clientApp;
+
+  /**
+   * The browser's {@code Sec-Fetch-Site} value — {@code none} when the visitor opened the URL
+   * themselves (typed, bookmark, QR), {@code cross-site} when they followed a link. Splits apart
+   * referrer-less clicks that otherwise all look the same. Null when the browser doesn't send it.
+   */
+  @Column(name = "fetch_site", length = 16)
+  private String fetchSite;
+
   @Builder
   public ClickEventEntity(
       LinkId linkId,
@@ -145,7 +161,9 @@ public class ClickEventEntity {
       Long destinationId,
       Long postId,
       Integer asn,
-      String asnOrg) {
+      String asnOrg,
+      String clientApp,
+      String fetchSite) {
     this.linkId = linkId == null ? null : linkId.value();
     this.clickedAt = clickedAt;
     this.referrer = referrer;
@@ -172,6 +190,8 @@ public class ClickEventEntity {
     this.postId = postId;
     this.asn = asn;
     this.asnOrg = asnOrg;
+    this.clientApp = clientApp;
+    this.fetchSite = fetchSite;
   }
 
   @PrePersist

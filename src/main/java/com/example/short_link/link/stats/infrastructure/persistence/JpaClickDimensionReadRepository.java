@@ -5,11 +5,14 @@ import com.example.short_link.link.stats.domain.repository.projection.ClickProje
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BotClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.BrowserClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CityClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ClientAppClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.CountryClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DestinationClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DeviceClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.FetchSiteClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.LanguageClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.OsClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.PostClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReferrerClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.ReferrerHostClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.RegionClickRow;
@@ -18,6 +21,7 @@ import com.example.short_link.link.stats.domain.repository.projection.ClickProje
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmContentClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmMediumClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmSourceClickRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.UtmTermClickRow;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.Query;
@@ -92,6 +96,35 @@ public interface JpaClickDimensionReadRepository extends Repository<ClickEventEn
           + "AND c.utmContent IS NOT NULL "
           + "GROUP BY c.utmContent ORDER BY count DESC")
   List<UtmContentClickRow> findUtmContentClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.utmTerm AS term, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.utmTerm IS NOT NULL "
+          + "GROUP BY c.utmTerm ORDER BY count DESC")
+  List<UtmTermClickRow> findUtmTermClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  // 인앱 브라우저는 사람이다 — bot = false 로 사람 클릭만 세고, client_app IS NULL(일반 브라우저)은 뺀다.
+  @Query(
+      "SELECT c.clientApp AS app, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.clientApp IS NOT NULL "
+          + "GROUP BY c.clientApp ORDER BY count DESC")
+  List<ClientAppClickRow> findClientAppClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.fetchSite AS fetchSite, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.fetchSite IS NOT NULL "
+          + "GROUP BY c.fetchSite ORDER BY count DESC")
+  List<FetchSiteClickRow> findFetchSiteClicks(@Param("linkId") Long linkId, Pageable pageable);
+
+  @Query(
+      "SELECT c.postId AS postId, COUNT(c) AS count "
+          + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.postId IS NOT NULL "
+          + "GROUP BY c.postId ORDER BY count DESC")
+  List<PostClickRow> findPostClicks(@Param("linkId") Long linkId, Pageable pageable);
 
   @Query(
       "SELECT c.sourceChannel AS source, COUNT(c) AS count "

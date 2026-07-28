@@ -20,6 +20,15 @@ public class LinkInsights {
   private static final double BOT_RATIO_THRESHOLD = 0.3;
   private static final double FAST_DECAY_THRESHOLD = 0.2;
 
+  /** 인앱 브라우저 비중이 이 정도는 돼야 "어디서 열렸는지"가 행동을 바꿀 만한 사실이 된다. */
+  private static final double IN_APP_SHARE_THRESHOLD = 0.2;
+
+  /** 채널 재방문율은 이 위여야 눈에 띈다 — 링크 전체 평균 재방문율은 보통 이보다 한참 낮다. */
+  private static final double CHANNEL_LOYALTY_THRESHOLD = 0.3;
+
+  /** 방문자 표본이 이보다 적으면 재방문율 한두 명에 비율이 요동쳐 신호가 아니라 잡음이다. */
+  private static final long CHANNEL_LOYALTY_MIN_VISITORS = 5;
+
   private final MessageSource messages;
 
   public LinkInsights(MessageSource messages) {
@@ -51,6 +60,62 @@ public class LinkInsights {
     secondWind(dailyClicks).ifPresent(insights::add);
     dormancy(dailyClicks).ifPresent(insights::add);
     return insights;
+  }
+
+  /**
+   * 인앱 브라우저 비중 — "카카오톡에서 열린 게 N%". 링크가 어디에 붙어 있는지가 아니라 어디에서 *열렸는지*라, 랜딩을 앱 웹뷰에서도 멀쩡히 돌게 만들지 말지를
+   * 가른다(로그인 리다이렉트·폰트·다운로드가 인앱에서 곧잘 깨진다).
+   *
+   * <p>{@link #compute} 밖에 있는 건 {@code channelJump} 와 같은 이유다 — 조립기가 이미 들고 있는 데이터로 만드는 규칙이라 기존 호출자
+   * 계약을 건드리지 않는다.
+   */
+  public Optional<LinkStats.Insight> inAppBrowser(
+      List<LinkStats.ClientAppClick> clientApps, long humanClicks) {
+    if (clientApps == null || clientApps.isEmpty() || humanClicks < MIN_TOTAL_FOR_INSIGHTS) {
+      return Optional.empty();
+    }
+    long inApp = 0;
+    LinkStats.ClientAppClick top = clientApps.get(0);
+    for (LinkStats.ClientAppClick c : clientApps) {
+      inApp += c.count();
+      if (c.count() > top.count()) top = c;
+    }
+    double share = (double) inApp / humanClicks;
+    if (share < IN_APP_SHARE_THRESHOLD) return Optional.empty();
+    String message = msg("insight.IN_APP_BROWSER", appName(top.app()), pct(share));
+    Map<String, Object> data = new LinkedHashMap<>();
+    data.put("topApp", top.app());
+    data.put("topAppClicks", top.count());
+    data.put("inAppClicks", inApp);
+    data.put("share", round3(share));
+    return Optional.of(new LinkStats.Insight("IN_APP_BROWSER", "info", message, data));
+  }
+
+  /**
+   * 채널 충성도 — "○○에서 온 사람의 N%가 다시 왔어요". 클릭 수 1등이 아니라 *재방문율* 1등을 집는다. 한 번 터지고 끝난 채널과 사람을 남긴 채널은 다른
+   * 이야기고, 다음에 어디에 글을 올릴지를 정하는 건 후자다.
+   */
+  public Optional<LinkStats.Insight> channelLoyalty(List<LinkStats.ChannelDepth> channelDepth) {
+    if (channelDepth == null || channelDepth.isEmpty()) return Optional.empty();
+    LinkStats.ChannelDepth best = null;
+    for (LinkStats.ChannelDepth c : channelDepth) {
+      // 재방문 수 자체가 표본 하한을 대신한다 — 방문자 수는 계약에 없고, 재방문 N명이면 방문자는 최소 N명이다.
+      if (c.returningVisitors() < CHANNEL_LOYALTY_MIN_VISITORS) continue;
+      if (c.returnRatio() < CHANNEL_LOYALTY_THRESHOLD) continue;
+      if (best == null || c.returnRatio() > best.returnRatio()) best = c;
+    }
+    if (best == null) return Optional.empty();
+    String message = msg("insight.CHANNEL_LOYALTY", best.host(), pct(best.returnRatio()));
+    Map<String, Object> data = new LinkedHashMap<>();
+    data.put("host", best.host());
+    data.put("returnRatio", round3(best.returnRatio()));
+    data.put("returningVisitors", best.returningVisitors());
+    return Optional.of(new LinkStats.Insight("CHANNEL_LOYALTY", "info", message, data));
+  }
+
+  /// 인앱 브라우저 표시 이름 — 없으면 저장된 값 그대로(요일 폴백과 같은 방식).
+  private String appName(String app) {
+    return messages.getMessage("clientApp." + app, null, app, LocaleContextHolder.getLocale());
   }
 
   /// 메시지는 요청 로케일(Accept-Language)로 — messages_xx.properties 에서 코드로 룩업.

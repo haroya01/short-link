@@ -302,4 +302,103 @@ class LinkInsightsTest {
         insights.compute(100, 0, List.of(), List.of(), List.of(), null, null, daily);
     assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("DORMANT");
   }
+
+  // ─── 인앱 브라우저 비중 ───
+
+  @Test
+  void inAppBrowser_firesWhenTheShareIsBigEnough() {
+    LocaleContextHolder.setLocale(Locale.KOREAN);
+    var apps =
+        List.of(
+            new LinkStats.ClientAppClick("kakaotalk", 25L),
+            new LinkStats.ClientAppClick("instagram", 10L));
+
+    var insight = insights.inAppBrowser(apps, 100).orElseThrow();
+
+    assertThat(insight.type()).isEqualTo("IN_APP_BROWSER");
+    assertThat(insight.severity()).isEqualTo("info");
+    assertThat(insight.message()).contains("카카오톡").contains("35.0");
+    assertThat(insight.data())
+        .containsEntry("topApp", "kakaotalk")
+        .containsEntry("inAppClicks", 35L)
+        .containsEntry("share", 0.35);
+  }
+
+  @Test
+  void inAppBrowser_localizesTheAppName() {
+    var apps = List.of(new LinkStats.ClientAppClick("kakaotalk", 50L));
+
+    LocaleContextHolder.setLocale(Locale.ENGLISH);
+    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("KakaoTalk");
+
+    LocaleContextHolder.setLocale(Locale.JAPANESE);
+    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("カカオトーク");
+  }
+
+  /** 이름 없는 앱은 저장된 값 그대로 — 요일 폴백과 같은 방식이라 새 앱이 붙어도 예외가 안 난다. */
+  @Test
+  void inAppBrowser_fallsBackToTheRawAppName() {
+    LocaleContextHolder.setLocale(Locale.KOREAN);
+    var apps = List.of(new LinkStats.ClientAppClick("someNewApp", 50L));
+
+    assertThat(insights.inAppBrowser(apps, 100).orElseThrow().message()).contains("someNewApp");
+  }
+
+  @Test
+  void inAppBrowser_silentWhenShareIsSmall() {
+    var apps = List.of(new LinkStats.ClientAppClick("kakaotalk", 5L));
+
+    assertThat(insights.inAppBrowser(apps, 100)).isEmpty();
+  }
+
+  @Test
+  void inAppBrowser_silentWithoutEnoughClicksOrData() {
+    assertThat(insights.inAppBrowser(List.of(new LinkStats.ClientAppClick("kakaotalk", 5L)), 5))
+        .isEmpty();
+    assertThat(insights.inAppBrowser(List.of(), 100)).isEmpty();
+    assertThat(insights.inAppBrowser(null, 100)).isEmpty();
+  }
+
+  // ─── 채널 충성도 ───
+
+  private static LinkStats.ChannelDepth depth(String host, long returning, double ratio) {
+    return new LinkStats.ChannelDepth(host, 100L, java.time.Instant.now(), returning, ratio);
+  }
+
+  @Test
+  void channelLoyalty_picksTheHighestReturnRateNotTheBiggestChannel() {
+    LocaleContextHolder.setLocale(Locale.KOREAN);
+    var channels =
+        List.of(
+            depth("instagram.com", 6L, 0.35),
+            // 클릭은 적어도 재방문율이 가장 높은 채널이 이야기의 주인공이다.
+            depth("notion.so", 8L, 0.62));
+
+    var insight = insights.channelLoyalty(channels).orElseThrow();
+
+    assertThat(insight.type()).isEqualTo("CHANNEL_LOYALTY");
+    assertThat(insight.severity()).isEqualTo("info");
+    assertThat(insight.message()).contains("notion.so").contains("62.0");
+    assertThat(insight.data())
+        .containsEntry("host", "notion.so")
+        .containsEntry("returnRatio", 0.62)
+        .containsEntry("returningVisitors", 8L);
+  }
+
+  @Test
+  void channelLoyalty_silentWhenTheRateIsOrdinary() {
+    assertThat(insights.channelLoyalty(List.of(depth("instagram.com", 9L, 0.12)))).isEmpty();
+  }
+
+  /** 재방문 2명으로 100%를 만들어도 신호가 아니라 잡음이다. */
+  @Test
+  void channelLoyalty_silentWhenTheSampleIsTiny() {
+    assertThat(insights.channelLoyalty(List.of(depth("instagram.com", 2L, 1.0)))).isEmpty();
+  }
+
+  @Test
+  void channelLoyalty_silentWithoutChannels() {
+    assertThat(insights.channelLoyalty(List.of())).isEmpty();
+    assertThat(insights.channelLoyalty(null)).isEmpty();
+  }
 }
