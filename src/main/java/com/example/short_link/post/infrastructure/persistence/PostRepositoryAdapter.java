@@ -230,26 +230,48 @@ class PostRepositoryAdapter implements PostRepository {
     return query.replaceAll("[+\\-><()~*\"@]", " ").replaceAll("\\s+", " ").trim();
   }
 
-  // ngram(token size 2) 은 두 글자 미만 토큰을 인덱싱하지 않는다 — "C++"→"C", 한글 한 글자 질의는 MATCH 가 0건이 되어
-  // 예전 title LIKE 검색 대비 회귀가 된다. 스크럽·정규화 후 남은 모든 토큰이 2자 미만(또는 아예 비었으면)일 때에 한해
-  // 제목·요약 LIKE 폴백을 켜, 짧은 질의도 최소한 제목/요약에서는 잡히게 한다. 폴백이 필요 없으면 null 을 넘겨(쿼리에서 IS NULL
-  // 로 가지 자체를 꺼) 일반 질의의 매칭 범위·성능에 영향을 주지 않는다.
+  // InnoDB 기본 스톱워드 중 1·2글자 항목. ngram 파서는 "스톱워드를 포함하는 토큰"을 인덱스에서
+  // 제외하므로(MySQL 공식 문서), 바이그램(2글자 토큰)에 실제로 걸릴 수 있는 스톱워드는 이 부분집합뿐
+  // — 3글자 이상(the·com·for…)은 2글자 토큰에 포함될 수 없다. 'a'·'i' 는 substring 포함만으로 걸린다.
+  private static final java.util.Set<String> NGRAM_FATAL_BIGRAMS =
+      java.util.Set.of(
+          "an", "as", "at", "be", "by", "de", "en", "in", "is", "it", "la", "of", "on", "or", "to");
+
+  // 용어가 FULLTEXT(ngram) 인덱스에 "보이는지". 모든 바이그램이 기본 스톱워드에 오염된 용어는 색인
+  // 자체가 0개라 MATCH 가 영원히 못 잡는다 — "java"(ja·av·va 전부 'a' 포함)·"data"(da·at·ta) 가
+  // 프로드 실측 0건, "jpa"("jp" 생존)·"docker" 정상(2026-07-29). 서버측 정석 해법은 빈 스톱워드
+  // 테이블 + FULLTEXT 인덱스 리빌드(DB 설정 = 직영)지만, 그때까지 앱 폴백이 구제한다.
+  private static boolean visibleToNgram(String term) {
+    if (term.length() < 2) return false; // ngram(2) 은 두 글자 미만 토큰을 인덱싱하지 않는다.
+    String lower = term.toLowerCase();
+    for (int i = 0; i + 2 <= lower.length(); i++) {
+      String bigram = lower.substring(i, i + 2);
+      boolean contaminated =
+          bigram.indexOf('a') >= 0
+              || bigram.indexOf('i') >= 0
+              || NGRAM_FATAL_BIGRAMS.contains(bigram);
+      if (!contaminated) return true;
+    }
+    return false;
+  }
+
+  // 모든 토큰이 인덱스 불가시(2자 미만이거나 스톱워드 전멸)일 때에 한해 제목·요약 LIKE 폴백을 켠다 —
+  // "C++"·한 글자 질의뿐 아니라 "java"·"data" 같은 최빈 개발 검색어가 여기 해당한다. 하나라도 보이는
+  // 토큰이 있으면 MATCH 가 담당하므로 null 을 넘겨(쿼리에서 IS NULL 로 가지 자체를 꺼) 일반 질의의
+  // 매칭 범위·성능에 영향을 주지 않는다.
   static String titleLikeFallback(String query) {
     String scrubbed = booleanMatch(query);
     if (scrubbed.isEmpty()) {
       // 연산자·구두점만 있어 매칭할 자연어가 없으면 폴백해도 잡을 게 없다.
       return null;
     }
-    boolean allTermsTooShort = true;
     for (String term : scrubbed.split(" ")) {
-      if (term.length() >= 2) {
-        allTermsTooShort = false;
-        break;
+      if (visibleToNgram(term)) {
+        return null;
       }
     }
-    // 폴백은 "짧은 질의라 ngram 이 못 잡는" 경우에만. 원문(스크럽 전)을 이스케이프해 %…% 로 감싼다 — 짧은 질의라도
-    // 사용자가 친 그대로(예: "C++")를 제목/요약에서 부분일치로 찾는다.
-    return allTermsTooShort ? likePattern(query) : null;
+    // 원문(스크럽 전)을 이스케이프해 %…% 로 감싼다 — 사용자가 친 그대로(예: "C++")를 부분일치로 찾는다.
+    return likePattern(query);
   }
 
   @Override
