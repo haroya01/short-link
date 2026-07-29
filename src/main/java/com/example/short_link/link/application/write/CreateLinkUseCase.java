@@ -63,7 +63,7 @@ public class CreateLinkUseCase {
 
   public LinkCreated execute(CreateLinkCommand command) {
     String url = command.url();
-    validator.validateUrl(url);
+    validator.validateUrl(url, command.allowSelfHost());
 
     boolean authenticated = command.userId() != null;
     String code = authenticated ? command.customCode() : null;

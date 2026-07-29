@@ -33,7 +33,8 @@ public class EventLinkIssuer {
     try {
       ShortCode code =
           createLink
-              .execute(new CreateLinkCommand(urlBuilder.build(slug), userId, null, null, false))
+              .execute(
+                  new CreateLinkCommand(urlBuilder.build(slug), userId, null, null, false, true))
               .shortCode();
       Optional<LinkEntity> link = linkRepository.findByShortCode(code);
       if (link.isEmpty()) {
