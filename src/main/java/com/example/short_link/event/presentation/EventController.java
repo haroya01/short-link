@@ -17,10 +17,13 @@ import com.example.short_link.event.application.write.UpdateEventUseCase;
 import com.example.short_link.event.domain.ContactField;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.presentation.request.ChangeStatusRequest;
+import com.example.short_link.event.presentation.request.CommitCoverRequest;
 import com.example.short_link.event.presentation.request.CreateAliasLinkRequest;
 import com.example.short_link.event.presentation.request.CreateEventRequest;
+import com.example.short_link.event.presentation.request.PresignCoverRequest;
 import com.example.short_link.event.presentation.request.QuestionSpecRequest;
 import com.example.short_link.event.presentation.request.UpdateEventRequest;
+import com.example.short_link.event.presentation.response.CommitCoverResponse;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -146,12 +149,6 @@ public class EventController {
   public EventAnalyticsView analytics(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return analyticsQueryService.analyze(userId, id);
   }
-
-  public record PresignCoverRequest(String contentType) {}
-
-  public record CommitCoverRequest(String key) {}
-
-  public record CommitCoverResponse(String coverImageUrl) {}
 
   @PostMapping("/{id}/cover/presign")
   public PresignResult presignCover(
