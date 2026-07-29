@@ -1,5 +1,7 @@
 package com.example.short_link.event.application.read;
 
+import com.example.short_link.event.application.EventOrganizerLookup;
+import com.example.short_link.event.application.EventOrganizerLookup.Organizer;
 import com.example.short_link.event.application.image.EventCoverImageService;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.repository.EventQuestionRepository;
@@ -19,6 +21,7 @@ public class PublicEventQueryService {
   private final EventRepository eventRepository;
   private final EventQuestionRepository questionRepository;
   private final EventCoverImageService coverImageService;
+  private final EventOrganizerLookup organizerLookup;
 
   @Transactional(readOnly = true)
   public PublicEventView findBySlug(String slug) {
@@ -30,7 +33,13 @@ public class PublicEventQueryService {
         questionRepository.findAllByEventIdOrderByPosition(event.getId()).stream()
             .map(EventQuestionView::from)
             .toList();
+    Organizer organizer = organizerLookup.find(event.getUserId()).orElse(null);
     return PublicEventView.from(
-        event, questions, Instant.now(), coverImageService.urlFor(event.getCoverImageKey()));
+        event,
+        questions,
+        Instant.now(),
+        coverImageService.urlFor(event.getCoverImageKey()),
+        organizer == null ? null : organizer.username(),
+        organizer == null ? null : organizer.avatarUrl());
   }
 }

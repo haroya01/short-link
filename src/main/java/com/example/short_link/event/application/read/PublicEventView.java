@@ -22,10 +22,18 @@ public record PublicEventView(
     String contactField,
     String status,
     boolean acceptingRegistrations,
+    int attending,
+    String organizerName,
+    String organizerAvatarUrl,
     List<EventQuestionView> questions) {
 
   public static PublicEventView from(
-      EventEntity event, List<EventQuestionView> questions, Instant now, String coverImageUrl) {
+      EventEntity event,
+      List<EventQuestionView> questions,
+      Instant now,
+      String coverImageUrl,
+      String organizerName,
+      String organizerAvatarUrl) {
     return new PublicEventView(
         event.getSlug(),
         event.getTitle(),
@@ -43,6 +51,9 @@ public record PublicEventView(
         event.getContactField().name(),
         event.getStatus().name(),
         event.acceptsRegistrations(now),
+        event.getRegistrationCount(),
+        organizerName,
+        organizerAvatarUrl,
         questions);
   }
 }

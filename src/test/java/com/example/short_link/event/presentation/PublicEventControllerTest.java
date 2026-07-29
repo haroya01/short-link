@@ -53,6 +53,9 @@ class PublicEventControllerTest {
         "EMAIL",
         "OPEN",
         true,
+        7,
+        "dohyun",
+        null,
         List.of());
   }
 
