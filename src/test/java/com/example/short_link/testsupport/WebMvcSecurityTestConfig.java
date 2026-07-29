@@ -76,6 +76,9 @@ public class WebMvcSecurityTestConfig {
           || ("POST".equals(method) && "/api/v1/auth/dev-login".equals(uri))
           // 행동 비콘은 프로드 SecurityConfig 도 익명 POST 를 연다 — 슬라이스도 같은 계약.
           || ("POST".equals(method) && "/api/v1/public/behavior-events".equals(uri))
+          // 이벤트 신청/취소 — 프로드 SecurityConfig 의 익명 POST 표면과 같은 계약.
+          || ("POST".equals(method) && uri.matches("/api/v1/public/events/[^/]+/registrations"))
+          || ("POST".equals(method) && "/api/v1/public/events/registrations/cancel".equals(uri))
           || ("GET".equals(method) && "/actuator/health".equals(uri))
           || ("GET".equals(method) && uri.startsWith("/api/v1/public/"));
     }

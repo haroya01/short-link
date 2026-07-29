@@ -7,12 +7,22 @@ import java.time.Instant;
  * 여러 묶음을 만들 때 batch:link UNIQUE 제약과 충돌하므로 false 로 호출 — 각 batch 가 자기 단축 코드를 갖도록 한다.
  */
 public record CreateLinkCommand(
-    String url, Long userId, String customCode, Instant expiresAt, boolean deduplicate) {
+    String url,
+    Long userId,
+    String customCode,
+    Instant expiresAt,
+    boolean deduplicate,
+    boolean allowSelfHost) {
 
   public CreateLinkCommand {
     if (url == null || url.isBlank()) {
       throw new IllegalArgumentException("url required");
     }
+  }
+
+  public CreateLinkCommand(
+      String url, Long userId, String customCode, Instant expiresAt, boolean deduplicate) {
+    this(url, userId, customCode, expiresAt, deduplicate, false);
   }
 
   public static CreateLinkCommand of(

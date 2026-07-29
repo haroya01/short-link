@@ -174,7 +174,11 @@ public class SecurityConfig {
                         "/api/v1/public/profiles/*/visit",
                         "/api/v1/public/profiles/*/posts/*/view",
                         "/api/v1/public/behavior-events",
-                        "/api/v1/public/abuse-reports")
+                        "/api/v1/public/abuse-reports",
+                        // 이벤트 신청/취소 — 참가자는 계정이 없다. 신청은 PoW 게이트가 컨트롤러에서 막고,
+                        // 취소는 소지자만 아는 토큰이 자격증명.
+                        "/api/v1/public/events/*/registrations",
+                        "/api/v1/public/events/registrations/cancel")
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/links/*/public-stats", "/api/v1/links/*/stream")
                     .permitAll()
