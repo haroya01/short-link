@@ -73,6 +73,10 @@ services:
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # Sign in with Apple audiences — 두 iOS 앱 번들 id(코드 기본값과 동일). 웹 Services ID 를
+      # 붙일 때 .env 에 전체 목록으로 넣는다(재빌드 불필요). 빈 값이면 yml 플레이스홀더가
+      # 기본값 대신 빈 문자열을 물기 때문에 여기서 완전한 기본 목록을 명시한다.
+      APPLE_SIGNIN_CLIENT_IDS: ${APPLE_SIGNIN_CLIENT_IDS:-focustime.kurl,focustime.kurl.links}
       TWOFA_AES_KEY: ${TWOFA_AES_KEY}
       POW_ENFORCE: ${POW_ENFORCE:-true}
       POW_DIFFICULTY: ${POW_DIFFICULTY:-3}
