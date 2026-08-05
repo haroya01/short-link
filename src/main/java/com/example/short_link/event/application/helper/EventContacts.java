@@ -11,6 +11,9 @@ public final class EventContacts {
   private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");
   private static final Pattern PHONE = Pattern.compile("^\\+?[0-9][0-9 .-]{5,18}[0-9]$");
   private static final Pattern KAKAO = Pattern.compile("^[A-Za-z0-9._-]{2,30}$");
+  private static final Pattern LINE = Pattern.compile("^[A-Za-z0-9._-]{2,30}$");
+  // 인스타 핸들 — 붙여넣기 습관의 앞 @ 는 정규화에서 벗긴다.
+  private static final Pattern INSTAGRAM = Pattern.compile("^@?[A-Za-z0-9._]{1,30}$");
 
   private EventContacts() {}
 
@@ -24,6 +27,8 @@ public final class EventContacts {
           case EMAIL -> EMAIL.matcher(value).matches();
           case PHONE -> PHONE.matcher(value.replaceAll("\\s", "")).matches();
           case KAKAO -> KAKAO.matcher(value).matches();
+          case LINE -> LINE.matcher(value).matches();
+          case INSTAGRAM -> INSTAGRAM.matcher(value).matches();
         };
     if (!valid) {
       throw new EventException(EventErrorCode.INVALID_CONTACT, field);
@@ -31,7 +36,8 @@ public final class EventContacts {
     return switch (field) {
       case EMAIL -> value.toLowerCase();
       case PHONE -> value.replaceAll("[\\s.-]", "");
-      case KAKAO -> value;
+      case KAKAO, LINE -> value;
+      case INSTAGRAM -> value.replaceFirst("^@", "").toLowerCase();
     };
   }
 }
