@@ -37,4 +37,19 @@ class EventContactsTest {
     assertThatThrownBy(() -> EventContacts.normalize(ContactField.KAKAO, "한글아이디"))
         .isInstanceOf(EventException.class);
   }
+
+  @Test
+  void line_idPattern() {
+    assertThat(EventContacts.normalize(ContactField.LINE, "line_id-99")).isEqualTo("line_id-99");
+    assertThatThrownBy(() -> EventContacts.normalize(ContactField.LINE, "x"))
+        .isInstanceOf(EventException.class);
+  }
+
+  @Test
+  void instagram_handleNormalized() {
+    // 앞 @ 는 벗기고 소문자로 — UNIQUE(event_id, contact) 중복 판정의 기준값.
+    assertThat(EventContacts.normalize(ContactField.INSTAGRAM, "@Kurl.Me")).isEqualTo("kurl.me");
+    assertThatThrownBy(() -> EventContacts.normalize(ContactField.INSTAGRAM, "no spaces"))
+        .isInstanceOf(EventException.class);
+  }
 }
