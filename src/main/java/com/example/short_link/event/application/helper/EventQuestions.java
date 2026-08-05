@@ -12,12 +12,12 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 커스텀 질문(최대 5개)과 답변의 검증·직렬화. options 는 JSON 문자열 배열, 답변은 {questionId: answer} JSON 객체. 질문 구조는 신청이
+ * 커스텀 질문(최대 10개)과 답변의 검증·직렬화. options 는 JSON 문자열 배열, 답변은 {questionId: answer} JSON 객체. 질문 구조는 신청이
  * 1건이라도 있으면 변경 불가 — 답변 매핑이 깨진다.
  */
 public final class EventQuestions {
 
-  public static final int MAX_QUESTIONS = 5;
+  public static final int MAX_QUESTIONS = 10;
   private static final int MAX_ANSWER_LENGTH = 500;
   private static final ObjectMapper MAPPER = new ObjectMapper();
 

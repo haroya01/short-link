@@ -21,4 +21,4 @@ public record CreateEventRequest(
     @Min(1) @Max(10000) Integer capacity,
     Instant closeAt,
     String contactField,
-    @Valid @Size(max = 5) List<QuestionSpecRequest> questions) {}
+    @Valid @Size(max = 10) List<QuestionSpecRequest> questions) {}

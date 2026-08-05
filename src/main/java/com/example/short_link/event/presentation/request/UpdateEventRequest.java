@@ -20,4 +20,4 @@ public record UpdateEventRequest(
     @Size(max = 2048) String onlineUrl,
     @Min(1) @Max(10000) Integer capacity,
     Instant closeAt,
-    @Valid @Size(max = 5) List<QuestionSpecRequest> questions) {}
+    @Valid @Size(max = 10) List<QuestionSpecRequest> questions) {}

@@ -22,12 +22,19 @@ class EventQuestionsTest {
   }
 
   @Test
-  void validateSpecs_capsAtFive() {
-    List<QuestionSpec> six =
-        java.util.stream.IntStream.range(0, 6)
+  void validateSpecs_capsAtTen() {
+    List<QuestionSpec> ten =
+        java.util.stream.IntStream.range(0, 10)
             .mapToObj(i -> new QuestionSpec("SHORT_TEXT", "q" + i, null, false))
             .toList();
-    assertThatThrownBy(() -> EventQuestions.validateSpecs(six)).isInstanceOf(EventException.class);
+    EventQuestions.validateSpecs(ten);
+
+    List<QuestionSpec> eleven =
+        java.util.stream.IntStream.range(0, 11)
+            .mapToObj(i -> new QuestionSpec("SHORT_TEXT", "q" + i, null, false))
+            .toList();
+    assertThatThrownBy(() -> EventQuestions.validateSpecs(eleven))
+        .isInstanceOf(EventException.class);
   }
 
   @Test
