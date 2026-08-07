@@ -107,9 +107,14 @@ services:
       - "80:80"
       - "443:443"
     volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - certbot_etc:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
+    ulimits:
+      nofile:
+        soft: 32768
+        hard: 32768
     depends_on:
       - app
     networks: [internal]
