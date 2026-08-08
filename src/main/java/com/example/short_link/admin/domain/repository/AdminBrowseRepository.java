@@ -37,8 +37,6 @@ public interface AdminBrowseRepository {
 
     UserEntity.Role getRole();
 
-    UserEntity.Tier getTier();
-
     Instant getCreatedAt();
 
     Instant getDeletedAt();

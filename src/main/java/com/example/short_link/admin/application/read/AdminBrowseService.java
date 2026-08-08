@@ -80,7 +80,6 @@ public class AdminBrowseService {
         r.getEmail(),
         r.getUsername(),
         r.getRole().name(),
-        r.getTier().name(),
         r.getDeletedAt() != null,
         r.getCreatedAt(),
         r.getLinkCount());
