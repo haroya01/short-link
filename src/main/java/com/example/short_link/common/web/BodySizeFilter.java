@@ -31,15 +31,13 @@ public class BodySizeFilter extends OncePerRequestFilter {
 
   /**
    * Routes whose legitimate payloads outgrow the default cap: the block editor saves whole
-   * documents (per-block validation alone allows far more than 16KB), bulk import uploads CSV
-   * files, and Stripe webhook events can run large — a 413 there makes Stripe retry and eventually
-   * disable the endpoint.
+   * documents (per-block validation alone allows far more than 16KB) and bulk import uploads CSV
+   * files.
    */
   private static final List<Limit> EXPANDED_LIMITS =
       List.of(
           new Limit("/api/v1/posts", 1024L * 1024L),
-          new Limit("/api/v1/links/bulk", 1024L * 1024L),
-          new Limit("/api/v1/billing/webhook", 256L * 1024L));
+          new Limit("/api/v1/links/bulk", 1024L * 1024L));
 
   private record Limit(String pathPrefix, long maxBytes) {}
 

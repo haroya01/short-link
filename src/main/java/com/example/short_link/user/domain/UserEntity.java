@@ -3,14 +3,12 @@ package com.example.short_link.user.domain;
 import com.example.short_link.common.jpa.BaseCreatedEntity;
 import com.example.short_link.user.domain.repository.*;
 import jakarta.persistence.Column;
-import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.PostLoad;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -26,11 +24,6 @@ public class UserEntity extends BaseCreatedEntity {
   public enum Role {
     USER,
     ADMIN
-  }
-
-  public enum Tier {
-    FREE,
-    PRO
   }
 
   /**
@@ -59,10 +52,6 @@ public class UserEntity extends BaseCreatedEntity {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private Role role = Role.USER;
-
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false, length = 16)
-  private Tier tier = Tier.FREE;
 
   @Column(nullable = false, length = 64)
   private String timezone = "Asia/Seoul";
@@ -145,24 +134,11 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "terms_version", length = 32)
   private String termsVersion;
 
-  @Embedded private StripeBinding stripe = new StripeBinding();
-
-  // Hibernate maps an @Embedded to null when every column on it is null — for users without any
-  // Stripe activity that breaks every downstream `stripe.xxx()` call with NPE. Restore the empty
-  // binding after load so callers can treat the field as always-present.
-  @PostLoad
-  void restoreStripeAfterLoad() {
-    if (stripe == null) {
-      stripe = new StripeBinding();
-    }
-  }
-
   public UserEntity(String email, String oauthProvider, String oauthId) {
     this.email = email;
     this.oauthProvider = oauthProvider;
     this.oauthId = oauthId;
     this.role = Role.USER;
-    this.tier = Tier.FREE;
     this.timezone = "Asia/Seoul";
   }
 
@@ -182,53 +158,6 @@ public class UserEntity extends BaseCreatedEntity {
 
   public boolean isAdmin() {
     return role == Role.ADMIN;
-  }
-
-  public boolean isPro() {
-    return tier == Tier.PRO;
-  }
-
-  public void upgradeToPro() {
-    this.tier = Tier.PRO;
-  }
-
-  public void downgradeToFree() {
-    this.tier = Tier.FREE;
-  }
-
-  public void linkStripeCustomer(String customerId) {
-    stripe.linkCustomer(customerId);
-  }
-
-  public void applySubscription(String subscriptionId, String status, Instant currentPeriodEnd) {
-    stripe.applySubscription(subscriptionId, status, currentPeriodEnd);
-    if ("active".equals(status) || "trialing".equals(status)) {
-      this.tier = Tier.PRO;
-    } else {
-      this.tier = Tier.FREE;
-    }
-  }
-
-  public void clearSubscription() {
-    stripe.clearSubscription();
-    this.tier = Tier.FREE;
-  }
-
-  // Backward-compatible accessors for the four columns now living on the embedded StripeBinding.
-  public String getStripeCustomerId() {
-    return stripe.getStripeCustomerId();
-  }
-
-  public String getStripeSubscriptionId() {
-    return stripe.getStripeSubscriptionId();
-  }
-
-  public String getSubscriptionStatus() {
-    return stripe.getSubscriptionStatus();
-  }
-
-  public Instant getSubscriptionCurrentPeriodEnd() {
-    return stripe.getSubscriptionCurrentPeriodEnd();
   }
 
   public void promoteToAdmin() {

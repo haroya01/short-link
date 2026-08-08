@@ -25,8 +25,6 @@ public interface UserRepository {
 
   Optional<UserEntity> findByEmail(String email);
 
-  Optional<UserEntity> findByStripeCustomerId(String stripeCustomerId);
-
   Optional<UserEntity> findByUsername(String username);
 
   long countByCreatedAtAfter(Instant since);

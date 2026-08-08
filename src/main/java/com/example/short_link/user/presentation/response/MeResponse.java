@@ -10,8 +10,6 @@ public record MeResponse(
     String role,
     String timezone,
     Instant createdAt,
-    String tier,
-    Instant subscriptionCurrentPeriodEnd,
     String username,
     String avatarUrl) {
 
@@ -23,8 +21,6 @@ public record MeResponse(
         u.getRole().name(),
         u.getTimezone(),
         u.getCreatedAt(),
-        u.getTier().name(),
-        u.getSubscriptionCurrentPeriodEnd(),
         u.getUsername(),
         u.getAvatarUrl());
   }
