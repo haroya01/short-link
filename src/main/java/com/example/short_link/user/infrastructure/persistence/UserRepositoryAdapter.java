@@ -56,11 +56,6 @@ class UserRepositoryAdapter implements UserRepository {
   }
 
   @Override
-  public Optional<UserEntity> findByStripeCustomerId(String stripeCustomerId) {
-    return jpa.findByStripeCustomerId(stripeCustomerId);
-  }
-
-  @Override
   public Optional<UserEntity> findByUsername(String username) {
     return jpa.findByUsername(username);
   }

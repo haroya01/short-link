@@ -21,7 +21,7 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
   @Query(
       value =
           "SELECT u.id AS id, u.email AS email, u.username AS username, "
-              + "u.role AS role, u.tier AS tier, u.createdAt AS createdAt, "
+              + "u.role AS role, u.createdAt AS createdAt, "
               + "u.deletedAt AS deletedAt, "
               + "(SELECT COUNT(l) FROM LinkEntity l WHERE l.userId = u.id) AS linkCount "
               + "FROM UserEntity u "
@@ -37,7 +37,7 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
 
   @Query(
       "SELECT u.id AS id, u.email AS email, u.username AS username, "
-          + "u.role AS role, u.tier AS tier, u.createdAt AS createdAt, "
+          + "u.role AS role, u.createdAt AS createdAt, "
           + "u.deletedAt AS deletedAt, "
           + "(SELECT COUNT(l) FROM LinkEntity l WHERE l.userId = u.id) AS linkCount "
           + "FROM UserEntity u WHERE u.id = :id")

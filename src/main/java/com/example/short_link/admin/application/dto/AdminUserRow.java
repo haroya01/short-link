@@ -12,7 +12,6 @@ public record AdminUserRow(
     String email,
     String username,
     String role,
-    String tier,
     boolean deleted,
     Instant createdAt,
     long linkCount) {}

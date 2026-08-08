@@ -226,17 +226,12 @@ public class SecurityConfig {
                         "/api/v1/auth/mobile/apple",
                         "/api/v1/auth/mobile/logout")
                     .permitAll()
-                    // Stripe verifies its own signature inside the handler — auth-by-signature, not
-                    // auth-by-session.
-                    .requestMatchers(POST, "/api/v1/billing/webhook")
-                    .permitAll()
-
                     // Admin surface.
                     .requestMatchers("/api/v1/admin/**")
                     .hasRole("ADMIN")
 
-                    // Everything else (links management, profiles, billing checkout/portal,
-                    // webhooks, custom-domains, tags, campaigns, 2FA setup, /users/me, ...) needs a
+                    // Everything else (links management, profiles, webhooks,
+                    // custom-domains, tags, campaigns, 2FA setup, /users/me, ...) needs a
                     // session. Letting `anyRequest().authenticated()` cover them keeps the matcher
                     // list short and removes ~70 lines of per-endpoint matchers that all said the
                     // same thing.

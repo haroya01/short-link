@@ -167,10 +167,3 @@ short-link:
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}
-  stripe:
-    api-key: ${STRIPE_SECRET_KEY:}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-    price-pro: ${STRIPE_PRICE_PRO:}
-    success-url: ${STRIPE_SUCCESS_URL:http://localhost:3001/ko/settings#data}
-    cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3001/ko/pricing}
-    portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:3001/ko/settings#data}

@@ -48,15 +48,6 @@ class ArchUnitGraphRulesTest {
   // ─── External SDK isolation (strict) ──────────────────────────────────
 
   @ArchTest
-  static final ArchRule stripeSdkConfinedToBillingInfrastructure =
-      noClasses()
-          .that()
-          .resideOutsideOfPackage("..billing.infrastructure.stripe..")
-          .should()
-          .dependOnClassesThat()
-          .resideInAPackage("com.stripe..");
-
-  @ArchTest
   static final ArchRule awsSdkConfinedToCommonStorage =
       noClasses()
           .that()
