@@ -68,11 +68,6 @@ class ClickEventAssemblerTest {
     assertThat(event.getBotName()).isEqualTo("preview:prefetch");
   }
 
-  /**
-   * A person browsing behind iCloud Private Relay exits through Cloudflare with an ordinary Safari
-   * UA. Classifying that as a datacenter bot removed real readers from the human numbers, which is
-   * what "someone opened my link and the stats didn't move" was. Relay egress must stay human.
-   */
   @Test
   void privacyRelayEgressIsRecordedAsHumanNotBot() {
     when(asnResolver.resolve(any()))
@@ -82,13 +77,9 @@ class ClickEventAssemblerTest {
 
     assertThat(event.isBot()).isFalse();
     assertThat(event.getBotName()).isNull();
-    // The ASN is still stored, so the breakdown can show the traffic came through a relay.
     assertThat(event.getAsnOrg()).isEqualTo("Cloudflare, Inc.");
   }
 
-  /**
-   * Hosting egress (AWS and friends) with a browser-looking UA stays a bot — that guard is intact.
-   */
   @Test
   void datacenterEgressIsStillRecordedAsBot() {
     when(asnResolver.resolve(any()))
@@ -100,10 +91,6 @@ class ClickEventAssemblerTest {
     assertThat(event.getBotName()).isEqualTo("datacenter:Amazon.com, Inc.");
   }
 
-  /**
-   * 인앱 브라우저는 사람이다 — client_app 이 채워져도 봇 판정은 그대로 false 다. 두 축을 섞으면 카카오톡으로 링크를 연 독자가 통계에서 사라진다(프라이버시
-   * 릴레이 때 실제로 났던 사고와 같은 모양).
-   */
   @Test
   void inAppBrowserIsStoredAsClientAppAndStaysHuman() {
     String kakao =
@@ -140,7 +127,6 @@ class ClickEventAssemblerTest {
     assertThat(event.getClientApp()).isNull();
   }
 
-  /** Sec-Fetch-Site 는 저장만 — 봇 판정에 쓰지 않는다. */
   @Test
   void storesFetchSiteWithoutTouchingBotClassification() {
     ClickEventEntity event =
@@ -177,7 +163,6 @@ class ClickEventAssemblerTest {
 
   @Test
   void gpcOptOutSkipsVisitorHash() {
-    // Sec-GPC 옵트아웃 → 재방문 식별 해시를 만들지 않는다(§0, 측정 아닌 존중).
     ClickEventEntity event =
         assembler.assemble(
             new PendingClick(ctx(null, "1.2.3.4", null).withGpc(true), null, OCCURRED_AT));

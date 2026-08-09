@@ -18,11 +18,6 @@ import com.example.short_link.link.stats.domain.ClickEventEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Maps one {@link PendingClick} to a persistable {@link ClickEventEntity} — classification (UA,
- * GeoIP, ASN, bot) and privacy handling (IP masking, GPC opt-out) all live here. Knows nothing
- * about queues, transactions, or persistence.
- */
 @Component
 @RequiredArgsConstructor
 public class ClickEventAssembler {
@@ -61,8 +56,6 @@ public class ClickEventAssembler {
         .regionName(geo.region())
         .cityName(geo.city())
         .language(LanguageExtractor.extract(ctx.acceptLanguage()))
-        // Sec-GPC(옵트아웃) 신호가 오면 재방문 식별 해시를 만들지 않는다 — "측정 위해 수집"이 아니라
-        // "존중 위해 수집"(§0). 클릭 자체는 익명 집계로 잡히되, 그 방문자는 return-tracking 안 함.
         .visitorHash(
             ctx.gpc()
                 ? null
@@ -75,7 +68,6 @@ public class ClickEventAssembler {
         .postId(ctx.postId())
         .asn(asnInfo.asn())
         .asnOrg(asnInfo.organization())
-        // 인앱 브라우저 이름은 사람/봇과 별개 축이다 — 위 classifyBot 결과에 절대 섞지 않는다.
         .clientApp(clientAppClassifier.classify(ctx.userAgent()))
         .fetchSite(ctx.fetchSite())
         .build();
@@ -93,8 +85,6 @@ public class ClickEventAssembler {
       return new BotClassification(true, BotHeuristic.SUSPECT_LABEL);
     }
     if (asnInfo.datacenter()) {
-      // Datacenter ASN with non-bot UA → almost always a scraper/headless. Mark it so stats
-      // don't conflate cloud egress with real eyeball traffic.
       String org = asnInfo.organization() == null ? "unknown" : asnInfo.organization();
       return new BotClassification(true, "datacenter:" + org);
     }

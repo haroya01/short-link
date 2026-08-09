@@ -84,7 +84,6 @@ class RedirectControllerTest {
                 .header("User-Agent", "Mozilla/5.0 (iPhone)"))
         .andExpect(status().isFound());
 
-    // 클릭 기록은 요청 뒤 버퍼에 남는다 — 응답 시점엔 row 가 없어야 한다(302 가 INSERT 를 기다리지 않는 계약).
     assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isZero();
 
     clickFlusher.flush();

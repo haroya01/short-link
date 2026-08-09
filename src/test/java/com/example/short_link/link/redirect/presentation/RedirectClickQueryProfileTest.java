@@ -22,13 +22,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-/**
- * 리다이렉트 한 번이 요청 스레드에서 내는 쿼리의 전량 프로파일. 트랜잭션 롤백 없이 실제 커밋 경로를 그대로 태워 프로드 클릭과 동일한 쿼리 시퀀스를 query-audit
- * 리포트로 남긴다.
- *
- * <p>비동기 전환 후 계약: 요청 스레드는 click_event INSERT 를 내지 않는다(302 는 클릭 기록을 기다리지 않는다). INSERT 는 플러시 프로파일
- * 테스트에서만 나타나야 한다.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -48,7 +41,6 @@ class RedirectClickQueryProfileTest {
 
   @BeforeEach
   void setUp() {
-    // 다른 테스트가 흘린 대기 클릭이 이 프로파일에 섞이지 않게 버퍼를 비우고 시작한다.
     clickBuffer.drain(Integer.MAX_VALUE);
     link = links.save(new LinkEntity("https://example.com/destination", CODE));
     clear(cacheManager, "link");
@@ -73,7 +65,7 @@ class RedirectClickQueryProfileTest {
     assertThat(clickRows()).isZero();
   }
 
-  // 예산 7 = 셋업·티어다운 6 + custom_domain 캐시 상태 여유 1. 동기 INSERT 가 부활하면 클릭당 +1 이라 초과된다.
+  // 7 = 셋업·티어다운 6 + custom_domain 캐시 여유 1. 동기 INSERT 부활 시 클릭당 +1 로 초과.
   @Test
   @ExpectMaxQueryCount(7)
   void repeatClickOnWarmCache() throws Exception {

@@ -6,15 +6,12 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.springframework.stereotype.Component;
 
-/**
- * Bounded FIFO holding clicks between the request thread and the flusher. Size is tracked in a
- * separate counter because {@link ConcurrentLinkedQueue#size()} is O(n) — the request path cannot
- * afford to walk the queue on every click.
- */
 @Component
 public class ClickBuffer {
 
   private final ConcurrentLinkedQueue<PendingClick> queue = new ConcurrentLinkedQueue<>();
+
+  // ConcurrentLinkedQueue.size() 는 O(n) — 요청 경로의 용량 검사는 이 카운터로만 한다.
   private final AtomicInteger size = new AtomicInteger();
   private final int capacity;
 
