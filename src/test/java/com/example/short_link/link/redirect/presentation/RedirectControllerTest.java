@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.ClickFlusher;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import java.time.Instant;
@@ -37,6 +38,7 @@ class RedirectControllerTest {
   @Autowired private ClickEventRepository clickEventRepository;
   @Autowired private ClickTotalsReadRepository clickRepository;
   @Autowired private CacheManager cacheManager;
+  @Autowired private ClickFlusher clickFlusher;
 
   @BeforeEach
   void clearLinkCache() {
@@ -82,6 +84,10 @@ class RedirectControllerTest {
                 .header("User-Agent", "Mozilla/5.0 (iPhone)"))
         .andExpect(status().isFound());
 
+    assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isZero();
+
+    clickFlusher.flush();
+
     assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isEqualTo(1);
   }
 
@@ -120,6 +126,8 @@ class RedirectControllerTest {
         .andExpect(content().string(Matchers.containsString("og:title")))
         .andExpect(content().string(Matchers.containsString("Article title")))
         .andExpect(content().string(Matchers.containsString("og:image")));
+
+    clickFlusher.flush();
 
     // Preview hits now persist as bot click_event rows so per-link stats can split \"social
     // preview\" out of generic bot traffic. They must NOT count toward human clicks.

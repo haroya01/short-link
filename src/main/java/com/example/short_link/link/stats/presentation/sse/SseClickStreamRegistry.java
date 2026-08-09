@@ -16,7 +16,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 /**
  * Holds all open SSE streams keyed by link id. {@link
- * com.example.short_link.link.stats.application.ClickRecorder} fires {@link ClickRecordedEvent}
+ * com.example.short_link.link.stats.application.ClickFlusher} fires {@link ClickRecordedEvent}
  * after every click and we fan out a small JSON payload (no PII) to every emitter watching that
  * link.
  *
