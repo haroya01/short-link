@@ -25,8 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * Records a {@link ProfileVisitEntity} for each visit to a /u/&lt;handle&gt; page. Reuses the same
  * UA / geo / ASN / bot-heuristic services as {@link
- * com.example.short_link.link.stats.application.ClickRecorder} so the enrichment quality (and the
- * downstream stats UX) stays consistent between link clicks and profile visits.
+ * com.example.short_link.link.stats.application.ClickEventAssembler} so the enrichment quality (and
+ * the downstream stats UX) stays consistent between link clicks and profile visits.
  */
 @Slf4j
 @Service

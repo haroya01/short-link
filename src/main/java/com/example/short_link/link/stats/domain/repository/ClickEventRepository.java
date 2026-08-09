@@ -8,6 +8,8 @@ public interface ClickEventRepository {
 
   ClickEventEntity save(ClickEventEntity event);
 
+  List<ClickEventEntity> saveAll(List<ClickEventEntity> events);
+
   long count();
 
   long countByLinkId(Long linkId);

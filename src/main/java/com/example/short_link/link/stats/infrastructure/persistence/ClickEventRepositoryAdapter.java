@@ -20,6 +20,11 @@ class ClickEventRepositoryAdapter implements ClickEventRepository {
   }
 
   @Override
+  public List<ClickEventEntity> saveAll(List<ClickEventEntity> events) {
+    return jpa.saveAll(events);
+  }
+
+  @Override
   public long count() {
     return jpa.count();
   }
