@@ -2,6 +2,7 @@ package com.example.short_link.admin.presentation;
 
 import com.example.short_link.admin.application.read.BlockedDomainQueryService;
 import com.example.short_link.admin.application.write.BlockDomainUseCase;
+import com.example.short_link.admin.application.write.BlockedDomainWarningFanout;
 import com.example.short_link.admin.application.write.UnblockDomainUseCase;
 import com.example.short_link.admin.domain.BlockedDomainEntity;
 import com.example.short_link.admin.presentation.request.BlockDomainRequest;
@@ -28,6 +29,7 @@ public class BlockedDomainController {
   private final BlockedDomainQueryService queryService;
   private final BlockDomainUseCase blockDomain;
   private final UnblockDomainUseCase unblockDomain;
+  private final BlockedDomainWarningFanout warningFanout;
 
   @GetMapping
   public List<BlockedDomainResponse> list() {
@@ -38,7 +40,10 @@ public class BlockedDomainController {
   public ResponseEntity<BlockedDomainResponse> block(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody BlockDomainRequest request) {
     BlockedDomainEntity blocked = blockDomain.execute(request.domain(), request.reason(), userId);
-    return ResponseEntity.status(HttpStatus.CREATED).body(BlockedDomainResponse.from(blocked));
+    // execute() 의 트랜잭션이 커밋된 뒤에 돌므로, 통지는 확정된 차단에 대해서만 나간다.
+    int warned = warningFanout.execute(blocked.getDomain());
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(BlockedDomainResponse.from(blocked, warned));
   }
 
   @DeleteMapping("/{domain}")

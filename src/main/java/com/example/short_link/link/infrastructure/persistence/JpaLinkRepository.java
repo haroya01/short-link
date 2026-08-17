@@ -60,6 +60,8 @@ public interface JpaLinkRepository
   @Query("select distinct l.userId from LinkEntity l")
   List<Long> findDistinctUserIds();
 
+  List<LinkEntity> findByOriginalUrlContaining(String fragment);
+
   List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to);
 
   @Query(
