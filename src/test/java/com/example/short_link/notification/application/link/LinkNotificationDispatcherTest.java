@@ -40,6 +40,14 @@ class LinkNotificationDispatcherTest {
   }
 
   @Test
+  void warningPushesEvenWhenPreferenceDisabled() {
+    when(prefs.isEnabled(7L, LinkNotificationType.WARNING)).thenReturn(false);
+    dispatcher.dispatch(7L, LinkNotificationType.WARNING, "spring", "운영자 경고", "정책 위반");
+    verify(repository).save(any(LinkNotificationEntity.class));
+    verify(pushSender).send(eq(7L), any(PushSender.PushMessage.class));
+  }
+
+  @Test
   void skipsEverythingWhenUserNull() {
     dispatcher.dispatch(null, LinkNotificationType.DIGEST, null, "x", "y");
     verify(repository, never()).save(any());

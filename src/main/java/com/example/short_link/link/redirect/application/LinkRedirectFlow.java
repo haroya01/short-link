@@ -1,5 +1,6 @@
 package com.example.short_link.link.redirect.application;
 
+import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.application.write.IncrementViewCountCommand;
@@ -20,9 +21,9 @@ import org.springframework.stereotype.Service;
 /**
  * Shared decision pipeline behind {@code GET /{shortCode}} and {@code POST /{shortCode}} (password
  * unlock). Controllers hand off the loaded cache DTO, plus the entity only when the password-unlock
- * path already needed it. The flow runs the four checks that don't depend on the entry point — view
- * limit, country block, destination pick, click recording — returning a {@link RedirectOutcome} for
- * the presentation layer to render.
+ * path already needed it. The flow runs the checks that don't depend on the entry point — view
+ * limit, country block, destination pick, operator domain blocklist, click recording — returning a
+ * {@link RedirectOutcome} for the presentation layer to render.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,6 +34,7 @@ public class LinkRedirectFlow {
   private final GeoIpResolver geoIpResolver;
   private final UserAgentClassifier userAgentClassifier;
   private final MeterRegistry meterRegistry;
+  private final BlockedDomainChecker blockedDomainChecker;
 
   /**
    * Run the post-load redirect pipeline: view-limit, country block, destination pick, click record.
@@ -94,6 +96,11 @@ public class LinkRedirectFlow {
     UserAgentInfo ua = userAgentClassifier.classify(userAgent);
     CachedLink.Picked picked =
         link.pick(clientCountry, LinkRedirectSupport.normalizeOs(ua.osName()), ua.deviceClass());
+    // 목적지 변형(variant)까지 포함해 실제 302 대상 URL 기준으로 검사 — 생성 후 차단된 도메인도 여기서 죽는다.
+    if (blockedDomainChecker.isBlocked(picked.url())) {
+      meterRegistry.counter("redirect.domain_blocked").increment();
+      return new RedirectOutcome.DomainBlocked();
+    }
     ClickContext ctx =
         ClickContext.of(
                 link.linkId(),

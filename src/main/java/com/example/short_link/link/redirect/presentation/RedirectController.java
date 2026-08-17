@@ -1,6 +1,7 @@
 package com.example.short_link.link.redirect.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
+import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
@@ -53,6 +54,7 @@ public class RedirectController {
   private final MeterRegistry meterRegistry;
   private final CustomDomainQueryService customDomainService;
   private final TurnstileProperties turnstile;
+  private final BlockedDomainChecker blockedDomainChecker;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -116,6 +118,11 @@ public class RedirectController {
     if (customOwner != null && !customOwner.equals(link.userId())) {
       throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
+    // 크롤러 프리뷰 분기보다 먼저 — 차단된 도메인은 OG 미리보기 카드도 내주지 않는다.
+    if (blockedDomainChecker.isBlocked(link.originalUrl())) {
+      meterRegistry.counter("redirect.domain_blocked").increment();
+      return LinkHtmlRenderer.domainBlockedPageResponse();
+    }
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
     if (crawlerLabel != null) {
       return handlePreview(
@@ -137,6 +144,7 @@ public class RedirectController {
               .header("X-Robots-Tag", "noindex, nofollow")
               .build();
       case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
+      case RedirectOutcome.DomainBlocked db -> LinkHtmlRenderer.domainBlockedPageResponse();
       case RedirectOutcome.ExpiredWithMessage em ->
           LinkHtmlRenderer.expiredPageResponse(em.message());
       case RedirectOutcome.PasswordRequired pr ->

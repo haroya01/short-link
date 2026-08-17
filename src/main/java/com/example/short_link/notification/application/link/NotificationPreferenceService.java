@@ -24,14 +24,23 @@ public class NotificationPreferenceService {
         .orElse(true);
   }
 
-  /** Full map for the settings screen — every type, defaulting absent rows to enabled. */
+  /**
+   * Full map for the settings screen — every opt-out-able type, defaulting absent rows to enabled.
+   * {@code WARNING} is left out: operator notices are not a preference.
+   */
   @Transactional(readOnly = true)
   public Map<LinkNotificationType, Boolean> all(Long userId) {
     Map<LinkNotificationType, Boolean> result = new EnumMap<>(LinkNotificationType.class);
     for (LinkNotificationType type : LinkNotificationType.values()) {
+      if (type == LinkNotificationType.WARNING) {
+        continue;
+      }
       result.put(type, true);
     }
     for (NotificationPreferenceEntity row : repository.findByUserId(userId)) {
+      if (row.getType() == LinkNotificationType.WARNING) {
+        continue;
+      }
       result.put(row.getType(), row.isEnabled());
     }
     return result;

@@ -21,6 +21,8 @@ import com.example.short_link.admin.application.read.AdminLinkMetricsQueryServic
 import com.example.short_link.admin.application.read.AdminOverviewService;
 import com.example.short_link.admin.application.read.AdminRouteMetricsService;
 import com.example.short_link.admin.application.read.RecentErrorsService;
+import com.example.short_link.admin.application.write.WarnUserUseCase;
+import com.example.short_link.admin.presentation.request.WarnUserRequest;
 import com.example.short_link.common.observability.AdminFunnelService;
 import com.example.short_link.common.observability.AdminRequestMetricsService;
 import com.example.short_link.common.observability.AdminSystemMetricsService;
@@ -29,13 +31,16 @@ import com.example.short_link.link.webhook.application.dto.WebhookReDetectResult
 import com.example.short_link.link.webhook.application.write.ReDetectWebhookFormatsUseCase;
 import com.example.short_link.user.application.dto.MintedAccessToken;
 import com.example.short_link.user.application.write.MintAccessTokenUseCase;
+import jakarta.validation.Valid;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -59,6 +64,7 @@ public class AdminController {
   private final AdminSystemMetricsService systemMetricsService;
   private final AdminFunnelService funnelService;
   private final MintAccessTokenUseCase mintAccessToken;
+  private final WarnUserUseCase warnUser;
 
   /**
    * Mint a fresh access token for the calling admin — a convenience for scripting against the API
@@ -108,6 +114,17 @@ public class AdminController {
   @GetMapping("/users/{id}")
   public AdminUserRow user(@PathVariable long id) {
     return browseService.user(id);
+  }
+
+  /**
+   * 약관 위반 계정에 보내는 운영자 경고. 링크 알림 인박스에 남고 푸시 설정과 무관하게 푸시된다. {@code shortCode} 는 어느 링크 건인지 가리키는
+   * 맥락(선택).
+   */
+  @PostMapping("/users/{id}/warning")
+  public ResponseEntity<Void> warnUser(
+      @PathVariable long id, @Valid @RequestBody WarnUserRequest request) {
+    warnUser.execute(id, request.shortCode(), request.message());
+    return ResponseEntity.noContent().build();
   }
 
   /**

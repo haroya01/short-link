@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.geoip.GeoLocation;
+import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.application.write.IncrementViewCountCommand;
@@ -36,10 +37,16 @@ class LinkRedirectFlowTest {
   private final GeoIpResolver geoIpResolver = mock(GeoIpResolver.class);
   private final UserAgentClassifier uaClassifier = mock(UserAgentClassifier.class);
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
+  private final BlockedDomainChecker blockedDomainChecker = mock(BlockedDomainChecker.class);
 
   private final LinkRedirectFlow flow =
       new LinkRedirectFlow(
-          incrementViewCount, clickRecorder, geoIpResolver, uaClassifier, meterRegistry);
+          incrementViewCount,
+          clickRecorder,
+          geoIpResolver,
+          uaClassifier,
+          meterRegistry,
+          blockedDomainChecker);
 
   private CachedLink basicLink(String url) {
     return new CachedLink(new LinkId(7L), url, null, null, null, null);
@@ -130,6 +137,49 @@ class LinkRedirectFlowTest {
     RedirectOutcome outcome = flow.execute(link, null, null, null, null, null, req());
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.Blocked.class);
+  }
+
+  @Test
+  void blockedDestinationDomainReturnsDomainBlockedWithoutRecordingClick() {
+    stubBasics();
+    when(blockedDomainChecker.isBlocked("https://spam.example/promo")).thenReturn(true);
+    CachedLink link = basicLink("https://spam.example/promo");
+
+    RedirectOutcome outcome = flow.execute(link, null, null, null, null, null, req());
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.DomainBlocked.class);
+    verify(clickRecorder, never()).record(any());
+    assertThat(meterRegistry.find("redirect.domain_blocked").counter().count()).isEqualTo(1.0);
+  }
+
+  @Test
+  void blockedVariantDestinationIsCaughtByPickedUrlCheck() {
+    when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation(null, null, null));
+    when(uaClassifier.classify(any()))
+        .thenReturn(new UserAgentInfo("mobile", "Android 14", "Chrome", false, null));
+    when(blockedDomainChecker.isBlocked("https://spam.example/app")).thenReturn(true);
+    CachedLink link =
+        new CachedLink(
+            new LinkId(7L),
+            null,
+            null,
+            "https://clean.example",
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            null,
+            List.of(
+                new CachedLink.Variant(
+                    11L, "https://spam.example/app", 10, true, null, null, "android")));
+
+    RedirectOutcome outcome = flow.execute(link, null, null, "ua", null, null, req());
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.DomainBlocked.class);
+    verify(clickRecorder, never()).record(any());
   }
 
   @Test
