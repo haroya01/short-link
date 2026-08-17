@@ -47,6 +47,12 @@ public interface LinkRepository {
   /** Distinct owners of any link — drives the per-user notification digest. */
   List<Long> findDistinctUserIds();
 
+  /**
+   * Coarse LIKE scan for links whose destination mentions {@code fragment} — the domain-block
+   * warning fan-out narrows the result by parsed host, so false positives here are fine.
+   */
+  List<LinkEntity> findByOriginalUrlContaining(String fragment);
+
   /** Links whose expiry falls in [from, to) — drives the expiry-imminent notification. */
   List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to);
 

@@ -109,6 +109,11 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<LinkEntity> findByOriginalUrlContaining(String fragment) {
+    return jpa.findByOriginalUrlContaining(fragment);
+  }
+
+  @Override
   public List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to) {
     return jpa.findByExpiresAtBetween(from, to);
   }
