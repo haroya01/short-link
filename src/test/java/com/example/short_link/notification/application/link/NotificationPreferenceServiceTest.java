@@ -43,9 +43,20 @@ class NotificationPreferenceServiceTest {
 
     var all = service.all(1L);
 
-    assertThat(all).hasSize(LinkNotificationType.values().length);
+    assertThat(all).hasSize(LinkNotificationType.values().length - 1);
     assertThat(all.get(LinkNotificationType.VELOCITY_SPIKE)).isFalse();
     assertThat(all.get(LinkNotificationType.FIRST_CLICK)).isTrue();
+  }
+
+  @Test
+  void allOmitsOperatorWarningFromSettingsMap() {
+    when(repo.findByUserId(1L))
+        .thenReturn(
+            List.of(new NotificationPreferenceEntity(1L, LinkNotificationType.WARNING, false)));
+
+    var all = service.all(1L);
+
+    assertThat(all).doesNotContainKey(LinkNotificationType.WARNING);
   }
 
   @Test

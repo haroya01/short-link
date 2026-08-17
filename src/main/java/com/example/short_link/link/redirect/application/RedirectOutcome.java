@@ -21,6 +21,9 @@ public sealed interface RedirectOutcome {
   /** Geo-blocked for the resolved client country — render the blocked interstitial. */
   record Blocked() implements RedirectOutcome {}
 
+  /** Destination host is on the operator blocklist — render the disabled-link interstitial. */
+  record DomainBlocked() implements RedirectOutcome {}
+
   /** View limit hit but the owner set an {@code expired_message} — render that copy at 410. */
   record ExpiredWithMessage(String message) implements RedirectOutcome {}
 }

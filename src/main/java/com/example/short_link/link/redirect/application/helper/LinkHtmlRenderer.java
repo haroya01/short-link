@@ -100,6 +100,10 @@ public final class LinkHtmlRenderer {
     return htmlResponse(HttpStatus.FORBIDDEN, blockedPage());
   }
 
+  public static ResponseEntity<byte[]> domainBlockedPageResponse() {
+    return htmlResponse(HttpStatus.FORBIDDEN, domainBlockedPage());
+  }
+
   public static ResponseEntity<byte[]> notFoundPageResponse() {
     return htmlResponse(HttpStatus.NOT_FOUND, notFoundPage());
   }
@@ -143,6 +147,12 @@ public final class LinkHtmlRenderer {
   static String blockedPage() {
     return page(
         "Not available", "<h1>이 지역에서는 열 수 없는 링크예요</h1>" + "<p>잘못된 것 같다면 링크를 만든 사람에게 문의하세요.</p>");
+  }
+
+  static String domainBlockedPage() {
+    return page(
+        "Link disabled",
+        "<h1>차단된 링크예요</h1>" + "<p>운영 정책 위반으로 더 이상 열 수 없는 링크예요.\n잘못된 차단 같다면 운영자에게 문의하세요.</p>");
   }
 
   static String notFoundPage() {

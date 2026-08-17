@@ -12,6 +12,9 @@ package com.example.short_link.notification.domain;
  *   <li>{@code VELOCITY_SPIKE} — clicks running well above the link's recent baseline.
  *   <li>{@code EXPIRY_IMMINENT} — a link with an expiry date entering its final week.
  *   <li>{@code DIGEST} — one calm daily summary of yesterday's clicks + top link.
+ *   <li>{@code WARNING} — an operator policy notice. Not opt-out-able: excluded from the settings
+ *       map and the dispatcher skips the preference gate, because terms §7 notices must reach the
+ *       account regardless of push preferences.
  * </ul>
  */
 public enum LinkNotificationType {
@@ -19,5 +22,6 @@ public enum LinkNotificationType {
   MILESTONE,
   VELOCITY_SPIKE,
   EXPIRY_IMMINENT,
-  DIGEST
+  DIGEST,
+  WARNING
 }

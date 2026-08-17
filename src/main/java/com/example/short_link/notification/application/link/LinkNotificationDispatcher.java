@@ -28,7 +28,8 @@ public class LinkNotificationDispatcher {
     }
     // 인박스 기록은 푸시 설정과 무관 — 푸시를 꺼도 인앱 목록엔 남는다.
     repository.save(new LinkNotificationEntity(userId, type, shortCode, subtitle, body));
-    if (!preferences.isEnabled(userId, type)) {
+    // 운영자 경고는 정책 통지라 옵트아웃 대상이 아니다 — 설정과 무관하게 푸시까지 나간다.
+    if (type != LinkNotificationType.WARNING && !preferences.isEnabled(userId, type)) {
       return;
     }
     pushSender.send(

@@ -85,7 +85,8 @@ public class PasswordUnlockController {
           flow.execute(link, entity, referrer, userAgent, acceptLanguage, src, req);
       ResponseEntity<?> response = renderUnlock(result);
       outcome =
-          (result instanceof RedirectOutcome.Blocked)
+          (result instanceof RedirectOutcome.Blocked
+                  || result instanceof RedirectOutcome.DomainBlocked)
               ? "blocked"
               : (result instanceof RedirectOutcome.ExpiredWithMessage) ? "expired" : "redirect";
       return response;
@@ -113,6 +114,7 @@ public class PasswordUnlockController {
         // 비밀번호가 맞으면 곧장 302 하지 않고, kurl 마크가 그려지는 잠금 해제 화면을 잠깐 보여준 뒤 이동한다.
       case RedirectOutcome.Redirect r -> LinkHtmlRenderer.unlockedPageResponse(r.picked().url());
       case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
+      case RedirectOutcome.DomainBlocked db -> LinkHtmlRenderer.domainBlockedPageResponse();
       case RedirectOutcome.ExpiredWithMessage em ->
           LinkHtmlRenderer.expiredPageResponse(em.message());
       case RedirectOutcome.PasswordRequired pr ->
