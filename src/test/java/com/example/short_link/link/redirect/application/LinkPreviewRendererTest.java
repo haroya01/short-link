@@ -2,14 +2,38 @@ package com.example.short_link.link.redirect.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.eventlink.EventLinkPreview;
 import com.example.short_link.link.domain.LinkEntity;
 import java.lang.reflect.Field;
 import java.time.Instant;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 
 class LinkPreviewRendererTest {
 
-  private final LinkPreviewRenderer renderer = new LinkPreviewRenderer();
+  private final LinkPreviewRenderer renderer = new LinkPreviewRenderer(linkId -> Optional.empty());
+
+  @Test
+  void eventLinkPreviewWinsOverOgMetadata() throws Exception {
+    LinkPreviewRenderer eventRenderer =
+        new LinkPreviewRenderer(
+            linkId ->
+                Optional.of(
+                    new EventLinkPreview("여름밤 링크 밋업", "8월 21일 (금) 19:00 · 성수 카페 어딘가", null)));
+    LinkEntity link = link("https://kurl.me/ko/e/summer");
+    Field id = LinkEntity.class.getDeclaredField("id");
+    id.setAccessible(true);
+    id.set(link, 7L);
+    link.applyOgMetadata("스크랩된 제목", "스크랩된 설명", null, Instant.now());
+
+    String html = eventRenderer.render(link, "https://kurl.me/qe1", 3L);
+
+    assertThat(html).contains("여름밤 링크 밋업");
+    assertThat(html).contains("8월 21일 (금) 19:00 · 성수 카페 어딘가");
+    assertThat(html).doesNotContain("스크랩된 제목");
+    // 커버 없는 이벤트는 기존 생성 카드 폴백 그대로.
+    assertThat(html).contains("https://kurl.me/qe1/og.png?c=3");
+  }
 
   @Test
   void rendersOgTagsWhenAvailable() {
