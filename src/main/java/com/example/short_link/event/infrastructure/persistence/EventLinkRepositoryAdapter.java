@@ -3,6 +3,7 @@ package com.example.short_link.event.infrastructure.persistence;
 import com.example.short_link.event.domain.EventLinkEntity;
 import com.example.short_link.event.domain.repository.EventLinkRepository;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -20,5 +21,10 @@ class EventLinkRepositoryAdapter implements EventLinkRepository {
   @Override
   public List<EventLinkEntity> findAllByEventId(Long eventId) {
     return jpa.findAllByEventId(eventId);
+  }
+
+  @Override
+  public Optional<EventLinkEntity> findByLinkId(Long linkId) {
+    return jpa.findByLinkId(linkId);
   }
 }
