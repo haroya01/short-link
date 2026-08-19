@@ -73,6 +73,25 @@ class BlockedDomainControllerTest {
         .andExpect(jsonPath("$.reason").value("phishing"));
   }
 
+  /* 자기 서비스 도메인 차단 거부 — 테스트 프로필의 자기 호스트는 base-url 기본값(localhost).
+  apex 와 그 서브도메인 모두 막혀야 한다(08-19 kurl.me 자기 차단 사고의 가드). */
+  @Test
+  void adminCannotBlockOwnServiceDomain() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("a5@x.com", "google", "g-ad5"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    for (String domain : new String[] {"localhost", "sub.localhost"}) {
+      mvc.perform(
+              post("/api/v1/admin/blocked-domains")
+                  .header("Authorization", "Bearer " + token)
+                  .contentType(MediaType.APPLICATION_JSON)
+                  .content("{\"domain\":\"" + domain + "\",\"reason\":\"oops\"}"))
+          .andExpect(status().isBadRequest());
+    }
+  }
+
   @Test
   void adminCanUnblockExisting() throws Exception {
     UserEntity admin = userRepository.save(new UserEntity("a3@x.com", "google", "g-ad3"));
