@@ -118,21 +118,42 @@ public class RedirectController {
     if (customOwner != null && !customOwner.equals(link.userId())) {
       throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
-    // 크롤러 프리뷰 분기보다 먼저 — 차단된 도메인은 OG 미리보기 카드도 내주지 않는다.
-    if (blockedDomainChecker.isBlocked(link.originalUrl())) {
+    // 크롤러 프리뷰 분기보다 먼저 — 차단된 도메인은 OG 미리보기 카드도 내주지 않는다(#659).
+    // originalUrl 만이 아니라 목적지 변형(variant)까지 본다: 사람 경로는 picked.url() 로 걸러지지만
+    // 크롤러는 지오/AB 컨텍스트가 없어 어떤 변형이든 걸릴 수 있으므로, 하나라도 차단이면 카드를 막는다.
+    if (anyDestinationBlocked(link)) {
       meterRegistry.counter("redirect.domain_blocked").increment();
       return LinkHtmlRenderer.domainBlockedPageResponse();
+    }
+    // 비밀번호 게이트를 크롤러 분기보다 먼저 — 안 그러면 스푸핑된 크롤러 UA 가 미리보기로
+    // 비밀번호 보호를 우회해 목적지를 통째로 노출한다(캐시 300초로 재배포까지). 보호 링크는
+    // 크롤러에게도 비밀번호 프롬프트만 준다(목적지 없는 페이지).
+    if (link.passwordRequired()) {
+      return LinkHtmlRenderer.passwordPromptResponse(
+          HttpStatus.OK, shortCode, false, turnstile.siteKey());
     }
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
     if (crawlerLabel != null) {
       return handlePreview(
           shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req);
     }
-    if (link.passwordRequired()) {
-      return LinkHtmlRenderer.passwordPromptResponse(
-          HttpStatus.OK, shortCode, false, turnstile.siteKey());
-    }
     return render(flow.execute(link, null, referrer, userAgent, acceptLanguage, src, post, req));
+  }
+
+  /**
+   * originalUrl + 활성 변형 목적지 중 하나라도 차단 도메인이면 참. 크롤러 미리보기·사람 리다이렉트 진입 전 공통 프리플라이트 — 생성 후 차단된 도메인이 변형
+   * 뒤에 숨어도 카드를 못 받게 한다.
+   */
+  private boolean anyDestinationBlocked(CachedLink link) {
+    if (blockedDomainChecker.isBlocked(link.originalUrl())) {
+      return true;
+    }
+    for (CachedLink.Variant variant : link.variants()) {
+      if (variant.enabled() && blockedDomainChecker.isBlocked(variant.url())) {
+        return true;
+      }
+    }
+    return false;
   }
 
   private ResponseEntity<?> render(RedirectOutcome outcome) {

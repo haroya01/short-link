@@ -54,7 +54,20 @@ public class ClickFlusher {
     List<ClickEventEntity> batch = assemble(pending);
     List<ClickEventEntity> saved = persist(batch);
     meterRegistry.counter("click_recorder", "result", "flushed").increment(saved.size());
-    saved.forEach(this::publishRecorded);
+    publishAll(saved);
+  }
+
+  /**
+   * ClickRecordedEvent 발행을 트랜잭션 경계 안에서 한다. 클릭 비동기화(#656) 이후 이 플러셔가 트랜잭션 밖 스케줄러 스레드에서 발행하면서, 소비자
+   * 3종(웹훅 디스패처·스파이크 감지·클릭 푸시)이 전부 @TransactionalEventListener(AFTER_COMMIT) 라 조용히 스킵됐다 — 커밋 시점에
+   * 바인딩된 트랜잭션이 없었기 때문. persist 와 분리된 별도(빈) 트랜잭션이라, 동기 @EventListener(SSE)가 발행 중 던져도 이미 저장된 클릭을 되돌리지
+   * 않는다. AFTER_COMMIT 리스너는 이 트랜잭션 커밋 직후 webhookExecutor 로 디스패치된다.
+   */
+  private void publishAll(List<ClickEventEntity> saved) {
+    if (saved.isEmpty()) {
+      return;
+    }
+    transaction.executeWithoutResult(status -> saved.forEach(this::publishRecorded));
   }
 
   // flush 는 실패해도 drain 으로 큐를 줄이므로 이 루프는 항상 끝난다.

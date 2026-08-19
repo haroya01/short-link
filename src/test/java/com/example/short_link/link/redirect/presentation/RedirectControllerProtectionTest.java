@@ -42,6 +42,23 @@ class RedirectControllerProtectionTest {
         .andExpect(content().string(Matchers.containsString("password")));
   }
 
+  /**
+   * 스푸핑된 크롤러 UA 가 비밀번호 보호를 우회하지 못한다 — 미리보기 분기가 비밀번호 게이트보다 먼저 돌면 목적지가 OG 카드로 통째로 노출됐다(캐시 300초로
+   * 재배포까지). 크롤러도 프롬프트만 받고, 목적지 URL 은 어디에도 실리지 않는다.
+   */
+  @Test
+  void crawlerCannotBypassPasswordToLeakDestination() throws Exception {
+    repository.save(new LinkEntity("https://secret-destination.example.com/private", "pwd0009"));
+    LinkEntity stored = repository.findByShortCode(new ShortCode("pwd0009")).orElseThrow();
+    stored.setPasswordHash("$2a$10$dummyhashvalueforbcrypt000000000000000000000000000000");
+    repository.save(stored);
+
+    mvc.perform(get("/pwd0009").header("User-Agent", "Twitterbot/1.0"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(Matchers.containsString("password")))
+        .andExpect(content().string(Matchers.not(Matchers.containsString("secret-destination"))));
+  }
+
   @Test
   void unlockWithWrongPasswordReprompts() throws Exception {
     repository.save(new LinkEntity("https://example.com", "pwd0002"));
