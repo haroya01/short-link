@@ -1,12 +1,16 @@
 package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.annotation.PreDestroy;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -21,6 +25,7 @@ public class ClickFlusher {
   private final ClickBuffer buffer;
   private final ClickEventAssembler assembler;
   private final ClickEventRepository repository;
+  private final LinkRepository linkRepository;
   private final ApplicationEventPublisher events;
   private final MeterRegistry meterRegistry;
   private final TransactionTemplate transaction;
@@ -30,6 +35,7 @@ public class ClickFlusher {
       ClickBuffer buffer,
       ClickEventAssembler assembler,
       ClickEventRepository repository,
+      LinkRepository linkRepository,
       ApplicationEventPublisher events,
       MeterRegistry meterRegistry,
       PlatformTransactionManager transactionManager,
@@ -37,6 +43,7 @@ public class ClickFlusher {
     this.buffer = buffer;
     this.assembler = assembler;
     this.repository = repository;
+    this.linkRepository = linkRepository;
     this.events = events;
     this.meterRegistry = meterRegistry;
     // REQUIRED(기본값)여야 한다: 스케줄러 스레드에선 어차피 새 트랜잭션이고, @Transactional 테스트는
@@ -67,7 +74,14 @@ public class ClickFlusher {
     if (saved.isEmpty()) {
       return;
     }
-    transaction.executeWithoutResult(status -> saved.forEach(this::publishRecorded));
+    // 계정 채널 팬아웃 키(shortCode·소유자) — 배치당 링크 일괄 조회 1회로 이벤트에 싣는다.
+    Map<Long, LinkEntity> links =
+        linkRepository
+            .findAllById(saved.stream().map(e -> e.linkId().value()).collect(Collectors.toSet()))
+            .stream()
+            .collect(Collectors.toMap(l -> l.linkId().value(), l -> l));
+    transaction.executeWithoutResult(
+        status -> saved.forEach(e -> publishRecorded(e, links.get(e.linkId().value()))));
   }
 
   // flush 는 실패해도 drain 으로 큐를 줄이므로 이 루프는 항상 끝난다.
@@ -116,10 +130,12 @@ public class ClickFlusher {
     return saved;
   }
 
-  private void publishRecorded(ClickEventEntity saved) {
+  private void publishRecorded(ClickEventEntity saved, LinkEntity link) {
     events.publishEvent(
         new ClickRecordedEvent(
             saved.linkId(),
+            link != null ? link.getShortCode().value() : null,
+            link != null ? link.getUserId() : null,
             saved.getClickedAt(),
             saved.getCountryCode(),
             saved.getDeviceClass(),

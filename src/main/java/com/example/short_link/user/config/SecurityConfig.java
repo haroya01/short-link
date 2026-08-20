@@ -180,7 +180,13 @@ public class SecurityConfig {
                         "/api/v1/public/events/*/registrations",
                         "/api/v1/public/events/registrations/cancel")
                     .permitAll()
-                    .requestMatchers(GET, "/api/v1/links/*/public-stats", "/api/v1/links/*/stream")
+                    // 스트림은 EventSource 라 Authorization 헤더가 없다 — 인증은 컨트롤러의
+                    // 단명 streamToken 이 대신한다(계정 채널 /users/me/clicks/stream 동일).
+                    .requestMatchers(
+                        GET,
+                        "/api/v1/links/*/public-stats",
+                        "/api/v1/links/*/stream",
+                        "/api/v1/users/me/clicks/stream")
                     .permitAll()
                     // 컬렉션 상세는 공유 가능한 단위 — 공개 컬렉션은 비로그인도 읽는다. 컨트롤러가
                     // null principal 을 받아 isVisibleTo()로 비공개를 404 로 감춘다(정보 누출 없음).

@@ -66,7 +66,8 @@ class ThresholdSpikeDetectorTest {
   }
 
   private ClickRecordedEvent click() {
-    return new ClickRecordedEvent(new LinkId(1L), now, "KR", "Mobile", "twitter", false, null);
+    return new ClickRecordedEvent(
+        new LinkId(1L), "abc1234", 1L, now, "KR", "Mobile", "twitter", false, null);
   }
 
   @Test
@@ -98,7 +99,8 @@ class ThresholdSpikeDetectorTest {
     when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
 
     detector.onClickRecorded(
-        new ClickRecordedEvent(new LinkId(1L), now, "KR", "Mobile", null, true, null));
+        new ClickRecordedEvent(
+            new LinkId(1L), "abc1234", 1L, now, "KR", "Mobile", null, true, null));
 
     verify(dispatcher, never()).deliver(any(), anyString(), anyString());
   }

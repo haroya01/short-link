@@ -11,6 +11,8 @@ public interface LinkRepository {
 
   Optional<LinkEntity> findById(Long id);
 
+  List<LinkEntity> findAllById(Collection<Long> ids);
+
   LinkEntity save(LinkEntity link);
 
   void delete(LinkEntity link);
