@@ -65,7 +65,7 @@ class LinkWebhookDispatcherTest {
 
   private ClickRecordedEvent event(boolean bot, String channel, String utm) {
     return new ClickRecordedEvent(
-        new LinkId(1L), Instant.now(), "KR", "Desktop", channel, bot, utm);
+        new LinkId(1L), "abc1234", 1L, Instant.now(), "KR", "Desktop", channel, bot, utm);
   }
 
   @Test

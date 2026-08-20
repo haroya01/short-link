@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkId;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -29,6 +30,7 @@ class ClickFlusherTest {
 
   private final ClickEventAssembler assembler = mock(ClickEventAssembler.class);
   private final ClickEventRepository repository = mock(ClickEventRepository.class);
+  private final LinkRepository linkRepository = mock(LinkRepository.class);
   private final ApplicationEventPublisher events = mock(ApplicationEventPublisher.class);
   private final PlatformTransactionManager txManager = mock(PlatformTransactionManager.class);
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
@@ -38,6 +40,7 @@ class ClickFlusherTest {
           buffer,
           assembler,
           repository,
+          linkRepository,
           events,
           registry,
           txManager,

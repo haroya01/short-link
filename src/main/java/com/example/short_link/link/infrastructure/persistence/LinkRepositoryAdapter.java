@@ -26,6 +26,11 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<LinkEntity> findAllById(Collection<Long> ids) {
+    return jpa.findAllById(ids);
+  }
+
+  @Override
   public LinkEntity save(LinkEntity link) {
     return jpa.save(link);
   }

@@ -23,10 +23,55 @@ class SseClickStreamRegistryTest {
 
     registry.onClickRecorded(
         new ClickRecordedEvent(
-            new LinkId(7L), Instant.now(), "KR", "mobile", "kakao.com", false, null));
+            new LinkId(7L),
+            "abc1234",
+            null,
+            Instant.now(),
+            "KR",
+            "mobile",
+            "kakao.com",
+            false,
+            null));
 
     assertThat(watching.sent).isEqualTo(1);
     assertThat(otherLink.sent).isZero();
+  }
+
+  @Test
+  void ownerChannelReceivesOwnClicksOnly() {
+    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    CountingEmitter owner = new CountingEmitter();
+    CountingEmitter stranger = new CountingEmitter();
+    assertThat(registry.registerForUser(1L, owner)).isTrue();
+    assertThat(registry.registerForUser(2L, stranger)).isTrue();
+
+    registry.onClickRecorded(
+        new ClickRecordedEvent(
+            new LinkId(7L),
+            "abc1234",
+            1L,
+            Instant.now(),
+            "KR",
+            "mobile",
+            "kakao.com",
+            false,
+            null));
+
+    assertThat(owner.sent).isEqualTo(1);
+    assertThat(stranger.sent).isZero();
+  }
+
+  @Test
+  void anonymousLinkClickSkipsOwnerChannel() {
+    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    CountingEmitter owner = new CountingEmitter();
+    registry.registerForUser(1L, owner);
+
+    registry.onClickRecorded(
+        new ClickRecordedEvent(
+            new LinkId(7L), "abc1234", null, Instant.now(), "KR", "mobile", null, false, null));
+
+    assertThat(owner.sent).isZero();
   }
 
   @Test
@@ -38,7 +83,8 @@ class SseClickStreamRegistryTest {
     registry.register(new LinkId(42L), alive);
 
     registry.onClickRecorded(
-        new ClickRecordedEvent(new LinkId(42L), Instant.now(), "KR", "desktop", null, false, null));
+        new ClickRecordedEvent(
+            new LinkId(42L), "abc1234", null, Instant.now(), "KR", "desktop", null, false, null));
 
     assertThat(alive.sent).isEqualTo(1);
     assertThat(registry.activeStreams(new LinkId(42L))).isEqualTo(1);
