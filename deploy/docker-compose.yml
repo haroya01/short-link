@@ -50,6 +50,10 @@ services:
     image: ghcr.io/haroya01/short-link:${APP_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
+    # 단일 박스에서 MySQL 과 동거 — 상한이 없으면 ENTRYPOINT 의 MaxRAMPercentage=75 가
+    # 호스트 전체 RAM 의 75% 를 힙 상한으로 계산해, 힙이 자라며 mysqld 를 스왑으로 밀어낸다.
+    # 1100m 이면 힙 상한 = 그 75% 인 825m — mysqld 상주분이 RAM 에 남는다.
+    mem_limit: 1100m
     depends_on:
       mysql:
         condition: service_healthy
