@@ -61,6 +61,8 @@ public class MyClickStreamController {
       return failFast(response, HttpStatus.UNAUTHORIZED);
     }
 
+    // no-transform — 중간자(개발 프록시·게이트웨이)의 gzip 버퍼링이 이벤트 전달을 막는 것을 금지.
+    response.setHeader("Cache-Control", "no-cache, no-transform");
     SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
     if (!registry.registerForUser(userId, emitter)) {
       return failFast(response, HttpStatus.TOO_MANY_REQUESTS);
