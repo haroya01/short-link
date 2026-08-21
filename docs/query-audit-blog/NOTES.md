@@ -71,6 +71,24 @@ AFTER:  ... delete post_block, 1× INSERT post_block (대문자=JdbcTemplate mul
 - 함께 뜨는 `write-amplification`(posts, 인덱스 8개) 는 fix 와 무관한 기존 항목 (before 에도 있었음).
 - 교훈: N+1 하나 죽이면 트레이드오프(여기선 +1 SELECT)가 생기고, 도구는 그 트레이드오프까지 정직하게 비춘다.
 
+## 사례 2 — 스파이크 감지기의 클릭당 풀스캔 (S7, 2026-08-21 수리)
+
+도구가 잡아둔 미제 하나 더. 08-07 클릭 경로 해부 때 `@QueryAudit` 저울이 지목한 용의자 S7 —
+`ThresholdSpikeDetector.onClickRecorded`(사람 클릭마다 발화하는 이벤트 리스너)가
+`enabled + delivery_mode` 로 **link_webhook 전 테이블을 스캔**하고, 자바에서 이 링크 것만 남기고 버렸다.
+쿼리에 link_id 술어가 아예 없어 기존 인덱스 `(link_id, enabled)` 는 무용.
+
+- 왜 문제인가: 클릭당 비용이 이 링크의 웹훅 수가 아니라 **전 서비스 웹훅 총수에 비례** — 성공할수록 느려지는 모양.
+  게다가 스파이크 *감지기*라서 클릭이 폭주할 때 쿼리도 폭주하고, 발화마다 `REQUIRES_NEW` 로
+  커넥션 풀에서 커넥션을 집어간다(풀 고갈 인시던트와 같은 자원의 경쟁자).
+- 수리: 인덱스 추가가 아니라 **쿼리 재성형** — 바로 옆 `LinkWebhookDispatcher` 가 이미 쓰는
+  `findAllByLinkIdAndEnabledTrue(linkId)` 를 재사용하고 mode 는 자바에서 거른다.
+  마이그레이션 0장, O(전체 테이블) → O(이 링크의 웹훅 몇 개).
+  풀스캔 쿼리(`findAllEnabledByDeliveryMode`)는 일 1회 `DailyWebhookSummaryJob` 전용으로 남는다
+  — 빈도가 스케줄에 묶여 있어 그 자리에선 올바른 모양이다.
+- 정직 기재: 오늘의 절대 효과 ≈ 0(테이블 소형). 이 사례의 요점은 속도가 아니라
+  **비용의 크기가 아닌 비용 함수의 모양을 보라** — "스파이크 감지기가 스파이크 때 제일 비싸진다"는 역설.
+
 ## 후속(별개)
 - post/feed/notification 도메인에 `@QueryAudit` 확장 + `fail-on-detection: true` 로 승격하면 이런 쓰기 N+1 이 다음부턴 CI 에서 막힌다.
 - 같은 패턴: 알림 fan-out `RecordBlogNotificationUseCase.recordForEach` 는 진짜 루프-INSERT N+1(수신자 N명당 INSERT).

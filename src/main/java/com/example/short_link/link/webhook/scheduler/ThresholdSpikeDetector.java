@@ -83,11 +83,12 @@ public class ThresholdSpikeDetector {
   public void onClickRecorded(ClickRecordedEvent event) {
     if (event.bot()) return;
     List<LinkWebhookEntity> candidates =
-        hooks.findAllEnabledByDeliveryMode(
-            WebhookDeliveryMode.THRESHOLD_SPIKE, WebhookDeliveryMode.BOTH);
-    if (candidates.isEmpty()) return;
+        hooks.findAllByLinkIdAndEnabledTrue(event.linkId().value());
     for (LinkWebhookEntity hook : candidates) {
-      if (!hook.getLinkId().equals(event.linkId().value())) continue;
+      WebhookDeliveryMode mode = hook.getDeliveryMode();
+      if (mode != WebhookDeliveryMode.THRESHOLD_SPIKE && mode != WebhookDeliveryMode.BOTH) {
+        continue;
+      }
       tryFire(hook);
     }
   }
