@@ -135,6 +135,26 @@ class EventQuestionsTest {
   }
 
   @Test
+  void storedQuestionsKeepOrderAndOptionsWhileTrimmingOnlyLabels() {
+    List<EventQuestionEntity> questions =
+        EventQuestions.toEntities(
+            42L,
+            List.of(
+                new QuestionSpec("short_text", "  소개  ", null, false),
+                new QuestionSpec("SINGLE_CHOICE", " 메뉴 ", List.of(" 한식 ", "양식"), true)));
+
+    assertThat(questions).extracting(EventQuestionEntity::getEventId).containsOnly(42L);
+    assertThat(questions).extracting(EventQuestionEntity::getPosition).containsExactly(0, 1);
+    assertThat(questions).extracting(EventQuestionEntity::getLabel).containsExactly("소개", "메뉴");
+    assertThat(questions.get(0).getType()).isEqualTo(QuestionType.SHORT_TEXT);
+    assertThat(questions.get(0).getOptionsJson()).isNull();
+    assertThat(questions.get(0).isRequired()).isFalse();
+    assertThat(EventQuestions.deserializeOptions(questions.get(1).getOptionsJson()))
+        .containsExactly(" 한식 ", "양식");
+    assertThat(questions.get(1).isRequired()).isTrue();
+  }
+
+  @Test
   void brokenAnswersJson_readsAsEmpty() {
     assertThat(EventQuestions.deserializeAnswers(null)).isEmpty();
     assertThat(EventQuestions.deserializeAnswers("not-json")).isEmpty();

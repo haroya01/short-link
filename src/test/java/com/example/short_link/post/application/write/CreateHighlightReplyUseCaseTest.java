@@ -50,10 +50,8 @@ class CreateHighlightReplyUseCaseTest {
         new CreateHighlightReplyUseCase(
             highlightRepository,
             replyRepository,
-            postRepository,
             userRepository,
-            events,
-            muteReader);
+            new CommentNotifications(userRepository, postRepository, events, muteReader));
   }
 
   /** Highlight 50 on post 42, authored by {@code authorId}. */

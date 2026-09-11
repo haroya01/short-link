@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -28,7 +29,9 @@ class BackToDraftPostUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new BackToDraftPostUseCase(postOwnership, postRepository);
+    useCase =
+        new BackToDraftPostUseCase(
+            postOwnership, postRepository, new PostWriteViewAssembler(postRepository));
   }
 
   @Test
@@ -38,10 +41,10 @@ class BackToDraftPostUseCaseTest {
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity result = useCase.execute(new BackToDraftPostCommand(7L, 42L));
+    PostView result = useCase.execute(new BackToDraftPostCommand(7L, 42L));
 
-    assertThat(result.getStatus()).isEqualTo(PostStatus.DRAFT);
-    assertThat(result.getScheduledAt()).isNull();
+    assertThat(result.status()).isEqualTo(PostStatus.DRAFT.name());
+    assertThat(result.scheduledAt()).isNull();
   }
 
   @Test

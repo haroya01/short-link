@@ -1,6 +1,8 @@
 package com.example.short_link.post.collection.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.post.exception.PostErrorCode;
+import com.example.short_link.post.exception.PostException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -55,9 +57,7 @@ public class CollectionEntity extends BaseTimeEntity {
       CollectionVisibility visibility,
       CollectionKind kind) {
     this.ownerId = ownerId;
-    this.title = title;
-    this.description = description;
-    this.visibility = visibility;
+    edit(title, description, visibility);
     this.kind = kind == null ? CollectionKind.COLLECTION : kind;
   }
 
@@ -71,8 +71,25 @@ public class CollectionEntity extends BaseTimeEntity {
   }
 
   public void edit(String title, String description, CollectionVisibility visibility) {
-    this.title = title;
-    this.description = description;
+    this.title = normalizeTitle(title);
+    this.description = normalizeDescription(description);
     this.visibility = visibility;
+  }
+
+  private static String normalizeTitle(String raw) {
+    String title = raw == null ? "" : raw.strip();
+    if (title.isEmpty()) {
+      throw new PostException(PostErrorCode.COLLECTION_TITLE_REQUIRED);
+    }
+    return title.length() > MAX_TITLE ? title.substring(0, MAX_TITLE) : title;
+  }
+
+  private static String normalizeDescription(String raw) {
+    if (raw == null) return null;
+    String description = raw.strip();
+    if (description.isEmpty()) return null;
+    return description.length() > MAX_DESCRIPTION
+        ? description.substring(0, MAX_DESCRIPTION)
+        : description;
   }
 }

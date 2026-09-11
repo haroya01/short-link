@@ -25,7 +25,8 @@ class NotificationActorReaderAdapter implements NotificationActorReader {
       return Map.of();
     }
     List<?> rows =
-        em.createNativeQuery("SELECT id, username, avatar_url FROM users WHERE id IN (:ids)")
+        em.createNativeQuery(
+                "SELECT id, username, avatar_url FROM users WHERE id IN (:ids) AND deleted_at IS NULL")
             .setParameter("ids", userIds)
             .getResultList();
     Map<Long, NotificationActor> resolved = new HashMap<>();

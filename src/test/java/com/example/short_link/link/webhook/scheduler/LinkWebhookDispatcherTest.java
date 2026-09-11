@@ -3,6 +3,7 @@ package com.example.short_link.link.webhook.scheduler;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -11,7 +12,9 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkId;
+import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
+import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import com.example.short_link.support.TestEntities;
@@ -23,11 +26,12 @@ import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.RedisScript;
-import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
 class LinkWebhookDispatcherTest {
@@ -36,7 +40,6 @@ class LinkWebhookDispatcherTest {
   @Mock private StringRedisTemplate redis;
 
   private SimpleMeterRegistry meterRegistry;
-  private JsonMapper jsonMapper;
   private WebhookDeliveryGate deliveryGate;
   private WebhookBatchBuffer batchBuffer;
   private WebhookHttpDeliveryClient deliveryClient;
@@ -46,14 +49,13 @@ class LinkWebhookDispatcherTest {
   @BeforeEach
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
-    jsonMapper = JsonMapper.builder().build();
     deliveryGate = new WebhookDeliveryGate(meterRegistry, redis);
     batchBuffer = new WebhookBatchBuffer(meterRegistry);
     deliveryClient = mock(WebhookHttpDeliveryClient.class);
-    batchDeliverer = new WebhookBatchDeliverer(repository, batchBuffer, deliveryClient, jsonMapper);
+    batchDeliverer = new WebhookBatchDeliverer(repository, batchBuffer, deliveryClient);
     dispatcher =
         new LinkWebhookDispatcher(
-            repository, jsonMapper, deliveryGate, batchBuffer, deliveryClient, batchDeliverer);
+            repository, deliveryGate, batchBuffer, deliveryClient, batchDeliverer);
   }
 
   private LinkWebhookEntity hook(WebhookFormat format) {
@@ -179,7 +181,7 @@ class LinkWebhookDispatcherTest {
     dispatcher.onClickRecorded(event(false, "google.com", "google"));
 
     assertThat(batchBuffer.size(99L)).isEqualTo(1);
-    verify(deliveryClient, never()).deliver(any(), any(), any());
+    verify(deliveryClient, never()).deliver(any(), any());
   }
 
   @Test
@@ -189,7 +191,26 @@ class LinkWebhookDispatcherTest {
 
     dispatcher.onClickRecorded(event(false, "google.com", "google"));
 
-    verify(deliveryClient).deliver(eq(h), any(), eq("click"));
+    verify(deliveryClient)
+        .deliver(
+            eq(h),
+            argThat(
+                notification ->
+                    notification instanceof WebhookNotification.Click click
+                        && "google.com".equals(click.payload().get("channel"))
+                        && !click.payload().containsKey("referrerHost")));
+  }
+
+  @ParameterizedTest
+  @EnumSource(WebhookDeliveryMode.class)
+  void everyModeKeepsExistingPerClickDelivery(WebhookDeliveryMode mode) {
+    LinkWebhookEntity hook = hook(WebhookFormat.GENERIC);
+    hook.changeDeliveryMode(mode, 9, 50, 10);
+    when(repository.findAllByLinkIdAndEnabledTrue(1L)).thenReturn(List.of(hook));
+
+    dispatcher.onClickRecorded(event(false, "google.com", null));
+
+    verify(deliveryClient).deliver(eq(hook), any(WebhookNotification.Click.class));
   }
 
   @Test
@@ -201,7 +222,7 @@ class LinkWebhookDispatcherTest {
 
     dispatcher.flushBatches();
 
-    verify(deliveryClient).deliver(eq(h), any(), eq("batch"));
+    verify(deliveryClient).deliver(eq(h), any(WebhookNotification.Batch.class));
     assertThat(batchBuffer.size(99L)).isZero();
   }
 }

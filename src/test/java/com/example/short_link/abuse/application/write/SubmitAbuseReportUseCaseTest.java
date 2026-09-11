@@ -12,6 +12,7 @@ import com.example.short_link.abuse.domain.AbuseReason;
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
 import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,17 +25,18 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class SubmitAbuseReportUseCaseTest {
 
   @Mock private AbuseReportRepository abuseReportRepository;
+  @Mock private AbuseSubjectReader subjects;
 
   private SubmitAbuseReportUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new SubmitAbuseReportUseCase(abuseReportRepository);
+    useCase = new SubmitAbuseReportUseCase(abuseReportRepository, subjects);
   }
 
   @Test
   void submitsReportWithHybridReason() {
-    when(abuseReportRepository.subjectExists(AbuseSubjectType.POST, 42L)).thenReturn(true);
+    when(subjects.subjectExists(AbuseSubjectType.POST, 42L)).thenReturn(true);
     when(abuseReportRepository.save(any(AbuseReportEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
 
@@ -51,7 +53,7 @@ class SubmitAbuseReportUseCaseTest {
 
   @Test
   void submitsAnonymousReportWithoutDetail() {
-    when(abuseReportRepository.subjectExists(AbuseSubjectType.USER, 9L)).thenReturn(true);
+    when(subjects.subjectExists(AbuseSubjectType.USER, 9L)).thenReturn(true);
     when(abuseReportRepository.save(any(AbuseReportEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
 
@@ -67,7 +69,7 @@ class SubmitAbuseReportUseCaseTest {
 
   @Test
   void rejectsMissingSubject() {
-    when(abuseReportRepository.subjectExists(AbuseSubjectType.POST, 404L)).thenReturn(false);
+    when(subjects.subjectExists(AbuseSubjectType.POST, 404L)).thenReturn(false);
 
     assertThatThrownBy(
             () ->
@@ -83,7 +85,7 @@ class SubmitAbuseReportUseCaseTest {
 
   @Test
   void rejectsDuplicateOpenReport() {
-    when(abuseReportRepository.subjectExists(AbuseSubjectType.POST, 42L)).thenReturn(true);
+    when(subjects.subjectExists(AbuseSubjectType.POST, 42L)).thenReturn(true);
     when(abuseReportRepository.existsOpenReport(7L, AbuseSubjectType.POST, 42L)).thenReturn(true);
 
     assertThatThrownBy(
@@ -101,7 +103,7 @@ class SubmitAbuseReportUseCaseTest {
   @Test
   void anonymousReportSkipsDedupGuard() {
     // 익명(reporter=null)은 existsOpenReport 가 false 를 돌려주므로 중복 가드에 걸리지 않는다.
-    when(abuseReportRepository.subjectExists(AbuseSubjectType.POST, 42L)).thenReturn(true);
+    when(subjects.subjectExists(AbuseSubjectType.POST, 42L)).thenReturn(true);
     when(abuseReportRepository.existsOpenReport(eq(null), any(), any())).thenReturn(false);
     when(abuseReportRepository.save(any(AbuseReportEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));

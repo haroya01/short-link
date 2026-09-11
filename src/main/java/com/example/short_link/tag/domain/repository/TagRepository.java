@@ -3,6 +3,7 @@ package com.example.short_link.tag.domain.repository;
 import com.example.short_link.tag.domain.TagEntity;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 public interface TagRepository {
@@ -21,5 +22,5 @@ public interface TagRepository {
 
   List<TagEntity> findAllByUserIdAndNameIn(Long userId, List<String> names);
 
-  List<Object[]> countLinksByTagIds(List<Long> tagIds);
+  Map<Long, Long> countLinksByTagIds(List<Long> tagIds);
 }

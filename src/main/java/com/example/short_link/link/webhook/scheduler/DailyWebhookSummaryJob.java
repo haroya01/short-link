@@ -5,6 +5,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.webhook.application.helper.DailySummaryAssembler;
 import com.example.short_link.link.webhook.application.helper.DailySummaryPayload;
+import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
@@ -19,7 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Sweeps every 5 minutes for hooks subscribed to {@link WebhookDeliveryMode#DAILY_SUMMARY} (or
@@ -40,8 +40,7 @@ public class DailyWebhookSummaryJob {
   private final LinkRepository links;
   private final UserAccessLookup users;
   private final DailySummaryAssembler assembler;
-  private final LinkWebhookDispatcher dispatcher;
-  private final JsonMapper jsonMapper;
+  private final WebhookHttpDeliveryClient deliveryClient;
   private final Clock clock;
 
   @Autowired
@@ -50,9 +49,8 @@ public class DailyWebhookSummaryJob {
       LinkRepository links,
       UserAccessLookup users,
       DailySummaryAssembler assembler,
-      LinkWebhookDispatcher dispatcher,
-      JsonMapper jsonMapper) {
-    this(hooks, links, users, assembler, dispatcher, jsonMapper, Clock.systemUTC());
+      WebhookHttpDeliveryClient deliveryClient) {
+    this(hooks, links, users, assembler, deliveryClient, Clock.systemUTC());
   }
 
   DailyWebhookSummaryJob(
@@ -60,15 +58,13 @@ public class DailyWebhookSummaryJob {
       LinkRepository links,
       UserAccessLookup users,
       DailySummaryAssembler assembler,
-      LinkWebhookDispatcher dispatcher,
-      JsonMapper jsonMapper,
+      WebhookHttpDeliveryClient deliveryClient,
       Clock clock) {
     this.hooks = hooks;
     this.links = links;
     this.users = users;
     this.assembler = assembler;
-    this.dispatcher = dispatcher;
-    this.jsonMapper = jsonMapper;
+    this.deliveryClient = deliveryClient;
     this.clock = clock;
   }
 
@@ -76,8 +72,7 @@ public class DailyWebhookSummaryJob {
   @Transactional
   public void sweep() {
     List<LinkWebhookEntity> candidates =
-        hooks.findAllEnabledByDeliveryMode(
-            WebhookDeliveryMode.DAILY_SUMMARY, WebhookDeliveryMode.BOTH);
+        hooks.findAllEnabledByDeliveryModes(WebhookDeliveryMode.dailySummaryModes());
     if (candidates.isEmpty()) return;
     for (LinkWebhookEntity hook : candidates) {
       tryDeliverFor(hook);
@@ -101,8 +96,7 @@ public class DailyWebhookSummaryJob {
 
     DailySummaryPayload payload =
         assembler.assemble(hook.linkId(), link.getShortCode(), yesterday, tz);
-    String body = jsonMapper.writeValueAsString(payload.toJsonMap());
-    dispatcher.deliver(hook, body, "daily_summary");
+    deliveryClient.deliver(hook, new WebhookNotification.DailySummary(payload));
     hook.markSummarySent(today);
   }
 

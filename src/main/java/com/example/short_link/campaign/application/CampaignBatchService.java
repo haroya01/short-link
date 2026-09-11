@@ -7,7 +7,6 @@ import com.example.short_link.campaign.application.write.CampaignBatchCreateComm
 import com.example.short_link.campaign.application.write.CampaignBatchUpdateCommand;
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.CampaignEntity;
-import com.example.short_link.campaign.domain.CampaignStatus;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.campaign.exception.CampaignErrorCode;
 import com.example.short_link.campaign.exception.CampaignException;
@@ -34,7 +33,7 @@ public class CampaignBatchService {
   @Transactional
   public BatchWithLink create(Long campaignId, Long ownerId, CampaignBatchCreateCommand command) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
-    rejectIfTerminal(campaign);
+    campaign.requireBatchEditable();
     String destination = resolveDestination(command.destinationUrl(), campaign);
     validateRow(command, destination, 0);
     return persistRow(campaign, ownerId, command, destination);
@@ -44,19 +43,19 @@ public class CampaignBatchService {
   public List<BatchWithLink> createBulk(
       Long campaignId, Long ownerId, CampaignBatchBulkCommand command) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
-    rejectIfTerminal(campaign);
+    campaign.requireBatchEditable();
 
-    List<String> destinations = new ArrayList<>(command.batches().size());
+    List<PreparedBatch> prepared = new ArrayList<>(command.batches().size());
     for (int i = 0; i < command.batches().size(); i++) {
       CampaignBatchCreateCommand row = command.batches().get(i);
       String destination = resolveDestination(row.destinationUrl(), campaign);
       validateRow(row, destination, i);
-      destinations.add(destination);
+      prepared.add(new PreparedBatch(row, destination));
     }
 
     List<BatchWithLink> out = new ArrayList<>(command.batches().size());
-    for (int i = 0; i < command.batches().size(); i++) {
-      out.add(persistRow(campaign, ownerId, command.batches().get(i), destinations.get(i)));
+    for (PreparedBatch batch : prepared) {
+      out.add(persistRow(campaign, ownerId, batch.command(), batch.destination()));
     }
     return out;
   }
@@ -90,7 +89,7 @@ public class CampaignBatchService {
   public BatchWithLink update(
       Long campaignId, Long batchId, Long ownerId, CampaignBatchUpdateCommand command) {
     CampaignEntity campaign = campaignQuery.detail(campaignId, ownerId);
-    rejectIfTerminal(campaign);
+    campaign.requireBatchEditable();
     BatchWithLink current = detail(campaignId, batchId, ownerId);
     CampaignBatchEntity batch = current.batch();
     batch.editMetadata(
@@ -143,12 +142,7 @@ public class CampaignBatchService {
     return new BatchWithLink(batch, link);
   }
 
-  private static void rejectIfTerminal(CampaignEntity campaign) {
-    if (campaign.getStatus() == CampaignStatus.ENDED
-        || campaign.getStatus() == CampaignStatus.ARCHIVED) {
-      throw new CampaignException(CampaignErrorCode.CAMPAIGN_TERMINAL_STATE);
-    }
-  }
+  private record PreparedBatch(CampaignBatchCreateCommand command, String destination) {}
 
   private static String resolveDestination(String rowDestination, CampaignEntity campaign) {
     if (rowDestination != null && !rowDestination.isBlank()) {

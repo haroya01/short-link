@@ -3,13 +3,13 @@ package com.example.short_link.link.application.write;
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.link.application.dto.MyLink;
+import com.example.short_link.link.application.read.MyLinkReader;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
-import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -27,6 +27,7 @@ public class UpdateLinkUseCase {
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final CreateLinkValidator validator;
+  private final MyLinkReader linkReader;
 
   @Transactional
   @CacheEvict(value = "link", key = "#command.shortCode()")
@@ -70,13 +71,6 @@ public class UpdateLinkUseCase {
         link.getShortCode().value(),
         command.userId(),
         Map.of("urlChanged", urlChanged, "expiresAtChanged", command.expiresAt() != null));
-    return new MyLink(
-        link.getShortCode(),
-        link.getOriginalUrl(),
-        link.getCreatedAt(),
-        link.getExpiresAt(),
-        0L,
-        List.of(),
-        List.of(0L, 0L, 0L, 0L, 0L, 0L, 0L));
+    return linkReader.read(link);
   }
 }

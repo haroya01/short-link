@@ -1,6 +1,7 @@
 package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.read.PostBlockView;
+import com.example.short_link.post.application.read.PostExportQueryService;
 import com.example.short_link.post.application.read.PostQueryService;
 import com.example.short_link.post.application.read.PostRevisionView;
 import com.example.short_link.post.application.read.PostView;
@@ -37,12 +38,8 @@ import com.example.short_link.post.presentation.request.UpdatePostRequest;
 import com.example.short_link.post.presentation.response.PostMarkdownResponse;
 import com.example.short_link.post.presentation.response.PreviewTokenResponse;
 import jakarta.validation.Valid;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipOutputStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -77,14 +74,14 @@ public class PostController {
   private final SetPinnedPostsUseCase setPinnedPosts;
   private final IssuePreviewTokenUseCase issuePreviewToken;
   private final PostQueryService postQueryService;
+  private final PostExportQueryService exportPosts;
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   public PostView create(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody CreatePostRequest request) {
-    return PostView.from(
-        createPost.execute(
-            new CreatePostCommand(userId, request.slug(), request.title(), request.languageTag())));
+    return createPost.execute(
+        new CreatePostCommand(userId, request.slug(), request.title(), request.languageTag()));
   }
 
   @PutMapping("/pins")
@@ -106,34 +103,9 @@ public class PostController {
    */
   @GetMapping(value = "/export", produces = "application/zip")
   public ResponseEntity<byte[]> exportAll(@AuthenticationPrincipal Long userId) throws IOException {
-    ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-    try (ZipOutputStream zip = new ZipOutputStream(buffer, StandardCharsets.UTF_8)) {
-      for (PostView post : postQueryService.listMyPosts(userId)) {
-        String markdown = markdownBlocks.toMarkdown(postQueryService.listBlocks(userId, post.id()));
-        zip.putNextEntry(new ZipEntry(post.slug() + ".md"));
-        zip.write(exportDocument(post, markdown).getBytes(StandardCharsets.UTF_8));
-        zip.closeEntry();
-      }
-    }
     return ResponseEntity.ok()
         .header("Content-Disposition", "attachment; filename=\"kurl-export.zip\"")
-        .body(buffer.toByteArray());
-  }
-
-  /** 재발행에 필요한 최소 메타만 frontmatter 로 — 에디터의 .md 내보내기와 같은 문법. */
-  private static String exportDocument(PostView post, String markdown) {
-    StringBuilder head = new StringBuilder("---\n");
-    head.append("title: \"").append(post.title().replace("\"", "\\\"")).append("\"\n");
-    head.append("slug: ").append(post.slug()).append('\n');
-    head.append("status: ").append(post.status()).append('\n');
-    if (post.tags() != null && !post.tags().isEmpty()) {
-      head.append("tags: [").append(String.join(", ", post.tags())).append("]\n");
-    }
-    if (post.publishedAt() != null) {
-      head.append("published: ").append(post.publishedAt()).append('\n');
-    }
-    head.append("---\n\n");
-    return head + markdown + "\n";
+        .body(exportPosts.export(userId));
   }
 
   @GetMapping("/{id}")
@@ -146,23 +118,22 @@ public class PostController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @Valid @RequestBody UpdatePostRequest request) {
-    return PostView.from(
-        updatePostMetadata.execute(
-            new UpdatePostMetadataCommand(
-                userId,
-                id,
-                request.title(),
-                request.slug(),
-                request.excerpt(),
-                request.ogImageUrl(),
-                request.ogImageKey(),
-                request.languageTag(),
-                request.tags())));
+    return updatePostMetadata.execute(
+        new UpdatePostMetadataCommand(
+            userId,
+            id,
+            request.title(),
+            request.slug(),
+            request.excerpt(),
+            request.ogImageUrl(),
+            request.ogImageKey(),
+            request.languageTag(),
+            request.tags()));
   }
 
   @PostMapping("/{id}/publish")
   public PostView publish(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return PostView.from(publishPost.execute(new PublishPostCommand(userId, id)));
+    return publishPost.execute(new PublishPostCommand(userId, id));
   }
 
   /** Get-or-create the share token so the owner can preview/share a not-yet-public post. */
@@ -177,23 +148,22 @@ public class PostController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @Valid @RequestBody SchedulePostRequest request) {
-    return PostView.from(
-        schedulePost.execute(new SchedulePostCommand(userId, id, request.scheduledAt())));
+    return schedulePost.execute(new SchedulePostCommand(userId, id, request.scheduledAt()));
   }
 
   @PostMapping("/{id}/unpublish")
   public PostView unpublish(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return PostView.from(unpublishPost.execute(new UnpublishPostCommand(userId, id)));
+    return unpublishPost.execute(new UnpublishPostCommand(userId, id));
   }
 
   @PostMapping("/{id}/republish")
   public PostView republish(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return PostView.from(republishPost.execute(new RepublishPostCommand(userId, id)));
+    return republishPost.execute(new RepublishPostCommand(userId, id));
   }
 
   @PostMapping("/{id}/back-to-draft")
   public PostView backToDraft(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return PostView.from(backToDraftPost.execute(new BackToDraftPostCommand(userId, id)));
+    return backToDraftPost.execute(new BackToDraftPostCommand(userId, id));
   }
 
   @GetMapping("/{id}/blocks")
@@ -255,8 +225,7 @@ public class PostController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @PathVariable Integer versionNumber) {
-    return PostView.from(
-        restorePostRevision.execute(new RestorePostRevisionCommand(userId, id, versionNumber)));
+    return restorePostRevision.execute(new RestorePostRevisionCommand(userId, id, versionNumber));
   }
 
   @DeleteMapping("/{id}")

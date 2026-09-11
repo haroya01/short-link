@@ -119,7 +119,7 @@ public class SseClickStreamRegistry {
                       "occurredAt", event.occurredAt().toString(),
                       "countryCode", nullToEmpty(event.countryCode()),
                       "deviceClass", nullToEmpty(event.deviceClass()),
-                      "channel", nullToEmpty(event.channel()),
+                      "channel", nullToEmpty(event.referrerHost()),
                       "bot", event.bot())));
     }
 
@@ -137,7 +137,7 @@ public class SseClickStreamRegistry {
                     "occurredAt", event.occurredAt().toString(),
                     "countryCode", nullToEmpty(event.countryCode()),
                     "deviceClass", nullToEmpty(event.deviceClass()),
-                    "channel", nullToEmpty(event.channel()),
+                    "channel", nullToEmpty(event.referrerHost()),
                     "bot", event.bot())));
   }
 

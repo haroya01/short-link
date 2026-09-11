@@ -10,6 +10,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PostCommentQueryService;
 import com.example.short_link.post.application.read.PublicAuthorView;
+import com.example.short_link.post.application.read.PublicFeedQuery;
+import com.example.short_link.post.application.read.PublicFeedQuery.Browse;
+import com.example.short_link.post.application.read.PublicFeedQuery.BrowseOrder;
+import com.example.short_link.post.application.read.PublicFeedQuery.Search;
+import com.example.short_link.post.application.read.PublicFeedQuery.SearchOrder;
+import com.example.short_link.post.application.read.PublicFeedQuery.Tagged;
 import com.example.short_link.post.application.read.PublicFeedQueryService;
 import com.example.short_link.post.application.read.PublicFeedView;
 import com.example.short_link.post.application.read.PublicSeriesQueryService;
@@ -19,6 +25,8 @@ import com.example.short_link.testsupport.KurlWebMvcTest;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -46,53 +54,191 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void feedDefaultUsesRecentSort() throws Exception {
-    when(publicFeedQueryService.feed("recent", null, 0, 20)).thenReturn(emptyFeed());
+    var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.hasNext").value(false))
         .andExpect(jsonPath("$.items.length()").value(0));
 
-    verify(publicFeedQueryService).feed("recent", null, 0, 20);
+    verify(publicFeedQueryService).feed(query);
   }
 
   @Test
   void feedWithQueryDefaultsToRelevanceSort() throws Exception {
-    // sort 미지정 검색 → 관련성 기본. (브라우즈 피드는 여전히 recent 기본 — 아래 별도 검증.)
-    when(publicFeedQueryService.search("hello", "relevance", null, 0, 20)).thenReturn(emptyFeed());
+    var query = new PublicFeedQuery(new Search("hello", SearchOrder.RELEVANCE, null), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("q", " hello ")).andExpect(status().isOk());
 
-    verify(publicFeedQueryService).search("hello", "relevance", null, 0, 20);
+    verify(publicFeedQueryService).feed(query);
   }
 
   @Test
   void feedWithQueryHonorsExplicitSort() throws Exception {
-    when(publicFeedQueryService.search("hello", "recent", null, 0, 20)).thenReturn(emptyFeed());
+    var query = new PublicFeedQuery(new Search("hello", SearchOrder.RECENT, null), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("q", "hello").param("sort", "recent"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).search("hello", "recent", null, 0, 20);
+    verify(publicFeedQueryService).feed(query);
   }
 
   @Test
   void feedWithTagRoutesToFeedByTag() throws Exception {
-    when(publicFeedQueryService.feedByTag("java", 0, 20)).thenReturn(emptyFeed());
+    var query = new PublicFeedQuery(new Tagged("java"), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("tag", " java ")).andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feedByTag("java", 0, 20);
+    verify(publicFeedQueryService).feed(query);
   }
 
   @Test
   void feedClampsOversizedPageSizeTo50() throws Exception {
-    when(publicFeedQueryService.feed("recent", null, 0, 50)).thenReturn(emptyFeed());
+    var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 50);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("size", "999").param("page", "-3"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed("recent", null, 0, 50);
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @Test
+  void searchTakesPriorityOverTagAndKeepsTheLanguageFilter() throws Exception {
+    var query = new PublicFeedQuery(new Search("hello", SearchOrder.TRENDING, " ko "), 2, 8);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+
+    mvc.perform(
+            get("/api/v1/public/posts")
+                .param("q", " hello ")
+                .param("tag", "java")
+                .param("sort", "TrEnDiNg")
+                .param("lang", " ko ")
+                .param("page", "2")
+                .param("size", "8"))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @Test
+  void blankSearchAllowsTagWhichIgnoresLanguageAndSort() throws Exception {
+    var query = new PublicFeedQuery(new Tagged("java"), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+
+    mvc.perform(
+            get("/api/v1/public/posts")
+                .param("q", "  ")
+                .param("tag", " java ")
+                .param("sort", "trending")
+                .param("lang", "ja"))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @Test
+  void blankFiltersBrowseAndClampNonPositiveSize() throws Exception {
+    var query = new PublicFeedQuery(new Browse(BrowseOrder.TRENDING, "  "), 0, 1);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+
+    mvc.perform(
+            get("/api/v1/public/posts")
+                .param("q", "  ")
+                .param("tag", "  ")
+                .param("sort", "TRENDING")
+                .param("lang", "  ")
+                .param("size", "0"))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @Test
+  void emptyPageParametersUseTheHttpDefaults() throws Exception {
+    var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+
+    mvc.perform(get("/api/v1/public/posts").param("page", "").param("size", ""))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @Test
+  void feedFiltersComeFromParametersAndIgnoreSameNamedHeaders() throws Exception {
+    var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+
+    mvc.perform(
+            get("/api/v1/public/posts")
+                .header("q", "hidden search")
+                .header("tag", "hidden tag")
+                .header("sort", "trending")
+                .header("lang", "ja"))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @Test
+  void formDefaultPrefixesDoNotSupplyMissingFeedFilters() throws Exception {
+    var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+
+    mvc.perform(
+            get("/api/v1/public/posts")
+                .param("!q", "hidden search")
+                .param("!tag", "hidden tag")
+                .param("!sort", "trending")
+                .param("!lang", "ja"))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"q", "q[]"})
+  void repeatedSearchParametersRetainTheirCommaJoinedString(String parameter) throws Exception {
+    var query = new PublicFeedQuery(new Search("spring,java", SearchOrder.RECENT, "ko"), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+
+    mvc.perform(
+            get("/api/v1/public/posts")
+                .param(parameter, "spring", "java")
+                .param("sort[]", "recent")
+                .param("lang[]", "ko"))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @Test
+  void emptyNamedSearchTakesPriorityOverItsArrayAlias() throws Exception {
+    var query = new PublicFeedQuery(new Tagged("java"), 0, 20);
+    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+
+    mvc.perform(
+            get("/api/v1/public/posts")
+                .param("q", "")
+                .param("q[]", "ignored search")
+                .param("tag", "java"))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(query);
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"page", "size"})
+  void nonNumericPageParametersReturnAnInvalidArgument(String parameter) throws Exception {
+    mvc.perform(get("/api/v1/public/posts").param(parameter, "later"))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_ARGUMENT"))
+        .andExpect(jsonPath("$.parameter").value(parameter));
   }
 
   @Test

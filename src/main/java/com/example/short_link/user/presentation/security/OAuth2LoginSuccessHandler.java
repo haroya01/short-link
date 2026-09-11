@@ -1,7 +1,8 @@
 package com.example.short_link.user.presentation.security;
 
 import com.example.short_link.user.application.write.AuthService;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.MobileLoginResult;
+import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -49,38 +50,32 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       return;
     }
 
-    LoginResult result = authService.loginWithOAuth(email, provider, oauthId);
-
-    if (result instanceof LoginResult.TwoFactorRequired challenge) {
-      String target =
-          frontendBaseUrl
-              + "/auth/2fa#challenge="
-              + URLEncoder.encode(challenge.challengeToken(), StandardCharsets.UTF_8);
-      res.sendRedirect(target);
-      return;
+    switch (authService.loginWithOAuth(email, provider, oauthId)) {
+      case TokenLoginResult.TwoFactorRequired challenge ->
+          res.sendRedirect(
+              frontendBaseUrl
+                  + "/auth/2fa#challenge="
+                  + URLEncoder.encode(challenge.challengeToken(), StandardCharsets.UTF_8));
+      case TokenLoginResult.Tokens tokens -> {
+        refreshCookieWriter.set(res, tokens.issued().refreshToken());
+        res.sendRedirect(
+            frontendBaseUrl
+                + "/auth/callback#access_token="
+                + URLEncoder.encode(tokens.issued().accessToken(), StandardCharsets.UTF_8));
+      }
     }
-
-    LoginResult.Tokens tokens = (LoginResult.Tokens) result;
-    refreshCookieWriter.set(res, tokens.issued().refreshToken());
-    String target =
-        frontendBaseUrl
-            + "/auth/callback#access_token="
-            + URLEncoder.encode(tokens.issued().accessToken(), StandardCharsets.UTF_8);
-    res.sendRedirect(target);
   }
 
   // The app can't read cookies or fragments out of the browser sheet, so both outcomes travel as
   // query params on the custom scheme: a one-time exchange code, or the 2FA challenge token.
-  private void handleMobile(HttpServletResponse res, LoginResult result) throws IOException {
-    if (result instanceof LoginResult.TwoFactorRequired challenge) {
-      res.sendRedirect(
-          mobileRedirectUri
-              + "?challenge="
-              + URLEncoder.encode(challenge.challengeToken(), StandardCharsets.UTF_8));
-      return;
-    }
-    LoginResult.MobileExchangeCode code = (LoginResult.MobileExchangeCode) result;
-    res.sendRedirect(
-        mobileRedirectUri + "?code=" + URLEncoder.encode(code.code(), StandardCharsets.UTF_8));
+  private void handleMobile(HttpServletResponse res, MobileLoginResult result) throws IOException {
+    String query =
+        switch (result) {
+          case MobileLoginResult.TwoFactorRequired challenge ->
+              "?challenge=" + URLEncoder.encode(challenge.challengeToken(), StandardCharsets.UTF_8);
+          case MobileLoginResult.ExchangeCode code ->
+              "?code=" + URLEncoder.encode(code.code(), StandardCharsets.UTF_8);
+        };
+    res.sendRedirect(mobileRedirectUri + query);
   }
 }

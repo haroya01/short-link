@@ -4,14 +4,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.TreeMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -42,42 +38,20 @@ public class AdminRequestMetricsService {
     Instant now = clock.instant();
     Instant from = now.minus(window.duration());
     List<RequestMetricEntity> rows = repository.findWindow(from, now);
-    Map<String, List<RequestMetricEntity>> byRoute = new HashMap<>();
-    for (RequestMetricEntity row : rows) {
-      byRoute
-          .computeIfAbsent(row.getMethod() + " " + row.getRoute(), k -> new ArrayList<>())
-          .add(row);
-    }
-    List<RouteAggregate> out = new ArrayList<>(byRoute.size());
-    for (Map.Entry<String, List<RequestMetricEntity>> entry : byRoute.entrySet()) {
-      List<RequestMetricEntity> group = entry.getValue();
-      long count = group.size();
-      long errors = 0;
-      long[] latencies = new long[group.size()];
-      Map<String, Long> statusDist = new TreeMap<>();
-      Map<String, Long> outcomeDist = new TreeMap<>();
-      for (int i = 0; i < group.size(); i++) {
-        RequestMetricEntity row = group.get(i);
-        latencies[i] = row.getLatencyMs();
-        if (row.getStatus() >= 500) errors++;
-        statusDist.merge(String.valueOf(row.getStatus()), 1L, Long::sum);
-        outcomeDist.merge(row.getOutcome(), 1L, Long::sum);
-      }
-      Arrays.sort(latencies);
-      RequestMetricEntity first = group.get(0);
+    List<RouteAggregate> out = new ArrayList<>();
+    for (RequestRouteMetrics.Summary summary : RequestRouteMetrics.summarizeWithOutcomes(rows)) {
       out.add(
           new RouteAggregate(
-              first.getMethod(),
-              first.getRoute(),
-              count,
-              percentile(latencies, 0.5),
-              percentile(latencies, 0.95),
-              percentile(latencies, 0.99),
-              count == 0 ? 0.0 : (double) errors / (double) count,
-              statusDist,
-              outcomeDist));
+              summary.method(),
+              summary.route(),
+              summary.count(),
+              summary.p50(),
+              summary.p95(),
+              summary.p99(),
+              summary.errorRate(),
+              summary.statusDistribution(),
+              summary.outcomeDistribution()));
     }
-    out.sort(Comparator.comparingLong(RouteAggregate::count).reversed());
     return out;
   }
 
@@ -120,21 +94,6 @@ public class AdminRequestMetricsService {
       if (out.size() >= limit) break;
     }
     return out;
-  }
-
-  /**
-   * Linear-interpolation percentile over a pre-sorted long array. Standard {@code (n-1) * p}
-   * indexing, matching what Micrometer's percentile snapshot does — keeps the new endpoint in the
-   * same ballpark as the old ring snapshot so dashboards don't appear to "jump" on switchover.
-   */
-  static double percentile(long[] sorted, double p) {
-    if (sorted.length == 0) return 0.0;
-    if (sorted.length == 1) return sorted[0];
-    double rank = (sorted.length - 1) * p;
-    int lo = (int) Math.floor(rank);
-    int hi = (int) Math.ceil(rank);
-    if (lo == hi) return sorted[lo];
-    return sorted[lo] + (rank - lo) * (sorted[hi] - sorted[lo]);
   }
 
   public enum Window {

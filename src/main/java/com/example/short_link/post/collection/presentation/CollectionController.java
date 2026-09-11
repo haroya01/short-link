@@ -53,19 +53,7 @@ public class CollectionController {
                 request.description(),
                 request.visibility(),
                 request.kind()));
-    return new CollectionSummaryView(
-        saved.getId(),
-        saved.getTitle(),
-        saved.getDescription(),
-        saved.getVisibility().name(),
-        saved.getKind().name(),
-        0,
-        saved.getUpdatedAt(),
-        List.of(),
-        null, // 방금 만든 내 컬렉션 에코 — 큐레이터/위치는 "이 글이 속한 길" 조회에서만 채운다.
-        null,
-        null,
-        null);
+    return CollectionSummaryView.afterCreation(saved);
   }
 
   @PutMapping("/collections/{id}")
@@ -77,19 +65,7 @@ public class CollectionController {
         commandService.edit(
             new EditCollectionCommand(
                 userId, id, request.title(), request.description(), request.visibility()));
-    return new CollectionSummaryView(
-        saved.getId(),
-        saved.getTitle(),
-        saved.getDescription(),
-        saved.getVisibility().name(),
-        saved.getKind().name(),
-        (int) queryService.connectionCount(saved.getId()),
-        saved.getUpdatedAt(),
-        List.of(),
-        null, // 방금 수정한 내 컬렉션 에코 — 큐레이터/위치는 "이 글이 속한 길" 조회에서만 채운다.
-        null,
-        null,
-        null);
+    return queryService.editedSummary(saved);
   }
 
   @GetMapping("/users/me/collections")

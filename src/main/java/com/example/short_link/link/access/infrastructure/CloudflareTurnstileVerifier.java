@@ -1,0 +1,110 @@
+package com.example.short_link.link.access.infrastructure;
+
+import com.example.short_link.link.access.application.TurnstileProperties;
+import com.example.short_link.link.access.application.TurnstileVerifier;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Component;
+import tools.jackson.core.StreamReadFeature;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+
+/**
+ * Verifies a Cloudflare Turnstile token against the siteverify endpoint. No-op (always passes) when
+ * no secret is configured, so the password gate keeps working until the owner provisions keys.
+ * Fail-closed when configured: if the verification call errors or the token is bad, unlock is
+ * denied (the password is still the primary gate; this only adds bot resistance).
+ */
+@Slf4j
+@Component
+public class CloudflareTurnstileVerifier implements TurnstileVerifier {
+
+  private static final URI SITEVERIFY =
+      URI.create("https://challenges.cloudflare.com/turnstile/v0/siteverify");
+  private static final JsonMapper JSON =
+      JsonMapper.builder()
+          .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
+          .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
+          .build();
+
+  private final TurnstileProperties props;
+  private final URI endpoint;
+  private final HttpClient http =
+      HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
+
+  // 생성자가 둘이라 스프링이 주입용을 못 고른다 — 운영용을 @Autowired 로 명시(2-arg 는 테스트 심).
+  @Autowired
+  public CloudflareTurnstileVerifier(TurnstileProperties props) {
+    this(props, SITEVERIFY);
+  }
+
+  // 테스트 심: siteverify 엔드포인트를 로컬 스텁으로 바꿔 검증 경로를 결정적으로 돌린다.
+  CloudflareTurnstileVerifier(TurnstileProperties props, URI endpoint) {
+    this.props = props;
+    this.endpoint = endpoint;
+  }
+
+  @Override
+  public boolean enabled() {
+    return props.verifyEnabled();
+  }
+
+  /** True if the challenge passes, or if Turnstile isn't configured. */
+  @Override
+  public boolean verify(String token, String remoteIp) {
+    if (!props.verifyEnabled()) {
+      return true;
+    }
+    if (token == null || token.isBlank()) {
+      return false;
+    }
+    try {
+      HttpResponse<String> response =
+          http.send(verificationRequest(token, remoteIp), HttpResponse.BodyHandlers.ofString());
+      return response.statusCode() == 200 && reportsSuccess(response.body());
+    } catch (InterruptedException interrupted) {
+      Thread.currentThread().interrupt();
+      return false;
+    } catch (Exception e) {
+      log.warn("Turnstile verification call failed: {}", e.toString());
+      return false;
+    }
+  }
+
+  private HttpRequest verificationRequest(String token, String remoteIp) {
+    StringBuilder form =
+        new StringBuilder("secret=")
+            .append(enc(props.secret()))
+            .append("&response=")
+            .append(enc(token));
+    if (remoteIp != null && !remoteIp.isBlank()) {
+      form.append("&remoteip=").append(enc(remoteIp));
+    }
+    return HttpRequest.newBuilder(endpoint)
+        .timeout(Duration.ofSeconds(4))
+        .header("Content-Type", "application/x-www-form-urlencoded")
+        .POST(HttpRequest.BodyPublishers.ofString(form.toString()))
+        .build();
+  }
+
+  /** Only the top-level JSON Boolean success=true accepts a proof. */
+  private boolean reportsSuccess(String body) {
+    if (body == null || body.isBlank()) return false;
+    JsonNode response = JSON.readTree(body);
+    if (!response.isObject()) return false;
+    JsonNode success = response.path("success");
+    return success.isBoolean() && success.booleanValue();
+  }
+
+  private static String enc(String value) {
+    return URLEncoder.encode(value, StandardCharsets.UTF_8);
+  }
+}

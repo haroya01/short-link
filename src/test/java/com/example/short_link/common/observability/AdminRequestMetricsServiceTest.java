@@ -2,11 +2,14 @@ package com.example.short_link.common.observability;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.within;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -39,9 +42,25 @@ class AdminRequestMetricsServiceTest {
     assertThat(top.method()).isEqualTo("GET");
     assertThat(top.route()).isEqualTo("/r/{shortCode}");
     assertThat(top.count()).isEqualTo(4L);
+    assertThat(top.p50()).isEqualTo(20.0);
+    assertThat(top.p95()).isCloseTo(216.25, within(0.0001));
+    assertThat(top.p99()).isCloseTo(243.25, within(0.0001));
     assertThat(top.errorRate()).isEqualTo(0.25); // 1 of 4 is a 500
     assertThat(top.statusDistribution()).containsEntry("302", 3L).containsEntry("500", 1L);
     assertThat(top.outcomeDistribution()).containsEntry("redirect", 3L).containsEntry("error", 1L);
+    assertThat(top.statusDistribution().keySet()).containsExactly("302", "500");
+    assertThat(top.outcomeDistribution().keySet()).containsExactly("error", "redirect");
+  }
+
+  @Test
+  void rawKeepsOneHourDefaultWindow() {
+    RequestMetricJpaRepository repo = mock(RequestMetricJpaRepository.class);
+    when(repo.findWindow(any(), any())).thenReturn(List.of());
+
+    new AdminRequestMetricsService(repo, fixedClock)
+        .raw(new AdminRequestMetricsService.RawQuery(null, null, null, null, null, null, null));
+
+    verify(repo).findWindow(NOW.minus(Duration.ofHours(1)), NOW);
   }
 
   @Test

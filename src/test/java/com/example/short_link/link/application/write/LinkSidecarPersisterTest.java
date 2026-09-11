@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import com.example.short_link.link.access.domain.LinkAccessControlEntity;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
+import com.example.short_link.link.infrastructure.persistence.LinkSidecarPersister;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
 import com.example.short_link.link.profilebinding.domain.LinkProfileBindingEntity;
 import jakarta.persistence.EntityManager;
@@ -23,7 +24,7 @@ class LinkSidecarPersisterTest {
     LinkSidecarPersister persister = new LinkSidecarPersister(entityManager);
     LinkEntity link = withId(new LinkEntity("https://example.com", "abc1234"), 123L);
 
-    persister.persistAll(link);
+    persister.initialize(link.linkId());
 
     ArgumentCaptor<Object> sidecars = ArgumentCaptor.forClass(Object.class);
     verify(entityManager, times(4)).persist(sidecars.capture());

@@ -3,12 +3,15 @@ package com.example.short_link.link.webhook.scheduler;
 import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.webhook.WebhookSender;
+import com.example.short_link.link.webhook.application.helper.WebhookNotification;
+import com.example.short_link.link.webhook.application.helper.WebhookPayloadAdapter;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Records a link webhook's delivery state. The actual sign-and-POST is the shared {@link
@@ -23,8 +26,12 @@ class WebhookHttpDeliveryClient {
   private final MeterRegistry meterRegistry;
   private final HttpFetcher httpFetcher;
   private final SecretCipher cipher;
+  private final JsonMapper jsonMapper;
 
-  void deliver(LinkWebhookEntity hook, String body, String eventType) {
+  void deliver(LinkWebhookEntity hook, WebhookNotification notification) {
+    String body =
+        jsonMapper.writeValueAsString(WebhookPayloadAdapter.build(hook.getFormat(), notification));
+    String eventType = notification.eventType();
     boolean signed = hook.getFormat() == WebhookFormat.GENERIC;
     WebhookSender.Result result =
         WebhookSender.send(

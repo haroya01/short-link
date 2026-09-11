@@ -53,11 +53,9 @@ public class MobileAuthController {
   public AppleLoginResponse apple(@Valid @RequestBody AppleLoginRequest request) {
     AppleIdentity identity = appleVerifier.verify(request.identityToken(), request.nonce());
     return switch (authService.loginWithApple(identity.subject(), identity.email())) {
-      case AuthService.LoginResult.Tokens tokens -> AppleLoginResponse.tokens(tokens.issued());
-      case AuthService.LoginResult.TwoFactorRequired challenge ->
+      case AuthService.TokenLoginResult.Tokens tokens -> AppleLoginResponse.tokens(tokens.issued());
+      case AuthService.TokenLoginResult.TwoFactorRequired challenge ->
           AppleLoginResponse.twoFactor(challenge.challengeToken());
-      case AuthService.LoginResult.MobileExchangeCode unused ->
-          throw new IllegalStateException("apple native login never issues an exchange code");
     };
   }
 

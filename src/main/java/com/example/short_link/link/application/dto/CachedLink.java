@@ -155,14 +155,12 @@ public record CachedLink(
     List<Variant> enabled = variants.stream().filter(Variant::enabled).toList();
     if (enabled.isEmpty()) return new Picked(originalUrl, null);
 
-    String country = clientCountry == null ? null : clientCountry.trim().toUpperCase();
-    String osLower = os == null ? null : os.trim().toLowerCase();
-    String dcLower = deviceClass == null ? null : deviceClass.trim().toLowerCase();
+    VisitorSignals visitor = VisitorSignals.normalized(clientCountry, os, deviceClass);
 
     int bestSpecificity = -1;
     List<Variant> winners = new ArrayList<>();
     for (Variant v : enabled) {
-      Integer specificity = matchSpecificity(v, country, osLower, dcLower);
+      Integer specificity = v.matchSpecificity(visitor);
       if (specificity == null) continue;
       if (specificity > bestSpecificity) {
         bestSpecificity = specificity;
@@ -176,27 +174,13 @@ public record CachedLink(
     return weightedPick(winners);
   }
 
-  /**
-   * Returns the number of predicates a variant matches against the visitor signals, or {@code null}
-   * if any non-null predicate fails. A variant with no predicates set always matches with
-   * specificity 0 (fully generic).
-   */
-  private static Integer matchSpecificity(
-      Variant v, String country, String os, String deviceClass) {
-    int score = 0;
-    if (v.countryCode() != null) {
-      if (!v.countryCode().equals(country)) return null;
-      score++;
+  private record VisitorSignals(String country, String os, String deviceClass) {
+    static VisitorSignals normalized(String country, String os, String deviceClass) {
+      return new VisitorSignals(
+          country == null ? null : country.trim().toUpperCase(),
+          os == null ? null : os.trim().toLowerCase(),
+          deviceClass == null ? null : deviceClass.trim().toLowerCase());
     }
-    if (v.os() != null) {
-      if (!v.os().equals(os)) return null;
-      score++;
-    }
-    if (v.deviceClass() != null) {
-      if (!v.deviceClass().equals(deviceClass)) return null;
-      score++;
-    }
-    return score;
   }
 
   private Picked weightedPick(List<Variant> pool) {
@@ -219,6 +203,28 @@ public record CachedLink(
       String countryCode,
       String deviceClass,
       String os) {
+
+    /**
+     * Returns the number of predicates a variant matches against the visitor signals, or {@code
+     * null} if any non-null predicate fails. A variant with no predicates set always matches with
+     * specificity 0 (fully generic).
+     */
+    private Integer matchSpecificity(VisitorSignals visitor) {
+      int score = 0;
+      if (countryCode != null) {
+        if (!countryCode.equals(visitor.country())) return null;
+        score++;
+      }
+      if (os != null) {
+        if (!os.equals(visitor.os())) return null;
+        score++;
+      }
+      if (deviceClass != null) {
+        if (!deviceClass.equals(visitor.deviceClass())) return null;
+        score++;
+      }
+      return score;
+    }
 
     public Variant(Long id, String url, int weight, boolean enabled, String countryCode) {
       this(id, url, weight, enabled, countryCode, null, null);

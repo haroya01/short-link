@@ -3,6 +3,7 @@ package com.example.short_link.link.stats.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.application.dto.LinkStats;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -24,6 +25,68 @@ class LinkInsightsTest {
   }
 
   private final LinkInsights insights = new LinkInsights(messageSource());
+
+  private static HostFirstSeenRow firstSeen(String host, Long epoch) {
+    return new HostFirstSeenRow() {
+      public String getHost() {
+        return host;
+      }
+
+      public Long getFirstSeenEpoch() {
+        return epoch;
+      }
+    };
+  }
+
+  private static LinkInsights.ReportFacts facts(long total, long human) {
+    return LinkInsights.ReportFacts.builder()
+        .total(total)
+        .human(human)
+        .heatmap(List.of())
+        .channels(List.of())
+        .countries(List.of())
+        .dailyClicks(List.of())
+        .clientApps(List.of(new LinkStats.ClientAppClick("kakaotalk", 3)))
+        .channelDepth(List.of(new LinkStats.ChannelDepth("loyal.example", 8, null, 5, 0.5)))
+        .build();
+  }
+
+  @Test
+  void reportBelowGeneralSampleStillEvaluatesLoyaltyWithoutReadingChannelHistory() {
+    List<LinkStats.Insight> report =
+        insights.computeReport(
+            facts(9, 9),
+            () -> {
+              throw new AssertionError("small samples must not query channel history");
+            });
+
+    assertThat(report).extracting(LinkStats.Insight::type).containsExactly("CHANNEL_LOYALTY");
+  }
+
+  @Test
+  void reportKeepsChannelJumpThenInAppThenLoyaltyOrder() {
+    List<LinkStats.Insight> report =
+        insights.computeReport(
+            facts(10, 10),
+            () ->
+                List.of(
+                    firstSeen("origin.example", 0L),
+                    firstSeen("early.example", 3599L),
+                    firstSeen("jump.example", 3600L)));
+
+    assertThat(report)
+        .extracting(LinkStats.Insight::type)
+        .containsExactly("CHANNEL_JUMP", "IN_APP_BROWSER", "CHANNEL_LOYALTY");
+    assertThat(report.getFirst().data())
+        .containsEntry("jumpedTo", "jump.example")
+        .containsEntry("gapHours", 1L);
+  }
+
+  @Test
+  void channelJumpKeepsAnUnknownOriginFromProducingAnInsight() {
+    assertThat(insights.channelJump(List.of(firstSeen(null, 0L), firstSeen("later", 7200L))))
+        .isEmpty();
+  }
 
   @AfterEach
   void resetLocale() {

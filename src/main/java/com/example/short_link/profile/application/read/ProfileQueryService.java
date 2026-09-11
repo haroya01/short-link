@@ -90,51 +90,8 @@ public class ProfileQueryService {
         linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(user.getId());
     List<ProfileBlockEntity> blocks =
         profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(user.getId());
-    Map<Long, Long> counts = new HashMap<>();
-    if (!links.isEmpty()) {
-      List<Long> ids = links.stream().map(LinkEntity::getId).toList();
-      for (LinkClickCount row : clickRepository.countsByLinkIds(ids)) {
-        counts.put(row.getLinkId(), row.getCount());
-      }
-    }
-    List<PublicProfile.ProfileEntry> out = new ArrayList<>(links.size() + blocks.size());
-    int li = 0;
-    int bi = 0;
-    while (li < links.size() || bi < blocks.size()) {
-      LinkEntity l = li < links.size() ? links.get(li) : null;
-      ProfileBlockEntity b = bi < blocks.size() ? blocks.get(bi) : null;
-      boolean takeLink = l != null && (b == null || l.getProfileOrder() <= b.getProfileOrder());
-      if (takeLink) {
-        out.add(
-            PublicProfile.ProfileEntry.link(
-                l.getShortCode(),
-                urlBuilder.build(l.getShortCode()),
-                l.getOriginalUrl(),
-                l.getEffectiveOgTitle(),
-                l.getEffectiveOgImage(),
-                counts.getOrDefault(l.getId(), 0L),
-                l.isProfileHighlighted()));
-        li++;
-      } else {
-        out.add(
-            switch (b.getType()) {
-              case TEXT -> PublicProfile.ProfileEntry.text(b.getId(), b.getContent());
-              case IMAGE -> PublicProfile.ProfileEntry.image(b.getId(), b.getContent());
-              case EMBED -> PublicProfile.ProfileEntry.embed(b.getId(), b.getContent());
-              case EMAIL_FORM -> PublicProfile.ProfileEntry.emailForm(b.getId(), b.getContent());
-              case CONTACT_CARD ->
-                  PublicProfile.ProfileEntry.contactCard(b.getId(), b.getContent());
-              case GALLERY -> PublicProfile.ProfileEntry.gallery(b.getId(), b.getContent());
-              case PRODUCT_CARD ->
-                  PublicProfile.ProfileEntry.productCard(b.getId(), b.getContent());
-              case BOOKING -> PublicProfile.ProfileEntry.booking(b.getId(), b.getContent());
-              case EVENT -> PublicProfile.ProfileEntry.event(b.getId(), b.getContent());
-              case PLACE -> PublicProfile.ProfileEntry.place(b.getId(), b.getContent());
-              case DIVIDER -> PublicProfile.ProfileEntry.divider(b.getId());
-            });
-        bi++;
-      }
-    }
+    Map<Long, Long> counts = clickCounts(links);
+    List<PublicProfile.ProfileEntry> out = entriesInProfileOrder(links, blocks, counts);
     long publishedPostCount = postCountReader.countPublishedByUserId(user.getId());
     return new PublicProfile(
         user.getUsername(),
@@ -146,6 +103,67 @@ public class ProfileQueryService {
         out,
         publishedPostCount,
         user.isHideFollowerCount());
+  }
+
+  private Map<Long, Long> clickCounts(List<LinkEntity> links) {
+    Map<Long, Long> counts = new HashMap<>();
+    if (!links.isEmpty()) {
+      List<Long> ids = links.stream().map(LinkEntity::getId).toList();
+      for (LinkClickCount row : clickRepository.countsByLinkIds(ids)) {
+        counts.put(row.getLinkId(), row.getCount());
+      }
+    }
+    return counts;
+  }
+
+  private List<PublicProfile.ProfileEntry> entriesInProfileOrder(
+      List<LinkEntity> links, List<ProfileBlockEntity> blocks, Map<Long, Long> counts) {
+    List<PublicProfile.ProfileEntry> entries = new ArrayList<>(links.size() + blocks.size());
+    int linkIndex = 0;
+    int blockIndex = 0;
+    while (linkIndex < links.size() || blockIndex < blocks.size()) {
+      LinkEntity link = linkIndex < links.size() ? links.get(linkIndex) : null;
+      ProfileBlockEntity block = blockIndex < blocks.size() ? blocks.get(blockIndex) : null;
+      boolean takeLink =
+          link != null && (block == null || link.getProfileOrder() <= block.getProfileOrder());
+      if (takeLink) {
+        entries.add(linkEntry(link, counts));
+        linkIndex++;
+      } else {
+        entries.add(blockEntry(block));
+        blockIndex++;
+      }
+    }
+    return entries;
+  }
+
+  private PublicProfile.ProfileEntry linkEntry(LinkEntity link, Map<Long, Long> counts) {
+    return PublicProfile.ProfileEntry.link(
+        link.getShortCode(),
+        urlBuilder.build(link.getShortCode()),
+        link.getOriginalUrl(),
+        link.getEffectiveOgTitle(),
+        link.getEffectiveOgImage(),
+        counts.getOrDefault(link.getId(), 0L),
+        link.isProfileHighlighted());
+  }
+
+  private static PublicProfile.ProfileEntry blockEntry(ProfileBlockEntity block) {
+    return switch (block.getType()) {
+      case TEXT -> PublicProfile.ProfileEntry.text(block.getId(), block.getContent());
+      case IMAGE -> PublicProfile.ProfileEntry.image(block.getId(), block.getContent());
+      case EMBED -> PublicProfile.ProfileEntry.embed(block.getId(), block.getContent());
+      case EMAIL_FORM -> PublicProfile.ProfileEntry.emailForm(block.getId(), block.getContent());
+      case CONTACT_CARD ->
+          PublicProfile.ProfileEntry.contactCard(block.getId(), block.getContent());
+      case GALLERY -> PublicProfile.ProfileEntry.gallery(block.getId(), block.getContent());
+      case PRODUCT_CARD ->
+          PublicProfile.ProfileEntry.productCard(block.getId(), block.getContent());
+      case BOOKING -> PublicProfile.ProfileEntry.booking(block.getId(), block.getContent());
+      case EVENT -> PublicProfile.ProfileEntry.event(block.getId(), block.getContent());
+      case PLACE -> PublicProfile.ProfileEntry.place(block.getId(), block.getContent());
+      case DIVIDER -> PublicProfile.ProfileEntry.divider(block.getId());
+    };
   }
 
   public PublicHandlesPage publicHandlesPage(int page, int size) {

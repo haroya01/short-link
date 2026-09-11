@@ -1,10 +1,9 @@
 package com.example.short_link.event.application.read;
 
-import com.example.short_link.event.application.image.EventCoverImageService;
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.event.application.read.EventView.EventLinkView;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.EventLinkEntity;
-import com.example.short_link.event.domain.EventRegistrationEntity;
 import com.example.short_link.event.domain.repository.EventLinkRepository;
 import com.example.short_link.event.domain.repository.EventQuestionRepository;
 import com.example.short_link.event.domain.repository.EventRegistrationRepository;
@@ -29,7 +28,7 @@ public class EventQueryService {
   private final EventRegistrationRepository registrationRepository;
   private final EventLinkRepository eventLinkRepository;
   private final LinkRepository linkRepository;
-  private final EventCoverImageService coverImageService;
+  private final ObjectStoragePublicUrls coverImageUrls;
 
   @Transactional(readOnly = true)
   public List<EventView> listMyEvents(Long userId) {
@@ -37,10 +36,7 @@ public class EventQueryService {
         .map(
             event ->
                 EventView.from(
-                    event,
-                    List.of(),
-                    List.of(),
-                    coverImageService.urlFor(event.getCoverImageKey())))
+                    event, List.of(), List.of(), coverImageUrls.forKey(event.getCoverImageKey())))
         .toList();
   }
 
@@ -52,7 +48,7 @@ public class EventQueryService {
             .map(EventQuestionView::from)
             .toList();
     return EventView.from(
-        event, questions, linkViews(eventId), coverImageService.urlFor(event.getCoverImageKey()));
+        event, questions, linkViews(eventId), coverImageUrls.forKey(event.getCoverImageKey()));
   }
 
   @Transactional(readOnly = true)
@@ -60,7 +56,7 @@ public class EventQueryService {
     requireOwned(userId, eventId);
     Map<Long, String> channelByLinkId = channelLabels(eventId);
     return registrationRepository.findAllByEventIdOrderByCreatedAtAsc(eventId).stream()
-        .map(r -> AttendeeView.from(r, channelLabel(r, channelByLinkId)))
+        .map(r -> AttendeeView.from(r, RegistrationChannel.labelFor(r, channelByLinkId)))
         .toList();
   }
 
@@ -117,17 +113,6 @@ public class EventQueryService {
                         .orElse(null),
                     link.getLabel()))
         .toList();
-  }
-
-  private static String channelLabel(
-      EventRegistrationEntity registration, Map<Long, String> channelByLinkId) {
-    if (registration.getLinkId() != null) {
-      String label = channelByLinkId.get(registration.getLinkId());
-      if (label != null) return label;
-    }
-    if (registration.getClientApp() != null) return registration.getClientApp();
-    if (registration.getReferrerHost() != null) return registration.getReferrerHost();
-    return null;
   }
 
   private EventEntity requireOwned(Long userId, Long eventId) {

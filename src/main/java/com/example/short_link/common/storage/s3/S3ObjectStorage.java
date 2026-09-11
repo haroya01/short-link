@@ -32,7 +32,7 @@ public class S3ObjectStorage implements ObjectStorage {
 
   private final S3Client s3Client;
   private final S3Presigner presigner;
-  private final AvatarProperties props;
+  private final S3StorageProperties props;
 
   @Override
   public boolean isConfigured() {

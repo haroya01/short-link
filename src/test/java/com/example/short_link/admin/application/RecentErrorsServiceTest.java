@@ -3,6 +3,7 @@ package com.example.short_link.admin.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.admin.application.read.RecentErrorsService;
+import com.example.short_link.admin.infrastructure.logging.RecentErrorsLogAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,18 +14,20 @@ class RecentErrorsServiceTest {
 
   private final Logger log = LoggerFactory.getLogger(RecentErrorsServiceTest.class);
   private RecentErrorsBuffer buffer;
+  private RecentErrorsLogAppender appender;
   private RecentErrorsService service;
 
   @BeforeEach
   void setup() {
     buffer = new RecentErrorsBuffer(50);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
     service = new RecentErrorsService(buffer);
   }
 
   @AfterEach
   void teardown() {
-    buffer.uninstall();
+    appender.uninstall();
   }
 
   @Test

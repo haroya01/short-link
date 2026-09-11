@@ -1,0 +1,34 @@
+# Reviewed HTTP/JDBC evidence for the readability follow-up, 2026-09-11.
+# Fixtures and direct DB assertions excluded; triggered async work included.
+# Counts were reviewed against actual SQL. Never automatically update on failure.
+# identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
+
+# Invalid scalar input stops before a repository; a following valid read still sees the saved link.
+@junit | binding-feed-invalid-page | 0 | 0 | 0 | 0 | 0
+@junit | binding-feed-invalid-size | 0 | 0 | 0 | 0 | 0
+@junit | binding-link-create | 6 | 6 | 2 | 0 | 14
+@junit | binding-links-invalid-size | 0 | 0 | 0 | 0 | 0
+@junit | binding-links-overflow-size | 0 | 0 | 0 | 0 | 0
+@junit | binding-links-valid-after-rejection | 4 | 0 | 0 | 0 | 4
+
+# Two new tags + their associations; PATCH includes real metadata and the triggered OG refresh.
+@junit | link-update-stat-tags | 4 | 4 | 0 | 1 | 9
+@junit | link-update-with-statistics | 10 | 1 | 4 | 0 | 15
+@junit | link-utc-day-fixture-create | 6 | 6 | 2 | 0 | 14
+
+# A real like creates a notification; account deletion preserves it but removes actor display data.
+@junit | notification-actor-account-delete | 2 | 1 | 1 | 0 | 4
+@junit | notification-actor-anonymous | 2 | 0 | 0 | 0 | 2
+@junit | notification-actor-like | 6 | 2 | 1 | 0 | 9
+@junit | notification-actor-post-create | 2 | 1 | 0 | 0 | 3
+@junit | notification-actor-post-publish | 7 | 2 | 1 | 0 | 10
+@junit | notification-actor-visible | 2 | 0 | 0 | 0 | 2
+
+# Real Cloudflare adapter against a local HTTP provider: only Boolean true passes.
+# The explicit worker contract includes the click and first-click notification persistence.
+@junit | turnstile-click-worker-persist | 6 | 2 | 0 | 0 | 8
+@junit | turnstile-link-create | 6 | 6 | 2 | 0 | 14
+@junit | turnstile-link-protect | 2 | 0 | 2 | 0 | 4
+@junit | turnstile-unlock-json-success | 3 | 0 | 1 | 0 | 4
+@junit | turnstile-unlock-nested-success-rejected | 0 | 0 | 0 | 0 | 0
+@junit | turnstile-unlock-string-success-rejected | 0 | 0 | 0 | 0 | 0

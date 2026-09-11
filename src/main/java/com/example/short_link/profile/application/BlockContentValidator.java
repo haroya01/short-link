@@ -24,38 +24,8 @@ public final class BlockContentValidator {
     return switch (type) {
       case DIVIDER -> null;
       case TEXT -> TextBlockBody.normalize(raw);
-      case IMAGE -> {
-        if (trimmed.isEmpty())
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url required");
-        if (trimmed.length() > 2048)
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url too long");
-        try {
-          URI uri = URI.create(trimmed);
-          String scheme = uri.getScheme();
-          if (scheme == null
-              || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
-            throw new ProfileException(
-                ProfileErrorCode.INVALID_USERNAME, "image url must be http(s)");
-          }
-          if (uri.getHost() == null || uri.getHost().isBlank()) {
-            throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url missing host");
-          }
-        } catch (IllegalArgumentException ex) {
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url malformed");
-        }
-        yield trimmed;
-      }
-      case EMBED -> {
-        if (trimmed.isEmpty())
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "embed url required");
-        if (trimmed.length() > 2048)
-          throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "embed url too long");
-        if (EmbedProvider.resolve(trimmed).isEmpty()) {
-          throw new ProfileException(
-              ProfileErrorCode.INVALID_USERNAME, "embed url: unsupported provider");
-        }
-        yield trimmed;
-      }
+      case IMAGE -> validateImageUrl(trimmed);
+      case EMBED -> validateEmbedUrl(trimmed);
       case EMAIL_FORM -> {
         if (trimmed.length() > 2048)
           throw new ProfileException(
@@ -93,5 +63,38 @@ public final class BlockContentValidator {
         yield Place.normalize(trimmed);
       }
     };
+  }
+
+  private static String validateImageUrl(String trimmed) {
+    if (trimmed.isEmpty())
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url required");
+    if (trimmed.length() > 2048)
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url too long");
+    try {
+      URI uri = URI.create(trimmed);
+      String scheme = uri.getScheme();
+      if (scheme == null
+          || !(scheme.equalsIgnoreCase("http") || scheme.equalsIgnoreCase("https"))) {
+        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url must be http(s)");
+      }
+      if (uri.getHost() == null || uri.getHost().isBlank()) {
+        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url missing host");
+      }
+    } catch (IllegalArgumentException ex) {
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "image url malformed");
+    }
+    return trimmed;
+  }
+
+  private static String validateEmbedUrl(String trimmed) {
+    if (trimmed.isEmpty())
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "embed url required");
+    if (trimmed.length() > 2048)
+      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "embed url too long");
+    if (EmbedProvider.resolve(trimmed).isEmpty()) {
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "embed url: unsupported provider");
+    }
+    return trimmed;
   }
 }

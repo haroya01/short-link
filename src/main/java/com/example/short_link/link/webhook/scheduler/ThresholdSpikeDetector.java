@@ -6,6 +6,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickAlertReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.link.webhook.application.helper.ThresholdSpikePayload;
+import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
@@ -21,7 +22,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Click-driven counterpart to {@link DailyWebhookSummaryJob}. On every committed click, finds hooks
@@ -45,8 +45,7 @@ public class ThresholdSpikeDetector {
   private final LinkRepository links;
   private final ClickTotalsReadRepository clickTotals;
   private final ClickAlertReadRepository clickAlerts;
-  private final LinkWebhookDispatcher dispatcher;
-  private final JsonMapper jsonMapper;
+  private final WebhookHttpDeliveryClient deliveryClient;
   private final Clock clock;
 
   @Autowired
@@ -55,9 +54,8 @@ public class ThresholdSpikeDetector {
       LinkRepository links,
       ClickTotalsReadRepository clickTotals,
       ClickAlertReadRepository clickAlerts,
-      LinkWebhookDispatcher dispatcher,
-      JsonMapper jsonMapper) {
-    this(hooks, links, clickTotals, clickAlerts, dispatcher, jsonMapper, Clock.systemUTC());
+      WebhookHttpDeliveryClient deliveryClient) {
+    this(hooks, links, clickTotals, clickAlerts, deliveryClient, Clock.systemUTC());
   }
 
   ThresholdSpikeDetector(
@@ -65,15 +63,13 @@ public class ThresholdSpikeDetector {
       LinkRepository links,
       ClickTotalsReadRepository clickTotals,
       ClickAlertReadRepository clickAlerts,
-      LinkWebhookDispatcher dispatcher,
-      JsonMapper jsonMapper,
+      WebhookHttpDeliveryClient deliveryClient,
       Clock clock) {
     this.hooks = hooks;
     this.links = links;
     this.clickTotals = clickTotals;
     this.clickAlerts = clickAlerts;
-    this.dispatcher = dispatcher;
-    this.jsonMapper = jsonMapper;
+    this.deliveryClient = deliveryClient;
     this.clock = clock;
   }
 
@@ -85,8 +81,7 @@ public class ThresholdSpikeDetector {
     List<LinkWebhookEntity> candidates =
         hooks.findAllByLinkIdAndEnabledTrue(event.linkId().value());
     for (LinkWebhookEntity hook : candidates) {
-      WebhookDeliveryMode mode = hook.getDeliveryMode();
-      if (mode != WebhookDeliveryMode.THRESHOLD_SPIKE && mode != WebhookDeliveryMode.BOTH) {
+      if (!hook.getDeliveryMode().sendsSpikeAlert()) {
         continue;
       }
       tryFire(hook);
@@ -112,8 +107,7 @@ public class ThresholdSpikeDetector {
     ThresholdSpikePayload payload =
         new ThresholdSpikePayload(
             link.getShortCode(), windowMinutes + "m", count, threshold, topReferrer);
-    String body = jsonMapper.writeValueAsString(payload.toJsonMap());
-    dispatcher.deliver(hook, body, "spike_alert");
+    deliveryClient.deliver(hook, new WebhookNotification.SpikeAlert(payload));
     hook.markSpikeFired(now);
   }
 

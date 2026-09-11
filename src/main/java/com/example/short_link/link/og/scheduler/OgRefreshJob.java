@@ -4,7 +4,7 @@ import com.example.short_link.common.lock.RedisDistributedLock;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.og.application.LinkOgFetchListener;
+import com.example.short_link.link.og.application.LinkOgFetchService;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
@@ -23,7 +23,7 @@ public class OgRefreshJob {
   private static final int BATCH_SIZE = 50;
 
   private final LinkRepository linkRepository;
-  private final LinkOgFetchListener listener;
+  private final LinkOgFetchService fetchService;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
   private final OgFetchProperties ogFetch;
@@ -41,7 +41,7 @@ public class OgRefreshJob {
       log.info("og refresh: {} stale candidates", candidates.size());
       for (LinkEntity link : candidates) {
         try {
-          listener.fetchAndStore(link.getShortCode(), link.getOriginalUrl());
+          fetchService.refresh(link.getShortCode(), link.getOriginalUrl());
         } catch (RuntimeException e) {
           log.warn("og refresh failed for {}", link.getShortCode(), e);
         }

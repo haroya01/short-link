@@ -1,14 +1,16 @@
 package com.example.short_link.notification.application.write;
 
+import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.dto.NotificationTarget;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
+import com.example.short_link.notification.domain.NotificationUser;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -18,7 +20,6 @@ import org.springframework.context.MessageSource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Persists in-app notifications. Called from after-commit listeners, so it opens its own
@@ -36,9 +37,9 @@ public class RecordBlogNotificationUseCase {
   private static final int FANOUT_CHUNK = 500;
 
   private final NotificationRepository repository;
-  private final JsonMapper jsonMapper;
+  private final NotificationTargetCodec targetCodec;
   private final PushSender pushSender;
-  private final UserRepository userRepository;
+  private final NotificationUserReader userReader;
   private final MessageSource messageSource;
   private final BlogNotificationPreferenceService preferenceService;
   private final NotificationFanoutWriter fanoutWriter;
@@ -50,11 +51,11 @@ public class RecordBlogNotificationUseCase {
    */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
-      Long recipientUserId, NotificationType type, Long actorUserId, Object payload) {
+      Long recipientUserId, NotificationType type, Long actorUserId, NotificationTarget payload) {
     if (!preferenceService.isEnabled(recipientUserId, type)) {
       return;
     }
-    String json = payload == null ? null : jsonMapper.writeValueAsString(payload);
+    String json = targetCodec.encode(payload);
     repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
     pushSender.send(
         recipientUserId, pushMessage(type, actorUserId, payload, localeOf(recipientUserId)));
@@ -75,7 +76,10 @@ public class RecordBlogNotificationUseCase {
    * audience.
    */
   public void recordForEach(
-      List<Long> recipientUserIds, NotificationType type, Long actorUserId, Object payload) {
+      List<Long> recipientUserIds,
+      NotificationType type,
+      Long actorUserId,
+      NotificationTarget payload) {
     if (recipientUserIds.isEmpty()) {
       return;
     }
@@ -83,7 +87,7 @@ public class RecordBlogNotificationUseCase {
     if (enabledRecipients.isEmpty()) {
       return;
     }
-    String json = payload == null ? null : jsonMapper.writeValueAsString(payload);
+    String json = targetCodec.encode(payload);
     for (int i = 0; i < enabledRecipients.size(); i += FANOUT_CHUNK) {
       List<Long> chunk =
           enabledRecipients.subList(i, Math.min(i + FANOUT_CHUNK, enabledRecipients.size()));
@@ -91,11 +95,11 @@ public class RecordBlogNotificationUseCase {
     }
     // 수신자를 로케일별로 묶어 각 언어로 푸시 — 한 번의 조합을 그 로케일 그룹에 보낸다.
     Map<String, List<Long>> byLocale =
-        userRepository.findAllByIdIn(enabledRecipients).stream()
+        userReader.findAllByIdIn(enabledRecipients).stream()
             .collect(
                 Collectors.groupingBy(
-                    RecordBlogNotificationUseCase::localeTag,
-                    Collectors.mapping(UserEntity::getId, Collectors.toList())));
+                    NotificationUser::localeTag,
+                    Collectors.mapping(NotificationUser::id, Collectors.toList())));
     byLocale.forEach(
         (tag, ids) ->
             pushSender.sendToAll(
@@ -104,36 +108,21 @@ public class RecordBlogNotificationUseCase {
 
   /** 앱 벨과 같은 문구를 수신자 로케일로 — MessageSource 번들(messages_*.properties)에서 렌더한다. */
   private PushSender.PushMessage pushMessage(
-      NotificationType type, Long actorUserId, Object payload, Locale locale) {
+      NotificationType type, Long actorUserId, NotificationTarget payload, Locale locale) {
     String actor =
-        userRepository
+        userReader
             .findById(actorUserId)
-            .map(user -> user.getUsername() == null ? "kurl" : user.getUsername())
+            .map(user -> user.username() == null ? "kurl" : user.username())
             .orElse("kurl");
-    String subtitle = subtitleOf(payload);
+    String subtitle = payload == null ? null : payload.pushSubtitle();
     String body =
         messageSource.getMessage("notification.push." + type.name(), new Object[] {actor}, locale);
     return new PushSender.PushMessage("kurl", subtitle, body);
   }
 
-  /** The push subtitle: a post's title, or a collection's name for a graph notice, else none. */
-  private static String subtitleOf(Object payload) {
-    if (payload instanceof NotificationPostRef ref && ref.title() != null) {
-      return ref.title();
-    }
-    if (payload instanceof NotificationCollectionRef ref && ref.collectionName() != null) {
-      return ref.collectionName();
-    }
-    return null;
-  }
-
   /** 수신자의 저장된 선호 로케일(모르면 ko). */
   private Locale localeOf(Long recipientUserId) {
     return Locale.forLanguageTag(
-        userRepository.findById(recipientUserId).map(UserEntity::getLocale).orElse("ko"));
-  }
-
-  private static String localeTag(UserEntity user) {
-    return user.getLocale() == null ? "ko" : user.getLocale();
+        userReader.findById(recipientUserId).map(NotificationUser::locale).orElse("ko"));
   }
 }

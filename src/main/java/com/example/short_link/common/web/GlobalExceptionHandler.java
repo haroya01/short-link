@@ -16,6 +16,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 /**
@@ -47,6 +48,16 @@ public class GlobalExceptionHandler {
         req.getRequestURI(),
         e.getMessage());
     return ProblemDetails.of(HttpStatus.BAD_REQUEST, "invalid argument", "INVALID_ARGUMENT", req);
+  }
+
+  /** A query/path value that cannot bind to its declared type is an invalid client argument. */
+  @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+  public ProblemDetail handleArgumentTypeMismatch(
+      MethodArgumentTypeMismatchException e, HttpServletRequest req) {
+    ProblemDetail body =
+        ProblemDetails.of(HttpStatus.BAD_REQUEST, "invalid parameter", "INVALID_ARGUMENT", req);
+    body.setProperty("parameter", e.getName());
+    return body;
   }
 
   @ExceptionHandler(OptimisticLockingFailureException.class)

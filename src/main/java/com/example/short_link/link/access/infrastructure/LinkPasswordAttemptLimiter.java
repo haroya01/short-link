@@ -1,5 +1,6 @@
 package com.example.short_link.link.access.infrastructure;
 
+import com.example.short_link.link.access.application.PasswordAttempts;
 import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -13,7 +14,7 @@ import org.springframework.stereotype.Component;
  */
 @Component
 @RequiredArgsConstructor
-public class LinkPasswordAttemptLimiter {
+public class LinkPasswordAttemptLimiter implements PasswordAttempts {
 
   static final int MAX_FAILURES = 10;
   private static final Duration WINDOW = Duration.ofMinutes(15);

@@ -24,6 +24,9 @@ public interface PostRepository {
 
   PostEntity save(PostEntity post);
 
+  /** 저장 시 생성되는 시각까지 확정한다. 쓰기 응답을 만들기 전에만 사용한다. */
+  void flush();
+
   void delete(PostEntity post);
 
   /** Atomically bump the denormalized like counter so concurrent likes can't lose an update. */

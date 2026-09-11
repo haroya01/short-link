@@ -1,6 +1,7 @@
 package com.example.short_link.link.destination.application.write;
 
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
+import com.example.short_link.link.destination.domain.DestinationPolicy;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.exception.DestinationErrorCode;
 import com.example.short_link.link.destination.exception.DestinationException;
@@ -30,18 +31,18 @@ public class UpdateDestinationUseCase {
       String deviceClass,
       String os) {
     LinkDestinationEntity dest = ownership.ownedDestination(userId, shortCode, destinationId);
-    if (url != null && !AddDestinationUseCase.isValidUrl(url)) {
+    if (url != null && !DestinationPolicy.isValidUrl(url)) {
       throw new DestinationException(DestinationErrorCode.INVALID_DESTINATION_URL);
     }
-    Integer clampedWeight = weight == null ? null : AddDestinationUseCase.clampWeight(weight);
+    Integer clampedWeight = weight == null ? null : DestinationPolicy.clampWeight(weight);
     dest.update(
         url == null ? null : url.trim(),
         clampedWeight,
-        AddDestinationUseCase.sanitizeLabel(label),
+        DestinationPolicy.sanitizeLabel(label),
         enabled,
         countryCode,
         deviceClass,
         os);
-    return AddDestinationUseCase.toSummary(dest);
+    return DestinationSummary.from(dest);
   }
 }

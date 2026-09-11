@@ -78,13 +78,6 @@ public class RepositoryUnusedMethodTest {
           .areNotAnnotatedWith(Async.class)
           .and()
           .areNotAnnotatedWith(Cacheable.class)
-          // EmailLeadService.submit(4-arg) is an internal helper exposed for the existing extended
-          // test suite. Production goes through submitPublic(3-arg). Narrowing to private is a
-          // separate cleanup once those tests migrate to the public entry point.
-          .and()
-          .doNotHaveFullName(
-              "com.example.short_link.profile.application.email.EmailLeadService.submit("
-                  + "java.lang.Long, java.lang.Long, java.lang.String, java.lang.String)")
           .should(beCalledFromOutsideOwner());
 
   private static boolean implementsInterfaceMethod(JavaMethod method) {

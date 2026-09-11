@@ -2,7 +2,6 @@ package com.example.short_link.link.webhook.application.write;
 
 import com.example.short_link.link.webhook.application.dto.WebhookReDetectResult;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
-import com.example.short_link.link.webhook.domain.WebhookFormat;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.util.List;
@@ -30,16 +29,9 @@ public class ReDetectWebhookFormatsUseCase {
       if (chunk.isEmpty()) break;
       for (LinkWebhookEntity hook : chunk) {
         scanned++;
-        WebhookFormat detected = WebhookFormat.detect(hook.getUrl());
-        boolean autoDisabled = !hook.isEnabled() && hook.getAutoDisabledReason() != null;
-        if (detected != hook.getFormat()) {
-          hook.changeFormat(detected);
-          formatChanged++;
-          if (autoDisabled && detected != WebhookFormat.GENERIC) {
-            hook.resetFailureState();
-            reactivated++;
-          }
-        }
+        LinkWebhookEntity.FormatRedetection result = hook.redetectFormat();
+        if (result.changed()) formatChanged++;
+        if (result.reactivated()) reactivated++;
       }
       afterId = chunk.get(chunk.size() - 1).getId();
       if (chunk.size() < CHUNK_SIZE) break;

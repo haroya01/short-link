@@ -42,6 +42,9 @@ class LinkManagementUseCasesTest {
 
     assertThat(result.shortCode().value()).isEqualTo("lmu0001");
     assertThat(result.originalUrl()).isEqualTo("https://new.com");
+    assertThat(result.clickCount()).isZero();
+    assertThat(result.tags()).isEmpty();
+    assertThat(result.clicksLast7d()).containsExactly(0L, 0L, 0L, 0L, 0L, 0L, 0L);
   }
 
   @Test

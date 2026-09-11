@@ -1,6 +1,5 @@
 package com.example.short_link.post.presentation;
 
-import com.example.short_link.post.application.read.PostBlockView;
 import com.example.short_link.post.application.read.PublicPostDetail;
 import com.example.short_link.post.application.read.PublicPostListView;
 import com.example.short_link.post.application.read.PublicPostQueryService;
@@ -43,11 +42,7 @@ public class PublicPostController {
   public ResponseEntity<String> publicMarkdown(
       @PathVariable String username, @PathVariable String slug) {
     PublicPostDetail detail = publicPostQueryService.findPublicPost(username, slug);
-    String markdown =
-        markdownBlocks.toMarkdown(
-            detail.blocks().stream()
-                .map(b -> new PostBlockView(null, b.type(), b.content(), b.blockOrder()))
-                .toList());
+    String markdown = markdownBlocks.toMarkdown(detail.blocks());
     return ResponseEntity.ok()
         .header("Content-Disposition", "inline; filename=\"" + slug + ".md\"")
         .body(markdown);

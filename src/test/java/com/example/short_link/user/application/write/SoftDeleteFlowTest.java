@@ -51,7 +51,7 @@ class SoftDeleteFlowTest {
     deletionService.deleteAccount(user.getId());
 
     IssuedTokens tokens =
-        ((AuthService.LoginResult.Tokens)
+        ((AuthService.TokenLoginResult.Tokens)
                 authService.loginWithOAuth("sd2@local.test", "google", "g-sd2"))
             .issued();
     assertThat(tokens.accessToken()).isNotBlank();
@@ -64,7 +64,7 @@ class SoftDeleteFlowTest {
   void refreshRejectsSoftDeletedUser() {
     UserEntity user = userRepository.save(new UserEntity("sd3@local.test", "google", "g-sd3"));
     IssuedTokens initial =
-        ((AuthService.LoginResult.Tokens)
+        ((AuthService.TokenLoginResult.Tokens)
                 authService.loginWithOAuth("sd3@local.test", "google", "g-sd3"))
             .issued();
 

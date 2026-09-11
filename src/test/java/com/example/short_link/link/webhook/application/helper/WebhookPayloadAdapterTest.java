@@ -2,10 +2,13 @@ package com.example.short_link.link.webhook.application.helper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 
 class WebhookPayloadAdapterTest {
 
@@ -23,14 +26,16 @@ class WebhookPayloadAdapterTest {
   @Test
   void genericReturnsClickUnchanged() {
     Map<String, Object> body =
-        WebhookPayloadAdapter.buildClick(WebhookFormat.GENERIC, SAMPLE_CLICK);
+        WebhookPayloadAdapter.build(
+            WebhookFormat.GENERIC, new WebhookNotification.Click(SAMPLE_CLICK));
     assertThat(body).isSameAs(SAMPLE_CLICK);
   }
 
   @Test
   void discordBodyHasEmbedsAndBrandColor() {
     Map<String, Object> body =
-        WebhookPayloadAdapter.buildClick(WebhookFormat.DISCORD, SAMPLE_CLICK);
+        WebhookPayloadAdapter.build(
+            WebhookFormat.DISCORD, new WebhookNotification.Click(SAMPLE_CLICK));
     assertThat(body).containsKey("embeds");
     @SuppressWarnings("unchecked")
     List<Map<String, Object>> embeds = (List<Map<String, Object>>) body.get("embeds");
@@ -45,7 +50,9 @@ class WebhookPayloadAdapterTest {
 
   @Test
   void slackBodyHasTextAndBlocks() {
-    Map<String, Object> body = WebhookPayloadAdapter.buildClick(WebhookFormat.SLACK, SAMPLE_CLICK);
+    Map<String, Object> body =
+        WebhookPayloadAdapter.build(
+            WebhookFormat.SLACK, new WebhookNotification.Click(SAMPLE_CLICK));
     assertThat(body).containsKeys("text", "blocks");
     assertThat(body.get("text").toString()).contains("link #42");
     @SuppressWarnings("unchecked")
@@ -57,7 +64,8 @@ class WebhookPayloadAdapterTest {
   @Test
   void discordBatchUsesEmbeds() {
     Map<String, Object> body =
-        WebhookPayloadAdapter.buildBatch(WebhookFormat.DISCORD, 42L, List.of(SAMPLE_CLICK));
+        WebhookPayloadAdapter.build(
+            WebhookFormat.DISCORD, new WebhookNotification.Batch(42L, List.of(SAMPLE_CLICK)));
     assertThat(body).containsKey("embeds");
     assertThat(body.get("content").toString()).contains("batch");
   }
@@ -65,16 +73,33 @@ class WebhookPayloadAdapterTest {
   @Test
   void slackBatchUsesText() {
     Map<String, Object> body =
-        WebhookPayloadAdapter.buildBatch(WebhookFormat.SLACK, 42L, List.of(SAMPLE_CLICK));
+        WebhookPayloadAdapter.build(
+            WebhookFormat.SLACK, new WebhookNotification.Batch(42L, List.of(SAMPLE_CLICK)));
     assertThat(body.get("text").toString()).contains("link #42");
   }
 
   @Test
   void genericBatchPreservesEvents() {
     Map<String, Object> body =
-        WebhookPayloadAdapter.buildBatch(WebhookFormat.GENERIC, 42L, List.of(SAMPLE_CLICK));
+        WebhookPayloadAdapter.build(
+            WebhookFormat.GENERIC, new WebhookNotification.Batch(42L, List.of(SAMPLE_CLICK)));
     assertThat(body).containsEntry("type", "click.batch").containsEntry("count", 1);
     assertThat(body.get("events")).isEqualTo(List.of(SAMPLE_CLICK));
+  }
+
+  @ParameterizedTest
+  @EnumSource(WebhookFormat.class)
+  void summariesAndSpikesKeepTheirExistingRawPayloadForEveryProvider(WebhookFormat format) {
+    DailySummaryPayload summary =
+        new DailySummaryPayload(
+            new ShortCode("abc"), "a", "b", 0, 0, 0, 0, null, null, null, 0, 0, null, null);
+    ThresholdSpikePayload spike =
+        new ThresholdSpikePayload(new ShortCode("abc"), "10m", 50, 40, null);
+
+    assertThat(WebhookPayloadAdapter.build(format, new WebhookNotification.DailySummary(summary)))
+        .isEqualTo(summary.toJsonMap());
+    assertThat(WebhookPayloadAdapter.build(format, new WebhookNotification.SpikeAlert(spike)))
+        .isEqualTo(spike.toJsonMap());
   }
 
   @Test

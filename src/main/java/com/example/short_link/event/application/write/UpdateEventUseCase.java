@@ -3,13 +3,11 @@ package com.example.short_link.event.application.write;
 import com.example.short_link.event.application.helper.EventQuestions;
 import com.example.short_link.event.application.helper.EventQuestions.QuestionSpec;
 import com.example.short_link.event.domain.EventEntity;
-import com.example.short_link.event.domain.EventQuestionEntity;
 import com.example.short_link.event.domain.repository.EventQuestionRepository;
 import com.example.short_link.event.domain.repository.EventRegistrationRepository;
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
-import java.util.ArrayList;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -56,18 +54,6 @@ public class UpdateEventUseCase {
     EventQuestions.validateSpecs(specs);
     questionRepository.deleteAllByEventId(event.getId());
     if (specs.isEmpty()) return;
-    List<EventQuestionEntity> questions = new ArrayList<>();
-    for (int i = 0; i < specs.size(); i++) {
-      QuestionSpec spec = specs.get(i);
-      questions.add(
-          new EventQuestionEntity(
-              event.getId(),
-              i,
-              EventQuestions.parseType(spec.type()),
-              spec.label().trim(),
-              EventQuestions.serializeOptions(spec.options()),
-              spec.required()));
-    }
-    questionRepository.saveAll(questions);
+    questionRepository.saveAll(EventQuestions.toEntities(event.getId(), specs));
   }
 }

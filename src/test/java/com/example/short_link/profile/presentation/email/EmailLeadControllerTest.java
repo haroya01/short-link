@@ -3,7 +3,7 @@ package com.example.short_link.profile.presentation.email;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -45,14 +45,14 @@ class EmailLeadControllerTest {
         blockRepository.save(
             new ProfileBlockEntity(
                 user.getId(), ProfileBlockType.EMAIL_FORM, "{\"title\":\"newsletter\"}", 1));
-    when(leadService.submitPublic(eq(block.getId()), eq("x@y.com"), anyString())).thenReturn(null);
-
     mvc.perform(
             post("/api/v1/public/email-leads")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"blockId\":" + block.getId() + ",\"email\":\"x@y.com\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.ok").value(true));
+
+    verify(leadService).submitPublic(eq(block.getId()), eq("x@y.com"), anyString());
   }
 
   @Test

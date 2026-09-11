@@ -5,9 +5,10 @@ import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.AbuseReportStatus;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
-import com.example.short_link.abuse.domain.repository.AbuseReportRepository.CommentSubjectSnapshot;
-import com.example.short_link.abuse.domain.repository.AbuseReportRepository.PostSubjectSnapshot;
-import com.example.short_link.abuse.domain.repository.AbuseReportRepository.UserSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.CommentSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.PostSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.UserSubjectSnapshot;
 import com.example.short_link.common.web.PostPublicUrlBuilder;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,7 @@ public class AbuseReportQueryService {
   private static final String POST_UNPUBLISHED = "UNPUBLISHED";
 
   private final AbuseReportRepository abuseReportRepository;
+  private final AbuseSubjectReader subjects;
   private final PostPublicUrlBuilder postPublicUrlBuilder;
 
   public List<AbuseReportView> listAll() {
@@ -57,7 +59,7 @@ public class AbuseReportQueryService {
     List<Long> ids = subjectIds(reports, AbuseSubjectType.POST);
     return ids.isEmpty()
         ? Map.of()
-        : abuseReportRepository.findPostSubjectSnapshots(ids).stream()
+        : subjects.findPostSubjectSnapshots(ids).stream()
             .collect(Collectors.toMap(PostSubjectSnapshot::getSubjectId, Function.identity()));
   }
 
@@ -65,7 +67,7 @@ public class AbuseReportQueryService {
     List<Long> ids = subjectIds(reports, AbuseSubjectType.COMMENT);
     return ids.isEmpty()
         ? Map.of()
-        : abuseReportRepository.findCommentSubjectSnapshots(ids).stream()
+        : subjects.findCommentSubjectSnapshots(ids).stream()
             .collect(Collectors.toMap(CommentSubjectSnapshot::getSubjectId, Function.identity()));
   }
 
@@ -73,7 +75,7 @@ public class AbuseReportQueryService {
     List<Long> ids = subjectIds(reports, AbuseSubjectType.USER);
     return ids.isEmpty()
         ? Map.of()
-        : abuseReportRepository.findUserSubjectSnapshots(ids).stream()
+        : subjects.findUserSubjectSnapshots(ids).stream()
             .collect(Collectors.toMap(UserSubjectSnapshot::getSubjectId, Function.identity()));
   }
 

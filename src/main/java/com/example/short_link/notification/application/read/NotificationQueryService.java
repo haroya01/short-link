@@ -1,9 +1,11 @@
 package com.example.short_link.notification.application.read;
 
+import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationListResult;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
+import com.example.short_link.notification.application.dto.NotificationTarget;
 import com.example.short_link.notification.application.dto.NotificationView;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
@@ -17,7 +19,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.json.JsonMapper;
 
 /** Reads a recipient's notification feed and unread count, resolving actor identity per page. */
 @Service
@@ -28,7 +29,7 @@ public class NotificationQueryService {
 
   private final NotificationRepository repository;
   private final NotificationActorReader actorReader;
-  private final JsonMapper jsonMapper;
+  private final NotificationTargetCodec targetCodec;
 
   @Transactional(readOnly = true)
   public NotificationListResult list(Long recipientUserId, Long beforeId, int limit) {
@@ -59,32 +60,13 @@ public class NotificationQueryService {
   private NotificationView toView(NotificationEntity row, Map<Long, NotificationActor> actors) {
     NotificationActor actor =
         row.getActorUserId() == null ? null : actors.get(row.getActorUserId());
-    // The payload shape follows the type: a series ref for SERIES_SUBSCRIBE, a collection ref for
-    // the graph notices (CONNECTED / PATH_GREW), else a post ref (LIKE/COMMENT/REPLY/NEW_POST; null
-    // for FOLLOW). Only the matching field is decoded so the others stay null.
     NotificationType type = row.getType();
-    NotificationSeriesRef series =
-        type == NotificationType.SERIES_SUBSCRIBE
-            ? decode(row.getPayload(), NotificationSeriesRef.class)
-            : null;
+    NotificationTarget target = targetCodec.decode(type, row.getPayload());
+    NotificationPostRef post = target instanceof NotificationPostRef ref ? ref : null;
+    NotificationSeriesRef series = target instanceof NotificationSeriesRef ref ? ref : null;
     NotificationCollectionRef collection =
-        isCollectionType(type) ? decode(row.getPayload(), NotificationCollectionRef.class) : null;
-    NotificationPostRef post =
-        series == null && collection == null
-            ? decode(row.getPayload(), NotificationPostRef.class)
-            : null;
+        target instanceof NotificationCollectionRef ref ? ref : null;
     return new NotificationView(
         row.getId(), type, actor, post, series, collection, row.isRead(), row.getCreatedAt());
-  }
-
-  private static boolean isCollectionType(NotificationType type) {
-    return type == NotificationType.CONNECTED || type == NotificationType.PATH_GREW;
-  }
-
-  private <T> T decode(String payload, Class<T> type) {
-    if (payload == null || payload.isBlank()) {
-      return null;
-    }
-    return jsonMapper.readValue(payload, type);
   }
 }

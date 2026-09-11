@@ -114,16 +114,33 @@ public final class ProductCardCarousel {
   private record PayloadOut(String title, String layout, List<ItemOut> items) {}
 
   public static String normalize(String raw) {
+    Payload parsed = readPayload(raw);
+    PayloadOut normalized = normalizePayload(parsed);
+    return writePayload(normalized);
+  }
+
+  private static Payload readPayload(String raw) {
     if (raw == null || raw.isBlank()) {
       throw new ProfileException(
           ProfileErrorCode.INVALID_USERNAME, "product card: config required");
     }
-    Payload parsed;
     try {
-      parsed = MAPPER.readValue(raw.trim(), Payload.class);
+      return MAPPER.readValue(raw.trim(), Payload.class);
     } catch (JsonProcessingException ex) {
       throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "product card: malformed json");
     }
+  }
+
+  private static String writePayload(PayloadOut payload) {
+    try {
+      return MAPPER.writeValueAsString(payload);
+    } catch (JsonProcessingException ex) {
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME, "product card: serialization failed");
+    }
+  }
+
+  private static PayloadOut normalizePayload(Payload parsed) {
     if (parsed == null || parsed.items == null || parsed.items.isEmpty()) {
       throw new ProfileException(
           ProfileErrorCode.INVALID_USERNAME, "product card: at least 1 item required");
@@ -137,63 +154,58 @@ public final class ProductCardCarousel {
     List<ItemOut> out = new ArrayList<>(parsed.items.size());
     for (Item item : parsed.items) {
       if (item == null) continue;
-      String name = trimTo(item.name, NAME_MAX);
-      if (name == null || name.isEmpty()) {
-        throw new ProfileException(
-            ProfileErrorCode.INVALID_USERNAME, "product card: each item needs a name");
-      }
-      List<ImageEntry> images = normalizeImages(item.images, item.image);
-      String ctaUrl = trimTo(item.ctaUrl, CTA_URL_MAX);
-      if (ctaUrl != null) validateHttpUrl(ctaUrl, "cta");
-      out.add(
-          new ItemOut(
-              name,
-              images,
-              trimTo(item.price, PRICE_MAX),
-              trimTo(item.originalPrice, PRICE_MAX),
-              normalizeBadge(item.badge),
-              trimTo(item.description, DESC_MAX),
-              trimTo(item.ctaLabel, CTA_LABEL_MAX),
-              ctaUrl));
+      out.add(normalizeItem(item));
     }
     if (out.isEmpty()) {
       throw new ProfileException(
           ProfileErrorCode.INVALID_USERNAME, "product card: at least 1 item required");
     }
-    try {
-      return MAPPER.writeValueAsString(new PayloadOut(title, layout, out));
-    } catch (JsonProcessingException ex) {
+    return new PayloadOut(title, layout, out);
+  }
+
+  private static ItemOut normalizeItem(Item item) {
+    String name = trimTo(item.name, NAME_MAX);
+    if (name == null || name.isEmpty()) {
       throw new ProfileException(
-          ProfileErrorCode.INVALID_USERNAME, "product card: serialization failed");
+          ProfileErrorCode.INVALID_USERNAME, "product card: each item needs a name");
     }
+    List<ImageEntry> images = normalizeImages(readCompatibleImages(item));
+    String ctaUrl = trimTo(item.ctaUrl, CTA_URL_MAX);
+    if (ctaUrl != null) validateHttpUrl(ctaUrl, "cta");
+    return new ItemOut(
+        name,
+        images,
+        trimTo(item.price, PRICE_MAX),
+        trimTo(item.originalPrice, PRICE_MAX),
+        normalizeBadge(item.badge),
+        trimTo(item.description, DESC_MAX),
+        trimTo(item.ctaLabel, CTA_LABEL_MAX),
+        ctaUrl);
   }
 
   /**
-   * Resolves the final image list for a single item. Order of precedence: explicit {@code images}
-   * array wins; if absent, the legacy single {@code image} string is wrapped into a one-element
-   * list with default focal point. Either way each entry is URL-validated and the cap is enforced.
+   * 비어 있지 않은 {@code images}가 우선이다. 없거나 빈 배열이면 구형 {@code image}를 읽는다. 선택한 배열의 모든 항목이 나중에 제외되더라도 구형
+   * 이미지로 되돌아가지 않는다.
    */
-  private static List<ImageEntry> normalizeImages(List<ImageEntry> images, String legacyImage) {
+  private static List<ImageEntry> readCompatibleImages(Item item) {
+    if (item.images != null && !item.images.isEmpty()) return item.images;
+    if (item.image == null) return List.of();
+    return List.of(new ImageEntry(item.image, FOCAL_DEFAULT, FOCAL_DEFAULT));
+  }
+
+  private static List<ImageEntry> normalizeImages(List<ImageEntry> images) {
+    if (images.size() > MAX_IMAGES_PER_ITEM) {
+      throw new ProfileException(
+          ProfileErrorCode.INVALID_USERNAME,
+          "product card: max " + MAX_IMAGES_PER_ITEM + " images per item");
+    }
     List<ImageEntry> out = new ArrayList<>();
-    if (images != null && !images.isEmpty()) {
-      if (images.size() > MAX_IMAGES_PER_ITEM) {
-        throw new ProfileException(
-            ProfileErrorCode.INVALID_USERNAME,
-            "product card: max " + MAX_IMAGES_PER_ITEM + " images per item");
-      }
-      for (ImageEntry entry : images) {
-        if (entry == null) continue;
-        String url = trimTo(entry.url, IMAGE_MAX);
-        if (url == null) continue;
-        validateHttpUrl(url, "image");
-        out.add(new ImageEntry(url, clampFocal(entry.focalX), clampFocal(entry.focalY)));
-      }
-    } else if (legacyImage != null) {
-      String url = trimTo(legacyImage, IMAGE_MAX);
-      if (url != null) {
-        validateHttpUrl(url, "image");
-        out.add(new ImageEntry(url, FOCAL_DEFAULT, FOCAL_DEFAULT));
-      }
+    for (ImageEntry entry : images) {
+      if (entry == null) continue;
+      String url = trimTo(entry.url, IMAGE_MAX);
+      if (url == null) continue;
+      validateHttpUrl(url, "image");
+      out.add(new ImageEntry(url, clampFocal(entry.focalX), clampFocal(entry.focalY)));
     }
     return out;
   }

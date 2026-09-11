@@ -10,4 +10,10 @@ package com.example.short_link.notification.application.dto;
  * (a followed author published). It is null for LIKE/COMMENT, where the recipient is the author and
  * the client already knows its own username.
  */
-public record NotificationPostRef(Long postId, String slug, String title, String authorUsername) {}
+public record NotificationPostRef(Long postId, String slug, String title, String authorUsername)
+    implements NotificationTarget {
+  @Override
+  public String pushSubtitle() {
+    return title;
+  }
+}

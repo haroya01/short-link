@@ -1,6 +1,6 @@
 package com.example.short_link.link.webhook.scheduler;
 
-import com.example.short_link.link.webhook.application.helper.WebhookPayloadAdapter;
+import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import java.util.List;
@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Per-hook batch delivery in its own transaction. Split out from {@link LinkWebhookDispatcher} so
@@ -26,7 +25,6 @@ class WebhookBatchDeliverer {
   private final LinkWebhookRepository repository;
   private final WebhookBatchBuffer batchBuffer;
   private final WebhookHttpDeliveryClient deliveryClient;
-  private final JsonMapper jsonMapper;
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void deliverOne(Long hookId) {
@@ -38,8 +36,6 @@ class WebhookBatchDeliverer {
     }
     List<Map<String, Object>> drained = batchBuffer.drain(hookId);
     if (drained.isEmpty()) return;
-    Map<String, Object> body =
-        WebhookPayloadAdapter.buildBatch(hook.getFormat(), hook.getLinkId(), drained);
-    deliveryClient.deliver(hook, jsonMapper.writeValueAsString(body), "batch");
+    deliveryClient.deliver(hook, new WebhookNotification.Batch(hook.getLinkId(), drained));
   }
 }

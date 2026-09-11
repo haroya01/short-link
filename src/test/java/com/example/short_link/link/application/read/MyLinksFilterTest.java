@@ -3,9 +3,11 @@ package com.example.short_link.link.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.link.application.dto.MyLink;
+import com.example.short_link.link.application.dto.MyLinksCursor;
 import com.example.short_link.link.application.dto.MyLinksQuery;
 import com.example.short_link.link.application.dto.MyLinksResult;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.LinkExpiryFilter;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.tag.application.write.ReplaceLinkTagsUseCase;
@@ -46,7 +48,7 @@ class MyLinksFilterTest {
 
     MyLinksResult result =
         service.myLinks(
-            user.getId(), MyLinksQuery.of(50, null, null, null, "example.com", null, null, null));
+            user.getId(), MyLinksQuery.builder().size(50).domain("example.com").build());
 
     assertThat(result.items())
         .extracting(r -> r.shortCode().value())
@@ -60,16 +62,16 @@ class MyLinksFilterTest {
     save(user, "https://example.com/active", "fc00011", Instant.now().plus(Duration.ofDays(7)));
     save(user, "https://example.com/expired", "fc00012", Instant.now().minus(Duration.ofDays(1)));
 
-    assertThat(filterExpiry(user.getId(), "NEVER"))
+    assertThat(filterExpiry(user.getId(), LinkExpiryFilter.NEVER))
         .extracting(r -> r.shortCode().value())
         .containsOnly("fc00010");
-    assertThat(filterExpiry(user.getId(), "ACTIVE"))
+    assertThat(filterExpiry(user.getId(), LinkExpiryFilter.ACTIVE))
         .extracting(r -> r.shortCode().value())
         .containsOnly("fc00010", "fc00011");
-    assertThat(filterExpiry(user.getId(), "EXPIRED"))
+    assertThat(filterExpiry(user.getId(), LinkExpiryFilter.EXPIRED))
         .extracting(r -> r.shortCode().value())
         .containsOnly("fc00012");
-    assertThat(filterExpiry(user.getId(), "HAS_EXPIRY"))
+    assertThat(filterExpiry(user.getId(), LinkExpiryFilter.HAS_EXPIRY))
         .extracting(r -> r.shortCode().value())
         .containsOnly("fc00011", "fc00012");
   }
@@ -85,20 +87,17 @@ class MyLinksFilterTest {
 
     MyLinksResult inWindow =
         service.myLinks(
-            user.getId(),
-            MyLinksQuery.of(50, null, null, null, null, null, null, futureCutoff.toString()));
+            user.getId(), MyLinksQuery.builder().size(50).createdBefore(futureCutoff).build());
     assertThat(inWindow.items()).extracting(r -> r.shortCode().value()).contains("fc00020");
 
     MyLinksResult excluded =
         service.myLinks(
-            user.getId(),
-            MyLinksQuery.of(50, null, null, null, null, null, futureCutoff.toString(), null));
+            user.getId(), MyLinksQuery.builder().size(50).createdAfter(futureCutoff).build());
     assertThat(excluded.items()).extracting(r -> r.shortCode().value()).doesNotContain("fc00020");
 
     MyLinksResult afterPast =
         service.myLinks(
-            user.getId(),
-            MyLinksQuery.of(50, null, null, null, null, null, pastCutoff.toString(), null));
+            user.getId(), MyLinksQuery.builder().size(50).createdAfter(pastCutoff).build());
     assertThat(afterPast.items()).extracting(r -> r.shortCode().value()).contains("fc00020");
   }
 
@@ -116,7 +115,7 @@ class MyLinksFilterTest {
     MyLinksResult result =
         service.myLinks(
             user.getId(),
-            MyLinksQuery.of(50, null, null, "work", "news.example.com", null, null, null));
+            MyLinksQuery.builder().size(50).tag("work").domain("news.example.com").build());
 
     assertThat(result.items()).extracting(r -> r.shortCode().value()).containsOnly("fc00030");
   }
@@ -128,17 +127,13 @@ class MyLinksFilterTest {
     save(owner, "https://example.com/mine", "fc00040", null);
     save(stranger, "https://example.com/notmine", "fc00041", null);
 
-    MyLinksResult result =
-        service.myLinks(
-            owner.getId(), MyLinksQuery.of(50, null, null, null, null, null, null, null));
+    MyLinksResult result = service.myLinks(owner.getId(), MyLinksQuery.builder().size(50).build());
 
     assertThat(result.items()).extracting(r -> r.shortCode().value()).containsExactly("fc00040");
   }
 
-  private List<MyLink> filterExpiry(Long userId, String value) {
-    return service
-        .myLinks(userId, MyLinksQuery.of(50, null, null, null, null, value, null, null))
-        .items();
+  private List<MyLink> filterExpiry(Long userId, LinkExpiryFilter value) {
+    return service.myLinks(userId, MyLinksQuery.builder().size(50).expiry(value).build()).items();
   }
 
   @Test
@@ -149,8 +144,7 @@ class MyLinksFilterTest {
     UserEntity user = userRepository.save(new UserEntity("f6@local.test", "google", "g-f6"));
     for (int i = 0; i < 5; i++) save(user, "https://example.com/p" + i, "cur" + i, null);
 
-    MyLinksResult page1 =
-        service.myLinks(user.getId(), MyLinksQuery.of(2, null, null, null, null, null, null, null));
+    MyLinksResult page1 = service.myLinks(user.getId(), MyLinksQuery.builder().size(2).build());
     assertThat(page1.items()).hasSize(2);
     assertThat(page1.hasMore()).isTrue();
     assertThat(page1.nextCursor()).isNotBlank();
@@ -158,14 +152,14 @@ class MyLinksFilterTest {
     MyLinksResult page2 =
         service.myLinks(
             user.getId(),
-            MyLinksQuery.of(2, page1.nextCursor(), null, null, null, null, null, null));
+            MyLinksQuery.builder().size(2).after(MyLinksCursor.decode(page1.nextCursor())).build());
     assertThat(page2.items()).hasSize(2);
     assertThat(page2.hasMore()).isTrue();
 
     MyLinksResult page3 =
         service.myLinks(
             user.getId(),
-            MyLinksQuery.of(2, page2.nextCursor(), null, null, null, null, null, null));
+            MyLinksQuery.builder().size(2).after(MyLinksCursor.decode(page2.nextCursor())).build());
     assertThat(page3.items()).hasSize(1);
     assertThat(page3.hasMore()).isFalse();
     assertThat(page3.nextCursor()).isNull();

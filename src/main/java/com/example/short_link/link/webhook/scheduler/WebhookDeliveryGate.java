@@ -34,8 +34,8 @@ class WebhookDeliveryGate {
     }
     if (hook.getReferrerHostFilter() != null && !hook.getReferrerHostFilter().isBlank()) {
       String filter = hook.getReferrerHostFilter().toLowerCase();
-      String channel = event.channel() == null ? "" : event.channel().toLowerCase();
-      if (!channel.contains(filter)) {
+      String referrerHost = event.referrerHost() == null ? "" : event.referrerHost().toLowerCase();
+      if (!referrerHost.contains(filter)) {
         meterRegistry.counter("webhook.delivery", "result", "skipped_filter").increment();
         return false;
       }

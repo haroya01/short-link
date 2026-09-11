@@ -33,10 +33,10 @@ class S3ObjectStorageTest {
   private final S3Presigner presigner = mock(S3Presigner.class);
 
   private S3ObjectStorage storage(boolean configured) {
-    AvatarProperties props =
+    S3StorageProperties props =
         configured
-            ? new AvatarProperties("bucket-x", "ap-northeast-2", "https://cdn", 0, 0)
-            : new AvatarProperties("", "", "", 0, 0);
+            ? new S3StorageProperties("bucket-x", "ap-northeast-2", "https://cdn")
+            : new S3StorageProperties("", "", "");
     return new S3ObjectStorage(s3, presigner, props);
   }
 

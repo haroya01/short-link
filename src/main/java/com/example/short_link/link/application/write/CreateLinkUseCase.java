@@ -36,7 +36,7 @@ public class CreateLinkUseCase {
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final CreateLinkValidator validator;
-  private final LinkSidecarPersister sidecarPersister;
+  private final LinkDefaultsWriter defaultsWriter;
   private final TransactionTemplate tx;
   private final long quotaPerUser;
 
@@ -47,7 +47,7 @@ public class CreateLinkUseCase {
       ApplicationEventPublisher events,
       AuditLogService auditLogService,
       CreateLinkValidator validator,
-      LinkSidecarPersister sidecarPersister,
+      LinkDefaultsWriter defaultsWriter,
       PlatformTransactionManager transactionManager,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
@@ -56,7 +56,7 @@ public class CreateLinkUseCase {
     this.events = events;
     this.auditLogService = auditLogService;
     this.validator = validator;
-    this.sidecarPersister = sidecarPersister;
+    this.defaultsWriter = defaultsWriter;
     this.tx = new TransactionTemplate(transactionManager);
     this.quotaPerUser = quotaPerUser;
   }
@@ -134,7 +134,7 @@ public class CreateLinkUseCase {
     LinkEntity entity = new LinkEntity(url, code, userId, expiresAt);
     attachClaimTokenIfAnonymous(entity, authenticated);
     LinkEntity saved = repository.save(entity);
-    sidecarPersister.persistAll(saved);
+    defaultsWriter.initialize(saved.linkId());
     return saved;
   }
 

@@ -12,6 +12,8 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -58,7 +60,7 @@ class LinkManagementControllerTest {
             patch("/api/v1/links/upd0002")
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"expiresAt\":\"2099-01-01T00:00:00Z\"}"))
+                .content("{\"expiresAt\":\"" + nextMonth() + "\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.expiresAt").exists());
   }
@@ -74,10 +76,15 @@ class LinkManagementControllerTest {
                 .header("Authorization", "Bearer " + token)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(
-                    "{\"originalUrl\":\"https://both.com\",\"expiresAt\":\"2099-01-01T00:00:00Z\"}"))
+                    "{\"originalUrl\":\"https://both.com\",\"expiresAt\":\"" + nextMonth() + "\"}"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.originalUrl").value("https://both.com"))
         .andExpect(jsonPath("$.expiresAt").exists());
+  }
+
+  private static Instant nextMonth() {
+    // Keep the persisted fixture within MySQL TIMESTAMP's supported range.
+    return Instant.now().plus(30, ChronoUnit.DAYS).truncatedTo(ChronoUnit.SECONDS);
   }
 
   @Test

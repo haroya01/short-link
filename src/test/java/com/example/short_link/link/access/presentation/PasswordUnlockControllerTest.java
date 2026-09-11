@@ -12,6 +12,8 @@ import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.access.application.LinkProtectionService;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.access.application.TurnstileVerifier;
+import com.example.short_link.link.access.application.write.PasswordUnlockUseCase;
+import com.example.short_link.link.access.infrastructure.CloudflareTurnstileVerifier;
 import com.example.short_link.link.access.infrastructure.LinkPasswordAttemptLimiter;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
@@ -35,11 +37,13 @@ class PasswordUnlockControllerTest {
   private final LinkRedirectFlow flow = mock(LinkRedirectFlow.class);
   // Turnstile unconfigured (empty secret) → verifier is a no-op, so the gate behaves as before.
   private final TurnstileProperties turnstile = new TurnstileProperties("", "");
-  private final TurnstileVerifier turnstileVerifier = new TurnstileVerifier(turnstile);
+  private final TurnstileVerifier turnstileVerifier = new CloudflareTurnstileVerifier(turnstile);
   private final LinkPasswordAttemptLimiter attemptLimiter = mock(LinkPasswordAttemptLimiter.class);
   private final PasswordUnlockController controller =
       new PasswordUnlockController(
-          lookup, protectionService, attemptLimiter, flow, turnstile, turnstileVerifier);
+          new PasswordUnlockUseCase(
+              lookup, protectionService, attemptLimiter, flow, turnstileVerifier),
+          turnstile);
 
   private static final ShortCode CODE = new ShortCode("abc123");
 
@@ -65,7 +69,7 @@ class PasswordUnlockControllerTest {
 
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("password_required");
-    verify(flow, never()).execute(any(), any(), any(), any(), any(), any(), any());
+    verify(flow, never()).execute(any(), any(), any());
   }
 
   @Test
@@ -76,7 +80,7 @@ class PasswordUnlockControllerTest {
     when(lookup.findActiveLink(CODE)).thenReturn(link);
     when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
     when(protectionService.checkPassword(entity, "good")).thenReturn(true);
-    when(flow.execute(any(), any(), any(), any(), any(), any(), any()))
+    when(flow.execute(any(), any(), any()))
         .thenReturn(new RedirectOutcome.Redirect(new CachedLink.Picked("https://dst", null)));
 
     MockHttpServletRequest req = request();
@@ -95,7 +99,7 @@ class PasswordUnlockControllerTest {
     when(entity.hasPassword()).thenReturn(false);
     when(lookup.findActiveLink(CODE)).thenReturn(link);
     when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
-    when(flow.execute(any(), any(), any(), any(), any(), any(), any()))
+    when(flow.execute(any(), any(), any()))
         .thenReturn(new RedirectOutcome.Redirect(new CachedLink.Picked("https://dst", 42L)));
 
     MockHttpServletRequest req = request();
@@ -114,8 +118,7 @@ class PasswordUnlockControllerTest {
     when(entity.hasPassword()).thenReturn(false);
     when(lookup.findActiveLink(CODE)).thenReturn(link);
     when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
-    when(flow.execute(any(), any(), any(), any(), any(), any(), any()))
-        .thenReturn(new RedirectOutcome.Blocked());
+    when(flow.execute(any(), any(), any())).thenReturn(new RedirectOutcome.Blocked());
 
     MockHttpServletRequest req = request();
     ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);
@@ -131,7 +134,7 @@ class PasswordUnlockControllerTest {
     when(entity.hasPassword()).thenReturn(false);
     when(lookup.findActiveLink(CODE)).thenReturn(link);
     when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
-    when(flow.execute(any(), any(), any(), any(), any(), any(), any()))
+    when(flow.execute(any(), any(), any()))
         .thenReturn(new RedirectOutcome.ExpiredWithMessage("Campaign closed"));
 
     MockHttpServletRequest req = request();
@@ -162,7 +165,7 @@ class PasswordUnlockControllerTest {
     when(entity.hasPassword()).thenReturn(false);
     when(lookup.findActiveLink(CODE)).thenReturn(link);
     when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
-    when(flow.execute(any(), any(), any(), any(), any(), any(), any()))
+    when(flow.execute(any(), any(), any()))
         .thenThrow(new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, CODE));
 
     MockHttpServletRequest req = request();
@@ -179,7 +182,7 @@ class PasswordUnlockControllerTest {
     when(entity.hasPassword()).thenReturn(false);
     when(lookup.findActiveLink(CODE)).thenReturn(link);
     when(lookup.findEntity(CODE)).thenReturn(Optional.of(entity));
-    when(flow.execute(any(), any(), any(), any(), any(), any(), any()))
+    when(flow.execute(any(), any(), any()))
         .thenThrow(new LinkException(LinkErrorCode.LINK_EXPIRED, CODE));
 
     MockHttpServletRequest req = request();

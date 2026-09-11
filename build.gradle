@@ -63,9 +63,13 @@ dependencies {
 	runtimeOnly 'net.logstash.logback:logstash-logback-encoder:8.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
-	testImplementation 'io.github.haroya01:query-audit-spring-boot-starter:0.4.0'
+	testImplementation 'io.github.haroya01:query-audit-spring-boot-starter:0.6.0'
 	testImplementation 'com.tngtech.archunit:archunit-junit5:1.3.0'
-	testImplementation 'io.github.haroya01:query-audit-mysql:0.4.0'
+	testImplementation 'io.github.haroya01:query-audit-mysql:0.6.0'
+	// The HTTP capture helper calls QueryInterceptor directly (datasource-proxy is runtime-only upstream).
+	testImplementation 'net.ttddyy:datasource-proxy:1.10'
+	testImplementation 'org.testcontainers:testcontainers-junit-jupiter'
+	testImplementation 'org.testcontainers:testcontainers-mysql'
 	testCompileOnly 'org.projectlombok:lombok'
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
@@ -75,6 +79,50 @@ tasks.named('test') {
 	useJUnitPlatform()
 	maxHeapSize = '2g'
 	finalizedBy jacocoTestReport
+	outputs.dir 'build/reports/query-audit/http-contracts'
+	doFirst { delete 'build/reports/query-audit/http-contracts' }
+}
+
+tasks.register('httpQueryContractTest', Test) {
+	group = 'verification'
+	description = 'Verify real HTTP SQL contracts against disposable Docker MySQL and Redis.'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform {
+		includeEngines 'junit-jupiter'
+	}
+	filter {
+		includeTestsMatching '*HttpQueryContractTest'
+	}
+	maxHeapSize = '2g'
+	outputs.dir 'build/reports/query-audit/http-contracts'
+	doFirst { delete 'build/reports/query-audit/http-contracts' }
+	finalizedBy 'verifyHttpEndpointCoverage'
+}
+
+tasks.register('verifyHttpEndpointCoverage') {
+	group = 'verification'
+	description = 'Fail when an active application HTTP handler has no successful user-journey request.'
+	mustRunAfter 'test', 'httpQueryContractTest'
+	onlyIf { tasks.test.state.failure == null && tasks.httpQueryContractTest.state.failure == null }
+	doLast {
+		if (!gradle.taskGraph.hasTask(tasks.test) && !gradle.taskGraph.hasTask(tasks.httpQueryContractTest)) {
+			throw new GradleException('Run httpQueryContractTest, or test verifyHttpEndpointCoverage, so the evidence matches the tested code.')
+		}
+		def evidence = file('build/reports/query-audit/http-contracts')
+		def inventory = new groovy.json.JsonSlurper().parse(new File(evidence, 'endpoint-inventory.json'))
+		def requests = fileTree(new File(evidence, 'routes')).matching { include '*.json' }.files.collect {
+			new groovy.json.JsonSlurper().parse(it)
+		}
+		def reached = requests.findAll { it.status >= 200 && it.status < 400 }.collect { it.handler }.toSet()
+		def missing = inventory.findAll { !reached.contains(it.handler) }
+		def summary = [handlers: inventory.size(), covered: inventory.size() - missing.size(), missing: missing]
+		new File(evidence, 'endpoint-coverage.json').text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(summary))
+		if (!missing.isEmpty()) {
+			throw new GradleException("Missing successful HTTP journeys for ${missing.size()} handlers: " + missing.collect { it.handler }.join(', '))
+		}
+		logger.lifecycle("HTTP endpoint coverage: ${inventory.size()}/${inventory.size()} active application handlers")
+	}
 }
 
 jacoco {

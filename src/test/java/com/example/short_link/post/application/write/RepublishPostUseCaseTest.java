@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -30,7 +31,12 @@ class RepublishPostUseCaseTest {
   @BeforeEach
   void setUp() {
     useCase =
-        new RepublishPostUseCase(postOwnership, postRepository, postRevisionCapture, cacheEviction);
+        new RepublishPostUseCase(
+            postOwnership,
+            postRepository,
+            postRevisionCapture,
+            cacheEviction,
+            new PostWriteViewAssembler(postRepository));
   }
 
   @Test
@@ -41,9 +47,9 @@ class RepublishPostUseCaseTest {
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity result = useCase.execute(new RepublishPostCommand(7L, 42L));
+    PostView result = useCase.execute(new RepublishPostCommand(7L, 42L));
 
-    assertThat(result.getStatus()).isEqualTo(PostStatus.PUBLISHED);
+    assertThat(result.status()).isEqualTo(PostStatus.PUBLISHED.name());
   }
 
   @Test

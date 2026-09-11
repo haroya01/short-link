@@ -39,21 +39,27 @@ public class AuthService {
    * token — the caller redirects the user to the 2FA prompt where they exchange the challenge +
    * TOTP code for a full pair via {@link #completeTwoFactor}.
    */
-  public sealed interface LoginResult {
-    record Tokens(IssuedTokens issued) implements LoginResult {}
+  public sealed interface TokenLoginResult {
+    record Tokens(IssuedTokens issued) implements TokenLoginResult {}
 
-    record TwoFactorRequired(String challengeToken) implements LoginResult {}
+    record TwoFactorRequired(String challengeToken) implements TokenLoginResult {}
+  }
 
-    record MobileExchangeCode(String code) implements LoginResult {}
+  /** Browser-based mobile OAuth returns a code to redeem, never a token pair. */
+  public sealed interface MobileLoginResult {
+    record TwoFactorRequired(String challengeToken) implements MobileLoginResult {}
+
+    record ExchangeCode(String code) implements MobileLoginResult {}
   }
 
   @Transactional
-  public LoginResult loginWithOAuth(String email, String oauthProvider, String oauthId) {
+  public TokenLoginResult loginWithOAuth(String email, String oauthProvider, String oauthId) {
     UserEntity user = upsertOAuthUser(email, oauthProvider, oauthId);
     if (twoFactor.isEnabled(user.getId())) {
-      return new LoginResult.TwoFactorRequired(jwt.createTwoFactorChallengeToken(user.getId()));
+      return new TokenLoginResult.TwoFactorRequired(
+          jwt.createTwoFactorChallengeToken(user.getId()));
     }
-    return new LoginResult.Tokens(issue(user));
+    return new TokenLoginResult.Tokens(issue(user));
   }
 
   /**
@@ -62,12 +68,14 @@ public class AuthService {
    * via {@link #exchangeMobileCode}. No session is issued until the code is redeemed.
    */
   @Transactional
-  public LoginResult loginWithOAuthMobile(String email, String oauthProvider, String oauthId) {
+  public MobileLoginResult loginWithOAuthMobile(
+      String email, String oauthProvider, String oauthId) {
     UserEntity user = upsertOAuthUser(email, oauthProvider, oauthId);
     if (twoFactor.isEnabled(user.getId())) {
-      return new LoginResult.TwoFactorRequired(jwt.createTwoFactorChallengeToken(user.getId()));
+      return new MobileLoginResult.TwoFactorRequired(
+          jwt.createTwoFactorChallengeToken(user.getId()));
     }
-    return new LoginResult.MobileExchangeCode(exchangeCodes.create(user.getId()));
+    return new MobileLoginResult.ExchangeCode(exchangeCodes.create(user.getId()));
   }
 
   @Transactional
@@ -102,7 +110,7 @@ public class AuthService {
    * oauth_provider/oauth_id identity and later Apple logins keep arriving through the email match.
    */
   @Transactional
-  public LoginResult loginWithApple(String appleSubject, String email) {
+  public TokenLoginResult loginWithApple(String appleSubject, String email) {
     UserEntity user =
         userRepository
             .findByOauthProviderAndOauthId("apple", appleSubject)
@@ -113,9 +121,10 @@ public class AuthService {
       user.restore();
     }
     if (twoFactor.isEnabled(user.getId())) {
-      return new LoginResult.TwoFactorRequired(jwt.createTwoFactorChallengeToken(user.getId()));
+      return new TokenLoginResult.TwoFactorRequired(
+          jwt.createTwoFactorChallengeToken(user.getId()));
     }
-    return new LoginResult.Tokens(issue(user));
+    return new TokenLoginResult.Tokens(issue(user));
   }
 
   private Optional<UserEntity> findLinkableByEmail(String email) {

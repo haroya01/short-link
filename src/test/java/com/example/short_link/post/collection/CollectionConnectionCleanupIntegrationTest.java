@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.post.application.write.CreateHighlightUseCase;
 import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
-import com.example.short_link.post.collection.application.read.CollectionQueryService;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionKind;
@@ -41,7 +40,6 @@ class CollectionConnectionCleanupIntegrationTest {
   @Autowired private CreateHighlightUseCase createHighlight;
   @Autowired private NoteCommandService noteCommand;
   @Autowired private DeletePostUseCase deletePost;
-  @Autowired private CollectionQueryService collectionQuery;
   @Autowired private CollectionConnectionRepository connectionRepository;
   @Autowired private CollectionRepository collectionRepository;
   @Autowired private PostRepository postRepository;
@@ -60,7 +58,7 @@ class CollectionConnectionCleanupIntegrationTest {
     connect(collectionId, ConnectionBlockType.POST, postId, 0);
     connect(collectionId, ConnectionBlockType.HIGHLIGHT, highlightId, 1);
     connect(collectionId, ConnectionBlockType.NOTE, noteId, 2);
-    assertThat(collectionQuery.connectionCount(collectionId)).isEqualTo(3);
+    assertThat(connectionRepository.countByCollectionId(collectionId)).isEqualTo(3);
 
     createHighlight.delete(alice, highlightId);
 
@@ -68,13 +66,13 @@ class CollectionConnectionCleanupIntegrationTest {
             connectionRepository.findAllByBlockTypeAndRefId(
                 ConnectionBlockType.HIGHLIGHT, highlightId))
         .isEmpty();
-    assertThat(collectionQuery.connectionCount(collectionId)).isEqualTo(2);
+    assertThat(connectionRepository.countByCollectionId(collectionId)).isEqualTo(2);
 
     noteCommand.delete(alice, noteId);
 
     assertThat(connectionRepository.findAllByBlockTypeAndRefId(ConnectionBlockType.NOTE, noteId))
         .isEmpty();
-    assertThat(collectionQuery.connectionCount(collectionId)).isEqualTo(1);
+    assertThat(connectionRepository.countByCollectionId(collectionId)).isEqualTo(1);
     // 손대지 않은 글 연결은 그대로.
     assertThat(connectionRepository.findAllByBlockTypeAndRefId(ConnectionBlockType.POST, postId))
         .hasSize(1);
@@ -89,7 +87,7 @@ class CollectionConnectionCleanupIntegrationTest {
     Long collectionId = collection(alice, "orphan C-b");
     connect(collectionId, ConnectionBlockType.POST, postId, 0);
     connect(collectionId, ConnectionBlockType.HIGHLIGHT, highlightId, 1);
-    assertThat(collectionQuery.connectionCount(collectionId)).isEqualTo(2);
+    assertThat(connectionRepository.countByCollectionId(collectionId)).isEqualTo(2);
 
     deletePost.execute(new DeletePostCommand(alice, postId));
 
@@ -99,7 +97,7 @@ class CollectionConnectionCleanupIntegrationTest {
             connectionRepository.findAllByBlockTypeAndRefId(
                 ConnectionBlockType.HIGHLIGHT, highlightId))
         .isEmpty();
-    assertThat(collectionQuery.connectionCount(collectionId)).isZero();
+    assertThat(connectionRepository.countByCollectionId(collectionId)).isZero();
   }
 
   private Long user(String username, String seed) {

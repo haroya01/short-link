@@ -10,11 +10,9 @@ import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.redirect.application.helper.LinkRedirectSupport;
 import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -42,60 +40,25 @@ public class LinkRedirectFlow {
    * {@link RedirectOutcome.ExpiredWithMessage} for the interstitial-rendering branches; otherwise
    * {@link RedirectOutcome.Redirect}.
    */
-  public RedirectOutcome execute(
-      CachedLink link,
-      LinkEntity entity,
-      String referrer,
-      String userAgent,
-      String acceptLanguage,
-      String src,
-      HttpServletRequest req) {
-    return execute(link, entity, referrer, userAgent, acceptLanguage, src, null, req);
-  }
-
-  /**
-   * Overload that also attributes the click to a blog post (the redirect carried {@code ?post=}).
-   */
-  public RedirectOutcome execute(
-      CachedLink link,
-      LinkEntity entity,
-      String referrer,
-      String userAgent,
-      String acceptLanguage,
-      String src,
-      Long postId,
-      HttpServletRequest req) {
-    if (entity != null) {
-      try {
-        enforceViewLimit(link, entity);
-      } catch (LinkException e) {
-        if (e.errorCode() == LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED
-            && entity.getExpiredMessage() != null) {
-          return new RedirectOutcome.ExpiredWithMessage(entity.getExpiredMessage());
-        }
-        throw e;
+  public RedirectOutcome execute(CachedLink link, LinkEntity entity, RedirectVisit visit) {
+    try {
+      enforceViewLimit(link, entity);
+    } catch (LinkException e) {
+      String expiredMessage = entity == null ? link.expiredMessage() : entity.getExpiredMessage();
+      if (e.errorCode() == LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED && expiredMessage != null) {
+        return new RedirectOutcome.ExpiredWithMessage(expiredMessage);
       }
-    } else {
-      try {
-        enforceViewLimit(link, null);
-      } catch (LinkException e) {
-        if (e.errorCode() == LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED
-            && link.expiredMessage() != null) {
-          return new RedirectOutcome.ExpiredWithMessage(link.expiredMessage());
-        }
-        throw e;
-      }
+      throw e;
     }
-    String clientCountry = geoIpResolver.resolve(LinkRedirectSupport.clientIp(req)).countryCode();
+    String clientCountry = geoIpResolver.resolve(visit.clientIp()).countryCode();
     if (link.isBlockedFor(clientCountry)) {
       meterRegistry
           .counter("redirect.blocked", "country", clientCountry == null ? "unknown" : clientCountry)
           .increment();
       return new RedirectOutcome.Blocked();
     }
-    UserAgentInfo ua = userAgentClassifier.classify(userAgent);
-    CachedLink.Picked picked =
-        link.pick(clientCountry, LinkRedirectSupport.normalizeOs(ua.osName()), ua.deviceClass());
+    UserAgentInfo ua = userAgentClassifier.classify(visit.userAgent());
+    CachedLink.Picked picked = link.pick(clientCountry, normalizeOs(ua.osName()), ua.deviceClass());
     // 목적지 변형(variant)까지 포함해 실제 302 대상 URL 기준으로 검사 — 생성 후 차단된 도메인도 여기서 죽는다.
     if (blockedDomainChecker.isBlocked(picked.url())) {
       meterRegistry.counter("redirect.domain_blocked").increment();
@@ -105,18 +68,18 @@ public class LinkRedirectFlow {
         ClickContext.of(
                 link.linkId(),
                 picked.url(),
-                referrer,
-                userAgent,
-                LinkRedirectSupport.clientIp(req),
-                acceptLanguage)
-            .withSourceChannel(src)
+                visit.referrer(),
+                visit.userAgent(),
+                visit.clientIp(),
+                visit.acceptLanguage())
+            .withSourceChannel(visit.sourceChannel())
             .withDestination(picked.destinationId())
-            .withPostId(postId)
-            .withGpc("1".equals(req.getHeader("Sec-GPC")))
-            .withFetchSite(LinkRedirectSupport.fetchSite(req));
+            .withPostId(visit.postId())
+            .withGpc(visit.gpc())
+            .withFetchSite(visit.fetchSite());
     // 브라우저 프리페치는 사람이 연 게 아니다 — Sec-Fetch(Sec-Purpose/Purpose/X-moz)로 가려 프리뷰로 집계해
     // 사람 클릭에서 뺀다(정직성). 진짜 클릭만 humanClicks 로 남는다.
-    if (isPrefetch(req)) {
+    if (visit.prefetch()) {
       clickRecorder.recordPreview(ctx, "prefetch");
     } else {
       clickRecorder.record(ctx);
@@ -124,16 +87,15 @@ public class LinkRedirectFlow {
     return new RedirectOutcome.Redirect(picked);
   }
 
-  /// 프리페치/프리렌더 요청 판별 — Chrome(Sec-Purpose), 레거시(Purpose), Firefox(X-moz).
-  private static boolean isPrefetch(HttpServletRequest req) {
-    String secPurpose = req.getHeader("Sec-Purpose");
-    if (secPurpose != null && secPurpose.toLowerCase().contains("prefetch")) {
-      return true;
-    }
-    if ("prefetch".equalsIgnoreCase(req.getHeader("Purpose"))) {
-      return true;
-    }
-    return "prefetch".equalsIgnoreCase(req.getHeader("X-moz"));
+  private static String normalizeOs(String osName) {
+    if (osName == null) return null;
+    String lower = osName.toLowerCase();
+    if (lower.contains("android")) return "android";
+    if (lower.contains("ios")) return "ios";
+    if (lower.contains("mac")) return "macos";
+    if (lower.contains("windows")) return "windows";
+    if (lower.contains("linux")) return "linux";
+    return null;
   }
 
   private void enforceViewLimit(CachedLink link, LinkEntity entity) {

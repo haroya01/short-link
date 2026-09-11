@@ -14,6 +14,8 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "click_event")
@@ -33,6 +35,9 @@ public class ClickEventEntity {
   }
 
   @Column(name = "clicked_at", nullable = false, updatable = false)
+  // MySQL TIMESTAMP converts through the connection time zone; a forced UTC calendar shifts its
+  // epoch.
+  @JdbcTypeCode(SqlTypes.TIMESTAMP)
   private Instant clickedAt;
 
   @Column(columnDefinition = "TEXT")

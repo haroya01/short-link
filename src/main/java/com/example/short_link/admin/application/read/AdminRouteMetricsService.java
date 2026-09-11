@@ -3,18 +3,14 @@ package com.example.short_link.admin.application.read;
 import com.example.short_link.admin.application.dto.AdminRouteMetric;
 import com.example.short_link.common.observability.RequestMetricEntity;
 import com.example.short_link.common.observability.RequestMetricJpaRepository;
+import com.example.short_link.common.observability.RequestRouteMetrics;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
-import java.util.TreeMap;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -56,60 +52,21 @@ public class AdminRouteMetricsService {
     Instant now = clock.instant();
     Instant from = now.minus(window);
     List<RequestMetricEntity> rows = repository.findWindow(from, now);
-    Map<String, List<RequestMetricEntity>> byRoute = new HashMap<>();
-    for (RequestMetricEntity row : rows) {
-      byRoute
-          .computeIfAbsent(row.getMethod() + " " + row.getRoute(), k -> new ArrayList<>())
-          .add(row);
-    }
-    List<AdminRouteMetric> out = new ArrayList<>(byRoute.size());
-    for (Map.Entry<String, List<RequestMetricEntity>> entry : byRoute.entrySet()) {
-      List<RequestMetricEntity> group = entry.getValue();
-      long count = group.size();
-      long error5xx = 0;
-      long[] latencies = new long[group.size()];
-      Map<String, Long> statusDist = new TreeMap<>();
-      for (int i = 0; i < group.size(); i++) {
-        RequestMetricEntity row = group.get(i);
-        latencies[i] = row.getLatencyMs();
-        if (row.getStatus() >= 500) error5xx++;
-        statusDist.merge(String.valueOf(row.getStatus()), 1L, Long::sum);
-      }
-      Arrays.sort(latencies);
-      RequestMetricEntity first = group.get(0);
-      double errorRate = count == 0 ? 0.0 : (double) error5xx / (double) count;
+    List<AdminRouteMetric> out = new ArrayList<>();
+    for (RequestRouteMetrics.Summary summary : RequestRouteMetrics.summarize(rows)) {
       out.add(
           new AdminRouteMetric(
-              first.getRoute(),
-              first.getMethod(),
-              count,
-              percentile(latencies, 0.5),
-              percentile(latencies, 0.95),
-              percentile(latencies, 0.99),
-              errorRate,
-              error5xx,
-              sortStatusDistribution(statusDist)));
+              summary.route(),
+              summary.method(),
+              summary.count(),
+              summary.p50(),
+              summary.p95(),
+              summary.p99(),
+              summary.errorRate(),
+              summary.error5xxCount(),
+              new LinkedHashMap<>(summary.statusDistribution())));
     }
-    out.sort(Comparator.comparingLong(AdminRouteMetric::count).reversed());
     return out;
-  }
-
-  private static double percentile(long[] sorted, double p) {
-    if (sorted.length == 0) return 0.0;
-    if (sorted.length == 1) return sorted[0];
-    double rank = (sorted.length - 1) * p;
-    int lo = (int) Math.floor(rank);
-    int hi = (int) Math.ceil(rank);
-    if (lo == hi) return sorted[lo];
-    return sorted[lo] + (rank - lo) * (sorted[hi] - sorted[lo]);
-  }
-
-  private static Map<String, Long> sortStatusDistribution(Map<String, Long> src) {
-    // Status codes sort lexicographically (200 < 404 < 500) — meaningful enough for a debug panel
-    // and stable across renders.
-    Map<String, Long> sorted = new LinkedHashMap<>();
-    new TreeMap<>(src).forEach(sorted::put);
-    return sorted;
   }
 
   public enum Window {

@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.LinkId;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -34,6 +35,8 @@ class SseClickStreamRegistryTest {
             null));
 
     assertThat(watching.sent).isEqualTo(1);
+    assertThat(watching.payload.get("channel")).isEqualTo("kakao.com");
+    assertThat(watching.payload.containsKey("referrerHost")).isFalse();
     assertThat(otherLink.sent).isZero();
   }
 
@@ -58,6 +61,8 @@ class SseClickStreamRegistryTest {
             null));
 
     assertThat(owner.sent).isEqualTo(1);
+    assertThat(owner.payload.get("channel")).isEqualTo("kakao.com");
+    assertThat(owner.payload.containsKey("referrerHost")).isFalse();
     assertThat(stranger.sent).isZero();
   }
 
@@ -131,6 +136,7 @@ class SseClickStreamRegistryTest {
   /** Minimal SseEmitter that lets us count send() calls without Tomcat. */
   private static class CountingEmitter extends SseEmitter {
     int sent = 0;
+    Map<?, ?> payload;
 
     CountingEmitter() {
       super(10_000L);
@@ -139,6 +145,13 @@ class SseClickStreamRegistryTest {
     @Override
     public void send(SseEventBuilder builder) {
       sent++;
+      payload =
+          builder.build().stream()
+              .map(item -> item.getData())
+              .filter(Map.class::isInstance)
+              .map(Map.class::cast)
+              .findFirst()
+              .orElseThrow();
     }
   }
 

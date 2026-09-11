@@ -97,7 +97,7 @@ public class TwoFactorService {
       throw new UserException(UserErrorCode.INVALID_TOTP);
     }
     List<String> plainCodes = generateRecoveryCodes();
-    row.enable(joinHashes(hashAll(plainCodes)));
+    row.enable(hashAll(plainCodes));
     meterRegistry.counter("twofa.enrolled").increment();
     return plainCodes;
   }
@@ -124,21 +124,15 @@ public class TwoFactorService {
   @Transactional
   public boolean verifyRecovery(Long userId, String recoveryCode) {
     UserTwoFactorEntity row = repository.findById(userId).orElse(null);
-    if (row == null || !row.isEnabled() || row.getRecoveryCodes() == null) return false;
-    List<String> hashes = readHashes(row.getRecoveryCodes());
+    if (row == null || !row.isEnabled()) return false;
     String trimmed = recoveryCode == null ? "" : recoveryCode.trim().toUpperCase();
     if (trimmed.isEmpty()) return false;
-    int matchIdx = -1;
-    for (int i = 0; i < hashes.size(); i++) {
-      if (bcrypt.matches(trimmed, hashes.get(i))) {
-        matchIdx = i;
-        break;
-      }
-    }
-    if (matchIdx < 0) return false;
-    hashes.remove(matchIdx);
-    row.replaceRecoveryCodes(joinHashes(hashes));
-    row.markUsed();
+    String matchedHash =
+        row.recoveryCodeHashes().stream()
+            .filter(hash -> bcrypt.matches(trimmed, hash))
+            .findFirst()
+            .orElse(null);
+    if (matchedHash == null || !row.consumeRecoveryCode(matchedHash)) return false;
     meterRegistry.counter("twofa.verify", "result", "recovery_ok").increment();
     return true;
   }
@@ -166,7 +160,7 @@ public class TwoFactorService {
       throw new UserException(UserErrorCode.INVALID_TOTP);
     }
     List<String> plain = generateRecoveryCodes();
-    row.replaceRecoveryCodes(joinHashes(hashAll(plain)));
+    row.replaceRecoveryCodes(hashAll(plain));
     meterRegistry.counter("twofa.recovery_codes_regenerated").increment();
     return plain;
   }
@@ -188,19 +182,6 @@ public class TwoFactorService {
     List<String> out = new ArrayList<>(plain.size());
     for (String p : plain) out.add(bcrypt.encode(p));
     return out;
-  }
-
-  private List<String> readHashes(String stored) {
-    if (stored == null || stored.isEmpty()) return new ArrayList<>();
-    List<String> out = new ArrayList<>();
-    for (String line : stored.split("\n")) {
-      if (!line.isBlank()) out.add(line);
-    }
-    return out;
-  }
-
-  private String joinHashes(List<String> hashes) {
-    return String.join("\n", hashes);
   }
 
   public record SetupChallenge(String secret, String provisioningUri) {}

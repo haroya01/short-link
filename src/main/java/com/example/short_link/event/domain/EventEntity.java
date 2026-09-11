@@ -119,9 +119,24 @@ public class EventEntity extends BaseTimeEntity {
   }
 
   public boolean acceptsRegistrations(Instant now) {
-    if (status != EventStatus.OPEN) return false;
-    if (closeAt != null && !now.isBefore(closeAt)) return false;
-    return capacity == null || registrationCount < capacity;
+    return registrationClosureReason(now) == null
+        && (capacity == null || registrationCount < capacity);
+  }
+
+  /** 상태와 마감만 검사한다. 실제 정원 확보는 저장소의 원자 갱신이 결정한다. */
+  public void requireRegistrationOpen(Instant now) {
+    EventErrorCode reason = registrationClosureReason(now);
+    if (reason != null) {
+      throw new EventException(reason, id);
+    }
+  }
+
+  private EventErrorCode registrationClosureReason(Instant now) {
+    if (status == EventStatus.CANCELED) return EventErrorCode.EVENT_CANCELED;
+    if (status != EventStatus.OPEN || (closeAt != null && !now.isBefore(closeAt))) {
+      return EventErrorCode.EVENT_REGISTRATION_CLOSED;
+    }
+    return null;
   }
 
   public Integer spotsLeft() {

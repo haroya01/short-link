@@ -138,4 +138,26 @@ class CampaignRecommendationServiceTest {
                     || r.verdict() == RecommendationVerdict.BOOST
                     || r.verdict() == RecommendationVerdict.REDUCE);
   }
+
+  @Test
+  void roundingTieCorrectsTheFirstLargestBatchAndKeepsItsVerdict() {
+    CampaignRecommendationView view = recommendWith(batch(1, 51, 5), batch(2, 50, 5));
+
+    assertThat(view.recommendations())
+        .extracting(CampaignRecommendationView.BatchRecommendation::recommendedQuantity)
+        .containsExactly(50, 51);
+    assertThat(view.recommendations())
+        .extracting(CampaignRecommendationView.BatchRecommendation::verdict)
+        .containsExactly(RecommendationVerdict.KEEP, RecommendationVerdict.KEEP);
+  }
+
+  @Test
+  void minimumAllocationCorrectionMayReduceTheFirstBatchBelowTheMinimum() {
+    CampaignRecommendationView view = recommendWith(batch(1, 10, 5), batch(2, 10, 5));
+
+    // 기존 배분 정책: 최솟값 적용 후 차이를 한 묶음에서만 보정하고 0 아래로 내리지 않는다.
+    assertThat(view.recommendations())
+        .extracting(CampaignRecommendationView.BatchRecommendation::recommendedQuantity)
+        .containsExactly(0, 50);
+  }
 }

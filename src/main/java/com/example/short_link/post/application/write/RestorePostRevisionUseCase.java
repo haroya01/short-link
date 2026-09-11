@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -32,9 +33,10 @@ public class RestorePostRevisionUseCase {
   private final PostRevisionRepository postRevisionRepository;
   private final PostBlockRepository postBlockRepository;
   private final PostSearchTextUpdater searchTextUpdater;
+  private final PostWriteViewAssembler writeViews;
 
   @Transactional
-  public PostEntity execute(RestorePostRevisionCommand cmd) {
+  public PostView execute(RestorePostRevisionCommand cmd) {
     PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
     PostRevisionEntity revision =
         postRevisionRepository
@@ -70,7 +72,7 @@ public class RestorePostRevisionUseCase {
     post.markEdited();
     // 제목·요약과 본문이 스냅샷 상태로 되돌았으니 파생 검색 컬럼도 그에 맞춰 다시 채운다(저장된 블록 재조회).
     searchTextUpdater.refresh(post);
-    return postRepository.save(post);
+    return writeViews.fromSaved(postRepository.save(post));
   }
 
   private PostSnapshot readJson(String json) {

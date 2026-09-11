@@ -8,4 +8,10 @@ package com.example.short_link.notification.application.dto;
  * connected post itself, or the post a connected highlight sits on) — carried for context/preview
  * and null for a connected note, which has no post.
  */
-public record NotificationCollectionRef(Long collectionId, String collectionName, Long postId) {}
+public record NotificationCollectionRef(Long collectionId, String collectionName, Long postId)
+    implements NotificationTarget {
+  @Override
+  public String pushSubtitle() {
+    return collectionName;
+  }
+}

@@ -3,10 +3,9 @@ package com.example.short_link.link.stats.application.read;
 import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.domain.repository.ClickLifecycleReadRepository;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.context.MessageSource;
-import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -22,7 +21,6 @@ class LinkStatsLifecycleReader {
   private static final int CHANNEL_DEPTH_TOP = 10;
 
   private final ClickLifecycleReadRepository clickLifecycle;
-  private final MessageSource messages;
 
   LinkStats.ReturnRate returnRate(LinkId linkId) {
     var row = clickLifecycle.findReturnRate(linkId.value());
@@ -59,33 +57,8 @@ class LinkStatsLifecycleReader {
         .toList();
   }
 
-  /// 채널 점프 — 원래(가장 이른) referrer host 이후 *1시간 이상 늦게* 처음 등장한 다른 host =
-  /// 링크가 원래 청중 밖으로 넘어간 순간("발견됨"). 시계열 first-seen 으로만 derivable, 신원 X.
-  java.util.Optional<LinkStats.Insight> channelJump(LinkId linkId) {
-    var rows = clickLifecycle.findFirstSeenByReferrerHost(linkId.value());
-    if (rows.size() < 2) return java.util.Optional.empty();
-    var origin = rows.get(0);
-    if (origin.getHost() == null || origin.getFirstSeenEpoch() == null)
-      return java.util.Optional.empty();
-    long originEpoch = origin.getFirstSeenEpoch();
-    for (int i = 1; i < rows.size(); i++) {
-      var row = rows.get(i);
-      if (row.getHost() == null || row.getFirstSeenEpoch() == null) continue;
-      long gapSeconds = row.getFirstSeenEpoch() - originEpoch;
-      if (gapSeconds >= 3600) {
-        String message =
-            messages.getMessage(
-                "insight.CHANNEL_JUMP",
-                new Object[] {origin.getHost(), row.getHost()},
-                LocaleContextHolder.getLocale());
-        java.util.Map<String, Object> data = new java.util.LinkedHashMap<>();
-        data.put("origin", origin.getHost());
-        data.put("jumpedTo", row.getHost());
-        data.put("gapHours", gapSeconds / 3600);
-        return java.util.Optional.of(new LinkStats.Insight("CHANNEL_JUMP", "info", message, data));
-      }
-    }
-    return java.util.Optional.empty();
+  List<HostFirstSeenRow> channelFirstSeen(LinkId linkId) {
+    return clickLifecycle.findFirstSeenByReferrerHost(linkId.value());
   }
 
   LinkStats.Lifecycle lifecycle(LinkId linkId) {

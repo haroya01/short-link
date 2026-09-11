@@ -7,9 +7,11 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.profile.domain.ProfileBlockEntity;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 class EmailLeadServiceExtendedTest {
 
@@ -109,30 +112,53 @@ class EmailLeadServiceExtendedTest {
   void submitIdempotentOnDuplicateEmail() {
     when(blockRepository.findById(11L)).thenReturn(Optional.of(emailBlock(11L, 7L)));
     when(repository.existsByBlockIdAndEmail(11L, "u@x.com")).thenReturn(true);
-    EmailLeadEntity result = service.submit(7L, 11L, "u@x.com", "1.1.1.1");
-    assertThat(result.getEmail()).isEqualTo("u@x.com");
-    verify(repository, never()).save(any());
+
+    service.submit(7L, 11L, "  U@X.com  ", "1.1.1.1");
+
+    var calls = inOrder(blockRepository, repository);
+    calls.verify(blockRepository).findById(11L);
+    calls.verify(repository).countByBlockIdAndSubmittedAtAfter(eq(11L), any(Instant.class));
+    calls.verify(repository).countByIpHashAndSubmittedAtAfter(anyString(), any(Instant.class));
+    calls.verify(repository).existsByBlockIdAndEmail(11L, "u@x.com");
+    calls.verifyNoMoreInteractions();
   }
 
   @Test
   void submitPersistsNewLead() {
     when(blockRepository.findById(11L)).thenReturn(Optional.of(emailBlock(11L, 7L)));
     when(repository.existsByBlockIdAndEmail(11L, "u@x.com")).thenReturn(false);
-    when(repository.save(any(EmailLeadEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-    EmailLeadEntity result = service.submit(7L, 11L, "  U@X.com  ", "1.2.3.4");
-    assertThat(result.getEmail()).isEqualTo("u@x.com");
-    assertThat(result.getUserId()).isEqualTo(7L);
-    assertThat(result.getIpHash()).isNotNull().hasSize(64);
-    verify(repository).save(any(EmailLeadEntity.class));
+
+    service.submit(7L, 11L, "  U@X.com  ", "1.2.3.4");
+
+    var savedLead = ArgumentCaptor.forClass(EmailLeadEntity.class);
+    verify(repository).save(savedLead.capture());
+    assertThat(savedLead.getValue().getEmail()).isEqualTo("u@x.com");
+    assertThat(savedLead.getValue().getUserId()).isEqualTo(7L);
+    assertThat(savedLead.getValue().getBlockId()).isEqualTo(11L);
+    assertThat(savedLead.getValue().getIpHash()).isNotNull().hasSize(64);
   }
 
   @Test
   void submitWithBlankIpStoresNullHash() {
     when(blockRepository.findById(11L)).thenReturn(Optional.of(emailBlock(11L, 7L)));
     when(repository.existsByBlockIdAndEmail(11L, "u@x.com")).thenReturn(false);
-    when(repository.save(any(EmailLeadEntity.class))).thenAnswer(inv -> inv.getArgument(0));
-    EmailLeadEntity result = service.submit(7L, 11L, "u@x.com", "");
-    assertThat(result.getIpHash()).isNull();
+
+    service.submit(7L, 11L, "u@x.com", "");
+
+    var savedLead = ArgumentCaptor.forClass(EmailLeadEntity.class);
+    verify(repository).save(savedLead.capture());
+    assertThat(savedLead.getValue().getIpHash()).isNull();
+    verify(repository, never()).countByIpHashAndSubmittedAtAfter(anyString(), any(Instant.class));
+  }
+
+  @Test
+  void publicSubmissionValidatesBlockBeforeEmail() {
+    when(blockRepository.findById(11L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.submitPublic(11L, "not-an-email", "1.1.1.1"))
+        .isInstanceOf(ProfileException.class)
+        .hasMessage("profile not found: block 11");
+    verifyNoInteractions(repository);
   }
 
   @Test

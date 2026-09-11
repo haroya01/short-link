@@ -1,14 +1,11 @@
 package com.example.short_link.post.note.domain.repository;
 
-import com.example.short_link.post.note.domain.NoteLikeEntity;
 import java.util.Collection;
 import java.util.List;
 
 public interface NoteLikeRepository {
 
-  boolean exists(Long noteId, Long userId);
-
-  void save(NoteLikeEntity like);
+  void addIfAbsent(Long noteId, Long userId);
 
   void delete(Long noteId, Long userId);
 

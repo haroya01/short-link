@@ -30,13 +30,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PublicFeedQueryService {
 
-  // A sentinel id that matches no row — lets the union query stay valid when one side is empty
-  // (JPQL `in ()` is invalid) without branching into separate queries.
-  private static final List<Long> NONE = List.of(-1L);
-  // Tag-side sentinel: a NUL char no real tag can equal (tags are trimmed, non-blank). Keeps
-  // the union query valid when the user follows no tags (JPQL `in ()` is invalid).
-  private static final List<String> NO_TAGS = List.of("\u0000");
-
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
@@ -44,35 +37,40 @@ public class PublicFeedQueryService {
   private final TagPrefQueryService tagPrefQueryService;
   private final PostFeedItemAssembler feedItemAssembler;
 
-  public PublicFeedView feed(String sort, String lang, int page, int size) {
-    List<PostEntity> posts =
-        "trending".equalsIgnoreCase(sort)
-            ? postRepository.findPublishedTrending(lang, page, size)
-            : postRepository.findPublishedRecent(lang, page, size);
-    return assemble(posts, postRepository.countPublished(lang), page, size);
+  public PublicFeedView feed(PublicFeedQuery query) {
+    return switch (query.selection()) {
+      case PublicFeedQuery.Search search -> search(search, query.page(), query.size());
+      case PublicFeedQuery.Tagged tagged -> tagged(tagged, query.page(), query.size());
+      case PublicFeedQuery.Browse browse -> browse(browse, query.page(), query.size());
+    };
   }
 
-  /** Posts carrying a tag (case-insensitive), newest first. */
-  public PublicFeedView feedByTag(String tag, int page, int size) {
+  private PublicFeedView browse(PublicFeedQuery.Browse browse, int page, int size) {
+    String language = browse.language();
+    List<PostEntity> posts =
+        switch (browse.order()) {
+          case RECENT -> postRepository.findPublishedRecent(language, page, size);
+          case TRENDING -> postRepository.findPublishedTrending(language, page, size);
+        };
+    return assemble(posts, postRepository.countPublished(language), page, size);
+  }
+
+  private PublicFeedView tagged(PublicFeedQuery.Tagged tagged, int page, int size) {
+    String tag = tagged.tag();
     List<PostEntity> posts = postRepository.findPublishedByTag(tag, page, size);
     return assemble(posts, postRepository.countPublishedByTag(tag), page, size);
   }
 
-  /**
-   * Free-text search via FULLTEXT(ngram) across title / excerpt / tags / body / author handle.
-   * {@code sort} = relevance (default) | recent | trending. Relevance ranks by MATCH() score;
-   * recent by publish date; trending by recent-window views.
-   */
-  public PublicFeedView search(String query, String sort, String lang, int page, int size) {
-    List<PostEntity> posts;
-    if ("trending".equalsIgnoreCase(sort)) {
-      posts = postRepository.searchPublishedTrending(query, lang, page, size);
-    } else if ("recent".equalsIgnoreCase(sort)) {
-      posts = postRepository.searchPublished(query, lang, page, size);
-    } else {
-      posts = postRepository.searchPublishedByRelevance(query, lang, page, size);
-    }
-    return assemble(posts, postRepository.countSearchPublished(query, lang), page, size);
+  private PublicFeedView search(PublicFeedQuery.Search search, int page, int size) {
+    String text = search.text();
+    String language = search.language();
+    List<PostEntity> posts =
+        switch (search.order()) {
+          case RELEVANCE -> postRepository.searchPublishedByRelevance(text, language, page, size);
+          case RECENT -> postRepository.searchPublished(text, language, page, size);
+          case TRENDING -> postRepository.searchPublishedTrending(text, language, page, size);
+        };
+    return assemble(posts, postRepository.countSearchPublished(text, language), page, size);
   }
 
   /** Most-used tags across published posts, most popular first — the 주제 index. */
@@ -119,12 +117,12 @@ public class PublicFeedQueryService {
     if (followingIds.isEmpty() && subscribedSeriesIds.isEmpty() && followedTags.isEmpty()) {
       return new PublicFeedView(List.of(), page, size, false);
     }
-    List<Long> authorIds = followingIds.isEmpty() ? NONE : followingIds;
-    List<Long> seriesIds = subscribedSeriesIds.isEmpty() ? NONE : subscribedSeriesIds;
-    List<String> tags = followedTags.isEmpty() ? NO_TAGS : followedTags;
     List<PostEntity> posts =
-        postRepository.findPublishedByAuthorsSeriesOrTags(authorIds, seriesIds, tags, page, size);
-    long total = postRepository.countPublishedByAuthorsSeriesOrTags(authorIds, seriesIds, tags);
+        postRepository.findPublishedByAuthorsSeriesOrTags(
+            followingIds, subscribedSeriesIds, followedTags, page, size);
+    long total =
+        postRepository.countPublishedByAuthorsSeriesOrTags(
+            followingIds, subscribedSeriesIds, followedTags);
 
     // Annotate each card with why it matched (작가/시리즈/주제) so the UI can explain it. Keyed by post
     // id, not list index — the assembler drops deleted-author posts, so positions wouldn't line up.

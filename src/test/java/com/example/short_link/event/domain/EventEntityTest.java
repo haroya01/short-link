@@ -1,8 +1,10 @@
 package com.example.short_link.event.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -39,6 +41,39 @@ class EventEntityTest {
   void rejectsRegistrations_afterCloseAt() {
     assertThat(event(null, NOW.minusSeconds(1)).acceptsRegistrations(NOW)).isFalse();
     assertThat(event(null, NOW).acceptsRegistrations(NOW)).isFalse();
+  }
+
+  @Test
+  void registrationGuardUsesTheSameDeadlineBoundaryAsPublicAvailability() {
+    EventEntity event = event(null, NOW);
+    assertThat(event.acceptsRegistrations(NOW.minusNanos(1))).isTrue();
+    assertThatCode(() -> event.requireRegistrationOpen(NOW.minusNanos(1)))
+        .doesNotThrowAnyException();
+    assertThat(event.acceptsRegistrations(NOW)).isFalse();
+    assertThatThrownBy(() -> event.requireRegistrationOpen(NOW))
+        .isInstanceOfSatisfying(
+            EventException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(EventErrorCode.EVENT_REGISTRATION_CLOSED));
+  }
+
+  @Test
+  void canceledReasonTakesPrecedenceOverDeadline() {
+    EventEntity event = event(null, NOW.minusSeconds(60));
+    event.cancel();
+    assertThat(event.acceptsRegistrations(NOW)).isFalse();
+    assertThatThrownBy(() -> event.requireRegistrationOpen(NOW))
+        .isInstanceOfSatisfying(
+            EventException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(EventErrorCode.EVENT_CANCELED));
+  }
+
+  @Test
+  void fullSnapshotHidesAvailabilityButLeavesReservationToAtomicUpdate() {
+    EventEntity event = event(1, null);
+    org.springframework.test.util.ReflectionTestUtils.setField(event, "registrationCount", 1);
+
+    assertThat(event.acceptsRegistrations(NOW)).isFalse();
+    assertThatCode(() -> event.requireRegistrationOpen(NOW)).doesNotThrowAnyException();
   }
 
   @Test

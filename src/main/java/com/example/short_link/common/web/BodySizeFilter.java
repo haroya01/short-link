@@ -1,5 +1,6 @@
 package com.example.short_link.common.web;
 
+import com.example.short_link.common.web.response.ProblemDetails;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
@@ -10,12 +11,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -71,15 +69,11 @@ public class BodySizeFilter extends OncePerRequestFilter {
   private void writeTooLarge(HttpServletRequest req, HttpServletResponse res, long limit)
       throws IOException {
     ProblemDetail body =
-        ProblemDetail.forStatusAndDetail(
-            HttpStatus.PAYLOAD_TOO_LARGE, "request body exceeds " + (limit / 1024) + "KB limit");
-    body.setInstance(URI.create(req.getRequestURI()));
-    body.setProperty("code", "PAYLOAD_TOO_LARGE");
-    body.setProperty("timestamp", Instant.now().toString());
-    String requestId = MDC.get("requestId");
-    if (requestId != null) {
-      body.setProperty("requestId", requestId);
-    }
+        ProblemDetails.of(
+            HttpStatus.PAYLOAD_TOO_LARGE,
+            "request body exceeds " + (limit / 1024) + "KB limit",
+            "PAYLOAD_TOO_LARGE",
+            req);
 
     res.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
     res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

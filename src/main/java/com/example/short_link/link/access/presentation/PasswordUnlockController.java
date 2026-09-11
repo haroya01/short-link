@@ -1,20 +1,16 @@
 package com.example.short_link.link.access.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
-import com.example.short_link.common.web.ClientIp;
-import com.example.short_link.link.access.application.LinkProtectionService;
+import com.example.short_link.link.access.application.PasswordUnlockResult;
 import com.example.short_link.link.access.application.TurnstileProperties;
-import com.example.short_link.link.access.application.TurnstileVerifier;
-import com.example.short_link.link.access.infrastructure.LinkPasswordAttemptLimiter;
-import com.example.short_link.link.application.dto.CachedLink;
-import com.example.short_link.link.application.read.LinkLookupQueryService;
-import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.access.application.write.PasswordUnlockUseCase;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
-import com.example.short_link.link.redirect.application.helper.LinkHtmlRenderer;
+import com.example.short_link.link.redirect.presentation.RedirectController;
+import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
+import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,12 +30,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class PasswordUnlockController {
 
-  private final LinkLookupQueryService lookup;
-  private final LinkProtectionService protectionService;
-  private final LinkPasswordAttemptLimiter attemptLimiter;
-  private final LinkRedirectFlow flow;
+  private final PasswordUnlockUseCase unlockUseCase;
   private final TurnstileProperties turnstile;
-  private final TurnstileVerifier turnstileVerifier;
 
   @PostMapping(
       value = "/{shortCode:[0-9A-Za-z]{3,16}}",
@@ -55,34 +47,28 @@ public class PasswordUnlockController {
       HttpServletRequest req) {
     String outcome = "error";
     try {
-      // 봇 차단(Turnstile)이 켜져 있으면 먼저 통과해야 한다 — 비밀번호 추측 자동화를 막는다.
-      if (turnstileVerifier.enabled() && !turnstileVerifier.verify(captchaToken, null)) {
-        outcome = "captcha_failed";
+      PasswordUnlockResult unlocked =
+          unlockUseCase.execute(
+              shortCode,
+              password,
+              captchaToken,
+              LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, null, req));
+      if (unlocked instanceof PasswordUnlockResult.Rejected rejected) {
+        outcome =
+            switch (rejected.reason()) {
+              case CAPTCHA_FAILED -> "captcha_failed";
+              case LOCKED_OUT -> "locked_out";
+              case WRONG_PASSWORD -> "password_required";
+            };
+        HttpStatus status =
+            rejected.reason() == PasswordUnlockResult.RejectionReason.LOCKED_OUT
+                ? HttpStatus.TOO_MANY_REQUESTS
+                : HttpStatus.UNAUTHORIZED;
+        boolean failed = rejected.reason() != PasswordUnlockResult.RejectionReason.CAPTCHA_FAILED;
         return LinkHtmlRenderer.passwordPromptResponse(
-            HttpStatus.UNAUTHORIZED, shortCode, false, turnstile.siteKey());
+            status, shortCode, failed, turnstile.siteKey());
       }
-      String clientIp = ClientIp.of(req);
-      // Per-link brute-force lockout: the global per-IP limit is too loose to stop a focused
-      // password-guessing run against one short link. Too many misses from one IP = cooldown.
-      if (attemptLimiter.isLockedOut(shortCode.value(), clientIp)) {
-        outcome = "locked_out";
-        return LinkHtmlRenderer.passwordPromptResponse(
-            HttpStatus.TOO_MANY_REQUESTS, shortCode, true, turnstile.siteKey());
-      }
-      CachedLink link = lookup.findActiveLink(shortCode);
-      LinkEntity entity =
-          lookup
-              .findEntity(shortCode)
-              .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
-      if (entity.hasPassword() && !protectionService.checkPassword(entity, password)) {
-        attemptLimiter.recordFailure(shortCode.value(), clientIp);
-        outcome = "password_required";
-        return LinkHtmlRenderer.passwordPromptResponse(
-            HttpStatus.UNAUTHORIZED, shortCode, true, turnstile.siteKey());
-      }
-      attemptLimiter.reset(shortCode.value(), clientIp);
-      RedirectOutcome result =
-          flow.execute(link, entity, referrer, userAgent, acceptLanguage, src, req);
+      RedirectOutcome result = ((PasswordUnlockResult.Completed) unlocked).redirect();
       ResponseEntity<?> response = renderUnlock(result);
       outcome =
           (result instanceof RedirectOutcome.Blocked

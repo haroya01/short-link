@@ -36,6 +36,7 @@ class ProductCardCarouselTest {
     assertThat(out).contains("\"url\":\"https://img.example/1.jpg\"");
     assertThat(out).contains("\"focalX\":50");
     assertThat(out).contains("\"focalY\":50");
+    assertThat(out).doesNotContain("\"image\":");
   }
 
   @Test
@@ -47,6 +48,52 @@ class ProductCardCarouselTest {
                 + "\"images\":[{\"url\":\"https://img.example/new.jpg\"}]}]}");
     assertThat(out).contains("\"url\":\"https://img.example/new.jpg\"");
     assertThat(out).doesNotContain("legacy.jpg");
+  }
+
+  @Test
+  void emptyImagesArrayFallsBackToLegacyImage() {
+    String out =
+        ProductCardCarousel.normalize(
+            """
+        {"items":[{"name":"x","images":[],"image":"https://img.example/legacy.jpg"}]}
+        """);
+
+    assertThat(out).contains("\"url\":\"https://img.example/legacy.jpg\"");
+    assertThat(out).contains("\"focalX\":50", "\"focalY\":50");
+    assertThat(out).doesNotContain("\"image\":");
+  }
+
+  @Test
+  void suppliedImagesDoNotFallBackAfterUnusableEntriesAreRemoved() {
+    String out =
+        ProductCardCarousel.normalize(
+            """
+        {"items":[{"name":"x","images":[null,{"url":" "}],
+          "image":"https://img.example/legacy.jpg"}]}
+        """);
+
+    assertThat(out).contains("\"images\":[]");
+    assertThat(out).doesNotContain("legacy.jpg", "\"image\":");
+  }
+
+  @Test
+  void validatesItemNameBeforeImagesAndImagesBeforeCta() {
+    assertThatThrownBy(
+            () ->
+                ProductCardCarousel.normalize(
+                    """
+        {"items":[{"name":" ","image":"file:///image.jpg","ctaUrl":"ftp://example.com"}]}
+        """))
+        .isInstanceOf(ProfileException.class)
+        .hasMessage("product card: each item needs a name");
+    assertThatThrownBy(
+            () ->
+                ProductCardCarousel.normalize(
+                    """
+        {"items":[{"name":"x","image":"file:///image.jpg","ctaUrl":"ftp://example.com"}]}
+        """))
+        .isInstanceOf(ProfileException.class)
+        .hasMessage("product card: image url must be http(s)");
   }
 
   @Test

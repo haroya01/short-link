@@ -52,6 +52,11 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public void flush() {
+    jpa.flush();
+  }
+
+  @Override
   public void delete(PostEntity post) {
     jpa.delete(post);
   }
@@ -260,27 +265,36 @@ class PostRepositoryAdapter implements PostRepository {
       int page,
       int size) {
     return jpa.findPublishedByAuthorsSeriesOrTags(
-        authorIds, seriesIds, tags, PostStatus.PUBLISHED, PageRequest.of(page, size));
+        idsForIn(authorIds),
+        idsForIn(seriesIds),
+        tagsForIn(tags),
+        PostStatus.PUBLISHED,
+        PageRequest.of(page, size));
   }
 
   @Override
   public long countPublishedByAuthorsSeriesOrTags(
       Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags) {
     return jpa.countPublishedByAuthorsSeriesOrTags(
-        authorIds, seriesIds, tags, PostStatus.PUBLISHED);
+        idsForIn(authorIds), idsForIn(seriesIds), tagsForIn(tags), PostStatus.PUBLISHED);
   }
 
   @Override
   public List<PostEntity> findForYouCandidates(
       Long userId, Collection<String> tags, Collection<Long> excludeIds, int page, int size) {
     return jpa.findForYouCandidates(
-        userId, tags, excludeIds, PostStatus.PUBLISHED, PageRequest.of(page, size));
+        userId,
+        tagsForIn(tags),
+        idsForIn(excludeIds),
+        PostStatus.PUBLISHED,
+        PageRequest.of(page, size));
   }
 
   @Override
   public long countForYouCandidates(
       Long userId, Collection<String> tags, Collection<Long> excludeIds) {
-    return jpa.countForYouCandidates(userId, tags, excludeIds, PostStatus.PUBLISHED);
+    return jpa.countForYouCandidates(
+        userId, tagsForIn(tags), idsForIn(excludeIds), PostStatus.PUBLISHED);
   }
 
   @Override
@@ -310,5 +324,14 @@ class PostRepositoryAdapter implements PostRepository {
                 new SeriesActivity(
                     ((Number) row[0]).longValue(), ((Number) row[1]).longValue(), (Instant) row[2]))
         .toList();
+  }
+
+  // JPQL의 빈 IN/NOT IN 인수 표현은 저장소 구현의 책임이다.
+  private static Collection<Long> idsForIn(Collection<Long> ids) {
+    return ids.isEmpty() ? List.of(-1L) : ids;
+  }
+
+  private static Collection<String> tagsForIn(Collection<String> tags) {
+    return tags.isEmpty() ? List.of("\u0000") : tags;
   }
 }

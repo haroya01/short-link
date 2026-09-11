@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -28,7 +29,12 @@ class UnpublishPostUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new UnpublishPostUseCase(postOwnership, postRepository, cacheEviction);
+    useCase =
+        new UnpublishPostUseCase(
+            postOwnership,
+            postRepository,
+            cacheEviction,
+            new PostWriteViewAssembler(postRepository));
   }
 
   @Test
@@ -38,10 +44,10 @@ class UnpublishPostUseCaseTest {
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity result = useCase.execute(new UnpublishPostCommand(7L, 42L));
+    PostView result = useCase.execute(new UnpublishPostCommand(7L, 42L));
 
-    assertThat(result.getStatus()).isEqualTo(PostStatus.UNPUBLISHED);
-    assertThat(result.getPublishedAt()).isNotNull(); // preserved
+    assertThat(result.status()).isEqualTo(PostStatus.UNPUBLISHED.name());
+    assertThat(result.publishedAt()).isNotNull(); // preserved
   }
 
   @Test

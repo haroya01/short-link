@@ -68,7 +68,12 @@ class CollectionControllerTest {
         .andExpect(jsonPath("$.id").value(10))
         .andExpect(jsonPath("$.title").value("느린 사고"))
         .andExpect(jsonPath("$.visibility").value("PUBLIC"))
-        .andExpect(jsonPath("$.count").value(0));
+        .andExpect(jsonPath("$.count").value(0))
+        .andExpect(jsonPath("$.preview").isEmpty())
+        .andExpect(jsonPath("$.curatorUsername").doesNotExist())
+        .andExpect(jsonPath("$.curatorAvatarUrl").doesNotExist())
+        .andExpect(jsonPath("$.position").doesNotExist())
+        .andExpect(jsonPath("$.connectionId").doesNotExist());
   }
 
   @Test
@@ -92,8 +97,9 @@ class CollectionControllerTest {
 
   @Test
   void editReturnsUpdatedSummary() throws Exception {
-    when(command.edit(any())).thenReturn(collection(10L));
-    when(query.connectionCount(10L)).thenReturn(2L);
+    CollectionEntity saved = collection(10L);
+    when(command.edit(any())).thenReturn(saved);
+    when(query.editedSummary(saved)).thenReturn(CollectionSummaryView.afterWrite(saved, 2L));
 
     mvc.perform(
             put("/api/v1/collections/10")

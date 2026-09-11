@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
@@ -25,12 +27,16 @@ import com.example.short_link.post.note.domain.NoteEntity;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -53,9 +59,12 @@ class CollectionQueryServiceTest {
         new CollectionQueryService(
             collectionRepository,
             connectionRepository,
-            postRepository,
-            highlightRepository,
-            noteRepository,
+            new CollectionContentReader(
+                connectionRepository,
+                postRepository,
+                highlightRepository,
+                noteRepository,
+                userRepository),
             userRepository);
   }
 
@@ -64,6 +73,28 @@ class CollectionQueryServiceTest {
         new CollectionEntity(ownerId, "느린 사고", "오래 머문 글", visibility, CollectionKind.COLLECTION);
     ReflectionTestUtils.setField(c, "id", id);
     return c;
+  }
+
+  @Test
+  void editedSummaryUsesSavedFieldsAndCurrentCountWithoutLoadingListContent() {
+    CollectionEntity saved = collection(10L, 1L, CollectionVisibility.PUBLIC);
+    Instant updatedAt = Instant.parse("2026-09-11T00:00:00Z");
+    ReflectionTestUtils.setField(saved, "updatedAt", updatedAt);
+    when(connectionRepository.countByCollectionId(10L)).thenReturn(3L);
+
+    CollectionSummaryView summary = service.editedSummary(saved);
+
+    assertThat(summary.id()).isEqualTo(10L);
+    assertThat(summary.title()).isEqualTo(saved.getTitle());
+    assertThat(summary.updatedAt()).isEqualTo(updatedAt);
+    assertThat(summary.count()).isEqualTo(3);
+    assertThat(summary.preview()).isEmpty();
+    assertThat(summary.curatorUsername()).isNull();
+    assertThat(summary.curatorAvatarUrl()).isNull();
+    assertThat(summary.position()).isNull();
+    assertThat(summary.connectionId()).isNull();
+    verifyNoInteractions(
+        collectionRepository, postRepository, highlightRepository, noteRepository, userRepository);
   }
 
   @Test
@@ -170,6 +201,58 @@ class CollectionQueryServiceTest {
     assertThat(result.get(6L)).extracting(CollectionSummaryView::id).containsExactly(10L);
     assertThat(result.get(6L).get(0).position()).isEqualTo(2);
     assertThat(result.get(7L)).isEmpty(); // 어느 공개 컬렉션에도 없음 → 빈 올.
+
+    InOrder queries = inOrder(connectionRepository, collectionRepository, userRepository);
+    queries
+        .verify(connectionRepository)
+        .findAllByBlockTypeAndRefIdIn(ConnectionBlockType.POST, List.of(5L, 6L, 7L));
+    queries.verify(collectionRepository).findAllByIdIn(Set.of(10L, 11L));
+    queries.verify(connectionRepository).countByCollectionIdIn(Set.of(10L));
+    queries.verify(userRepository).findAllByIdIn(Set.of(1L));
+    queries
+        .verify(connectionRepository)
+        .findRanksByCollectionIdsAndBlockType(Set.of(10L), ConnectionBlockType.POST);
+    queries.verifyNoMoreInteractions();
+  }
+
+  @Test
+  void batchKeepsRequestedOrderAndRecentCollectionsWithStableTiesAndNoDuplicates() {
+    CollectionEntity older = collection(10L, 1L, CollectionVisibility.PUBLIC);
+    CollectionEntity recent = collection(12L, 1L, CollectionVisibility.PUBLIC);
+    CollectionEntity recentEncounteredFirst = collection(13L, 1L, CollectionVisibility.PUBLIC);
+    ReflectionTestUtils.setField(older, "updatedAt", Instant.parse("2026-09-10T00:00:00Z"));
+    ReflectionTestUtils.setField(recent, "updatedAt", Instant.parse("2026-09-11T00:00:00Z"));
+    ReflectionTestUtils.setField(recentEncounteredFirst, "updatedAt", recent.getUpdatedAt());
+    when(connectionRepository.findAllByBlockTypeAndRefIdIn(
+            ConnectionBlockType.POST, List.of(7L, 5L, 6L)))
+        .thenReturn(
+            List.of(
+                conn(10L, ConnectionBlockType.POST, 5L),
+                conn(13L, ConnectionBlockType.POST, 5L),
+                conn(12L, ConnectionBlockType.POST, 5L),
+                conn(13L, ConnectionBlockType.POST, 5L),
+                conn(10L, ConnectionBlockType.POST, 6L)));
+    when(collectionRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(older, recent, recentEncounteredFirst));
+
+    Map<Long, List<CollectionSummaryView>> result =
+        service.publicCollectionsContainingBatch(
+            ConnectionBlockType.POST, Arrays.asList(7L, null, 5L, 5L, 6L));
+
+    assertThat(result.keySet()).containsExactly(7L, 5L, 6L);
+    assertThat(result.get(7L)).isEmpty();
+    assertThat(result.get(5L)).extracting(CollectionSummaryView::id).containsExactly(13L, 12L, 10L);
+    assertThat(result.get(6L)).extracting(CollectionSummaryView::id).containsExactly(10L);
+    assertThat(result.get(5L))
+        .allSatisfy(
+            summary -> {
+              assertThat(summary.count()).isZero();
+              assertThat(summary.preview()).isEmpty();
+              assertThat(summary.curatorUsername()).isNull();
+              assertThat(summary.curatorAvatarUrl()).isNull();
+              assertThat(summary.position()).isNull();
+              assertThat(summary.connectionId()).isNull();
+            });
   }
 
   @Test

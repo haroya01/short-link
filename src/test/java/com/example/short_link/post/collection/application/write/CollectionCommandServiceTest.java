@@ -162,14 +162,14 @@ class CollectionCommandServiceTest {
   }
 
   @Test
-  void editRejectsForeignOwner() {
+  void editChecksOwnershipBeforeValidatingTitle() {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 2L, CollectionVisibility.PRIVATE)));
 
     assertThatThrownBy(
             () ->
                 service.edit(
-                    new EditCollectionCommand(1L, 10L, "x", null, CollectionVisibility.PUBLIC)))
+                    new EditCollectionCommand(1L, 10L, "  ", null, CollectionVisibility.PUBLIC)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_PERMISSION_DENIED);
