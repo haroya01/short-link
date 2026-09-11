@@ -4,7 +4,7 @@ import com.example.short_link.user.application.dto.AppleIdentity;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.write.AppleIdentityVerifier;
 import com.example.short_link.user.application.write.AuthService;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
@@ -65,14 +65,12 @@ public class AuthController {
       @Valid @RequestBody AppleLoginRequest request, HttpServletResponse res) {
     AppleIdentity identity = appleVerifier.verify(request.identityToken(), request.nonce());
     return switch (authService.loginWithApple(identity.subject(), identity.email())) {
-      case LoginResult.Tokens tokens -> {
+      case TokenLoginResult.Tokens tokens -> {
         refreshCookieWriter.set(res, tokens.issued().refreshToken());
         yield AppleWebLoginResponse.tokens(tokens.issued().accessToken());
       }
-      case LoginResult.TwoFactorRequired challenge ->
+      case TokenLoginResult.TwoFactorRequired challenge ->
           AppleWebLoginResponse.twoFactor(challenge.challengeToken());
-      case LoginResult.MobileExchangeCode unused ->
-          throw new IllegalStateException("apple web login never issues an exchange code");
     };
   }
 

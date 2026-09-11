@@ -40,9 +40,6 @@ public class ForYouQueryService {
   /** An explicit tag follow outweighs an incidental read. */
   private static final int FOLLOWED_WEIGHT = 3;
 
-  /** No-match sentinel so the `not in` stays valid before the reader has read anything. */
-  private static final List<Long> NO_EXCLUDE = List.of(-1L);
-
   private final PostRepository postRepository;
   private final PostReadRepository postReadRepository;
   private final PostLikeRepository postLikeRepository;
@@ -72,10 +69,9 @@ public class ForYouQueryService {
       return new PublicFeedView(feedItemAssembler.assemble(trending), page, size, hasNext);
     }
 
-    List<Long> exclude = recentReadIds.isEmpty() ? NO_EXCLUDE : recentReadIds;
     List<PostEntity> posts =
-        postRepository.findForYouCandidates(userId, interest, exclude, page, size);
-    long total = postRepository.countForYouCandidates(userId, interest, exclude);
+        postRepository.findForYouCandidates(userId, interest, recentReadIds, page, size);
+    long total = postRepository.countForYouCandidates(userId, interest, recentReadIds);
     boolean hasNext = (long) (page + 1) * size < total;
 
     Set<String> interestSet = Set.copyOf(interest);

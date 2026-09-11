@@ -52,8 +52,7 @@ class CreateCommentUseCaseTest {
             postRepository,
             commentRepository,
             userRepository,
-            events,
-            muteReader,
+            new CommentNotifications(userRepository, postRepository, events, muteReader),
             moderationGuard,
             blockChecker);
   }
@@ -323,5 +322,25 @@ class CreateCommentUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COMMENT_PARENT_INVALID);
+  }
+
+  @Test
+  void mutedOwnerReplyStillSuppressesCommentButAllowsExplicitMention() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
+    when(commentRepository.findById(50L))
+        .thenReturn(Optional.of(new CommentEntity(42L, 7L, null, "owner's comment")));
+    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
+    when(userRepository.findByUsername("olivia")).thenReturn(Optional.of(userWithId(7L, "olivia")));
+    when(muteReader.isMuted(7L, BlogNotificationKind.REPLY)).thenReturn(true);
+
+    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "thanks @olivia"));
+
+    ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
+    verify(events, times(2)).publishEvent(published.capture());
+    assertThat(published.getAllValues())
+        .extracting(Object::getClass)
+        .containsExactly(CommentReplyEvent.class, CommentMentionEvent.class);
   }
 }

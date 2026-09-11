@@ -9,6 +9,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.stats.application.LinkInsights;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -30,6 +31,7 @@ class LinkStatsQueryServiceIntegrationTest {
   @Autowired private UserRepository userRepository;
   @Autowired private LinkVisibilityService visibilityService;
   @Autowired private LinkStatsLifecycleReader lifecycleReader;
+  @Autowired private LinkInsights insights;
   @Autowired private LinkStatsDimensionBreakdownsReader dimensionsReader;
 
   @Test
@@ -128,7 +130,7 @@ class LinkStatsQueryServiceIntegrationTest {
         link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(30))); // 30분 — gap<3600, 건너뜀
     hostClick(link, "reddit.com", t0.plus(java.time.Duration.ofHours(2))); // 2시간 — gap≥3600, 점프
 
-    var insight = lifecycleReader.channelJump(link.linkId());
+    var insight = insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()));
 
     assertThat(insight).isPresent();
     assertThat(insight.get().type()).isEqualTo("CHANNEL_JUMP");
@@ -144,7 +146,7 @@ class LinkStatsQueryServiceIntegrationTest {
         linkRepository.save(new LinkEntity("https://example.com", "stcj1h", owner.getId(), null));
     hostClick(link, "instagram.com", java.time.Instant.now().minus(java.time.Duration.ofHours(1)));
 
-    assertThat(lifecycleReader.channelJump(link.linkId())).isEmpty();
+    assertThat(insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()))).isEmpty();
   }
 
   @Test
@@ -157,7 +159,7 @@ class LinkStatsQueryServiceIntegrationTest {
     hostClick(link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(20))); // gap<3600 → 점프 아님
 
     // 두 host 지만 1시간 안에 다 나타나 채널 점프로 보지 않는다(루프가 점프 없이 끝나는 갈래).
-    assertThat(lifecycleReader.channelJump(link.linkId())).isEmpty();
+    assertThat(insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()))).isEmpty();
   }
 
   // ─── 새 분석 축 (인앱 브라우저 · 글 귀속 · UTM term · 채널 깊이 · Sec-Fetch-Site) ───

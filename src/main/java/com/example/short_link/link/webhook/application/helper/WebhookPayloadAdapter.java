@@ -16,6 +16,16 @@ public final class WebhookPayloadAdapter {
 
   private static final String SENDER_NAME = "kurl";
 
+  public static Map<String, Object> build(WebhookFormat format, WebhookNotification notification) {
+    return switch (notification) {
+      case WebhookNotification.Click click -> buildClick(format, click.payload());
+      case WebhookNotification.Batch batch -> buildBatch(format, batch.linkId(), batch.events());
+        // 요약과 급증 알림은 기존 원본 JSON 계약을 유지한다. 공급자 전용 표현은 아직 없다.
+      case WebhookNotification.DailySummary summary -> summary.payload().toJsonMap();
+      case WebhookNotification.SpikeAlert spike -> spike.payload().toJsonMap();
+    };
+  }
+
   public static Map<String, Object> buildClick(WebhookFormat format, Map<String, Object> click) {
     return switch (format) {
       case GENERIC -> click;

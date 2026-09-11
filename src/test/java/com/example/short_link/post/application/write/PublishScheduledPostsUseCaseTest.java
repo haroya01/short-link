@@ -31,7 +31,9 @@ class PublishScheduledPostsUseCaseTest {
 
   private PublishScheduledPostsUseCase useCase() {
     return new PublishScheduledPostsUseCase(
-        postRepository, postRevisionCapture, searchTextUpdater, cacheEviction, events);
+        postRepository,
+        new PostPublicationCompletion(
+            postRevisionCapture, searchTextUpdater, cacheEviction, events));
   }
 
   private static PostEntity scheduledPost(String slug) {
@@ -68,5 +70,22 @@ class PublishScheduledPostsUseCaseTest {
     assertThat(published).isZero();
     verify(postRepository, never()).save(any());
     verify(postRevisionCapture, never()).capture(any());
+  }
+
+  @Test
+  void invalidPostDoesNotPreventLaterPostAndEventKeepsBatchTime() {
+    PostEntity invalid = scheduledPost("invalid");
+    invalid.updateTitle("");
+    PostEntity valid = scheduledPost("valid");
+    Instant batchTime = Instant.parse("2026-01-01T12:00:00Z");
+    when(postRepository.findScheduledDue(batchTime)).thenReturn(List.of(invalid, valid));
+
+    assertThat(useCase().execute(batchTime)).isEqualTo(1);
+
+    verify(postRepository, never()).save(invalid);
+    verify(postRepository).save(valid);
+    var event = org.mockito.ArgumentCaptor.forClass(PostPublishedEvent.class);
+    verify(events).publishEvent(event.capture());
+    assertThat(event.getValue().occurredAt()).isEqualTo(batchTime);
   }
 }

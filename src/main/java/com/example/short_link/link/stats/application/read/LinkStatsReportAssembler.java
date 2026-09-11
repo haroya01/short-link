@@ -40,68 +40,67 @@ class LinkStatsReportAssembler {
     List<LinkStats.ChannelDepth> channelDepth = lifecycleReader.channelDepth(linkId);
 
     List<LinkStats.Insight> insights =
-        new java.util.ArrayList<>(
-            insightsCalculator.compute(
-                totals.total(),
-                totals.bot(),
-                time.heatmap(),
-                channels.channels(),
-                geo.countries(),
-                returnRate,
-                lifecycle,
-                time.daily()));
-    // 채널 점프는 시계열 first-seen 쿼리가 필요해 compute() 밖에서 곁들인다(원래 청중 탈출 신호).
-    if (totals.total() >= 10) {
-      lifecycleReader.channelJump(linkId).ifPresent(insights::add);
-    }
-    // 인앱 비중·채널 충성도도 같은 자리에서 — 이미 읽어 둔 브레이크다운으로 만드는 규칙이라 추가 쿼리가 없다.
-    insightsCalculator.inAppBrowser(clientApps, totals.human()).ifPresent(insights::add);
-    insightsCalculator.channelLoyalty(channelDepth).ifPresent(insights::add);
+        insightsCalculator.computeReport(
+            LinkInsights.ReportFacts.builder()
+                .total(totals.total())
+                .human(totals.human())
+                .bot(totals.bot())
+                .heatmap(time.heatmap())
+                .channels(channels.channels())
+                .countries(geo.countries())
+                .returnRate(returnRate)
+                .lifecycle(lifecycle)
+                .dailyClicks(time.daily())
+                .clientApps(clientApps)
+                .channelDepth(channelDepth)
+                .build(),
+            () -> lifecycleReader.channelFirstSeen(linkId));
 
-    return new LinkStats(
-        link.getShortCode(),
-        reportZone.getId(),
-        totals.total(),
-        totals.human(),
-        totals.bot(),
-        totals.unique(),
-        totals.previewClicks(),
-        totals.profileClicks(),
-        totals.firstClickAt(),
-        totals.lastClickAt(),
-        totals.timeToFirstClickMinutes(),
-        time.peakHour(),
-        velocity,
-        returnRate,
-        lifecycle,
-        time.daily(),
-        time.hourly(),
-        time.dayOfWeek(),
-        time.heatmap(),
-        channels.referrers(),
-        channels.referrerHosts(),
-        channels.channels(),
-        devices.devices(),
-        devices.os(),
-        devices.browsers(),
-        devices.botBreakdown(),
-        utm.campaigns(),
-        utm.sources(),
-        utm.mediums(),
-        utm.contents(),
-        utm.terms(),
-        utm.sourceChannels(),
-        clientApps,
-        fetchSites,
-        postClicks,
-        channelDepth,
-        destinations,
-        geo.countries(),
-        geo.regions(),
-        geo.cities(),
-        geo.languages(),
-        geo.asns(),
-        geo.datacenterClicks(),
-        insights);
+    return LinkStats.builder()
+        .shortCode(link.getShortCode())
+        .timezone(reportZone.getId())
+        .totalClicks(totals.total())
+        .humanClicks(totals.human())
+        .botClicks(totals.bot())
+        .uniqueClicks(totals.unique())
+        .previewClicks(totals.previewClicks())
+        .profileClicks(totals.profileClicks())
+        .firstClickAt(totals.firstClickAt())
+        .lastClickAt(totals.lastClickAt())
+        .timeToFirstClickMinutes(totals.timeToFirstClickMinutes())
+        .peakHour(time.peakHour())
+        .velocity(velocity)
+        .returnRate(returnRate)
+        .lifecycle(lifecycle)
+        .dailyClicks(time.daily())
+        .hourClicks(time.hourly())
+        .dayOfWeekClicks(time.dayOfWeek())
+        .heatmap(time.heatmap())
+        .referrerClicks(channels.referrers())
+        .referrerHostClicks(channels.referrerHosts())
+        .channelClicks(channels.channels())
+        .deviceClicks(devices.devices())
+        .osClicks(devices.os())
+        .browserClicks(devices.browsers())
+        .botClicks2(devices.botBreakdown())
+        .utmCampaignClicks(utm.campaigns())
+        .utmSourceClicks(utm.sources())
+        .utmMediumClicks(utm.mediums())
+        .utmContentClicks(utm.contents())
+        .utmTermClicks(utm.terms())
+        .sourceChannelClicks(utm.sourceChannels())
+        .clientAppClicks(clientApps)
+        .fetchSiteClicks(fetchSites)
+        .postClicks(postClicks)
+        .channelDepth(channelDepth)
+        .destinationClicks(destinations)
+        .countryClicks(geo.countries())
+        .regionClicks(geo.regions())
+        .cityClicks(geo.cities())
+        .languageClicks(geo.languages())
+        .asnClicks(geo.asns())
+        .datacenterClicks(geo.datacenterClicks())
+        .insights(insights)
+        .build();
   }
 }

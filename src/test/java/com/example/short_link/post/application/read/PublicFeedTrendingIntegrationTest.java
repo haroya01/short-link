@@ -55,7 +55,7 @@ class PublicFeedTrendingIntegrationTest {
   }
 
   private List<String> trendingSlugs() {
-    return service.feed("trending", null, 0, 50).items().stream()
+    return service.feed(PublicFeedQuery.from(null, null, "trending", null, 0, 50)).items().stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -107,7 +107,9 @@ class PublicFeedTrendingIntegrationTest {
     // Native query with :lang bound → only the matching language. Proves the `:lang IS NULL OR
     // p.language_tag = :lang` filter holds against MySQL, both set and unset.
     List<String> ja =
-        service.feed("trending", "ja", 0, 50).items().stream().map(PublicFeedItem::slug).toList();
+        service.feed(PublicFeedQuery.from(null, null, "trending", "ja", 0, 50)).items().stream()
+            .map(PublicFeedItem::slug)
+            .toList();
     assertThat(ja).contains("trend-lang-ja").doesNotContain("trend-lang-ko");
 
     List<String> all = trendingSlugs(); // lang null → all languages

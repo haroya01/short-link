@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -18,9 +19,10 @@ public class UpdatePostMetadataUseCase {
   private final PostOwnership postOwnership;
   private final PostRepository postRepository;
   private final PostSearchTextUpdater searchTextUpdater;
+  private final PostWriteViewAssembler writeViews;
 
   @Transactional
-  public PostEntity execute(UpdatePostMetadataCommand cmd) {
+  public PostView execute(UpdatePostMetadataCommand cmd) {
     PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
 
     if (cmd.slug() != null && !cmd.slug().equals(post.getSlug())) {
@@ -57,7 +59,7 @@ public class UpdatePostMetadataUseCase {
       // 저장된 본문 블록을 다시 읽어 새 메타와 합쳐 재계산(og-image·slug 만 바뀐 편집엔 조회를 아낀다).
       searchTextUpdater.refresh(post);
     }
-    return postRepository.save(post);
+    return writeViews.fromSaved(postRepository.save(post));
   }
 
   /**
@@ -67,7 +69,7 @@ public class UpdatePostMetadataUseCase {
    * UnpublishPostUseCase#adminExecute}. {@code adminUserId} is recorded for the audit trail only.
    */
   @Transactional
-  public PostEntity adminExecute(Long adminUserId, Long postId, String title, List<String> tags) {
+  public PostView adminExecute(Long adminUserId, Long postId, String title, List<String> tags) {
     log.info("admin post metadata edit: adminUserId={}, postId={}", adminUserId, postId);
     PostEntity post =
         postRepository
@@ -84,6 +86,6 @@ public class UpdatePostMetadataUseCase {
     if (searchFieldChanged) {
       searchTextUpdater.refresh(post);
     }
-    return postRepository.save(post);
+    return writeViews.fromSaved(postRepository.save(post));
   }
 }

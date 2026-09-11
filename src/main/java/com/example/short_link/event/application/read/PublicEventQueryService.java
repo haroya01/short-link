@@ -1,8 +1,8 @@
 package com.example.short_link.event.application.read;
 
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.event.application.EventOrganizerLookup;
 import com.example.short_link.event.application.EventOrganizerLookup.Organizer;
-import com.example.short_link.event.application.image.EventCoverImageService;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.repository.EventQuestionRepository;
 import com.example.short_link.event.domain.repository.EventRepository;
@@ -20,7 +20,7 @@ public class PublicEventQueryService {
 
   private final EventRepository eventRepository;
   private final EventQuestionRepository questionRepository;
-  private final EventCoverImageService coverImageService;
+  private final ObjectStoragePublicUrls coverImageUrls;
   private final EventOrganizerLookup organizerLookup;
 
   @Transactional(readOnly = true)
@@ -38,7 +38,7 @@ public class PublicEventQueryService {
         event,
         questions,
         Instant.now(),
-        coverImageService.urlFor(event.getCoverImageKey()),
+        coverImageUrls.forKey(event.getCoverImageKey()),
         organizer == null ? null : organizer.username(),
         organizer == null ? null : organizer.avatarUrl());
   }

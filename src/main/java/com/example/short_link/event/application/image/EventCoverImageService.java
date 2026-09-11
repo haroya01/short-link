@@ -1,8 +1,9 @@
 package com.example.short_link.event.application.image;
 
+import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
-import com.example.short_link.common.storage.s3.AvatarProperties;
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.repository.EventRepository;
 import com.example.short_link.event.exception.EventErrorCode;
@@ -18,7 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * 이벤트 커버 이미지 — {@code PostImageService} 의 presign/commit two-step 축소판 (URL import 없음). key prefix
- * {@code event-covers/{userId}/{eventId}/{uuid}.{ext}}, storage 정책은 AvatarProperties 재사용.
+ * {@code event-covers/{userId}/{eventId}/{uuid}.{ext}}, 업로드 제한은 공통 ImageUploadPolicy를 따른다.
  */
 @Slf4j
 @Service
@@ -33,9 +34,10 @@ public class EventCoverImageService {
 
   private static final String KEY_PREFIX = "event-covers/";
 
-  private final AvatarProperties props;
+  private final ImageUploadPolicy uploadPolicy;
   private final ObjectStorage objectStorage;
   private final EventRepository eventRepository;
+  private final ObjectStoragePublicUrls publicUrls;
 
   public record PresignResult(
       String uploadUrl, String publicUrl, String key, String contentType, long maxBytes) {}
@@ -50,8 +52,10 @@ public class EventCoverImageService {
     }
     String key = KEY_PREFIX + userId + "/" + eventId + "/" + UUID.randomUUID() + "." + ext;
     String uploadUrl =
-        objectStorage.presignPut(key, normalized, Duration.ofSeconds(props.presignTtlSeconds()));
-    return new PresignResult(uploadUrl, urlFor(key), key, normalized, props.maxBytes());
+        objectStorage.presignPut(
+            key, normalized, Duration.ofSeconds(uploadPolicy.presignTtlSeconds()));
+    return new PresignResult(
+        uploadUrl, publicUrls.forKey(key), key, normalized, uploadPolicy.maxBytes());
   }
 
   @Transactional
@@ -66,7 +70,7 @@ public class EventCoverImageService {
         objectStorage
             .objectSize(key)
             .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND, "upload"));
-    if (size > props.maxBytes()) {
+    if (size > uploadPolicy.maxBytes()) {
       try {
         objectStorage.delete(key);
       } catch (ObjectStorageException e) {
@@ -76,17 +80,7 @@ public class EventCoverImageService {
     }
     objectStorage.applyImmutableCacheControl(key);
     event.updateCoverImage(key);
-    return urlFor(key);
-  }
-
-  public String urlFor(String key) {
-    if (key == null || key.isBlank()) return null;
-    String base = props.publicBaseUrl();
-    if (base == null || base.isBlank()) {
-      base = "https://" + props.bucket() + ".s3." + props.region() + ".amazonaws.com";
-    }
-    if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
-    return base + "/" + key;
+    return publicUrls.forKey(key);
   }
 
   private EventEntity requireOwned(Long userId, Long eventId) {
@@ -101,7 +95,7 @@ public class EventCoverImageService {
   }
 
   private void requireConfigured() {
-    if (!props.isConfigured()) {
+    if (!objectStorage.isConfigured()) {
       throw new EventException(EventErrorCode.INVALID_QUESTIONS, "storage not configured");
     }
   }

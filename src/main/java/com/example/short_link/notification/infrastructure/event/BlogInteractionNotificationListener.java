@@ -4,6 +4,7 @@ import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
+import com.example.short_link.notification.application.dto.NotificationTarget;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -43,7 +44,7 @@ public class BlogInteractionNotificationListener {
    * (no author handle — the recipient IS the author for LIKE/COMMENT) when a post is present, else
    * null (FOLLOW).
    */
-  private static Object payloadOf(BlogInteractionEvent event) {
+  private static NotificationTarget payloadOf(BlogInteractionEvent event) {
     if (event.type() == BlogInteractionType.SERIES_SUBSCRIBE) {
       return new NotificationSeriesRef(event.seriesId(), event.seriesSlug(), event.seriesTitle());
     }

@@ -174,19 +174,22 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   //   "frontend"가 세 글 모두 매칭). 연산자 없는 평문 BOOLEAN 항(implicit 바이그램 그룹)만이 한/영
   //   단어 둘 다 정확히 부분일치하고 관련성 점수도 준다(다단어는 "많이 겹칠수록 상위" OR 랭킹).
   //
+  String SEARCH_PREDICATE =
+      "WHERE p.status = 'PUBLISHED' AND ("
+          + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
+          + "OR p.user_id IN (SELECT u.id FROM users u "
+          + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
+          + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
+          + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
+          + "AND (:lang IS NULL OR p.language_tag = :lang) ";
+
   // recent 정렬: 관련성 무시, 최신순 — 예전 recent 검색과 정렬 계약 동일(본문까지 잡히는 것만 넓어졌다).
   @Query(
       nativeQuery = true,
       value =
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_search_text s ON s.post_id = p.id "
-              + "WHERE p.status = 'PUBLISHED' AND ("
-              + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
-              + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
-              + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
-              + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
-              + "AND (:lang IS NULL OR p.language_tag = :lang) "
+              + SEARCH_PREDICATE
               + "ORDER BY p.published_at DESC")
   List<PostEntity> searchPublishedRecent(
       @Param("match") String match,
@@ -203,13 +206,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       value =
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_search_text s ON s.post_id = p.id "
-              + "WHERE p.status = 'PUBLISHED' AND ("
-              + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
-              + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
-              + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
-              + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
-              + "AND (:lang IS NULL OR p.language_tag = :lang) "
+              + SEARCH_PREDICATE
               + "ORDER BY MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) DESC, "
               + "p.published_at DESC")
   List<PostEntity> searchPublishedByRelevance(
@@ -229,13 +226,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_search_text s ON s.post_id = p.id "
               + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
-              + "WHERE p.status = 'PUBLISHED' AND ("
-              + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
-              + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
-              + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
-              + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
-              + "AND (:lang IS NULL OR p.language_tag = :lang) "
+              + SEARCH_PREDICATE
               + "GROUP BY p.id "
               + "ORDER BY COUNT(DISTINCT e.id) DESC, p.published_at DESC")
   List<PostEntity> searchPublishedTrendingSince(
@@ -251,13 +242,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       value =
           "SELECT COUNT(*) FROM posts p "
               + "LEFT JOIN post_search_text s ON s.post_id = p.id "
-              + "WHERE p.status = 'PUBLISHED' AND ("
-              + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
-              + "OR p.user_id IN (SELECT u.id FROM users u "
-              + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
-              + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
-              + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
-              + "AND (:lang IS NULL OR p.language_tag = :lang)")
+              + SEARCH_PREDICATE)
   long countSearchPublished(
       @Param("match") String match,
       @Param("like") String like,

@@ -1,7 +1,7 @@
 package com.example.short_link.link.webhook.scheduler;
 
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
-import com.example.short_link.link.webhook.application.helper.WebhookPayloadAdapter;
+import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import java.util.List;
@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
-import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Listens for {@link ClickRecordedEvent} and POSTs a signed JSON payload to every enabled webhook
@@ -28,7 +27,6 @@ import tools.jackson.databind.json.JsonMapper;
 public class LinkWebhookDispatcher {
 
   private final LinkWebhookRepository repository;
-  private final JsonMapper jsonMapper;
   private final WebhookDeliveryGate deliveryGate;
   private final WebhookBatchBuffer batchBuffer;
   private final WebhookHttpDeliveryClient deliveryClient;
@@ -62,7 +60,7 @@ public class LinkWebhookDispatcher {
       if (hook.isBatchEnabled()) {
         batchBuffer.enqueue(hook.getId(), payload);
       } else {
-        deliverSingle(hook, payload);
+        deliveryClient.deliver(hook, new WebhookNotification.Click(payload));
       }
     }
   }
@@ -79,15 +77,6 @@ public class LinkWebhookDispatcher {
     }
   }
 
-  void deliver(LinkWebhookEntity hook, String body, String eventType) {
-    deliveryClient.deliver(hook, body, eventType);
-  }
-
-  private void deliverSingle(LinkWebhookEntity hook, Map<String, Object> payload) {
-    Map<String, Object> adapted = WebhookPayloadAdapter.buildClick(hook.getFormat(), payload);
-    deliver(hook, jsonMapper.writeValueAsString(adapted), "click");
-  }
-
   private Map<String, Object> clickPayload(ClickRecordedEvent event) {
     return Map.of(
         "type",
@@ -101,7 +90,7 @@ public class LinkWebhookDispatcher {
         "deviceClass",
         event.deviceClass() == null ? "" : event.deviceClass(),
         "channel",
-        event.channel() == null ? "" : event.channel(),
+        event.referrerHost() == null ? "" : event.referrerHost(),
         "utmSource",
         event.utmSource() == null ? "" : event.utmSource(),
         "bot",

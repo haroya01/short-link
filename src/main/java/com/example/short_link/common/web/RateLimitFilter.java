@@ -1,19 +1,13 @@
 package com.example.short_link.common.web;
 
+import com.example.short_link.common.web.response.ProblemDetails;
 import io.micrometer.core.instrument.MeterRegistry;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.net.URI;
-import java.time.Duration;
-import java.time.Instant;
 import java.util.List;
-import org.slf4j.MDC;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -25,8 +19,6 @@ import tools.jackson.databind.json.JsonMapper;
 public class RateLimitFilter extends OncePerRequestFilter {
 
   static final String METRIC_NAME = "rate_limit.exceeded";
-
-  private static final Duration WINDOW = Duration.ofMinutes(1);
 
   // Sensitive auth endpoints get a tighter per-IP bucket on top of the global limit. Brute-force
   // against a 6-digit 2FA OTP would otherwise sit comfortably under the global anonymous cap
@@ -43,26 +35,19 @@ public class RateLimitFilter extends OncePerRequestFilter {
           new EndpointRule("POST", "/api/v1/2fa/disable", 5),
           new EndpointRule("POST", "/api/v1/auth/refresh", 10));
 
-  private static final RedisScript<Long> INCR_AND_EXPIRE =
-      new DefaultRedisScript<>(
-          "local c = redis.call('INCR', KEYS[1]) "
-              + "if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end "
-              + "return c",
-          Long.class);
-
-  private final StringRedisTemplate redis;
+  private final RateLimitCounter counter;
   private final JsonMapper jsonMapper;
   private final long anonymousLimit;
   private final long authenticatedLimit;
   private final MeterRegistry meterRegistry;
 
   public RateLimitFilter(
-      StringRedisTemplate redis,
+      RateLimitCounter counter,
       JsonMapper jsonMapper,
       long anonymousLimit,
       long authenticatedLimit,
       MeterRegistry meterRegistry) {
-    this.redis = redis;
+    this.counter = counter;
     this.jsonMapper = jsonMapper;
     this.anonymousLimit = anonymousLimit;
     this.authenticatedLimit = authenticatedLimit;
@@ -86,9 +71,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     for (EndpointRule rule : ENDPOINT_RULES) {
       if (rule.method().equals(method) && rule.path().equals(uri)) {
-        String epKey = "rate:ep:" + method + ":" + uri + ":ip:" + clientIp;
-        Long epCount =
-            redis.execute(INCR_AND_EXPIRE, List.of(epKey), String.valueOf(WINDOW.getSeconds()));
+        Long epCount = counter.incrementEndpoint(method, uri, clientIp);
         if (epCount != null && epCount > rule.perMinute()) {
           meterRegistry.counter(METRIC_NAME, "scope", "endpoint", "path", uri).increment();
           writeRateLimitResponse(req, res);
@@ -99,17 +82,15 @@ public class RateLimitFilter extends OncePerRequestFilter {
     }
 
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    String identifier;
+    Long count;
     long limit;
     if (auth != null && auth.getPrincipal() instanceof Long userId) {
-      identifier = "user:" + userId;
+      count = counter.incrementUser(userId);
       limit = authenticatedLimit;
     } else {
-      identifier = "ip:" + clientIp;
+      count = counter.incrementAnonymous(clientIp);
       limit = anonymousLimit;
     }
-    String key = "rate:" + identifier;
-    Long count = redis.execute(INCR_AND_EXPIRE, List.of(key), String.valueOf(WINDOW.getSeconds()));
     if (count != null && count > limit) {
       meterRegistry
           .counter(
@@ -126,14 +107,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
   private void writeRateLimitResponse(HttpServletRequest req, HttpServletResponse res)
       throws IOException {
     ProblemDetail body =
-        ProblemDetail.forStatusAndDetail(HttpStatus.TOO_MANY_REQUESTS, "rate limit exceeded");
-    body.setInstance(URI.create(req.getRequestURI()));
-    body.setProperty("code", "RATE_LIMITED");
-    body.setProperty("timestamp", Instant.now().toString());
-    String requestId = MDC.get("requestId");
-    if (requestId != null) {
-      body.setProperty("requestId", requestId);
-    }
+        ProblemDetails.of(HttpStatus.TOO_MANY_REQUESTS, "rate limit exceeded", "RATE_LIMITED", req);
 
     res.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
     res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);

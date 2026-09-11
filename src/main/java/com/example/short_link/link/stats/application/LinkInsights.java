@@ -1,12 +1,15 @@
 package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.application.dto.LinkStats;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Supplier;
+import lombok.Builder;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -33,6 +36,63 @@ public class LinkInsights {
 
   public LinkInsights(MessageSource messages) {
     this.messages = messages;
+  }
+
+  @Builder
+  public record ReportFacts(
+      long total,
+      long human,
+      long bot,
+      List<LinkStats.HeatmapCell> heatmap,
+      List<LinkStats.ChannelClick> channels,
+      List<LinkStats.CountryClick> countries,
+      LinkStats.ReturnRate returnRate,
+      LinkStats.Lifecycle lifecycle,
+      List<LinkStats.DailyClick> dailyClicks,
+      List<LinkStats.ClientAppClick> clientApps,
+      List<LinkStats.ChannelDepth> channelDepth) {}
+
+  /** 채널 최초 관측은 기본 표본 조건을 만족할 때만 읽는다. 인앱·충성도는 각각의 표본 조건을 적용한다. */
+  public List<LinkStats.Insight> computeReport(
+      ReportFacts facts, Supplier<List<HostFirstSeenRow>> channelFirstSeen) {
+    List<LinkStats.Insight> insights =
+        compute(
+            facts.total(),
+            facts.bot(),
+            facts.heatmap(),
+            facts.channels(),
+            facts.countries(),
+            facts.returnRate(),
+            facts.lifecycle(),
+            facts.dailyClicks());
+    if (facts.total() >= MIN_TOTAL_FOR_INSIGHTS) {
+      channelJump(channelFirstSeen.get()).ifPresent(insights::add);
+    }
+    inAppBrowser(facts.clientApps(), facts.human()).ifPresent(insights::add);
+    channelLoyalty(facts.channelDepth()).ifPresent(insights::add);
+    return insights;
+  }
+
+  /** 최초 채널보다 한 시간 이상 늦게 관측된 첫 채널을 찾는다. 입력은 최초 관측 시각 순서다. */
+  public Optional<LinkStats.Insight> channelJump(List<HostFirstSeenRow> rows) {
+    if (rows.size() < 2) return Optional.empty();
+    HostFirstSeenRow origin = rows.get(0);
+    if (origin.getHost() == null || origin.getFirstSeenEpoch() == null) return Optional.empty();
+    long originEpoch = origin.getFirstSeenEpoch();
+    for (int i = 1; i < rows.size(); i++) {
+      HostFirstSeenRow row = rows.get(i);
+      if (row.getHost() == null || row.getFirstSeenEpoch() == null) continue;
+      long gapSeconds = row.getFirstSeenEpoch() - originEpoch;
+      if (gapSeconds >= 3600) {
+        String message = msg("insight.CHANNEL_JUMP", origin.getHost(), row.getHost());
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("origin", origin.getHost());
+        data.put("jumpedTo", row.getHost());
+        data.put("gapHours", gapSeconds / 3600);
+        return Optional.of(new LinkStats.Insight("CHANNEL_JUMP", "info", message, data));
+      }
+    }
+    return Optional.empty();
   }
 
   public List<LinkStats.Insight> compute(
@@ -65,9 +125,6 @@ public class LinkInsights {
   /**
    * 인앱 브라우저 비중 — "카카오톡에서 열린 게 N%". 링크가 어디에 붙어 있는지가 아니라 어디에서 *열렸는지*라, 랜딩을 앱 웹뷰에서도 멀쩡히 돌게 만들지 말지를
    * 가른다(로그인 리다이렉트·폰트·다운로드가 인앱에서 곧잘 깨진다).
-   *
-   * <p>{@link #compute} 밖에 있는 건 {@code channelJump} 와 같은 이유다 — 조립기가 이미 들고 있는 데이터로 만드는 규칙이라 기존 호출자
-   * 계약을 건드리지 않는다.
    */
   public Optional<LinkStats.Insight> inAppBrowser(
       List<LinkStats.ClientAppClick> clientApps, long humanClicks) {

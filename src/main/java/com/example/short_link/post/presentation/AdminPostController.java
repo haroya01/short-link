@@ -51,8 +51,7 @@ public class AdminPostController {
       @AuthenticationPrincipal Long adminUserId,
       @PathVariable Long id,
       @Valid @RequestBody AdminUpdatePostRequest request) {
-    return PostView.from(
-        updatePostMetadata.adminExecute(adminUserId, id, request.title(), request.tags()));
+    return updatePostMetadata.adminExecute(adminUserId, id, request.title(), request.tags());
   }
 
   /**

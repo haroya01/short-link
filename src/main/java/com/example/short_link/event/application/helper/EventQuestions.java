@@ -7,6 +7,7 @@ import com.example.short_link.event.exception.EventException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +25,23 @@ public final class EventQuestions {
   private EventQuestions() {}
 
   public record QuestionSpec(String type, String label, List<String> options, boolean required) {}
+
+  public static List<EventQuestionEntity> toEntities(Long eventId, List<QuestionSpec> specs) {
+    if (specs == null || specs.isEmpty()) return List.of();
+    List<EventQuestionEntity> questions = new ArrayList<>(specs.size());
+    for (int position = 0; position < specs.size(); position++) {
+      QuestionSpec spec = specs.get(position);
+      questions.add(
+          new EventQuestionEntity(
+              eventId,
+              position,
+              parseType(spec.type()),
+              spec.label().trim(),
+              serializeOptions(spec.options()),
+              spec.required()));
+    }
+    return questions;
+  }
 
   public static void validateSpecs(List<QuestionSpec> specs) {
     if (specs == null) return;

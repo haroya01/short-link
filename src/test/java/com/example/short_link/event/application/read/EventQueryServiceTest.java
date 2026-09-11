@@ -5,7 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.event.application.image.EventCoverImageService;
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.event.application.read.EventView.EventLinkView;
 import com.example.short_link.event.domain.ContactField;
 import com.example.short_link.event.domain.EventEntity;
@@ -42,7 +42,7 @@ class EventQueryServiceTest {
   @Mock private EventRegistrationRepository registrationRepository;
   @Mock private EventLinkRepository eventLinkRepository;
   @Mock private LinkRepository linkRepository;
-  @Mock private EventCoverImageService coverImageService;
+  @Mock private ObjectStoragePublicUrls coverImageUrls;
 
   private EventQueryService service;
 
@@ -55,7 +55,7 @@ class EventQueryServiceTest {
             registrationRepository,
             eventLinkRepository,
             linkRepository,
-            coverImageService);
+            coverImageUrls);
   }
 
   private EventEntity ownedEvent() {
@@ -90,7 +90,7 @@ class EventQueryServiceTest {
   void listMyEvents_mapsCoverUrl() {
     EventEntity event = ownedEvent();
     when(eventRepository.findAllByUserIdOrderByCreatedAtDesc(1L)).thenReturn(List.of(event));
-    when(coverImageService.urlFor(null)).thenReturn(null);
+    when(coverImageUrls.forKey(null)).thenReturn(null);
 
     List<EventView> views = service.listMyEvents(1L);
 

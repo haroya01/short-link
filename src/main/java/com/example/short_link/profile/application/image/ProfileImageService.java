@@ -1,8 +1,9 @@
 package com.example.short_link.profile.application.image;
 
+import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
-import com.example.short_link.common.storage.s3.AvatarProperties;
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
@@ -34,12 +35,13 @@ public class ProfileImageService {
 
   private static final String KEY_PREFIX = "profile-images/";
 
-  private final AvatarProperties props;
+  private final ImageUploadPolicy uploadPolicy;
   private final ObjectStorage objectStorage;
+  private final ObjectStoragePublicUrls publicUrls;
 
   public PresignResult presignUpload(Long userId, String contentType) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
-    require(props.isConfigured());
+    require(objectStorage.isConfigured());
     String normalized = contentType == null ? "" : contentType.trim().toLowerCase(Locale.ROOT);
     String ext = ALLOWED_TYPES.get(normalized);
     if (ext == null) {
@@ -48,14 +50,20 @@ public class ProfileImageService {
     }
     String key = KEY_PREFIX + userId + "/" + UUID.randomUUID() + "." + ext;
     String uploadUrl =
-        objectStorage.presignPut(key, normalized, Duration.ofSeconds(props.presignTtlSeconds()));
+        objectStorage.presignPut(
+            key, normalized, Duration.ofSeconds(uploadPolicy.presignTtlSeconds()));
     return new PresignResult(
-        uploadUrl, publicUrlFor(key), key, normalized, props.maxBytes(), props.presignTtlSeconds());
+        uploadUrl,
+        publicUrls.forKey(key),
+        key,
+        normalized,
+        uploadPolicy.maxBytes(),
+        uploadPolicy.presignTtlSeconds());
   }
 
   public CommitResult commitUpload(Long userId, String key) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
-    require(props.isConfigured());
+    require(objectStorage.isConfigured());
     String expectedPrefix = KEY_PREFIX + userId + "/";
     if (key == null || key.isBlank() || !key.startsWith(expectedPrefix)) {
       throw new UserException(UserErrorCode.INVALID_AVATAR, "key not owned by user");
@@ -64,7 +72,7 @@ public class ProfileImageService {
         objectStorage
             .objectSize(key)
             .orElseThrow(() -> new UserException(UserErrorCode.INVALID_AVATAR, "upload not found"));
-    if (contentLength > props.maxBytes()) {
+    if (contentLength > uploadPolicy.maxBytes()) {
       try {
         objectStorage.delete(key);
       } catch (ObjectStorageException e) {
@@ -72,19 +80,10 @@ public class ProfileImageService {
       }
       throw new UserException(
           UserErrorCode.INVALID_AVATAR,
-          "image exceeds maxBytes (" + contentLength + " > " + props.maxBytes() + ")");
+          "image exceeds maxBytes (" + contentLength + " > " + uploadPolicy.maxBytes() + ")");
     }
     objectStorage.applyImmutableCacheControl(key);
-    return new CommitResult(publicUrlFor(key), key);
-  }
-
-  private String publicUrlFor(String key) {
-    String base = props.publicBaseUrl();
-    if (base == null || base.isBlank()) {
-      base = "https://" + props.bucket() + ".s3." + props.region() + ".amazonaws.com";
-    }
-    if (base.endsWith("/")) base = base.substring(0, base.length() - 1);
-    return base + "/" + key;
+    return new CommitResult(publicUrls.forKey(key), key);
   }
 
   private static void require(boolean condition) {

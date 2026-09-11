@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -34,7 +35,12 @@ class UpdatePostMetadataUseCaseTest {
     PostSearchTextUpdater searchTextUpdater =
         new PostSearchTextUpdater(
             postBlockRepository, postSearchTextRepository, JsonMapper.builder().build());
-    useCase = new UpdatePostMetadataUseCase(postOwnership, postRepository, searchTextUpdater);
+    useCase =
+        new UpdatePostMetadataUseCase(
+            postOwnership,
+            postRepository,
+            searchTextUpdater,
+            new PostWriteViewAssembler(postRepository));
   }
 
   private PostEntity ownedPost() {
@@ -47,13 +53,13 @@ class UpdatePostMetadataUseCaseTest {
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity updated =
+    PostView updated =
         useCase.execute(
             new UpdatePostMetadataCommand(
                 7L, 42L, "New Title", null, null, null, null, null, null));
 
-    assertThat(updated.getTitle()).isEqualTo("New Title");
-    assertThat(updated.getSlug()).isEqualTo("original-slug");
+    assertThat(updated.title()).isEqualTo("New Title");
+    assertThat(updated.slug()).isEqualTo("original-slug");
   }
 
   @Test

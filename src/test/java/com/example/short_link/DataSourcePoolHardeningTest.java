@@ -104,16 +104,23 @@ class DataSourcePoolHardeningTest {
 
   // ── helpers ──────────────────────────────────────────────────────────────────────────────────
 
-  /** 테스트 DB(application-test.yml) 로 향하는 독립 Hikari 설정. */
+  /** Spring 테스트와 같은 환경변수 재정의를 사용해 독립 Hikari 풀도 격리된 테스트 DB를 향한다. */
   private static HikariConfig baseConfig(String poolName) {
     Map<String, Object> test = loadYaml("/application-test.yml");
     HikariConfig c = new HikariConfig();
     c.setPoolName(poolName);
-    c.setJdbcUrl((String) dig(test, "spring", "datasource", "url"));
-    c.setUsername((String) dig(test, "spring", "datasource", "username"));
-    c.setPassword((String) dig(test, "spring", "datasource", "password"));
+    c.setJdbcUrl(testDataSourceProperty(test, "url"));
+    c.setUsername(testDataSourceProperty(test, "username"));
+    c.setPassword(testDataSourceProperty(test, "password"));
     c.setDriverClassName("com.mysql.cj.jdbc.Driver");
     return c;
+  }
+
+  private static String testDataSourceProperty(Map<String, Object> test, String property) {
+    return System.getenv()
+        .getOrDefault(
+            "SPRING_DATASOURCE_" + property.toUpperCase(java.util.Locale.ROOT),
+            (String) dig(test, "spring", "datasource", property));
   }
 
   private static Map<String, Object> loadYaml(String classpathResource) {

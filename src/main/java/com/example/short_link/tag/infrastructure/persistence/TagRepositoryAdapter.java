@@ -3,7 +3,9 @@ package com.example.short_link.tag.infrastructure.persistence;
 import com.example.short_link.tag.domain.TagEntity;
 import com.example.short_link.tag.domain.repository.TagRepository;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -50,7 +52,12 @@ class TagRepositoryAdapter implements TagRepository {
   }
 
   @Override
-  public List<Object[]> countLinksByTagIds(List<Long> tagIds) {
-    return jpa.countLinksByTagIds(tagIds);
+  public Map<Long, Long> countLinksByTagIds(List<Long> tagIds) {
+    Map<Long, Long> counts = new HashMap<>();
+    if (tagIds.isEmpty()) return counts;
+    for (Object[] row : jpa.countLinksByTagIds(tagIds)) {
+      counts.put((Long) row[0], (Long) row[1]);
+    }
+    return counts;
   }
 }

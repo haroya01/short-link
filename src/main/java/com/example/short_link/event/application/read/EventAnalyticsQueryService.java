@@ -90,13 +90,8 @@ public class EventAnalyticsQueryService {
 
   private static String registrationChannel(
       EventRegistrationEntity registration, Map<Long, String> channelByLinkId) {
-    if (registration.getLinkId() != null) {
-      String label = channelByLinkId.get(registration.getLinkId());
-      if (label != null) return label;
-    }
-    if (registration.getClientApp() != null) return registration.getClientApp();
-    if (registration.getReferrerHost() != null) return registration.getReferrerHost();
-    return DIRECT;
+    String label = RegistrationChannel.labelFor(registration, channelByLinkId);
+    return label != null ? label : DIRECT;
   }
 
   private static String orDirect(String value) {

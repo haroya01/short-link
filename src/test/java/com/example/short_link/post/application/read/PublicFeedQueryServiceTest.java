@@ -2,6 +2,7 @@ package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
@@ -68,7 +69,7 @@ class PublicFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L, 2L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countPublished(null)).thenReturn(1L);
 
-    PublicFeedView view = service.feed("recent", null, 0, 20);
+    PublicFeedView view = service.feed(PublicFeedQuery.from(null, null, "recent", null, 0, 20));
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).id()).isEqualTo(42L);
@@ -84,7 +85,7 @@ class PublicFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countPublished(null)).thenReturn(10L);
 
-    PublicFeedView view = service.feed("recent", null, 0, 2);
+    PublicFeedView view = service.feed(PublicFeedQuery.from(null, null, "recent", null, 0, 2));
 
     assertThat(view.items()).hasSize(2);
     assertThat(view.hasNext()).isTrue();
@@ -96,7 +97,7 @@ class PublicFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countPublishedByTag("spring")).thenReturn(1L);
 
-    PublicFeedView view = service.feedByTag("spring", 0, 20);
+    PublicFeedView view = service.feed(PublicFeedQuery.from(null, "spring", null, null, 0, 20));
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).slug()).isEqualTo("a");
@@ -111,7 +112,8 @@ class PublicFeedQueryServiceTest {
     when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
 
     // relevance = 새 기본값(sort 미인식/relevance 모두 관련성 쿼리로).
-    PublicFeedView view = service.search("spring", "relevance", null, 0, 20);
+    PublicFeedView view =
+        service.feed(PublicFeedQuery.from("spring", null, "relevance", null, 0, 20));
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).slug()).isEqualTo("a");
@@ -124,7 +126,7 @@ class PublicFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
 
-    service.search("spring", "recent", null, 0, 20);
+    service.feed(PublicFeedQuery.from("spring", null, "recent", null, 0, 20));
 
     verify(postRepository).searchPublished("spring", null, 0, 20);
   }
@@ -136,9 +138,31 @@ class PublicFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
 
-    service.search("spring", "trending", null, 0, 20);
+    service.feed(PublicFeedQuery.from("spring", null, "trending", null, 0, 20));
 
     verify(postRepository).searchPublishedTrending("spring", null, 0, 20);
+  }
+
+  @Test
+  void combinedSearchAndTagUsesOnlyTheSearchRepositoryQueries() {
+    when(postRepository.searchPublishedTrending("spring", " ko ", 2, 8)).thenReturn(List.of());
+
+    service.feed(PublicFeedQuery.from(" spring ", "java", "TRENDING", " ko ", 2, 8));
+
+    verify(postRepository).searchPublishedTrending("spring", " ko ", 2, 8);
+    verify(postRepository).countSearchPublished("spring", " ko ");
+    verifyNoMoreInteractions(postRepository);
+  }
+
+  @Test
+  void taggedFeedIgnoresSortAndLanguageAndUsesTheSameTagForRowsAndCount() {
+    when(postRepository.findPublishedByTag("java", 0, 20)).thenReturn(List.of());
+
+    service.feed(PublicFeedQuery.from("  ", " java ", "trending", "ja", 0, 20));
+
+    verify(postRepository).findPublishedByTag("java", 0, 20);
+    verify(postRepository).countPublishedByTag("java");
+    verifyNoMoreInteractions(postRepository);
   }
 
   @Test
@@ -146,12 +170,11 @@ class PublicFeedQueryServiceTest {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of(2L, 3L));
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
-    // No subscriptions / followed tags → those sides are the no-match sentinels.
+    // No subscriptions / followed tags → pass those selections as empty lists.
     when(postRepository.findPublishedByAuthorsSeriesOrTags(
-            List.of(2L, 3L), List.of(-1L), List.of("\u0000"), 0, 20))
+            List.of(2L, 3L), List.of(), List.of(), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
-    when(postRepository.countPublishedByAuthorsSeriesOrTags(
-            List.of(2L, 3L), List.of(-1L), List.of("\u0000")))
+    when(postRepository.countPublishedByAuthorsSeriesOrTags(List.of(2L, 3L), List.of(), List.of()))
         .thenReturn(1L);
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
 
@@ -166,12 +189,11 @@ class PublicFeedQueryServiceTest {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of(7L));
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
-    // No followed authors/tags → those sides are no-match sentinels; series side carries the query.
+    // No followed authors/tags → empty selections; series side carries the query.
     when(postRepository.findPublishedByAuthorsSeriesOrTags(
-            List.of(-1L), List.of(7L), List.of("\u0000"), 0, 20))
+            List.of(), List.of(7L), List.of(), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
-    when(postRepository.countPublishedByAuthorsSeriesOrTags(
-            List.of(-1L), List.of(7L), List.of("\u0000")))
+    when(postRepository.countPublishedByAuthorsSeriesOrTags(List.of(), List.of(7L), List.of()))
         .thenReturn(1L);
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
 
@@ -188,10 +210,10 @@ class PublicFeedQueryServiceTest {
     // Followed a tag (mixed case) → it's lower-cased before hitting the (lower(t) in :tags) query.
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of("Spring"), List.of()));
     when(postRepository.findPublishedByAuthorsSeriesOrTags(
-            List.of(-1L), List.of(-1L), List.of("spring"), 0, 20))
+            List.of(), List.of(), List.of("spring"), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
     when(postRepository.countPublishedByAuthorsSeriesOrTags(
-            List.of(-1L), List.of(-1L), List.of("spring")))
+            List.of(), List.of(), List.of("spring")))
         .thenReturn(1L);
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
 
@@ -234,7 +256,7 @@ class PublicFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countPublished(null)).thenReturn(1L);
 
-    service.feed("trending", null, 0, 20);
+    service.feed(PublicFeedQuery.from(null, null, "trending", null, 0, 20));
 
     verify(postRepository).findPublishedTrending(null, 0, 20);
   }
@@ -274,7 +296,7 @@ class PublicFeedQueryServiceTest {
     when(postRepository.findPublishedRecent("ko", 0, 20)).thenReturn(List.of());
     when(postRepository.countPublished("ko")).thenReturn(0L);
 
-    service.feed("recent", "ko", 0, 20);
+    service.feed(PublicFeedQuery.from(null, null, "recent", "ko", 0, 20));
 
     verify(postRepository).findPublishedRecent("ko", 0, 20);
     verify(postRepository).countPublished("ko");
@@ -285,7 +307,7 @@ class PublicFeedQueryServiceTest {
     when(postRepository.findPublishedTrending("ja", 0, 20)).thenReturn(List.of());
     when(postRepository.countPublished("ja")).thenReturn(0L);
 
-    service.feed("trending", "ja", 0, 20);
+    service.feed(PublicFeedQuery.from(null, null, "trending", "ja", 0, 20));
 
     verify(postRepository).findPublishedTrending("ja", 0, 20);
   }
@@ -295,7 +317,7 @@ class PublicFeedQueryServiceTest {
     when(postRepository.searchPublished("rust", "en", 0, 20)).thenReturn(List.of());
     when(postRepository.countSearchPublished("rust", "en")).thenReturn(0L);
 
-    service.search("rust", "recent", "en", 0, 20);
+    service.feed(PublicFeedQuery.from("rust", null, "recent", "en", 0, 20));
 
     verify(postRepository).searchPublished("rust", "en", 0, 20);
     verify(postRepository).countSearchPublished("rust", "en");

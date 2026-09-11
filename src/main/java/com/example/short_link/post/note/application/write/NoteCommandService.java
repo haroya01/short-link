@@ -4,12 +4,10 @@ import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.NoteLikeEntity;
 import com.example.short_link.post.note.domain.NoteRow;
 import com.example.short_link.post.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -61,13 +59,7 @@ public class NoteCommandService {
         .findById(noteId)
         .orElseThrow(() -> new PostException(PostErrorCode.NOTE_NOT_FOUND, noteId));
     if (on) {
-      if (!likes.exists(noteId, userId)) {
-        try {
-          likes.save(new NoteLikeEntity(noteId, userId));
-        } catch (DataIntegrityViolationException ignored) {
-          // 동시 요청이 먼저 넣음 — 멱등이므로 그대로 진행.
-        }
-      }
+      likes.addIfAbsent(noteId, userId);
     } else {
       likes.delete(noteId, userId);
     }

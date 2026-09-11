@@ -100,4 +100,17 @@ class UpdateDestinationUseCaseTest {
 
     assertThat(out.url()).isEqualTo("https://new.example.com");
   }
+
+  @Test
+  void omittedWeightAndBlankLabelKeepExistingValues() {
+    LinkDestinationEntity destination = dest();
+    destination.update(null, 37, "existing label", null, null);
+
+    var summary =
+        useCase.execute(7L, new ShortCode("abc"), 99L, null, null, "   ", null, null, null, null);
+
+    assertThat(summary.weight()).isEqualTo(37);
+    assertThat(summary.label()).isEqualTo("existing label");
+    assertThat(summary.url()).isEqualTo("https://old.example.com");
+  }
 }

@@ -2,7 +2,6 @@ package com.example.short_link.link.webhook.scheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -17,6 +16,7 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.webhook.application.helper.DailySummaryAssembler;
 import com.example.short_link.link.webhook.application.helper.DailySummaryPayload;
+import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
@@ -27,7 +27,6 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import tools.jackson.databind.json.JsonMapper;
 
 class DailyWebhookSummaryJobTest {
 
@@ -35,8 +34,7 @@ class DailyWebhookSummaryJobTest {
   private final LinkRepository links = mock(LinkRepository.class);
   private final UserAccessLookup users = mock(UserAccessLookup.class);
   private final DailySummaryAssembler assembler = mock(DailySummaryAssembler.class);
-  private final LinkWebhookDispatcher dispatcher = mock(LinkWebhookDispatcher.class);
-  private final JsonMapper jsonMapper = JsonMapper.builder().build();
+  private final WebhookHttpDeliveryClient deliveryClient = mock(WebhookHttpDeliveryClient.class);
 
   private LinkWebhookEntity hookWithSummary(int hour) {
     LinkWebhookEntity hook =
@@ -70,8 +68,7 @@ class DailyWebhookSummaryJobTest {
   }
 
   private DailyWebhookSummaryJob jobAt(ZonedDateTime t) {
-    return new DailyWebhookSummaryJob(
-        hooks, links, users, assembler, dispatcher, jsonMapper, clockAt(t));
+    return new DailyWebhookSummaryJob(hooks, links, users, assembler, deliveryClient, clockAt(t));
   }
 
   private DailySummaryPayload stubPayload() {
@@ -82,7 +79,7 @@ class DailyWebhookSummaryJobTest {
   @Test
   void firesWhenHourReachedAndNotSentToday() {
     LinkWebhookEntity hook = hookWithSummary(9);
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     ownerInSeoul();
     when(assembler.assemble(
@@ -91,13 +88,13 @@ class DailyWebhookSummaryJobTest {
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
-    verify(dispatcher, times(1)).deliver(eq(hook), anyString(), eq("daily_summary"));
+    verify(deliveryClient, times(1)).deliver(eq(hook), any(WebhookNotification.DailySummary.class));
   }
 
   @Test
   void marksSummarySentAfterDelivery() {
     LinkWebhookEntity hook = hookWithSummary(9);
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     ownerInSeoul();
     when(assembler.assemble(
@@ -112,33 +109,33 @@ class DailyWebhookSummaryJobTest {
   @Test
   void doesNotFireBeforeConfiguredHour() {
     LinkWebhookEntity hook = hookWithSummary(9);
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     ownerInSeoul();
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 8, 59, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
-    verify(dispatcher, never()).deliver(any(), anyString(), anyString());
+    verify(deliveryClient, never()).deliver(any(), any());
   }
 
   @Test
   void doesNotFireTwiceSameLocalDay() {
     LinkWebhookEntity hook = hookWithSummary(9);
     hook.markSummarySent(LocalDate.of(2026, 5, 25));
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     ownerInSeoul();
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 14, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
-    verify(dispatcher, never()).deliver(any(), anyString(), anyString());
+    verify(deliveryClient, never()).deliver(any(), any());
   }
 
   @Test
   void firesAgainNextDay() {
     LinkWebhookEntity hook = hookWithSummary(9);
     hook.markSummarySent(LocalDate.of(2026, 5, 24));
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     ownerInSeoul();
     when(assembler.assemble(
@@ -147,36 +144,36 @@ class DailyWebhookSummaryJobTest {
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 9, 5, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
-    verify(dispatcher, times(1)).deliver(eq(hook), anyString(), eq("daily_summary"));
+    verify(deliveryClient, times(1)).deliver(eq(hook), any(WebhookNotification.DailySummary.class));
   }
 
   @Test
   void skipsHookWhenOwnerMissing() {
     LinkWebhookEntity hook = hookWithSummary(9);
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     when(users.timezone(7L)).thenReturn(Optional.empty());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
-    verify(dispatcher, never()).deliver(any(), anyString(), anyString());
+    verify(deliveryClient, never()).deliver(any(), any());
   }
 
   @Test
   void skipsHookWhenLinkMissing() {
     LinkWebhookEntity hook = hookWithSummary(9);
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.empty());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
-    verify(dispatcher, never()).deliver(any(), anyString(), anyString());
+    verify(deliveryClient, never()).deliver(any(), any());
   }
 
   @Test
   void usesYesterdayAsWindow() {
     LinkWebhookEntity hook = hookWithSummary(9);
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     ownerInSeoul();
     when(assembler.assemble(
@@ -199,7 +196,7 @@ class DailyWebhookSummaryJobTest {
   @Test
   void falsyTimezoneFallsBackToSeoul() {
     LinkWebhookEntity hook = hookWithSummary(9);
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of(hook));
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of(hook));
     when(links.findById(1L)).thenReturn(Optional.of(link()));
     when(users.timezone(7L)).thenReturn(Optional.of("Not/A/Real/Zone"));
     when(assembler.assemble(
@@ -218,10 +215,10 @@ class DailyWebhookSummaryJobTest {
 
   @Test
   void emptyCandidateListIsNoOp() {
-    when(hooks.findAllEnabledByDeliveryMode(any(), any())).thenReturn(List.of());
+    when(hooks.findAllEnabledByDeliveryModes(any())).thenReturn(List.of());
 
     jobAt(ZonedDateTime.of(2026, 5, 25, 10, 0, 0, 0, ZoneId.of("Asia/Seoul"))).sweep();
 
-    verify(dispatcher, never()).deliver(any(), anyString(), anyString());
+    verify(deliveryClient, never()).deliver(any(), any());
   }
 }

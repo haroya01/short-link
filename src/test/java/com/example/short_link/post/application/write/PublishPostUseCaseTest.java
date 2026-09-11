@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.event.PostPublishedEvent;
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -37,10 +38,9 @@ class PublishPostUseCaseTest {
         new PublishPostUseCase(
             postOwnership,
             postRepository,
-            postRevisionCapture,
-            searchTextUpdater,
-            cacheEviction,
-            events);
+            new PostPublicationCompletion(
+                postRevisionCapture, searchTextUpdater, cacheEviction, events),
+            new PostWriteViewAssembler(postRepository));
   }
 
   @Test
@@ -49,13 +49,13 @@ class PublishPostUseCaseTest {
     when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity result = useCase.execute(new PublishPostCommand(7L, 42L));
+    PostView result = useCase.execute(new PublishPostCommand(7L, 42L));
 
-    assertThat(result.getStatus()).isEqualTo(PostStatus.PUBLISHED);
-    assertThat(result.getPublishedAt()).isNotNull();
-    verify(postRevisionCapture).capture(result);
+    assertThat(result.status()).isEqualTo(PostStatus.PUBLISHED.name());
+    assertThat(result.publishedAt()).isNotNull();
+    verify(postRevisionCapture).capture(post);
     // 발행 시점에도 검색 평문을 채워 "제목만 붙이고 블록 편집 없이 발행" 한 글이 본문·제목 검색에서 누락되지 않게 한다.
-    verify(searchTextUpdater).refresh(result);
+    verify(searchTextUpdater).refresh(post);
     // First publish fans out to followers via PostPublishedEvent.
     ArgumentCaptor<PostPublishedEvent> evt = ArgumentCaptor.forClass(PostPublishedEvent.class);
     verify(events).publishEvent(evt.capture());

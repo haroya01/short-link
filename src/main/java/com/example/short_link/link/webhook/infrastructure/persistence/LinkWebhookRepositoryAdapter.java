@@ -3,6 +3,7 @@ package com.example.short_link.link.webhook.infrastructure.persistence;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -51,8 +52,8 @@ class LinkWebhookRepositoryAdapter implements LinkWebhookRepository {
   }
 
   @Override
-  public List<LinkWebhookEntity> findAllEnabledByDeliveryMode(
-      WebhookDeliveryMode modeA, WebhookDeliveryMode modeB) {
-    return jpa.findAllEnabledByDeliveryMode(modeA, modeB);
+  public List<LinkWebhookEntity> findAllEnabledByDeliveryModes(
+      Collection<WebhookDeliveryMode> modes) {
+    return modes.isEmpty() ? List.of() : jpa.findAllEnabledByDeliveryModes(modes);
   }
 }

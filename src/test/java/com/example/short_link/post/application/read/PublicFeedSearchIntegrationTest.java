@@ -102,7 +102,7 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> slugs(String query) {
-    return service.search(query, "recent", null, 0, 20).items().stream()
+    return service.feed(PublicFeedQuery.from(query, null, "recent", null, 0, 20)).items().stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -203,7 +203,7 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> trendingSlugs(String query) {
-    return service.search(query, "trending", null, 0, 20).items().stream()
+    return service.feed(PublicFeedQuery.from(query, null, "trending", null, 0, 20)).items().stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -231,7 +231,10 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> relevanceSlugs(String query) {
-    return service.search(query, "relevance", null, 0, 20).items().stream()
+    return service
+        .feed(PublicFeedQuery.from(query, null, "relevance", null, 0, 20))
+        .items()
+        .stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -299,17 +302,15 @@ class PublicFeedSearchIntegrationTest {
   @Test
   void publishedWithoutBlockEditIsSearchableByTitleWord() {
     long author = author("publisher");
-    PostEntity created =
+    var created =
         createPost.execute(new CreatePostCommand(author, "publish-only", "동시성 제어 깊이 파보기", "ko"));
     // 블록 교체·메타 수정 없이 곧장 발행 — 예전이라면 search_text 가 NULL 로 남았을 경로.
-    publishPost.execute(new PublishPostCommand(author, created.getId()));
+    publishPost.execute(new PublishPostCommand(author, created.id()));
 
     // 곁 테이블에 발행 시점 refresh 로 행이 생겼고, 제목 단어(부분어 포함)로 잡힌다.
     Integer rows =
         jdbc.queryForObject(
-            "SELECT COUNT(*) FROM post_search_text WHERE post_id = ?",
-            Integer.class,
-            created.getId());
+            "SELECT COUNT(*) FROM post_search_text WHERE post_id = ?", Integer.class, created.id());
     assertThat(rows).isEqualTo(1);
     assertThat(relevanceSlugs("동시성")).containsExactly("publish-only");
     assertThat(relevanceSlugs("제어")).containsExactly("publish-only");

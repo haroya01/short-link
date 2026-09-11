@@ -1,8 +1,6 @@
 package com.example.short_link.post.application.write;
 
-import com.example.short_link.post.application.read.PostBlockView;
-import com.example.short_link.post.domain.PostBlockType;
-import java.net.URI;
+import com.example.short_link.post.domain.PostBlockContent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -11,14 +9,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
-import tools.jackson.databind.node.ObjectNode;
 
 /**
- * Markdown ↔ block-model conversion, ported line-for-line from the web editor's {@code
- * markdown-to-blocks.ts} so the native app and the web produce identical block streams for the same
- * markdown. 13 block types round-trip except {@code CTA_REF}, which has no markdown authoring path
- * and is preserved verbatim. The frontend copy remains the reference — when the mapping changes
- * there, mirror it here (and vice versa).
+ * Markdown ↔ block-model conversion, matching the web editor's {@code markdown-to-blocks.ts} so the
+ * native app and the web produce identical block streams for the same markdown. 13 block types
+ * round-trip except {@code CTA_REF}, which has no markdown authoring path and is preserved
+ * verbatim. The frontend copy remains the reference — when the mapping changes there, mirror it
+ * here (and vice versa).
  */
 @Component
 @RequiredArgsConstructor
@@ -26,314 +23,87 @@ public class MarkdownBlocksConverter {
 
   private final JsonMapper json;
 
-  private static final Pattern FENCE = Pattern.compile("^(`{3,}|~{3,})(.*)$");
-  private static final Pattern HEADING = Pattern.compile("^(#{1,3})\\s+(.+)$");
-  private static final Pattern QUOTE = Pattern.compile("^>\\s*(.*)$");
-  // 표준 마크다운 image title `![alt](url "캡션")` 의 title 을 캡션으로 분리 캡처(group 3). The title
-  // allows escaped quotes (`\"`) — the web editor backslash-escapes a `"` inside the caption, so a
-  // caption like `she said "hi"` serializes as `"she said \"hi\""`; without honoring the escape the
-  // whole image match failed and the image fell back to a literal-text PARAGRAPH.
-  private static final Pattern IMAGE =
-      Pattern.compile("!\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+\"((?:[^\"\\\\]|\\\\.)*)\")?\\)");
-  // Backslash escapes inside an image title (`\"` → `"`, `\\` → `\`), undone when reading a caption
-  // back out. Mirrors the web's unescapeTitle.
-  private static final Pattern TITLE_ESCAPE = Pattern.compile("\\\\([\"\\\\])");
-  private static final Pattern AUTOLINK = Pattern.compile("^<(https?://[^>\\s]+)>$");
-  private static final Pattern LINK_ONLY =
-      Pattern.compile("^\\[[^\\]]*\\]\\((https?://[^)\\s]+)\\)$");
-  private static final Pattern BARE_URL = Pattern.compile("^(https?://\\S+)$");
-  // A URL path ending in one of the image formats the upload/import pipeline handles — used to send
-  // a standalone bare image URL to an IMAGE block instead of a link-preview EMBED.
-  private static final Pattern IMAGE_EXT =
-      Pattern.compile("\\.(?:jpe?g|png|gif|webp)$", Pattern.CASE_INSENSITIVE);
-  private static final Pattern LIST_START = Pattern.compile("^(?:[-*]|\\d+\\.)\\s+.*");
-  private static final Pattern LIST_CONT = Pattern.compile("^\\s*(?:[-*]|\\d+\\.)\\s+.*");
-  private static final Pattern INDENTED = Pattern.compile("^\\s+\\S.*");
-  private static final Pattern TABLE_SEP = Pattern.compile("^[\\s|:-]+$");
-  private static final Pattern PARA_BREAK =
-      Pattern.compile("^(#{1,3}\\s|>\\s|!\\[|[-*]\\s|\\d+\\.\\s).*");
-
-  // Medium-style per-image width, carried as an alt-text marker prefix (the only metadata that
-  // survives the markdown round-trip). Stripped before storage, re-attached on serialize.
-  private static final String[] WIDTHS = {"wide", "full", "half"};
-
-  // MARK: markdown → blocks
-
   public List<ReplacePostBlocksCommand.BlockInput> toBlocks(String markdown) {
-    if (markdown == null || markdown.isBlank()) {
-      return List.of();
-    }
-    // Normalize CRLF pastes (Windows / external editors) — otherwise a stray \r rides every line
-    // into block contents and line-head matching. Mirrored in the frontend markdown-to-blocks.ts.
-    String[] lines = markdown.replace("\r\n", "\n").split("\n", -1);
-    List<ReplacePostBlocksCommand.BlockInput> blocks = new ArrayList<>();
-    int i = 0;
-
-    while (i < lines.length) {
-      String line = lines[i];
-
-      if (line.trim().isEmpty()) {
-        i++;
-        continue;
-      }
-
-      // Fenced code block — consume the whole region (incl. blank / markdown-like lines) so the
-      // line-based rules below can't tear it apart.
-      Matcher fence = FENCE.matcher(line);
-      if (fence.matches()) {
-        String marker = fence.group(1).substring(0, 1).repeat(3);
-        String langPart = fence.group(2).trim();
-        String lang = langPart.isEmpty() ? null : langPart.split("\\s+")[0];
-        List<String> code = new ArrayList<>();
-        i++;
-        while (i < lines.length) {
-          if (lines[i].stripLeading().startsWith(marker)) {
-            i++;
-            break;
-          }
-          code.add(lines[i]);
-          i++;
-        }
-        ObjectNode node = json.createObjectNode();
-        if (lang == null) {
-          node.putNull("lang");
-        } else {
-          node.put("lang", lang);
-        }
-        node.put("code", String.join("\n", code));
-        blocks.add(block(PostBlockType.CODE, json.writeValueAsString(node)));
-        continue;
-      }
-
-      // GFM table (header row + "| --- |" separator + body rows) → raw markdown in one block.
-      if (isTableStart(line, i + 1 < lines.length ? lines[i + 1] : null)) {
-        List<String> rows = new ArrayList<>();
-        while (i < lines.length && lines[i].stripLeading().startsWith("|")) {
-          rows.add(lines[i]);
-          i++;
-        }
-        blocks.add(block(PostBlockType.TABLE, String.join("\n", rows)));
-        continue;
-      }
-
-      if (line.trim().equals("---")) {
-        blocks.add(block(PostBlockType.DIVIDER, null));
-        i++;
-        continue;
-      }
-
-      Matcher heading = HEADING.matcher(line);
-      if (heading.matches()) {
-        PostBlockType type =
-            switch (heading.group(1).length()) {
-              case 1 -> PostBlockType.H1;
-              case 2 -> PostBlockType.H2;
-              default -> PostBlockType.H3;
-            };
-        blocks.add(block(type, heading.group(2).trim()));
-        i++;
-        continue;
-      }
-
-      Matcher quote = QUOTE.matcher(line);
-      if (quote.matches()) {
-        // Coalesce consecutive `>` lines into ONE quote — one block per line rendered as N
-        // adjacent quote boxes.
-        StringBuilder quoteLines = new StringBuilder(quote.group(1));
-        i++;
-        while (i < lines.length) {
-          Matcher qm = QUOTE.matcher(lines[i]);
-          if (!qm.matches()) break;
-          quoteLines.append('\n').append(qm.group(1));
-          i++;
-        }
-        blocks.add(block(PostBlockType.QUOTE, quoteLines.toString().trim()));
-        continue;
-      }
-
-      // One OR MORE images on a line (a side-by-side «half» pair serializes adjacent) → one IMAGE
-      // block each. Only when the line is *nothing but* images.
-      Matcher img = IMAGE.matcher(line);
-      List<String[]> images = new ArrayList<>();
-      while (img.find()) {
-        images.add(new String[] {img.group(1), img.group(2), img.group(3)});
-      }
-      if (!images.isEmpty() && IMAGE.matcher(line).replaceAll("").trim().isEmpty()) {
-        for (String[] im : images) {
-          ObjectNode node = json.createObjectNode();
-          node.put("url", im[1]);
-          String alt = im[0];
-          String width = null;
-          for (String w : WIDTHS) {
-            String mark = "«" + w + "» ";
-            if (alt.startsWith(mark)) {
-              width = w;
-              alt = alt.substring(mark.length());
-              break;
-            }
-          }
-          node.put("alt", alt);
-          if (width != null) {
-            node.put("width", width);
-          }
-          if (im[2] != null) {
-            String caption = unescapeTitle(im[2]).trim();
-            if (!caption.isEmpty()) {
-              node.put("caption", caption);
-            }
-          }
-          blocks.add(block(PostBlockType.IMAGE, json.writeValueAsString(node)));
-        }
-        i++;
-        continue;
-      }
-
-      // A standalone bare image URL (e.g. an external image pasted on its own line) → IMAGE block,
-      // so it renders as the image and not a link-preview card. Must run before the embed check,
-      // which would otherwise claim every standalone http(s) URL.
-      String imageUrl = standaloneImageUrl(line);
-      if (imageUrl != null) {
-        ObjectNode node = json.createObjectNode();
-        node.put("url", imageUrl);
-        node.put("alt", "");
-        blocks.add(block(PostBlockType.IMAGE, json.writeValueAsString(node)));
-        i++;
-        continue;
-      }
-
-      String embedUrl = standaloneEmbedUrl(line);
-      if (embedUrl != null) {
-        blocks.add(block(PostBlockType.EMBED, embedUrl));
-        i++;
-        continue;
-      }
-
-      // A markdown list (bullet or numbered), possibly NESTED — capture the whole region as raw
-      // markdown so nesting round-trips. Block type follows the first line.
-      if (LIST_START.matcher(line).matches()) {
-        boolean ordered = Character.isDigit(line.charAt(0));
-        List<String> listLines = new ArrayList<>();
-        while (i < lines.length
-            && !lines[i].trim().isEmpty()
-            && (LIST_CONT.matcher(lines[i]).matches() || INDENTED.matcher(lines[i]).matches())) {
-          listLines.add(lines[i]);
-          i++;
-        }
-        blocks.add(
-            block(
-                ordered ? PostBlockType.LIST_NUMBERED : PostBlockType.LIST_BULLET,
-                String.join("\n", listLines)));
-        continue;
-      }
-
-      // PARAGRAPH — consecutive non-empty lines. Always consume the current line FIRST so `i`
-      // advances even when the line matched no rule above (e.g. an image with a trailing caption);
-      // otherwise the loop would spin forever.
-      List<String> paraLines = new ArrayList<>();
-      paraLines.add(lines[i]);
-      i++;
-      while (i < lines.length
-          && !lines[i].trim().isEmpty()
-          && !lines[i].trim().equals("---")
-          && !lines[i].startsWith("```")
-          && !lines[i].startsWith("~~~")
-          && !isTableStart(lines[i], i + 1 < lines.length ? lines[i + 1] : null)
-          && !PARA_BREAK.matcher(lines[i]).matches()
-          && standaloneImageUrl(lines[i]) == null
-          && standaloneEmbedUrl(lines[i]) == null) {
-        paraLines.add(lines[i]);
-        i++;
-      }
-      blocks.add(block(PostBlockType.PARAGRAPH, String.join("\n", paraLines)));
-    }
-
-    return blocks;
+    if (markdown == null || markdown.isBlank()) return List.of();
+    return new MarkdownBlockParser(json, markdown).parse();
   }
 
-  // MARK: blocks → markdown
-
-  public String toMarkdown(List<PostBlockView> blocks) {
+  public String toMarkdown(List<? extends PostBlockContent> blocks) {
     List<String> parts = new ArrayList<>();
-    for (PostBlockView b : blocks) {
-      String content = b.content();
-      switch (b.type()) {
-        case "H1" -> parts.add("# " + nullToEmpty(content));
-        case "H2" -> parts.add("## " + nullToEmpty(content));
-        case "H3" -> parts.add("### " + nullToEmpty(content));
-        case "QUOTE" -> {
-          // Prefix every line so a multi-line quote round-trips back to ONE QUOTE block.
-          StringBuilder sb = new StringBuilder();
-          for (String l : nullToEmpty(content).split("\n", -1)) {
-            if (sb.length() > 0) sb.append('\n');
-            sb.append("> ").append(l);
-          }
-          parts.add(sb.toString());
-        }
-        case "DIVIDER" -> parts.add("---");
-        case "IMAGE" -> {
-          JsonNode node = readTreeOrNull(content);
-          if (node != null && node.path("url").isString()) {
-            String alt = node.path("alt").isString() ? node.path("alt").stringValue() : "";
-            String width = node.path("width").isString() ? node.path("width").stringValue() : null;
-            String marked = width != null ? "«" + width + "» " + alt : alt;
-            String caption =
-                node.path("caption").isString() ? node.path("caption").stringValue() : "";
-            // 캡션은 표준 image title 로 — `"`/`\` 는 이스케이프해 title 을 깨지 않고 그대로 왕복시킨다
-            // (파싱이 로드 시 `\"` 를 다시 `"` 로 읽어 원문 그대로 복원된다). 웹 직렬화와 동일.
-            String title =
-                caption.isBlank()
-                    ? ""
-                    : " \"" + caption.trim().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
-            parts.add("![" + marked + "](" + node.path("url").stringValue() + title + ")");
-          }
-        }
-        case "LIST_BULLET", "LIST_NUMBERED" -> {
-          if (content == null || content.isEmpty()) break;
-          // New format = raw markdown (nesting-capable). Legacy = JSON array of flat strings.
-          JsonNode node = readTreeOrNull(content);
-          if (node != null && node.isArray()) {
-            StringBuilder sb = new StringBuilder();
-            int n = 0;
-            for (JsonNode item : node) {
-              if (sb.length() > 0) sb.append('\n');
-              sb.append(
-                  b.type().equals("LIST_NUMBERED")
-                      ? (++n) + ". " + item.asString()
-                      : "- " + item.asString());
-            }
-            parts.add(sb.toString());
-          } else {
-            parts.add(content);
-          }
-        }
-        case "EMBED" -> {
-          // Emit the URL on its own line so it round-trips back to an EMBED block. Content is
-          // normally the bare URL; tolerate legacy JSON {url}.
-          if (content == null || content.isEmpty()) break;
-          JsonNode node = readTreeOrNull(content);
-          if (node != null && node.path("url").isString()) {
-            parts.add(node.path("url").stringValue());
-          } else {
-            parts.add(content);
-          }
-        }
-        case "CODE" -> {
-          JsonNode node = readTreeOrNull(content);
-          if (node != null) {
-            String code = node.path("code").isString() ? node.path("code").stringValue() : "";
-            String lang = node.path("lang").isString() ? node.path("lang").stringValue() : "";
-            String fence = fenceFor(code);
-            parts.add(fence + lang + "\n" + code + "\n" + fence);
-          }
-        }
-          // TABLE = raw GFM markdown, CTA_REF = read-only placeholder preserved as-is, PARAGRAPH
-          // and anything unknown fall through to verbatim content.
-        default -> {
-          if (content != null && !content.isEmpty()) parts.add(content);
-        }
-      }
+    for (PostBlockContent block : blocks) {
+      String part = serialize(block);
+      if (part != null) parts.add(part);
     }
     return String.join("\n\n", parts);
+  }
+
+  private String serialize(PostBlockContent block) {
+    String content = block.content();
+    return switch (block.type()) {
+      case "H1" -> "# " + nullToEmpty(content);
+      case "H2" -> "## " + nullToEmpty(content);
+      case "H3" -> "### " + nullToEmpty(content);
+      case "QUOTE" -> quote(content);
+      case "DIVIDER" -> "---";
+      case "IMAGE" -> image(content);
+      case "LIST_BULLET", "LIST_NUMBERED" -> list(content, block.type().equals("LIST_NUMBERED"));
+      case "EMBED" -> embed(content);
+      case "CODE" -> code(content);
+        // TABLE, CTA_REF, PARAGRAPH 및 알 수 없는 타입은 원문을 유지한다.
+      default -> content == null || content.isEmpty() ? null : content;
+    };
+  }
+
+  private static String quote(String content) {
+    StringBuilder result = new StringBuilder();
+    for (String line : nullToEmpty(content).split("\n", -1)) {
+      if (result.length() > 0) result.append('\n');
+      result.append("> ").append(line);
+    }
+    return result.toString();
+  }
+
+  private String image(String content) {
+    JsonNode node = readTreeOrNull(content);
+    if (node == null || !node.path("url").isString()) return null;
+    String alt = node.path("alt").isString() ? node.path("alt").stringValue() : "";
+    String width = node.path("width").isString() ? node.path("width").stringValue() : null;
+    String marked = width != null ? "«" + width + "» " + alt : alt;
+    String caption = node.path("caption").isString() ? node.path("caption").stringValue() : "";
+    String title =
+        caption.isBlank()
+            ? ""
+            : " \"" + caption.trim().replace("\\", "\\\\").replace("\"", "\\\"") + "\"";
+    return "![" + marked + "](" + node.path("url").stringValue() + title + ")";
+  }
+
+  private String list(String content, boolean numbered) {
+    if (content == null || content.isEmpty()) return null;
+    JsonNode node = readTreeOrNull(content);
+    // 현재 형식은 중첩 가능한 마크다운, 구형 형식은 문자열 JSON 배열이다.
+    if (node == null || !node.isArray()) return content;
+    StringBuilder result = new StringBuilder();
+    int number = 0;
+    for (JsonNode item : node) {
+      if (result.length() > 0) result.append('\n');
+      result.append(numbered ? (++number) + ". " + item.asString() : "- " + item.asString());
+    }
+    return result.toString();
+  }
+
+  private String embed(String content) {
+    if (content == null || content.isEmpty()) return null;
+    JsonNode node = readTreeOrNull(content);
+    return node != null && node.path("url").isString() ? node.path("url").stringValue() : content;
+  }
+
+  private String code(String content) {
+    JsonNode node = readTreeOrNull(content);
+    if (node == null) return null;
+    String code = node.path("code").isString() ? node.path("code").stringValue() : "";
+    String lang = node.path("lang").isString() ? node.path("lang").stringValue() : "";
+    String fence = fenceFor(code);
+    return fence + lang + "\n" + code + "\n" + fence;
   }
 
   /** A backtick fence longer than any run of backticks in the code, so the code can't break out. */
@@ -344,63 +114,6 @@ public class MarkdownBlocksConverter {
       longest = Math.max(longest, m.group().length());
     }
     return "`".repeat(Math.max(3, longest + 1));
-  }
-
-  /** A pipe-led line whose next line is a GFM separator row (`| --- |`) — the start of a table. */
-  private static boolean isTableStart(String line, String next) {
-    if (!line.stripLeading().startsWith("|") || next == null) return false;
-    String t = next.trim();
-    return TABLE_SEP.matcher(t).matches() && t.contains("-") && t.contains("|");
-  }
-
-  /**
-   * A line that is just a single URL (bare, an autolink, or a `[text](url)` link) → that URL.
-   * velog-style: ANY standalone parseable http(s) URL on its own line becomes an EMBED card
-   * (video→iframe, map→static map, everything else→OG link card — the reader decides). The web's
-   * {@code planEmbed} only returns null for unparseable / non-http URLs, so "parseable" is the
-   * whole gate here. A URL with surrounding text stays an inline link.
-   */
-  private static String standaloneEmbedUrl(String line) {
-    String t = line.trim();
-    Matcher m = AUTOLINK.matcher(t);
-    if (!m.matches()) m = LINK_ONLY.matcher(t);
-    if (!m.matches()) m = BARE_URL.matcher(t);
-    if (!m.matches()) return null;
-    String url = m.group(1);
-    try {
-      URI parsed = new URI(url);
-      if (parsed.getHost() == null) return null;
-      return url;
-    } catch (Exception e) {
-      return null;
-    }
-  }
-
-  /**
-   * A line that is just a bare (or {@code <autolink>}) URL pointing at an image file (by extension)
-   * → that URL, so a pasted external image renders as an IMAGE block instead of a link-preview
-   * EMBED. A labeled {@code [text](url)} link is deliberately left to the embed path (the author
-   * meant a link, not an image). Mirrors the web's {@code standaloneImageUrl}.
-   */
-  private static String standaloneImageUrl(String line) {
-    String t = line.trim();
-    Matcher m = AUTOLINK.matcher(t);
-    if (!m.matches()) m = BARE_URL.matcher(t);
-    if (!m.matches()) return null;
-    String url = m.group(1);
-    try {
-      URI parsed = new URI(url);
-      if (parsed.getHost() == null) return null;
-      String path = parsed.getPath();
-      return path != null && IMAGE_EXT.matcher(path).find() ? url : null;
-    } catch (Exception e) {
-      return null;
-    }
-  }
-
-  /** Undo the image-title escaping ({@code \"} → {@code "}, {@code \\} → {@code \}). */
-  private static String unescapeTitle(String s) {
-    return TITLE_ESCAPE.matcher(s).replaceAll("$1");
   }
 
   private JsonNode readTreeOrNull(String content) {
@@ -414,9 +127,5 @@ public class MarkdownBlocksConverter {
 
   private static String nullToEmpty(String s) {
     return s == null ? "" : s;
-  }
-
-  private static ReplacePostBlocksCommand.BlockInput block(PostBlockType type, String content) {
-    return new ReplacePostBlocksCommand.BlockInput(type, content);
   }
 }

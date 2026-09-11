@@ -42,14 +42,9 @@ public class CollectionCommandService {
 
   @Transactional
   public CollectionEntity create(CreateCollectionCommand cmd) {
-    String title = cmd.title() == null ? "" : cmd.title().strip();
-    if (title.isEmpty()) {
-      throw new PostException(PostErrorCode.COLLECTION_TITLE_REQUIRED);
-    }
-    title = clamp(title, CollectionEntity.MAX_TITLE);
-    String description = clampNullable(cmd.description(), CollectionEntity.MAX_DESCRIPTION);
     return collectionRepository.save(
-        new CollectionEntity(cmd.userId(), title, description, cmd.visibility(), cmd.kind()));
+        new CollectionEntity(
+            cmd.userId(), cmd.title(), cmd.description(), cmd.visibility(), cmd.kind()));
   }
 
   /**
@@ -73,22 +68,13 @@ public class CollectionCommandService {
     for (int i = 0; i < orderedConnectionIds.size(); i++) {
       byId.get(orderedConnectionIds.get(i)).reposition(i);
     }
-    // updated_at 을 끌어올려 "최근 손댄 컬렉션"이 목록 위로.
-    collection.edit(collection.getTitle(), collection.getDescription(), collection.getVisibility());
   }
 
   /** 이름·소개·공개 범위 수정(주인만). 제목은 비울 수 없다. */
   @Transactional
   public CollectionEntity edit(EditCollectionCommand cmd) {
     CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
-    String title = cmd.title() == null ? "" : cmd.title().strip();
-    if (title.isEmpty()) {
-      throw new PostException(PostErrorCode.COLLECTION_TITLE_REQUIRED);
-    }
-    collection.edit(
-        clamp(title, CollectionEntity.MAX_TITLE),
-        clampNullable(cmd.description(), CollectionEntity.MAX_DESCRIPTION),
-        cmd.visibility());
+    collection.edit(cmd.title(), cmd.description(), cmd.visibility());
     return collection;
   }
 
@@ -109,21 +95,19 @@ public class CollectionCommandService {
             .findFirst()
             .orElse(null);
     if (already != null) {
-      String rewritten = clampNullable(cmd.why(), CollectionConnectionEntity.MAX_WHY);
+      String rewritten = normalizeWhy(cmd.why());
       if (rewritten != null && !rewritten.isBlank()) already.rewriteWhy(rewritten);
       return already;
     }
 
     int position =
         existing.stream().mapToInt(CollectionConnectionEntity::getPosition).max().orElse(-1) + 1;
-    String why = clampNullable(cmd.why(), CollectionConnectionEntity.MAX_WHY);
+    String why = normalizeWhy(cmd.why());
 
     CollectionConnectionEntity saved =
         connectionRepository.save(
             new CollectionConnectionEntity(
                 collection.getId(), cmd.blockType(), cmd.refId(), why, position));
-    // updated_at 을 끌어올려 "최근 손댄 컬렉션"이 목록 위로 온다.
-    collection.edit(collection.getTitle(), collection.getDescription(), collection.getVisibility());
 
     publishConnected(collection, cmd, existing);
     return saved;
@@ -252,14 +236,12 @@ public class CollectionCommandService {
     }
   }
 
-  private static String clamp(String value, int max) {
-    return value.length() > max ? value.substring(0, max) : value;
-  }
-
-  private static String clampNullable(String value, int max) {
+  private static String normalizeWhy(String value) {
     if (value == null) return null;
     String stripped = value.strip();
     if (stripped.isEmpty()) return null;
-    return clamp(stripped, max);
+    return stripped.length() > CollectionConnectionEntity.MAX_WHY
+        ? stripped.substring(0, CollectionConnectionEntity.MAX_WHY)
+        : stripped;
   }
 }

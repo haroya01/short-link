@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
@@ -12,11 +13,12 @@ public class SchedulePostUseCase {
 
   private final PostOwnership postOwnership;
   private final PostRepository postRepository;
+  private final PostWriteViewAssembler writeViews;
 
   @Transactional
-  public PostEntity execute(SchedulePostCommand cmd) {
+  public PostView execute(SchedulePostCommand cmd) {
     PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
     post.schedule(cmd.scheduledAt());
-    return postRepository.save(post);
+    return writeViews.fromSaved(postRepository.save(post));
   }
 }

@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -15,9 +16,10 @@ public class CreatePostUseCase {
 
   private final PostRepository postRepository;
   private final UserModerationGuard moderationGuard;
+  private final PostWriteViewAssembler writeViews;
 
   @Transactional
-  public PostEntity execute(CreatePostCommand cmd) {
+  public PostView execute(CreatePostCommand cmd) {
     // 제재(BANNED/현재 SUSPENDED) 유저는 콘텐츠를 만들 수 없다.
     moderationGuard.requireCanWrite(cmd.userId());
     if (postRepository.existsByUserIdAndSlug(cmd.userId(), cmd.slug())) {
@@ -28,6 +30,6 @@ public class CreatePostUseCase {
     // Title column is NOT NULL; a draft may be untitled, so coalesce a missing title to blank.
     String title = cmd.title() == null ? "" : cmd.title();
     PostEntity post = new PostEntity(cmd.userId(), cmd.slug(), title, cmd.languageTag());
-    return postRepository.save(post);
+    return writeViews.fromSaved(postRepository.save(post));
   }
 }

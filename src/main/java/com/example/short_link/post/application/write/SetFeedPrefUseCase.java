@@ -1,6 +1,6 @@
 package com.example.short_link.post.application.write;
 
-import com.example.short_link.post.application.read.FeedPrefsView;
+import com.example.short_link.post.domain.FeedTab;
 import com.example.short_link.post.domain.UserFeedPrefEntity;
 import com.example.short_link.post.domain.repository.UserFeedPrefRepository;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +18,7 @@ public class SetFeedPrefUseCase {
 
   @Transactional
   public void setDefaultTab(Long userId, String tab) {
-    if (!FeedPrefsView.isAllowed(tab)) {
+    if (!FeedTab.isAllowed(tab)) {
       throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unknown feed tab: " + tab);
     }
     repository

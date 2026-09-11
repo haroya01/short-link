@@ -110,10 +110,4 @@ public class EventRegistrationEntity extends BaseCreatedEntity {
     this.status = RegistrationStatus.CONFIRMED;
     this.canceledAt = null;
   }
-
-  public void purgePii() {
-    this.name = "[purged]";
-    this.contact = "purged:" + id;
-    this.answersJson = null;
-  }
 }

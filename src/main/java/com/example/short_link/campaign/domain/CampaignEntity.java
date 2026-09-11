@@ -1,6 +1,7 @@
 package com.example.short_link.campaign.domain;
 
-import com.example.short_link.campaign.domain.repository.*;
+import com.example.short_link.campaign.exception.CampaignErrorCode;
+import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.common.jpa.BaseTimeEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -74,6 +75,7 @@ public class CampaignEntity extends BaseTimeEntity {
       CampaignPostEndAction postEndAction,
       String postEndDestinationUrl,
       String postEndMessage) {
+    validatePolicy(startsAt, endsAt, postEndAction, postEndDestinationUrl);
     this.ownerId = ownerId;
     this.name = name;
     this.startsAt = startsAt;
@@ -108,12 +110,34 @@ public class CampaignEntity extends BaseTimeEntity {
     this.status = CampaignStatus.ARCHIVED;
   }
 
+  /** 수동 종료는 보관된 캠페인에서 거부하고, 재호출 시 최초 종료 시각을 유지한다. */
+  public Instant endNow(Instant now) {
+    requireNotArchived();
+    markEnded(now);
+    return endedAt != null ? endedAt : now;
+  }
+
+  public Instant policyReapplicationTime(Instant now) {
+    if (status != CampaignStatus.ENDED) {
+      throw new CampaignException(CampaignErrorCode.REAPPLY_ON_NON_ENDED);
+    }
+    return endedAt != null ? endedAt : now;
+  }
+
+  public void requireBatchEditable() {
+    if (status == CampaignStatus.ENDED || status == CampaignStatus.ARCHIVED) {
+      throw new CampaignException(CampaignErrorCode.CAMPAIGN_TERMINAL_STATE);
+    }
+  }
+
   public void updatePolicy(
       Instant endsAt,
       String defaultDestinationUrl,
       CampaignPostEndAction postEndAction,
       String postEndDestinationUrl,
       String postEndMessage) {
+    requireNotArchived();
+    validatePolicy(startsAt, endsAt, postEndAction, postEndDestinationUrl);
     this.endsAt = endsAt;
     this.defaultDestinationUrl = defaultDestinationUrl;
     this.postEndAction = postEndAction == null ? CampaignPostEndAction.KEEP : postEndAction;
@@ -123,6 +147,26 @@ public class CampaignEntity extends BaseTimeEntity {
 
   public void rename(String name) {
     this.name = name;
+  }
+
+  private void requireNotArchived() {
+    if (status == CampaignStatus.ARCHIVED) {
+      throw new CampaignException(CampaignErrorCode.CAMPAIGN_ARCHIVED);
+    }
+  }
+
+  private static void validatePolicy(
+      Instant startsAt,
+      Instant endsAt,
+      CampaignPostEndAction postEndAction,
+      String postEndDestinationUrl) {
+    if (!endsAt.isAfter(startsAt)) {
+      throw new CampaignException(CampaignErrorCode.INVALID_CAMPAIGN_PERIOD);
+    }
+    if (postEndAction == CampaignPostEndAction.REDIRECT
+        && (postEndDestinationUrl == null || postEndDestinationUrl.isBlank())) {
+      throw new CampaignException(CampaignErrorCode.MISSING_POST_END_DESTINATION);
+    }
   }
 
   private static String normalizeMessage(String raw) {

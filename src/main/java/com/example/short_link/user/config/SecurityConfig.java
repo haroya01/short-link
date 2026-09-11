@@ -5,6 +5,7 @@ import static org.springframework.http.HttpMethod.POST;
 import static org.springframework.security.web.util.matcher.RegexRequestMatcher.regexMatcher;
 
 import com.example.short_link.common.config.RateLimitProperties;
+import com.example.short_link.common.web.RateLimitCounter;
 import com.example.short_link.common.web.RateLimitFilter;
 import com.example.short_link.user.presentation.security.ApiKeyAuthenticationFilter;
 import com.example.short_link.user.presentation.security.JsonAuthenticationEntryPoint;
@@ -19,7 +20,6 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -105,12 +105,12 @@ public class SecurityConfig {
 
   @Bean
   public RateLimitFilter rateLimitFilter(
-      StringRedisTemplate redis,
+      RateLimitCounter counter,
       JsonMapper jsonMapper,
       RateLimitProperties rateLimit,
       MeterRegistry meterRegistry) {
     return new RateLimitFilter(
-        redis, jsonMapper, rateLimit.anonymous(), rateLimit.authenticated(), meterRegistry);
+        counter, jsonMapper, rateLimit.anonymous(), rateLimit.authenticated(), meterRegistry);
   }
 
   @Bean

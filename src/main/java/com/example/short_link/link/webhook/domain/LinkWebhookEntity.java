@@ -123,6 +123,19 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
     this.lastError = null;
   }
 
+  public record FormatRedetection(boolean changed, boolean reactivated) {}
+
+  /** 포맷이 바뀐 자동 비활성 훅만 복구한다. 사용자가 직접 끈 훅은 그대로 둔다. */
+  public FormatRedetection redetectFormat() {
+    WebhookFormat detected = WebhookFormat.detect(url);
+    if (detected == format) return new FormatRedetection(false, false);
+    boolean reactivate =
+        !enabled && autoDisabledReason != null && detected != WebhookFormat.GENERIC;
+    changeFormat(detected);
+    if (reactivate) resetFailureState();
+    return new FormatRedetection(true, reactivate);
+  }
+
   public void enable() {
     this.enabled = true;
     this.consecutiveFailures = 0;

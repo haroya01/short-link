@@ -9,9 +9,11 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
-import com.example.short_link.common.storage.s3.AvatarProperties;
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
+import com.example.short_link.common.storage.s3.S3StorageProperties;
 import com.example.short_link.event.application.image.EventCoverImageService.PresignResult;
 import com.example.short_link.event.domain.ContactField;
 import com.example.short_link.event.domain.EventEntity;
@@ -29,14 +31,21 @@ import org.springframework.test.util.ReflectionTestUtils;
 @ExtendWith(MockitoExtension.class)
 class EventCoverImageServiceTest {
 
-  private static final AvatarProperties CONFIGURED =
-      new AvatarProperties("covers", "ap-northeast-2", "https://cdn.kurl.me/", 300, 1024);
+  private static final ImageUploadPolicy UPLOAD_POLICY = new ImageUploadPolicy(300, 1024);
+
+  private static final S3StorageProperties CONFIGURED =
+      new S3StorageProperties("covers", "ap-northeast-2", "https://cdn.kurl.me/");
 
   @Mock private ObjectStorage objectStorage;
   @Mock private EventRepository eventRepository;
 
-  private EventCoverImageService service(AvatarProperties props) {
-    return new EventCoverImageService(props, objectStorage, eventRepository);
+  private EventCoverImageService service(S3StorageProperties storageProperties) {
+    when(objectStorage.isConfigured()).thenReturn(storageProperties.isConfigured());
+    return new EventCoverImageService(
+        UPLOAD_POLICY,
+        objectStorage,
+        eventRepository,
+        new ObjectStoragePublicUrls(storageProperties));
   }
 
   private EventEntity ownedEvent() {
@@ -61,7 +70,7 @@ class EventCoverImageServiceTest {
 
   @Test
   void unconfiguredStorage_refusesPresign() {
-    AvatarProperties blank = new AvatarProperties("", "ap-northeast-2", null, 300, 1024);
+    S3StorageProperties blank = new S3StorageProperties("", "ap-northeast-2", null);
 
     assertThatThrownBy(() -> service(blank).presignUpload(1L, 10L, "image/jpeg"))
         .isInstanceOf(EventException.class)
@@ -180,12 +189,13 @@ class EventCoverImageServiceTest {
 
   @Test
   void urlFor_composesFromBaseOrBucket() {
-    assertThat(service(CONFIGURED).urlFor(null)).isNull();
-    assertThat(service(CONFIGURED).urlFor("  ")).isNull();
-    assertThat(service(CONFIGURED).urlFor("k.jpg")).isEqualTo("https://cdn.kurl.me/k.jpg");
+    assertThat(new ObjectStoragePublicUrls(CONFIGURED).forKey(null)).isNull();
+    assertThat(new ObjectStoragePublicUrls(CONFIGURED).forKey("  ")).isNull();
+    assertThat(new ObjectStoragePublicUrls(CONFIGURED).forKey("k.jpg"))
+        .isEqualTo("https://cdn.kurl.me/k.jpg");
 
-    AvatarProperties noBase = new AvatarProperties("covers", "ap-northeast-2", " ", 300, 1024);
-    assertThat(service(noBase).urlFor("k.jpg"))
+    S3StorageProperties noBase = new S3StorageProperties("covers", "ap-northeast-2", " ");
+    assertThat(new ObjectStoragePublicUrls(noBase).forKey("k.jpg"))
         .isEqualTo("https://covers.s3.ap-northeast-2.amazonaws.com/k.jpg");
   }
 }

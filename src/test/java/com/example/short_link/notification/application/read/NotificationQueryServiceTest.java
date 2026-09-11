@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationListResult;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
@@ -35,7 +36,8 @@ class NotificationQueryServiceTest {
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
   private NotificationQueryService service() {
-    return new NotificationQueryService(repository, actorReader, jsonMapper);
+    return new NotificationQueryService(
+        repository, actorReader, new NotificationTargetCodec(jsonMapper));
   }
 
   private static NotificationEntity entity(

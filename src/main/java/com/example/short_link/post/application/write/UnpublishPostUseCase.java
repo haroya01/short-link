@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -18,15 +19,16 @@ public class UnpublishPostUseCase {
   private final PostOwnership postOwnership;
   private final PostRepository postRepository;
   private final ProfileCacheInvalidator cacheEviction;
+  private final PostWriteViewAssembler writeViews;
 
   @Transactional
-  public PostEntity execute(UnpublishPostCommand cmd) {
+  public PostView execute(UnpublishPostCommand cmd) {
     PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
     post.unpublish();
     PostEntity saved = postRepository.save(post);
     // Unpublishing the author's last public post drops them to hasBlog=false; evict the profile.
     cacheEviction.evictByUserId(saved.getUserId());
-    return saved;
+    return writeViews.fromSaved(saved);
   }
 
   /**

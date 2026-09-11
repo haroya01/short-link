@@ -6,7 +6,6 @@ import com.example.short_link.event.application.helper.EventContacts;
 import com.example.short_link.event.application.helper.EventQuestions;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.EventRegistrationEntity;
-import com.example.short_link.event.domain.EventStatus;
 import com.example.short_link.event.domain.repository.EventQuestionRepository;
 import com.example.short_link.event.domain.repository.EventRegistrationRepository;
 import com.example.short_link.event.domain.repository.EventRepository;
@@ -41,7 +40,7 @@ public class RegisterForEventUseCase {
         eventRepository
             .findBySlug(cmd.slug())
             .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND, cmd.slug()));
-    requireOpen(event);
+    event.requireRegistrationOpen(Instant.now());
     String contact = EventContacts.normalize(event.getContactField(), cmd.contact());
     String name = requireName(cmd.name());
     String answersJson =
@@ -84,16 +83,6 @@ public class RegisterForEventUseCase {
             ? null
             : Math.max(0, event.getCapacity() - (event.getRegistrationCount() + 1));
     return new RegistrationResult(registration.getId(), cancelToken, spotsLeft);
-  }
-
-  private void requireOpen(EventEntity event) {
-    if (event.getStatus() == EventStatus.CANCELED) {
-      throw new EventException(EventErrorCode.EVENT_CANCELED, event.getId());
-    }
-    if (event.getStatus() != EventStatus.OPEN
-        || (event.getCloseAt() != null && !Instant.now().isBefore(event.getCloseAt()))) {
-      throw new EventException(EventErrorCode.EVENT_REGISTRATION_CLOSED, event.getId());
-    }
   }
 
   private static String requireName(String raw) {

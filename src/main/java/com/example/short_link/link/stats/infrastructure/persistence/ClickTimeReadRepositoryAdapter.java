@@ -6,7 +6,9 @@ import com.example.short_link.link.stats.domain.repository.projection.ClickProje
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayOfWeekClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -57,6 +59,32 @@ class ClickTimeReadRepositoryAdapter implements ClickTimeReadRepository {
 
   @Override
   public List<DailyClicksByLinkRow> findDailyClicksByLinkIdsSince(List<Long> ids, Instant from) {
-    return jpa.findDailyClicksByLinkIdsSince(ids, from);
+    // Instant를 숫자로 전달하고 UTC 날짜로 복원해 JDBC/DB 세션의 달력 변환을 거치지 않는다.
+    BigDecimal fromEpoch =
+        BigDecimal.valueOf(from.getEpochSecond()).add(BigDecimal.valueOf(from.getNano(), 9));
+    return jpa.findUtcDailyClicksByLinkIdsSince(ids, fromEpoch).stream()
+        .<DailyClicksByLinkRow>map(
+            row ->
+                new UtcDailyClicks(
+                    row.getLinkId(), LocalDate.ofEpochDay(row.getEpochDay()), row.getCount()))
+        .toList();
+  }
+
+  private record UtcDailyClicks(Long linkId, LocalDate day, Long count)
+      implements DailyClicksByLinkRow {
+    @Override
+    public Long getLinkId() {
+      return linkId;
+    }
+
+    @Override
+    public LocalDate getDay() {
+      return day;
+    }
+
+    @Override
+    public Long getCount() {
+      return count;
+    }
   }
 }

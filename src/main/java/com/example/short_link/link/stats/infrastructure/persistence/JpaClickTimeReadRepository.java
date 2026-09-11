@@ -2,10 +2,10 @@ package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClicksByLinkRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayOfWeekClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;
@@ -85,11 +85,27 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       @Param("since") Instant since,
       @Param("tz") String timezone);
 
+  /** UTC epoch 일자로 묶고, 하한도 epoch에서 변환해 세션 시간대가 날짜와 기간을 바꾸지 않게 한다. */
   @Query(
-      "SELECT c.linkId AS linkId, FUNCTION('DATE', c.clickedAt) AS day, COUNT(c) AS count "
-          + "FROM ClickEventEntity c "
-          + "WHERE c.linkId IN :ids AND c.bot = false AND c.clickedAt >= :from "
-          + "GROUP BY c.linkId, FUNCTION('DATE', c.clickedAt)")
-  List<DailyClicksByLinkRow> findDailyClicksByLinkIdsSince(
-      @Param("ids") List<Long> ids, @Param("from") Instant from);
+      value =
+          """
+      SELECT c.link_id AS linkId,
+             FLOOR(UNIX_TIMESTAMP(c.clicked_at) / 86400) AS epochDay,
+             COUNT(*) AS count
+      FROM click_event c
+      WHERE c.link_id IN (:ids) AND c.is_bot = false
+        AND c.clicked_at >= FROM_UNIXTIME(:fromEpoch)
+      GROUP BY c.link_id, FLOOR(UNIX_TIMESTAMP(c.clicked_at) / 86400)
+      """,
+      nativeQuery = true)
+  List<UtcDailyClicksByLinkRow> findUtcDailyClicksByLinkIdsSince(
+      @Param("ids") List<Long> ids, @Param("fromEpoch") BigDecimal fromEpoch);
+
+  interface UtcDailyClicksByLinkRow {
+    Long getLinkId();
+
+    Long getEpochDay();
+
+    Long getCount();
+  }
 }

@@ -7,6 +7,9 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,7 +17,7 @@ import lombok.NoArgsConstructor;
 /**
  * Per-user TOTP enrolment. Created in a pending state when the user starts setup; only flipped to
  * {@code enabled=true} once they successfully verify a code from their authenticator. Recovery
- * codes are stored as a JSON array of bcrypt hashes — single use, regenerable.
+ * codes are stored as newline-separated bcrypt hashes — single use, regenerable.
  */
 @Entity
 @Table(name = "user_two_factor")
@@ -51,9 +54,9 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
     this.lastUsedAt = null;
   }
 
-  public void enable(String recoveryCodesJson) {
+  public void enable(List<String> recoveryCodeHashes) {
     this.enabled = true;
-    this.recoveryCodes = recoveryCodesJson;
+    this.recoveryCodes = String.join("\n", recoveryCodeHashes);
     this.lastUsedAt = Instant.now();
   }
 
@@ -63,8 +66,23 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
     this.lastUsedAt = null;
   }
 
-  public void replaceRecoveryCodes(String recoveryCodesJson) {
-    this.recoveryCodes = recoveryCodesJson;
+  public void replaceRecoveryCodes(List<String> recoveryCodeHashes) {
+    this.recoveryCodes = String.join("\n", recoveryCodeHashes);
+  }
+
+  public List<String> recoveryCodeHashes() {
+    if (recoveryCodes == null || recoveryCodes.isEmpty()) return List.of();
+    return Arrays.stream(recoveryCodes.split("\n")).filter(line -> !line.isBlank()).toList();
+  }
+
+  /** Removes one matched hash and records its use as a single state change. */
+  public boolean consumeRecoveryCode(String matchedHash) {
+    if (!enabled) return false;
+    List<String> remaining = new ArrayList<>(recoveryCodeHashes());
+    if (!remaining.remove(matchedHash)) return false;
+    recoveryCodes = String.join("\n", remaining);
+    markUsed();
+    return true;
   }
 
   public void markUsed() {

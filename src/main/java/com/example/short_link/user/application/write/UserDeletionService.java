@@ -2,7 +2,6 @@ package com.example.short_link.user.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
-import com.example.short_link.common.observability.RequestMetricJpaRepository;
 import com.example.short_link.common.user.UserDataEraser;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -33,7 +32,6 @@ public class UserDeletionService {
   private final FollowRepository followRepository;
   private final BlockRepository blockRepository;
   private final WebPushSubscriptionRepository webPushSubscriptionRepository;
-  private final RequestMetricJpaRepository requestMetricRepository;
   private final List<UserDataEraser> userDataErasers;
   private final RefreshTokenStore refreshTokenStore;
   private final MeterRegistry meterRegistry;
@@ -75,9 +73,6 @@ public class UserDeletionService {
     // ON DELETE CASCADE, or the endpoint + encryption keys linger as orphans after the user is
     // gone.
     webPushSubscriptionRepository.deleteByUserId(userId);
-    // request_metrics keeps a user link for the admin dashboard; on erasure drop the link (keep the
-    // operational row anonymized) so a deleted account leaves no identifier behind.
-    requestMetricRepository.anonymizeUser(userId);
 
     List<LinkEntity> links = linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (!links.isEmpty()) {

@@ -12,11 +12,11 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkPreviewCrawlerDetector;
-import com.example.short_link.link.redirect.application.LinkPreviewRenderer;
 import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
-import com.example.short_link.link.redirect.application.helper.LinkHtmlRenderer;
-import com.example.short_link.link.redirect.application.helper.LinkRedirectSupport;
+import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
+import com.example.short_link.link.redirect.presentation.helper.LinkPreviewRenderer;
+import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
 import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -137,7 +137,11 @@ public class RedirectController {
       return handlePreview(
           shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req);
     }
-    return render(flow.execute(link, null, referrer, userAgent, acceptLanguage, src, post, req));
+    return render(
+        flow.execute(
+            link,
+            null,
+            LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)));
   }
 
   /**

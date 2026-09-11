@@ -2,7 +2,7 @@ package com.example.short_link.event.application.read;
 
 import com.example.short_link.common.eventlink.EventLinkPreview;
 import com.example.short_link.common.eventlink.EventLinkPreviewPort;
-import com.example.short_link.event.application.image.EventCoverImageService;
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
 import com.example.short_link.event.domain.EventEntity;
 import com.example.short_link.event.domain.repository.EventLinkRepository;
 import com.example.short_link.event.domain.repository.EventRepository;
@@ -29,7 +29,7 @@ public class EventLinkPreviewAdapter implements EventLinkPreviewPort {
 
   private final EventLinkRepository eventLinks;
   private final EventRepository events;
-  private final EventCoverImageService coverImages;
+  private final ObjectStoragePublicUrls coverImageUrls;
 
   @Override
   @Transactional(readOnly = true)
@@ -45,7 +45,7 @@ public class EventLinkPreviewAdapter implements EventLinkPreviewPort {
     String location = event.getLocationText();
     String description = location == null || location.isBlank() ? when : when + " · " + location;
     return new EventLinkPreview(
-        event.getTitle(), description, coverImages.urlFor(event.getCoverImageKey()));
+        event.getTitle(), description, coverImageUrls.forKey(event.getCoverImageKey()));
   }
 
   private static ZoneId zoneOf(String timezone) {

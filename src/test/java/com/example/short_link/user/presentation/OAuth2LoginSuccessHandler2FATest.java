@@ -6,7 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.application.write.AuthService;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
 import jakarta.servlet.http.HttpServletRequest;
@@ -46,7 +46,7 @@ class OAuth2LoginSuccessHandler2FATest {
         new DefaultOAuth2User(Set.of(), Map.of("email", "u@x.com", "sub", "g-2fa"), "sub");
     OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(principal, Set.of(), "google");
     when(authService.loginWithOAuth("u@x.com", "google", "g-2fa"))
-        .thenReturn(new LoginResult.TwoFactorRequired("challenge-token-value"));
+        .thenReturn(new TokenLoginResult.TwoFactorRequired("challenge-token-value"));
 
     handler.onAuthenticationSuccess(req, res, auth);
 

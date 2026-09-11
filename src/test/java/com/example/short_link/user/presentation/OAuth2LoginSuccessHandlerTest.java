@@ -8,7 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.write.AuthService;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
 import jakarta.servlet.http.HttpServletRequest;
@@ -49,7 +49,7 @@ class OAuth2LoginSuccessHandlerTest {
     OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(principal, Set.of(), "google");
     when(authService.loginWithOAuth("u@x.com", "google", "g-1"))
         .thenReturn(
-            new LoginResult.Tokens(new IssuedTokens("access-jwt-value", "refresh-jwt-value")));
+            new TokenLoginResult.Tokens(new IssuedTokens("access-jwt-value", "refresh-jwt-value")));
 
     handler.onAuthenticationSuccess(req, res, auth);
 
@@ -67,7 +67,7 @@ class OAuth2LoginSuccessHandlerTest {
         new DefaultOAuth2User(Set.of(), Map.of("email", "u@x.com", "sub", "g-2"), "sub");
     OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(principal, Set.of(), "google");
     when(authService.loginWithOAuth(any(), any(), any()))
-        .thenReturn(new LoginResult.Tokens(new IssuedTokens("access", "refresh")));
+        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access", "refresh")));
 
     handler.onAuthenticationSuccess(req, res, auth);
 

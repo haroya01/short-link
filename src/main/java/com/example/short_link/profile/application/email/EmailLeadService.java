@@ -49,8 +49,9 @@ public class EmailLeadService {
     this.ipHashSalt = ipHashSalt;
   }
 
+  /** 이미 등록된 이메일도 접수 완료로 처리하며, 중복 행은 만들지 않는다. */
   @Transactional
-  public EmailLeadEntity submit(Long ownerUserId, Long blockId, String email, String clientIp) {
+  void submit(Long ownerUserId, Long blockId, String email, String clientIp) {
     String normalizedEmail = normalizeEmail(email);
     ProfileBlockEntity block =
         blockRepository
@@ -74,21 +75,20 @@ public class EmailLeadService {
       throw new ProfileException(ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "ip window exhausted");
     }
     if (repository.existsByBlockIdAndEmail(block.getId(), normalizedEmail)) {
-      return new EmailLeadEntity(ownerUserId, block.getId(), normalizedEmail, ipHash);
+      return;
     }
-    return repository.save(
-        new EmailLeadEntity(ownerUserId, block.getId(), normalizedEmail, ipHash));
+    repository.save(new EmailLeadEntity(ownerUserId, block.getId(), normalizedEmail, ipHash));
   }
 
   @Transactional
-  public EmailLeadEntity submitPublic(Long blockId, String email, String clientIp) {
+  public void submitPublic(Long blockId, String email, String clientIp) {
     ProfileBlockEntity block =
         blockRepository
             .findById(blockId)
             .filter(b -> b.getType() == ProfileBlockType.EMAIL_FORM)
             .orElseThrow(
                 () -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "block " + blockId));
-    return submit(block.getUserId(), block.getId(), email, clientIp);
+    submit(block.getUserId(), block.getId(), email, clientIp);
   }
 
   @Transactional(readOnly = true)

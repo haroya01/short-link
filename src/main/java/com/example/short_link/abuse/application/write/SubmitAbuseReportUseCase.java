@@ -2,6 +2,7 @@ package com.example.short_link.abuse.application.write;
 
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
 import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
 import lombok.RequiredArgsConstructor;
@@ -13,11 +14,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class SubmitAbuseReportUseCase {
 
   private final AbuseReportRepository abuseReportRepository;
+  private final AbuseSubjectReader subjects;
 
   @Transactional
   public AbuseReportEntity execute(SubmitAbuseReportCommand cmd) {
     // 존재검사: 없는 대상 신고는 거부(400/404). 오타·정리된 대상으로 큐를 오염시키지 않는다.
-    if (!abuseReportRepository.subjectExists(cmd.subjectType(), cmd.subjectId())) {
+    if (!subjects.subjectExists(cmd.subjectType(), cmd.subjectId())) {
       throw new AbuseException(
               AbuseErrorCode.SUBJECT_NOT_FOUND, cmd.subjectType() + "#" + cmd.subjectId())
           .with("subjectType", cmd.subjectType().name())
