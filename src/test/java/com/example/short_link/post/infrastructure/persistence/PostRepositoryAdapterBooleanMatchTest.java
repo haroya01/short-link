@@ -44,11 +44,26 @@ class PostRepositoryAdapterBooleanMatchTest {
   }
 
   @Test
-  void titleLikeFallbackOffWhenAnyTermLongEnough() {
-    // 두 글자 이상 토큰이 하나라도 있으면 ngram 이 잡을 수 있으니 폴백은 꺼둔다(null = 쿼리 가지 off).
+  void titleLikeFallbackEngagesForStopwordDeadTerms() {
+    // 모든 바이그램이 InnoDB 기본 스톱워드('a'·'i' substring 포함)에 오염된 용어는 색인이 0개 —
+    // "java"(ja·av·va)·"data"(da·at·ta)가 프로드 실측 0건이던 원인. 폴백으로 구제한다.
+    assertThat(PostRepositoryAdapter.titleLikeFallback("java")).isEqualTo("%java%");
+    assertThat(PostRepositoryAdapter.titleLikeFallback("Java")).isEqualTo("%java%");
+    assertThat(PostRepositoryAdapter.titleLikeFallback("data")).isEqualTo("%data%");
+    // "ab" 도 유일 바이그램 "ab" 가 'a' 포함이라 인덱스 불가시.
+    assertThat(PostRepositoryAdapter.titleLikeFallback("ab")).isEqualTo("%ab%");
+  }
+
+  @Test
+  void titleLikeFallbackOffWhenAnyTermVisibleToNgram() {
+    // 인덱스에 보이는(스톱워드 오염을 피한 바이그램이 있는) 토큰이 하나라도 있으면 MATCH 가
+    // 담당하므로 폴백은 꺼둔다(null = 쿼리 가지 off). "jpa"는 "jp", "docker"는 "do" 등이 생존.
     assertThat(PostRepositoryAdapter.titleLikeFallback("리다이렉트")).isNull();
     assertThat(PostRepositoryAdapter.titleLikeFallback("C++ 성능")).isNull();
-    assertThat(PostRepositoryAdapter.titleLikeFallback("ab")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("jpa")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("docker")).isNull();
+    // 죽은 토큰(java)과 산 토큰(성능)이 섞이면 산 쪽을 MATCH 에 맡긴다.
+    assertThat(PostRepositoryAdapter.titleLikeFallback("java 성능")).isNull();
   }
 
   @Test
