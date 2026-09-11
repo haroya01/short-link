@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Locale;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -75,10 +76,7 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "avatar_url", length = 512)
   private String avatarUrl;
 
-  /**
-   * S3 object key (e.g. avatars/{userId}/{uuid}.jpg). Kept so we can DELETE the old object on
-   * re-upload — the URL alone isn't enough to derive the key when CDN domains differ from raw S3.
-   */
+  /** CDN URL에서 원본 키를 복원할 수 없으므로 재업로드 시 삭제할 키를 별도로 저장한다. */
   @Column(name = "avatar_key", length = 256)
   private String avatarKey;
 
@@ -89,28 +87,15 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "banner_key", length = 256)
   private String bannerKey;
 
-  /**
-   * JSON-encoded list of the user's social links shown at the bottom of the public profile, e.g.
-   * {@code [{"channel":"x","url":"https://x.com/haroya"},{"channel":"line","url":"..."}]}. Up to 2
-   * entries; null/empty means no socials (the visitor sees only Copy + Native share). Parse /
-   * validate via {@link com.example.short_link.profile.application.Socials}.
-   */
+  /** 소셜 프로필 JSON 배열. 검증·정규화는 {@link com.example.short_link.profile.application.Socials}가 담당한다. */
   @Column(name = "socials", length = 1024)
   private String socials;
 
-  /**
-   * When true, anonymous visitors can fetch aggregated visit stats for this profile via {@code GET
-   * /api/v1/public/profiles/{username}/stats} and the public stats page renders. Default false —
-   * opt-in only, owners flip it from the profile edit screen.
-   */
+  /** true면 익명 방문자에게 프로필 집계 통계를 공개한다. 기본값은 비공개다. */
   @Column(name = "is_stats_public", nullable = false)
   private boolean statsPublic = false;
 
-  /**
-   * When true, the author's follower / following totals are withheld from the public author page —
-   * the follow-status response omits both counts entirely (not shown as zero). Default false, so
-   * counts are public unless the owner opts out from the profile edit screen.
-   */
+  /** true면 공개 응답에서 팔로워·팔로잉 수를 0으로 표시하지 않고 필드 자체를 생략한다. */
   @Column(name = "hide_follower_count", nullable = false)
   private boolean hideFollowerCount = false;
 
@@ -123,11 +108,7 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "suspended_until")
   private Instant suspendedUntil;
 
-  /**
-   * Which legal terms version the user accepted at sign-up, and when — proof of acceptance for the
-   * click-wrap consent shown on the login/sign-up screen. Null for accounts created before consent
-   * capture existed (they accepted under the prior browse-wrap notice).
-   */
+  /** 가입 시 동의한 약관 버전과 시각. 동의 기록 도입 이전 계정은 null이다. */
   @Column(name = "terms_agreed_at")
   private Instant termsAgreedAt;
 
@@ -142,7 +123,6 @@ public class UserEntity extends BaseCreatedEntity {
     this.timezone = "Asia/Seoul";
   }
 
-  /** Record acceptance of the legal terms — called once when the account is created at sign-up. */
   private static final java.util.Set<String> SUPPORTED_LOCALES =
       java.util.Set.of("ko", "ja", "en", "vi", "hi");
 
@@ -204,7 +184,7 @@ public class UserEntity extends BaseCreatedEntity {
       this.profileTheme = null;
       return;
     }
-    String v = theme.trim().toLowerCase();
+    String v = theme.trim().toLowerCase(Locale.ROOT);
     switch (v) {
       case "light",
               "dark",
@@ -252,14 +232,12 @@ public class UserEntity extends BaseCreatedEntity {
     return moderationStatus == ModerationStatus.BANNED;
   }
 
-  /** 지금 시점 기준으로 정지 중인지 — 만료시각이 지났으면 정지 아님(자동 해제). */
   public boolean isSuspendedAt(Instant now) {
     return moderationStatus == ModerationStatus.SUSPENDED
         && suspendedUntil != null
         && suspendedUntil.isAfter(now);
   }
 
-  /** 지금 콘텐츠를 생성할 수 있는지 — BANNED 이거나 만료 전 SUSPENDED 면 false. */
   public boolean canWriteAt(Instant now) {
     return !isBanned() && !isSuspendedAt(now);
   }

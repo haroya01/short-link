@@ -37,28 +37,20 @@ public class DeletePostUseCase {
   private final ProfileCacheInvalidator cacheEviction;
   private final CollectionConnectionCleaner connectionCleaner;
 
-  /**
-   * 본인 글을 영구 삭제. block → revision 본문 데이터에 더해, 같은 글에 달린 댓글 (PII 포함) · 좋아요 · 북마크 · 하이라이트 · 읽기 기록 같은
-   * 상호작용 행도 함께 정리해 고아 데이터를 남기지 않는다. 큐레이터가 이 글이나 그 하이라이트를 컬렉션에 이어둔 연결은 FK 없는 다형 참조라 함께 정리한다 (하이라이트
-   * id 는 하이라이트를 지우기 전에 읽어둔다). 마지막에 post 를 지운다. 분석 데이터 (click_event 등) 는 별도 도메인이라 영향 없음.
-   */
+  /** 컬렉션 연결에는 FK가 없으므로 하이라이트 ID를 삭제 전에 읽어 연결도 제거한다. */
   @Transactional
   public void execute(DeletePostCommand cmd) {
-    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     deleteCascade(post);
   }
 
-  /**
-   * Admin removal of any author's post — same cascade as the owner path, no ownership gate on
-   * purpose ({@code /api/v1/admin/**} is ADMIN-only at the security layer, mirroring {@code
-   * UnpublishPostUseCase#adminExecute}). {@code adminUserId} is recorded for the audit trail only.
-   */
+  /** 관리자 권한은 HTTP 보안 계층에서 검사한다. adminUserId는 감사 로그용이다. */
   @Transactional
   public void adminExecute(Long adminUserId, Long postId) {
     log.info("admin post delete: adminUserId={}, postId={}", adminUserId, postId);
     PostEntity post =
         postRepository
-            .findById(postId)
+            .findByIdForUpdate(postId)
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId));
     deleteCascade(post);
   }
@@ -80,8 +72,7 @@ public class DeletePostUseCase {
     postReadRepository.deleteAllByPostId(post.getId());
     connectionCleaner.purgeForPost(post.getId());
     postRepository.delete(post);
-    // Deleting a published post drops the author's count; evict so a now-empty blog hides its
-    // entry-point on the public profile.
+    // 마지막 공개 글을 삭제하면 프로필의 블로그 진입점도 사라져야 한다.
     cacheEviction.evictByUserId(post.getUserId());
   }
 }

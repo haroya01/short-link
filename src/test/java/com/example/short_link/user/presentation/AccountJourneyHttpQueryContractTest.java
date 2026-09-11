@@ -342,6 +342,7 @@ class AccountJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
                 null,
                 200));
     assertThat(webChallenge.has("accessToken")).isFalse();
+    String loginCode = totp(secret);
     call(
         "account-two-factor-web-complete",
         "POST",
@@ -350,11 +351,24 @@ class AccountJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
             "challenge",
             webChallenge.path("challenge").asText(),
             "code",
-            totp(secret),
+            loginCode,
             "recovery",
             false),
         null,
         200);
+    call(
+        "account-two-factor-totp-replay-rejected",
+        "POST",
+        "/api/v1/auth/2fa/verify",
+        Map.of(
+            "challenge",
+            webChallenge.path("challenge").asText(),
+            "code",
+            loginCode,
+            "recovery",
+            false),
+        null,
+        401);
     var mobileChallenge =
         body(
             call(
@@ -399,13 +413,19 @@ class AccountJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
             true),
         null,
         401);
+    // 로그인에 쓴 TOTP는 재사용할 수 없어, 허용 오차 안의 다음 코드를 사용한다.
+    long nextStep =
+        Math.max(
+            Instant.now().getEpochSecond() / TotpCodec.PERIOD_SECONDS,
+            count("select last_verified_step from user_two_factor where user_id=?", owner.getId())
+                + 1);
     var regenerated =
         body(
             call(
                 "account-two-factor-regenerate",
                 "POST",
                 "/api/v1/2fa/recovery-codes/regenerate",
-                Map.of("code", totp(secret)),
+                Map.of("code", TotpCodec.generateCode(secret, nextStep)),
                 token,
                 200));
     assertThat(regenerated.path("recoveryCodes").size()).isEqualTo(10);
@@ -413,7 +433,7 @@ class AccountJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
         "account-two-factor-disable",
         "POST",
         "/api/v1/2fa/disable",
-        Map.of("code", totp(secret)),
+        Map.of("code", regenerated.path("recoveryCodes").get(0).asText()),
         token,
         200);
     assertThat(

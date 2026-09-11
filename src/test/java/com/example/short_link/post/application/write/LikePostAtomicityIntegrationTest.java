@@ -14,11 +14,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Exercises the like flow against a real DB — the {@code INSERT IGNORE}, the atomic counter {@code
- * UPDATE}, and the {@code likeCount > 0} clamp only exist at SQL level, so a mock unit test can't
- * prove the denormalized counter actually tracks the like rows or stays non-negative.
- */
+/** 실제 DB에서 멱등 INSERT와 카운터 증감이 좋아요 행 수와 일치하는지 확인한다. */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -31,16 +27,16 @@ class LikePostAtomicityIntegrationTest {
 
   private long persistPost() {
     UserEntity author = userRepository.save(new UserEntity("author@x.com", "google", "g-author"));
-    return postRepository.save(new PostEntity(author.getId(), "slug", "Title", "ko")).getId();
+    PostEntity post = new PostEntity(author.getId(), "slug", "Title", "ko");
+    post.publish();
+    return postRepository.save(post).getId();
   }
 
   private long user(String suffix) {
     return userRepository.save(new UserEntity(suffix + "@x.com", "google", "g-" + suffix)).getId();
   }
 
-  /**
-   * Denormalized counter read fresh from the DB — clears the stale entity left by the bulk UPDATE.
-   */
+  /** Bulk UPDATE 이전의 엔티티를 비우고 DB의 카운터를 다시 읽는다. */
   private long denormalizedLikeCount(long postId) {
     em.flush();
     em.clear();

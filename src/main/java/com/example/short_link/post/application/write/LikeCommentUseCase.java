@@ -9,21 +9,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Comment like toggle — the post-like contract in miniature: INSERT IGNORE keeps a double-like
- * idempotent, the response carries the authoritative count. No notification on purpose: the post
- * owner already hears about the comment itself, and comment-like pings are noise at this scale.
- */
+/** INSERT IGNORE로 중복 좋아요를 무시한다. 댓글 좋아요는 알림을 보내지 않는다. */
 @Service
 @RequiredArgsConstructor
 public class LikeCommentUseCase {
 
   private final CommentRepository commentRepository;
   private final CommentLikeRepository commentLikeRepository;
+  private final PostInteractionAccess access;
 
   @Transactional
   public CommentLikeStatus like(Long userId, Long commentId) {
-    requireComment(commentId);
+    access.requireLikeableComment(userId, commentId);
     commentLikeRepository.insertIgnore(commentId, userId);
     return new CommentLikeStatus(commentLikeRepository.countByCommentId(commentId), true);
   }

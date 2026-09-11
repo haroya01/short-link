@@ -14,11 +14,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Per-user TOTP enrolment. Created in a pending state when the user starts setup; only flipped to
- * {@code enabled=true} once they successfully verify a code from their authenticator. Recovery
- * codes are stored as newline-separated bcrypt hashes — single use, regenerable.
- */
+/** 인증기 확인 전에는 비활성 상태다. 복구코드는 줄바꿈으로 구분한 bcrypt 해시로 저장한다. */
 @Entity
 @Table(name = "user_two_factor")
 @Getter
@@ -41,6 +37,9 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
   @Column(name = "last_used_at")
   private Instant lastUsedAt;
 
+  @Column(name = "last_verified_step")
+  private Long lastVerifiedStep;
+
   public UserTwoFactorEntity(Long userId, String encryptedSecret) {
     this.userId = userId;
     this.secret = encryptedSecret;
@@ -52,18 +51,20 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
     this.enabled = false;
     this.recoveryCodes = null;
     this.lastUsedAt = null;
+    this.lastVerifiedStep = null;
   }
 
-  public void enable(List<String> recoveryCodeHashes) {
+  public void enable(List<String> recoveryCodeHashes, Instant enabledAt) {
     this.enabled = true;
     this.recoveryCodes = String.join("\n", recoveryCodeHashes);
-    this.lastUsedAt = Instant.now();
+    this.lastUsedAt = enabledAt;
   }
 
   public void disable() {
     this.enabled = false;
     this.recoveryCodes = null;
     this.lastUsedAt = null;
+    this.lastVerifiedStep = null;
   }
 
   public void replaceRecoveryCodes(List<String> recoveryCodeHashes) {
@@ -76,16 +77,20 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
   }
 
   /** Removes one matched hash and records its use as a single state change. */
-  public boolean consumeRecoveryCode(String matchedHash) {
+  public boolean consumeRecoveryCode(String matchedHash, Instant usedAt) {
     if (!enabled) return false;
     List<String> remaining = new ArrayList<>(recoveryCodeHashes());
     if (!remaining.remove(matchedHash)) return false;
     recoveryCodes = String.join("\n", remaining);
-    markUsed();
+    lastUsedAt = usedAt;
     return true;
   }
 
-  public void markUsed() {
-    this.lastUsedAt = Instant.now();
+  /** The repository must lock this enrollment while an authentication consumes its step. */
+  public boolean consumeTotpStep(long verifiedStep, Instant usedAt) {
+    if (!enabled || (lastVerifiedStep != null && verifiedStep <= lastVerifiedStep)) return false;
+    lastVerifiedStep = verifiedStep;
+    lastUsedAt = usedAt;
+    return true;
   }
 }

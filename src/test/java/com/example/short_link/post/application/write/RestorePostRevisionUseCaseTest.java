@@ -70,7 +70,7 @@ class RestorePostRevisionUseCaseTest {
                 "og.png",
                 "ja",
                 List.of(new PostSnapshot.BlockSnapshot("PARAGRAPH", "Old content"))));
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 2))
         .thenReturn(Optional.of(revision(2, json)));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -91,7 +91,7 @@ class RestorePostRevisionUseCaseTest {
     post.updateOgImage("https://cdn/existing.png", "existing.png");
     String json =
         objectMapper.writeValueAsString(new PostSnapshot("T", null, null, null, "ko", List.of()));
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 1))
         .thenReturn(Optional.of(revision(1, json)));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -106,7 +106,7 @@ class RestorePostRevisionUseCaseTest {
   @Test
   void rejectsRevisionNotFound() {
     PostEntity post = new PostEntity(7L, "my-post", "Current", "ko");
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 99)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> useCase.execute(new RestorePostRevisionCommand(7L, 42L, 99)))

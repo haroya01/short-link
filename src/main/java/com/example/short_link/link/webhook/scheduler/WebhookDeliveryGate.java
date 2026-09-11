@@ -6,6 +6,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -33,16 +34,17 @@ class WebhookDeliveryGate {
       return false;
     }
     if (hook.getReferrerHostFilter() != null && !hook.getReferrerHostFilter().isBlank()) {
-      String filter = hook.getReferrerHostFilter().toLowerCase();
-      String referrerHost = event.referrerHost() == null ? "" : event.referrerHost().toLowerCase();
+      String filter = hook.getReferrerHostFilter().toLowerCase(Locale.ROOT);
+      String referrerHost =
+          event.referrerHost() == null ? "" : event.referrerHost().toLowerCase(Locale.ROOT);
       if (!referrerHost.contains(filter)) {
         meterRegistry.counter("webhook.delivery", "result", "skipped_filter").increment();
         return false;
       }
     }
     if (hook.getUtmSourceFilter() != null && !hook.getUtmSourceFilter().isBlank()) {
-      String filter = hook.getUtmSourceFilter().toLowerCase();
-      String src = event.utmSource() == null ? "" : event.utmSource().toLowerCase();
+      String filter = hook.getUtmSourceFilter().toLowerCase(Locale.ROOT);
+      String src = event.utmSource() == null ? "" : event.utmSource().toLowerCase(Locale.ROOT);
       if (!src.contains(filter)) {
         meterRegistry.counter("webhook.delivery", "result", "skipped_filter").increment();
         return false;

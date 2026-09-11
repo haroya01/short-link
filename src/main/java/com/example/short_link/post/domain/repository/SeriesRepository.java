@@ -9,7 +9,9 @@ public interface SeriesRepository {
 
   Optional<SeriesEntity> findById(Long id);
 
-  /** Batch hydrate series by id — used to turn ranked series ids back into entities without N+1. */
+  /** Serializes membership changes and deletion before any member post is locked. */
+  Optional<SeriesEntity> findByIdForUpdate(Long id);
+
   List<SeriesEntity> findAllByIdIn(Collection<Long> ids);
 
   Optional<SeriesEntity> findByUserIdAndSlug(Long userId, String slug);

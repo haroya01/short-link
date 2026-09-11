@@ -7,11 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Issues (get-or-create) the share token for an owned post, so the owner can preview a
- * not-yet-public draft via an unguessable link. Idempotent: re-opening the share dialog returns the
- * same token, so the link stays stable.
- */
+/** 다시 요청해도 기존 토큰을 유지해 공유 URL이 바뀌지 않게 한다. */
 @Service
 @RequiredArgsConstructor
 public class IssuePreviewTokenUseCase {
@@ -21,7 +17,7 @@ public class IssuePreviewTokenUseCase {
 
   @Transactional
   public String issue(Long userId, Long postId) {
-    PostEntity post = postOwnership.requireOwned(userId, postId);
+    PostEntity post = postOwnership.requireOwnedForUpdate(userId, postId);
     String token = post.ensurePreviewToken(newToken());
     postRepository.save(post);
     return token;

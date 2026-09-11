@@ -23,16 +23,14 @@ public class UpdatePostMetadataUseCase {
 
   @Transactional
   public PostView execute(UpdatePostMetadataCommand cmd) {
-    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
 
     if (cmd.slug() != null && !cmd.slug().equals(post.getSlug())) {
       if (postRepository.existsByUserIdAndSlug(cmd.userId(), cmd.slug())) {
         throw new PostException(PostErrorCode.SLUG_CONFLICT, cmd.slug());
       }
-      // updateSlug 가 frozen 상태에서 PostException(SLUG_FROZEN) throw
       post.updateSlug(cmd.slug());
     }
-    // 제목·요약·태그는 검색 평문(search_text)의 재료 — 이 중 하나라도 바뀌면 파생 컬럼을 다시 채운다.
     boolean searchFieldChanged = cmd.title() != null || cmd.excerpt() != null || cmd.tags() != null;
     if (cmd.title() != null) {
       post.updateTitle(cmd.title());
@@ -56,24 +54,18 @@ public class UpdatePostMetadataUseCase {
 
     post.markEdited();
     if (searchFieldChanged) {
-      // 저장된 본문 블록을 다시 읽어 새 메타와 합쳐 재계산(og-image·slug 만 바뀐 편집엔 조회를 아낀다).
       searchTextUpdater.refresh(post);
     }
     return writeViews.fromSaved(postRepository.save(post));
   }
 
-  /**
-   * Admin moderation edit of any author's post — title and tags only (the fields moderation
-   * actually rewrites; body/slug/cover/excerpt stay the author's). No ownership gate on purpose —
-   * {@code /api/v1/admin/**} is ADMIN-only at the security layer, mirroring {@code
-   * UnpublishPostUseCase#adminExecute}. {@code adminUserId} is recorded for the audit trail only.
-   */
+  /** 관리자 권한은 HTTP 보안 계층에서 검사한다. adminUserId는 감사 로그용이다. */
   @Transactional
   public PostView adminExecute(Long adminUserId, Long postId, String title, List<String> tags) {
     log.info("admin post metadata edit: adminUserId={}, postId={}", adminUserId, postId);
     PostEntity post =
         postRepository
-            .findById(postId)
+            .findByIdForUpdate(postId)
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId));
     boolean searchFieldChanged = title != null || tags != null;
     if (title != null) {

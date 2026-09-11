@@ -3,14 +3,19 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
+import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostException;
@@ -34,16 +39,28 @@ class LikePostUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new LikePostUseCase(postRepository, postLikeRepository, events);
+    useCase =
+        new LikePostUseCase(
+            postRepository,
+            postLikeRepository,
+            events,
+            new PostInteractionAccess(
+                postRepository,
+                mock(CommentRepository.class),
+                mock(PostHighlightRepository.class),
+                mock(UserModerationGuard.class),
+                mock(UserBlockChecker.class)));
   }
 
   private PostEntity post() {
-    return new PostEntity(7L, "s", "T", "ko");
+    PostEntity post = new PostEntity(7L, "s", "T", "ko");
+    post.publish();
+    return post;
   }
 
   @Test
   void likeInsertsAndBumpsCounterWhenNew() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post()));
+    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(post()));
     when(postLikeRepository.insertIgnore(42L, 9L)).thenReturn(1);
     when(postLikeRepository.countByPostId(42L)).thenReturn(1L);
 
@@ -52,7 +69,6 @@ class LikePostUseCaseTest {
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(1);
     verify(postRepository).incrementLikeCount(42L);
-    // A new like notifies the post's author (owner 7L ≠ liker 9L).
     ArgumentCaptor<BlogInteractionEvent> evt = ArgumentCaptor.forClass(BlogInteractionEvent.class);
     verify(events).publishEvent(evt.capture());
     assertThat(evt.getValue().type()).isEqualTo(BlogInteractionType.LIKE);
@@ -63,7 +79,7 @@ class LikePostUseCaseTest {
 
   @Test
   void newLikeOnOwnPostDoesNotNotify() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post())); // owner 7L
+    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(post())); // owner 7L
     when(postLikeRepository.insertIgnore(42L, 7L)).thenReturn(1);
     when(postLikeRepository.countByPostId(42L)).thenReturn(1L);
 
@@ -74,7 +90,7 @@ class LikePostUseCaseTest {
 
   @Test
   void likeIsIdempotentWhenAlreadyLiked() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post()));
+    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(post()));
     when(postLikeRepository.insertIgnore(42L, 9L)).thenReturn(0);
     when(postLikeRepository.countByPostId(42L)).thenReturn(3L);
 
@@ -87,8 +103,9 @@ class LikePostUseCaseTest {
   }
 
   @Test
-  void unlikeRemovesAndDropsCounterWhenLiked() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post()));
+  void unlikeRemovesAndDropsCounterWhenLikedEvenAfterUnpublishing() {
+    when(postRepository.findByIdForUpdate(42L))
+        .thenReturn(Optional.of(new PostEntity(7L, "s", "T", "ko")));
     when(postLikeRepository.deleteByPostIdAndUserId(42L, 9L)).thenReturn(1);
     when(postLikeRepository.countByPostId(42L)).thenReturn(0L);
 
@@ -101,7 +118,7 @@ class LikePostUseCaseTest {
 
   @Test
   void unlikeIsNoopWhenNotLiked() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(post()));
+    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(post()));
     when(postLikeRepository.deleteByPostIdAndUserId(42L, 9L)).thenReturn(0);
     when(postLikeRepository.countByPostId(42L)).thenReturn(5L);
 
@@ -114,7 +131,7 @@ class LikePostUseCaseTest {
 
   @Test
   void rejectsMissingPost() {
-    when(postRepository.findById(42L)).thenReturn(Optional.empty());
+    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> useCase.like(9L, 42L)).isInstanceOf(PostException.class);
   }

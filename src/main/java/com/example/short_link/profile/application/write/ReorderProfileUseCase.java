@@ -8,6 +8,7 @@ import com.example.short_link.profile.application.ProfileCacheEviction;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -38,7 +39,7 @@ public class ReorderProfileUseCase {
     int order = 1;
     for (ReorderItem item : cmd.items()) {
       if (item == null || item.kind() == null || item.id() == null) continue;
-      switch (item.kind().toUpperCase()) {
+      switch (item.kind().toUpperCase(Locale.ROOT)) {
         case "LINK" -> {
           LinkEntity link = ownedLinks.get(item.id());
           if (link != null) {

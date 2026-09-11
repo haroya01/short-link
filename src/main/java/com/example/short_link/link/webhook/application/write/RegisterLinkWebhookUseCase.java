@@ -11,6 +11,7 @@ import com.example.short_link.link.webhook.exception.WebhookErrorCode;
 import com.example.short_link.link.webhook.exception.WebhookException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,7 +48,7 @@ public class RegisterLinkWebhookUseCase {
             new LinkWebhookEntity(
                 link.linkId(), cmd.url(), cipher.encrypt(secret), sanitizedName, format));
     meterRegistry
-        .counter("link.webhook.registered", "format", format.name().toLowerCase())
+        .counter("link.webhook.registered", "format", format.name().toLowerCase(Locale.ROOT))
         .increment();
     return new IssuedWebhook(
         saved.getId(), cmd.url(), secret, sanitizedName, saved.getCreatedAt(), format);

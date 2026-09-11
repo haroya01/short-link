@@ -1,16 +1,10 @@
 package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.common.cache.ProfileCacheInvalidator;
-import com.example.short_link.common.event.PostPublishedEvent;
-import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.time.Instant;
 import java.util.List;
@@ -18,74 +12,32 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PublishScheduledPostsUseCaseTest {
+  @Mock private PostRepository posts;
+  @Mock private PublishScheduledPostUseCase publishPost;
 
-  @Mock private PostRepository postRepository;
-  @Mock private PostRevisionCapture postRevisionCapture;
-  @Mock private PostSearchTextUpdater searchTextUpdater;
-  @Mock private ProfileCacheInvalidator cacheEviction;
-  @Mock private ApplicationEventPublisher events;
+  @Test
+  void countsOnlyCommittedPublicationsAndContinuesAfterAFailedPost() {
+    Instant now = Instant.now();
+    when(posts.findScheduledDueIds(now)).thenReturn(List.of(1L, 2L, 3L));
+    when(publishPost.execute(1L, now)).thenThrow(new IllegalStateException("commit failed"));
+    when(publishPost.execute(2L, now)).thenReturn(false);
+    when(publishPost.execute(3L, now)).thenReturn(true);
 
-  private PublishScheduledPostsUseCase useCase() {
-    return new PublishScheduledPostsUseCase(
-        postRepository,
-        new PostPublicationCompletion(
-            postRevisionCapture, searchTextUpdater, cacheEviction, events));
-  }
+    assertThat(new PublishScheduledPostsUseCase(posts, publishPost).execute(now)).isEqualTo(1);
 
-  private static PostEntity scheduledPost(String slug) {
-    PostEntity p = new PostEntity(1L, slug, "Title " + slug, "ko");
-    p.schedule(Instant.now().plusSeconds(3600)); // requires a future time to enter SCHEDULED
-    return p;
+    verify(publishPost).execute(3L, now);
   }
 
   @Test
-  void publishesDuePostsAndCapturesRevisions() {
-    PostEntity a = scheduledPost("a");
-    PostEntity b = scheduledPost("b");
-    when(postRepository.findScheduledDue(any())).thenReturn(List.of(a, b));
+  void emptyWorkListDoesNotOpenPublicationTransactions() {
+    Instant now = Instant.now();
+    when(posts.findScheduledDueIds(now)).thenReturn(List.of());
 
-    int published = useCase().execute(Instant.now());
+    assertThat(new PublishScheduledPostsUseCase(posts, publishPost).execute(now)).isZero();
 
-    assertThat(published).isEqualTo(2);
-    assertThat(a.getStatus()).isEqualTo(PostStatus.PUBLISHED);
-    assertThat(b.getStatus()).isEqualTo(PostStatus.PUBLISHED);
-    verify(postRepository, times(2)).save(any(PostEntity.class));
-    verify(postRevisionCapture, times(2)).capture(any(PostEntity.class));
-    // 예약만 걸고 블록 편집 없이 자동 발행되는 글도 검색 평문이 채워지도록 발행마다 refresh 한다.
-    verify(searchTextUpdater, times(2)).refresh(any(PostEntity.class));
-    // Each scheduled post is going public for the first time → one fan-out event apiece.
-    verify(events, times(2)).publishEvent(any(PostPublishedEvent.class));
-  }
-
-  @Test
-  void noDuePostsIsNoOp() {
-    when(postRepository.findScheduledDue(any())).thenReturn(List.of());
-
-    int published = useCase().execute(Instant.now());
-
-    assertThat(published).isZero();
-    verify(postRepository, never()).save(any());
-    verify(postRevisionCapture, never()).capture(any());
-  }
-
-  @Test
-  void invalidPostDoesNotPreventLaterPostAndEventKeepsBatchTime() {
-    PostEntity invalid = scheduledPost("invalid");
-    invalid.updateTitle("");
-    PostEntity valid = scheduledPost("valid");
-    Instant batchTime = Instant.parse("2026-01-01T12:00:00Z");
-    when(postRepository.findScheduledDue(batchTime)).thenReturn(List.of(invalid, valid));
-
-    assertThat(useCase().execute(batchTime)).isEqualTo(1);
-
-    verify(postRepository, never()).save(invalid);
-    verify(postRepository).save(valid);
-    var event = org.mockito.ArgumentCaptor.forClass(PostPublishedEvent.class);
-    verify(events).publishEvent(event.capture());
-    assertThat(event.getValue().occurredAt()).isEqualTo(batchTime);
+    verifyNoInteractions(publishPost);
   }
 }

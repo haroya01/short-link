@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.notification.application.push.NotificationPushDelivery;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.LinkNotificationEntity;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -21,7 +22,7 @@ class LinkNotificationDispatcherTest {
   private final PushSender pushSender = mock(PushSender.class);
   private final LinkNotificationRepository repository = mock(LinkNotificationRepository.class);
   private final LinkNotificationDispatcher dispatcher =
-      new LinkNotificationDispatcher(prefs, pushSender, repository);
+      new LinkNotificationDispatcher(prefs, new NotificationPushDelivery(pushSender), repository);
 
   @Test
   void recordsAndSendsWhenEnabled() {

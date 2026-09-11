@@ -5,6 +5,7 @@ import com.example.short_link.notification.application.dto.NotificationCollectio
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationTarget;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
+import com.example.short_link.notification.application.push.NotificationPushDelivery;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -21,15 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Persists in-app notifications. Called from after-commit listeners, so it opens its own
- * transaction ({@code REQUIRES_NEW}) — the originating action has already committed by then. The
- * target reference, when present, is serialized into the row's JSON payload.
- *
- * <p>This is also the single choke point every notification type flows through, so the APNs push
- * mirror hangs here: same recipient, same moment, fire-and-forget (the sender never blocks the
- * transaction; the in-app bell stays the source of truth).
- */
+/** 원래 작업의 커밋 이후 별도 트랜잭션으로 알림을 저장한다. 푸시는 알림 저장 트랜잭션까지 커밋된 뒤 제출한다. */
 @Service
 @RequiredArgsConstructor
 public class RecordBlogNotificationUseCase {
@@ -38,17 +31,13 @@ public class RecordBlogNotificationUseCase {
 
   private final NotificationRepository repository;
   private final NotificationTargetCodec targetCodec;
-  private final PushSender pushSender;
+  private final NotificationPushDelivery pushDelivery;
   private final NotificationUserReader userReader;
   private final MessageSource messageSource;
   private final BlogNotificationPreferenceService preferenceService;
   private final NotificationFanoutWriter fanoutWriter;
 
-  /**
-   * A single notification. {@code payload} is the type's target ref (post / series) or null.
-   * Skipped entirely — no bell row, no push — when the recipient has muted this type; an absent
-   * preference is on, so existing behavior is unchanged.
-   */
+  /** 수신 거부면 인앱 알림과 푸시 모두 생략한다. payload는 대상 참조 또는 null이다. */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
       Long recipientUserId, NotificationType type, Long actorUserId, NotificationTarget payload) {
@@ -57,23 +46,13 @@ public class RecordBlogNotificationUseCase {
     }
     String json = targetCodec.encode(payload);
     repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
-    pushSender.send(
+    pushDelivery.send(
         recipientUserId, pushMessage(type, actorUserId, payload, localeOf(recipientUserId)));
   }
 
   /**
-   * Fan-out: one row per recipient sharing the same type/actor/target — a followed author's new
-   * post landing in every follower's bell, or a grown path reaching each of its prior contributors.
-   * The target ref ({@link NotificationPostRef} or {@link NotificationCollectionRef}) is serialized
-   * once and reused across the inserts. Recipients who muted this type are dropped up front by one
-   * bulk query (no per-follower lookup); an absent preference is on, so a follower who never
-   * touched settings still receives it.
-   *
-   * <p>Runs off the request thread (the caller is an after-commit async listener); the surviving
-   * recipients are chunked into separate transactions so a popular author's fan-out never holds one
-   * DB connection open across the whole batch (the 2026-06 pool-exhaustion failure mode). Every
-   * enabled follower is still notified — chunking bounds connection-hold, it does not cap the
-   * audience.
+   * {@link NotificationPostRef}·{@link NotificationCollectionRef} 등의 대상 참조를 수신자마다 저장한다. 수신 거부자를
+   * 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다.
    */
   public void recordForEach(
       List<Long> recipientUserIds,
@@ -102,7 +81,7 @@ public class RecordBlogNotificationUseCase {
                     Collectors.mapping(NotificationUser::id, Collectors.toList())));
     byLocale.forEach(
         (tag, ids) ->
-            pushSender.sendToAll(
+            pushDelivery.sendToAll(
                 ids, pushMessage(type, actorUserId, payload, Locale.forLanguageTag(tag))));
   }
 

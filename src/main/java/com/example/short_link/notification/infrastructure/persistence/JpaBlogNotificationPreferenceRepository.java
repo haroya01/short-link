@@ -6,6 +6,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,7 +18,16 @@ public interface JpaBlogNotificationPreferenceRepository
 
   List<BlogNotificationPreferenceEntity> findByUserId(Long userId);
 
-  /** User ids in the candidate set who explicitly opted out of {@code type} — one query, no N+1. */
+  @Modifying(flushAutomatically = true, clearAutomatically = true)
+  @Query(
+      value =
+          "INSERT INTO blog_notification_preference (user_id, type, enabled, created_at) "
+              + "VALUES (:userId, :type, :enabled, CURRENT_TIMESTAMP(6)) "
+              + "ON DUPLICATE KEY UPDATE enabled = :enabled",
+      nativeQuery = true)
+  void setEnabled(
+      @Param("userId") Long userId, @Param("type") String type, @Param("enabled") boolean enabled);
+
   @Query(
       "select p.userId from BlogNotificationPreferenceEntity p "
           + "where p.type = :type and p.enabled = false and p.userId in :userIds")

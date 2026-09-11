@@ -131,7 +131,7 @@ class EmailLeadServiceExtendedTest {
     service.submit(7L, 11L, "  U@X.com  ", "1.2.3.4");
 
     var savedLead = ArgumentCaptor.forClass(EmailLeadEntity.class);
-    verify(repository).save(savedLead.capture());
+    verify(repository).addIfAbsent(savedLead.capture());
     assertThat(savedLead.getValue().getEmail()).isEqualTo("u@x.com");
     assertThat(savedLead.getValue().getUserId()).isEqualTo(7L);
     assertThat(savedLead.getValue().getBlockId()).isEqualTo(11L);
@@ -146,7 +146,7 @@ class EmailLeadServiceExtendedTest {
     service.submit(7L, 11L, "u@x.com", "");
 
     var savedLead = ArgumentCaptor.forClass(EmailLeadEntity.class);
-    verify(repository).save(savedLead.capture());
+    verify(repository).addIfAbsent(savedLead.capture());
     assertThat(savedLead.getValue().getIpHash()).isNull();
     verify(repository, never()).countByIpHashAndSubmittedAtAfter(anyString(), any(Instant.class));
   }

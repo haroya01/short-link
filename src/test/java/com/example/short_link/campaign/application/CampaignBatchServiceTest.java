@@ -7,6 +7,7 @@ import com.example.short_link.campaign.application.dto.BatchWithLink;
 import com.example.short_link.campaign.application.write.ArchiveCampaignUseCase;
 import com.example.short_link.campaign.application.write.CreateCampaignUseCase;
 import com.example.short_link.campaign.domain.CampaignEntity;
+import com.example.short_link.campaign.exception.CampaignErrorCode;
 import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.campaign.presentation.request.CampaignBatchBulkRequest;
 import com.example.short_link.campaign.presentation.request.CampaignBatchCreateRequest;
@@ -123,7 +124,12 @@ class CampaignBatchServiceTest {
                 new CampaignBatchCreateRequest("zero-q", null, null, 0, null, null)));
 
     assertThatThrownBy(() -> batchService.createBulk(campaign.getId(), owner, req.toCommand()))
-        .isInstanceOf(CampaignException.class);
+        .isInstanceOfSatisfying(
+            CampaignException.class,
+            e -> {
+              assertThat(e.errorCode()).isEqualTo(CampaignErrorCode.INVALID_BATCH_ROW);
+              assertThat(e.getMessage()).isEqualTo("row 1: quantity must be positive");
+            });
 
     assertThat(batchService.list(campaign.getId(), owner)).isEmpty();
   }

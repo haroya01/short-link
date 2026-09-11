@@ -93,7 +93,7 @@ class EmailLeadControllerTest {
         blockRepository.save(
             new ProfileBlockEntity(
                 user.getId(), ProfileBlockType.EMAIL_FORM, "{\"title\":\"newsletter\"}", 1));
-    doThrow(new ProfileException(ProfileErrorCode.INVALID_USERNAME, "bad email"))
+    doThrow(new ProfileException(ProfileErrorCode.INVALID_EMAIL, "bad email"))
         .when(leadService)
         .submitPublic(eq(block.getId()), eq("bogus"), anyString());
 
@@ -102,7 +102,7 @@ class EmailLeadControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"blockId\":" + block.getId() + ",\"email\":\"bogus\"}"))
         .andExpect(status().isBadRequest())
-        .andExpect(jsonPath("$.code").value("INVALID_USERNAME"));
+        .andExpect(jsonPath("$.code").value("INVALID_EMAIL"));
   }
 
   @Test

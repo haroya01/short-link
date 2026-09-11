@@ -27,10 +27,8 @@ public class CancelRegistrationUseCase {
         registrationRepository
             .findByCancelTokenHash(CancelTokens.hash(cancelToken))
             .orElseThrow(() -> new EventException(EventErrorCode.REGISTRATION_NOT_FOUND));
-    if (!registration.isConfirmed()) {
-      return;
+    if (registration.cancel(Instant.now())) {
+      eventRepository.decrementRegistrationCount(registration.getEventId());
     }
-    registration.cancel(Instant.now());
-    eventRepository.decrementRegistrationCount(registration.getEventId());
   }
 }

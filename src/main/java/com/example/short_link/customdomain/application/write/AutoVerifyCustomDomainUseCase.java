@@ -3,36 +3,29 @@ package com.example.short_link.customdomain.application.write;
 import com.example.short_link.common.net.TxtResolver;
 import com.example.short_link.customdomain.application.helper.CustomDomainPolicy;
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
-import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Probe one pending domain on behalf of the auto-verify job. Never throws on DNS misses; that's the
- * normal "still propagating" path and the next tick will retry.
- */
+/** DNS 불일치는 전파 지연일 수 있으므로 예외 없이 다음 자동 검증에서 재시도한다. */
 @Service
 @RequiredArgsConstructor
 public class AutoVerifyCustomDomainUseCase {
 
-  private final CustomDomainRepository repository;
   private final MeterRegistry meterRegistry;
   private final TxtResolver txtResolver;
+  private final RecordCustomDomainVerificationUseCase recordVerification;
 
-  @Transactional
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public boolean execute(CustomDomainEntity entity) {
     boolean ok = checkTxtRecord(entity.getDomain(), entity.getVerificationToken());
-    CustomDomainEntity reloaded = repository.findById(entity.getId()).orElse(null);
-    if (reloaded == null) return false;
-    if (ok) {
-      reloaded.markVerified();
+    boolean recorded = recordVerification.executeIfPresent(entity.getId(), ok);
+    if (recorded) {
       meterRegistry.counter("custom_domain.verify", "result", "auto_ok").increment();
-      return true;
     }
-    reloaded.markCheckFailed();
-    return false;
+    return recorded;
   }
 
   private boolean checkTxtRecord(String domain, String expectedToken) {

@@ -19,10 +19,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 비로그인 신청. 순서가 정합성의 전부다: 검증 → 정원 원자 증가(만석 판정) → 저장. 저장이 UNIQUE(event_id, contact) 경합으로 지면 증가분을
- * 되돌린다. 취소된 같은 contact 의 재신청은 그 행을 되살린다.
- */
+/** 정원을 원자적으로 확보한 뒤 저장한다. 연락처 중복 경합으로 저장에 실패하면 확보한 정원을 돌려준다. 취소된 연락처의 재신청은 기존 행을 복구한다. */
 @Service
 @RequiredArgsConstructor
 public class RegisterForEventUseCase {
@@ -42,7 +39,7 @@ public class RegisterForEventUseCase {
             .orElseThrow(() -> new EventException(EventErrorCode.EVENT_NOT_FOUND, cmd.slug()));
     event.requireRegistrationOpen(Instant.now());
     String contact = EventContacts.normalize(event.getContactField(), cmd.contact());
-    String name = requireName(cmd.name());
+    String name = EventRegistrationEntity.normalizeName(cmd.name());
     String answersJson =
         EventQuestions.validateAndSerializeAnswers(
             questionRepository.findAllByEventIdOrderByPosition(event.getId()), cmd.answers());
@@ -83,12 +80,5 @@ public class RegisterForEventUseCase {
             ? null
             : Math.max(0, event.getCapacity() - (event.getRegistrationCount() + 1));
     return new RegistrationResult(registration.getId(), cancelToken, spotsLeft);
-  }
-
-  private static String requireName(String raw) {
-    if (raw == null || raw.isBlank() || raw.trim().length() > 100) {
-      throw new EventException(EventErrorCode.INVALID_ANSWER, "name");
-    }
-    return raw.trim();
   }
 }

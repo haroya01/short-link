@@ -7,6 +7,7 @@ import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
+import com.example.short_link.notification.application.push.NotificationPushDelivery;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -57,7 +58,6 @@ class RecordBlogNotificationUseCaseTest {
     return new NotificationUser(id, null, locale);
   }
 
-  /** Default: every type enabled for every recipient — existing behavior is preference-free. */
   @org.junit.jupiter.api.BeforeEach
   void defaultsToEveryTypeEnabled() {
     when(preferenceService.isEnabled(
@@ -74,7 +74,7 @@ class RecordBlogNotificationUseCaseTest {
     return new RecordBlogNotificationUseCase(
         repository,
         new NotificationTargetCodec(jsonMapper),
-        pushSender,
+        new NotificationPushDelivery(pushSender),
         userRepository,
         messageSource,
         preferenceService,
@@ -288,7 +288,6 @@ class RecordBlogNotificationUseCaseTest {
     NotificationUser r9 = userWith(9L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7, r9));
-    // 8 muted NEW_POST; the filtered list keeps 7 and 9 in order — only those reach the writer.
     when(preferenceService.filterEnabled(List.of(7L, 8L, 9L), NotificationType.NEW_POST))
         .thenReturn(List.of(7L, 9L));
 
@@ -397,7 +396,6 @@ class RecordBlogNotificationUseCaseTest {
     NotificationUser r7 = userWith(7L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7));
-    // 9 muted PATH_GREW; the filtered list keeps 7 — only that survivor reaches the writer.
     when(preferenceService.filterEnabled(List.of(7L, 9L), NotificationType.PATH_GREW))
         .thenReturn(List.of(7L));
 

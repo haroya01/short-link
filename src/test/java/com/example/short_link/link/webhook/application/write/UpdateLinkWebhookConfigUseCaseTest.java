@@ -1,6 +1,7 @@
 package com.example.short_link.link.webhook.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -141,5 +142,35 @@ class UpdateLinkWebhookConfigUseCaseTest {
                 null));
 
     assertThat(summary.deliveryMode()).isEqualTo(WebhookDeliveryMode.PER_EVENT);
+  }
+
+  @Test
+  void invalidDeliveryModeDoesNotApplyFilterChanges() {
+    LinkWebhookEntity hook = stubHook();
+    UpdateLinkWebhookConfigCommand command =
+        new UpdateLinkWebhookConfigCommand(
+            7L,
+            new ShortCode("abcde"),
+            99L,
+            true,
+            30,
+            true,
+            100,
+            "example.com",
+            "campaign",
+            WebhookDeliveryMode.DAILY_SUMMARY,
+            null,
+            null,
+            null);
+
+    assertThatThrownBy(() -> useCase.execute(command)).isInstanceOf(IllegalArgumentException.class);
+
+    assertThat(hook.isIncludeBots()).isFalse();
+    assertThat(hook.getSampleRate()).isEqualTo(100);
+    assertThat(hook.isBatchEnabled()).isFalse();
+    assertThat(hook.getDailyQuota()).isNull();
+    assertThat(hook.getReferrerHostFilter()).isNull();
+    assertThat(hook.getUtmSourceFilter()).isNull();
+    assertThat(hook.getDeliveryMode()).isEqualTo(WebhookDeliveryMode.PER_EVENT);
   }
 }

@@ -3,15 +3,13 @@ package com.example.short_link.notification.infrastructure;
 import com.example.short_link.notification.application.push.PushSender;
 import java.util.Collection;
 import java.util.List;
+import java.util.function.Consumer;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-/**
- * 한 알림을 모든 푸시 채널로 — APNs(iOS 앱)와 웹푸시(브라우저)에 동시에 보낸다. {@link
- * com.example.short_link.notification.application.write.RecordBlogNotificationUseCase} 가 주입받는 단일
- * 발송기(@Primary). 각 채널은 미설정이면 스스로 no-op 이라 여기선 분기 없이 둘 다 호출만 한다. 델리게이트는 구체 타입으로 받아(자기 자신 재주입 방지) 한
- * 번씩만 부른다.
- */
+/** 채널별 실패를 격리해 한 푸시 채널의 실패가 다른 채널의 전달을 막지 않게 한다. */
+@Slf4j
 @Component
 @Primary
 public class CompositePushSender implements PushSender {
@@ -24,11 +22,21 @@ public class CompositePushSender implements PushSender {
 
   @Override
   public void send(Long recipientUserId, PushMessage message) {
-    delegates.forEach(d -> d.send(recipientUserId, message));
+    deliver(d -> d.send(recipientUserId, message));
   }
 
   @Override
   public void sendToAll(Collection<Long> recipientUserIds, PushMessage message) {
-    delegates.forEach(d -> d.sendToAll(recipientUserIds, message));
+    deliver(d -> d.sendToAll(recipientUserIds, message));
+  }
+
+  private void deliver(Consumer<PushSender> delivery) {
+    for (PushSender delegate : delegates) {
+      try {
+        delivery.accept(delegate);
+      } catch (RuntimeException e) {
+        log.warn("push channel {} failed: {}", delegate.getClass().getSimpleName(), e.toString());
+      }
+    }
   }
 }

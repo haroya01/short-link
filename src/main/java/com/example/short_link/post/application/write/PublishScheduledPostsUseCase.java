@@ -1,43 +1,29 @@
 package com.example.short_link.post.application.write;
 
-import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Flips SCHEDULED posts whose time has come to PUBLISHED. The schedule endpoint only parks a post
- * (status=SCHEDULED, scheduledAt); this is what actually publishes it — invoked per-minute by
- * {@code PublishScheduledPostsJob}. A post that can't go public (e.g. its title was cleared after
- * scheduling) is skipped, not allowed to fail the whole batch. Revisions are captured like a manual
- * publish, so the published version is recorded.
- */
+/** 글별 트랜잭션으로 발행하며, 한 글이 실패해도 나머지 예약 글은 계속 처리한다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class PublishScheduledPostsUseCase {
 
   private final PostRepository postRepository;
-  private final PostPublicationCompletion publicationCompletion;
+  private final PublishScheduledPostUseCase publishScheduledPost;
 
-  @Transactional
   public int execute(Instant now) {
-    List<PostEntity> due = postRepository.findScheduledDue(now);
+    List<Long> due = postRepository.findScheduledDueIds(now);
     int published = 0;
-    for (PostEntity post : due) {
+    for (Long postId : due) {
       try {
-        // A scheduled post has never been public, so its first auto-publish notifies followers.
-        boolean firstPublish = post.getPublishedAt() == null;
-        post.publish();
-        postRepository.save(post);
-        publicationCompletion.complete(post, firstPublish, () -> now);
-        published++;
+        if (publishScheduledPost.execute(postId, now)) published++;
       } catch (RuntimeException e) {
-        log.warn("scheduled publish skipped post {}: {}", post.getId(), e.getMessage());
+        log.warn("scheduled publish skipped post {}: {}", postId, e.getMessage());
       }
     }
     return published;

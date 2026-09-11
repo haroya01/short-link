@@ -19,10 +19,8 @@ public class ReplacePostBlocksUseCase {
 
   @Transactional
   public List<PostBlockEntity> execute(ReplacePostBlocksCommand cmd) {
-    // Stamp the edit on the (managed) post — a body replace otherwise never touches the posts row,
-    // so without this a content-only edit wouldn't move last_edited_at. Hibernate dirty-checks the
-    // managed entity and flushes the stamp at commit (no explicit save needed).
-    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    // 본문만 교체해도 last_edited_at이 바뀌도록 부모 글에 편집 시각을 기록한다.
+    PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     post.markEdited();
     postBlockRepository.deleteAllByPostId(cmd.postId());
     if (cmd.blocks().isEmpty()) {
@@ -35,12 +33,10 @@ public class ReplacePostBlocksUseCase {
     for (ReplacePostBlocksCommand.BlockInput input : cmd.blocks()) {
       entities.add(new PostBlockEntity(cmd.postId(), input.type(), input.content(), order++));
     }
-    // One multi-row INSERT instead of saveAll's per-row INSERTs (IDENTITY ids can't be batched),
-    // then re-read so callers still receive the persisted blocks with their generated ids.
+    // IDENTITY는 JDBC 배치가 안 되므로 다중 행 INSERT 후 생성 ID를 다시 읽는다.
     postBlockRepository.insertAll(entities);
     List<PostBlockEntity> persisted =
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId());
-    // 방금 심은 블록을 그대로 넘겨 파생 검색 컬럼을 갱신 — 재조회 없이 본문까지 인덱싱된다.
     searchTextUpdater.refresh(post, persisted);
     return persisted;
   }

@@ -14,6 +14,7 @@ import com.example.short_link.link.stats.application.LinkClickEventReader;
 import com.example.short_link.link.stats.application.read.LinkStatsQueryService;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -93,7 +94,7 @@ public class LinkExportService {
   public String exportStatsCsv(Long userId, ShortCode shortCode, String dimension) {
     LinkStats stats = statsService.stats(userId, shortCode);
     StringBuilder sb = new StringBuilder(8 * 1024);
-    String dim = dimension == null ? "daily" : dimension.toLowerCase();
+    String dim = dimension == null ? "daily" : dimension.toLowerCase(Locale.ROOT);
     switch (dim) {
       case "daily" -> {
         CsvWriter.appendRow(sb, "date", "count");

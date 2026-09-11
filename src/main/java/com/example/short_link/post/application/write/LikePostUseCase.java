@@ -20,15 +20,14 @@ public class LikePostUseCase {
   private final PostRepository postRepository;
   private final PostLikeRepository postLikeRepository;
   private final ApplicationEventPublisher events;
+  private final PostInteractionAccess access;
 
   @Transactional
   public PostLikeStatus like(Long userId, Long postId) {
-    PostEntity post = requirePost(postId);
-    // Insert + counter bump are both atomic at the DB level, so concurrent likes from different
-    // users can't lose an increment, and a double-like from the same user bumps the count once.
+    PostEntity post = access.requireInteractablePostForUpdate(userId, postId);
+    // 새 좋아요 행이 생긴 경우에만 원자적으로 카운터를 증가시킨다.
     if (postLikeRepository.insertIgnore(postId, userId) > 0) {
       postRepository.incrementLikeCount(postId);
-      // Only a genuinely new like (not a repeat) notifies the author, and never a self-like.
       if (!post.getUserId().equals(userId)) {
         events.publishEvent(
             BlogInteractionEvent.like(
@@ -49,7 +48,7 @@ public class LikePostUseCase {
 
   private PostEntity requirePost(Long postId) {
     return postRepository
-        .findById(postId)
+        .findByIdForUpdate(postId)
         .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId));
   }
 }

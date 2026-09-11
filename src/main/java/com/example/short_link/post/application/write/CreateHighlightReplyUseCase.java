@@ -5,25 +5,18 @@ import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
-import com.example.short_link.post.domain.repository.PostHighlightRepository;
-import com.example.short_link.post.exception.PostErrorCode;
-import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Create a reply in a highlight's flat thread. The highlight must exist; the reply notifies the
- * highlight's author (the thread opener) and any @-mentioned users, reusing the in-app REPLY /
- * MENTION fan-out — the same shape as {@link CreateCommentUseCase}.
- */
+/** 하이라이트 작성자에게 답글 알림을 보내며 멘션 알림은 댓글과 같은 정책으로 처리한다. */
 @Service
 @RequiredArgsConstructor
 public class CreateHighlightReplyUseCase {
 
-  private final PostHighlightRepository highlightRepository;
+  private final PostInteractionAccess access;
   private final PostHighlightReplyRepository replyRepository;
   private final UserRepository userRepository;
   private final CommentNotifications notifications;
@@ -31,10 +24,7 @@ public class CreateHighlightReplyUseCase {
   @Transactional
   public HighlightReplyView execute(CreateHighlightReplyCommand cmd) {
     PostHighlightEntity highlight =
-        highlightRepository
-            .findById(cmd.highlightId())
-            .orElseThrow(
-                () -> new PostException(PostErrorCode.HIGHLIGHT_NOT_FOUND, cmd.highlightId()));
+        access.requireReplyableHighlight(cmd.userId(), cmd.highlightId());
 
     PostHighlightReplyEntity saved =
         replyRepository.save(

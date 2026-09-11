@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 import org.springframework.beans.factory.annotation.Value;
@@ -76,9 +77,9 @@ public class ProfileQueryService {
 
   @Cacheable(
       value = "public-profile",
-      key = "#username == null ? '' : #username.trim().toLowerCase()")
+      key = "#username == null ? '' : #username.trim().toLowerCase(T(java.util.Locale).ROOT)")
   public PublicProfile findByUsername(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase();
+    String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
     UserEntity user =
         userRepository
             .findByUsername(normalized)

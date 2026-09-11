@@ -8,19 +8,27 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-@RequiredArgsConstructor
 public class LinkProtectionService {
 
   private final LinkRepository repository;
   private final LinkAccessControlRepository accessControlRepository;
-  private final BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
+  private final PasswordEncoder encoder;
+
+  public LinkProtectionService(
+      LinkRepository repository,
+      LinkAccessControlRepository accessControlRepository,
+      @Qualifier("linkPasswordEncoder") PasswordEncoder encoder) {
+    this.repository = repository;
+    this.accessControlRepository = accessControlRepository;
+    this.encoder = encoder;
+  }
 
   @Transactional
   @CacheEvict(value = "link", key = "#shortCode")

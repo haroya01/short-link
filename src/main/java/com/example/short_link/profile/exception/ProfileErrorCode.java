@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 public enum ProfileErrorCode {
   PROFILE_NOT_FOUND(HttpStatus.NOT_FOUND, "profile not found: %s"),
   INVALID_USERNAME(HttpStatus.BAD_REQUEST, "%s"),
+  INVALID_EMAIL(HttpStatus.BAD_REQUEST, "%s"),
   USERNAME_TAKEN(HttpStatus.CONFLICT, "username taken: %s"),
   OEMBED_NOT_APPLICABLE(HttpStatus.UNPROCESSABLE_ENTITY, "oembed not applicable"),
   EMAIL_LEAD_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "%s");

@@ -110,12 +110,7 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
     this.format = format == null ? WebhookFormat.GENERIC : format;
   }
 
-  /**
-   * Clears the failure trail so a hook that auto-disabled on a stale reason (e.g. the payload-shape
-   * mismatch fixed by re-detecting {@link WebhookFormat}) can fire again. Distinct from {@link
-   * #enable()} because we also want {@code lastError} blanked — leaving the old error string
-   * dangling on a freshly-revived hook is misleading in the dashboard.
-   */
+  /** 재활성화할 때 실패 횟수와 이전 오류 표시도 초기화한다. */
   public void resetFailureState() {
     this.enabled = true;
     this.consecutiveFailures = 0;
@@ -175,8 +170,6 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
         includeBots, sampleRate, batchEnabled, dailyQuota, referrerHostFilter, utmSourceFilter);
   }
 
-  // Backward-compatible accessors. The filter VO holds the actual columns now, but every existing
-  // caller still goes through the entity surface.
   public boolean isIncludeBots() {
     return filter.isIncludeBots();
   }
@@ -201,19 +194,36 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
     return filter.getUtmSourceFilter();
   }
 
-  /**
-   * Switch the hook's delivery mode + the mode-specific knobs. Caller passes only the values that
-   * apply to the new mode; the entity nulls out the others to keep the row coherent (e.g. switching
-   * from DAILY_SUMMARY to PER_EVENT clears the summary hour so a future re-enable doesn't fire
-   * yesterday's stats at a stale hour).
-   */
+  /** 새 전송 모드에서 사용하지 않는 설정은 지워 다음 모드 전환에 남지 않게 한다. */
   public void changeDeliveryMode(
       WebhookDeliveryMode mode,
       Integer summaryHourOfDay,
       Integer spikeThreshold,
       Integer spikeWindowMinutes) {
     if (mode == null) return;
+    validateDeliveryMode(mode, summaryHourOfDay, spikeThreshold, spikeWindowMinutes);
     this.deliveryMode = mode;
+    if (mode.sendsDailySummary()) {
+      this.summaryHourOfDay = summaryHourOfDay;
+    } else {
+      this.summaryHourOfDay = null;
+      this.summaryLastSentDate = null;
+    }
+    if (mode.sendsSpikeAlert()) {
+      this.spikeThreshold = spikeThreshold;
+      this.spikeWindowMinutes = spikeWindowMinutes;
+    } else {
+      this.spikeThreshold = null;
+      this.spikeWindowMinutes = null;
+      this.spikeLastFiredAt = null;
+    }
+  }
+
+  private static void validateDeliveryMode(
+      WebhookDeliveryMode mode,
+      Integer summaryHourOfDay,
+      Integer spikeThreshold,
+      Integer spikeWindowMinutes) {
     if (mode.sendsDailySummary()) {
       if (summaryHourOfDay == null) {
         throw new IllegalArgumentException("summaryHourOfDay required for " + mode);
@@ -221,10 +231,6 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
       if (summaryHourOfDay < 0 || summaryHourOfDay > 23) {
         throw new IllegalArgumentException("summaryHourOfDay must be 0..23");
       }
-      this.summaryHourOfDay = summaryHourOfDay;
-    } else {
-      this.summaryHourOfDay = null;
-      this.summaryLastSentDate = null;
     }
     if (mode.sendsSpikeAlert()) {
       if (spikeThreshold == null || spikeThreshold < 1) {
@@ -233,12 +239,6 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
       if (spikeWindowMinutes == null || spikeWindowMinutes < 1) {
         throw new IllegalArgumentException("spikeWindowMinutes must be >= 1 for " + mode);
       }
-      this.spikeThreshold = spikeThreshold;
-      this.spikeWindowMinutes = spikeWindowMinutes;
-    } else {
-      this.spikeThreshold = null;
-      this.spikeWindowMinutes = null;
-      this.spikeLastFiredAt = null;
     }
   }
 

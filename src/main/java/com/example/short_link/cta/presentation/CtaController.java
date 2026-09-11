@@ -14,6 +14,7 @@ import com.example.short_link.cta.presentation.request.CreateCtaRequest;
 import com.example.short_link.cta.presentation.request.UpdateCtaRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -84,10 +85,10 @@ public class CtaController {
   }
 
   private static CtaStyle parseStyle(String s) {
-    return s == null || s.isBlank() ? null : CtaStyle.valueOf(s.toUpperCase());
+    return s == null || s.isBlank() ? null : CtaStyle.valueOf(s.toUpperCase(Locale.ROOT));
   }
 
   private static CtaPurpose parsePurpose(String s) {
-    return s == null || s.isBlank() ? null : CtaPurpose.valueOf(s.toUpperCase());
+    return s == null || s.isBlank() ? null : CtaPurpose.valueOf(s.toUpperCase(Locale.ROOT));
   }
 }

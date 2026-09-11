@@ -24,17 +24,15 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 인증 없이 public 으로 접근 가능한 read service. PUBLISHED 글만 노출. UNPUBLISHED 는 410 Gone (작성자 의도적 제거),
- * DRAFT/SCHEDULED 는 404. 존재하지 않거나 soft-deleted user 도 404.
- *
- * <p>CTA_REF 블록은 content JSON 의 {@code ctaId} 를 lookup 해서 라이브러리 entity 의 label/url/style/purpose 까지
- * hydrate. 삭제된 CTA 는 deleted=true 로 표시 (UI 가 fallback 처리 가능).
+ * 공개 조회: PUBLISHED만 노출하고 UNPUBLISHED는 410, DRAFT/SCHEDULED·삭제 작성자는 404다. 삭제된 CTA 참조는 deleted=true로
+ * 반환한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -52,8 +50,7 @@ public class PublicPostQueryService {
 
   public PublicPostListView listPublicPosts(String username) {
     UserEntity author = resolveAuthor(username);
-    // Pinned posts (curation) surface first by pin_order; the rest keep publishedAt-desc. The repo
-    // already returns publishedAt-desc and Stream.sorted is stable, so unpinned order is preserved.
+    // 안정 정렬이므로 고정되지 않은 글은 저장소의 발행 최신순을 유지한다.
     List<PublicPostListItem> posts =
         postRepository
             .findAllByUserIdAndStatusOrderByPublishedAtDesc(author.getId(), PostStatus.PUBLISHED)
@@ -64,9 +61,6 @@ public class PublicPostQueryService {
     return new PublicPostListView(PublicAuthorView.from(author), posts);
   }
 
-  /**
-   * Pinned (pin_order != null) before unpinned; pinned ordered by pin_order asc. Stable for ties.
-   */
   private static final Comparator<PostEntity> PINNED_FIRST =
       (a, b) -> {
         Integer pa = a.getPinOrder();
@@ -94,13 +88,7 @@ public class PublicPostQueryService {
     return buildDetail(author, post);
   }
 
-  /**
-   * Reads a post by its share token, bypassing the status guard — this is how an owner previews a
-   * not-yet-public draft. The token IS the authorization (unguessable), so no principal is
-   * required. A deleted author or unknown token is a 404 (no detail leaked about which). Series nav
-   * resolves to null for an unpublished post (it isn't among its series' published siblings), which
-   * is the intended preview behavior.
-   */
+  /** 미리보기 토큰 자체가 접근 권한이므로 로그인·공개 상태 검사를 생략한다. 없는 토큰과 삭제 작성자는 모두 404이며, 비공개 글은 시리즈 탐색에 포함하지 않는다. */
   public PublicPostDetail findPreviewPost(String token) {
     if (token == null || token.isBlank()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
@@ -130,7 +118,6 @@ public class PublicPostQueryService {
         PublicAuthorView.from(author), PublicPostListItem.from(post), blocks, seriesNavFor(post));
   }
 
-  /** Build the series nav for a published post, or null if it isn't in a series. */
   private PublicPostSeriesNav seriesNavFor(PostEntity post) {
     if (post.getSeriesId() == null) return null;
     SeriesEntity series = seriesRepository.findById(post.getSeriesId()).orElse(null);
@@ -178,12 +165,10 @@ public class PublicPostQueryService {
     }
     CtaEntity cta = ctaMap.get(ctaId);
     if (cta == null) {
-      // CTA 라이브러리에서 영구 삭제됐거나 (현재는 soft-delete 만 가능) 다른 user 의 CTA 면 lookup 실패.
-      // 자기 글의 CTA 면 정상적으로 hydrate. 어쨌든 안전하게 null cta 로 반환 — UI 가 placeholder.
+      // 삭제됐거나 다른 작성자의 CTA는 빈 참조로 반환한다.
       return PublicPostBlockView.from(entity);
     }
-    // Serve the tracked kurl short link when one exists, so clicks flow through the redirect and
-    // attribute to this post. Falls back to the raw URL when tracking wasn't established.
+    // 추적 링크가 있으면 이 글의 클릭으로 집계하고, 없으면 원본 URL로 이동한다.
     String url =
         cta.getTrackedShortCode() != null
             ? shortLinkUrlBuilder.build(ShortCode.of(cta.getTrackedShortCode()))
@@ -208,7 +193,7 @@ public class PublicPostQueryService {
   }
 
   private UserEntity resolveAuthor(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase();
+    String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
     return userRepository
         .findByUsername(normalized)
         .filter(u -> !u.isDeleted())

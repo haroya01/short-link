@@ -3,15 +3,10 @@ package com.example.short_link.link.redirect.presentation.helper;
 import com.example.short_link.common.web.ClientIp;
 import com.example.short_link.link.redirect.application.RedirectVisit;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Locale;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-/**
- * Stateless support for the redirect / password-unlock flow — picks the client IP, normalizes the
- * OS label, and maps a final response status to the metric outcome label. Lifted out of {@code
- * RedirectController} so the same helpers can serve {@code PasswordUnlockController} without
- * duplicating the logic.
- */
 public final class LinkRedirectSupport {
 
   private LinkRedirectSupport() {}
@@ -37,7 +32,7 @@ public final class LinkRedirectSupport {
 
   private static boolean isPrefetch(HttpServletRequest request) {
     String secPurpose = request.getHeader("Sec-Purpose");
-    if (secPurpose != null && secPurpose.toLowerCase().contains("prefetch")) return true;
+    if (secPurpose != null && secPurpose.toLowerCase(Locale.ROOT).contains("prefetch")) return true;
     if ("prefetch".equalsIgnoreCase(request.getHeader("Purpose"))) return true;
     return "prefetch".equalsIgnoreCase(request.getHeader("X-moz"));
   }
@@ -46,16 +41,11 @@ public final class LinkRedirectSupport {
     return ClientIp.of(req);
   }
 
-  /**
-   * The request's {@code Sec-Fetch-Site} value, or null when absent. Only the four values the fetch
-   * metadata spec defines are kept — anything else is a forged or garbage header and is dropped
-   * rather than stored. Read here (not as a {@code @RequestHeader}) so both the redirect flow and
-   * the preview branch get it the same way {@code Sec-GPC} is read.
-   */
+  /** Sec-Fetch-Site의 표준 값 네 가지만 저장하며, 누락·알 수 없는 값은 null이다. */
   public static String fetchSite(HttpServletRequest req) {
     String raw = req.getHeader("Sec-Fetch-Site");
     if (raw == null) return null;
-    String value = raw.trim().toLowerCase();
+    String value = raw.trim().toLowerCase(Locale.ROOT);
     return switch (value) {
       case "none", "cross-site", "same-site", "same-origin" -> value;
       default -> null;

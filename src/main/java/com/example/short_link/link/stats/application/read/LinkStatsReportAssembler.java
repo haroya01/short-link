@@ -4,6 +4,7 @@ import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.application.LinkInsights;
+import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +22,8 @@ class LinkStatsReportAssembler {
 
   LinkStats assemble(LinkEntity link, ZoneId reportZone) {
     LinkId linkId = link.linkId();
-    String reportTz = LinkStatsDateSupport.currentOffset(reportZone);
+    Instant reportTime = Instant.now();
+    String reportTz = LinkStatsDateSupport.offsetAt(reportZone, reportTime);
 
     LinkStatsTotalsReader.Totals totals = totalsReader.totals(linkId, link.getCreatedAt());
     LinkStats.Velocity velocity = totalsReader.velocity(linkId);
@@ -42,6 +44,7 @@ class LinkStatsReportAssembler {
     List<LinkStats.Insight> insights =
         insightsCalculator.computeReport(
             LinkInsights.ReportFacts.builder()
+                .reportDate(reportTime.atZone(reportZone).toLocalDate())
                 .total(totals.total())
                 .human(totals.human())
                 .bot(totals.bot())

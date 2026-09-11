@@ -50,7 +50,7 @@
 @junit | author-analytics-post-table | 3 | 0 | 0 | 0 | 3
 @junit | author-block-reader | 2 | 1 | 0 | 0 | 3
 @junit | author-blocked-users-list | 2 | 0 | 0 | 0 | 2
-@junit | author-comment-like | 2 | 1 | 0 | 0 | 3
+@junit | author-comment-like | 5 | 1 | 0 | 0 | 6
 @junit | author-comment-reply | 8 | 2 | 0 | 0 | 10
 @junit | author-comment-unlike | 3 | 0 | 0 | 1 | 4
 @junit | author-delete-post-with-live-reader-data | 3 | 0 | 0 | 11 | 14
@@ -65,7 +65,7 @@
 @junit | author-first-publish | 7 | 2 | 1 | 0 | 10
 @junit | author-follow-highlight-curator | 9 | 2 | 0 | 0 | 11
 @junit | author-followed-highlight-feed | 5 | 0 | 0 | 0 | 5
-@junit | author-highlight-reply-create | 7 | 2 | 0 | 0 | 9
+@junit | author-highlight-reply-create | 8 | 2 | 0 | 0 | 10
 @junit | author-highlight-reply-delete | 1 | 0 | 0 | 1 | 2
 @junit | author-liked-comment-ids | 2 | 0 | 0 | 0 | 2
 @junit | author-note-like | 3 | 1 | 0 | 0 | 4
@@ -95,7 +95,8 @@
 @junit | author-series-detail | 3 | 0 | 0 | 0 | 3
 @junit | author-series-edit | 3 | 0 | 1 | 0 | 4
 @junit | author-series-list | 2 | 0 | 0 | 0 | 2
-@junit | author-series-order-posts | 7 | 0 | 2 | 0 | 9
+# Lock the series and its complete affected post set in two reads, then assemble the response.
+@junit | author-series-order-posts | 5 | 0 | 2 | 0 | 7
 @junit | author-series-reader-stats | 19 | 0 | 0 | 0 | 19
 @junit | author-unblock-reader | 2 | 0 | 0 | 1 | 3
 @junit | author-unpublished-body-edit | 3 | 2 | 1 | 1 | 7
@@ -167,7 +168,7 @@
 @junit | curation-second-curator-collection | 0 | 1 | 0 | 0 | 1
 @junit | curation-second-curator-connect-shared-post | 6 | 2 | 0 | 0 | 8
 @junit | curation-source-body-write | 3 | 2 | 1 | 1 | 7
-@junit | curation-source-highlight-create | 1 | 1 | 0 | 0 | 2
+@junit | curation-source-highlight-create | 3 | 1 | 0 | 0 | 4
 @junit | curation-source-post-create | 2 | 1 | 0 | 0 | 3
 @junit | curation-source-post-delete | 3 | 0 | 0 | 10 | 13
 @junit | curation-source-post-publish | 7 | 2 | 1 | 0 | 10
@@ -176,8 +177,9 @@
 @junit | custom-domain-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | custom-domain-list | 1 | 0 | 0 | 0 | 1
 @junit | custom-domain-register | 2 | 1 | 0 | 0 | 3
-@junit | custom-domain-verification-missing | 1 | 0 | 0 | 0 | 1
-@junit | custom-domain-verify | 1 | 0 | 1 | 0 | 2
+# DNS result persistence reloads the domain in its own transaction, including failed checks.
+@junit | custom-domain-verification-missing | 2 | 0 | 1 | 0 | 3
+@junit | custom-domain-verify | 2 | 0 | 1 | 0 | 3
 @junit | discovery-english-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | discovery-english-metadata | 3 | 2 | 1 | 0 | 6
 @junit | discovery-english-publish | 7 | 2 | 1 | 0 | 10
@@ -295,7 +297,8 @@
 @junit | notification-blog-list | 2 | 0 | 0 | 0 | 2
 @junit | notification-blog-preference-list | 1 | 0 | 0 | 0 | 1
 @junit | notification-blog-preference-other-user | 1 | 0 | 0 | 0 | 1
-@junit | notification-blog-preference-set | 1 | 1 | 0 | 0 | 2
+# Preference writes atomically insert or update; there is no preceding existence query.
+@junit | notification-blog-preference-set | 0 | 1 | 0 | 0 | 1
 @junit | notification-blog-read | 0 | 0 | 1 | 0 | 1
 @junit | notification-blog-read-all | 0 | 0 | 1 | 0 | 1
 @junit | notification-blog-unread | 1 | 0 | 0 | 0 | 1
@@ -306,7 +309,7 @@
 @junit | notification-link-cross-user-read | 0 | 0 | 1 | 0 | 1
 @junit | notification-link-list | 1 | 0 | 0 | 0 | 1
 @junit | notification-link-preference-list | 1 | 0 | 0 | 0 | 1
-@junit | notification-link-preference-set | 1 | 1 | 0 | 0 | 2
+@junit | notification-link-preference-set | 0 | 1 | 0 | 0 | 1
 @junit | notification-link-read | 0 | 0 | 1 | 0 | 1
 @junit | notification-link-read-all | 0 | 0 | 1 | 0 | 1
 @junit | notification-link-unread | 1 | 0 | 0 | 0 | 1
@@ -425,7 +428,7 @@
 @junit | reader-foreign-bookmark-folder-denied | 1 | 0 | 0 | 0 | 1
 @junit | reader-global-highlight-feed | 4 | 0 | 0 | 0 | 4
 @junit | reader-highlight-containing-paths | 5 | 0 | 0 | 0 | 5
-@junit | reader-highlight-create | 1 | 1 | 0 | 0 | 2
+@junit | reader-highlight-create | 3 | 1 | 0 | 0 | 4
 @junit | reader-highlight-delete | 1 | 0 | 0 | 3 | 4
 @junit | reader-history-clear-all | 0 | 0 | 0 | 1 | 1
 @junit | reader-history-forget-one | 0 | 0 | 0 | 1 | 1
@@ -441,8 +444,8 @@
 @junit | reader-personal-connection-global-fallback | 6 | 0 | 0 | 0 | 6
 @junit | reader-post-containing-paths | 5 | 0 | 0 | 0 | 5
 @junit | reader-post-containing-paths-batch | 5 | 0 | 0 | 0 | 5
-@junit | reader-post-like | 6 | 2 | 1 | 0 | 9
-@junit | reader-post-like-idempotent | 2 | 1 | 0 | 0 | 3
+@junit | reader-post-like | 8 | 2 | 1 | 0 | 11
+@junit | reader-post-like-idempotent | 4 | 1 | 0 | 0 | 5
 @junit | reader-post-like-status | 2 | 0 | 0 | 0 | 2
 @junit | reader-post-unbookmark | 1 | 0 | 0 | 1 | 2
 @junit | reader-post-unlike | 2 | 0 | 1 | 1 | 4
@@ -487,11 +490,11 @@
 @junit | reader-unpublished-post-gone | 2 | 0 | 0 | 0 | 2
 @junit | removal-live-bookmark | 1 | 1 | 0 | 0 | 2
 @junit | removal-live-comment | 8 | 2 | 0 | 0 | 10
-@junit | removal-live-comment-like | 2 | 1 | 0 | 0 | 3
-@junit | removal-live-highlight | 1 | 1 | 0 | 0 | 2
+@junit | removal-live-comment-like | 5 | 1 | 0 | 0 | 6
+@junit | removal-live-highlight | 3 | 1 | 0 | 0 | 4
 @junit | removal-live-highlight-connection | 8 | 2 | 0 | 0 | 10
-@junit | removal-live-highlight-reply | 7 | 2 | 0 | 0 | 9
-@junit | removal-live-like | 6 | 2 | 1 | 0 | 9
+@junit | removal-live-highlight-reply | 8 | 2 | 0 | 0 | 10
+@junit | removal-live-like | 8 | 2 | 1 | 0 | 11
 @junit | removal-live-post-connection | 6 | 2 | 0 | 0 | 8
 @junit | removal-live-read | 2 | 1 | 0 | 0 | 3
 @junit | removal-retained-reader-collection | 0 | 1 | 0 | 0 | 1
@@ -504,7 +507,8 @@
 @junit | schedule-reader-follows-author | 9 | 2 | 0 | 0 | 11
 @junit | schedule-reader-opens-published-post | 4 | 0 | 0 | 0 | 4
 @junit | schedule-worker-before-due-time | 1 | 0 | 0 | 0 | 1
-@junit | schedule-worker-publishes-due-post | 10 | 3 | 1 | 0 | 14
+# Candidates are read once; each publication then locks and rechecks its own row/transaction.
+@junit | schedule-worker-publishes-due-post | 11 | 3 | 1 | 0 | 15
 @junit | schedule-worker-repeated-tick | 1 | 0 | 0 | 0 | 1
 @junit | tag-create | 1 | 1 | 0 | 0 | 2
 @junit | tag-delete | 2 | 0 | 0 | 2 | 4

@@ -1,6 +1,7 @@
 package com.example.short_link.admin.application.read;
 
 import com.example.short_link.admin.domain.repository.BlockedDomainRepository;
+import com.example.short_link.common.transaction.AfterCommit;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -9,14 +10,8 @@ import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
-/**
- * Cache boundary for the full blocked-domain set. Kept outside {@link BlockedDomainQueryService} so
- * Spring's cache proxy is used even when the query service checks the set from inside {@code
- * isBlocked}.
- */
+/** {@link BlockedDomainQueryService} 내부 호출에도 Spring 캐시 프록시가 적용되도록 분리한다. */
 @Component
 @RequiredArgsConstructor
 public class BlockedDomainCache {
@@ -34,18 +29,7 @@ public class BlockedDomainCache {
   }
 
   public void evictAfterCommit() {
-    if (TransactionSynchronizationManager.isSynchronizationActive()
-        && TransactionSynchronizationManager.isActualTransactionActive()) {
-      TransactionSynchronizationManager.registerSynchronization(
-          new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-              evictNow();
-            }
-          });
-      return;
-    }
-    evictNow();
+    AfterCommit.run(this::evictNow);
   }
 
   public void evictNow() {

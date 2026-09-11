@@ -27,6 +27,7 @@ import com.example.short_link.event.presentation.response.CommitCoverResponse;
 import jakarta.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -117,7 +118,9 @@ public class EventController {
       @PathVariable Long id,
       @Valid @RequestBody ChangeStatusRequest request) {
     changeStatus.execute(
-        userId, id, ChangeEventStatusUseCase.Action.valueOf(request.action().toUpperCase()));
+        userId,
+        id,
+        ChangeEventStatusUseCase.Action.valueOf(request.action().toUpperCase(Locale.ROOT)));
     return eventQueryService.findOwnEvent(userId, id);
   }
 
@@ -169,7 +172,7 @@ public class EventController {
   private static ContactField parseContactField(String raw) {
     return raw == null || raw.isBlank()
         ? ContactField.EMAIL
-        : ContactField.valueOf(raw.toUpperCase());
+        : ContactField.valueOf(raw.toUpperCase(Locale.ROOT));
   }
 
   private static List<com.example.short_link.event.application.helper.EventQuestions.QuestionSpec>

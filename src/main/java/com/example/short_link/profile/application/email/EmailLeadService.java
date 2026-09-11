@@ -14,16 +14,12 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.HexFormat;
 import java.util.List;
-import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class EmailLeadService {
-
-  private static final Pattern EMAIL =
-      Pattern.compile("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$");
 
   private static final int BLOCK_WINDOW_MAX = 200;
 
@@ -52,7 +48,7 @@ public class EmailLeadService {
   /** 이미 등록된 이메일도 접수 완료로 처리하며, 중복 행은 만들지 않는다. */
   @Transactional
   void submit(Long ownerUserId, Long blockId, String email, String clientIp) {
-    String normalizedEmail = normalizeEmail(email);
+    EmailLeadEntity lead = new EmailLeadEntity(ownerUserId, blockId, email, hashIp(clientIp));
     ProfileBlockEntity block =
         blockRepository
             .findById(blockId)
@@ -62,22 +58,23 @@ public class EmailLeadService {
                 () ->
                     new ProfileException(
                         ProfileErrorCode.PROFILE_NOT_FOUND, "email form block " + blockId));
-    String ipHash = hashIp(clientIp);
-    Instant blockSince = Instant.now().minus(BLOCK_WINDOW);
+    String ipHash = lead.getIpHash();
+    Instant now = Instant.now();
+    Instant blockSince = now.minus(BLOCK_WINDOW);
     if (repository.countByBlockIdAndSubmittedAtAfter(block.getId(), blockSince)
         >= BLOCK_WINDOW_MAX) {
       throw new ProfileException(
           ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "block window exhausted");
     }
-    Instant ipSince = Instant.now().minus(IP_WINDOW);
+    Instant ipSince = now.minus(IP_WINDOW);
     if (ipHash != null
         && repository.countByIpHashAndSubmittedAtAfter(ipHash, ipSince) >= IP_WINDOW_MAX) {
       throw new ProfileException(ProfileErrorCode.EMAIL_LEAD_RATE_LIMITED, "ip window exhausted");
     }
-    if (repository.existsByBlockIdAndEmail(block.getId(), normalizedEmail)) {
+    if (repository.existsByBlockIdAndEmail(block.getId(), lead.getEmail())) {
       return;
     }
-    repository.save(new EmailLeadEntity(ownerUserId, block.getId(), normalizedEmail, ipHash));
+    repository.addIfAbsent(lead);
   }
 
   @Transactional
@@ -133,17 +130,6 @@ public class EmailLeadService {
     return repository.save(lead);
   }
 
-  private static String normalizeEmail(String raw) {
-    String trimmed = raw == null ? "" : raw.trim().toLowerCase();
-    if (trimmed.isEmpty())
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email required");
-    if (trimmed.length() > 254)
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email too long");
-    if (!EMAIL.matcher(trimmed).matches())
-      throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "email malformed");
-    return trimmed;
-  }
-
   private String hashIp(String ip) {
     if (ip == null || ip.isBlank()) return null;
     try {
@@ -152,7 +138,7 @@ public class EmailLeadService {
       byte[] digest = md.digest(input.getBytes(StandardCharsets.UTF_8));
       return HexFormat.of().formatHex(digest);
     } catch (NoSuchAlgorithmException ex) {
-      return null;
+      throw new IllegalStateException("SHA-256 unavailable", ex);
     }
   }
 }

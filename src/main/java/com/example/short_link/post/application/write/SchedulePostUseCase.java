@@ -17,7 +17,7 @@ public class SchedulePostUseCase {
 
   @Transactional
   public PostView execute(SchedulePostCommand cmd) {
-    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     post.schedule(cmd.scheduledAt());
     return writeViews.fromSaved(postRepository.save(post));
   }

@@ -16,6 +16,7 @@ public class UpdateCampaignPolicyUseCase {
   @Transactional
   public CampaignEntity execute(UpdateCampaignPolicyCommand command) {
     CampaignEntity c = ownership.require(command.campaignId(), command.ownerId());
+    String name = command.name() != null ? command.name() : c.getName();
     Instant endsAt = command.endsAt() != null ? command.endsAt() : c.getEndsAt();
     CampaignPostEndAction action =
         command.postEndAction() != null ? command.postEndAction() : c.getPostEndAction();
@@ -29,10 +30,7 @@ public class UpdateCampaignPolicyUseCase {
             : c.getDefaultDestinationUrl();
     String postEndMessage =
         command.postEndMessage() != null ? command.postEndMessage() : c.getPostEndMessage();
-    c.updatePolicy(endsAt, defaultDest, action, postEndUrl, postEndMessage);
-    if (command.name() != null) {
-      c.rename(command.name());
-    }
+    c.updateDetails(name, endsAt, defaultDest, action, postEndUrl, postEndMessage);
     return c;
   }
 }
