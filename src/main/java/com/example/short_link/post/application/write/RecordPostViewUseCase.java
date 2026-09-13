@@ -18,21 +18,12 @@ import com.example.short_link.post.domain.repository.PostViewEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
+import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Public post 단건 view 카운터. visitor 가 publishing page 열 때 frontend 가 fire. 익명, dedup 없음 (v0 minimum)
- * — 정확한 unique visitor 추적은 L3 tracking JS 별도 트랙. PUBLISHED 글만 집계 (DRAFT / UNPUBLISHED 는 noop).
- *
- * <p>집계는 두 갈래다: posts.view_count 누적 카운터(카드에 보이는 총 조회수)를 올리고, 동시에 post_view_event 에 한 줄을 남긴다. 후자가
- * "trending" 을 누적이 아니라 최근 윈도우 조회수로 계산하는 근거이자, **글별/시리즈별 독자 분석**(누가·어디서 봤나)의 원천이다. 이벤트 한 줄은 요청
- * 컨텍스트({@link ViewContext})로 enrich 한다 — referrer/UA/IP/UTM → 국가/기기/브라우저/유입/채널, {@code
- * ProfileVisitRecorder} 와 같은 classifier 를 재사용해 enrichment 품질을 맞춘다. enrichment 가 실패해도 조회수 증가는 막지
- * 않는다(핫패스): bare 이벤트로 폴백한다.
- */
+/** 공개 글의 요청마다 조회수와 방문 이벤트를 기록한다. 방문자 중복은 제거하지 않는다. 분류기 오류가 나면 부가 정보 없는 이벤트를 저장해 조회 집계를 유지한다. */
 @Slf4j
 @Service
 public class RecordPostViewUseCase {
@@ -46,27 +37,7 @@ public class RecordPostViewUseCase {
   private final BotHeuristic botHeuristic;
   private final Clock clock;
 
-  @Autowired
   public RecordPostViewUseCase(
-      UserRepository userRepository,
-      PostRepository postRepository,
-      PostViewEventRepository postViewEventRepository,
-      UserAgentClassifier userAgentClassifier,
-      GeoIpResolver geoIpResolver,
-      AsnResolver asnResolver,
-      BotHeuristic botHeuristic) {
-    this(
-        userRepository,
-        postRepository,
-        postViewEventRepository,
-        userAgentClassifier,
-        geoIpResolver,
-        asnResolver,
-        botHeuristic,
-        Clock.systemUTC());
-  }
-
-  RecordPostViewUseCase(
       UserRepository userRepository,
       PostRepository postRepository,
       PostViewEventRepository postViewEventRepository,
@@ -87,21 +58,18 @@ public class RecordPostViewUseCase {
 
   @Transactional
   public void execute(RecordPostViewCommand cmd, ViewContext ctx) {
-    String normalized = cmd.username().trim().toLowerCase();
+    String normalized = cmd.username().trim().toLowerCase(Locale.ROOT);
     UserEntity author =
         userRepository.findByUsername(normalized).filter(u -> !u.isDeleted()).orElse(null);
     if (author == null) return;
-    PostEntity post = postRepository.findByUserIdAndSlug(author.getId(), cmd.slug()).orElse(null);
+    PostEntity post =
+        postRepository.findByUserIdAndSlugForUpdate(author.getId(), cmd.slug()).orElse(null);
     if (post == null || !post.isPublished()) return;
     post.incrementViewCount();
     postRepository.save(post);
     postViewEventRepository.save(buildEvent(post.getId(), ctx));
   }
 
-  /**
-   * Enriched view event from the request context; falls back to a bare row if enrichment throws so
-   * a classifier hiccup never costs the view (the count is already persisted above).
-   */
   private PostViewEventEntity buildEvent(Long postId, ViewContext ctx) {
     if (ctx == null || ctx.isEmpty()) {
       return new PostViewEventEntity(postId, clock.instant());
@@ -140,8 +108,7 @@ public class RecordPostViewUseCase {
           .regionName(geo.region())
           .cityName(geo.city())
           .language(LanguageExtractor.extract(ctx.acceptLanguage()))
-          // Sec-GPC(옵트아웃) 신호가 오면 재방문 식별 해시를 만들지 않는다 — 조회 자체는 익명 집계로
-          // 잡히되, 그 방문자는 return-tracking 안 함(§0, 측정 아닌 존중).
+          // GPC 수신 시 익명 방문만 집계하고 재방문 식별 해시는 만들지 않는다.
           .visitorHash(
               ctx.gpc() ? null : VisitorHasher.hash(postId, ctx.clientIp(), ctx.userAgent()))
           .sourceChannel(SourceChannelNormalizer.normalize(ctx.sourceChannel()))

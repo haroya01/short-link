@@ -6,7 +6,7 @@ import com.example.short_link.post.webhook.domain.BlogWebhookFormat;
 import java.time.Instant;
 import java.util.Set;
 
-/** A blog webhook as shown in the settings list — never includes the secret. */
+/** Settings responses never include the webhook secret. */
 public record BlogWebhookSummary(
     Long id,
     String url,

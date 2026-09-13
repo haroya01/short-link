@@ -225,6 +225,17 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
                 200))
             .path("id")
             .asLong();
+    var invalid =
+        body(
+            call(
+                "profile-email-lead-invalid-rejected",
+                "POST",
+                "/api/v1/public/email-leads",
+                Map.of("blockId", block, "email", "not-an-email"),
+                null,
+                400));
+    assertThat(invalid.path("code").asText()).isEqualTo("INVALID_EMAIL");
+    assertThat(count("select count(*) from email_lead where block_id=?", block)).isZero();
     Map<String, Object> lead = Map.of("blockId", block, "email", "Reader@example.com");
     call("profile-email-lead-submit", "POST", "/api/v1/public/email-leads", lead, null, 200);
     call(

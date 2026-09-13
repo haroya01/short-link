@@ -4,7 +4,7 @@ import com.example.short_link.link.domain.LinkExpiryFilter;
 import java.time.Instant;
 import lombok.Builder;
 
-/** 내 링크 조회의 정규화된 조건. HTTP 문자열 해석은 presentation에서 끝낸다. */
+/** HTTP 문자열 해석과 조건 정규화는 presentation에서 끝내야 한다. */
 @Builder
 public record MyLinksQuery(
     int size,

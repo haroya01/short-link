@@ -20,6 +20,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -61,10 +62,8 @@ public class PostEntity extends BaseTimeEntity {
   private Instant publishedAt;
 
   /**
-   * Last meaningful content/metadata edit (NULL until first edited). Set explicitly by the edit
-   * use-cases via {@link #markEdited()} — deliberately NOT a Hibernate @UpdateTimestamp, so it's
-   * immune to view-count / like-count writes that touch the row. The reader surfaces "수정 {date}"
-   * only when this is meaningfully later than publishedAt.
+   * 내용 편집 시 {@link #markEdited()}로만 갱신한다. 조회·좋아요 쓰기에 바뀌지 않도록 Hibernate 자동 수정 시각을 사용하지 않는다. 최초 편집
+   * 전에는 null이다.
    */
   @Column(name = "last_edited_at")
   private Instant lastEditedAt;
@@ -74,10 +73,6 @@ public class PostEntity extends BaseTimeEntity {
 
   @Column(length = 500)
   private String excerpt;
-
-  // 파생 검색 평문(search_text)은 posts 컬럼이 아니라 곁 테이블 post_search_text 에 있다. 이 컬럼은 FULLTEXT 인덱스만
-  // 훑는 파생 캐시일 뿐 응답에 실리지 않는데, posts 에 두면 피드·상세 등 모든 PostEntity 로드가 최대 수십 KB 본문 평문을 함께
-  // 끌어오기 때문이다. 쓰기는 PostSearchTextUpdater, 읽기(검색)는 네이티브 쿼리의 JOIN 이 담당한다.
 
   @Column(name = "og_image_url", length = 512)
   private String ogImageUrl;
@@ -96,11 +91,7 @@ public class PostEntity extends BaseTimeEntity {
   public static final int MAX_TAGS = 10;
   public static final int MAX_TAG_LENGTH = 40;
 
-  /**
-   * Freeform tags, owner-ordered. Stored in a side table as an ordered collection (velog-style
-   * tags). Normalization (trim / blank-drop / case-insensitive dedup / length + count caps) lives
-   * in {@link #updateTags} so the invariant holds regardless of caller.
-   */
+  /** 작성자 순서를 유지하며 정규화는 {@link #updateTags}에서 수행한다. */
   @ElementCollection
   @CollectionTable(name = "post_tag", joinColumns = @JoinColumn(name = "post_id"))
   @OrderColumn(name = "ordinal")
@@ -108,11 +99,7 @@ public class PostEntity extends BaseTimeEntity {
   @BatchSize(size = 50)
   private List<String> tags = new ArrayList<>();
 
-  /**
-   * Unguessable token that lets the owner share a not-yet-public post via {@code
-   * {slug}?preview=...} without publishing it. Null until first requested; the public read path
-   * bypasses the status guard when it matches. Set lazily via {@link #ensurePreviewToken}.
-   */
+  /** 공개 상태를 우회하는 미리보기 권한이다. 처음 요청할 때 생성하고 이후 유지한다. */
   @Column(name = "preview_token", length = 64)
   private String previewToken;
 
@@ -123,10 +110,7 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "series_order")
   private Integer seriesOrder;
 
-  /**
-   * Author curation: 0-based position among the author's pinned posts (NULL = not pinned). Pinned
-   * posts surface first on the author's public profile, ordered by this. Owner-set, published-only.
-   */
+  /** 고정 순서(0부터). null은 고정되지 않은 글이다. */
   @Column(name = "pin_order")
   private Integer pinOrder;
 
@@ -192,16 +176,10 @@ public class PostEntity extends BaseTimeEntity {
     this.languageTag = languageTag;
   }
 
-  /**
-   * Stamp the last-edited time. Called by the edit use-cases (metadata update / body block replace
-   * / revision restore) so it tracks real author edits, not lifecycle writes (views, likes,
-   * publish).
-   */
   public void markEdited() {
     this.lastEditedAt = Instant.now();
   }
 
-  /** A title may be blank while drafting, but is required before a post goes public. */
   private void requireTitleToGoPublic() {
     if (title == null || title.isBlank()) {
       throw new PostException(PostErrorCode.TITLE_REQUIRED);
@@ -239,7 +217,7 @@ public class PostEntity extends BaseTimeEntity {
     this.status = PostStatus.UNPUBLISHED;
   }
 
-  /** Bring an unpublished post back. URL is preserved, publishedAt is unchanged. */
+  /** 재공개할 때 URL과 최초 발행 시각은 유지한다. */
   public void republish() {
     if (status != PostStatus.UNPUBLISHED) {
       throw new PostException(PostErrorCode.REPUBLISH_NOT_UNPUBLISHED);
@@ -263,21 +241,12 @@ public class PostEntity extends BaseTimeEntity {
     this.likeCount++;
   }
 
-  /**
-   * Replace all tags. Normalizes: trims, drops blanks, truncates each to {@link #MAX_TAG_LENGTH},
-   * de-duplicates case-insensitively (first occurrence's casing wins), and caps the list at {@link
-   * #MAX_TAGS}. An empty/blank input clears all tags.
-   */
+  /** 대소문자 중복은 첫 표기를 유지한다. 빈 입력은 태그 전체 삭제다. */
   public void updateTags(List<String> raw) {
     this.tags.clear();
     this.tags.addAll(normalizeTags(raw));
   }
 
-  /**
-   * Assigns a share token if one isn't set yet and returns the effective token. Idempotent —
-   * calling again keeps (and returns) the existing token, so re-opening the share dialog yields a
-   * stable link. The caller supplies the generated token so the entity stays free of randomness.
-   */
   public String ensurePreviewToken(String token) {
     if (this.previewToken == null) {
       this.previewToken = token;
@@ -295,7 +264,6 @@ public class PostEntity extends BaseTimeEntity {
     this.seriesOrder = null;
   }
 
-  /** Pin at a 0-based position among the author's pinned posts (curation). */
   public void pinAt(int order) {
     this.pinOrder = order;
   }
@@ -315,7 +283,7 @@ public class PostEntity extends BaseTimeEntity {
         trimmed = trimmed.substring(0, MAX_TAG_LENGTH).trim();
       }
       if (trimmed.isEmpty()) continue;
-      byLowercase.putIfAbsent(trimmed.toLowerCase(), trimmed);
+      byLowercase.putIfAbsent(trimmed.toLowerCase(Locale.ROOT), trimmed);
       if (byLowercase.size() >= MAX_TAGS) break;
     }
     return new ArrayList<>(byLowercase.values());

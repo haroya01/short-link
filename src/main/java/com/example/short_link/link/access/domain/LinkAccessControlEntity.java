@@ -10,9 +10,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 1:1 with link.id — split out of LinkEntity for the access-policy fields (password + view cap).
- */
 @Entity
 @Table(name = "link_access_control")
 @Getter

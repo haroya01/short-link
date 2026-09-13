@@ -10,10 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * user 슬라이스의 {@link UserModerationGuard} 구현 — post 슬라이스의 글/댓글 생성 경로가 user 에 직접 의존하지 않고 제재 상태를 확인하게
- * 한다. BANNED 또는 만료 전 SUSPENDED 면 예외를 던진다. 익명(null)이면 통과.
- */
+/** 익명(null)은 통과한다. BANNED 또는 만료 전 SUSPENDED 계정은 쓰기를 거부한다. */
 @Component
 @RequiredArgsConstructor
 class UserModerationGuardAdapter implements UserModerationGuard {

@@ -10,7 +10,6 @@ public interface BookmarkFolderRepository {
 
   Optional<BookmarkFolderEntity> findByIdAndUserId(Long id, Long userId);
 
-  /** The user's folders, oldest first — a stable order so the filter bar doesn't reshuffle. */
   List<BookmarkFolderEntity> findAllByUserIdOrderByCreatedAtAsc(Long userId);
 
   boolean existsByUserIdAndName(Long userId, String name);

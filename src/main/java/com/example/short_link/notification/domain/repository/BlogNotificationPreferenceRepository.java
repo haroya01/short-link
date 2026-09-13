@@ -6,7 +6,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
-/** Persistence port for per-user blog-bell notification opt-outs. */
 public interface BlogNotificationPreferenceRepository {
 
   Optional<BlogNotificationPreferenceEntity> findByUserIdAndType(
@@ -14,13 +13,9 @@ public interface BlogNotificationPreferenceRepository {
 
   List<BlogNotificationPreferenceEntity> findByUserId(Long userId);
 
-  BlogNotificationPreferenceEntity save(BlogNotificationPreferenceEntity preference);
+  /** Atomically creates or updates one preference; concurrent writes retain exactly one row. */
+  void setEnabled(Long userId, NotificationType type, boolean enabled);
 
-  /**
-   * Of the given candidate user ids, those who have opted OUT of {@code type} (an explicit {@code
-   * enabled=false} row). One query for the whole set so a NEW_POST fan-out can drop silenced
-   * followers without an N+1 per follower. Absent candidates are enabled by default and never
-   * returned.
-   */
+  /** 후보 중 명시적으로 수신을 거부한 사용자만 일괄 반환한다. 설정이 없는 사용자는 제외한다. */
   List<Long> findDisabledUserIds(Collection<Long> userIds, NotificationType type);
 }

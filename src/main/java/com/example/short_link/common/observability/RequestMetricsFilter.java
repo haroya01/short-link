@@ -9,7 +9,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Map;
 import org.slf4j.MDC;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.core.Authentication;
@@ -19,14 +18,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerMapping;
 
 /**
- * Records one {@link RequestMetric} per finished request and hands it off to the buffered async
- * writer. Sits low in the filter chain so the recorded {@code route} reflects the matched
- * {@code @RequestMapping} pattern (filled in by Spring after dispatch), not the raw URI — without
- * that we'd group every {@code /r/abc} / {@code /r/xyz} hit as its own route and blow up the
- * dashboard's row count.
- *
- * <p>Some endpoints are filtered out: the actuator path (noisy, never useful), and the metrics read
- * endpoint itself (recursive — an admin opening the dashboard would log itself N times).
+ * Records the matched route after dispatch to avoid one metrics group per raw URL. Excludes
+ * actuator noise and the metrics read endpoint so dashboard reads do not feed their own metrics.
  */
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE)
@@ -38,12 +31,7 @@ public class RequestMetricsFilter extends OncePerRequestFilter {
   private final RequestMetricsRecorder recorder;
   private final Clock clock;
 
-  @Autowired
-  public RequestMetricsFilter(RequestMetricsRecorder recorder) {
-    this(recorder, Clock.systemUTC());
-  }
-
-  RequestMetricsFilter(RequestMetricsRecorder recorder, Clock clock) {
+  public RequestMetricsFilter(RequestMetricsRecorder recorder, Clock clock) {
     this.recorder = recorder;
     this.clock = clock;
   }

@@ -22,10 +22,8 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Notifies an author's blog webhooks when a reader likes/comments/follows/subscribes. Fires only
- * after the interaction commits (so a rolled-back like never sends a phantom notification) and runs
- * on the shared {@code webhookExecutor} so a slow receiver can't stall the request path. The
- * actor's name is resolved here, lazily, only once a matching enabled hook is confirmed to exist.
+ * Dispatches after commit on {@code webhookExecutor}, so rollbacks send nothing and slow receivers
+ * do not block requests. Actor lookup runs only after a matching enabled hook is found.
  */
 @Slf4j
 @Component

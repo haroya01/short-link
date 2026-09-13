@@ -15,16 +15,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * One row per public post view — the time-sliced source of truth behind the "trending" sort.
- * posts.view_count stays the denormalized lifetime counter shown on cards; this log lets the feed
- * rank by views inside a rolling window, so "trending" means recent traction rather than all-time
- * totals. Anonymous and un-deduped, mirroring the view_count counter's v0 semantics.
- *
- * <p>Each row also carries the visitor dimensions (referrer / device / browser / country / UTM /
- * source channel / bot flag) — enriched on the write path from the same classifier services as
- * {@code ProfileVisitRecorder} — so the per-post / per-series reader analytics can break reads down
- * the same way the profile-visit dashboard does. Dimensions are nullable: rows logged before the
- * V80 migration have none, and they don't block the lightweight view-count write path on failure.
+ * Anonymous views are not deduplicated. The log supports rolling-window ranking while
+ * posts.view_count holds the lifetime total. Dimensions may be null on legacy rows or when
+ * enrichment fails, so view recording can continue.
  */
 @Entity
 @Table(name = "post_view_event")
@@ -104,11 +97,10 @@ public class PostViewEventEntity {
   @Column(name = "source_channel", length = 64)
   private String sourceChannel;
 
-  /** 행동 이벤트(behavior_event)와 퍼널 조인용 탭 수명 세션 — V115 이전 행과 sid 없는 비콘은 NULL. */
+  /** behavior_event와 퍼널 조인용 탭 수명 세션이다. 구형 행과 sid 없는 비콘은 null이다. */
   @Column(name = "session_id", length = 40)
   private String sessionId;
 
-  /** Back-compat: a bare view (no dimensions) — used where enrichment context isn't available. */
   public PostViewEventEntity(Long postId, Instant viewedAt) {
     this.postId = postId;
     this.viewedAt = viewedAt;

@@ -19,21 +19,15 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 독자 행동 이벤트 비콘. 인증 없음, 응답은 항상 202 — 비콘이 UX 를 막거나 콘솔 에러를 만들면 안 된다. 본문은 문자열로 받아 직접 파싱한다: 프론트가
- * Content-Type 없는 keepalive fetch/sendBeacon(text/plain, CORS 사전요청 없음)으로 쏘기 때문. 파싱 실패·초과 크기는 조용히
- * 버린다(드랍 카운트는 유스케이스 미터가 담당).
- */
+/** CORS 사전 요청 없는 sendBeacon/text/plain을 받기 위해 문자열로 파싱한다. 잘못된 본문은 비콘의 사용자 흐름을 막지 않도록 무시한다. */
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/public")
 @RequiredArgsConstructor
 public class BehaviorEventBeaconController {
 
-  /** 이 엔드포인트의 자체 상한 — 전역 BodySizeFilter(16KB)보다 좁다. 정상 배치(≤25건)는 수 KB 다. */
   static final int MAX_BODY_BYTES = 8 * 1024;
 
-  /** 페이로드가 원시타입뿐이라 앱 전역 모듈이 필요 없다 — 주입 대신 로컬 매퍼(웹 슬라이스에 ObjectMapper 빈 없음). */
   private static final ObjectMapper MAPPER =
       new ObjectMapper()
           .configure(

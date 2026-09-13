@@ -8,21 +8,12 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.Locale;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Records a username freed up by a rename. While the row is unexpired:
- *
- * <ul>
- *   <li>Visitors hitting the old handle get redirected to the owner's current handle.
- *   <li>Other users cannot claim the old handle (squat protection).
- * </ul>
- *
- * <p>Expiration is fixed at the time of rename ({@code changedAt + 30 days}). Once expired the row
- * is ignored — the handle is fully released.
- */
+/** 변경일부터 30일 동안 이전 이름을 새 이름으로 리다이렉트하고 타인의 선점을 막는다. 만료 후에는 이전 이름을 다시 사용할 수 있다. */
 @Entity
 @Table(name = "username_history")
 @Getter
@@ -47,7 +38,7 @@ public class UsernameHistoryEntity {
 
   public UsernameHistoryEntity(Long userId, String oldUsername, Instant expiresAt) {
     this.userId = userId;
-    this.oldUsername = oldUsername.toLowerCase();
+    this.oldUsername = oldUsername.toLowerCase(Locale.ROOT);
     this.changedAt = Instant.now();
     this.expiresAt = expiresAt;
   }

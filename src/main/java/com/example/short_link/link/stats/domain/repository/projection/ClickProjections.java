@@ -2,11 +2,6 @@ package com.example.short_link.link.stats.domain.repository.projection;
 
 import java.time.LocalDate;
 
-/**
- * Projection interfaces shared by the click-event read repositories. Sub-repositories (totals,
- * time, dimension, lifecycle, range, alert) all return these so application services don't have to
- * know which repository produced a row.
- */
 public final class ClickProjections {
 
   private ClickProjections() {}
@@ -75,7 +70,7 @@ public final class ClickProjections {
     Long getCount();
   }
 
-  /** referrer host 별 *최초* 클릭 시각(epoch 초) — 채널 점프("원래 채널 탈출") 판별용. */
+  /** referrer host별 최초 클릭 시각이며 epoch 초 단위다. */
   public interface HostFirstSeenRow {
     String getHost();
 
@@ -156,17 +151,13 @@ public final class ClickProjections {
     Long getCount();
   }
 
-  /** 링크를 품고 있던 글별 사람 클릭 — 제목은 post 슬라이스 포트로 따로 붙인다. */
   public interface PostClickRow {
     Long getPostId();
 
     Long getCount();
   }
 
-  /**
-   * referrer host 하나를 시간축까지 포함해 읽은 행 — 클릭 수, 첫 등장 시각(epoch 초), 그 채널에서 온 방문자 수와 그중 재방문 수. 채널을 "막대
-   * 하나"가 아니라 "언제 시작해 얼마나 붙잡았나"로 보게 한다.
-   */
+  /** {@code firstSeenEpoch}는 epoch 초다. 방문자와 재방문 수는 해당 referrer host에 한정한다. */
   public interface ChannelDepthRow {
     String getHost();
 

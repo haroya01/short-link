@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 채널별 별칭 링크 ("단톡용", "트위터용" …) — UTM 을 모르는 주최자의 채널 분석 UX. */
 @Service
 @RequiredArgsConstructor
 public class CreateEventAliasLinkUseCase {

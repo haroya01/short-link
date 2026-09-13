@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 푸시 디바이스 등록 — 앱이 APNs 토큰을 받을 때마다 upsert, 로그아웃 때 삭제. */
 @RestController
 @RequestMapping("/api/v1/notifications/devices")
 @RequiredArgsConstructor

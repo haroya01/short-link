@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 노트 좋아요 — (note, user) 한 쌍이 곧 상태라 토글은 insert/delete 멱등으로 끝난다. */
 @Entity
 @Table(
     name = "note_like",

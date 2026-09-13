@@ -10,19 +10,8 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 /**
- * CONTACT_CARD block payload — the digital-business-card vertical's core. Stored as JSON in {@code
- * profile_block.content}. Only {@code name} is required; the rest fall through to "not shown" on
- * the rendered card. vCard serialization for the .vcf download happens on the front end, where the
- * browser can offer a save dialog without a round-trip.
- *
- * <p>{@code logoUrl} is an http(s) URL pointing to an image uploaded via the profile-images S3
- * pipeline; renders as a small brand mark on both the front and back of the holographic card.
- * Stored in the same JSON content column — no schema change needed.
- *
- * <p>{@code palette} is a whitelisted holographic foil preset id (e.g. {@code amethyst}, {@code
- * rose-gold}). The frontend maps each id to a set of 6 HSL color stops driving the card's
- * iridescent gradient. We validate the id against a closed set so a typo or hostile value can't
- * produce a broken render or feed arbitrary CSS into the page.
+ * Only name is required; absent optional fields are hidden. vCard serialization occurs on the
+ * frontend. Palette IDs must stay allow-listed to prevent arbitrary CSS values reaching rendering.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ContactCard(
@@ -48,10 +37,8 @@ public record ContactCard(
   private static final int LOGO_URL_MAX = 512;
 
   /**
-   * Logo focal point — percentage 0..100 on each axis, matching the CSS {@code object-position}
-   * value the frontend applies when cropping the rectangular uploaded logo into the card's square
-   * logo slot. Default 50/50 = visual center, which is what existing records (predating focal
-   * points) end up with on the next normalize pass.
+   * Focal points are percentages from 0 to 100 matching CSS {@code object-position}; missing values
+   * default to the center (50/50).
    */
   private static final int FOCAL_DEFAULT = 50;
 
@@ -59,9 +46,8 @@ public record ContactCard(
   private static final int FOCAL_MAX = 100;
 
   /**
-   * Allowed palette ids. Keep in sync with the frontend palette map; adding a new palette is a
-   * coordinated change across both repos. Null / blank means "use the default palette" so existing
-   * CONTACT_CARD blocks (which predate this field) keep rendering with the original amethyst look.
+   * Keep IDs aligned with the frontend palette map. Null or blank selects the default amethyst
+   * palette for compatibility.
    */
   private static final Set<String> ALLOWED_PALETTES =
       Set.of(

@@ -12,19 +12,7 @@ import java.io.InputStream;
 import javax.imageio.ImageIO;
 import org.springframework.stereotype.Component;
 
-/**
- * Renders a 1200×630 PNG that crawlers fetch as the link's og:image when the destination has no
- * preview image of its own. The card shows the click count in a large headline plus the short URL —
- * the goal is that every share advertises kurl by surfacing how many times the link has already
- * been clicked.
- *
- * <p>Design tokens mirror the frontend brand surface (kurl.me): white background, accent-600
- * (#059669) mark, slate-900 headline, Pretendard Bold/Regular. Mark geometry is a 1:1 port of
- * {@code components/logo.tsx} (viewBox 28×18, three rounded bars).
- *
- * <p>Pure AWT/ImageIO so we keep the dependency tree clean. PNG bytes are returned uncached; the
- * controller is responsible for HTTP cache headers.
- */
+/** Logo geometry mirrors {@code components/logo.tsx}; HTTP caching belongs to the controller. */
 @Component
 public class OgCardImageRenderer {
 

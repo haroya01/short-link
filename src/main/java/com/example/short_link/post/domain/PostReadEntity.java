@@ -12,11 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * One reader's read of a post (the "reading history"). {@code (user_id, post_id)} is unique — a
- * re-read just moves {@code read_at} forward (the row floats to the top of the history). Unlike the
- * anonymous {@code post_view_event} log, this is the reader's own private record.
- */
+/** A private per-user record. Rereads update {@code read_at} on the existing row. */
 @Entity
 @Table(
     name = "post_read",
@@ -47,7 +43,6 @@ public class PostReadEntity {
     this.readAt = readAt;
   }
 
-  /** Re-read — float this entry back to the top of the history. */
   public void touch(Instant readAt) {
     this.readAt = readAt;
   }

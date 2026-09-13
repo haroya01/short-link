@@ -189,4 +189,69 @@ class EventEntityTest {
     assertThat(event.isOwnedBy(1L)).isTrue();
     assertThat(event.isOwnedBy(2L)).isFalse();
   }
+
+  @Test
+  void constructorRejectsCapacityOutsideTheSupportedRangeWithoutHttpValidation() {
+    for (int invalid : new int[] {-1, 0, 10001}) {
+      assertThatThrownBy(() -> event(invalid, null))
+          .isInstanceOfSatisfying(
+              EventException.class,
+              e -> assertThat(e.errorCode()).isEqualTo(EventErrorCode.INVALID_EVENT_DETAILS));
+    }
+    assertThat(event(1, null).getCapacity()).isEqualTo(1);
+    assertThat(event(10000, null).getCapacity()).isEqualTo(10000);
+  }
+
+  @Test
+  void rejectedUpdatePreservesEveryEditableField() {
+    EventEntity event = event(10, NOW);
+    Instant startsAt = event.getStartsAt();
+
+    assertThatThrownBy(
+            () ->
+                event.update(
+                    "Changed",
+                    "Changed",
+                    NOW,
+                    NOW.plusSeconds(60),
+                    "UTC",
+                    "Changed",
+                    "https://changed.example",
+                    "https://changed.example/online",
+                    0,
+                    NOW.plusSeconds(30)))
+        .isInstanceOfSatisfying(
+            EventException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(EventErrorCode.INVALID_EVENT_DETAILS));
+
+    assertThat(event.getTitle()).isEqualTo("스터디 모집");
+    assertThat(event.getDescriptionMd()).isNull();
+    assertThat(event.getStartsAt()).isEqualTo(startsAt);
+    assertThat(event.getEndsAt()).isNull();
+    assertThat(event.getTimezone()).isEqualTo("Asia/Tokyo");
+    assertThat(event.getLocationText()).isEqualTo("시부야");
+    assertThat(event.getLocationUrl()).isNull();
+    assertThat(event.getOnlineUrl()).isNull();
+    assertThat(event.getCapacity()).isEqualTo(10);
+    assertThat(event.getCloseAt()).isEqualTo(NOW);
+  }
+
+  @Test
+  void directUpdatesRejectMissingRequiredDetailsAndOverlongTitle() {
+    EventEntity event = event(null, null);
+    assertThatThrownBy(
+            () -> event.update(" ", null, NOW, null, "UTC", null, null, null, null, null))
+        .isInstanceOf(EventException.class);
+    assertThatThrownBy(
+            () -> event.update("Title", null, null, null, "UTC", null, null, null, null, null))
+        .isInstanceOf(EventException.class);
+    assertThatThrownBy(
+            () -> event.update("Title", null, NOW, null, " ", null, null, null, null, null))
+        .isInstanceOf(EventException.class);
+    assertThatThrownBy(
+            () ->
+                event.update("x".repeat(201), null, NOW, null, "UTC", null, null, null, null, null))
+        .isInstanceOf(EventException.class);
+    assertThat(event.getTitle()).isEqualTo("스터디 모집");
+  }
 }

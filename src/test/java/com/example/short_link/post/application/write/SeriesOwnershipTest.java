@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -49,5 +50,37 @@ class SeriesOwnershipTest {
     when(seriesRepository.findById(SERIES_ID)).thenReturn(Optional.of(series));
 
     assertThat(seriesOwnership.requireOwned(USER, SERIES_ID)).isSameAs(series);
+  }
+
+  @Test
+  void lockedLookupReturnsOwnedSeries() {
+    SeriesEntity series = new SeriesEntity(USER, "series", "Series");
+    when(seriesRepository.findByIdForUpdate(SERIES_ID)).thenReturn(Optional.of(series));
+
+    assertThat(seriesOwnership.requireOwnedForUpdate(USER, SERIES_ID)).isSameAs(series);
+  }
+
+  @Test
+  void lockedLookupPreservesMissingSeriesError() {
+    when(seriesRepository.findByIdForUpdate(SERIES_ID)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> seriesOwnership.requireOwnedForUpdate(USER, SERIES_ID))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            error -> assertThat(error.errorCode()).isEqualTo(PostErrorCode.SERIES_NOT_FOUND));
+  }
+
+  @Test
+  void lockedLookupChecksOwnershipAndPreservesSeriesContext() {
+    SeriesEntity series = new SeriesEntity(9L, "series", "Series");
+    when(seriesRepository.findByIdForUpdate(SERIES_ID)).thenReturn(Optional.of(series));
+
+    assertThatThrownBy(() -> seriesOwnership.requireOwnedForUpdate(USER, SERIES_ID))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            error -> {
+              assertThat(error.errorCode()).isEqualTo(PostErrorCode.SERIES_PERMISSION_DENIED);
+              assertThat(error.properties()).containsEntry("seriesId", SERIES_ID);
+            });
   }
 }

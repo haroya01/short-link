@@ -9,10 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Follow state for an author page. Works unauthenticated ({@code viewerId == null}) — the follower
- * count is public; only the {@code following} flag depends on a logged-in viewer.
- */
+/** Accepts a null viewerId for anonymous reads; their following flag is false. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

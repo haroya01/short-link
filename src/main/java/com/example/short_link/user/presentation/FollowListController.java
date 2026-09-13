@@ -11,10 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The followers / following <em>lists</em> for an author (Medium-style). Public GET — the counts
- * were already public via {@code /follow}; these expose <em>who</em>. The per-row {@code
- * followedByMe} reads a null principal for anonymous viewers (stays false). When the author hides
- * their counts, the lists 403 for everyone but the author (see {@link FollowListQueryService}).
+ * Anonymous viewers have followedByMe=false. When counts are hidden, only the author can read the
+ * lists; others receive 403.
  */
 @RestController
 @RequestMapping("/api/v1/users/{username}")

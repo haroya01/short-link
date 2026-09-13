@@ -6,9 +6,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Tiny SET-NX-EX based lock for fencing scheduled jobs across multiple app instances. Not a
- * full-fledged distributed lock — no fencing tokens, no auto-renewal. Safe enough for "only one
- * task runs the daily cleanup" use cases where doing nothing in a contended window is fine.
+ * SET-NX-EX lock for scheduled jobs; has no fencing tokens or auto-renewal. Use only when skipping
+ * a contended run is acceptable.
  */
 @Component
 @RequiredArgsConstructor

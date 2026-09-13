@@ -24,13 +24,11 @@ public class LinkLookupQueryService {
   private final ClickTotalsReadRepository clickTotalsRepository;
   private final MeterRegistry meterRegistry;
 
-  /** SSE / OG card 등 entity 가 직접 필요한 controller 용. 못 찾으면 empty. */
   @Transactional(readOnly = true)
   public Optional<LinkEntity> findEntity(ShortCode shortCode) {
     return repository.findByShortCode(shortCode);
   }
 
-  /** OG card 의 click count 배지용. bot 제외 휴먼 클릭만. */
   @Transactional(readOnly = true)
   public long countHumanClicks(LinkId linkId) {
     return clickTotalsRepository.countHumanByLinkId(linkId.value());

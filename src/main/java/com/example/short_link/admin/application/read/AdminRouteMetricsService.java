@@ -11,31 +11,18 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-/**
- * Replaces the in-process {@code RouteMetricsRingBuffer} that used to drive these endpoints — the
- * ring sampled Micrometer's {@code http.server.requests} timer once a minute, which gave us
- * per-minute deltas but no raw events to drill into. The new source carries every request, so
- * percentile and error-rate computations operate over the actual sample set rather than the timer's
- * bucketed approximation.
- */
 @Service
 public class AdminRouteMetricsService {
 
-  /** Hard cap for lifetime aggregates — beyond this we'd be sorting hundreds of MB in heap. */
+  /** 전체 요청을 메모리에서 정렬하므로 집계 기간을 제한한다. */
   private static final Duration LIFETIME_CAP = Duration.ofDays(7);
 
   private final RequestMetricJpaRepository repository;
   private final Clock clock;
 
-  @Autowired
-  public AdminRouteMetricsService(RequestMetricJpaRepository repository) {
-    this(repository, Clock.systemUTC());
-  }
-
-  AdminRouteMetricsService(RequestMetricJpaRepository repository, Clock clock) {
+  public AdminRouteMetricsService(RequestMetricJpaRepository repository, Clock clock) {
     this.repository = repository;
     this.clock = clock;
   }

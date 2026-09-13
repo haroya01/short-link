@@ -46,7 +46,7 @@ class PublishPostUseCaseTest {
   @Test
   void publishesDraftAndCapturesRevisionAndAnnouncesFirstPublish() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     PostView result = useCase.execute(new PublishPostCommand(7L, 42L));
@@ -56,7 +56,6 @@ class PublishPostUseCaseTest {
     verify(postRevisionCapture).capture(post);
     // 발행 시점에도 검색 평문을 채워 "제목만 붙이고 블록 편집 없이 발행" 한 글이 본문·제목 검색에서 누락되지 않게 한다.
     verify(searchTextUpdater).refresh(post);
-    // First publish fans out to followers via PostPublishedEvent.
     ArgumentCaptor<PostPublishedEvent> evt = ArgumentCaptor.forClass(PostPublishedEvent.class);
     verify(events).publishEvent(evt.capture());
     assertThat(evt.getValue().authorUserId()).isEqualTo(7L);
@@ -67,7 +66,7 @@ class PublishPostUseCaseTest {
   void republishingAnAlreadyPublishedPostDoesNotAnnounceAgain() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     post.publish(); // already public once → publishedAt set
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(new PublishPostCommand(7L, 42L));

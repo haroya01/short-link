@@ -21,14 +21,12 @@ class BlogNotificationPreferenceRepositoryTest {
 
   @Test
   void findDisabledUserIdsReturnsOnlyExplicitOptOutsForTheType() {
-    // Two enabled rows (kept on) + one muted row + one candidate with no row at all. Only the
-    // explicit opt-out for the queried type comes back — enabled rows and absent candidates default
-    // to on and are never returned.
-    repository.save(new BlogNotificationPreferenceEntity(1L, NotificationType.NEW_POST, true));
-    repository.save(new BlogNotificationPreferenceEntity(2L, NotificationType.NEW_POST, true));
-    repository.save(new BlogNotificationPreferenceEntity(3L, NotificationType.NEW_POST, false));
+    // 설정이 없는 사용자는 기본 활성이고, 명시적으로 끈 설정만 조회된다.
+    repository.setEnabled(1L, NotificationType.NEW_POST, true);
+    repository.setEnabled(2L, NotificationType.NEW_POST, true);
+    repository.setEnabled(3L, NotificationType.NEW_POST, false);
     // A muted row for a *different* type must not leak into a NEW_POST query.
-    repository.save(new BlogNotificationPreferenceEntity(1L, NotificationType.COMMENT, false));
+    repository.setEnabled(1L, NotificationType.COMMENT, false);
 
     List<Long> disabled =
         repository.findDisabledUserIds(List.of(1L, 2L, 3L, 4L), NotificationType.NEW_POST);

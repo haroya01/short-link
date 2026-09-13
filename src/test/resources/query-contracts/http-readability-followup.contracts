@@ -1,7 +1,49 @@
-# Reviewed HTTP/JDBC evidence for the readability follow-up, 2026-09-11.
+# Reviewed HTTP/JDBC evidence for the readability follow-up, 2026-09-12.
 # Fixtures and direct DB assertions excluded; triggered async work included.
 # Counts were reviewed against actual SQL. Never automatically update on failure.
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
+
+# The public form is loaded before domain address validation rejects the submission.
+@junit | profile-email-lead-invalid-rejected | 1 | 0 | 0 | 0 | 1
+
+# Replayed TOTP reads the locked 2FA state and rejects before tokens or state updates.
+@junit | account-two-factor-totp-replay-rejected | 1 | 0 | 0 | 0 | 1
+
+# Interaction access: normal HTTP setup and delivered notifications are included.
+@junit | interaction-access-author-block | 2 | 1 | 0 | 0 | 3
+@junit | interaction-access-body-write | 3 | 2 | 1 | 1 | 7
+@junit | interaction-access-comment-create | 8 | 2 | 0 | 0 | 10
+@junit | interaction-access-existing-comment-like | 5 | 1 | 0 | 0 | 6
+@junit | interaction-access-existing-post-like | 8 | 2 | 1 | 0 | 11
+@junit | interaction-access-existing-reply | 9 | 2 | 0 | 0 | 11
+@junit | interaction-access-highlight-create | 3 | 1 | 0 | 0 | 4
+@junit | interaction-access-post-create | 2 | 1 | 0 | 0 | 3
+@junit | interaction-access-post-publish | 7 | 2 | 1 | 0 | 10
+@junit | interaction-access-post-unpublish | 3 | 0 | 1 | 0 | 4
+
+# Rejections read only the account, target, publication and block state needed to decide.
+# Direct assertions additionally verify no interaction, notification or counter mutations.
+@junit | interaction-access-banned-post-like | 1 | 0 | 0 | 0 | 1
+@junit | interaction-access-blocked-comment-like | 4 | 0 | 0 | 0 | 4
+@junit | interaction-access-blocked-comment | 3 | 0 | 0 | 0 | 3
+@junit | interaction-access-blocked-highlight | 3 | 0 | 0 | 0 | 3
+@junit | interaction-access-blocked-post-like | 3 | 0 | 0 | 0 | 3
+@junit | interaction-access-blocked-reply | 4 | 0 | 0 | 0 | 4
+@junit | interaction-access-deleted-comment-like | 2 | 0 | 0 | 0 | 2
+@junit | interaction-access-deleted-parent-comment-reply | 4 | 0 | 0 | 0 | 4
+@junit | interaction-access-suspended-comment-like | 1 | 0 | 0 | 0 | 1
+@junit | interaction-access-suspended-highlight | 1 | 0 | 0 | 0 | 1
+@junit | interaction-access-suspended-post-like | 1 | 0 | 0 | 0 | 1
+@junit | interaction-access-suspended-reply | 1 | 0 | 0 | 0 | 1
+@junit | interaction-access-unpublished-comment-like | 3 | 0 | 0 | 0 | 3
+@junit | interaction-access-unpublished-highlight | 2 | 0 | 0 | 0 | 2
+@junit | interaction-access-unpublished-post-like | 2 | 0 | 0 | 0 | 2
+@junit | interaction-access-unpublished-reply | 3 | 0 | 0 | 0 | 3
+
+# Existing contributions remain removable after publication/account/access restrictions.
+@junit | interaction-access-restricted-comment-unlike | 3 | 0 | 0 | 1 | 4
+@junit | interaction-access-restricted-post-unlike | 2 | 0 | 1 | 1 | 4
+@junit | interaction-access-restricted-reply-delete | 1 | 0 | 0 | 1 | 2
 
 # Invalid scalar input stops before a repository; a following valid read still sees the saved link.
 @junit | binding-feed-invalid-page | 0 | 0 | 0 | 0 | 0
@@ -19,7 +61,7 @@
 # A real like creates a notification; account deletion preserves it but removes actor display data.
 @junit | notification-actor-account-delete | 2 | 1 | 1 | 0 | 4
 @junit | notification-actor-anonymous | 2 | 0 | 0 | 0 | 2
-@junit | notification-actor-like | 6 | 2 | 1 | 0 | 9
+@junit | notification-actor-like | 8 | 2 | 1 | 0 | 11
 @junit | notification-actor-post-create | 2 | 1 | 0 | 0 | 3
 @junit | notification-actor-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | notification-actor-visible | 2 | 0 | 0 | 0 | 2

@@ -3,7 +3,6 @@ package com.example.short_link.link.webhook.application.helper;
 import java.util.List;
 import java.util.Map;
 
-/** 전달할 내용. 공급자별 표현과 JSON 직렬화는 전달 경계에서 결정한다. */
 public sealed interface WebhookNotification {
 
   String eventType();

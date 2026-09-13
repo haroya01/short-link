@@ -14,12 +14,9 @@ public interface PostHighlightReplyRepository {
 
   void delete(PostHighlightReplyEntity reply);
 
-  /** A highlight's replies, oldest first — the flat thread render order. */
   List<PostHighlightReplyEntity> findAllByHighlightIdOrderByCreatedAtAsc(Long highlightId);
 
-  /** Purge a highlight's replies — used when the highlight is removed without DB cascade. */
   int deleteAllByHighlightId(Long highlightId);
 
-  /** Reply counts for a batch of highlights — one GROUP BY for the whole highlight list render. */
   Map<Long, Long> countByHighlightIds(Collection<Long> highlightIds);
 }

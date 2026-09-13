@@ -12,9 +12,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Records auditable events (link create/update/delete, account delete, admin actions). Each call
- * runs in its own transaction so a rollback in the caller doesn't lose the audit row, and a write
- * failure here doesn't cascade into the caller's flow (the call is logged-and-swallowed).
+ * Uses an independent transaction so caller rollbacks do not remove audit rows. Audit write
+ * failures are logged and swallowed.
  */
 @Slf4j
 @Service

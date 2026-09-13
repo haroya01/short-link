@@ -4,6 +4,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,10 +19,10 @@ public class DeleteSeriesUseCase {
 
   @Transactional
   public void execute(DeleteSeriesCommand cmd) {
-    SeriesEntity series = seriesOwnership.requireOwned(cmd.userId(), cmd.seriesId());
-    // Detach member posts first — series_id is a soft reference, so leaving them set would
-    // orphan the posts behind a series that no longer exists.
-    for (PostEntity post : postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(series.getId())) {
+    SeriesEntity series = seriesOwnership.requireOwnedForUpdate(cmd.userId(), cmd.seriesId());
+    // series_id는 FK가 없으므로 시리즈 삭제 전에 글에서 참조를 지운다.
+    for (PostEntity post :
+        postRepository.findSeriesMembersAndRequestedForUpdate(series.getId(), List.of())) {
       post.clearSeries();
       postRepository.save(post);
     }

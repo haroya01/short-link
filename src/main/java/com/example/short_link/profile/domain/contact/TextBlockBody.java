@@ -8,59 +8,34 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Set;
 
 /**
- * TEXT block payload — markdown body plus optional visual hints (layout / accent / icon). The
- * payload migrated from "plain markdown string" to "JSON object" so the seller can pick a Toss-
- * style highlight box or a quote rail without us hijacking the markdown syntax for our own
- * directives. Reads tolerate both shapes:
- *
- * <ul>
- *   <li>JSON {@code {body, layout?, accent?, icon?}} — the new shape.
- *   <li>Plain string — the legacy shape, treated as {@code body} with all visual hints at their
- *       defaults ({@code layout=inline}, no accent, no icon).
- * </ul>
- *
- * <p>Writes always emit the JSON shape so the storage layer eventually converges. Markdown source
- * is preserved verbatim — rendering happens client-side via react-markdown which strips raw HTML by
- * default, so we don't need server-side sanitization.
+ * Reads JSON {@code {body, layout?, accent?, icon?}} and legacy markdown strings; writes always
+ * emit JSON. Legacy strings use inline layout with no accent or icon. Rendering and raw-HTML
+ * filtering belong to the frontend.
  */
 public final class TextBlockBody {
 
-  /** Same 2000-char cap the v1 TEXT block enforced — protects the editor's row preview. */
   private static final int BODY_MAX = 2000;
 
-  /** Single emoji or short symbol — used as the visual hook on the {@code card} layout. */
   private static final int ICON_MAX = 8;
 
   /**
-   * Layouts: {@code inline} keeps the v1 inline-markdown rendering; {@code card} wraps the body in
-   * a tinted box; {@code quote} adds an accent left-rail with indent. Unknown values fall back to
-   * inline rather than reject so a frontend ahead of a backend deploy doesn't 400 every write.
+   * Unknown layouts fall back to inline so a frontend deployed ahead of the backend does not reject
+   * writes.
    */
   private static final Set<String> LAYOUT_IDS = Set.of("inline", "card", "quote");
 
-  /**
-   * Accent palette ids. Mapped to fixed Tailwind shades on the frontend so the visual language is
-   * consistent across locales / themes.
-   */
   private static final Set<String> ACCENT_IDS = Set.of("blue", "amber", "green", "red", "violet");
 
   private static final ObjectMapper MAPPER = new ObjectMapper();
 
   private TextBlockBody() {}
 
-  /** New JSON shape. {@code body} required; rest optional. */
+  /** {@code body} is required; visual hints are optional. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record Payload(String body, String layout, String accent, String icon) {}
 
-  /**
-   * Output record — always emits all four fields so the consumer never has to branch on absence.
-   */
   private record PayloadOut(String body, String layout, String accent, String icon) {}
 
-  /**
-   * Validates and normalizes a TEXT block payload. Accepts the new JSON shape or a legacy plain
-   * markdown string. Always returns a JSON-serialized {@link PayloadOut} so storage converges.
-   */
   public static String normalize(String raw) {
     if (raw == null) {
       throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "text block content required");
@@ -75,9 +50,7 @@ public final class TextBlockBody {
     String accent = null;
     String icon = null;
 
-    // Try JSON first when the raw payload looks like an object literal — a plain markdown body
-    // never starts with '{' (markdown's `{` has no semantic meaning at line start), so this prefix
-    // check is a cheap discriminator without false positives in practice.
+    // Try JSON after a leading brace; invalid JSON or missing body uses legacy markdown.
     if (trimmed.startsWith("{")) {
       try {
         Payload parsed = MAPPER.readValue(trimmed, Payload.class);
@@ -131,8 +104,6 @@ public final class TextBlockBody {
     if (raw == null) return null;
     String t = raw.trim();
     if (t.isEmpty()) return null;
-    // Cap at a few code points — enough for one emoji including ZWJ sequences like 👨‍💻 but
-    // short enough that the chip stays visually compact.
     return t.length() <= ICON_MAX ? t : t.substring(0, ICON_MAX);
   }
 }

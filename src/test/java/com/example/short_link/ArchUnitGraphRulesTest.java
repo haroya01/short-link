@@ -16,8 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
     importOptions = {ImportOption.DoNotIncludeTests.class, ImportOption.DoNotIncludeJars.class})
 class ArchUnitGraphRulesTest {
 
-  // ─── Layer direction (strict) ──────────────────────────────────────────
-
   @ArchTest
   static final ArchRule domainDoesNotDependOnPresentation =
       noClasses()
@@ -37,6 +35,15 @@ class ArchUnitGraphRulesTest {
           .resideInAPackage("..application..");
 
   @ArchTest
+  static final ArchRule domainDoesNotDependOnInfrastructure =
+      noClasses()
+          .that()
+          .resideInAPackage("..domain..")
+          .should()
+          .dependOnClassesThat()
+          .resideInAPackage("..infrastructure..");
+
+  @ArchTest
   static final ArchRule applicationDoesNotDependOnPresentation =
       noClasses()
           .that()
@@ -44,8 +51,6 @@ class ArchUnitGraphRulesTest {
           .should()
           .dependOnClassesThat()
           .resideInAPackage("..presentation..");
-
-  // ─── External SDK isolation (strict) ──────────────────────────────────
 
   @ArchTest
   static final ArchRule awsSdkConfinedToCommonStorage =
@@ -101,8 +106,6 @@ class ArchUnitGraphRulesTest {
           .dependOnClassesThat()
           .resideInAPackage("com.google.zxing..");
 
-  // ─── Naming convention (strict) ───────────────────────────────────────
-
   @ArchTest
   static final ArchRule useCasesLiveInApplicationWrite =
       classes()
@@ -110,8 +113,6 @@ class ArchUnitGraphRulesTest {
           .haveSimpleNameEndingWith("UseCase")
           .should()
           .resideInAPackage("..application.write..");
-
-  // ─── Architecture Boundaries ─────────────────────────────────────────
 
   @ArchTest
   static final ArchRule apacheHttpClientConfined =
@@ -160,9 +161,7 @@ class ArchUnitGraphRulesTest {
           .should()
           .resideInAPackage("..presentation..");
 
-  // 트랜잭션 경계는 application / infrastructure 만 갖는다. presentation 에 @Transactional 이
-  // 박히면 컨트롤러가 도메인 트랜잭션을 들고 가는 형태가 되고, domain 에 박히면 entity 가
-  // cross-cutting 책임을 떠안아 도메인 모델 순수성이 깨진다.
+  // 트랜잭션은 application과 infrastructure에서만 관리한다.
   @ArchTest
   static final ArchRule transactionalNotInPresentationOrDomain =
       methods()
@@ -172,8 +171,7 @@ class ArchUnitGraphRulesTest {
           .beDeclaredInClassesThat()
           .resideOutsideOfPackages("..presentation..", "..domain..");
 
-  // Properties 는 immutable record + compact constructor — Phase 0 (PR #319) 컨벤션. class
-  // 로 신설되면 setter / mutable field 누설 위험이 생긴다.
+  // 설정은 불변 record로 유지한다.
   @ArchTest
   static final ArchRule propertiesAreRecords =
       classes()

@@ -6,10 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
-/**
- * Reads an author's follower ids via one native query against the user module's {@code user_follow}
- * table — a native query so the notification module needn't depend on the user module's entity.
- */
+/** Uses a native query to avoid an entity dependency on the user module. */
 @Repository
 class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
 

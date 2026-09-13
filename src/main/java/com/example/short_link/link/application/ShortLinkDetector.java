@@ -4,11 +4,7 @@ import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/**
- * Recognizes whether a URL is already one of our own short links (same host as {@link
- * ShortLinkUrlBuilder} produces) and extracts its short code. Used to avoid double-wrapping when an
- * author pastes an existing kurl link as a CTA target.
- */
+/** Recognizes existing short links to avoid wrapping them again when used as CTA targets. */
 @Component
 public class ShortLinkDetector {
 

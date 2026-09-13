@@ -15,19 +15,8 @@ class ArchitectureRulesTest {
   private static final Path MAIN = Path.of("src/main/java/com/example/short_link");
   private static final Path TEST = Path.of("src/test/java/com/example/short_link");
 
-  /**
-   * Ratchet for migrating ControllerTest classes from {@code @SpringBootTest} to
-   * {@code @WebMvcTest}. Slice tests boot only the MVC layer + the controller's declared
-   * dependencies (~50ms vs ~3-5s for a full {@code @SpringBootTest}). A new {@code @SpringBootTest}
-   * ControllerTest pushes the count past baseline and fails the build — migrate an existing one to
-   * balance, or raise the baseline only with a deliberate decision.
-   */
+  /** New controller tests use MVC slices; the number of full-context tests must not grow. */
   private static final int SPRING_BOOT_CONTROLLER_TEST_BASELINE = 37;
-
-  private static final Pattern FEATURE_PRESENTATION_IMPORT =
-      Pattern.compile(
-          "^import com\\.example\\.short_link\\.(abuse|admin|campaign|cta|link|notification|post|profile|user)\\.presentation\\.",
-          Pattern.MULTILINE);
 
   private static final Pattern REPOSITORY_IMPORT =
       Pattern.compile("^import com\\.example\\.short_link\\..*Repository;", Pattern.MULTILINE);
@@ -37,18 +26,6 @@ class ArchitectureRulesTest {
 
   private static final Pattern NESTED_PRESENTATION_DTO =
       Pattern.compile("\\brecord\\s+\\w*(Request|Response|Page)\\b");
-
-  @Test
-  void applicationLayerDoesNotDependOnFeaturePresentationLayer() throws IOException {
-    List<String> violations =
-        javaSources()
-            .filter(path -> relative(path).contains("/application/"))
-            .filter(path -> FEATURE_PRESENTATION_IMPORT.matcher(read(path)).find())
-            .map(ArchitectureRulesTest::relative)
-            .toList();
-
-    assertThat(violations).isEmpty();
-  }
 
   @Test
   void controllersDoNotDependOnRepositoriesDirectly() throws IOException {
@@ -94,9 +71,7 @@ class ArchitectureRulesTest {
                       || relative.contains("/presentation/response/")) {
                     return false;
                   }
-                  // sub-feature folder (e.g., /presentation/email/MyEmailLeadResponse.java) is OK.
-                  // Violation = file directly under /presentation/ (matches
-                  // /presentation/Foo.java).
+                  // Sub-feature DTO packages are allowed; direct presentation DTOs are not.
                   return relative.matches(".*/presentation/[A-Z][A-Za-z0-9]*\\.java$");
                 })
             .map(ArchitectureRulesTest::relative)

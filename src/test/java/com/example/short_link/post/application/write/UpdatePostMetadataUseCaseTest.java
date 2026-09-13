@@ -50,7 +50,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesTitleOnly() {
     PostEntity post = ownedPost();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     PostView updated =
@@ -65,7 +65,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesExcerptAndClearsWithBlank() {
     PostEntity post = ownedPost();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
@@ -80,7 +80,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesOgImageAndClearsWithBlank() {
     PostEntity post = ownedPost();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
@@ -97,7 +97,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesLanguageTag() {
     PostEntity post = ownedPost();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
@@ -108,7 +108,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesTagsWithNormalization() {
     PostEntity post = ownedPost();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
@@ -131,7 +131,7 @@ class UpdatePostMetadataUseCaseTest {
   void clearsTagsWithEmptyList() {
     PostEntity post = ownedPost();
     post.updateTags(List.of("a", "b"));
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
@@ -144,7 +144,7 @@ class UpdatePostMetadataUseCaseTest {
   void leavesTagsUnchangedWhenNull() {
     PostEntity post = ownedPost();
     post.updateTags(List.of("keep"));
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(
@@ -156,7 +156,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void updatesSlugInDraft() {
     PostEntity post = ownedPost();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.existsByUserIdAndSlug(7L, "new-slug")).thenReturn(false);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
@@ -168,7 +168,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void rejectsSlugCollision() {
     PostEntity post = ownedPost();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.existsByUserIdAndSlug(7L, "taken")).thenReturn(true);
 
     assertThatThrownBy(
@@ -185,7 +185,7 @@ class UpdatePostMetadataUseCaseTest {
   void rejectsSlugChangeWhenFrozen() {
     PostEntity post = ownedPost();
     post.publish();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.existsByUserIdAndSlug(7L, "new-slug")).thenReturn(false);
 
     assertThatThrownBy(
@@ -201,7 +201,7 @@ class UpdatePostMetadataUseCaseTest {
   @Test
   void allowsBlankTitleForDraft() {
     PostEntity post = ownedPost();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(new UpdatePostMetadataCommand(7L, 42L, "", null, null, null, null, null, null));

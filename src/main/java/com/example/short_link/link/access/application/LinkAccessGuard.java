@@ -7,12 +7,7 @@ import com.example.short_link.link.exception.LinkException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Centralised "can this user read this link?" decision. Owner can always read; ADMIN can read any
- * link for support/observability. Mutation paths (register webhook, change destinations, edit OG)
- * still go through {@link LinkEntity#isOwnedBy} directly — admin is intentionally a read-only role
- * here, so they can never accidentally edit someone else's data.
- */
+/** ADMIN access is read-only. Mutation paths must still require {@link LinkEntity#isOwnedBy}. */
 @Component
 @RequiredArgsConstructor
 public class LinkAccessGuard {

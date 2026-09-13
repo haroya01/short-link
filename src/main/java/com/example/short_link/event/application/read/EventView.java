@@ -4,7 +4,6 @@ import com.example.short_link.event.domain.EventEntity;
 import java.time.Instant;
 import java.util.List;
 
-/** 주최자 대시보드용. */
 public record EventView(
     Long id,
     String slug,

@@ -24,6 +24,8 @@ class TotpCodecTest {
     String nextCode = TotpCodec.generateCode(secret, step + 1);
     assertThat(TotpCodec.verify(secret, prevCode, now)).isTrue();
     assertThat(TotpCodec.verify(secret, nextCode, now)).isTrue();
+    assertThat(TotpCodec.matchingStep(secret, prevCode, now)).hasValue(step - 1);
+    assertThat(TotpCodec.matchingStep(secret, nextCode, now)).hasValue(step + 1);
   }
 
   @Test

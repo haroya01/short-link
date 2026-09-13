@@ -1,6 +1,7 @@
 package com.example.short_link.campaign.domain;
 
-import com.example.short_link.campaign.domain.repository.*;
+import com.example.short_link.campaign.exception.CampaignErrorCode;
+import com.example.short_link.campaign.exception.CampaignException;
 import com.example.short_link.common.jpa.BaseTimeEntity;
 import com.example.short_link.link.domain.LinkId;
 import jakarta.persistence.Column;
@@ -58,6 +59,7 @@ public class CampaignBatchEntity extends BaseTimeEntity {
       String areaLabel,
       int quantity,
       String memo) {
+    validateMetadata(name, distributorName, areaLabel, quantity, memo);
     this.campaignId = campaignId;
     this.linkId = linkId == null ? null : linkId.value();
     this.name = name;
@@ -67,13 +69,34 @@ public class CampaignBatchEntity extends BaseTimeEntity {
     this.memo = memo;
   }
 
-  /** Metadata 만 수정 — 대표 link 와의 결합은 immutable (인쇄된 QR 의 destination 안전). */
   public void editMetadata(
       String name, String distributorName, String areaLabel, int quantity, String memo) {
+    validateMetadata(name, distributorName, areaLabel, quantity, memo);
     this.name = name;
     this.distributorName = distributorName;
     this.areaLabel = areaLabel;
     this.quantity = quantity;
     this.memo = memo;
+  }
+
+  public static void validateMetadata(
+      String name, String distributorName, String areaLabel, int quantity, String memo) {
+    if (name == null || name.isBlank()) {
+      throw new CampaignException(CampaignErrorCode.INVALID_BATCH_METADATA, "name required");
+    }
+    if (quantity <= 0) {
+      throw new CampaignException(
+          CampaignErrorCode.INVALID_BATCH_METADATA, "quantity must be positive");
+    }
+    requireMaxLength(name, 255, "name");
+    requireMaxLength(distributorName, 255, "distributorName");
+    requireMaxLength(areaLabel, 255, "areaLabel");
+    requireMaxLength(memo, 500, "memo");
+  }
+
+  private static void requireMaxLength(String value, int maxLength, String field) {
+    if (value != null && value.length() > maxLength) {
+      throw new CampaignException(CampaignErrorCode.INVALID_BATCH_METADATA, field + " too long");
+    }
   }
 }

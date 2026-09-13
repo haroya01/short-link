@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.user.domain.repository.UserTwoFactorRepository;
 import com.example.short_link.user.exception.UserException;
 import java.time.Instant;
 import java.util.List;
@@ -21,6 +22,7 @@ class TwoFactorServiceTest {
 
   @Autowired private TwoFactorService service;
   @Autowired private UserRepository userRepository;
+  @Autowired private UserTwoFactorRepository twoFactorRepository;
 
   @Test
   void enrollFlow() {
@@ -34,6 +36,9 @@ class TwoFactorServiceTest {
     String code = TotpCodec.generateCode(challenge.secret(), Instant.now().getEpochSecond() / 30);
     List<String> recovery = service.confirm(user.getId(), code);
     assertThat(recovery).hasSize(TwoFactorService.RECOVERY_CODE_COUNT);
+    assertThat(twoFactorRepository.findById(user.getId()).orElseThrow().recoveryCodeHashes())
+        .hasSize(10)
+        .allSatisfy(hash -> assertThat(hash).startsWith("$2a$10$"));
     assertThat(service.isEnabled(user.getId())).isTrue();
   }
 

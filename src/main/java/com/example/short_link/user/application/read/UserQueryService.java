@@ -16,7 +16,6 @@ public class UserQueryService {
 
   private final UserRepository userRepository;
 
-  /** 활성(soft-delete 아님) user 만 반환. 없거나 deleted 면 throw. */
   public UserEntity activeOrThrow(Long userId) {
     return userRepository
         .findById(userId)
@@ -24,7 +23,6 @@ public class UserQueryService {
         .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
   }
 
-  /** Filter 등 비-throw 경로용. deleted 도 포함된 row 가 그대로 필요한 곳은 직접 repository 사용 X. */
   public Optional<UserEntity> findActive(Long userId) {
     return userRepository.findById(userId).filter(u -> !u.isDeleted());
   }

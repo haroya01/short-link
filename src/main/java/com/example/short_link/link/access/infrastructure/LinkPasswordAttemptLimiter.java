@@ -7,10 +7,8 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 /**
- * Per-(shortCode, client-IP) failed-password limiter for the unlock endpoint. The global per-IP
- * rate limit (100/min across all endpoints) is too loose to stop a focused brute-force against one
- * short link's password; this locks an IP out of a specific code after a handful of misses, for a
- * cooldown window. Only actual password failures count — a correct password resets the counter.
+ * Limits guesses per link and client IP because the global per-IP limit is too loose for password
+ * brute force. Only password failures count; success resets the counter.
  */
 @Component
 @RequiredArgsConstructor

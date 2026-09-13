@@ -5,14 +5,10 @@ import java.time.Instant;
 import java.util.Base64;
 
 /**
- * Opaque pagination cursor — encodes the (createdAt, id) pair of the last row from the previous
- * page so the next page can resume strictly after it. The optional sortValue is used only by
- * computed server-side sorts such as clickCount, where the DB row cursor alone is not enough to
- * resume the sorted projection.
- *
- * <p>Wire format: base64-url(no-pad) of {@code "<createdAtMicros>:<id>"} for the legacy createdAt
- * cursor, or {@code "v2:<createdAtMicros>:<id>:<sortValue>"} for computed sorts. Opaque to clients;
- * malformed input throws {@link IllegalArgumentException} which the controller maps to 400.
+ * Resumes strictly after the previous page's last row. Computed sorts also require {@code
+ * sortValue}. Wire format is unpadded base64url of {@code <createdAtMicros>:<id>} or {@code
+ * v2:<createdAtMicros>:<id>:<sortValue>}. Malformed input throws {@link IllegalArgumentException},
+ * mapped to HTTP 400.
  */
 public record MyLinksCursor(Instant createdAt, long id, Long sortValue) {
 

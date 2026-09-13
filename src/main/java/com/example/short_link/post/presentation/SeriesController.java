@@ -64,9 +64,6 @@ public class SeriesController {
     return seriesQueryService.getMine(userId, id);
   }
 
-  /**
-   * Deep reader breakdown aggregated across the series' member posts — same shape as post stats.
-   */
   @GetMapping("/{id}/stats")
   public PostReadStats stats(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return readStats.forSeries(userId, id);

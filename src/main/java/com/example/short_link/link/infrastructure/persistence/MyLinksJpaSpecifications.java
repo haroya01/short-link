@@ -6,6 +6,7 @@ import com.example.short_link.link.domain.repository.MyLinksSearchCriteria;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
+import java.util.Locale;
 import org.springframework.data.jpa.domain.Specification;
 
 final class MyLinksJpaSpecifications {
@@ -48,10 +49,10 @@ final class MyLinksJpaSpecifications {
     return (root, query, cb) -> cb.equal(root.get("userId"), userId);
   }
 
-  // LIKE wildcards in user-supplied search text are escaped with `!` so "50%" or "a_b" match
-  // literally instead of acting as wildcards (the post search path escapes the same way).
+  // 검색어의 %, _를 문자 그대로 찾도록 !로 이스케이프한다.
   private static String likeContains(String text) {
-    String escaped = text.toLowerCase().replace("!", "!!").replace("%", "!%").replace("_", "!_");
+    String escaped =
+        text.toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_");
     return "%" + escaped + "%";
   }
 

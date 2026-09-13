@@ -1,6 +1,8 @@
 package com.example.short_link.event.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
+import com.example.short_link.event.exception.EventErrorCode;
+import com.example.short_link.event.exception.EventException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,11 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 비로그인 신청 1건. name/contact/answersJson 은 PII — 이벤트 종료 30일 후 스케줄러가 파기. 채널 스냅샷 컬럼은 신청 시점에 클릭 이벤트에서
- * 비정규화해 박는다 (대시보드가 click_event 조인 없이 집계). 취소는 cancelTokenHash (SHA-256) 로만 — 원본 토큰은 확인 메일/완료 화면에만
- * 존재.
- */
+/** name/contact/answersJson은 이벤트 종료 30일 후 파기한다. 채널은 신청 시점의 스냅샷이며, 취소 토큰은 SHA-256 해시만 저장한다. */
 @Entity
 @Table(name = "event_registration")
 @Getter
@@ -71,8 +69,9 @@ public class EventRegistrationEntity extends BaseCreatedEntity {
 
   public EventRegistrationEntity(
       Long eventId, String name, String contact, String answersJson, String cancelTokenHash) {
+    String normalizedName = normalizeName(name);
     this.eventId = eventId;
-    this.name = name;
+    this.name = normalizedName;
     this.contact = contact;
     this.answersJson = answersJson;
     this.cancelTokenHash = cancelTokenHash;
@@ -97,17 +96,30 @@ public class EventRegistrationEntity extends BaseCreatedEntity {
     this.visitorHash = visitorHash;
   }
 
-  public void cancel(Instant at) {
+  public boolean cancel(Instant at) {
+    if (!isConfirmed()) return false;
     this.status = RegistrationStatus.CANCELED;
     this.canceledAt = at;
+    return true;
   }
 
   /** 취소 후 같은 contact 재신청 — UNIQUE(event_id, contact) 위에서 CANCELED 행을 되살린다. */
   public void reactivate(String name, String answersJson, String cancelTokenHash) {
-    this.name = name;
+    if (isConfirmed()) {
+      throw new EventException(EventErrorCode.ALREADY_REGISTERED);
+    }
+    String normalizedName = normalizeName(name);
+    this.name = normalizedName;
     this.answersJson = answersJson;
     this.cancelTokenHash = cancelTokenHash;
     this.status = RegistrationStatus.CONFIRMED;
     this.canceledAt = null;
+  }
+
+  public static String normalizeName(String raw) {
+    if (raw == null || raw.isBlank() || raw.trim().length() > 100) {
+      throw new EventException(EventErrorCode.INVALID_ANSWER, "name");
+    }
+    return raw.trim();
   }
 }

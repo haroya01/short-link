@@ -9,17 +9,9 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
-/**
- * Whitelist + normalization for the user's social links shown at the bottom of the public profile.
- * Each entry pairs a {@link Social#channel} from {@link #ALLOWED} with the user's own URL —
- * visitors click the X button and land on the owner's X profile, not on a tweet-intent page. Capped
- * at {@link #MAX} for visual balance.
- *
- * <p>Persisted shape is a compact JSON array (e.g. {@code
- * [{"channel":"x","url":"https://x.com/foo"}]}) stored in {@code users.socials}.
- */
 public final class Socials {
 
   public static final List<String> ALLOWED =
@@ -39,12 +31,7 @@ public final class Socials {
 
   public record Social(String channel, String url) {}
 
-  /**
-   * Parse + validate JSON from the API. {@code null}/blank returns null (= no socials). Order is
-   * preserved from the caller; duplicates by channel are dropped (first wins). Throws if any entry
-   * has an unknown channel / invalid URL or the count exceeds {@link #MAX}; the controller turns
-   * that into a 400.
-   */
+  /** null·공백은 삭제를 뜻한다. 순서를 유지하며 같은 채널은 첫 값만 남긴다. */
   public static String normalize(String raw) {
     if (raw == null) return null;
     String trimmed = raw.trim();
@@ -64,7 +51,7 @@ public final class Socials {
     Set<String> seen = new HashSet<>();
     for (Social s : parsed) {
       if (s == null) continue;
-      String channel = s.channel() == null ? "" : s.channel().trim().toLowerCase();
+      String channel = s.channel() == null ? "" : s.channel().trim().toLowerCase(Locale.ROOT);
       String url = s.url() == null ? "" : s.url().trim();
       if (channel.isEmpty() || url.isEmpty()) continue;
       if (!ALLOWED_SET.contains(channel)) {
@@ -87,7 +74,7 @@ public final class Socials {
     }
   }
 
-  /** Render the stored JSON as a list for DTO emission. {@code null}/blank maps to empty list. */
+  /** null·공백인 저장 값은 빈 목록으로 반환한다. */
   public static List<Social> toList(String json) {
     if (json == null || json.isBlank()) return List.of();
     try {

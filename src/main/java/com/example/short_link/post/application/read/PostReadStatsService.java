@@ -20,12 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Deep reader analytics for a single post or a whole series, scoped over post_view_event. Same
- * dimensional breakdown + JSON shape as the profile-visit dashboard ({@link PostReadStats} mirrors
- * ProfileStats), so the frontend reuses one dashboard. Ownership is enforced before any
- * aggregation; a series resolves to its member post ids and aggregates across them.
- */
+/** Ownership is checked before aggregation; series stats include all member post IDs. */
 @Service
 @RequiredArgsConstructor
 public class PostReadStatsService {
@@ -64,7 +59,7 @@ public class PostReadStatsService {
   private PostReadStats compute(Collection<Long> postIds, Long ownerUserId) {
     ZoneId zone = safeZone(ownerTimezone(ownerUserId));
     if (postIds.isEmpty()) {
-      // No member posts (empty series) → nothing to aggregate; SQL IN () would be invalid anyway.
+      // An empty series must short-circuit before SQL IN ().
       return PostReadStats.empty(zone.getId());
     }
     String tz = currentOffset(zone);

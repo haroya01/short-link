@@ -2,7 +2,6 @@ package com.example.short_link.link.destination.domain;
 
 import java.util.Locale;
 
-/** Shared input rules for destination creation and partial updates. */
 public final class DestinationPolicy {
   public static final int MIN_WEIGHT = 1;
   public static final int MAX_WEIGHT = 100;

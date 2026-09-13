@@ -3,18 +3,9 @@ package com.example.short_link.common.event;
 import java.time.Instant;
 
 /**
- * Published once per user @-mentioned in a comment. Notification-only (webhooks don't subscribe to
- * mentions), so it's a separate event from {@link BlogInteractionEvent}. The mentioned user may not
- * own the post, so {@code postAuthorUsername} is carried to build the post link — same shape as
- * {@link CommentReplyEvent}.
- *
- * @param recipientUserId the mentioned user
- * @param actorUserId who wrote the comment (used to skip self-mentions and resolve a name)
- * @param postId the post the comment lives on
- * @param postSlug post slug snapshot
- * @param postTitle post title snapshot
- * @param postAuthorUsername the post owner's handle, for building the post link
- * @param occurredAt when the comment was written
+ * Published once per mentioned user for notifications only. {@code postAuthorUsername} builds the
+ * post link because the recipient may not own the post. Slug, title, and author username are
+ * snapshots; the consumer skips self-mentions.
  */
 public record CommentMentionEvent(
     Long recipientUserId,

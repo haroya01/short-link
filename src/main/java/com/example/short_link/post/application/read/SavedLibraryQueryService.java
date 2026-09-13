@@ -16,11 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The owner's "보관함" (스마트 셸프): their bookmarks as full feed cards plus the folders they're filed
- * under. Stale bookmarks (post deleted/unpublished or author gone) are skipped, mirroring the liked
- * list. Posts and authors are batch-loaded to avoid an N+1 over the list.
- */
+/** Skips bookmarks whose post is deleted/unpublished or whose author is deleted. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

@@ -55,8 +55,7 @@ public class BlockDomainUseCase {
     return blockedDomain;
   }
 
-  /* apex 를 막으면 서브도메인 호스트도, 서브도메인을 막으면 그 자신도 걸리게 양방향 접미사 비교.
-  (08-19: 신고 처리 중 kurl.me 차단 → 자기 참조 링크 전부 403, prod-smoke 경보) */
+  /** 상위 도메인 차단으로 서비스 호스트가 함께 막히지 않도록 양방향 접미사를 비교한다. */
   private boolean isSelfDomain(String normalized) {
     for (String host : selfHosts) {
       if (normalized.equals(host)

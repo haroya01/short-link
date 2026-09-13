@@ -6,9 +6,16 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.campaign.exception.CampaignErrorCode;
 import com.example.short_link.campaign.exception.CampaignException;
 import java.time.Instant;
+import java.util.stream.Stream;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 class CampaignEntityTest {
+
+  private static Stream<String> invalidNames() {
+    return Stream.of(null, "", " \t\n", "n".repeat(256));
+  }
 
   private static CampaignEntity sample(Instant startsAt, Instant endsAt) {
     return new CampaignEntity(
@@ -20,6 +27,47 @@ class CampaignEntityTest {
         CampaignPostEndAction.KEEP,
         null,
         null);
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidNames")
+  void constructionRejectsMissingBlankAndOverlongNames(String name) {
+    Instant start = Instant.parse("2026-05-22T01:00:00Z");
+
+    assertThatThrownBy(
+            () ->
+                new CampaignEntity(1L, name, start, start.plusSeconds(60), null, null, null, null))
+        .isInstanceOfSatisfying(
+            CampaignException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(CampaignErrorCode.INVALID_CAMPAIGN_NAME));
+  }
+
+  @ParameterizedTest
+  @MethodSource("invalidNames")
+  void rejectedRenamePreservesTheExistingName(String name) {
+    Instant start = Instant.parse("2026-05-22T01:00:00Z");
+    CampaignEntity campaign = sample(start, start.plusSeconds(60));
+
+    assertThatThrownBy(() -> campaign.rename(name))
+        .isInstanceOfSatisfying(
+            CampaignException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(CampaignErrorCode.INVALID_CAMPAIGN_NAME));
+
+    assertThat(campaign.getName()).isEqualTo("Sample");
+  }
+
+  @Test
+  void namesAtTheLengthBoundaryKeepTheirOriginalWhitespace() {
+    Instant start = Instant.parse("2026-05-22T01:00:00Z");
+    String name = " " + "n".repeat(253) + " ";
+    CampaignEntity campaign =
+        new CampaignEntity(1L, name, start, start.plusSeconds(60), null, null, null, null);
+    assertThat(campaign.getName()).isEqualTo(name);
+
+    campaign.rename("x");
+    assertThat(campaign.getName()).isEqualTo("x");
+    campaign.rename(name);
+    assertThat(campaign.getName()).isEqualTo(name);
   }
 
   @Test
@@ -169,5 +217,35 @@ class CampaignEntityTest {
 
     campaign.updatePolicy(start.plusSeconds(120), null, CampaignPostEndAction.EXPIRE, null, "  ");
     assertThat(campaign.getPostEndMessage()).isNull();
+  }
+
+  @Test
+  void archivedCampaignCannotBeRenamedThroughTheDomainMethod() {
+    Instant start = Instant.parse("2026-05-22T01:00:00Z");
+    CampaignEntity campaign = sample(start, start.plusSeconds(60));
+    campaign.archive();
+
+    assertThatThrownBy(() -> campaign.rename("Changed"))
+        .isInstanceOfSatisfying(
+            CampaignException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(CampaignErrorCode.CAMPAIGN_ARCHIVED));
+
+    assertThat(campaign.getName()).isEqualTo("Sample");
+  }
+
+  @Test
+  void missingPeriodUsesTheDomainErrorBeforeAnyMutation() {
+    Instant start = Instant.parse("2026-05-22T01:00:00Z");
+    assertThatThrownBy(() -> sample(null, start))
+        .isInstanceOfSatisfying(
+            CampaignException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(CampaignErrorCode.INVALID_CAMPAIGN_PERIOD));
+    CampaignEntity campaign = sample(start, start.plusSeconds(60));
+
+    assertThatThrownBy(() -> campaign.updatePolicy(null, null, null, null, null))
+        .isInstanceOfSatisfying(
+            CampaignException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(CampaignErrorCode.INVALID_CAMPAIGN_PERIOD));
+    assertThat(campaign.getEndsAt()).isEqualTo(start.plusSeconds(60));
   }
 }

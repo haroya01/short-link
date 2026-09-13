@@ -3,10 +3,8 @@ package com.example.short_link.admin.application.dto;
 import java.util.List;
 
 /**
- * Cross-author blog health for the admin console: lifetime published-post and read totals, the
- * count of authors active in the last 30 days, the unresolved-report backlog, and the most-read
- * posts. Lives under {@code admin.application} so the polymorphic Redis cache serializer ({@link
- * com.example.short_link.admin.config.AdminCacheConfig}) can round-trip it.
+ * {@link com.example.short_link.admin.config.AdminCacheConfig}의 역직렬화 허용 범위인 {@code
+ * admin.application} 패키지에 둔다.
  */
 public record BlogAdminMetrics(
     long totalPosts,

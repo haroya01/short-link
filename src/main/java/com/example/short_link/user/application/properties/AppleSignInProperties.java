@@ -4,9 +4,8 @@ import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Native Sign in with Apple verification knobs. {@code clientIds} are the audiences we accept in
- * the identity token — for the native flow that is each app's iOS bundle id (blog app and links
- * app), not a Services ID. Defaults cover production so the test profile needs no overrides.
+ * {@code clientIds} lists accepted token audiences: native bundle IDs and, for web login, the
+ * Services ID.
  */
 @ConfigurationProperties(prefix = "short-link.apple")
 public record AppleSignInProperties(String issuer, String jwkSetUri, List<String> clientIds) {

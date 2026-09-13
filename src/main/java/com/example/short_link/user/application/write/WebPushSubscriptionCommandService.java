@@ -8,7 +8,6 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 웹푸시 구독 등록 — 구독 콜백마다 upsert(소유자 갈아끼움 포함), 구독해제 때 삭제. */
 @Service
 @RequiredArgsConstructor
 public class WebPushSubscriptionCommandService {

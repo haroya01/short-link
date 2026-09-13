@@ -2,12 +2,7 @@ package com.example.short_link.link.exception;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Catalog of every link-feature error. Each entry: HTTP status + message template ({@link
- * String#formatted}) + ordered metadata keys. Constructor args zip with metadata keys so {@code
- * throw new LinkException(LINK_QUOTA_EXCEEDED, 200L)} auto-populates {@code properties.put(
- * "limit", 200L)} — no separate {@code .with(...)} call at the throw site.
- */
+/** Message arguments also populate the ordered metadata keys; their positions must match. */
 public enum LinkErrorCode {
   LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "link not found: %s"),
   LINK_EXPIRED(HttpStatus.GONE, "link expired: %s"),

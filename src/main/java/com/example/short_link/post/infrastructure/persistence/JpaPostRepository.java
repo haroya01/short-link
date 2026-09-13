@@ -2,17 +2,28 @@ package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import jakarta.persistence.LockModeType;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select p from PostEntity p where p.id = :id")
+  Optional<PostEntity> findByIdForUpdate(@Param("id") Long id);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select p from PostEntity p where p.userId = :userId and p.slug = :slug")
+  Optional<PostEntity> findByUserIdAndSlugForUpdate(
+      @Param("userId") Long userId, @Param("slug") String slug);
 
   List<PostEntity> findAllByIdIn(Collection<Long> ids);
 
@@ -35,35 +46,39 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
-  // Sort comes from the Pageable (per analytics sort dimension); the adapter appends an id-desc
-  // tie-break so paging stays stable when many posts share a metric value (e.g. all 0).
+  // 지표가 같아도 페이지 순서가 안정되도록 어댑터에서 ID 내림차순을 추가한다.
   List<PostEntity> findByUserIdAndStatusIn(
       Long userId, Collection<PostStatus> statuses, Pageable pageable);
 
   long countByUserIdAndStatusIn(Long userId, Collection<PostStatus> statuses);
 
-  // Single-status count (PUBLISHED) for the public profile's blog flag — resolved index-only by
-  // idx_posts_user_status (user_id, status). Distinct from the Collection version, which spans
-  // PUBLISHED+UNPUBLISHED for analytics and would over-count here.
+  // 공개 프로필의 블로그 표시에는 UNPUBLISHED를 포함하는 분석용 카운트를 쓰면 안 된다.
   long countByUserIdAndStatus(Long userId, PostStatus status);
 
-  List<PostEntity> findAllByStatusAndScheduledAtLessThanEqual(
-      PostStatus status, Instant scheduledAt);
+  @Query(
+      "select p.id from PostEntity p where p.status = :status and p.scheduledAt <= :now order by p.id")
+  List<Long> findScheduledDueIds(@Param("status") PostStatus status, @Param("now") Instant now);
 
   List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query(
+      "select p from PostEntity p where p.seriesId = :seriesId or p.id in :requestedIds order by p.id")
+  List<PostEntity> findSeriesMembersAndRequestedForUpdate(
+      @Param("seriesId") Long seriesId, @Param("requestedIds") Collection<Long> requestedIds);
+
+  @Lock(LockModeType.PESSIMISTIC_WRITE)
+  @Query("select p from PostEntity p where p.userId = :userId and p.status = :status order by p.id")
+  List<PostEntity> findPublishedByUserIdForUpdate(
+      @Param("userId") Long userId, @Param("status") PostStatus status);
 
   List<PostEntity> findAllBySeriesIdInOrderBySeriesOrderAsc(Collection<Long> seriesIds);
 
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 
-  // Trending = most views inside a recent window (`since`), newest as tiebreak. LEFT JOIN so every
-  // published post still appears: posts with no recent views fall to a window count of 0 and sort
-  // by
-  // recency, keeping the feed full on a young platform while genuine traction floats to the top.
-  // posts.view_count (lifetime) is deliberately unused here — ranking on that all-time counter is
-  // exactly what made the old "trending" really just "most-viewed ever". Native because it crosses
-  // to post_view_event; SELECT p.* + GROUP BY p.id is valid under MySQL's PK functional dependency.
+  // LEFT JOIN으로 최근 조회가 없는 글도 포함한다. 누적 view_count는 순위에 사용하지 않는다.
+  // MySQL에서는 기본키로 GROUP BY하면 p.*를 선택할 수 있다.
   @Query(
       nativeQuery = true,
       value =
@@ -75,7 +90,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   List<PostEntity> findPublishedTrendingSince(
       @Param("since") Instant since, @Param("lang") String lang, Pageable pageable);
 
-  // Global recent feed with an optional language filter (:lang null = all languages).
   @Query(
       "select p from PostEntity p where p.status = :status "
           + "and (:lang is null or p.languageTag = :lang) order by p.publishedAt desc")
@@ -99,11 +113,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "where lower(t) = lower(:tag) and p.status = :status")
   long countPublishedByTag(@Param("tag") String tag, @Param("status") PostStatus status);
 
-  // The "following" feed union: posts whose author I follow OR whose series I subscribe to OR which
-  // carry a tag I follow. LEFT JOIN p.tags so the `lower(t) in :tags` (case-insensitive) match
-  // works;
-  // `distinct` collapses the row fan-out that join produces for multi-tag posts. Callers pass a
-  // no-match sentinel for any empty side (JPQL `in ()` is invalid).
+  // 태그가 없는 작가·시리즈 글도 포함하려고 LEFT JOIN한다. DISTINCT는 여러 태그의 중복을 제거한다.
+  // 빈 IN 인수는 어댑터가 매칭되지 않는 값으로 변환한다.
   @Query(
       "select distinct p from PostEntity p left join p.tags t "
           + "where p.status = :status "
@@ -126,9 +137,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("tags") Collection<String> tags,
       @Param("status") PostStatus status);
 
-  // "For You" — posts carrying any interest tag (inner join: a match is required), not the reader's
-  // own and not already read. `distinct` collapses the multi-tag join fan-out. excludeIds is never
-  // empty (caller passes a no-match sentinel), so `not in` stays valid.
+  // DISTINCT로 다중 태그의 중복을 제거한다. 빈 NOT IN 인수는 어댑터가 변환한다.
   @Query(
       "select distinct p from PostEntity p join p.tags t "
           + "where p.status = :status and p.userId <> :userId "
@@ -156,24 +165,11 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "where p.status = :status group by t order by count(p) desc")
   List<Object[]> findPopularTags(@Param("status") PostStatus status, Pageable pageable);
 
-  // Free-text feed search — FULLTEXT(ngram) over the derived search text (title + excerpt + tags +
-  // flattened body blocks), so the query reaches the body, not just the title/tags. 그 평문은 posts 컬럼이
-  // 아니라 곁 테이블 post_search_text 에 있다(읽기 경로가 본문 평문을 함께 로드하지 않도록). 검색만 필요할 때 LEFT JOIN 으로
-  // 붙인다 — LEFT 라 곁 행이 없는 글(작가 핸들만 걸린 경우 등)도 계속 노출된다.
-  //
-  // 매처 셋을 OR: (1) MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) — 본문/제목 ngram 매칭,
-  // (2) 작가 핸들 LIKE 서브쿼리(username 은 users 에 있어 FULLTEXT 인덱스를 못 탄다), (3) 짧은 질의 폴백:
-  // :titleLike 가 null 이 아닐 때만 제목·요약 LIKE — ngram 이 두 글자 미만 토큰을 못 잡는 "C++"·한글 한 글자
-  // 질의의 회귀를 막는다(일반 질의는 :titleLike=null 이라 이 가지가 꺼져 매칭 범위·성능에 영향 없음).
-  // `:match` 는 연산자 스크럽된 AGAINST 문자열, `:like` 는 소문자·와일드카드 이스케이프된 %…% 핸들 패턴,
-  // `:titleLike` 는 폴백 시에만 채워지는 제목/요약 %…% 패턴. Native 인 이유는 MATCH() 가 JPQL 이 아니라서.
-  //
-  // ★ BOOLEAN MODE + 평문 토큰(no +/*/""): ngram+BOOLEAN의 프리픽스 연산자(term*)나
-  //   구문("term")은 여러 바이그램으로 쪼개지는 한글 다바이그램 토큰을 깨뜨린다(실측: +"리다이렉트"=0건).
-  //   반대로 NATURAL 모드는 한글은 잘 잡지만 영어는 흔한 바이그램(en,nt,on…) 하나만 겹쳐도 오매칭(실측:
-  //   "frontend"가 세 글 모두 매칭). 연산자 없는 평문 BOOLEAN 항(implicit 바이그램 그룹)만이 한/영
-  //   단어 둘 다 정확히 부분일치하고 관련성 점수도 준다(다단어는 "많이 겹칠수록 상위" OR 랭킹).
-  //
+  // 검색 평문이 없는 글도 작성자 핸들로 찾을 수 있도록 LEFT JOIN한다.
+  // :match는 연산자를 제거한 BOOLEAN 검색어, :like는 이스케이프한 핸들 검색어다.
+  // :titleLike는 2글자 ngram이 처리하지 못하는 짧은 질의의 제목·요약 폴백에만 사용한다.
+  // ngram에서 접두·구문 연산자는 한글 다중 바이그램을 깨뜨리고 NATURAL MODE는 일부 바이그램만
+  // 겹쳐도 매칭되므로, 연산자 없는 BOOLEAN 항을 유지한다.
   String SEARCH_PREDICATE =
       "WHERE p.status = 'PUBLISHED' AND ("
           + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
@@ -183,7 +179,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
           + "AND (:lang IS NULL OR p.language_tag = :lang) ";
 
-  // recent 정렬: 관련성 무시, 최신순 — 예전 recent 검색과 정렬 계약 동일(본문까지 잡히는 것만 넓어졌다).
   @Query(
       nativeQuery = true,
       value =
@@ -198,9 +193,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("lang") String lang,
       Pageable pageable);
 
-  // relevance 정렬(새 기본값): MATCH() 관련성 점수 내림차순, 발행 최신을 동점 타이브레이크로. 작가 핸들만 걸리거나 짧은
-  // 질의 폴백으로만 잡힌 글은 점수 0(본문 매칭 없음)이라 관련성 목록의 맨 아래로 밀리되 계속 노출된다 — 예전 검색이 잡던
-  // 것을 하나도 빠뜨리지 않는다.
+  // 핸들·짧은 질의 폴백으로만 매칭된 글은 관련성 점수가 0이어도 결과에 포함한다.
   @Query(
       nativeQuery = true,
       value =
@@ -216,10 +209,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("lang") String lang,
       Pageable pageable);
 
-  // Same match, ranked by recent-window views (newest as tiebreak) so the trending sort means the
-  // same thing inside search as on the main feed. Mirrors findPublishedTrendingSince: LEFT JOIN
-  // post_view_event for the windowed COUNT. COUNT(DISTINCT e.id) so multiple view rows aggregate
-  // correctly; GROUP BY p.id collapses them to one row per post.
   @Query(
       nativeQuery = true,
       value =
@@ -249,17 +238,12 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("titleLike") String titleLike,
       @Param("lang") String lang);
 
-  // Authors ranked for the discovery rail — most published posts first, total views as tiebreak.
-  // Returns [userId, postCount, totalViews]; the service hydrates authors and drops deleted ones.
   @Query(
       "select p.userId, count(p), coalesce(sum(p.viewCount), 0) from PostEntity p "
           + "where p.status = :status group by p.userId "
           + "order by count(p) desc, coalesce(sum(p.viewCount), 0) desc")
   List<Object[]> findTopAuthorIds(@Param("status") PostStatus status, Pageable pageable);
 
-  // Series ranked for cross-author discovery — most recently active first. Counts only PUBLISHED
-  // member posts and drops thin series via HAVING. Returns [seriesId, postCount, lastPublishedAt];
-  // the service hydrates the series + author and drops deleted ones.
   @Query(
       "select p.seriesId, count(p), max(p.publishedAt) from PostEntity p "
           + "where p.status = :status and p.seriesId is not null "

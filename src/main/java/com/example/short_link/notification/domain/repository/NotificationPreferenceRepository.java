@@ -5,7 +5,6 @@ import com.example.short_link.notification.domain.NotificationPreferenceEntity;
 import java.util.List;
 import java.util.Optional;
 
-/** Persistence port for per-user link-notification opt-outs. */
 public interface NotificationPreferenceRepository {
 
   Optional<NotificationPreferenceEntity> findByUserIdAndType(
@@ -13,5 +12,6 @@ public interface NotificationPreferenceRepository {
 
   List<NotificationPreferenceEntity> findByUserId(Long userId);
 
-  NotificationPreferenceEntity save(NotificationPreferenceEntity preference);
+  /** Atomically creates or updates one preference; concurrent writes retain exactly one row. */
+  void setEnabled(Long userId, LinkNotificationType type, boolean enabled);
 }

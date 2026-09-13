@@ -26,7 +26,7 @@ public class NotificationPreferenceRepositoryAdapter implements NotificationPref
   }
 
   @Override
-  public NotificationPreferenceEntity save(NotificationPreferenceEntity preference) {
-    return jpa.save(preference);
+  public void setEnabled(Long userId, LinkNotificationType type, boolean enabled) {
+    jpa.setEnabled(userId, type.name(), enabled);
   }
 }

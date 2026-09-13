@@ -16,21 +16,13 @@ import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Sweeps every 5 minutes for hooks subscribed to {@link WebhookDeliveryMode#DAILY_SUMMARY} (or
- * {@link WebhookDeliveryMode#BOTH}). For each one whose owner's local-time hour has reached the
- * configured {@code summaryHourOfDay} and that hasn't fired yet today (in the owner's TZ), assemble
- * yesterday's stats and POST one summary. {@code summaryLastSentDate} ensures at-most-once per
- * local day even if the sweep tick is delayed or restarted.
- *
- * <p>The 5-minute cadence is the right granularity for an hour-of-day trigger: shorter doesn't help
- * (we still only fire once per day per hook), longer risks slipping past the user's chosen hour
- * after a restart.
+ * Uses the owner's timezone for the configured hour, yesterday's reporting window, and {@code
+ * summaryLastSentDate} daily deduplication.
  */
 @Slf4j
 @Component
@@ -43,17 +35,7 @@ public class DailyWebhookSummaryJob {
   private final WebhookHttpDeliveryClient deliveryClient;
   private final Clock clock;
 
-  @Autowired
   public DailyWebhookSummaryJob(
-      LinkWebhookRepository hooks,
-      LinkRepository links,
-      UserAccessLookup users,
-      DailySummaryAssembler assembler,
-      WebhookHttpDeliveryClient deliveryClient) {
-    this(hooks, links, users, assembler, deliveryClient, Clock.systemUTC());
-  }
-
-  DailyWebhookSummaryJob(
       LinkWebhookRepository hooks,
       LinkRepository links,
       UserAccessLookup users,

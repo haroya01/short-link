@@ -26,7 +26,7 @@ public class NoteQueryService {
     return new NoteFeedView(rows, safePage, hasNext);
   }
 
-  /** likedByMe 는 공개 피드에 안 싣는다(#538 comment_like 와 같은 분리) — 배치로 따로 묻는다. */
+  /** 공개 피드는 사용자별 likedByMe를 포함하지 않으므로 인증 상태를 별도로 조회한다. */
   @Transactional(readOnly = true)
   public List<Long> likedNoteIds(Long userId, List<Long> noteIds) {
     return likes.likedNoteIds(userId, noteIds);

@@ -3,10 +3,8 @@ package com.example.short_link.link.stats.application;
 import com.example.short_link.link.domain.LinkId;
 
 /**
- * Inputs needed to record one click. {@code sourceChannel}, {@code destinationId} and {@code
- * postId} are optional and default to {@code null} via {@link #of}. {@code postId} attributes a
- * click to the blog post that embedded the link ("이 글이 만든 클릭") — set when the redirect carries
- * {@code ?post=}.
+ * {@code sourceChannel}, {@code destinationId}, and {@code postId} default to null via {@link #of}.
+ * {@code postId} comes from {@code ?post=} and attributes the click to the embedding post.
  */
 public record ClickContext(
     LinkId linkId,
@@ -103,8 +101,7 @@ public record ClickContext(
         fetchSite);
   }
 
-  /// Sec-Fetch-Site — 레퍼러가 지워진 클릭에서도 "직접 열었나(none) vs 링크를 눌렀나(cross-site)" 를 가른다.
-  /// 브라우저가 표준으로 보내는 저엔트로피 값이라 방문자를 특정하지 않는다. 저장만 하고 봇 판정엔 쓰지 않는다.
+  /// Sec-Fetch-Site는 referrer 없는 클릭의 이동 맥락을 구분하며, 봇 판정에는 쓰지 않는다.
   public ClickContext withFetchSite(String value) {
     return new ClickContext(
         linkId,

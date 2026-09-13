@@ -20,6 +20,11 @@ class SeriesRepositoryAdapter implements SeriesRepository {
   }
 
   @Override
+  public Optional<SeriesEntity> findByIdForUpdate(Long id) {
+    return jpa.findByIdForUpdate(id);
+  }
+
+  @Override
   public List<SeriesEntity> findAllByIdIn(Collection<Long> ids) {
     return jpa.findAllByIdIn(ids);
   }

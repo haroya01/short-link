@@ -13,14 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 독자 행동 이벤트 한 줄 — {@code post_view_event}(도달)와 짝을 이루는 "행동" 계층. 스크롤 깊이({@code read_progress}), 두 번째
- * 행동({@code second_action}: 다른 글/연결/프로필/시리즈/태그 클릭), CTA 클릭을 세션 단위로 남긴다.
- *
- * <p>식별은 두 겹이다: {@code sessionId} 는 탭 수명(sessionStorage)의 임시 ID 로 퍼널 순서를 잇고, {@code visitorHash} 는
- * post_view_event 와 같은 공식(post+IP+UA)이라 같은 글의 도달 이벤트와 조인된다. 추적 쿠키는 쓰지 않으며 Sec-GPC 방문자는 해시를 만들지 않는다
- * — 조회 경로({@code RecordPostViewUseCase})와 같은 계약. 원본 행은 보존 기간(기본 90일)이 지나면 청소 잡이 걷는다.
- */
+/** 세션 ID는 탭 안의 행동 순서를 잇고, 방문자 해시는 글 조회와 조인하는 데 사용한다. Sec-GPC 요청에는 방문자 해시를 남기지 않는다. */
 @Entity
 @Table(name = "behavior_event")
 @Getter

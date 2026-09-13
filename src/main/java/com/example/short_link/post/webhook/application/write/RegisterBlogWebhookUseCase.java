@@ -12,12 +12,12 @@ import com.example.short_link.post.webhook.domain.repository.BlogWebhookReposito
 import io.micrometer.core.instrument.MeterRegistry;
 import java.security.SecureRandom;
 import java.util.EnumSet;
+import java.util.Locale;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Registers a blog notification webhook for the author. The secret is issued once, here. */
 @Service
 @RequiredArgsConstructor
 public class RegisterBlogWebhookUseCase {
@@ -50,7 +50,7 @@ public class RegisterBlogWebhookUseCase {
             new BlogWebhookEntity(
                 userId, url, cipher.encrypt(secret), sanitizeName(name), format, subscribed));
     meterRegistry
-        .counter("blog.webhook.registered", "format", format.name().toLowerCase())
+        .counter("blog.webhook.registered", "format", format.name().toLowerCase(Locale.ROOT))
         .increment();
     return new IssuedBlogWebhook(
         saved.getId(), url, secret, saved.getName(), format, saved.events(), saved.getCreatedAt());

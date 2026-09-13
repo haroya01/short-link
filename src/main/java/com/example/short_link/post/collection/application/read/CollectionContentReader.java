@@ -22,7 +22,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/** 컬렉션에 연결된 내용을 일괄 조회하고 공개 범위에 맞는 자료를 준비한다. */
 @Service
 @RequiredArgsConstructor
 public class CollectionContentReader {

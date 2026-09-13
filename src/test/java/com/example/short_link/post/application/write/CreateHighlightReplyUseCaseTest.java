@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -11,10 +12,13 @@ import com.example.short_link.common.event.HighlightMentionEvent;
 import com.example.short_link.common.event.HighlightReplyEvent;
 import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
+import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
+import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -41,6 +45,8 @@ class CreateHighlightReplyUseCaseTest {
   @Mock private UserRepository userRepository;
   @Mock private ApplicationEventPublisher events;
   @Mock private BlogNotificationMuteReader muteReader;
+  @Mock private UserModerationGuard moderation;
+  @Mock private UserBlockChecker blocks;
 
   private CreateHighlightReplyUseCase useCase;
 
@@ -48,7 +54,12 @@ class CreateHighlightReplyUseCaseTest {
   void setUp() {
     useCase =
         new CreateHighlightReplyUseCase(
-            highlightRepository,
+            new PostInteractionAccess(
+                postRepository,
+                mock(CommentRepository.class),
+                highlightRepository,
+                moderation,
+                blocks),
             replyRepository,
             userRepository,
             new CommentNotifications(userRepository, postRepository, events, muteReader));
@@ -110,6 +121,7 @@ class CreateHighlightReplyUseCaseTest {
 
   @Test
   void replyingToYourOwnHighlightSendsNoReplyNotice() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(highlightRepository.findById(50L))
         .thenReturn(Optional.of(highlight(9L))); // author == actor
     when(replyRepository.save(any(PostHighlightReplyEntity.class)))
@@ -167,8 +179,7 @@ class CreateHighlightReplyUseCaseTest {
 
   @Test
   void mentioningTheHighlightAuthorWhoMutedReplyStillFiresTheirMention() {
-    // Author 3 muted REPLY but keeps MENTION on. A REPLY collapse would drop their bell entirely —
-    // so an explicit @-mention of them must NOT fold into a notice they won't receive.
+    // REPLY를 꺼둔 작성자에게는 MENTION을 별도로 전달해야 한다.
     when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L))); // author 3
     when(replyRepository.save(any(PostHighlightReplyEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
@@ -180,8 +191,7 @@ class CreateHighlightReplyUseCaseTest {
 
     useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "thanks @dan"));
 
-    // Both events publish (REPLY dropped downstream by the mute; MENTION survives so the explicitly
-    // mentioned author is reachable through their still-on MENTION preference).
+    // REPLY는 하위 처리에서 차단되고 MENTION은 전달된다.
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
     HighlightMentionEvent mention =

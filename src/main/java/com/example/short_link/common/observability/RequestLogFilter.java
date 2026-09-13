@@ -12,10 +12,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Logs one INFO line per HTTP request at completion with method, uri, status and latency. Sits just
- * inside {@link com.example.short_link.common.web.MdcFilter} so the line carries requestId and
- * userId via MDC. Skips actuator/health/redirect probe paths to keep the volume sane — those are
- * already covered by Micrometer metrics.
+ * Runs inside MdcFilter so completion logs carry requestId/userId. Probe paths are omitted because
+ * Micrometer already covers them.
  */
 @Slf4j
 @Component

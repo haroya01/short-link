@@ -63,11 +63,7 @@ public interface JpaCollectionConnectionRepository
   List<CollectionConnectionCount> countByCollectionIdIn(
       @Param("collectionIds") Collection<Long> collectionIds);
 
-  /**
-   * 컬렉션들 안에서 이 블록 타입 연결들의 1-based 순위 — position 을 그대로 쓰지 않고 (position, id) 정렬로 다시 세어 삭제·재배치로 듬성해진
-   * raw 값에 흔들리지 않게 한다. 여러 컬렉션의 순위를 한 쿼리로(window function) 받아 글마다 세지 않는다(N+1 방지). collectionIds 가 비면
-   * 빈 목록.
-   */
+  /** 저장된 position에 빈자리가 있어도 (position, id) 정렬로 연속된 1-based 순위를 계산한다. */
   @Query(
       value =
           "SELECT collection_id AS collectionId, ref_id AS refId, "
@@ -79,7 +75,6 @@ public interface JpaCollectionConnectionRepository
   List<ConnectionRankProjection> findRanksByCollectionIdInAndBlockType(
       @Param("collectionIds") Collection<Long> collectionIds, @Param("blockType") String blockType);
 
-  /** 순위 window 쿼리 한 행 — collection_id 안에서 ref_id 의 1-based position. */
   interface ConnectionRankProjection {
     Long getCollectionId();
 
@@ -88,10 +83,7 @@ public interface JpaCollectionConnectionRepository
     int getPosition();
   }
 
-  /**
-   * 대상 블록(글·하이라이트·노트)이 하드 삭제될 때 그를 가리키던 연결을 일괄 정리 — ref_id 는 FK 없는 다형 참조라 DB 가 대신 지워주지 않는다. 벌크
-   * delete 라 영속성 컨텍스트를 우회한다(삭제 트랜잭션 안에서만 호출).
-   */
+  /** FK 없는 다형 참조를 정리한다. 벌크 삭제가 영속성 컨텍스트를 우회하므로 삭제 트랜잭션 안에서만 호출한다. */
   @Modifying
   @Query(
       "delete from CollectionConnectionEntity c"
@@ -99,8 +91,7 @@ public interface JpaCollectionConnectionRepository
   int deleteByBlockTypeAndRefIdIn(
       @Param("blockType") ConnectionBlockType blockType, @Param("refIds") Collection<Long> refIds);
 
-  // 공동 등장 — 이 블록이 놓인 *공개* 컬렉션에 함께 놓인 다른 블록들(자기 자신 제외).
-  // 사람이 손으로 엮은 간선만 — sharedCount 큰 순 = 같은 길에 더 자주 함께 놓인 것. §0: PUBLIC 만.
+  // PUBLIC 컬렉션에서만 공동 등장을 집계하며 대상 블록 자신은 제외한다.
   @Query(
       value =
           "SELECT cc2.block_type AS blockType, cc2.ref_id AS refId, "
@@ -122,8 +113,7 @@ public interface JpaCollectionConnectionRepository
           @Param("refId") Long refId,
           @Param("limit") int limit);
 
-  // 큐레이터 겹침 — 내 공개 컬렉션의 블록을 자기 공개 컬렉션에도 엮은 다른 큐레이터(나 제외).
-  // sharedItems = (block_type, ref_id) 쌍 기준 겹치는 블록 수 — 팔로우가 아니라 취향(엮은 것)으로 잇는다.
+  // sharedItems는 중복을 제거한 (block_type, ref_id) 쌍의 수다.
   @Query(
       value =
           "SELECT col2.owner_id AS curatorId, "

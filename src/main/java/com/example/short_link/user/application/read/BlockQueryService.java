@@ -11,11 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The viewer's "blocked users" list — drives the manage/unblock screen and the client-side content
- * filter (the app hides blocked authors' posts/comments locally from this set). Newest block first;
- * users that no longer have a handle are skipped while keeping the order.
- */
+/** Newest block first; users without a handle are skipped while preserving order. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

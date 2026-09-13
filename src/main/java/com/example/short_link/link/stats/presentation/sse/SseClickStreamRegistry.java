@@ -14,24 +14,11 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/**
- * Holds all open SSE streams keyed by link id. {@link
- * com.example.short_link.link.stats.application.ClickFlusher} fires {@link ClickRecordedEvent}
- * after every click and we fan out a small JSON payload (no PII) to every emitter watching that
- * link.
- *
- * <p>계정 채널({@code emittersByUserId})은 대시보드 라이브 모먼트용 — 소유자가 자기 링크 전체의 클릭 도착을 한 스트림으로 받는다. 페이로드에
- * {@code shortCode} 가 실려 어느 행을 깨울지 안다.
- *
- * <p>Listed streams self-clean on completion / timeout / error so the map only ever holds live
- * sessions.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class SseClickStreamRegistry {
 
-  /** Per-emitter limit so a runaway loop on a single link can't push unbounded messages. */
   private static final int MAX_STREAMS_PER_KEY = 16;
 
   private final Map<LinkId, List<SseEmitter>> emittersByLinkId = new ConcurrentHashMap<>();
@@ -47,10 +34,7 @@ public class SseClickStreamRegistry {
   }
 
   private <K> boolean registerInto(Map<K, List<SseEmitter>> map, K key, SseEmitter emitter) {
-    // compute() runs under the key's bin lock, serializing with remove()'s computeIfPresent. That
-    // closes the race where remove() evicts an emptied bucket between this method's limit check and
-    // the add — which would otherwise orphan this emitter in a bucket no longer reachable from the
-    // map (it would never receive events or get cleaned up).
+    // Share the removal key lock so insertion cannot orphan an emitter in an evicted bucket.
     boolean[] added = {false};
     map.compute(
         key,
@@ -86,9 +70,7 @@ public class SseClickStreamRegistry {
   }
 
   private <K> void removeFrom(Map<K, List<SseEmitter>> map, K key, SseEmitter emitter) {
-    // computeIfPresent atomically removes the emitter and, when the bucket empties, evicts the
-    // entry (returning null) under the same bin lock register() holds — so a concurrent register()
-    // can't be adding to a bucket we're about to drop.
+    // Use the same key lock as register() so bucket eviction cannot discard a concurrent addition.
     boolean[] removed = {false};
     map.computeIfPresent(
         key,
@@ -123,7 +105,7 @@ public class SseClickStreamRegistry {
                       "bot", event.bot())));
     }
 
-    // 계정 채널 — 익명 링크(owner null)는 나가지 않는다. shortCode 로 대시보드 행을 특정한다.
+    // Anonymous links have no account stream; shortCode identifies the owner dashboard row.
     if (event.ownerUserId() == null) return;
     List<SseEmitter> ownerBucket = emittersByUserId.get(event.ownerUserId());
     if (ownerBucket == null || ownerBucket.isEmpty()) return;
@@ -148,7 +130,6 @@ public class SseClickStreamRegistry {
         emitter.send(built);
         delivered++;
       } catch (IOException | IllegalStateException e) {
-        // best-effort: drop dead emitters silently
         emitter.completeWithError(e);
         bucket.remove(emitter);
       }

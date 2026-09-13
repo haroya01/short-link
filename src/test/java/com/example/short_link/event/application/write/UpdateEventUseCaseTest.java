@@ -126,7 +126,8 @@ class UpdateEventUseCaseTest {
 
   @Test
   void questionChange_isLockedOnceRegistrationsExist() {
-    when(eventRepository.findById(10L)).thenReturn(Optional.of(event()));
+    EventEntity event = event();
+    when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
     when(registrationRepository.countConfirmedByEventId(10L)).thenReturn(1L);
 
     assertThatThrownBy(
@@ -137,6 +138,9 @@ class UpdateEventUseCaseTest {
         .extracting(e -> ((EventException) e).errorCode())
         .isEqualTo(EventErrorCode.INVALID_QUESTIONS);
     verify(questionRepository, never()).deleteAllByEventId(10L);
+    assertThat(event.getTitle()).isEqualTo("스터디");
+    assertThat(event.getStartsAt()).isEqualTo(STARTS);
+    assertThat(event.getCapacity()).isNull();
   }
 
   @Test
@@ -171,5 +175,26 @@ class UpdateEventUseCaseTest {
     assertThat(saved.get(0).getLabel()).isEqualTo("한 줄 소개");
     assertThat(saved.get(0).getPosition()).isZero();
     assertThat(saved.get(1).getOptionsJson()).contains("\"S\"", "\"M\"");
+  }
+
+  @Test
+  void invalidQuestionsLeaveEventDetailsAndStoredQuestionsUnchanged() {
+    EventEntity event = event();
+    when(eventRepository.findById(10L)).thenReturn(Optional.of(event));
+
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
+                    command(
+                        1L,
+                        List.of(new QuestionSpec("SINGLE_CHOICE", "Size", List.of("S"), false)))))
+        .isInstanceOfSatisfying(
+            EventException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(EventErrorCode.INVALID_QUESTIONS));
+
+    assertThat(event.getTitle()).isEqualTo("스터디");
+    assertThat(event.getStartsAt()).isEqualTo(STARTS);
+    assertThat(event.getCapacity()).isNull();
+    verify(questionRepository, never()).deleteAllByEventId(10L);
   }
 }

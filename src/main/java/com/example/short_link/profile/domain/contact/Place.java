@@ -9,20 +9,8 @@ import java.net.URI;
 import java.util.Set;
 
 /**
- * PLACE block payload — a single business / venue / 매장 promo card. Visitors see the storefront
- * photo (or a map fallback), name, address, hours, and a "길찾기" / phone / share / copy action row.
- * We deliberately scope this to one location per block — multi-location chains can stack PLACE
- * blocks or wait for a v3 chain-grouping feature.
- *
- * <p>Google Places handles the address / lat / lng / placeId resolution on the frontend; the
- * backend just persists the resolved fields and runs sanity validation (URL whitelisting,
- * coordinate ranges, category whitelist). No outbound HTTP calls — the API key lives on the client
- * (HTTP-referrer-restricted) and the Place Details / Static Map URLs are built from the stored
- * fields at render time.
- *
- * <p>Categories are a fixed whitelist matching the frontend icon set (cafe / bakery / restaurant /
- * retail / studio / gallery / popup / space). Anything else is collapsed to {@code null} so a
- * misspelled or future-added category from a forward-rolled-out frontend doesn't 400 the block.
+ * Places are resolved on the frontend; the backend validates and stores resolved fields without
+ * outbound requests.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Place(
@@ -45,9 +33,8 @@ public record Place(
   private static final int PLACE_ID_MAX = 255;
 
   /**
-   * Whitelist of accepted category slugs. Anything outside this set is dropped on normalize so a
-   * frontend rolled out with a new category before the backend doesn't error the entire save — the
-   * block just renders with no category chip until both sides agree.
+   * Unknown categories become null so a frontend category added before backend deployment does not
+   * reject the whole block.
    */
   private static final Set<String> CATEGORIES =
       Set.of("cafe", "bakery", "restaurant", "retail", "studio", "gallery", "popup", "space");

@@ -11,7 +11,6 @@ public interface PostBookmarkRepository {
 
   Optional<PostBookmarkEntity> findByPostIdAndUserId(Long postId, Long userId);
 
-  /** The user's bookmarks, newest first — drives the reading list. */
   List<PostBookmarkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
   /** Bookmark counts per folder for one user (unfiled bookmarks excluded). */
@@ -22,12 +21,10 @@ public interface PostBookmarkRepository {
   void delete(PostBookmarkEntity bookmark);
 
   /**
-   * Insert a bookmark, ignoring the duplicate-key conflict when the user already bookmarked the
-   * post. Returns the number of rows inserted (1 = newly bookmarked, 0 = already bookmarked).
-   * Atomic — no read-then-write race, and no exception to poison the surrounding transaction.
+   * Returns 1 for a new bookmark or 0 for a duplicate. Duplicate inserts must not fail the
+   * transaction.
    */
   int insertIgnore(Long postId, Long userId);
 
-  /** Purge every bookmark on a post — used when the post is permanently deleted. */
   int deleteAllByPostId(Long postId);
 }

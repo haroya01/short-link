@@ -7,10 +7,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
-/**
- * Collection-slice implementation of the neutral cleanup port. A single bulk delete per block type;
- * an empty highlight set is skipped so a post with no highlights issues no query.
- */
 @Repository
 @RequiredArgsConstructor
 class CollectionConnectionCleanerAdapter implements CollectionConnectionCleaner {

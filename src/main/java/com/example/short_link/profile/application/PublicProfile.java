@@ -15,11 +15,7 @@ public record PublicProfile(
     long publishedPostCount,
     boolean hideFollowerCount) {
 
-  /**
-   * Single shape for the rendered public profile feed. The {@code kind} discriminator drives
-   * frontend rendering; fields not relevant to a given kind are null. Sparse but JSON-flat —
-   * Jackson handles this without sealed-class plumbing.
-   */
+  /** {@code kind} selects the JSON shape; fields irrelevant to that kind are null. */
   public record ProfileEntry(
       String kind,
       Long id,
@@ -69,44 +65,30 @@ public record PublicProfile(
       return new ProfileEntry("EMBED", id, null, null, null, null, null, null, null, url);
     }
 
-    /** Content is the EMAIL_FORM JSON config (title / placeholder / successMessage). */
     public static ProfileEntry emailForm(Long id, String config) {
       return new ProfileEntry("EMAIL_FORM", id, null, null, null, null, null, null, null, config);
     }
 
-    /** Content is the CONTACT_CARD JSON (name + optional title/company/email/phone/etc.). */
     public static ProfileEntry contactCard(Long id, String config) {
       return new ProfileEntry("CONTACT_CARD", id, null, null, null, null, null, null, null, config);
     }
 
-    /** Content is the GALLERY JSON ({@code {"images":["url",...]}}). */
     public static ProfileEntry gallery(Long id, String config) {
       return new ProfileEntry("GALLERY", id, null, null, null, null, null, null, null, config);
     }
 
-    /** Content is the PRODUCT_CARD JSON ({@code {title?, items: [...]}}). */
     public static ProfileEntry productCard(Long id, String config) {
       return new ProfileEntry("PRODUCT_CARD", id, null, null, null, null, null, null, null, config);
     }
 
-    /** Content is the BOOKING JSON ({@code {url, title?, description?, ctaLabel?}}). */
     public static ProfileEntry booking(Long id, String config) {
       return new ProfileEntry("BOOKING", id, null, null, null, null, null, null, null, config);
     }
 
-    /**
-     * Content is the EVENT JSON ({@code {title, startsAt, endsAt?, location?, description?,
-     * url?}}). ICS / Google Calendar URL building happens on the frontend.
-     */
     public static ProfileEntry event(Long id, String config) {
       return new ProfileEntry("EVENT", id, null, null, null, null, null, null, null, config);
     }
 
-    /**
-     * Content is the PLACE JSON ({@code {name, address, lat, lng, placeId?, phone?, coverUrl?,
-     * category?, hoursText?}}). Static Map / directions URL building happens on the frontend with
-     * the public Google Maps API key (HTTP-referrer-restricted).
-     */
     public static ProfileEntry place(Long id, String config) {
       return new ProfileEntry("PLACE", id, null, null, null, null, null, null, null, config);
     }

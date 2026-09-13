@@ -9,7 +9,6 @@ import java.util.zip.ZipOutputStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/** 계정의 모든 글을 frontmatter와 본문을 가진 마크다운 ZIP으로 내보낸다. */
 @Service
 @RequiredArgsConstructor
 public class PostExportQueryService {
@@ -29,7 +28,6 @@ public class PostExportQueryService {
     return buffer.toByteArray();
   }
 
-  /** 재발행에 필요한 최소 메타만 frontmatter 로 — 에디터의 .md 내보내기와 같은 문법. */
   private static String exportDocument(PostView post, String markdown) {
     StringBuilder head = new StringBuilder("---\n");
     head.append("title: \"").append(post.title().replace("\"", "\\\"")).append("\"\n");

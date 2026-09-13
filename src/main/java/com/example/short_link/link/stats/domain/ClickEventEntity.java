@@ -35,8 +35,7 @@ public class ClickEventEntity {
   }
 
   @Column(name = "clicked_at", nullable = false, updatable = false)
-  // MySQL TIMESTAMP converts through the connection time zone; a forced UTC calendar shifts its
-  // epoch.
+  // MySQL TIMESTAMP uses the connection time zone; forcing a UTC calendar would shift the epoch.
   @JdbcTypeCode(SqlTypes.TIMESTAMP)
   private Instant clickedAt;
 
@@ -97,11 +96,7 @@ public class ClickEventEntity {
   @Column(name = "visitor_hash", length = 64)
   private String visitorHash;
 
-  /**
-   * Channel hint passed by the short URL itself (e.g., {@code /abc?src=qr}). Lets owners attribute
-   * traffic from places where the referrer header is missing — KakaoTalk, QR codes, offline
-   * posters, etc.
-   */
+  /** {@code ?src=} attributes traffic when the referrer header is missing. */
   @Column(name = "source_channel", length = 40)
   private String sourceChannel;
 
@@ -109,10 +104,7 @@ public class ClickEventEntity {
   @Column(name = "destination_id")
   private Long destinationId;
 
-  /**
-   * Blog post that embedded this link, when the click came from a post (the redirect carried {@code
-   * ?post=}). Powers "이 글이 만든 클릭" in author analytics; null for clicks from anywhere else.
-   */
+  /** Set from {@code ?post=} for the embedding blog post; null for other traffic. */
   @Column(name = "post_id")
   private Long postId;
 
@@ -124,17 +116,14 @@ public class ClickEventEntity {
   private String asnOrg;
 
   /**
-   * In-app browser this click was opened in (kakaotalk, instagram, …), derived from the user agent
-   * at write time. Null for an ordinary browser. Independent of {@link #bot} — an in-app browser is
-   * a person.
+   * In-app browser derived from the UA; null for ordinary browsers and independent of {@link #bot}.
    */
   @Column(name = "client_app", length = 32)
   private String clientApp;
 
   /**
-   * The browser's {@code Sec-Fetch-Site} value — {@code none} when the visitor opened the URL
-   * themselves (typed, bookmark, QR), {@code cross-site} when they followed a link. Splits apart
-   * referrer-less clicks that otherwise all look the same. Null when the browser doesn't send it.
+   * {@code Sec-Fetch-Site}: {@code none} for direct navigation, {@code cross-site} for followed
+   * links, null when absent.
    */
   @Column(name = "fetch_site", length = 16)
   private String fetchSite;

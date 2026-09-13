@@ -4,10 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 /**
- * Hash-cash style proof-of-work for anonymous endpoints. The server hands out a random challenge;
- * the client must find a {@code nonce} such that {@code SHA-256(challenge:nonce)} starts with
- * {@code difficulty} hex zeros. Each challenge is single-use (deleted on verify) with a 5-minute
- * TTL. Invalid proofs never consume an outstanding challenge.
+ * Requires {@code SHA-256(challenge:nonce)} to start with {@code difficulty} hex zeros. Challenges
+ * expire after five minutes and can be consumed once; invalid proofs leave them usable.
  */
 @Service
 @RequiredArgsConstructor
@@ -29,11 +27,6 @@ public class PowService {
     return new Challenge(challenge, properties.difficulty());
   }
 
-  /**
-   * Verifies and consumes the challenge. Returns true only if the challenge was issued by this
-   * cluster, hasn't been used yet, and the supplied nonce produces a hash with at least {@code
-   * difficulty} hex zeros. The challenge is deleted on success — same proof can't be replayed.
-   */
   public boolean verifyAndConsume(String challenge, String nonce) {
     VerificationResult result = verifyThenConsume(challenge, nonce);
     metrics.verificationCompleted(result);

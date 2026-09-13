@@ -15,11 +15,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * One in-app notification for a recipient. The actor is kept as a bare id ({@code actorUserId}) and
- * resolved to a name/avatar at read time, so the write path is a single insert and the displayed
- * name never goes stale. {@code payload} is the type-specific display data as JSON — only the
- * point-in-time post reference today — which keeps new notification kinds from each needing a
- * column. {@code readAt} is null until the recipient opens the bell.
+ * Actor identity is resolved at read time to keep display names current; target payload JSON is a
+ * write-time snapshot. Null {@code readAt} means unread.
  */
 @Entity
 @Table(name = "notification")

@@ -13,12 +13,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Serves the dynamically-generated OG card PNG for short links that have no destination preview
- * image. Cached aggressively at the edge — the count baked into the image is the human-click total
- * at the time of render, and a 60s freshness window is fine for share previews (they get scraped
- * seconds after the link is posted).
- */
 @RestController
 @RequiredArgsConstructor
 public class OgCardController {

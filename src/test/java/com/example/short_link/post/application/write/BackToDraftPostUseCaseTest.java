@@ -38,7 +38,7 @@ class BackToDraftPostUseCaseTest {
   void revertsScheduledToDraft() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     post.schedule(Instant.now().plus(1, ChronoUnit.HOURS));
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     PostView result = useCase.execute(new BackToDraftPostCommand(7L, 42L));
@@ -51,7 +51,7 @@ class BackToDraftPostUseCaseTest {
   void rejectsBackToDraftFromPublished() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     post.publish();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
 
     assertThatThrownBy(() -> useCase.execute(new BackToDraftPostCommand(7L, 42L)))
         .isInstanceOf(PostException.class)

@@ -40,6 +40,7 @@ import com.example.short_link.post.presentation.response.PreviewTokenResponse;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -96,11 +97,7 @@ public class PostController {
     return postQueryService.listMyPosts(userId);
   }
 
-  /**
-   * 내 글 전부를 마크다운 zip 한 방으로 — "언제든 들고 나갈 수 있다"의 계정 단위 완성(글 단위 내보내기·공개 마크다운 URL 의 마지막 조각). 초안·예약·내림까지
-   * 전 상태 포함(내 데이터 전부), 파일마다 frontmatter(title/slug/status/tags/published) + 본문, 파일명은 유저당 유일한
-   * slug.md. 개인 블로그 규모(수백 편·글당 200k 자 캡)라 메모리 조립로 충분하다. API 키로도 호출 가능.
-   */
+  /** 비공개·초안·예약을 포함한 모든 글을 slug.md 파일로 내보낸다. */
   @GetMapping(value = "/export", produces = "application/zip")
   public ResponseEntity<byte[]> exportAll(@AuthenticationPrincipal Long userId) throws IOException {
     return ResponseEntity.ok()
@@ -136,7 +133,6 @@ public class PostController {
     return publishPost.execute(new PublishPostCommand(userId, id));
   }
 
-  /** Get-or-create the share token so the owner can preview/share a not-yet-public post. */
   @PostMapping("/{id}/preview-token")
   public PreviewTokenResponse issuePreviewToken(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
@@ -182,14 +178,13 @@ public class PostController {
             .map(
                 b ->
                     new ReplacePostBlocksCommand.BlockInput(
-                        PostBlockType.valueOf(b.type().toUpperCase()), b.content()))
+                        PostBlockType.valueOf(b.type().toUpperCase(Locale.ROOT)), b.content()))
             .toList();
     return replacePostBlocks.execute(new ReplacePostBlocksCommand(userId, id, inputs)).stream()
         .map(PostBlockView::from)
         .toList();
   }
 
-  /** The post body as markdown — the native app edits markdown, not the block JSON. */
   @GetMapping("/{id}/markdown")
   public PostMarkdownResponse markdown(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
@@ -197,11 +192,7 @@ public class PostController {
         markdownBlocks.toMarkdown(postQueryService.listBlocks(userId, id)));
   }
 
-  /**
-   * Replace the body from markdown — the server-owned md→blocks conversion keeps the app and the
-   * web editor producing identical block streams. Responds with the round-tripped markdown so the
-   * client can adopt the canonical serialization.
-   */
+  /** 클라이언트가 서버의 정규화된 표현을 사용하도록 저장 후 마크다운을 다시 반환한다. */
   @PutMapping("/{id}/markdown")
   public PostMarkdownResponse replaceMarkdown(
       @AuthenticationPrincipal Long userId,

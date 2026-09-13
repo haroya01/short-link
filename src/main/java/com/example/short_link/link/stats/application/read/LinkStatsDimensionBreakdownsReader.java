@@ -110,10 +110,7 @@ class LinkStatsDimensionBreakdownsReader {
         .toList();
   }
 
-  /**
-   * 링크를 품고 있던 글별 사람 클릭. 제목은 link 슬라이스가 post 를 직접 알면 슬라이스 그래프에 사이클이 생기므로 common 중립 포트({@link
-   * PostTitleReader})로 한 번에 batch 조회해 붙인다. 지워진 글은 제목만 null 이고 클릭 수는 남긴다.
-   */
+  /** 중립 포트 {@link PostTitleReader}로 제목을 읽어 post 슬라이스와의 순환 의존을 피한다. 지워진 글은 제목만 null이고 클릭 수는 남긴다. */
   List<LinkStats.PostClick> postClicks(LinkId linkId) {
     var rows = clickDimensions.findTopPostClicks(linkId.value(), TOP_SIZE);
     if (rows.isEmpty()) return List.of();

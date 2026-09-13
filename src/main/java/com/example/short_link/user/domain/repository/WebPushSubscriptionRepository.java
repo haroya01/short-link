@@ -17,10 +17,9 @@ public interface WebPushSubscriptionRepository {
   /** 사용자 요청 구독해제 — 자기 소유(userId) 의 endpoint 만 지운다. 남의 구독을 endpoint 만으로 못 지우게. */
   void deleteByUserIdAndEndpoint(Long userId, String endpoint);
 
-  /** Purge every subscription a user owns — called on account hard delete (V99 has no users FK). */
+  /** Must be called on account hard delete; subscriptions have no users FK. */
   void deleteByUserId(Long userId);
 
-  /** A user's subscriptions — the sender fans a push to every one (one per browser/device). */
   List<WebPushSubscriptionEntity> findAllByUserId(Long userId);
 
   List<WebPushSubscriptionEntity> findAllByUserIdIn(Collection<Long> userIds);

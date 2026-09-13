@@ -24,10 +24,8 @@ public class LinkEntity extends BaseCreatedEntity {
   private Long id;
 
   /**
-   * Typed accessor for the primary key. Use this everywhere outside the JPA boundary so a stray
-   * {@code Long} can't be silently passed where this link's id was expected. The raw {@code id}
-   * field stays {@code Long} so Hibernate's identity generation + persistence cache stay on their
-   * proven path.
+   * Use {@link LinkId} outside the JPA boundary; the raw key remains {@code Long} for Hibernate
+   * identity generation and persistence caching.
    */
   public LinkId linkId() {
     return id == null ? null : new LinkId(id);
@@ -94,33 +92,22 @@ public class LinkEntity extends BaseCreatedEntity {
   @Column(name = "profile_order")
   private Integer profileOrder;
 
-  /** Marks the one "hero" featured link rendered as a big card on the public profile. */
   @Column(name = "profile_highlighted", nullable = false)
   private boolean profileHighlighted = false;
 
-  /**
-   * Comma-separated ISO-3166 alpha-2 country codes blocked from this link. A clicker resolved to
-   * any listed country gets a "blocked" page instead of the redirect. Null/blank = no blocklist.
-   */
+  /** Comma-separated ISO-3166 alpha-2 blocked countries. Null or blank means no blocklist. */
   @Column(name = "blocked_countries", length = 255)
   private String blockedCountries;
 
-  /** Owner-only memo (campaign context, why the link was made). Never shown to visitors. */
+  /** Owner-only memo; never shown to visitors. */
   @Column(length = 280)
   private String note;
 
-  /**
-   * Optional message rendered on the expired / view-limit page in place of the generic copy. Lets a
-   * brand owner say "Sale ended — see the next drop at example.com" instead of a flat "expired".
-   */
+  /** Overrides the generic copy on the expired or view-limit page when provided. */
   @Column(name = "expired_message", length = 500)
   private String expiredMessage;
 
-  /**
-   * Optional redirect target applied after the link expires. When non-null, the expired page is
-   * skipped and a 302 to this URL is served. Campaign domain pushes the campaign's
-   * post-end-destination here on ENDED transition; single-link users may set it directly.
-   */
+  /** When set, expiry serves a 302 to this URL instead of an expired page. */
   @Column(name = "expired_redirect_url", length = 2048)
   private String expiredRedirectUrl;
 
@@ -169,11 +156,9 @@ public class LinkEntity extends BaseCreatedEntity {
   }
 
   /**
-   * Apply a campaign's post-end policy in a single move. Called by the campaign domain when
-   * transitioning to ENDED so the redirect hot path can keep reading only this entity.
-   *
-   * <p>{@code expiredMessage} 는 EXPIRE 분기에서만 의미가 있다 — REDIRECT 일 때는 만료 페이지가 뜨지 않으므로 null 로 전달된다. 인자
-   * 자체는 무차별 적용 (null 이면 기존 메시지 클리어, 비어있지 않으면 덮어쓴다) — 호출자가 KEEP/EXPIRE/REDIRECT 분기 의도를 가지고 전달.
+   * Campaign end policy is stored here so redirects do not need campaign lookups. Null values clear
+   * existing policy; callers pass {@code expiredMessage} only for EXPIRE, since REDIRECT skips the
+   * page.
    */
   public void applyCampaignExpiration(
       Instant expiresAt, String expiredRedirectUrl, String expiredMessage) {
@@ -239,8 +224,7 @@ public class LinkEntity extends BaseCreatedEntity {
   public void claim(Long newOwnerId) {
     this.userId = newOwnerId;
     this.claimToken = null;
-    // Anonymous links carry a short TTL so they don't accumulate forever; when the creator signs
-    // in we promote them to permanent — they're now under an account that can manage them.
+    // Claimed links become permanent because an account can now manage them.
     this.expiresAt = null;
   }
 

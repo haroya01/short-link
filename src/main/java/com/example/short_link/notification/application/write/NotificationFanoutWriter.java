@@ -9,12 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Writes one fan-out chunk in its own transaction. Split out of {@link
- * RecordBlogNotificationUseCase} so each chunk acquires and releases a DB connection independently
- * — a popular author's thousand-follower fan-out then never holds a single connection open across
- * the whole batch (the 2026-06 pool-exhaustion failure mode).
- */
+/** Each fan-out chunk uses its own transaction to release the DB connection between chunks. */
 @Service
 @RequiredArgsConstructor
 public class NotificationFanoutWriter {

@@ -18,10 +18,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 이전 발행 스냅샷으로 본문 + 메타데이터 복원. slug / status / publishedAt 등 상태 메타는 건드리지 않음 — 본문 (블록) 과 가벼운 메타
- * (title, excerpt, ogImage, languageTag) 만 되돌림.
- */
+/** 본문과 내용 메타데이터만 복원한다. slug·공개 상태·발행 시각은 유지한다. */
 @Service
 @RequiredArgsConstructor
 public class RestorePostRevisionUseCase {
@@ -37,7 +34,7 @@ public class RestorePostRevisionUseCase {
 
   @Transactional
   public PostView execute(RestorePostRevisionCommand cmd) {
-    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     PostRevisionEntity revision =
         postRevisionRepository
             .findByPostIdAndVersionNumber(cmd.postId(), cmd.versionNumber())
@@ -70,7 +67,6 @@ public class RestorePostRevisionUseCase {
     }
 
     post.markEdited();
-    // 제목·요약과 본문이 스냅샷 상태로 되돌았으니 파생 검색 컬럼도 그에 맞춰 다시 채운다(저장된 블록 재조회).
     searchTextUpdater.refresh(post);
     return writeViews.fromSaved(postRepository.save(post));
   }

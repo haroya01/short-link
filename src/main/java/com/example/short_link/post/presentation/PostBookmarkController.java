@@ -14,10 +14,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Authenticated bookmarks (reading list). Toggle/status live under a post; the list of the caller's
- * bookmarks is its own collection resource.
- */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor

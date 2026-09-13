@@ -1,9 +1,5 @@
 package com.example.short_link.post.application.read;
 
-/**
- * A public feed selects one source: search text, a tag, or all published posts. Language values
- * retain the repository's shared filter normalization.
- */
 public record PublicFeedQuery(Selection selection, int page, int size) {
 
   private static final int MAX_SIZE = 50;

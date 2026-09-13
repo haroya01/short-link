@@ -11,12 +11,8 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Per-hook batch delivery in its own transaction. Split out from {@link LinkWebhookDispatcher} so
- * that a slow webhook receiver only holds its own DB connection — the surrounding scheduler loop
- * runs without a transaction, so other hooks' record-state writes are not serialized behind it.
- *
- * <p>{@code REQUIRES_NEW} is mandatory: the caller's loop must not share a transaction with us, or
- * a 5s HTTP read timeout on hook N stalls every subsequent hook's tx commit.
+ * REQUIRES_NEW gives each hook an independent commit boundary; the scheduler loop must not hold one
+ * transaction across slow HTTP deliveries.
  */
 @Component
 @RequiredArgsConstructor

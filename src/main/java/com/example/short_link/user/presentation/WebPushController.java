@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 브라우저 웹푸시 구독 — 권한 허용 시 구독 등록(upsert), 끌 때/로그아웃 때 삭제. */
 @RestController
 @RequestMapping("/api/v1/notifications/web-push")
 @RequiredArgsConstructor

@@ -20,7 +20,7 @@ public final class WebhookPayloadAdapter {
     return switch (notification) {
       case WebhookNotification.Click click -> buildClick(format, click.payload());
       case WebhookNotification.Batch batch -> buildBatch(format, batch.linkId(), batch.events());
-        // 요약과 급증 알림은 기존 원본 JSON 계약을 유지한다. 공급자 전용 표현은 아직 없다.
+        // 요약과 급증 알림은 공급자 포맷과 무관하게 원본 JSON 계약을 유지한다.
       case WebhookNotification.DailySummary summary -> summary.payload().toJsonMap();
       case WebhookNotification.SpikeAlert spike -> spike.payload().toJsonMap();
     };

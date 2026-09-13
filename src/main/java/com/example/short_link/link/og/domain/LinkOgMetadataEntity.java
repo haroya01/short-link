@@ -11,7 +11,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 1:1 with link.id — split out of LinkEntity to keep OG/social fields off the hot path. */
+/** Separate OG fields keep the main link row narrow on redirect lookups. */
 @Entity
 @Table(name = "link_og_metadata")
 @Getter

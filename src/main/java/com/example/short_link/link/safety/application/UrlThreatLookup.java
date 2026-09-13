@@ -1,7 +1,8 @@
 package com.example.short_link.link.safety.application;
 
 /**
- * Threat lookup with provider-independent failures and an allow-through result during an outage.
+ * Outages may return an allow-through verdict; lookup failures remain provider-independent
+ * exceptions.
  */
 public interface UrlThreatLookup {
 

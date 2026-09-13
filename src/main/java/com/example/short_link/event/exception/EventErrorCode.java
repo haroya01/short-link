@@ -9,6 +9,7 @@ public enum EventErrorCode {
   EVENT_FULL(HttpStatus.CONFLICT, "event full: %s"),
   EVENT_REGISTRATION_CLOSED(HttpStatus.CONFLICT, "registration closed: %s"),
   ALREADY_REGISTERED(HttpStatus.CONFLICT, "already registered"),
+  INVALID_EVENT_DETAILS(HttpStatus.BAD_REQUEST, "invalid event details: %s"),
   INVALID_CONTACT(HttpStatus.BAD_REQUEST, "invalid contact for field type %s"),
   INVALID_QUESTIONS(HttpStatus.BAD_REQUEST, "invalid questions: %s"),
   INVALID_ANSWER(HttpStatus.BAD_REQUEST, "invalid answer for question: %s"),

@@ -10,7 +10,7 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/** 약관 7조의 "사유 통지"를 나르는 운영자 경고 — 링크 알림 인박스에 남고 푸시 설정과 무관하게 푸시된다. 부제는 수신자 locale, 본문은 운영자가 쓴 그대로. */
+/** 약관 위반 경고는 사용자의 푸시 수신 설정과 무관하게 전달한다. */
 @Service
 @RequiredArgsConstructor
 public class WarnUserUseCase {

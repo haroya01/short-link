@@ -66,8 +66,7 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
     return "refresh:" + userId + ":";
   }
 
-  // Separate prefix so the grace marker isn't swept by deleteAllForUser's "refresh:{id}:*" scan —
-  // it expires on its own short TTL, so a theft wipe never needs to clear it.
+  // Grace markers use a separate prefix, survive deleteAllForUser, and expire on their own TTL.
   private String rotatedKey(Long userId, String jti) {
     return "refresh-rotated:" + userId + ":" + jti;
   }

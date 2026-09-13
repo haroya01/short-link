@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One block edge: {@code blockerId} blocks {@code blockedId}. The pair is unique. */
 @Entity
 @Table(
     name = "user_block",

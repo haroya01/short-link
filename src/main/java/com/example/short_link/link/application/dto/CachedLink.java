@@ -5,6 +5,7 @@ import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
 public record CachedLink(
@@ -130,7 +131,7 @@ public record CachedLink(
 
   public boolean isBlockedFor(String clientCountry) {
     if (blockedCountries == null || clientCountry == null) return false;
-    String upper = clientCountry.toUpperCase();
+    String upper = clientCountry.toUpperCase(Locale.ROOT);
     for (String code : blockedCountries.split(",")) {
       if (upper.equals(code.trim())) return true;
     }
@@ -145,12 +146,7 @@ public record CachedLink(
     return pick(clientCountry, null, null);
   }
 
-  /**
-   * Picks one destination using a layered match. Each variant's non-null predicates (country, OS,
-   * device class) must match the visitor's signals. Among matching variants, the most-specific set
-   * (most non-null predicates satisfied) wins; ties resolve by weighted random pick. If nothing
-   * matches at all, fall through to the link's control URL.
-   */
+  /** 모든 지정 조건이 일치하는 목적지 중 조건 수가 가장 많은 것을 선택한다. 동률이면 가중 무작위 선택, 일치 항목이 없으면 원본 URL을 사용한다. */
   public Picked pick(String clientCountry, String os, String deviceClass) {
     List<Variant> enabled = variants.stream().filter(Variant::enabled).toList();
     if (enabled.isEmpty()) return new Picked(originalUrl, null);
@@ -177,9 +173,9 @@ public record CachedLink(
   private record VisitorSignals(String country, String os, String deviceClass) {
     static VisitorSignals normalized(String country, String os, String deviceClass) {
       return new VisitorSignals(
-          country == null ? null : country.trim().toUpperCase(),
-          os == null ? null : os.trim().toLowerCase(),
-          deviceClass == null ? null : deviceClass.trim().toLowerCase());
+          country == null ? null : country.trim().toUpperCase(Locale.ROOT),
+          os == null ? null : os.trim().toLowerCase(Locale.ROOT),
+          deviceClass == null ? null : deviceClass.trim().toLowerCase(Locale.ROOT));
     }
   }
 
@@ -204,11 +200,7 @@ public record CachedLink(
       String deviceClass,
       String os) {
 
-    /**
-     * Returns the number of predicates a variant matches against the visitor signals, or {@code
-     * null} if any non-null predicate fails. A variant with no predicates set always matches with
-     * specificity 0 (fully generic).
-     */
+    /** 불일치 조건이 있으면 null, 아니면 지정된 조건 수를 반환한다. 조건이 없으면 0이다. */
     private Integer matchSpecificity(VisitorSignals visitor) {
       int score = 0;
       if (countryCode != null) {

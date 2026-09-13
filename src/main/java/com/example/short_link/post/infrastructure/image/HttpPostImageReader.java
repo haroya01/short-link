@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/** 외부 이미지를 안전한 HTTP 경로로 읽고 저장 가능한 바이트인지 검증한다. */
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -67,9 +66,8 @@ public class HttpPostImageReader implements ExternalPostImageReader {
   }
 
   /**
-   * 리다이렉트를 hop 단위로 직접 따라간다. Pinned DNS 는 cross-host 리다이렉트를 죽이는데(DNS 리바인딩 방어), 노션 이미지
-   * 프록시(www.notion.so/image/...)는 S3 서명 URL 로 302 를 주므로 자동 추적으로는 항상 실패했다. 각 hop 의 Location 을 {@link
-   * PublicHttpUrlGuard} 로 다시 해석-검증해 사설 IP 로 새는 것을 막는다.
+   * 각 리다이렉트에서 {@link PublicHttpUrlGuard}로 주소를 다시 검증한다. 호스트가 바뀌는 이미지 프록시를 지원하면서 DNS 재바인딩과 사설 IP 접근을
+   * 차단한다.
    */
   private Response fetchFollowingRedirects(
       Resolved first, Map<String, String> headers, int fetchCap, String originalUrl, Long postId) {
@@ -113,11 +111,7 @@ public class HttpPostImageReader implements ExternalPostImageReader {
     return status == 301 || status == 302 || status == 303 || status == 307 || status == 308;
   }
 
-  /**
-   * 바이트 시그니처로 이미지 타입을 판별한다. 원격 서버의 Content-Type 은 공격자 통제 값이고 정상 케이스에서도 자주 틀리므로(노션/S3 서명 URL 이
-   * {@code application/octet-stream} 으로 내려주는 경우가 흔함) 저장 타입은 바이트에서 얻는다 — 시그니처가 허용 타입과 안 맞으면
-   * (HTML/SVG 폴리글랏 포함) 거부된다.
-   */
+  /** 원격 Content-Type은 신뢰할 수 없고 정상 이미지도 octet-stream으로 올 수 있어 저장 타입은 바이트 시그니처로 판별한다. */
   private static String sniffImageType(byte[] b) {
     if (b.length >= 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) {
       return "image/jpeg";

@@ -81,10 +81,7 @@ public class CampaignBatchService {
     return pairWithLink(batch);
   }
 
-  /**
-   * Metadata 만 수정 — 대표 link 와의 결합 (linkId / campaignId) 는 immutable. ENDED / ARCHIVED 캠페인은 거부. Null
-   * 필드는 기존 값 유지.
-   */
+  /** 대표 링크와 캠페인은 변경할 수 없다. null 필드는 유지하고 종료·보관 캠페인은 거부한다. */
   @Transactional
   public BatchWithLink update(
       Long campaignId, Long batchId, Long ownerId, CampaignBatchUpdateCommand command) {
@@ -103,7 +100,7 @@ public class CampaignBatchService {
     return new BatchWithLink(batch, current.link());
   }
 
-  /** Batch 삭제 = 대표 link 도 삭제 (인쇄된 QR 죽음). status 무관 허용 — 끝난 캠페인의 자산 정리에도 쓰임. 호출자(UI)가 경고 표시 책임. */
+  /** 대표 링크도 삭제하므로 인쇄된 QR도 무효화된다. 종료된 캠페인에서도 삭제할 수 있다. */
   @Transactional
   public void delete(Long campaignId, Long batchId, Long ownerId) {
     BatchWithLink current = detail(campaignId, batchId, ownerId);
@@ -121,8 +118,7 @@ public class CampaignBatchService {
 
   private BatchWithLink persistRow(
       CampaignEntity campaign, Long ownerId, CampaignBatchCreateCommand row, String destination) {
-    // dedup=false — 같은 destination 의 여러 batch 가 각자 다른 short code 를 갖도록 (batch:link
-    // UNIQUE 제약). 인쇄물 발주 시 batch 별 추적이 가능해야 함.
+    // 배치별 추적 코드와 Batch:Link 1:1 관계를 유지하려고 URL 중복 제거를 끈다.
     LinkCreated created =
         linkCreationService.execute(new CreateLinkCommand(destination, ownerId, null, null, false));
     LinkEntity link =
@@ -153,12 +149,11 @@ public class CampaignBatchService {
   }
 
   private static void validateRow(CampaignBatchCreateCommand row, String destination, int index) {
-    if (row.name() == null || row.name().isBlank()) {
-      throw new CampaignException(CampaignErrorCode.INVALID_BATCH_ROW, index, "name required");
-    }
-    if (row.quantity() <= 0) {
-      throw new CampaignException(
-          CampaignErrorCode.INVALID_BATCH_ROW, index, "quantity must be positive");
+    try {
+      CampaignBatchEntity.validateMetadata(
+          row.name(), row.distributorName(), row.areaLabel(), row.quantity(), row.memo());
+    } catch (CampaignException e) {
+      throw new CampaignException(CampaignErrorCode.INVALID_BATCH_ROW, index, e.getMessage());
     }
     if (destination == null) {
       throw new CampaignException(CampaignErrorCode.MISSING_DESTINATION_URL);

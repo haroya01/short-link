@@ -17,29 +17,18 @@ public interface SeriesSubscriptionRepository {
   void delete(SeriesSubscriptionEntity subscription);
 
   /**
-   * Insert a subscription, ignoring the duplicate-key conflict when the user already subscribes.
-   * Returns the number of rows inserted (1 = newly subscribed, 0 = already subscribed) so the
-   * caller fires the new-subscriber notification exactly once. Atomic — no read-then-write race,
-   * and no exception to poison the surrounding transaction.
+   * Returns 1 for a new subscription or 0 for a duplicate, so notification fires exactly once.
+   * Duplicate inserts must not fail the transaction.
    */
   int insertIgnore(Long userId, Long seriesId);
 
-  /** How many users subscribe to this series. */
   long countBySeriesId(Long seriesId);
 
-  /**
-   * Subscriber counts for many series at once, keyed by series id — the batch form of {@link
-   * #countBySeriesId} for the series-analytics list. Series with no subscribers are absent from the
-   * map (caller defaults to 0).
-   */
+  /** Maps series ID to subscriber count; series with zero subscribers are absent. */
   Map<Long, Long> countBySeriesIdIn(Collection<Long> seriesIds);
 
-  /** Ids of every series this user subscribes to — feeds the "following" tab + the card's state. */
   List<Long> findSubscribedSeriesIds(Long userId);
 
-  /**
-   * New subscribers per UTC day since {@code since} (sparse) — drives the subscriber trend chart.
-   * The {@code views} field of each {@link DailyViewCount} carries that day's new-subscriber count.
-   */
+  /** Sparse new-subscriber counts per UTC day. {@link DailyViewCount#views()} carries the count. */
   List<DailyViewCount> countDailyBySeriesIdSince(Long seriesId, Instant since);
 }

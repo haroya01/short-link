@@ -6,19 +6,13 @@ import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * Looks up the autonomous system number + organisation for an IP. Used in the click pipeline so
- * stats can group "real visitors" vs "datacenter / cloud egress" without each consumer having to
- * carry a list of cloud AS numbers themselves.
- */
 @Service
 @RequiredArgsConstructor
 public class AsnResolver {
 
   /**
-   * Coarse list of cloud / hosting AS numbers we treat as "non-eyeball traffic" for stats. Not
-   * exhaustive — extend as new abuse patterns surface. Consumer privacy relays are deliberately not
-   * here — see {@link #RELAY_ASN}.
+   * Hosting egress treated as bot traffic. Consumer privacy relays belong in {@link #RELAY_ASN}
+   * instead.
    */
   static final Set<Integer> DATACENTER_ASN =
       Set.of(
@@ -40,17 +34,8 @@ public class AsnResolver {
           );
 
   /**
-   * Egress networks that carry ordinary people behind a privacy relay — iCloud Private Relay (which
-   * exits through Cloudflare / Fastly / Akamai) and Cloudflare WARP. These used to sit in {@link
-   * #DATACENTER_ASN}, which quietly erased every iPhone reader on Private Relay from the "people"
-   * numbers: the click was stored as {@code bot=true, botName="datacenter:Cloudflare"}, counted in
-   * the total but not in people or unique visitors — the reported "someone opened my link and the
-   * stats didn't move".
-   *
-   * <p>The trade is deliberate and asymmetric: some scraping does run on Cloudflare Workers, so a
-   * few bots now land in the human bucket — but erasing a real reader is worse than tolerating an
-   * occasional bot, and the UA classifier + burst heuristic still catch the obvious ones. Akamai
-   * was never listed, so relay traffic exiting there already counted as human.
+   * Consumer privacy relays count as people to avoid excluding real readers. This may admit some
+   * cloud-hosted scraping; UA and burst heuristics still apply.
    */
   static final Set<Integer> RELAY_ASN =
       Set.of(

@@ -10,11 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Block / unblock another user (App Store 1.2 UGC requirement). Blocking yourself is rejected. The
- * block edge is idempotent — re-blocking someone already blocked is a no-op. Content hiding is done
- * client-side from the block list (see {@code BlockQueryService}).
- */
+/** Blocking is idempotent and rejects self-blocks. Clients use the block list to hide content. */
 @Service
 @RequiredArgsConstructor
 public class BlockUseCase {

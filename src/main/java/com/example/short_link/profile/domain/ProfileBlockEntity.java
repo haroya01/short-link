@@ -32,9 +32,8 @@ public class ProfileBlockEntity extends BaseTimeEntity {
   private ProfileBlockType type;
 
   /**
-   * Type-specific payload. TEXT: section header text. IMAGE/EMBED: URL. EMAIL_FORM / CONTACT_CARD /
-   * GALLERY / PRODUCT_CARD: JSON config. DIVIDER: null. Stored as TEXT to fit PRODUCT_CARD's
-   * multi-item JSON (up to 8 items with image URLs + descriptions).
+   * Type-specific payload: TEXT and structured blocks store JSON, IMAGE/EMBED store URLs, DIVIDER
+   * is null. TEXT storage accommodates multi-item product JSON.
    */
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;

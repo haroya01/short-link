@@ -1,5 +1,6 @@
 package com.example.short_link.notification.application.link;
 
+import com.example.short_link.notification.application.push.NotificationPushDelivery;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.LinkNotificationEntity;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -8,17 +9,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 링크 알림 한 건을 처리한다 — 인박스에 항상 기록하고(푸시를 꺼 둬도 앱에서 본다), 푸시 설정이 켜져 있으면 푸시도 보낸다. {@code shortCode} 는 어떤
- * 링크의 알림인지 가리킨다(다이제스트처럼 링크 단위가 아니면 {@code null}).
- */
+/** shortCode가 null이면 다이제스트처럼 특정 링크에 속하지 않는 알림이다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class LinkNotificationDispatcher {
 
   private final NotificationPreferenceService preferences;
-  private final PushSender pushSender;
+  private final NotificationPushDelivery pushDelivery;
   private final LinkNotificationRepository repository;
 
   public void dispatch(
@@ -32,7 +30,7 @@ public class LinkNotificationDispatcher {
     if (type != LinkNotificationType.WARNING && !preferences.isEnabled(userId, type)) {
       return;
     }
-    pushSender.send(
+    pushDelivery.send(
         userId, new PushSender.PushMessage("kurl", subtitle, body, type.name(), shortCode));
   }
 }

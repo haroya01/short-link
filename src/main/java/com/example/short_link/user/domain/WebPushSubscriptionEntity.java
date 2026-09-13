@@ -12,8 +12,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 브라우저 웹푸시 구독(APNs 디바이스 토큰의 웹 짝). endpoint 가 유니크 — 같은 브라우저가 재구독하면 소유자를 갈아끼운다(이전 계정으로의 오발송 방지).
- * p256dh·auth 는 브라우저가 준 공개키/인증 시크릿. 로그아웃·구독해제·404/410 응답 시 삭제.
+ * 같은 endpoint로 다른 계정이 재구독하면 오발송 방지를 위해 소유자를 바꾼다. p256dh/auth는 브라우저의 공개키/인증 시크릿이며, 로그아웃·구독해제·404/410
+ * 응답 시 삭제한다.
  */
 @Entity
 @Table(name = "web_push_subscription")

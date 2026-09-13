@@ -4,13 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 /**
- * Link short code — 3..16 alphanumeric characters. The constructor enforces the same shape the
- * {@code RedirectController} path regex and {@code SecurityConfig.SHORT_CODE_REGEX} use, so an
- * invalid short code can never be carried through the system as a valid identifier.
- *
- * <p>JSON serializes to / from a bare string via {@link JsonValue} / {@link JsonCreator}, so the
- * wire format is unchanged. JPA persists as VARCHAR through {@code ShortCodeAttributeConverter}
- * (autoApply).
+ * Keep validation aligned with the redirect path regex and {@code SecurityConfig.SHORT_CODE_REGEX}.
+ * JSON remains a bare string; JPA stores VARCHAR through {@code ShortCodeAttributeConverter}.
  */
 public record ShortCode(@JsonValue String value) {
 

@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Marks notifications read — one by id (ownership-checked) or all unread for the recipient. */
 @Service
 @RequiredArgsConstructor
 public class MarkNotificationReadUseCase {

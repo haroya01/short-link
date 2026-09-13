@@ -24,6 +24,18 @@ class EmailLeadRepositoryAdapter implements EmailLeadRepository {
   }
 
   @Override
+  public void addIfAbsent(EmailLeadEntity lead) {
+    // The unique block/email key arbitrates concurrent submissions without rolling back a retry.
+    jpa.insertIfAbsent(
+        lead.getUserId(),
+        lead.getBlockId(),
+        lead.getEmail(),
+        lead.getIpHash(),
+        Instant.now(),
+        lead.isOptedOut());
+  }
+
+  @Override
   public void delete(EmailLeadEntity lead) {
     jpa.delete(lead);
   }

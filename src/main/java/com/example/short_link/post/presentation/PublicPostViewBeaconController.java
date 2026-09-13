@@ -15,11 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Public post 의 view beacon. 인증 없이 frontend 가 페이지 로드 시 fire. invalid username/slug 또는 non-PUBLISHED
- * 면 silent (UseCase 가 noop). dedup 없음 — v0 minimum. 요청 헤더/쿼리(referrer·UA·IP·UTM·src)를 그대로 넘겨 이벤트를
- * enrich 한다(글별/시리즈별 독자 분석의 원천) — 프로필 visit beacon 과 같은 입력.
- */
+/** 없는 글과 미발행 글의 비콘은 무시한다. 조회는 중복 제거 없이 집계한다. */
 @RestController
 @RequestMapping("/api/v1/public/profiles")
 @RequiredArgsConstructor
@@ -47,8 +43,7 @@ public class PublicPostViewBeaconController {
     recordPostView.execute(
         new RecordPostViewCommand(username, slug),
         new ViewContext(
-            // ref(쿼리) 우선 — fetch 비콘의 Referer 헤더는 비콘을 쏜 글 페이지 자신이라 유입원이
-            // 못 된다. 프론트가 document.referrer 를 ref 로 실어 보내고, 헤더는 폴백.
+            // fetch의 Referer는 글 자체이므로 document.referrer를 담은 ref 쿼리를 우선한다.
             ref != null && !ref.isBlank() ? ref : referrer,
             userAgent,
             ClientIp.of(req),
@@ -60,8 +55,7 @@ public class PublicPostViewBeaconController {
             utmTerm,
             utmContent,
             "1".equals(req.getHeader("Sec-GPC")),
-            // 행동 비콘(behavior_event)과 같은 세션으로 조인되는 탭 수명 임시 ID — 유입 레퍼러가
-            // 붙은 도달 이벤트가 퍼널의 진입점이 된다.
+            // behavior_event와 조인하는 탭 수명 세션 ID다.
             sid));
   }
 }

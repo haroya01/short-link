@@ -15,13 +15,6 @@ public class UpdateLinkWebhookConfigUseCase {
   @Transactional
   public WebhookSummary execute(UpdateLinkWebhookConfigCommand cmd) {
     LinkWebhookEntity hook = ownership.ownedHook(cmd.userId(), cmd.shortCode(), cmd.webhookId());
-    hook.updateConfig(
-        cmd.includeBots(),
-        cmd.sampleRate(),
-        cmd.batchEnabled(),
-        cmd.dailyQuota(),
-        cmd.referrerHostFilter(),
-        cmd.utmSourceFilter());
     if (cmd.deliveryMode() != null) {
       hook.changeDeliveryMode(
           cmd.deliveryMode(),
@@ -29,6 +22,13 @@ public class UpdateLinkWebhookConfigUseCase {
           cmd.spikeThreshold(),
           cmd.spikeWindowMinutes());
     }
+    hook.updateConfig(
+        cmd.includeBots(),
+        cmd.sampleRate(),
+        cmd.batchEnabled(),
+        cmd.dailyQuota(),
+        cmd.referrerHostFilter(),
+        cmd.utmSourceFilter());
     return WebhookSummary.from(hook);
   }
 }

@@ -29,10 +29,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 컬렉션 표면 — 만들기·내 목록·상세·연결·연결끊기·삭제. "연결"이 §0의 핵심 동사라 글 인게이지와 같은 인증 컨텍스트에서 그 자리 연결을 받는다. 상세는 PRIVATE
- * 가시성을 쿼리 서비스가 가른다.
- */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -100,7 +96,6 @@ public class CollectionController {
     commandService.disconnect(userId, id, connectionId);
   }
 
-  /** 연결 순서 재배치 — PATH(reading path)의 흐름을 짠다. 이 컬렉션의 모든 연결 id 를 순서대로 나열. */
   @PutMapping("/collections/{id}/connections/order")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void reorderConnections(

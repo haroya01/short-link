@@ -2,6 +2,7 @@ package com.example.short_link.link.classifier.application;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Component;
 
@@ -20,7 +21,6 @@ public class ReferrerChannelClassifier {
           Map.entry("reddit.com", "social"),
           Map.entry("threads.net", "social"),
           Map.entry("pinterest.com", "social"),
-          // dark-social / 게시·커뮤니티 추가 — 이전엔 전부 'other' 로 뭉개지던 진짜 채널들.
           Map.entry("bsky.app", "social"),
           Map.entry("mastodon.social", "social"),
           Map.entry("medium.com", "social"),
@@ -28,7 +28,7 @@ public class ReferrerChannelClassifier {
           Map.entry("twitch.tv", "social"),
           Map.entry("news.ycombinator.com", "social"),
           Map.entry("story.kakao.com", "social"),
-          // 메신저(다크 소셜) — referrer 를 보내는 웹 클라이언트는 잡힌다(DM/그룹 공유).
+          // 메신저도 referrer를 보내는 웹 클라이언트만 식별할 수 있다.
           Map.entry("discord.com", "messaging"),
           Map.entry("discordapp.com", "messaging"),
           Map.entry("t.me", "messaging"),
@@ -38,7 +38,6 @@ public class ReferrerChannelClassifier {
           Map.entry("web.whatsapp.com", "messaging"),
           Map.entry("line.me", "messaging"),
           Map.entry("open.kakao.com", "messaging"),
-          // 뉴스레터·구독 출판
           Map.entry("substack.com", "newsletter"),
           Map.entry("google.com", "search"),
           Map.entry("bing.com", "search"),
@@ -61,7 +60,7 @@ public class ReferrerChannelClassifier {
     if (host == null) {
       return "other";
     }
-    String lower = host.toLowerCase();
+    String lower = host.toLowerCase(Locale.ROOT);
     String exact = DOMAIN_TO_CHANNEL.get(lower);
     if (exact != null) {
       return exact;

@@ -9,13 +9,7 @@ import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Service;
 
 /**
- * Surfaces what Micrometer / Actuator already collects ({@code jvm.*}, {@code hikaricp.*}, {@code
- * cache.*}) as a single admin endpoint payload. Zero code-path overhead — these gauges are computed
- * lazily on read and the admin call hits them only when the operator opens the dashboard.
- *
- * <p>Existence of each gauge depends on autoconfig — if the cache implementation doesn't ship
- * Micrometer bindings (Redis cache without Lettuce metrics, for example), the corresponding field
- * reads as {@code null} / 0 rather than throwing.
+ * Unavailable gauges return null or 0 so missing Micrometer bindings do not break the dashboard.
  */
 @Service
 public class AdminSystemMetricsService {
@@ -30,11 +24,7 @@ public class AdminSystemMetricsService {
     return new SystemMetrics(jvm(), hikari(), caches(), outboundHttp(), scheduledTasks());
   }
 
-  /**
-   * Per-{@code task} scheduled job timer aggregates. Same mean/max-only shape as {@link
-   * #outboundHttp()} for the same reason (no histogram autoconfig). Result counts split ok vs error
-   * so a dashboard can flag a job that's quietly throwing every fire without anyone noticing.
-   */
+  /** Mean/max only, as with {@link #outboundHttp()}: default timers publish no histogram. */
   private Map<String, ScheduledTaskStat> scheduledTasks() {
     Map<String, Map<String, Long>> resultCountsByTask = new LinkedHashMap<>();
     Map<String, Long> totalCountByTask = new LinkedHashMap<>();
@@ -69,11 +59,7 @@ public class AdminSystemMetricsService {
   }
 
   /**
-   * Per-{@code client} outbound HTTP timer aggregates ({@code webhook}, {@code og_fetch}). Mean and
-   * max are sourced directly from the timer; we don't request percentile because the default Spring
-   * autoconfig doesn't enable histogram publication on these timers (would inflate registry size
-   * with no operator-side benefit at 100k req/day). The dashboard reads mean / max with a "look at
-   * request_metrics for per-call drill-down" hint instead.
+   * Uses mean/max because the default timers do not publish the histograms needed for percentiles.
    */
   private Map<String, OutboundHttpStat> outboundHttp() {
     Map<String, Map<String, Long>> resultCountsByClient = new LinkedHashMap<>();
@@ -128,11 +114,6 @@ public class AdminSystemMetricsService {
     return new HikariStats(active, idle, pending, total, acquireMillisMean);
   }
 
-  /**
-   * Per-{@code @Cacheable} cache, sums {@code cache.gets} grouped by {@code result=hit|miss}. The
-   * read happens against whatever caches are currently registered — Redis / Caffeine / etc. all
-   * expose the same metric shape via Micrometer's {@code CacheMeterBinder} contract.
-   */
   private Map<String, CacheStat> caches() {
     Map<String, CacheStat> out = new LinkedHashMap<>();
     Search getsSearch = registry.find("cache.gets");

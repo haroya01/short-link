@@ -8,11 +8,6 @@ import java.time.Instant;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
-/**
- * Counts kurl click_event rows attributed to a post (post_id) or to all of an author's posts. Uses
- * a native query against click_event so the post module needn't depend on the link module's entity
- * — the cross-product seam is a single, read-only SQL join on post_id.
- */
 @Repository
 class PostLinkClickReaderAdapter implements PostLinkClickReader {
 

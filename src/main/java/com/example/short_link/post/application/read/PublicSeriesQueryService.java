@@ -16,6 +16,7 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -24,17 +25,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Public, unauthenticated series read. Only PUBLISHED member posts are exposed. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PublicSeriesQueryService {
 
-  // A "series" worth showcasing has at least two published posts; a lone post isn't a series yet.
   private static final int MIN_POSTS = 2;
 
-  // How many member titles the discovery card previews — enough to show "what's inside" at a
-  // glance.
   private static final int PREVIEW_POSTS = 4;
 
   private final UserRepository userRepository;
@@ -42,11 +39,7 @@ public class PublicSeriesQueryService {
   private final PostRepository postRepository;
   private final SeriesSubscriptionRepository subscriptionRepository;
 
-  /**
-   * The series this user subscribes to, as feed cards (most recently active first) — the home
-   * feed's "시리즈" tab. Mirrors {@link #discoverSeries(int)}'s hydration but scoped to the viewer's
-   * subscriptions: drops series whose author is gone or that have no published posts yet.
-   */
+  /** 구독 시리즈를 최근 활동순으로 반환한다. 삭제 작성자와 발행 글이 없는 시리즈는 제외한다. */
   public List<PublicSeriesCard> subscribedSeries(Long userId) {
     List<Long> ids = subscriptionRepository.findSubscribedSeriesIds(userId);
     if (ids.isEmpty()) return List.of();
@@ -78,7 +71,7 @@ public class PublicSeriesQueryService {
     List<PostEntity> published =
         postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
             s.getId(), PostStatus.PUBLISHED);
-    if (published.isEmpty()) return null; // no public posts yet → not worth a card
+    if (published.isEmpty()) return null;
     Instant last =
         published.stream()
             .map(PostEntity::getPublishedAt)
@@ -100,12 +93,7 @@ public class PublicSeriesQueryService {
         previews);
   }
 
-  /**
-   * Cross-author series for the discovery feed — most recently active first. Hydrates each ranked
-   * series with its author, dropping any whose author is deleted/missing, and keeps the activity
-   * ordering. Over-fetches a little so deleted-author drops don't shrink the result below {@code
-   * limit}.
-   */
+  /** 삭제 작성자를 제외해도 요청 수를 채울 수 있도록 후보를 더 조회한다. */
   public List<PublicSeriesCard> discoverSeries(int limit) {
     int safeLimit = Math.max(limit, 1);
     List<SeriesActivity> ranked = postRepository.findActiveSeries(MIN_POSTS, safeLimit * 2);
@@ -124,9 +112,7 @@ public class PublicSeriesQueryService {
             .filter(u -> !u.isDeleted())
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
 
-    // Resolve + drop missing/deleted authors and cut to the limit FIRST, then fetch member previews
-    // only for the survivors (one small query each) — so dropped/over-limit series cost nothing
-    // extra.
+    // 제외될 시리즈의 미리보기를 조회하지 않도록 작성자 검사와 개수 제한을 먼저 적용한다.
     return ranked.stream()
         .map(a -> resolve(a, series.get(a.seriesId()), authors))
         .filter(Objects::nonNull)
@@ -139,7 +125,7 @@ public class PublicSeriesQueryService {
       SeriesActivity activity, SeriesEntity series, Map<Long, UserEntity> authors) {
     if (series == null) return null;
     UserEntity author = authors.get(series.getUserId());
-    if (author == null) return null; // deleted/missing author → drop
+    if (author == null) return null;
     return new Resolved(activity, series, author);
   }
 
@@ -154,7 +140,6 @@ public class PublicSeriesQueryService {
         memberPreviews(r.series().getId()));
   }
 
-  /** The first few published members, in series order — the card's "what's inside" preview. */
   private List<SeriesPostRef> memberPreviews(Long seriesId) {
     return postRepository
         .findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, PostStatus.PUBLISHED)
@@ -169,7 +154,6 @@ public class PublicSeriesQueryService {
   public PublicSeriesListView listPublicSeries(String username) {
     UserEntity author = resolveAuthor(username);
     List<SeriesEntity> all = seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId());
-    // 시리즈별 발행 멤버글을 한 번에 모아 글 수·태그를 메모리 집계 (시리즈마다 따로 조회하던 N+1 제거).
     Map<Long, List<PostEntity>> publishedBySeries =
         postRepository
             .findAllBySeriesIdInOrderBySeriesOrderAsc(
@@ -194,7 +178,6 @@ public class PublicSeriesQueryService {
     return new PublicSeriesListView(PublicAuthorView.from(author), series);
   }
 
-  /** 발행 멤버글 태그를 등장 순서 보존하며 중복 제거. */
   private static List<String> distinctTags(List<PostEntity> posts) {
     return posts.stream().flatMap(p -> p.getTags().stream()).distinct().toList();
   }
@@ -221,7 +204,7 @@ public class PublicSeriesQueryService {
   }
 
   private UserEntity resolveAuthor(String username) {
-    String normalized = username == null ? "" : username.trim().toLowerCase();
+    String normalized = username == null ? "" : username.trim().toLowerCase(Locale.ROOT);
     return userRepository
         .findByUsername(normalized)
         .filter(u -> !u.isDeleted())

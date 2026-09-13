@@ -12,6 +12,7 @@ import com.example.short_link.profile.presentation.request.ProfileBlockCreateReq
 import com.example.short_link.profile.presentation.request.ProfileBlockUpdateRequest;
 import com.example.short_link.profile.presentation.response.ProfileBlockResponse;
 import jakarta.validation.Valid;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -34,7 +35,7 @@ public class ProfileBlockController {
   @PostMapping
   public ProfileBlockResponse create(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody ProfileBlockCreateRequest request) {
-    ProfileBlockType type = ProfileBlockType.valueOf(request.type().toUpperCase());
+    ProfileBlockType type = ProfileBlockType.valueOf(request.type().toUpperCase(Locale.ROOT));
     ProfileBlockEntity block =
         createBlock.execute(new CreateBlockCommand(userId, type, request.content()));
     return ProfileBlockResponse.from(block);

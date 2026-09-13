@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Owner-facing profile visit stats + the public-visibility toggle. */
 @RestController
 @RequestMapping("/api/v1/users/me/profile")
 @RequiredArgsConstructor

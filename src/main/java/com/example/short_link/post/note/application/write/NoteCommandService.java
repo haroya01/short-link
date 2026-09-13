@@ -19,7 +19,7 @@ public class NoteCommandService {
   private final NoteLikeRepository likes;
   private final CollectionConnectionCleaner connectionCleaner;
 
-  /** 쓰는 즉시 공개 — 발행 상태 기계 없음. 응답은 피드와 같은 행(작성자 포함). */
+  /** 생성 즉시 공개하며 별도 발행 상태는 없다. */
   @Transactional
   public NoteRow create(Long userId, String rawBody) {
     String body = rawBody == null ? "" : rawBody.trim();
@@ -35,7 +35,7 @@ public class NoteCommandService {
         .orElseThrow(() -> new PostException(PostErrorCode.NOTE_NOT_FOUND, saved.getId()));
   }
 
-  /** 내 노트만 — hard delete(좋아요 행까지 같이). */
+  /** 소유자만 물리 삭제할 수 있으며 좋아요도 함께 삭제한다. */
   @Transactional
   public void delete(Long userId, Long noteId) {
     NoteEntity note =
@@ -46,13 +46,12 @@ public class NoteCommandService {
       throw new PostException(PostErrorCode.NOTE_PERMISSION_DENIED);
     }
     likes.deleteAllByNoteId(noteId);
-    // Curator connections pointing at this note have no FK to cascade — drop them so the owning
-    // collection stops counting a block that no longer renders.
+    // 컬렉션 연결에는 FK가 없으므로 노트 삭제 전에 직접 제거한다.
     connectionCleaner.purgeForNote(noteId);
     notes.delete(note);
   }
 
-  /** 멱등 토글 — (note,user) 유니크가 곧 상태. 동시 PUT 의 중복 insert 는 무해하게 흡수. */
+  /** 동시 중복 요청은 멱등 처리한다. */
   @Transactional
   public LikeStatus setLike(Long userId, Long noteId, boolean on) {
     notes

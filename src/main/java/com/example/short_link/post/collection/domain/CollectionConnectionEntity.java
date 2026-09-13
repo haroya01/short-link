@@ -14,9 +14,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 /**
- * 연결 = (컬렉션 × 블록) 한 줄. {@code refId} 는 {@code blockType} 에 따라 post / post_highlight / note 의 PK 를
- * 가리키는 다형 참조다(세 테이블 동시 FK 불가라 애플리케이션이 대상 존재를 검증). {@code why} 는 "왜 이었나" 한 줄(선택) — 큐레이션의 목소리. 같은 블록을
- * 같은 컬렉션에 두 번 못 잇는다(유니크).
+ * {@code refId}는 {@code blockType}에 따라 post/post_highlight/note의 PK를 참조한다. 다형 참조에는 FK를 걸 수 없어
+ * 애플리케이션에서 대상 존재를 검증한다.
  */
 @Entity
 @Table(name = "collection_connection")
@@ -55,12 +54,10 @@ public class CollectionConnectionEntity extends BaseCreatedEntity {
     this.position = position;
   }
 
-  /** 재배치(reorder) — PATH 에서 순서가 곧 논증 흐름이라 position 을 새 값으로 옮긴다. */
   public void reposition(int position) {
     this.position = position;
   }
 
-  /** 같은 블록을 다시 이으며 새로 쓴 "왜" — 멱등 반환 대신 목소리를 갱신한다(조용한 유실 방지). */
   public void rewriteWhy(String why) {
     this.why = why;
   }

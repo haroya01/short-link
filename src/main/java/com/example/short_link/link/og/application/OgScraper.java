@@ -13,6 +13,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -65,7 +66,7 @@ public class OgScraper {
         return OgMetadata.empty();
       }
       String contentType = response.header("Content-Type");
-      if (contentType == null || !contentType.toLowerCase().startsWith("text/html")) {
+      if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("text/html")) {
         resultTag.set("non_html");
         return OgMetadata.empty();
       }

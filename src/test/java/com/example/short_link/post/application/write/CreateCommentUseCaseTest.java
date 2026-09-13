@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -18,6 +19,7 @@ import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -49,12 +51,15 @@ class CreateCommentUseCaseTest {
   void setUp() {
     useCase =
         new CreateCommentUseCase(
-            postRepository,
+            new PostInteractionAccess(
+                postRepository,
+                commentRepository,
+                mock(PostHighlightRepository.class),
+                moderationGuard,
+                blockChecker),
             commentRepository,
             userRepository,
-            new CommentNotifications(userRepository, postRepository, events, muteReader),
-            moderationGuard,
-            blockChecker);
+            new CommentNotifications(userRepository, postRepository, events, muteReader));
   }
 
   private PostEntity publishedPost() {
@@ -239,8 +244,7 @@ class CreateCommentUseCaseTest {
 
   @Test
   void mentioningSomeoneWhoMutedCommentStillFiresTheirMention() {
-    // The owner (7) muted COMMENT but keeps MENTION on. A COMMENT collapse would drop their bell
-    // entirely — so an explicit @-mention of them must NOT fold into a notice they won't receive.
+    // COMMENT를 꺼둔 작성자에게는 MENTION을 별도로 전달해야 한다.
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
@@ -250,8 +254,7 @@ class CreateCommentUseCaseTest {
 
     useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"));
 
-    // Both events still publish (COMMENT is dropped downstream by the mute; the MENTION survives so
-    // the explicitly-mentioned owner is reachable through their still-on MENTION preference).
+    // COMMENT는 하위 처리에서 차단되고 MENTION은 전달된다.
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
     CommentMentionEvent mention =
@@ -266,8 +269,7 @@ class CreateCommentUseCaseTest {
 
   @Test
   void mentioningTheOwnerWithoutAnyMuteFiresExactlyOneCommentNotice() {
-    // Symmetric guard: with no mute, the owner's COMMENT is delivered, so their @-mention collapses
-    // into it — exactly one event, no COMMENT+MENTION duplicate.
+    // COMMENT를 받는 작성자의 MENTION은 합쳐서 한 번만 알린다.
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
@@ -322,6 +324,21 @@ class CreateCommentUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COMMENT_PARENT_INVALID);
+  }
+
+  @Test
+  void rejectsReplyToAModeratedParentBeforeSavingOrNotifying() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
+    CommentEntity removed = new CommentEntity(42L, 1L, null, "removed by moderation");
+    removed.softDelete();
+    when(commentRepository.findById(99L)).thenReturn(Optional.of(removed));
+
+    assertThatThrownBy(() -> useCase.execute(new CreateCommentCommand(9L, 42L, 99L, "reply")))
+        .isInstanceOf(PostException.class)
+        .extracting(error -> ((PostException) error).errorCode())
+        .isEqualTo(PostErrorCode.COMMENT_PARENT_INVALID);
+    verify(commentRepository, org.mockito.Mockito.never()).save(any());
+    org.mockito.Mockito.verifyNoInteractions(events, userRepository, muteReader);
   }
 
   @Test

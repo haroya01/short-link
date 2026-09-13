@@ -10,11 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Mints a fresh access token for an already-authenticated user — the API token an admin pulls from
- * the admin page to script against the API. The token carries the user's own role, so it grants
- * nothing beyond what the requester already has.
- */
+/** Uses the authenticated requester's own role, granting no additional privileges. */
 @Service
 @RequiredArgsConstructor
 public class MintAccessTokenUseCase {

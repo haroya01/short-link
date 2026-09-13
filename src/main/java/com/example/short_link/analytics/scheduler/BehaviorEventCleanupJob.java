@@ -12,10 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * behavior_event 원본을 보존 기간(기본 90일)으로 걷는다. 방침이 "원본은 90일 뒤 삭제"를 약속하므로 이 잡이 곧 컴플라이언스다 — 집계가 필요해지면 원본이
- * 살아 있는 동안 언제든 재계산하면 된다(그래서 롤업보다 청소가 먼저 존재한다).
- */
+/** 개인정보처리방침의 보존 기간이 지난 원본을 삭제한다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

@@ -41,7 +41,7 @@ class UnpublishPostUseCaseTest {
   void unpublishesPublished() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     post.publish();
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     PostView result = useCase.execute(new UnpublishPostCommand(7L, 42L));
@@ -53,7 +53,7 @@ class UnpublishPostUseCaseTest {
   @Test
   void rejectsUnpublishOfDraft() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
 
     assertThatThrownBy(() -> useCase.execute(new UnpublishPostCommand(7L, 42L)))
         .isInstanceOf(PostException.class)

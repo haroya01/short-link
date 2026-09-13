@@ -9,6 +9,7 @@ import com.example.short_link.customdomain.exception.CustomDomainException;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
@@ -18,20 +19,21 @@ public class VerifyCustomDomainUseCase {
   private final CustomDomainOwnership ownership;
   private final MeterRegistry meterRegistry;
   private final TxtResolver txtResolver;
+  private final RecordCustomDomainVerificationUseCase recordVerification;
 
-  @Transactional
+  /** DNS checks and their recorded outcome must survive a caller transaction's rollback. */
+  @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public DomainSummary execute(Long userId, Long domainId) {
     CustomDomainEntity entity = ownership.ownedDomain(userId, domainId);
     boolean ok = checkTxtRecord(entity.getDomain(), entity.getVerificationToken());
+    DomainSummary summary = recordVerification.execute(userId, domainId, ok);
     if (!ok) {
-      entity.markCheckFailed();
       meterRegistry.counter("custom_domain.verify", "result", "failed").increment();
       throw new CustomDomainException(
           CustomDomainErrorCode.CUSTOM_DOMAIN_NOT_VERIFIED, entity.getDomain());
     }
-    entity.markVerified();
     meterRegistry.counter("custom_domain.verify", "result", "ok").increment();
-    return CustomDomainPolicy.toSummary(entity);
+    return summary;
   }
 
   private boolean checkTxtRecord(String domain, String expectedToken) {

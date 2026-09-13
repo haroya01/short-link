@@ -6,12 +6,8 @@ import java.util.Collection;
 import java.util.List;
 
 /**
- * Aggregates post_view_event rows over a set of post ids (one post, or a series' member posts) into
- * the visitor-dimension breakdowns the reader dashboard shows. Mirrors {@code
- * ProfileVisitBreakdownReader} + the profile time-series queries, scoped by post_id instead of
- * profile_user_id. Human-only (is_bot = false) except the explicit bot count. Callers must pass a
- * non-empty id set (the service short-circuits empty → empty stats, since SQL {@code IN ()} is
- * invalid).
+ * Aggregates post_view_event for a non-empty set of post IDs; callers must short-circuit empty
+ * sets. Visitor breakdowns use human reads; total and bot counts are separate.
  */
 public interface PostReadStatsReader {
 

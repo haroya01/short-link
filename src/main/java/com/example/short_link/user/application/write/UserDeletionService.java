@@ -64,14 +64,11 @@ public class UserDeletionService {
   public void hardDelete(Long userId) {
     if (!userRepository.existsById(userId)) return;
 
-    // Blog/social tables reference users without ON DELETE CASCADE — purge slice-local rows
-    // first or the final users delete trips FK constraints and the cleanup job retries forever.
+    // Purge slice-owned rows before users: their foreign keys lack ON DELETE CASCADE.
     userDataErasers.forEach(eraser -> eraser.eraseFor(userId));
     followRepository.deleteAllInvolving(userId);
     blockRepository.deleteAllInvolving(userId);
-    // web_push_subscription (V99) has no users FK — purge it explicitly, mirroring device_token's
-    // ON DELETE CASCADE, or the endpoint + encryption keys linger as orphans after the user is
-    // gone.
+    // Web-push subscriptions have no users FK, so delete their endpoint and keys explicitly.
     webPushSubscriptionRepository.deleteByUserId(userId);
 
     List<LinkEntity> links = linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);

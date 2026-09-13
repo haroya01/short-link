@@ -26,9 +26,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * Periodically pulls a fresh GeoLite2-City mmdb from MaxMind and hot-swaps the in-memory database
- * via {@link GeoIpDatabaseHolder}. Skips when no license key is configured (the bundled fallback
- * mmdb keeps working). Single-instance fenced via Redis lock.
+ * Refresh is fenced across instances by a Redis lock. Without a license key, the bundled fallback
+ * database remains in use.
  */
 @Slf4j
 @Component
@@ -44,9 +43,7 @@ public class GeoIpRefreshJob {
   private final MeterRegistry meterRegistry;
   private final GeoipProperties geoip;
 
-  // Reused across runs — a fresh HttpClient per invocation leaks its internal selector/executor
-  // threads, which accumulate over the job's weekly lifetime. (Field initializer, so it stays out
-  // of the @RequiredArgsConstructor.)
+  // Reuse the client across runs to avoid accumulating selector/executor threads.
   private final HttpClient httpClient =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(15)).build();
 

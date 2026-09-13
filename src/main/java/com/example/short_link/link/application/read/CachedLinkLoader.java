@@ -15,10 +15,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Owns the Redis-backed {@code "link"} cache for redirect-path lookups. Lives in a separate bean so
- * the {@link Cacheable} proxy actually intercepts the call — when this method sat next to {@code
- * findActiveLink} on {@link LinkLookupQueryService}, self-invocation bypassed AOP and every
- * redirect hit MySQL.
+ * Kept in a separate bean so the {@link Cacheable} proxy intercepts redirect lookups;
+ * self-invocation would bypass the cache.
  */
 @Component
 @RequiredArgsConstructor

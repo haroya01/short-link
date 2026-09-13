@@ -13,11 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Records a link webhook's delivery state. The actual sign-and-POST is the shared {@link
- * WebhookSender}; this class only maps the outcome onto the hook's success/failure surface and
- * logs.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor

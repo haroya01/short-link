@@ -3,6 +3,7 @@ package com.example.short_link.event.application.write;
 import com.example.short_link.event.application.helper.EventQuestions;
 import com.example.short_link.event.application.helper.EventQuestions.QuestionSpec;
 import com.example.short_link.event.domain.EventEntity;
+import com.example.short_link.event.domain.EventQuestionEntity;
 import com.example.short_link.event.domain.repository.EventQuestionRepository;
 import com.example.short_link.event.domain.repository.EventRegistrationRepository;
 import com.example.short_link.event.domain.repository.EventRepository;
@@ -30,6 +31,8 @@ public class UpdateEventUseCase {
     if (!event.isOwnedBy(cmd.userId())) {
       throw new EventException(EventErrorCode.EVENT_PERMISSION_DENIED);
     }
+    event.requireEditable();
+    List<EventQuestionEntity> questions = prepareQuestions(event, cmd.questions());
     event.update(
         cmd.title(),
         cmd.descriptionMd(),
@@ -41,19 +44,20 @@ public class UpdateEventUseCase {
         cmd.onlineUrl(),
         cmd.capacity(),
         cmd.closeAt());
-    replaceQuestions(event, cmd.questions());
+    if (questions != null) {
+      questionRepository.deleteAllByEventId(event.getId());
+      if (!questions.isEmpty()) {
+        questionRepository.saveAll(questions);
+      }
+    }
     return event;
   }
 
-  private void replaceQuestions(EventEntity event, List<QuestionSpec> specs) {
-    if (specs == null) return;
-    if (registrationRepository.countConfirmedByEventId(event.getId()) > 0) {
-      // 답변이 이미 달린 질문 구조를 바꾸면 answers 매핑이 깨진다 — 신청자가 있으면 잠근다.
-      throw new EventException(EventErrorCode.INVALID_QUESTIONS, "registrations exist");
-    }
+  private List<EventQuestionEntity> prepareQuestions(EventEntity event, List<QuestionSpec> specs) {
+    if (specs == null) return null;
+    event.requireQuestionChangesAllowed(
+        registrationRepository.countConfirmedByEventId(event.getId()));
     EventQuestions.validateSpecs(specs);
-    questionRepository.deleteAllByEventId(event.getId());
-    if (specs.isEmpty()) return;
-    questionRepository.saveAll(EventQuestions.toEntities(event.getId(), specs));
+    return EventQuestions.toEntities(event.getId(), specs);
   }
 }

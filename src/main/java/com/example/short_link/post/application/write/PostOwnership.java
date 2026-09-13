@@ -17,7 +17,16 @@ public class PostOwnership {
     return loadOwned(userId, postId);
   }
 
-  /** 엔티티가 필요 없는 호출자를 위한 소유권 검사. 응답 데이터는 준비하지 않는다. */
+  /** Lock the parent post before any post or child mutation, sharing the lifecycle write order. */
+  public PostEntity requireOwnedForUpdate(Long userId, Long postId) {
+    return verifyOwner(
+        postRepository
+            .findByIdForUpdate(postId)
+            .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId)),
+        userId,
+        postId);
+  }
+
   public void verifyOwned(Long userId, Long postId) {
     loadOwned(userId, postId);
   }
@@ -27,6 +36,10 @@ public class PostOwnership {
         postRepository
             .findById(postId)
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId));
+    return verifyOwner(post, userId, postId);
+  }
+
+  private PostEntity verifyOwner(PostEntity post, Long userId, Long postId) {
     if (!post.isOwnedBy(userId)) {
       throw new PostException(PostErrorCode.PERMISSION_DENIED).with("postId", postId);
     }

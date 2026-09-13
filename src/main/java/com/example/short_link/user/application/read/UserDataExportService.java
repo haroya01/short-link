@@ -19,11 +19,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * GDPR Article 20 (data portability): returns a JSON snapshot of the user's account, links, and
- * click stats. Blog/social data (posts, comments, profile, notes, follows, email leads, …) is NOT
- * yet included here — it's available on request via the contact channel in the privacy policy. The
- * policy's §8 wording must match this scope. Click events use the masked client_ip (already stored
- * that way), so no de-anonymization happens via export.
+ * Exports account, links, and masked click statistics. Blog/social data is excluded and provided
+ * through the privacy policy's contact channel; policy §8 must stay aligned with this scope.
  */
 @Service
 @RequiredArgsConstructor
@@ -49,8 +46,6 @@ public class UserDataExportService {
 
   private List<ExportedClick> exportClicks(List<LinkEntity> links) {
     if (links.isEmpty()) return List.of();
-    // O(1) shortCode lookup — previously each click did a links.stream().filter().findFirst()
-    // (O(N×M) over the whole user's click history).
     Map<Long, String> shortCodeByLinkId =
         links.stream().collect(Collectors.toMap(LinkEntity::getId, l -> l.getShortCode().value()));
     List<Long> linkIds = List.copyOf(shortCodeByLinkId.keySet());

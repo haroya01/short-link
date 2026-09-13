@@ -14,10 +14,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 링크 알림 한 건 — 첫 클릭·마일스톤·급증·곧 만료. 블로그 {@link NotificationEntity}(좋아요·댓글 등)와는 다른 도메인이라 별도 테이블을 쓴다.
- * {@code shortCode} 로 어떤 링크의 알림인지 가리키고, {@code readAt} 가 null 이면 안 읽음.
- */
+/** {@code readAt}가 null이면 안 읽은 알림이다. */
 @Entity
 @Table(name = "link_notification")
 @Getter

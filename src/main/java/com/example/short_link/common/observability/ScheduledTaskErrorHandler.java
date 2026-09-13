@@ -11,12 +11,8 @@ import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.util.ErrorHandler;
 
 /**
- * Replaces Spring's default {@code TaskUtils$LoggingErrorHandler} which logs a generic "Unexpected
- * error occurred in scheduled task" line with no hint of *which* task threw. We walk the failing
- * exception's stack trace for the first frame inside our package, push it into MDC under the {@code
- * task} key (so {@link com.example.short_link.admin.application.RecentErrorsBuffer} can attach it
- * to the captured record), then re-log with the resolved name. Net effect: admin "recent errors"
- * pane shows {@code task=LinkWebhookDispatcher.flushBatches} instead of a useless generic message.
+ * Adds the first application stack frame to MDC as {@code task}, allowing the admin error buffer to
+ * identify which scheduled method failed.
  */
 @Configuration
 @Slf4j
@@ -40,8 +36,7 @@ public class ScheduledTaskErrorHandler implements SchedulingConfigurer {
     scheduler.setPoolSize(2);
     scheduler.setThreadNamePrefix("scheduled-");
     scheduler.setErrorHandler(new ContextAwareErrorHandler());
-    // 5s shutdown grace — long enough for an in-flight webhook flush to finish, short enough
-    // that test contexts don't drag for 30s on tearDown when a fixedDelay=5s job is mid-tick.
+    // Allow an in-flight webhook flush to finish without a long shutdown wait.
     scheduler.setWaitForTasksToCompleteOnShutdown(true);
     scheduler.setAwaitTerminationSeconds(5);
     scheduler.initialize();

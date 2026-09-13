@@ -9,7 +9,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-/** Set a user's default feed tab — upserts the single per-user row. Rejects unknown tabs. */
 @Service
 @RequiredArgsConstructor
 public class SetFeedPrefUseCase {

@@ -9,27 +9,19 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-/** Append-only log of public post views — the source the trending feed windows over. */
 public interface PostViewEventRepository {
 
   PostViewEventEntity save(PostViewEventEntity event);
 
-  /** Per-day view counts for one post since {@code since} (sparse — empty days omitted). */
+  /** Per-UTC-day counts; days without views are omitted. */
   List<DailyViewCount> countDailyByPostIdSince(Long postId, Instant since);
 
-  /** Per-day view counts across all of an author's posts since {@code since} (sparse). */
+  /** Counts across the author's posts per UTC day; days without views are omitted. */
   List<DailyViewCount> countDailyByUserIdSince(Long userId, Instant since);
 
-  /**
-   * Top referrer hosts across all of an author's posts since {@code since}, views-desc. 사람 조회만 집계하고
-   * direct(레퍼러 없음)는 제외 — 개요 대시보드의 "유입 경로" 행.
-   */
+  /** 사람 조회만 집계하고 direct 유입은 제외한다. 조회수 내림차순이다. */
   List<ReferrerViewCount> topReferrerHostsByUserSince(Long userId, Instant since, int limit);
 
-  /**
-   * Distinct human reader fingerprints (visitor_hash) per post, keyed by post id. Lifetime — the
-   * series read-through funnel intersects adjacent episodes' reader sets. Posts with no readers are
-   * absent from the map.
-   */
+  /** Lifetime distinct human visitor hashes, keyed by post ID. Posts with no readers are absent. */
   Map<Long, Set<String>> readersByPostId(Collection<Long> postIds);
 }

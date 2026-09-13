@@ -11,6 +11,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -21,7 +22,6 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 class PostRepositoryAdapter implements PostRepository {
 
-  // Rolling window the trending feed ranks views over — "recent traction" = the last 7 days.
   private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaPostRepository jpa;
@@ -32,6 +32,11 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public Optional<PostEntity> findByIdForUpdate(Long id) {
+    return jpa.findByIdForUpdate(id);
+  }
+
+  @Override
   public List<PostEntity> findAllByIdIn(Collection<Long> ids) {
     return jpa.findAllByIdIn(ids);
   }
@@ -39,6 +44,11 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug) {
     return jpa.findByUserIdAndSlug(userId, slug);
+  }
+
+  @Override
+  public Optional<PostEntity> findByUserIdAndSlugForUpdate(Long userId, String slug) {
+    return jpa.findByUserIdAndSlugForUpdate(userId, slug);
   }
 
   @Override
@@ -87,7 +97,6 @@ class PostRepositoryAdapter implements PostRepository {
     return jpa.findAllByUserIdAndStatusOrderByPublishedAtDesc(userId, status);
   }
 
-  // Posts with analytics meaning — drafts/scheduled have never been read, so they're excluded.
   private static final List<PostStatus> ANALYTICS_STATUSES =
       List.of(PostStatus.PUBLISHED, PostStatus.UNPUBLISHED);
 
@@ -100,8 +109,6 @@ class PostRepositoryAdapter implements PostRepository {
           case RECENT -> "createdAt";
           case VIEWS -> "viewCount";
         };
-    // id-desc tie-break keeps paging stable when many posts share the same metric value (e.g. all
-    // 0).
     Sort ordering = Sort.by(Sort.Order.desc(field), Sort.Order.desc("id"));
     return jpa.findByUserIdAndStatusIn(
         userId, ANALYTICS_STATUSES, PageRequest.of(page, size, ordering));
@@ -113,13 +120,24 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findScheduledDue(Instant now) {
-    return jpa.findAllByStatusAndScheduledAtLessThanEqual(PostStatus.SCHEDULED, now);
+  public List<Long> findScheduledDueIds(Instant now) {
+    return jpa.findScheduledDueIds(PostStatus.SCHEDULED, now);
   }
 
   @Override
   public List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId) {
     return jpa.findAllBySeriesIdOrderBySeriesOrderAsc(seriesId);
+  }
+
+  @Override
+  public List<PostEntity> findSeriesMembersAndRequestedForUpdate(
+      Long seriesId, Collection<Long> requestedIds) {
+    return jpa.findSeriesMembersAndRequestedForUpdate(seriesId, idsForIn(requestedIds));
+  }
+
+  @Override
+  public List<PostEntity> findPublishedByUserIdForUpdate(Long userId) {
+    return jpa.findPublishedByUserIdForUpdate(userId, PostStatus.PUBLISHED);
   }
 
   @Override
@@ -207,42 +225,27 @@ class PostRepositoryAdapter implements PostRepository {
         booleanMatch(query), likePattern(query), titleLikeFallback(query), normLang(lang));
   }
 
-  /**
-   * Blank/whitespace language → null (no filter). Keeps "all languages" the empty-string default.
-   */
   private static String normLang(String lang) {
     return lang == null || lang.isBlank() ? null : lang.trim();
   }
 
-  // Lowercase + escape the LIKE metacharacters in user input, then wrap in %…% for a contains
-  // match.
-  // '!' is the escape char declared in the queries; escape it first so a literal '!' can't shield
-  // the
-  // following char. Without this, a search for "50%" would match every title.
+  // LIKE의 이스케이프 문자 !부터 처리해야 사용자의 !가 다음 문자에 영향을 주지 않는다.
   private static String likePattern(String query) {
-    String escaped = query.toLowerCase().replace("!", "!!").replace("%", "!%").replace("_", "!_");
+    String escaped =
+        query.toLowerCase(Locale.ROOT).replace("!", "!!").replace("%", "!%").replace("_", "!_");
     return "%" + escaped + "%";
   }
 
-  // Normalize raw user input into the AGAINST string for FULLTEXT BOOLEAN MODE. We strip the
-  // operator characters (+ - > < ( ) ~ * " @) so a stray operator can't hijack the query or
-  // become an unbalanced token, and collapse whitespace, leaving PLAIN space-separated terms.
-  // Plain (no +/*/quote) BOOLEAN terms are the one form that matches both Korean and English
-  // precisely under the ngram parser: a term's bigrams are required as a group (real substring
-  // match), unlike NATURAL mode which over-matches on any shared bigram. An empty result (query
-  // was only operators/punctuation) stays empty — AGAINST('') matches zero rows without error.
+  // BOOLEAN 연산자를 제거해 검색어가 구문을 바꾸지 않게 한다.
+  // ngram의 한·영 부분 일치를 유지하려고 접두·구문 연산자 없이 평문 항만 전달한다.
   static String booleanMatch(String query) {
     return query.replaceAll("[+\\-><()~*\"@]", " ").replaceAll("\\s+", " ").trim();
   }
 
-  // ngram(token size 2) 은 두 글자 미만 토큰을 인덱싱하지 않는다 — "C++"→"C", 한글 한 글자 질의는 MATCH 가 0건이 되어
-  // 예전 title LIKE 검색 대비 회귀가 된다. 스크럽·정규화 후 남은 모든 토큰이 2자 미만(또는 아예 비었으면)일 때에 한해
-  // 제목·요약 LIKE 폴백을 켜, 짧은 질의도 최소한 제목/요약에서는 잡히게 한다. 폴백이 필요 없으면 null 을 넘겨(쿼리에서 IS NULL
-  // 로 가지 자체를 꺼) 일반 질의의 매칭 범위·성능에 영향을 주지 않는다.
+  // 2글자 ngram이 처리하지 못하는 짧은 질의만 제목·요약 LIKE 폴백을 사용한다.
   static String titleLikeFallback(String query) {
     String scrubbed = booleanMatch(query);
     if (scrubbed.isEmpty()) {
-      // 연산자·구두점만 있어 매칭할 자연어가 없으면 폴백해도 잡을 게 없다.
       return null;
     }
     boolean allTermsTooShort = true;
@@ -252,8 +255,7 @@ class PostRepositoryAdapter implements PostRepository {
         break;
       }
     }
-    // 폴백은 "짧은 질의라 ngram 이 못 잡는" 경우에만. 원문(스크럽 전)을 이스케이프해 %…% 로 감싼다 — 짧은 질의라도
-    // 사용자가 친 그대로(예: "C++")를 제목/요약에서 부분일치로 찾는다.
+    // C++ 같은 원문을 그대로 찾도록 연산자 제거 전 검색어를 이스케이프한다.
     return allTermsTooShort ? likePattern(query) : null;
   }
 

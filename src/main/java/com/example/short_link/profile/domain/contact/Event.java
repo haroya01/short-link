@@ -10,15 +10,8 @@ import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 
 /**
- * EVENT block payload — user-authored calendar event (workshop, popup, deadline, etc.) that
- * visitors can add to their own calendar. Rendered as a date-tile card with an "Add to Calendar"
- * action; ICS file generation + Google/Outlook URL building happen on the frontend so we don't need
- * to round-trip for a download.
- *
- * <p>JSON shape: {@code {title, startsAt, endsAt?, location?, description?, url?}}. Times are ISO
- * 8601 with offset (e.g. {@code 2026-06-15T14:00:00+09:00}) — we store the offset, not just UTC, so
- * the rendered card can display "9 AM KST" without re-resolving timezones every render. The
- * frontend can convert to the visitor's local time at display time if it wants.
+ * Times preserve their ISO-8601 offset for display. Calendar downloads and provider URLs are
+ * generated on the frontend.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Event(

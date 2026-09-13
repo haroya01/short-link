@@ -2,11 +2,7 @@ package com.example.short_link.admin.application.dto;
 
 import java.time.Instant;
 
-/**
- * One row of the admin link-browse table. {@code ownerId}/{@code ownerEmail} are null for anonymous
- * links. {@code status} is derived server-side ({@code ACTIVE} / {@code EXPIRED} / {@code
- * LIMIT_REACHED}) so the client doesn't re-implement the redirect gate's expiry logic.
- */
+/** 익명 링크의 {@code ownerId}와 {@code ownerEmail}은 null이다. */
 public record AdminLinkRow(
     String shortCode,
     String originalUrl,

@@ -34,8 +34,7 @@ public class MyLinksQueryService {
   }
 
   private MyLinksResult myLinksSortedByCreatedAt(Long userId, MyLinksQuery query) {
-    // Fetch one extra row to detect hasMore without a count() — cursor pagination's whole point is
-    // avoiding the OFFSET / COUNT(*) cost on big tables.
+    // Fetch one extra row to detect hasMore without a COUNT query.
     int limit = query.size() + 1;
     MyLinksCursor cursor = query.after();
     List<LinkEntity> raw =

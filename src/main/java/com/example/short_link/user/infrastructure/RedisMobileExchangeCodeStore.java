@@ -12,8 +12,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class RedisMobileExchangeCodeStore implements MobileExchangeCodeStore {
 
-  // Long enough for the app to come back from the browser sheet, short enough that a code
-  // captured from a redirect log or screen recording is dead by the time anyone could replay it.
+  // Allow the app to return from the browser while limiting replay exposure from a leaked code.
   private static final Duration TTL = Duration.ofSeconds(60);
 
   private final StringRedisTemplate redis;

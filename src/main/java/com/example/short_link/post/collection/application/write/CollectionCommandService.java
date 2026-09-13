@@ -25,10 +25,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 컬렉션 쓰기 — 만들기 / 블록 잇기(연결) / 연결 끊기 / 컬렉션 삭제. "연결"이 §0의 핵심 동사라 대상(글·하이라이트·노트)이 실제로 존재하는지 검증하고, 같은
- * 블록을 같은 컬렉션에 두 번 잇는 요청은 멱등하게 흘려보낸다(유니크 키와 일관). 모든 변경은 주인만.
- */
+/** 모든 변경은 주인만 가능하다. 연결 대상의 존재를 검증하며 같은 블록의 재연결은 멱등 처리한다. */
 @Service
 @RequiredArgsConstructor
 public class CollectionCommandService {
@@ -47,10 +44,7 @@ public class CollectionCommandService {
             cmd.userId(), cmd.title(), cmd.description(), cmd.visibility(), cmd.kind()));
   }
 
-  /**
-   * 연결 순서 재배치(주인만) — PATH(reading path)에서 position 이 곧 논증의 흐름이다. 주어진 connectionId 순서대로 position 을
-   * 0..n 으로 다시 매긴다. 제공된 id 집합이 이 컬렉션의 연결 집합과 정확히 일치해야 한다(부분/이질 id 거부).
-   */
+  /** 주어진 ID 순서로 0부터 재배치한다. ID 집합은 컬렉션의 전체 연결과 중복 없이 정확히 일치해야 한다. */
   @Transactional
   public void reorder(Long userId, Long collectionId, List<Long> orderedConnectionIds) {
     CollectionEntity collection = ownedCollection(userId, collectionId);
@@ -61,7 +55,6 @@ public class CollectionCommandService {
 
     if (orderedConnectionIds.size() != connections.size()
         || !byId.keySet().equals(new HashSet<>(orderedConnectionIds))) {
-      // 한 컬렉션의 연결 전체를 빠짐없이·중복 없이 넘겨야 한다(스냅샷 재배치).
       throw new PostException(PostErrorCode.COLLECTION_REORDER_MISMATCH, collectionId);
     }
 
@@ -70,7 +63,6 @@ public class CollectionCommandService {
     }
   }
 
-  /** 이름·소개·공개 범위 수정(주인만). 제목은 비울 수 없다. */
   @Transactional
   public CollectionEntity edit(EditCollectionCommand cmd) {
     CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
@@ -78,14 +70,13 @@ public class CollectionCommandService {
     return collection;
   }
 
-  /** 블록을 컬렉션에 잇는다. 이미 이어져 있으면 멱등 — 단, 새로 쓴 "왜"가 오면 그걸로 바꾼다(조용한 유실 방지). */
+  /** 기존 연결도 새 {@code why}가 있으면 갱신한다. */
   @Transactional
   public CollectionConnectionEntity connect(ConnectBlockCommand cmd) {
     CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
     requireTargetExists(cmd.blockType(), cmd.refId());
 
-    // 새 삽입 전의 길 — 이미 담긴 연결들. 멱등 조기반환·position 계산·PATH_GREW 수신자(기여자) 해석에 모두 재사용해
-    // existsBy/findMaxPosition 를 되풀이하지 않는다.
+    // 삽입 전 연결 목록을 순서 계산과 기존 기여자 알림에 함께 사용한다.
     List<CollectionConnectionEntity> existing =
         connectionRepository.findAllByCollectionIdOrderByPositionAsc(collection.getId());
 
@@ -114,10 +105,8 @@ public class CollectionCommandService {
   }
 
   /**
-   * 연결이 실제로 새로 생겼을 때만 그래프 알림 이벤트를 낸다(멱등 재연결은 조용히). 소유 슬라이스(글·하이라이트·노트 리포지토리를 이미 든다)에서 수신자를 모두 해석해
-   * 넘긴다: 이어진 글/하이라이트의 작가(CONNECTED 수신자)와, 이미 담겨 있던 블록들의 서로 다른 작가들(PATH_GREW 수신자 — 이어진 작가·큐레이터 제외,
-   * 작가별 dedup). 노트는 작가가 곧 큐레이터라 CONNECTED 수신자를 만들지 않고 기여자로도 치지 않는다. 작가 조회는 타입별 한 벌크 쿼리로 N+1 을 피한다.
-   * 이벤트는 커밋 후 리스너가 소비하므로 롤백되면 알림도 없다.
+   * 새 연결에만 이벤트를 발행한다. 노트 작성자는 큐레이터이므로 수신자에서 제외하며, PATH_GREW는 연결한 작가·큐레이터를 제외한 기존 기여자에게 작가별 한 번만
+   * 보낸다. 리스너는 커밋 후 실행하므로 롤백 시 알림도 없다.
    */
   private void publishConnected(
       CollectionEntity collection,
@@ -141,7 +130,6 @@ public class CollectionCommandService {
             Instant.now()));
   }
 
-  /** 이어진 블록의 작가 — 글·하이라이트는 작성자 user_id, 노트는 작가가 곧 큐레이터라 없음(null). */
   private Long authorOf(ConnectionBlockType blockType, Long refId) {
     return switch (blockType) {
       case POST -> postRepository.findById(refId).map(PostEntity::getUserId).orElse(null);
@@ -151,7 +139,6 @@ public class CollectionCommandService {
     };
   }
 
-  /** 미리보기용 계기 글 id — 글은 자기 자신, 하이라이트는 얹힌 글, 노트는 글이 없어 null. */
   private Long occasioningPostId(ConnectionBlockType blockType, Long refId) {
     return switch (blockType) {
       case POST -> refId;
@@ -161,10 +148,7 @@ public class CollectionCommandService {
     };
   }
 
-  /**
-   * 이미 담겨 있던 블록들의 서로 다른 작가들 — 이어진 작가·큐레이터 제외, 작가별 dedup. 글·하이라이트 ref 를 타입별로 모아 각각 한 벌크 쿼리로 작가를
-   * 해석한다(연결 수만큼 단건 조회하지 않음 = N+1 방지). 노트 연결은 기여자로 치지 않는다(작가가 곧 큐레이터).
-   */
+  /** 노트는 큐레이터 자신의 것이므로 기여자로 세지 않는다. 연결한 작가와 큐레이터도 제외한다. */
   private List<Long> priorContributorAuthorIds(
       List<CollectionConnectionEntity> priorConnections, Long connectedAuthorId, Long curatorId) {
     List<Long> postIds = refIdsOf(priorConnections, ConnectionBlockType.POST);

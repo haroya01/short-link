@@ -24,11 +24,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Auth surface for the native app. The web flow keeps the refresh token in an HTTP-only cookie; the
- * app holds it in the Keychain instead, so every endpoint here speaks tokens in the request /
- * response body and never touches cookies. Login still goes through the same server-side Google
- * OAuth dance — {@code /start} flags the session as app-initiated and the success handler comes
- * back on the custom scheme with a one-time code that {@code /exchange} redeems for the pair.
+ * Mobile refresh tokens travel in request/response bodies for app storage. Browser OAuth returns a
+ * one-time custom-scheme code, redeemed at /exchange for the token pair.
  */
 @RestController
 @RequestMapping("/api/v1/auth/mobile")
@@ -44,11 +41,6 @@ public class MobileAuthController {
     res.sendRedirect("/oauth2/authorization/google");
   }
 
-  /**
-   * Native Sign in with Apple — no browser hop. The system sheet hands the app an identity token;
-   * we verify it against Apple's JWKS and answer with either a token pair or a 2FA challenge. The
-   * challenge is the same contract as the browser dance, so {@code /2fa/verify} is shared.
-   */
   @PostMapping("/apple")
   public AppleLoginResponse apple(@Valid @RequestBody AppleLoginRequest request) {
     AppleIdentity identity = appleVerifier.verify(request.identityToken(), request.nonce());

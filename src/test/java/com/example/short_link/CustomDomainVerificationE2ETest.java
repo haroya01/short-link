@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.common.net.TxtResolver;
+import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -16,6 +18,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,12 +32,12 @@ import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-@Transactional
 @Import(CustomDomainVerificationE2ETest.StubTxtResolverConfig.class)
 class CustomDomainVerificationE2ETest {
 
@@ -43,6 +46,11 @@ class CustomDomainVerificationE2ETest {
   @Autowired private JwtTokenService jwt;
   @Autowired private StubTxtResolver txtResolver;
   @Autowired private CacheManager cacheManager;
+  @Autowired private CustomDomainRepository domainRepository;
+  @Autowired private LinkRepository linkRepository;
+  @Autowired private PlatformTransactionManager transactionManager;
+
+  private final List<Long> createdUserIds = new ArrayList<>();
 
   @BeforeEach
   void resetResolver() {
@@ -50,10 +58,33 @@ class CustomDomainVerificationE2ETest {
     clear(cacheManager, "link");
   }
 
+  @AfterEach
+  void deleteCommittedFixtures() {
+    new TransactionTemplate(transactionManager)
+        .executeWithoutResult(
+            status -> {
+              for (Long userId : createdUserIds) {
+                domainRepository
+                    .findAllByUserIdOrderByIdAsc(userId)
+                    .forEach(domainRepository::delete);
+                linkRepository.deleteAll(
+                    linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId));
+                userRepository.deleteById(userId);
+              }
+            });
+    clear(cacheManager, "link");
+  }
+
+  private UserEntity createCommittedUser(String suffix) {
+    UserEntity user =
+        userRepository.save(new UserEntity(suffix + "@x.com", "google", "g-" + suffix));
+    createdUserIds.add(user.getId());
+    return user;
+  }
+
   @Test
   void register_thenVerify_marksDomainVerifiedAndEnablesRouting() throws Exception {
-    // given
-    UserEntity user = userRepository.save(new UserEntity("cdv-1@x.com", "google", "g-cdv-1"));
+    UserEntity user = createCommittedUser("cdv-1");
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
@@ -81,14 +112,12 @@ class CustomDomainVerificationE2ETest {
     String issuedToken = JsonPath.read(registerBody, "$.verificationToken");
     txtResolver.put("_kurl-verify.go.verify-flow.example.com", issuedToken);
 
-    // when
     mvc.perform(
             post("/api/v1/custom-domains/" + domainId + "/verify")
                 .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.verified").value(true));
 
-    // then
     mvc.perform(get("/cdv00001").header("Host", "go.verify-flow.example.com"))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://owner-verify.com"));
@@ -96,8 +125,7 @@ class CustomDomainVerificationE2ETest {
 
   @Test
   void register_thenVerify_returns422WhenTokenMissingAtTxt() throws Exception {
-    // given
-    UserEntity user = userRepository.save(new UserEntity("cdv-2@x.com", "google", "g-cdv-2"));
+    UserEntity user = createCommittedUser("cdv-2");
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     String registerBody =
@@ -112,7 +140,6 @@ class CustomDomainVerificationE2ETest {
             .getContentAsString();
     Integer domainId = JsonPath.read(registerBody, "$.id");
 
-    // when / then
     mvc.perform(
             post("/api/v1/custom-domains/" + domainId + "/verify")
                 .header("Authorization", "Bearer " + token))
@@ -121,8 +148,7 @@ class CustomDomainVerificationE2ETest {
 
   @Test
   void register_thenVerify_returns422WhenTokenMismatch() throws Exception {
-    // given
-    UserEntity user = userRepository.save(new UserEntity("cdv-3@x.com", "google", "g-cdv-3"));
+    UserEntity user = createCommittedUser("cdv-3");
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     String registerBody =
@@ -139,7 +165,6 @@ class CustomDomainVerificationE2ETest {
 
     txtResolver.put("_kurl-verify.go.wrong-txt.example.com", "kurl-verify=someone-elses-token");
 
-    // when / then
     mvc.perform(
             post("/api/v1/custom-domains/" + domainId + "/verify")
                 .header("Authorization", "Bearer " + token))

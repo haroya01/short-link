@@ -44,9 +44,8 @@ class ReplacePostBlocksUseCaseTest {
   @Test
   void replacesWithNewBlocks() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
-    // insertAll returns no ids, so the use case reads the blocks back for the response — the
-    // re-read is the source of the returned list.
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    // Batch INSERT는 ID를 반환하지 않아 응답용 블록을 다시 읽는다.
     List<PostBlockEntity> persisted =
         List.of(
             new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0),
@@ -80,7 +79,6 @@ class ReplacePostBlocksUseCaseTest {
 
     assertThat(result).isSameAs(persisted);
 
-    // 파생 검색 평문이 제목 + 본문(문단 텍스트)까지 담겨 곁 테이블에 upsert 되는지 — 본문이 인덱싱되는 게 이 업그레이드의 핵심.
     ArgumentCaptor<String> searchText = ArgumentCaptor.forClass(String.class);
     verify(postSearchTextRepository).upsert(any(), searchText.capture());
     assertThat(searchText.getValue()).contains("My Post").contains("Hello");
@@ -89,14 +87,13 @@ class ReplacePostBlocksUseCaseTest {
   @Test
   void replaceWithEmptyDeletesAll() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
 
     List<PostBlockEntity> result =
         useCase.execute(new ReplacePostBlocksCommand(7L, 42L, List.of()));
 
     verify(postBlockRepository).deleteAllByPostId(42L);
     assertThat(result).isEmpty();
-    // 본문을 비워도 검색 평문은 제목으로 다시 채워져 upsert 된다(예전 본문 잔재 없음).
     verify(postSearchTextRepository).upsert(any(), eq("My Post"));
   }
 
@@ -108,7 +105,6 @@ class ReplacePostBlocksUseCaseTest {
                 i -> new ReplacePostBlocksCommand.BlockInput(PostBlockType.PARAGRAPH, "block " + i))
             .toList();
 
-    // 본문 한도는 사용자가 볼 사유라 PostException(BODY_LIMIT) — 익명 IllegalArgument 가 아니다.
     assertThatThrownBy(() -> new ReplacePostBlocksCommand(7L, 42L, tooMany))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
@@ -117,7 +113,7 @@ class ReplacePostBlocksUseCaseTest {
 
   @Test
   void rejectsForeignOwner() {
-    when(postOwnership.requireOwned(7L, 42L))
+    when(postOwnership.requireOwnedForUpdate(7L, 42L))
         .thenThrow(new PostException(PostErrorCode.PERMISSION_DENIED));
 
     assertThatThrownBy(() -> useCase.execute(new ReplacePostBlocksCommand(7L, 42L, List.of())))

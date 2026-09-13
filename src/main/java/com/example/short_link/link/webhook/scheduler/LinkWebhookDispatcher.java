@@ -16,11 +16,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Listens for {@link ClickRecordedEvent} and POSTs a signed JSON payload to every enabled webhook
- * for that link. Filtering/quota, batching, and HTTP delivery live in focused collaborators so this
- * class stays limited to event orchestration and repository transaction boundaries.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -33,14 +28,9 @@ public class LinkWebhookDispatcher {
   private final WebhookBatchDeliverer batchDeliverer;
 
   /**
-   * Fires only after the click row is committed. A plain {@link
-   * org.springframework.context.event.EventListener} would invoke us mid-transaction; if the click
-   * insert later rolled back we'd have already POSTed a phantom event. Async runs on the dedicated
-   * {@code webhookExecutor} so a slow receiver can't starve OG-fetch and vice versa.
-   *
-   * <p>{@code REQUIRES_NEW} is mandatory here — {@code TransactionalEventListener} fires after the
-   * outer click-recording transaction has already committed, so we need our own tx for the
-   * downstream {@code recordSuccess/recordFailure} dirty-check writes to land.
+   * AFTER_COMMIT prevents delivery of rolled-back clicks. REQUIRES_NEW persists delivery-state
+   * changes after the outer transaction closes. A dedicated executor isolates slow receivers from
+   * OG fetches.
    */
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -66,9 +56,8 @@ public class LinkWebhookDispatcher {
   }
 
   /**
-   * Runs every 5 seconds to fan out per-webhook batch flushes. Each hook is delivered in its own
-   * {@code REQUIRES_NEW} transaction inside {@link WebhookBatchDeliverer} so a 5s HTTP read timeout
-   * on one receiver doesn't stall the rest of the loop's record-state writes.
+   * Each hook flush commits independently in {@link WebhookBatchDeliverer}; a slow delivery does
+   * not keep prior hooks' state changes uncommitted.
    */
   @Scheduled(fixedDelay = 5000)
   public void flushBatches() {

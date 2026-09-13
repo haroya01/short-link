@@ -14,20 +14,15 @@ import java.util.List;
 import java.util.Set;
 import java.util.regex.Pattern;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 독자 행동 이벤트 배치 적재. 비콘 계약이라 실패가 사용자에게 새면 안 된다 — 화이트리스트에 안 맞는 건은 에러 대신 조용히 드랍하고, 수용/드랍 카운트만 미터로 남긴다.
- * 봇 판정(UA→버스트→데이터센터)과 방문자 해시는 {@code RecordPostViewUseCase} 의 조회 경로와 같은 공식을 재사용해, 도달과 행동이 같은 기준으로
- * 걸러지고 조인되게 한다. Sec-GPC 방문자는 해시를 만들지 않는다(세션 내 퍼널만, 재방문 추적 없음).
- */
+/** 잘못된 이벤트는 비콘 호출을 실패시키지 않고 제외한다. 방문자 해시는 글 조회와 같은 공식으로 만들되 Sec-GPC 요청에는 생성하지 않는다. */
 @Slf4j
 @Service
 public class RecordBehaviorEventsUseCase {
 
-  /** 한 배치에서 받아주는 최대 건수 — 그 밖은 드랍(비콘 플러시 주기상 정상 트래픽은 한 자릿수). */
+  /** 배치 상한을 넘은 이벤트는 제외한다. */
   static final int MAX_BATCH = 25;
 
   private static final Set<String> EVENT_NAMES =
@@ -45,23 +40,7 @@ public class RecordBehaviorEventsUseCase {
   private final MeterRegistry meterRegistry;
   private final Clock clock;
 
-  @Autowired
   public RecordBehaviorEventsUseCase(
-      BehaviorEventRepository repository,
-      UserAgentClassifier userAgentClassifier,
-      AsnResolver asnResolver,
-      BotHeuristic botHeuristic,
-      MeterRegistry meterRegistry) {
-    this(
-        repository,
-        userAgentClassifier,
-        asnResolver,
-        botHeuristic,
-        meterRegistry,
-        Clock.systemUTC());
-  }
-
-  RecordBehaviorEventsUseCase(
       BehaviorEventRepository repository,
       UserAgentClassifier userAgentClassifier,
       AsnResolver asnResolver,
@@ -76,7 +55,9 @@ public class RecordBehaviorEventsUseCase {
     this.clock = clock;
   }
 
-  /** 수용한 건수를 돌려준다(비콘 응답에는 안 실리고 테스트·미터 용). */
+  /**
+   * @return 저장한 이벤트 수
+   */
   @Transactional
   public int execute(String sessionId, List<BehaviorEventCommand> batch, BehaviorContext ctx) {
     if (batch == null || batch.isEmpty()) return 0;
@@ -146,7 +127,7 @@ public class RecordBehaviorEventsUseCase {
         .build();
   }
 
-  /** 배치는 한 요청 = 한 방문자라 판정은 요청당 한 번만 돌린다. 판정 실패는 행동을 잃을 이유가 아니다 — 미분류로 폴백. */
+  /** 분류 실패로 이벤트가 유실되지 않도록 미분류로 저장한다. */
   private Classification classify(BehaviorContext ctx) {
     try {
       UserAgentInfo ua = userAgentClassifier.classify(ctx.userAgent());

@@ -20,7 +20,6 @@ public class CreatePostUseCase {
 
   @Transactional
   public PostView execute(CreatePostCommand cmd) {
-    // 제재(BANNED/현재 SUSPENDED) 유저는 콘텐츠를 만들 수 없다.
     moderationGuard.requireCanWrite(cmd.userId());
     if (postRepository.existsByUserIdAndSlug(cmd.userId(), cmd.slug())) {
       throw new PostException(PostErrorCode.SLUG_CONFLICT, cmd.slug())

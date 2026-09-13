@@ -1,7 +1,6 @@
 package com.example.short_link.notification.application.link;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -60,25 +59,10 @@ class NotificationPreferenceServiceTest {
   }
 
   @Test
-  void setEnabledUpdatesExistingRowInPlace() {
-    NotificationPreferenceEntity existing =
-        new NotificationPreferenceEntity(1L, LinkNotificationType.FIRST_CLICK, true);
-    when(repo.findByUserIdAndType(1L, LinkNotificationType.FIRST_CLICK))
-        .thenReturn(Optional.of(existing));
-
+  void setEnabledUsesAtomicRepositoryWriteWithoutAnExistenceRead() {
     service.setEnabled(1L, LinkNotificationType.FIRST_CLICK, false);
 
-    assertThat(existing.isEnabled()).isFalse();
-    verify(repo, never()).save(any());
-  }
-
-  @Test
-  void setEnabledInsertsWhenAbsent() {
-    when(repo.findByUserIdAndType(1L, LinkNotificationType.EXPIRY_IMMINENT))
-        .thenReturn(Optional.empty());
-
-    service.setEnabled(1L, LinkNotificationType.EXPIRY_IMMINENT, false);
-
-    verify(repo).save(any(NotificationPreferenceEntity.class));
+    verify(repo).setEnabled(1L, LinkNotificationType.FIRST_CLICK, false);
+    verify(repo, never()).findByUserIdAndType(1L, LinkNotificationType.FIRST_CLICK);
   }
 }

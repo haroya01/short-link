@@ -13,10 +13,8 @@ import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
 /**
- * The one place an outbound webhook is actually signed and POSTed. Shared by every webhook source
- * (link-click hooks, blog-interaction hooks) so the SSRF guard, HMAC-SHA256 signature, headers,
- * timeouts and delivery metrics are identical everywhere. Stateless: it never touches a hook entity
- * — it returns a {@link Result} the caller maps onto its own record-success/record-failure surface.
+ * Shares SSRF validation, signatures, timeouts, and delivery metrics across webhook sources.
+ * Callers persist the returned delivery result.
  */
 public final class WebhookSender {
 
@@ -36,9 +34,7 @@ public final class WebhookSender {
     SIGN_ERROR
   }
 
-  /**
-   * The delivery outcome. {@code statusCode} is the HTTP status when one was received, else null.
-   */
+  /** {@code statusCode} is null when no HTTP response was received. */
   public record Result(Outcome outcome, Integer statusCode, String error) {
     public boolean ok() {
       return outcome == Outcome.OK;
@@ -46,9 +42,8 @@ public final class WebhookSender {
   }
 
   /**
-   * Sign (when {@code sign}) and POST {@code body} to {@code url}. {@code eventType} rides in the
-   * {@code X-Kurl-Event} header. Delivery metrics are emitted on {@code registry} with the same
-   * tags across all sources. Never throws — every failure becomes a {@link Result}.
+   * {@code eventType} becomes the X-Kurl-Event header. Never throws: all delivery failures become a
+   * {@link Result}.
    */
   public static Result send(
       HttpFetcher httpFetcher,

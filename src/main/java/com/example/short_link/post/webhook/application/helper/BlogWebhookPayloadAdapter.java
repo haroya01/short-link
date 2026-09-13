@@ -6,13 +6,10 @@ import com.example.short_link.post.webhook.domain.BlogWebhookFormat;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
-/**
- * Shapes a blog interaction into the body each receiver expects. GENERIC emits structured JSON for
- * self-hosted consumers (verified by the HMAC signature); DISCORD/SLACK emit the chat-native shapes
- * with a one-line human summary. Pure functions over the event — no I/O, no entity.
- */
+/** GENERIC은 HMAC 검증용 구조화 JSON, DISCORD/SLACK은 각 채팅 서비스의 메시지 형식이다. */
 public final class BlogWebhookPayloadAdapter {
 
   private static final int BRAND_GREEN = 0x059669;
@@ -21,7 +18,7 @@ public final class BlogWebhookPayloadAdapter {
 
   /** Header value for {@code X-Kurl-Event}: e.g. "like", "series_subscribe". */
   public static String eventType(BlogInteractionType type) {
-    return type.name().toLowerCase();
+    return type.name().toLowerCase(Locale.ROOT);
   }
 
   public static Map<String, Object> build(

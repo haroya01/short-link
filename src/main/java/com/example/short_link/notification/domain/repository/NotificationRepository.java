@@ -4,7 +4,6 @@ import com.example.short_link.notification.domain.NotificationEntity;
 import java.time.Instant;
 import java.util.List;
 
-/** Persistence port for a recipient's in-app notifications. */
 public interface NotificationRepository {
 
   NotificationEntity save(NotificationEntity notification);
@@ -20,6 +19,6 @@ public interface NotificationRepository {
   /** Marks one notification read iff it belongs to the recipient and is unread. */
   void markRead(Long id, Long recipientUserId, Instant at);
 
-  /** Marks every unread notification for the recipient read; returns the number updated. */
+  /** Returns the number of unread notifications updated for the recipient. */
   int markAllRead(Long recipientUserId, Instant at);
 }

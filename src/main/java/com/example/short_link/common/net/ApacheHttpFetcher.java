@@ -20,14 +20,8 @@ import org.apache.hc.core5.util.Timeout;
 import org.springframework.stereotype.Component;
 
 /**
- * Apache HttpClient 5 implementation of {@link HttpFetcher}. The single place in the codebase that
- * touches {@code org.apache.hc.*} (along with {@link PinnedHttpClientFactory}) — see ArchUnit
- * {@code apacheHttpClientConfinedExceptKnownLeaks}.
- *
- * <p>Builds a per-request pinned client (DNS rebinding defense), executes the request, reads the
- * response body up to {@code maxBodyBytes}, and closes the client. Connection reuse across calls is
- * intentionally not done — pinning the resolved IP per request matters more than connection pooling
- * for our outbound traffic profile (low QPS, security-critical).
+ * Uses a fresh pinned client per request to prevent DNS rebinding. Connections are deliberately not
+ * pooled across resolved IP batches.
  */
 @Component
 public class ApacheHttpFetcher implements HttpFetcher {

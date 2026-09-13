@@ -16,7 +16,6 @@ public class CtaQueryService {
   private final CtaRepository ctaRepository;
   private final CtaOwnership ctaOwnership;
 
-  /** 활성 CTA 만 (soft-delete 제외). */
   public List<CtaView> listMyCtas(Long userId) {
     return ctaRepository.findAllByUserIdAndDeletedAtIsNullOrderByCreatedAtDesc(userId).stream()
         .map(CtaView::from)

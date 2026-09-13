@@ -3,9 +3,8 @@ package com.example.short_link.post.collection.application.read;
 import java.time.Instant;
 
 /**
- * 연결된 한 블록의 해석된 뷰 — {@code blockType} 으로 갈라 읽는다(클라가 종류별 다른 실루엣으로 렌더). 공통 필드를 종류 간 재사용한다: POST 는
- * title/excerpt/slug/username, HIGHLIGHT 는 quote + 원문 title/slug/username, NOTE 는 body. {@code why}
- * 는 큐레이터의 한 줄.
+ * {@code blockType}에 따라 필드를 해석한다: POST는 title/excerpt/slug/username, HIGHLIGHT는 quote와 원문 정보, NOTE는
+ * body. {@code why}는 큐레이터가 적은 연결 이유다.
  */
 public record ConnectionView(
     Long id,

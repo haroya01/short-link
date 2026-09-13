@@ -11,8 +11,8 @@ public interface JpaCommentLikeRepository extends JpaRepository<CommentLikeEntit
 
   long countByCommentId(Long commentId);
 
-  // MySQL INSERT IGNORE — (comment_id, user_id) 유니크 키가 중복 좋아요를 0-row no-op 으로 만들어
-  // 트랜잭션 안에서 예외 없이 멱등(post_like 와 동일 계약). created_at 은 네이티브라 직접 채운다.
+  // INSERT IGNORE keeps duplicates from failing the transaction; native inserts set created_at
+  // explicitly.
   @Modifying
   @Query(
       value =

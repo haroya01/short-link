@@ -21,7 +21,6 @@ public record UpdatePostMetadataCommand(
   public UpdatePostMetadataCommand {
     if (userId == null) throw new IllegalArgumentException("userId required");
     if (postId == null) throw new IllegalArgumentException("postId required");
-    // Blank title allowed (untitled draft); required only at publish.
     if (title != null && title.length() > 200) {
       throw new IllegalArgumentException("title max 200");
     }

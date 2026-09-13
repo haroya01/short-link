@@ -5,16 +5,12 @@ import java.net.URLEncoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
+import java.util.Locale;
+import java.util.OptionalLong;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-/**
- * RFC 6238 TOTP (HMAC-SHA1, 30s step, 6 digits). The secret is stored as Base32 — Google
- * Authenticator and other apps consume that format directly via the {@code otpauth://totp/} URI.
- *
- * <p>Verification accepts the previous, current, and next step to tolerate small clock drift on the
- * user's phone (RFC suggests ±1 step).
- */
+/** RFC 6238: HMAC-SHA1, 30초 간격, 6자리, Base32 비밀키. 시계 오차로 ±1 구간을 허용한다. */
 public final class TotpCodec {
 
   public static final int CODE_DIGITS = 6;
@@ -46,20 +42,26 @@ public final class TotpCodec {
               | ((hash[offset + 2] & 0xFF) << 8)
               | (hash[offset + 3] & 0xFF);
       int code = binary % 1_000_000;
-      return String.format("%06d", code);
+      return String.format(Locale.ROOT, "%06d", code);
     } catch (Exception e) {
       throw new IllegalStateException("HMAC-SHA1 unavailable", e);
     }
   }
 
   public static boolean verify(String base32Secret, String code, long currentEpochSecond) {
-    if (code == null || code.length() != CODE_DIGITS) return false;
+    return matchingStep(base32Secret, code, currentEpochSecond).isPresent();
+  }
+
+  static OptionalLong matchingStep(String base32Secret, String code, long currentEpochSecond) {
+    if (code == null || code.length() != CODE_DIGITS) return OptionalLong.empty();
     String trimmed = code.trim();
     long step = currentEpochSecond / PERIOD_SECONDS;
     for (int delta = -VERIFY_WINDOW_STEPS; delta <= VERIFY_WINDOW_STEPS; delta++) {
-      if (constantTimeEquals(generateCode(base32Secret, step + delta), trimmed)) return true;
+      if (constantTimeEquals(generateCode(base32Secret, step + delta), trimmed)) {
+        return OptionalLong.of(step + delta);
+      }
     }
-    return false;
+    return OptionalLong.empty();
   }
 
   public static String provisioningUri(String issuer, String accountName, String base32Secret) {
@@ -103,7 +105,7 @@ public final class TotpCodec {
   }
 
   private static byte[] base32Decode(String s) {
-    String clean = s.replace("=", "").replace(" ", "").toUpperCase();
+    String clean = s.replace("=", "").replace(" ", "").toUpperCase(Locale.ROOT);
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     int buffer = 0, bits = 0;
     for (char c : clean.toCharArray()) {

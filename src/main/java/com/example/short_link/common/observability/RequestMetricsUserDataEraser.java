@@ -4,7 +4,6 @@ import com.example.short_link.common.user.UserDataEraser;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** Retains operational metrics while removing the erased account's identifier. */
 @Component
 @RequiredArgsConstructor
 class RequestMetricsUserDataEraser implements UserDataEraser {

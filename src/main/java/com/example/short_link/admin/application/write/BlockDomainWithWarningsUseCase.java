@@ -4,7 +4,6 @@ import com.example.short_link.admin.domain.BlockedDomainEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/** Coordinates owner warnings after the blocking operation has finished its transaction. */
 @Service
 @RequiredArgsConstructor
 public class BlockDomainWithWarningsUseCase {

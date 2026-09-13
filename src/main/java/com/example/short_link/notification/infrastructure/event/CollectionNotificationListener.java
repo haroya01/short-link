@@ -11,16 +11,8 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Turns a {@link CollectionConnectedEvent} into the two graph-bell notices, closing the reading
- * graph's retention loop: CONNECTED tells the woven work's author "someone put your work in their
- * path," and PATH_GREW tells everyone already in that path "a path you're part of grew." Like its
- * sibling {@link PostNotificationListener} it fires only after the connect commits and runs on the
- * shared {@code webhookExecutor}, so the recording insert never stalls the request path.
- *
- * <p>Both notices point at the collection, so they share one {@link NotificationCollectionRef}
- * payload. The producer already resolved and deduped every recipient, so this stays a thin fan-out
- * with no post→data lookup: the author self-connecting is dropped up front (a null recipient), and
- * PATH_GREW's recipient list already excludes the woven author and the connecting curator.
+ * Recipients are resolved and deduplicated by the event producer; both notices target the
+ * collection. AFTER_COMMIT prevents notifications for rolled-back connections.
  */
 @Component
 @RequiredArgsConstructor
@@ -35,8 +27,7 @@ public class CollectionNotificationListener {
         new NotificationCollectionRef(
             event.collectionId(), event.collectionName(), event.connectedPostId());
 
-    // CONNECTED → the woven work's author. Null when the curator wove their own work (or a note,
-    // whose author is the curator), so no self-notice fires.
+    // A null author denotes a self-connection or curator-owned note.
     if (event.connectedAuthorUserId() != null
         && !event.connectedAuthorUserId().equals(event.actorUserId())) {
       recordUseCase.record(
@@ -46,8 +37,7 @@ public class CollectionNotificationListener {
           collection);
     }
 
-    // PATH_GREW → every distinct prior contributor. The list is already deduped and already
-    // excludes the woven author and the curator, so an empty list is a silent no-op.
+    // The producer deduplicates prior contributors and excludes the connected author and curator.
     recordUseCase.recordForEach(
         event.priorContributorUserIds(),
         NotificationType.PATH_GREW,

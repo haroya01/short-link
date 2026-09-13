@@ -1,6 +1,5 @@
 package com.example.short_link.customdomain.scheduler;
 
-import com.example.short_link.customdomain.application.helper.CustomDomainPolicy;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.customdomain.application.write.AutoVerifyCustomDomainUseCase;
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
@@ -10,13 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Polls DNS for newly-registered custom domains so the user doesn't have to babysit a Verify
- * button. Each tick walks all unverified rows created within {@link
- * CustomDomainPolicy#AUTO_VERIFY_WINDOW} and runs one TXT lookup per row; verified rows fall out
- * naturally on the next tick. Beyond the window we stop probing — the manual /verify endpoint is
- * the fallback for slow propagation.
- */
+/** 자동 검증 기간이 지나면 DNS 전파가 늦은 도메인은 수동 검증으로 확인한다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

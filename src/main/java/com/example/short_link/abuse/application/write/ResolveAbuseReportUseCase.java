@@ -14,12 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 신고 처리 + 집행. 상태 전이(REVIEWING/RESOLVED/REJECTED)와 선택적 집행 조치(글 게시취소·댓글 soft삭제·유저 정지/차단)를 <b>같은
- * 트랜잭션</b>에서 수행한다 — 집행이 실패하면 상태 전이도 롤백되어 "처리됐는데 집행 안 됨"이 남지 않는다. 크로스슬라이스 집행은 전부 common 중립 포트({@link
- * PostModerationPort}·{@link CommentModerationPort}·{@link UserModerationPort})를 경유해 슬라이스 그래프를
- * 비순환으로 유지한다(ArchUnit 강제).
- */
+/** 집행 실패 시 처리 상태도 롤백되도록 두 변경을 같은 트랜잭션에서 수행한다. */
 @Service
 @RequiredArgsConstructor
 public class ResolveAbuseReportUseCase {
@@ -42,7 +37,6 @@ public class ResolveAbuseReportUseCase {
       throw new AbuseException(AbuseErrorCode.ALREADY_RESOLVED, cmd.reportId());
     }
 
-    // 집행 먼저 — 실패 시 상태 전이까지 롤백. 조치는 신고 대상(subjectType/subjectId)에만 적용된다.
     enforce(cmd, report);
 
     switch (cmd.resolution()) {

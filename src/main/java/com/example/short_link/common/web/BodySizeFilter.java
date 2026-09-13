@@ -27,11 +27,7 @@ public class BodySizeFilter extends OncePerRequestFilter {
 
   private static final long DEFAULT_MAX_BODY_BYTES = 16L * 1024L;
 
-  /**
-   * Routes whose legitimate payloads outgrow the default cap: the block editor saves whole
-   * documents (per-block validation alone allows far more than 16KB) and bulk import uploads CSV
-   * files.
-   */
+  /** Whole editor documents and bulk CSV imports need a larger cap than ordinary API payloads. */
   private static final List<Limit> EXPANDED_LIMITS =
       List.of(
           new Limit("/api/v1/posts", 1024L * 1024L),
@@ -51,9 +47,8 @@ public class BodySizeFilter extends OncePerRequestFilter {
       writeTooLarge(req, res, limit);
       return;
     }
-    // Content-Length can be absent (chunked transfer) or understate the body — cap the actual
-    // stream too so a length-less body can't be read unboundedly into memory. An overrun throws
-    // PayloadTooLargeException, which GlobalExceptionHandler maps to 413.
+    // Content-Length may be absent or understated; also cap the actual stream (overrun maps to
+    // 413).
     chain.doFilter(new LimitedBodyRequest(req, limit), res);
   }
 
@@ -80,7 +75,6 @@ public class BodySizeFilter extends OncePerRequestFilter {
     jsonMapper.writeValue(res.getOutputStream(), body);
   }
 
-  /** Wraps the request body stream to abort reads that exceed the route's byte cap. */
   private static final class LimitedBodyRequest extends HttpServletRequestWrapper {
     private final long limit;
 

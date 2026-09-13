@@ -20,6 +20,11 @@ class CustomDomainRepositoryAdapter implements CustomDomainRepository {
   }
 
   @Override
+  public Optional<CustomDomainEntity> findByIdForUpdate(Long id) {
+    return jpa.findByIdForUpdate(id);
+  }
+
+  @Override
   public CustomDomainEntity save(CustomDomainEntity domain) {
     return jpa.save(domain);
   }

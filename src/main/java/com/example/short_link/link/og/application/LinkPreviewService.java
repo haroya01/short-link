@@ -9,10 +9,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
 /**
- * Unfurls an arbitrary URL into a {@link LinkPreview} (og:title/description/image) for blog link
- * cards — reusing the existing {@link OgScraper} (SSRF-safe {@code HttpFetcher}). Cached 24h per
- * URL so the same link doesn't re-fetch on every post render. Non-http(s) or scrape failures
- * collapse to a bare card (just the URL) so the frontend always has something to draw.
+ * Non-HTTP(S) URLs and scrape failures return a bare URL card. Results are cached per URL for 24
+ * hours.
  */
 @Slf4j
 @Service

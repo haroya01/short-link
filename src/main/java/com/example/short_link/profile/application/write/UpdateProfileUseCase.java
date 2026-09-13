@@ -16,6 +16,7 @@ import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -58,8 +59,6 @@ public class UpdateProfileUseCase {
     String previousUsername = user.getUsername();
     updateUsername(user, cmd.username(), cmd.userId());
     updateAppearance(user, cmd);
-    // The public-profile cache is keyed by username with a long TTL — without eviction every
-    // bio/theme/socials edit keeps serving the stale entry, and a rename leaves the old key alive.
     cacheEviction.evictByUsername(previousUsername);
     String currentUsername = user.getUsername();
     if (currentUsername != null && !currentUsername.equals(previousUsername)) {
@@ -71,7 +70,7 @@ public class UpdateProfileUseCase {
 
   private void updateUsername(UserEntity user, String requestedUsername, Long userId) {
     if (requestedUsername != null) {
-      String normalized = requestedUsername.trim().toLowerCase();
+      String normalized = requestedUsername.trim().toLowerCase(Locale.ROOT);
       validateUsername(normalized);
       if (!normalized.equals(user.getUsername())) {
         if (ReservedUsernames.ALL.contains(normalized)) {

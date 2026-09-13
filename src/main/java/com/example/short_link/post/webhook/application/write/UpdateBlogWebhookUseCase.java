@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Edits a blog webhook's name, the interactions it fires on, and its enabled state. */
 @Service
 @RequiredArgsConstructor
 public class UpdateBlogWebhookUseCase {

@@ -16,10 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 모집/이벤트 신청 페이지. 발행 즉시 OPEN, 참가자는 비로그인 신청. registrationCount 는 정원 판정의 단일 진실 — 증감은 반드시 repository 의
- * 조건부 원자 UPDATE 로만 한다 (엔티티 필드 조작 금지).
- */
+/** 정원 판정에 쓰는 registrationCount는 저장소의 조건부 원자 UPDATE로만 증감한다. */
 @Entity
 @Table(name = "event")
 @Getter
@@ -99,6 +96,8 @@ public class EventEntity extends BaseTimeEntity {
       Integer capacity,
       Instant closeAt,
       ContactField contactField) {
+    validateDetails(
+        title, descriptionMd, startsAt, timezone, locationText, locationUrl, onlineUrl, capacity);
     this.userId = userId;
     this.slug = slug;
     this.title = title;
@@ -160,7 +159,9 @@ public class EventEntity extends BaseTimeEntity {
       String onlineUrl,
       Integer capacity,
       Instant closeAt) {
-    requireNotCanceled();
+    requireEditable();
+    validateDetails(
+        title, descriptionMd, startsAt, timezone, locationText, locationUrl, onlineUrl, capacity);
     this.title = title;
     this.descriptionMd = descriptionMd;
     this.startsAt = startsAt;
@@ -174,17 +175,17 @@ public class EventEntity extends BaseTimeEntity {
   }
 
   public void updateCoverImage(String coverImageKey) {
-    requireNotCanceled();
+    requireEditable();
     this.coverImageKey = coverImageKey;
   }
 
   public void close() {
-    requireNotCanceled();
+    requireEditable();
     this.status = EventStatus.CLOSED;
   }
 
   public void reopen() {
-    requireNotCanceled();
+    requireEditable();
     this.status = EventStatus.OPEN;
   }
 
@@ -200,9 +201,52 @@ public class EventEntity extends BaseTimeEntity {
     this.piiPurgedAt = at;
   }
 
-  private void requireNotCanceled() {
+  public void requireQuestionChangesAllowed(long confirmedRegistrations) {
+    requireEditable();
+    if (confirmedRegistrations > 0) {
+      throw new EventException(EventErrorCode.INVALID_QUESTIONS, "registrations exist");
+    }
+  }
+
+  public void requireEditable() {
     if (status == EventStatus.CANCELED) {
       throw new EventException(EventErrorCode.EVENT_CANCELED, id);
+    }
+  }
+
+  private static void validateDetails(
+      String title,
+      String descriptionMd,
+      Instant startsAt,
+      String timezone,
+      String locationText,
+      String locationUrl,
+      String onlineUrl,
+      Integer capacity) {
+    requireText(title, 200, "title");
+    requireText(timezone, 40, "timezone");
+    if (startsAt == null) {
+      throw new EventException(EventErrorCode.INVALID_EVENT_DETAILS, "startsAt required");
+    }
+    if (capacity != null && (capacity < 1 || capacity > 10000)) {
+      throw new EventException(EventErrorCode.INVALID_EVENT_DETAILS, "capacity must be 1..10000");
+    }
+    requireMaxLength(descriptionMd, 50000, "descriptionMd");
+    requireMaxLength(locationText, 200, "locationText");
+    requireMaxLength(locationUrl, 2048, "locationUrl");
+    requireMaxLength(onlineUrl, 2048, "onlineUrl");
+  }
+
+  private static void requireText(String value, int maxLength, String field) {
+    if (value == null || value.isBlank()) {
+      throw new EventException(EventErrorCode.INVALID_EVENT_DETAILS, field + " required");
+    }
+    requireMaxLength(value, maxLength, field);
+  }
+
+  private static void requireMaxLength(String value, int maxLength, String field) {
+    if (value != null && value.length() > maxLength) {
+      throw new EventException(EventErrorCode.INVALID_EVENT_DETAILS, field + " too long");
     }
   }
 }

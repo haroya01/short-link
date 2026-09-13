@@ -2,6 +2,7 @@ package com.example.short_link.link.classifier.application.helper;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Locale;
 
 public final class ReferrerNormalizer {
 
@@ -20,7 +21,7 @@ public final class ReferrerNormalizer {
         return null;
       }
       String path = uri.getRawPath();
-      String result = uri.getScheme() + "://" + host.toLowerCase();
+      String result = uri.getScheme() + "://" + host.toLowerCase(Locale.ROOT);
       if (path != null && !path.isEmpty() && !path.equals("/")) {
         result += path;
       }
@@ -36,7 +37,7 @@ public final class ReferrerNormalizer {
     }
     try {
       String host = new URI(referrer.trim()).getHost();
-      return host == null ? null : host.toLowerCase();
+      return host == null ? null : host.toLowerCase(Locale.ROOT);
     } catch (URISyntaxException e) {
       return null;
     }

@@ -3,6 +3,7 @@ package com.example.short_link.event.application.helper;
 import com.example.short_link.event.domain.ContactField;
 import com.example.short_link.event.exception.EventErrorCode;
 import com.example.short_link.event.exception.EventException;
+import java.util.Locale;
 import java.util.regex.Pattern;
 
 /** 연락처 정규화 + 필드 타입별 검증. UNIQUE(event_id, contact) 중복 판정의 기준값을 만든다. */
@@ -12,7 +13,6 @@ public final class EventContacts {
   private static final Pattern PHONE = Pattern.compile("^\\+?[0-9][0-9 .-]{5,18}[0-9]$");
   private static final Pattern KAKAO = Pattern.compile("^[A-Za-z0-9._-]{2,30}$");
   private static final Pattern LINE = Pattern.compile("^[A-Za-z0-9._-]{2,30}$");
-  // 인스타 핸들 — 붙여넣기 습관의 앞 @ 는 정규화에서 벗긴다.
   private static final Pattern INSTAGRAM = Pattern.compile("^@?[A-Za-z0-9._]{1,30}$");
 
   private EventContacts() {}
@@ -34,10 +34,10 @@ public final class EventContacts {
       throw new EventException(EventErrorCode.INVALID_CONTACT, field);
     }
     return switch (field) {
-      case EMAIL -> value.toLowerCase();
+      case EMAIL -> value.toLowerCase(Locale.ROOT);
       case PHONE -> value.replaceAll("[\\s.-]", "");
       case KAKAO, LINE -> value;
-      case INSTAGRAM -> value.replaceFirst("^@", "").toLowerCase();
+      case INSTAGRAM -> value.replaceFirst("^@", "").toLowerCase(Locale.ROOT);
     };
   }
 }

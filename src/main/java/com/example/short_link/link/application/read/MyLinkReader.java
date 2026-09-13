@@ -13,11 +13,9 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 목록과 수정 응답에 필요한 실제 클릭 수, 태그, 최근 7일 통계를 일괄 조회한다. */
 @Component
 public class MyLinkReader {
 
@@ -26,15 +24,7 @@ public class MyLinkReader {
   private final LinkTagLookup linkTags;
   private final Clock clock;
 
-  @Autowired
   public MyLinkReader(
-      ClickTotalsReadRepository clickTotals,
-      ClickTimeReadRepository clickTime,
-      LinkTagLookup linkTags) {
-    this(clickTotals, clickTime, linkTags, Clock.systemUTC());
-  }
-
-  MyLinkReader(
       ClickTotalsReadRepository clickTotals,
       ClickTimeReadRepository clickTime,
       LinkTagLookup linkTags,

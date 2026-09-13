@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Product usage, activity rankings, retention, and conversion analytics. */
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
@@ -65,21 +64,11 @@ public class AdminAnalyticsController {
     return analyticsService.activeUsers(period);
   }
 
-  /**
-   * Cross-author blog health — lifetime post / read totals, authors active in the last 30 days, the
-   * unresolved-report backlog, and the most-read posts. 5-minute cached like the other admin
-   * aggregates.
-   */
   @GetMapping("/blog/metrics")
   public BlogAdminMetrics blogMetrics() {
     return blogMetricsService.metrics();
   }
 
-  /**
-   * signup → first link → first click → first webhook user-count funnel for the requested signup
-   * window. Conversion ratios surface where the pipeline narrows — onboarding (signup→link),
-   * distribution (link→click), or retention (click→webhook).
-   */
   @GetMapping("/funnel")
   public AdminFunnelService.Funnel funnel(
       @RequestParam(name = "window", required = false) String window) {

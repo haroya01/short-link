@@ -8,9 +8,8 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 /**
- * S3 SDK beans for {@link S3ObjectStorage}. Always create them — the wrapper falls back to
- * unconfigured (via {@link S3StorageProperties#isConfigured()}) when bucket is blank, so callers
- * can degrade gracefully without missing beans breaking startup.
+ * Create beans even without a bucket; {@link S3StorageProperties#isConfigured()} lets callers
+ * handle unavailable storage without breaking startup.
  */
 @Configuration
 public class S3StorageConfig {

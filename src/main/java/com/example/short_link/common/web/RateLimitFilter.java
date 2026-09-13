@@ -20,14 +20,10 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
   static final String METRIC_NAME = "rate_limit.exceeded";
 
-  // Sensitive auth endpoints get a tighter per-IP bucket on top of the global limit. Brute-force
-  // against a 6-digit 2FA OTP would otherwise sit comfortably under the global anonymous cap
-  // (100/min) — that's too generous when the endpoint's only defense is the limit itself.
+  // Auth endpoints need stricter per-IP limits to resist brute-forcing six-digit 2FA codes.
   private record EndpointRule(String method, String path, long perMinute) {}
 
-  // dev-login 은 의도적 제외 — DevAuthController 자체가 dev profile 한정이라 prod 노출 없음.
-  // 테스트 fixture 가 dev-login 을 호출해 user 를 만드는 경로가 광범위해 endpoint rate 룰이
-  // 오히려 false-positive 만 만든다.
+  // dev-login은 dev profile에만 노출되므로 테스트 계정 생성에 별도 인증 제한을 적용하지 않는다.
   private static final List<EndpointRule> ENDPOINT_RULES =
       List.of(
           new EndpointRule("POST", "/api/v1/auth/2fa/verify", 5),

@@ -15,10 +15,8 @@ public interface JpaPostLikeRepository extends JpaRepository<PostLikeEntity, Lon
 
   long countByPostId(Long postId);
 
-  // MySQL INSERT IGNORE: the (post_id, user_id) unique key turns a duplicate like into a no-op
-  // (0 rows) instead of a constraint violation, so the like flow stays idempotent without catching
-  // an exception inside the transaction. created_at is set here because the native insert bypasses
-  // the @CreationTimestamp callback.
+  // INSERT IGNORE avoids duplicate exceptions. Native inserts bypass @CreationTimestamp,
+  // so created_at is set explicitly.
   @Modifying
   @Query(
       value =

@@ -12,11 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Trims the audit_log table to a sliding retention window. The table grows with every privileged
- * action so we drop rows older than {@code retention-days} on a daily cadence; this is the only
- * cleanup path — everything else stays append-only.
- */
+/** Deletes rows beyond the retention window; all other audit-log paths are append-only. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

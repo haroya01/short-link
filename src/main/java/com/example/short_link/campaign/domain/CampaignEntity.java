@@ -23,6 +23,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class CampaignEntity extends BaseTimeEntity {
 
+  private static final int NAME_MAX_LENGTH = 255;
+
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
@@ -53,10 +55,7 @@ public class CampaignEntity extends BaseTimeEntity {
   @Column(name = "post_end_destination_url", length = 2048)
   private String postEndDestinationUrl;
 
-  /**
-   * postEndAction=EXPIRE 일 때 batch link 의 만료 페이지에 박힐 메시지. KEEP/REDIRECT 일 때는 저장만 되고 link 에는
-   * propagate 되지 않는다 — UI 가 action 을 EXPIRE 로 바꿨다가 다시 돌릴 때 메시지가 사라지지 않도록.
-   */
+  /** EXPIRE에서만 링크에 적용한다. 다른 정책에서도 보관해 EXPIRE로 돌아올 때 재사용한다. */
   @Column(name = "post_end_message", length = 500)
   private String postEndMessage;
 
@@ -75,6 +74,7 @@ public class CampaignEntity extends BaseTimeEntity {
       CampaignPostEndAction postEndAction,
       String postEndDestinationUrl,
       String postEndMessage) {
+    validateName(name);
     validatePolicy(startsAt, endsAt, postEndAction, postEndDestinationUrl);
     this.ownerId = ownerId;
     this.name = name;
@@ -90,14 +90,12 @@ public class CampaignEntity extends BaseTimeEntity {
     return this.ownerId != null && this.ownerId.equals(userId);
   }
 
-  /** startsAt 도래 → DRAFT 에서 ACTIVE 로. ENDED/ARCHIVED 는 영향 없음. */
   public void activateIfStarted(Instant now) {
     if (status == CampaignStatus.DRAFT && !startsAt.isAfter(now)) {
       this.status = CampaignStatus.ACTIVE;
     }
   }
 
-  /** 종료 도달 또는 수동 종료. 멱등 — 이미 ENDED/ARCHIVED 면 변경 없음. */
   public void markEnded(Instant now) {
     if (status == CampaignStatus.ENDED || status == CampaignStatus.ARCHIVED) {
       return;
@@ -138,6 +136,32 @@ public class CampaignEntity extends BaseTimeEntity {
       String postEndMessage) {
     requireNotArchived();
     validatePolicy(startsAt, endsAt, postEndAction, postEndDestinationUrl);
+    applyPolicy(
+        endsAt, defaultDestinationUrl, postEndAction, postEndDestinationUrl, postEndMessage);
+  }
+
+  /** 검증 실패 시 이름만 바뀐 상태가 남지 않도록 모든 검증을 변경 전에 마친다. */
+  public void updateDetails(
+      String name,
+      Instant endsAt,
+      String defaultDestinationUrl,
+      CampaignPostEndAction postEndAction,
+      String postEndDestinationUrl,
+      String postEndMessage) {
+    requireNotArchived();
+    validateName(name);
+    validatePolicy(startsAt, endsAt, postEndAction, postEndDestinationUrl);
+    this.name = name;
+    applyPolicy(
+        endsAt, defaultDestinationUrl, postEndAction, postEndDestinationUrl, postEndMessage);
+  }
+
+  private void applyPolicy(
+      Instant endsAt,
+      String defaultDestinationUrl,
+      CampaignPostEndAction postEndAction,
+      String postEndDestinationUrl,
+      String postEndMessage) {
     this.endsAt = endsAt;
     this.defaultDestinationUrl = defaultDestinationUrl;
     this.postEndAction = postEndAction == null ? CampaignPostEndAction.KEEP : postEndAction;
@@ -146,7 +170,15 @@ public class CampaignEntity extends BaseTimeEntity {
   }
 
   public void rename(String name) {
+    requireNotArchived();
+    validateName(name);
     this.name = name;
+  }
+
+  private static void validateName(String name) {
+    if (name == null || name.isBlank() || name.length() > NAME_MAX_LENGTH) {
+      throw new CampaignException(CampaignErrorCode.INVALID_CAMPAIGN_NAME);
+    }
   }
 
   private void requireNotArchived() {
@@ -160,7 +192,7 @@ public class CampaignEntity extends BaseTimeEntity {
       Instant endsAt,
       CampaignPostEndAction postEndAction,
       String postEndDestinationUrl) {
-    if (!endsAt.isAfter(startsAt)) {
+    if (startsAt == null || endsAt == null || !endsAt.isAfter(startsAt)) {
       throw new CampaignException(CampaignErrorCode.INVALID_CAMPAIGN_PERIOD);
     }
     if (postEndAction == CampaignPostEndAction.REDIRECT

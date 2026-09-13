@@ -38,7 +38,7 @@ class SchedulePostUseCaseTest {
   void schedulesDraft() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     Instant when = Instant.now().plus(2, ChronoUnit.HOURS);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     PostView result = useCase.execute(new SchedulePostCommand(7L, 42L, when));
@@ -51,7 +51,7 @@ class SchedulePostUseCaseTest {
   void rejectsScheduleInPast() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     Instant past = Instant.now().minus(1, ChronoUnit.MINUTES);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
 
     assertThatThrownBy(() -> useCase.execute(new SchedulePostCommand(7L, 42L, past)))
         .isInstanceOf(PostException.class)
@@ -64,7 +64,7 @@ class SchedulePostUseCaseTest {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     post.publish();
     Instant future = Instant.now().plus(1, ChronoUnit.HOURS);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
 
     assertThatThrownBy(() -> useCase.execute(new SchedulePostCommand(7L, 42L, future)))
         .isInstanceOf(PostException.class)

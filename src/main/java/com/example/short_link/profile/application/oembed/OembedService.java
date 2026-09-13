@@ -26,11 +26,8 @@ public class OembedService {
   }
 
   /**
-   * Returns oembed metadata for a whitelisted provider URL. Throws {@link ProfileException} when
-   * the host isn't a registered provider — the controller maps that to 422 via {@code
-   * ProfileExceptionHandler}. Cached 24h per input URL; provider 4xx/5xx are swallowed into an
-   * empty response so the frontend can render the bare URL as a fallback without surfacing a
-   * transient outage.
+   * Unknown provider hosts produce HTTP 422. Provider failures return an empty result for bare-URL
+   * fallback; results are cached per URL for 24 hours.
    */
   @Cacheable(value = CACHE, key = "#url")
   public OembedMetadata fetch(String url) {

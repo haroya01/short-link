@@ -15,9 +15,15 @@ public interface PostRepository {
 
   Optional<PostEntity> findById(Long id);
 
+  /** Serializes lifecycle decisions for a post until the caller's transaction completes. */
+  Optional<PostEntity> findByIdForUpdate(Long id);
+
   List<PostEntity> findAllByIdIn(Collection<Long> ids);
 
   Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
+
+  /** 조회수 변경에 사용할 최신 글을 배타적으로 잠근다. */
+  Optional<PostEntity> findByUserIdAndSlugForUpdate(Long userId, String slug);
 
   /** Resolves a post by its share token (any status), for the unauthenticated preview read. */
   Optional<PostEntity> findByPreviewToken(String previewToken);
@@ -41,47 +47,39 @@ public interface PostRepository {
 
   List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
-  /**
-   * Author's posts that have been public (PUBLISHED/UNPUBLISHED), paged + sorted for the analytics
-   * per-post table (infinite scroll).
-   */
+  /** 분석 대상은 공개 이력이 있는 PUBLISHED/UNPUBLISHED 글이다. */
   List<PostEntity> findUserAnalyticsPosts(
       Long userId, int page, int size, PostPerformanceSort sort);
 
   long countUserAnalyticsPosts(Long userId);
 
-  /** SCHEDULED posts whose scheduledAt has arrived (<= now) — the auto-publish job's work list. */
-  List<PostEntity> findScheduledDue(Instant now);
+  /** Includes {@code scheduledAt <= now}; the work list may become stale before publication. */
+  List<Long> findScheduledDueIds(Instant now);
 
   List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
 
   /**
-   * All member posts across many series in one query — the batch form of {@link
-   * #findAllBySeriesIdOrderBySeriesOrderAsc} for the series-analytics list (group by seriesId in
-   * memory). Series order is preserved within each series.
+   * Locks existing members and requested posts together, in post-id order, before membership edits.
    */
+  List<PostEntity> findSeriesMembersAndRequestedForUpdate(
+      Long seriesId, Collection<Long> requestedIds);
+
+  /** Locks an author's currently published posts in id order before replacing the pinned set. */
+  List<PostEntity> findPublishedByUserIdForUpdate(Long userId);
+
   List<PostEntity> findAllBySeriesIdInOrderBySeriesOrderAsc(Collection<Long> seriesIds);
 
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 
-  /**
-   * Global public feed (all authors), newest first. 0-based page. {@code lang} (null/blank = all)
-   * filters to one post language, backing the feed's language chips.
-   */
+  /** 발행 최신순. page는 0부터, lang의 null·공백은 전체 언어다. */
   List<PostEntity> findPublishedRecent(String lang, int page, int size);
 
-  /**
-   * Global public feed ranked by views inside a recent window (recent traction), newest as tiebreak
-   * — the honest "trending" sort. Posts with no recent views fall back to recency so the feed stays
-   * full. Distinct from posts.view_count, the lifetime counter shown on cards. {@code lang}
-   * (null/blank = all) filters to one post language.
-   */
+  /** 최근 구간 조회수 내림차순, 동률은 발행 최신순이다. 누적 조회수는 사용하지 않는다. 최근 조회가 없는 글도 포함하며 lang의 null·공백은 전체 언어다. */
   List<PostEntity> findPublishedTrending(String lang, int page, int size);
 
   long countPublished(String lang);
 
-  /** Count of an author's PUBLISHED posts — backs the public profile's blog entry-point flag. */
   long countPublishedByUserId(Long userId);
 
   /** Published posts carrying a tag (case-insensitive), newest first. */
@@ -89,11 +87,7 @@ public interface PostRepository {
 
   long countPublishedByTag(String tag);
 
-  /**
-   * Published posts matching free text via FULLTEXT(ngram) over the derived search text (title +
-   * excerpt + tags + body) OR the author handle, ranked by relevance (best match first) — the
-   * default search sort. {@code lang} (null/blank = all) filters to one post language.
-   */
+  /** 본문·메타데이터 또는 작성자 핸들을 검색해 관련성순으로 반환한다. lang의 null·공백은 전체 언어다. */
   List<PostEntity> searchPublishedByRelevance(String query, String lang, int page, int size);
 
   /** Same match as {@link #searchPublishedByRelevance} but newest first — the recent sort. */
@@ -104,12 +98,7 @@ public interface PostRepository {
 
   long countSearchPublished(String query, String lang);
 
-  /**
-   * Published posts by any of the given authors OR in any of the given series OR carrying any of
-   * the given (lower-cased) tags, newest first — the "following" feed merging the three follow
-   * signals (작가·시리즈·주제). Pass non-empty collections (use a sentinel that matches nothing when a
-   * side is empty).
-   */
+  /** 작가·시리즈·소문자 태그 중 하나라도 일치하는 공개 글을 최신순으로 반환한다. */
   List<PostEntity> findPublishedByAuthorsSeriesOrTags(
       Collection<Long> authorIds,
       Collection<Long> seriesIds,
@@ -120,27 +109,16 @@ public interface PostRepository {
   long countPublishedByAuthorsSeriesOrTags(
       Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags);
 
-  /**
-   * "For You" candidates — recent published posts carrying any of the reader's interest tags
-   * (lower-cased), excluding their own posts and a set of already-read post ids. Newest first. Pass
-   * non-empty {@code excludeIds} (use a sentinel that matches nothing when there are no reads yet).
-   */
+  /** 관심 태그가 있는 공개 글 중 본인 글과 읽은 글을 제외하고 최신순으로 반환한다. 태그는 소문자로 전달한다. */
   List<PostEntity> findForYouCandidates(
       Long userId, Collection<String> tags, Collection<Long> excludeIds, int page, int size);
 
   long countForYouCandidates(Long userId, Collection<String> tags, Collection<Long> excludeIds);
 
-  /** Most-used tags across published posts, most popular first — the 주제 index. */
   List<TagCount> findPopularTags(int limit);
 
-  /**
-   * [authorId, publishedPostCount, totalViews] ranked for the discovery rail, top authors first.
-   */
   List<AuthorPostStats> findTopAuthorStats(int limit);
 
-  /**
-   * Series with at least {@code minPosts} published members, most recently active first — backs the
-   * cross-author series discovery surface (the feed's series cards).
-   */
+  /** 발행 글이 minPosts개 이상인 시리즈를 최근 활동순으로 반환한다. */
   List<SeriesActivity> findActiveSeries(int minPosts, int limit);
 }

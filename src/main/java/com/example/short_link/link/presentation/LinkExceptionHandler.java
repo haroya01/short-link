@@ -11,13 +11,6 @@ import org.springframework.http.ProblemDetail;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-/**
- * Single handler for every {@link LinkException}. Status / code come from the exception's {@link
- * LinkErrorCode}; response-side metadata is set by the throw site via {@link
- * LinkException#with(String, Object)} and surfaced here as ProblemDetail properties.
- * SHORT_CODE_EXHAUSTED is logged at error level because it signals an exhausted code space, not a
- * user error.
- */
 @RestControllerAdvice
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @Slf4j

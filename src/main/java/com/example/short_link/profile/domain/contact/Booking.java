@@ -11,15 +11,9 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * BOOKING block payload — links visitors to an external scheduling/reservation provider (Calendly,
- * Cal.com, 네이버예약, 카카오 톡채널, Microsoft Bookings, Google Calendar appointment, etc.).
- *
- * <p>The host whitelist is the SSRF / phishing guard: only allow-listed providers are accepted, so
- * a malicious user can't dress up an arbitrary URL as "예약하기". Adding a provider is intentional —
- * append a {@link Provider} entry, don't widen the host match.
- *
- * <p>JSON shape: {@code {url, title?, description?, ctaLabel?}}. The provider id is derived from
- * the URL host at render time so we don't have to trust client-supplied "provider" fields.
+ * Only allow-listed booking hosts are accepted to keep arbitrary phishing URLs out of reservation
+ * CTAs. Derive provider identity from the URL host, not client input; add providers through {@link
+ * Provider} entries.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Booking(String url, String title, String description, String ctaLabel) {
@@ -70,10 +64,6 @@ public record Booking(String url, String title, String description, String ctaLa
     return t.length() <= max ? t : t.substring(0, max);
   }
 
-  /**
-   * Whitelisted booking providers. Add a new provider by appending an entry — never by widening
-   * host matching, since the host check is what keeps phishing URLs out of "예약하기" CTAs.
-   */
   public enum Provider {
     CALENDLY("calendly", Set.of("calendly.com", "www.calendly.com")),
     CAL_COM("cal_com", Set.of("cal.com", "app.cal.com")),

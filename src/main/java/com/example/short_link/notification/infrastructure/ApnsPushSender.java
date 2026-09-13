@@ -19,9 +19,8 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * APNs HTTP/2 직발송(외부 SDK 없음). 인증은 .p8 키로 서명한 ES256 JWT — 50분 캐시(애플 권장 20~60분 창). 발송은 작은 전용 풀에서
- * fire-and-forget으로 수행하고 전송 실패는 로그로 남긴다. 기기 토큰 조회·payload 직렬화는 호출 스레드에서 실행되며 실패가 호출자에게 전파된다.
- * 410(Unregistered)·BadDeviceToken 은 그 자리에서 토큰 폐기.
+ * 전송은 전용 풀에서 실행하며 실패는 로그로 남긴다. 기기 조회·직렬화 실패는 호출자에게 전파된다. 410(Unregistered)과 BadDeviceToken은 기기 토큰을
+ * 폐기한다.
  */
 @Component
 @Slf4j
@@ -124,8 +123,8 @@ public class ApnsPushSender implements PushSender {
   }
 
   /**
-   * aps.alert/sound 는 그대로 두고(구버전 앱 호환) 라우팅 힌트만 얹는다: type·shortCode 는 aps 형제 최상위 키로, shortCode 가 있는
-   * 알림만 category="LINK_STATS" 를 달아 앱이 "통계 보기" 액션을 붙인다. 값이 없는 키는 통째로 생략한다.
+   * 구버전 앱 호환을 위해 aps.alert/sound는 유지한다. type·shortCode는 최상위 키이며 값이 없으면 생략한다. shortCode가 있는 알림에만
+   * LINK_STATS category를 붙인다.
    */
   String payloadJson(PushMessage message) {
     var alert = new java.util.LinkedHashMap<String, Object>();

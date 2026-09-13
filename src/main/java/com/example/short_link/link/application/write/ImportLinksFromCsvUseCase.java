@@ -15,15 +15,14 @@ import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 /**
- * Imports a CSV of URLs to be shortened in one go. Header row is optional. Recognized columns
- * (case-insensitive): {@code url} (required), {@code custom_code}, {@code expires_at} (ISO-8601).
- * Rows that fail validation or shortening are returned with an error reason; the rest of the batch
- * still goes through.
+ * 헤더는 선택이며 url(필수), custom_code, expires_at(ISO-8601)을 대소문자 구분 없이 인식한다. 실패한 행은 오류로 반환하고 나머지 행은 계속
+ * 처리한다.
  */
 @Slf4j
 @Service
@@ -116,17 +115,14 @@ public class ImportLinksFromCsvUseCase {
     return line.split(",", -1);
   }
 
-  /**
-   * Maps column positions. If the first row looks like a header, we use the named columns;
-   * otherwise we assume column order: url, custom_code, expires_at.
-   */
+  /** 헤더가 없으면 url, custom_code, expires_at 순서로 읽는다. */
   private record Header(int urlIdx, int customCodeIdx, int expiresAtIdx, boolean hasHeader) {
 
     static Header detect(String[] firstRow) {
       int u = -1, c = -1, e = -1;
       boolean looksLikeHeader = false;
       for (int i = 0; i < firstRow.length; i++) {
-        String name = firstRow[i].trim().toLowerCase();
+        String name = firstRow[i].trim().toLowerCase(Locale.ROOT);
         switch (name) {
           case "url" -> {
             u = i;

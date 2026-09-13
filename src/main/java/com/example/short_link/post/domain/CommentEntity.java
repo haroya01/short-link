@@ -12,12 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * A comment on a published post. One level of threading: a reply sets {@code parentId} to a
- * top-level comment. Anyone can read; only authenticated users create. Deletion is the comment
- * author or the post owner (physical), or an admin moderation take-down (soft — {@code deletedAt}
- * hides it from public reads while keeping an audit/recovery trail).
- */
+/** 답글은 최상위 댓글만 참조한다. 작성자·글 소유자의 삭제는 물리 삭제, 관리자 삭제는 감사·복구를 위해 deletedAt으로 숨긴다. */
 @Entity
 @Table(name = "comment")
 @Getter
@@ -43,7 +38,6 @@ public class CommentEntity extends BaseTimeEntity {
   @Column(nullable = false, length = MAX_BODY)
   private String body;
 
-  /** 관리자 모더레이션 soft 삭제 시각. null 이면 살아있는 댓글. */
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
@@ -62,11 +56,14 @@ public class CommentEntity extends BaseTimeEntity {
     return parentId != null;
   }
 
+  public boolean acceptsReplyOn(Long postId) {
+    return this.postId.equals(postId) && !isReply() && !isDeleted();
+  }
+
   public boolean isDeleted() {
     return deletedAt != null;
   }
 
-  /** 관리자 모더레이션 soft 삭제 — 공개 조회에서 숨긴다. 이미 삭제됐으면 무연산. */
   public void softDelete() {
     if (deletedAt == null) {
       this.deletedAt = Instant.now();

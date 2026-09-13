@@ -1,12 +1,8 @@
 package com.example.short_link.common.geoip;
 
 /**
- * Thin port for IP geo + ASN lookups. Adapter (MaxMind) is fully hidden — application sees only
- * domain records.
- *
- * <p>Adapter MUST never throw on lookup failure: a missing or malformed ip is a normal click-stream
- * event and the click pipeline can't fail. Return {@link GeoLocation#empty()} / {@link
- * AsnRawInfo#empty()} instead.
+ * Lookup failures must never throw into the click pipeline. Missing or malformed IPs return {@link
+ * GeoLocation#empty()} or {@link AsnRawInfo#empty()}.
  */
 public interface GeoLookup {
 

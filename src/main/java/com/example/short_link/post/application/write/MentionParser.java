@@ -7,10 +7,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * Extracts {@code @username} handles from a comment body. Matches the username grammar ({@code
- * [a-z0-9][a-z0-9_]{2,15}}) and the lookbehind keeps it from firing inside an email ({@code
- * foo@bar} — the {@code @} is preceded by a word char). Returns distinct handles in first- seen
- * order, capped so a comment stuffed with mentions can't fan out without bound.
+ * Ignores handles inside email addresses. Returns distinct handles in first-seen order, capped to
+ * prevent unbounded notification fan-out.
  */
 final class MentionParser {
 

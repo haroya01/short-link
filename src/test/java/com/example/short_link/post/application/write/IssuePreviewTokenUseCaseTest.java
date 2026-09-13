@@ -25,7 +25,7 @@ class IssuePreviewTokenUseCaseTest {
   @Test
   void issueGeneratesAndPersistsTokenForOwnedPost() {
     PostEntity post = new PostEntity(7L, "p", "P", "ko"); // no token yet
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     String token = useCase().issue(7L, 42L);
@@ -39,7 +39,7 @@ class IssuePreviewTokenUseCaseTest {
   void issueIsIdempotentReturningTheExistingToken() {
     PostEntity post = new PostEntity(7L, "p", "P", "ko");
     post.ensurePreviewToken("existing-token");
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     String token = useCase().issue(7L, 42L);

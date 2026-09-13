@@ -8,20 +8,12 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Counts how many users registered within the requested window have reached each of the four
- * pipeline milestones — signed up → created their first link → received a first click on any link →
- * wired a webhook on any link. Conversion ratios on top let the operator see at a glance where the
- * funnel narrows (e.g. lots of accounts but few people creating links → onboarding problem; many
- * links but no clicks → distribution problem).
- *
- * <p>All counts are point-in-time: a user who signed up two days ago and creates their first
- * webhook today is counted in the {@code withWebhook} bucket for the 7-day window. Conversions are
- * derived in-process, not pinned to the user's signup-time progress.
+ * The window selects users by signup time; milestone counts reflect their current state, including
+ * links, clicks, and webhooks created after signup.
  */
 @Service
 public class AdminFunnelService {
@@ -30,12 +22,7 @@ public class AdminFunnelService {
 
   private final Clock clock;
 
-  @Autowired
-  public AdminFunnelService() {
-    this(Clock.systemUTC());
-  }
-
-  AdminFunnelService(Clock clock) {
+  public AdminFunnelService(Clock clock) {
     this.clock = clock;
   }
 

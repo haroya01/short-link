@@ -19,12 +19,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * One blog notification webhook owned by an author. Fires when a reader likes/comments/follows/
- * subscribes — scoped to the author (all their posts), not to a single post. The interaction set
- * the hook cares about is stored as a CSV of {@link BlogInteractionType} names so the row stays a
- * flat column without a join table. Self-disables after repeated failures, like the link webhook.
- */
+/** 개별 글이 아닌 작성자의 모든 글에 적용되는 알림 훅이다. 반복 실패 시 자동 비활성화한다. */
 @Entity
 @Table(name = "blog_webhook")
 @Getter
@@ -90,7 +85,6 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
     this.events = encode(events);
   }
 
-  /** The interactions this hook subscribes to, decoded from the stored CSV. */
   public EnumSet<BlogInteractionType> events() {
     EnumSet<BlogInteractionType> set = EnumSet.noneOf(BlogInteractionType.class);
     if (events == null || events.isBlank()) {
@@ -120,13 +114,12 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
   }
 
   public void update(String name, Set<BlogInteractionType> events, Boolean enabled) {
+    String updatedEvents = events != null && !events.isEmpty() ? encode(events) : this.events;
     if (name != null) {
       String trimmed = name.trim();
       this.name = trimmed.isEmpty() ? null : trimmed;
     }
-    if (events != null && !events.isEmpty()) {
-      this.events = encode(events);
-    }
+    this.events = updatedEvents;
     if (enabled != null) {
       if (enabled) {
         enable();
@@ -171,6 +164,9 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
       return Arrays.stream(BlogInteractionType.values())
           .map(Enum::name)
           .collect(Collectors.joining(","));
+    }
+    if (events.stream().anyMatch(java.util.Objects::isNull)) {
+      throw new IllegalArgumentException("events must not contain null");
     }
     return events.stream().map(Enum::name).collect(Collectors.joining(","));
   }

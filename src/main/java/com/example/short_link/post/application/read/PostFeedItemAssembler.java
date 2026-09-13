@@ -10,11 +10,7 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Hydrates posts into {@link PublicFeedItem} cards: joins each post's author in one batch (no
- * per-post N+1) and drops posts whose author is deleted. The input order is preserved, so callers
- * that already ordered their posts (recent feed, a reading list, liked-first) keep that order.
- */
+/** Batch-loads authors and drops deleted-author posts, preserving the input order. */
 @Component
 @RequiredArgsConstructor
 public class PostFeedItemAssembler {

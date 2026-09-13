@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Add / remove a post from the caller's reading list. Idempotent. */
+/** Bookmark and unbookmark operations are idempotent. */
 @Service
 @RequiredArgsConstructor
 public class BookmarkPostUseCase {
@@ -20,8 +20,7 @@ public class BookmarkPostUseCase {
   @Transactional
   public PostBookmarkStatus bookmark(Long userId, Long postId) {
     requirePost(postId);
-    // INSERT IGNORE: idempotent + race-safe — a concurrent duplicate becomes a no-op instead of a
-    // unique-key violation.
+    // INSERT IGNORE makes concurrent duplicate bookmarks a no-op without failing the transaction.
     postBookmarkRepository.insertIgnore(postId, userId);
     return new PostBookmarkStatus(true);
   }

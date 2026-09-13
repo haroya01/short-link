@@ -18,21 +18,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The "For You" feed — a personalized discovery feed ranked by tag affinity. Interest tags come
- * from what the reader explicitly follows plus the tags of posts they've actually read and liked;
- * candidates are recent published posts in those tags that they haven't read yet (and aren't their
- * own). A reader with no signal yet falls back to trending until we know them. Each card is
- * annotated with the interest tag it matched (왜 추천).
+ * Discovers unread posts from followed tags and recent reads/likes. Readers with no interest signal
+ * fall back to trending.
  */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ForYouQueryService {
 
-  /** Recent reads kept out of the feed (so it doesn't re-surface what you just read). */
+  /** Recent reads excluded from recommendations. */
   private static final int EXCLUDE_CAP = 200;
 
-  /** Recent reads/likes mined for interest tags. */
+  /** Recent reads and likes used to derive interest tags. */
   private static final int SIGNAL_CAP = 40;
 
   private static final int MAX_INTEREST_TAGS = 12;
@@ -63,7 +60,7 @@ public class ForYouQueryService {
 
     List<String> interest = deriveInterestTags(prefs.followed(), recentReadIds, likedIds, hidden);
     if (interest.isEmpty()) {
-      // Cold start — no signal yet. Trending is the honest default until we know the reader.
+      // No interest signal yet; use trending for the cold start.
       List<PostEntity> trending = postRepository.findPublishedTrending(null, page, size);
       boolean hasNext = (long) (page + 1) * size < postRepository.countPublished(null);
       return new PublicFeedView(feedItemAssembler.assemble(trending), page, size, hasNext);
@@ -89,7 +86,7 @@ public class ForYouQueryService {
     return new PublicFeedView(items, page, size, hasNext);
   }
 
-  /** followed tags (weighted) ∪ frequent tags from recent reads/likes, minus hidden — top N. */
+  /** Ranks followed and recently read/liked tags by weight, excluding hidden tags. */
   private List<String> deriveInterestTags(
       List<String> followed, List<Long> readIds, List<Long> likedIds, Set<String> hidden) {
     Map<String, Integer> freq = new HashMap<>();

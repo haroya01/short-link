@@ -16,7 +16,6 @@ public interface RequestMetricJpaRepository extends JpaRepository<RequestMetricE
   @Query("UPDATE RequestMetricEntity m SET m.userId = null WHERE m.userId = :userId")
   int anonymizeUser(@Param("userId") Long userId);
 
-  /** Sliding retention window — request logs are operational telemetry, not a permanent record. */
   @Modifying
   @Transactional
   @Query("DELETE FROM RequestMetricEntity m WHERE m.occurredAt < :cutoff")

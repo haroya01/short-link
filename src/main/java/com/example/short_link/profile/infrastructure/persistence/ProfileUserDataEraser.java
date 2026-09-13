@@ -6,9 +6,8 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
 /**
- * Purges the profile slice's user-owned rows on account hard delete. None of these tables carry a
- * users FK (so they never block the delete), but leaving them behind would break the deletion
- * promise: blocks and leads are the user's page content and audience data.
+ * These user-owned tables lack users foreign keys and must be cleared explicitly on account
+ * deletion.
  */
 @Repository
 class ProfileUserDataEraser implements UserDataEraser {

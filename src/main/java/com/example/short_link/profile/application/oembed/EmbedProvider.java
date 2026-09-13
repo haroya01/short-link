@@ -7,10 +7,8 @@ import java.util.Optional;
 import java.util.Set;
 
 /**
- * Whitelist of oembed providers we proxy. Acts as the SSRF guard: a user-supplied URL only resolves
- * to a provider if its host matches one of these entries — anything else (private IPs, arbitrary
- * domains) is rejected before we ever make an outbound call. Add a new provider by appending an
- * enum entry, not by widening the host match.
+ * Only allow-listed provider hosts may trigger outbound requests. Add explicit provider entries
+ * rather than widening host matching.
  */
 public enum EmbedProvider {
   YOUTUBE(

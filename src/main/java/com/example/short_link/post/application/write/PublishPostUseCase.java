@@ -19,10 +19,8 @@ public class PublishPostUseCase {
 
   @Transactional
   public PostView execute(PublishPostCommand cmd) {
-    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
-    // publishedAt is stamped only on the very first publish and preserved across
-    // unpublish/republish
-    // — so a null here is exactly "never been public", which is when followers should be notified.
+    PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
+    // publishedAt은 재발행에도 유지되므로 null일 때만 최초 발행 알림을 보낸다.
     boolean firstPublish = post.getPublishedAt() == null;
     post.publish();
     PostEntity saved = postRepository.save(post);

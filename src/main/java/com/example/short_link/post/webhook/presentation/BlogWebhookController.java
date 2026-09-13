@@ -23,10 +23,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Author-private CRUD for blog notification webhooks — fire on likes/comments/follows/series
- * subscriptions across all of the signed-in author's posts. Scoped to the user, not a single post.
- */
 @RestController
 @RequestMapping("/api/v1/blog/webhooks")
 @RequiredArgsConstructor

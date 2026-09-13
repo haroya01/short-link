@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Public, unauthenticated reply listing for a highlight's flat thread. Authors batch-hydrated. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -28,7 +27,7 @@ public class PostHighlightReplyQueryService {
   private final UserRepository userRepository;
 
   public List<HighlightReplyView> listForHighlight(Long highlightId) {
-    // 다른 공개 read(댓글 등)와 일관되게, 발행 안 된 글(초안·비공개·차단)의 하이라이트 답글은 노출하지 않는다.
+    // 미발행 글의 하이라이트 답글은 공개 목록에 노출하지 않는다.
     Long postId =
         highlightRepository.findById(highlightId).map(PostHighlightEntity::getPostId).orElse(null);
     if (postId == null

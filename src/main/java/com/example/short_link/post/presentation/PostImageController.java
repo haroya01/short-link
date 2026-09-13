@@ -36,7 +36,6 @@ public class PostImageController {
     return postImageService.commitUpload(userId, postId, request.key());
   }
 
-  /** Re-host an external image URL (e.g. pasted from Notion) — server fetches and stores it. */
   @PostMapping("/import")
   public PostImageService.CommitResult importFromUrl(
       @AuthenticationPrincipal Long userId,

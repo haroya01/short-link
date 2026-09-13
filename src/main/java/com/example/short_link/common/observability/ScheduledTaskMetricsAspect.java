@@ -9,16 +9,8 @@ import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
 /**
- * Wraps every {@code @Scheduled} method with a Micrometer {@link Timer} so the admin can see which
- * background jobs are slow / erroring without instrumenting each call site by hand. The task tag is
- * {@code SimpleClassName.methodName} so dashboards read the bare task identity (e.g. {@code
- * OgFetchRetryJob.run}, {@code LinkWebhookDispatcher.flushBatches}) — no package prefix, no FQN
- * noise.
- *
- * <p>Exceptions from the proceeding call are re-thrown unchanged after tagging the timer {@code
- * result=error}; we never swallow a failure for observability's sake. Spring's scheduled-task
- * infrastructure already handles "next firing" decisions, so it sees the same Throwable it would
- * have seen without this aspect.
+ * Tags scheduled timers as {@code SimpleClassName.methodName}. Exceptions are tagged as errors and
+ * rethrown unchanged so Spring retains control of subsequent firings.
  */
 @Slf4j
 @Aspect

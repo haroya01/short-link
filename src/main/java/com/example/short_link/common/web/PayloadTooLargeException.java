@@ -1,8 +1,5 @@
 package com.example.short_link.common.web;
 
-/**
- * Thrown when a request body exceeds its route's byte cap, including when Content-Length is absent.
- */
 public class PayloadTooLargeException extends RuntimeException {
 
   private final long limit;

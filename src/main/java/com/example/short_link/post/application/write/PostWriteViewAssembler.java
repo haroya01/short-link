@@ -6,7 +6,6 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** 쓰기 트랜잭션 안에서 저장 시각과 지연 로딩 데이터를 확정한 뒤 응답을 만든다. */
 @Component
 @RequiredArgsConstructor
 public class PostWriteViewAssembler {

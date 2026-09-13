@@ -17,7 +17,7 @@ public class BackToDraftPostUseCase {
 
   @Transactional
   public PostView execute(BackToDraftPostCommand cmd) {
-    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+    PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     post.backToDraft();
     return writeViews.fromSaved(postRepository.save(post));
   }

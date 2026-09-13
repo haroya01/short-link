@@ -10,7 +10,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 이벤트의 배포 채널별 별칭 단축링크 ("단톡용", "QR용" …). primary 링크도 한 행. */
+/** primary 링크도 별칭 링크와 함께 한 행으로 저장한다. */
 @Entity
 @Table(name = "event_link")
 @Getter

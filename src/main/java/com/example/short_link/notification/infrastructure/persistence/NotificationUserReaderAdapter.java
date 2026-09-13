@@ -10,7 +10,6 @@ import java.util.Objects;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
-/** Reads only push identity and locale; preserves the former user repository's inclusion rules. */
 @Repository
 class NotificationUserReaderAdapter implements NotificationUserReader {
   @PersistenceContext private EntityManager em;

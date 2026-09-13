@@ -5,7 +5,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,8 +38,7 @@ class SetPinnedPostsUseCaseTest {
     PostEntity p1 = published(1L, "a");
     PostEntity p2 = published(2L, "b");
     PostEntity p3 = published(3L, "c");
-    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(7L, PostStatus.PUBLISHED))
-        .thenReturn(List.of(p1, p2, p3));
+    when(postRepository.findPublishedByUserIdForUpdate(7L)).thenReturn(List.of(p1, p2, p3));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(7L, List.of(3L, 1L));
@@ -53,8 +51,7 @@ class SetPinnedPostsUseCaseTest {
   @Test
   void ignoresIdsNotAmongTheAuthorsPublishedPosts() {
     PostEntity p1 = published(1L, "a");
-    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(7L, PostStatus.PUBLISHED))
-        .thenReturn(List.of(p1));
+    when(postRepository.findPublishedByUserIdForUpdate(7L)).thenReturn(List.of(p1));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(7L, List.of(99L)); // not owned / not published
@@ -66,12 +63,23 @@ class SetPinnedPostsUseCaseTest {
   void nullListClearsAllPins() {
     PostEntity p1 = published(1L, "a");
     p1.pinAt(0);
-    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(7L, PostStatus.PUBLISHED))
-        .thenReturn(List.of(p1));
+    when(postRepository.findPublishedByUserIdForUpdate(7L)).thenReturn(List.of(p1));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(7L, null);
 
     assertThat(p1.getPinOrder()).isNull();
+  }
+
+  @Test
+  void duplicateIdsUseTheirFirstRequestedIndex() {
+    PostEntity p1 = published(1L, "a");
+    PostEntity p2 = published(2L, "b");
+    when(postRepository.findPublishedByUserIdForUpdate(7L)).thenReturn(List.of(p1, p2));
+
+    useCase.execute(7L, List.of(2L, 2L, 1L));
+
+    assertThat(p2.getPinOrder()).isEqualTo(0);
+    assertThat(p1.getPinOrder()).isEqualTo(2);
   }
 }
