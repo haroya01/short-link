@@ -10,10 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * "이 문장이 속한 길" — 한 하이라이트를 담은 *공개* 컬렉션/길 목록(미로그인 독자도 본다). A 척추의 발견 고리: 한 문장에서 그것이 엮인 길들로. 비공개·링크공유
- * 컬렉션은 빠진다.
- */
+/** PUBLIC 컬렉션만 노출한다. PRIVATE와 UNLISTED는 제외한다. */
 @RestController
 @RequestMapping("/api/v1/public/highlights")
 @RequiredArgsConstructor

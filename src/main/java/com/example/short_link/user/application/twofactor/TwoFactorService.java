@@ -12,7 +12,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.OptionalLong;
-import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,14 +29,14 @@ public class TwoFactorService {
   private final RecoveryCodes recoveryCodes;
   private final Clock clock;
 
-  public TwoFactorService(
+  TwoFactorService(
       UserRepository userRepository,
       UserTwoFactorRepository repository,
       SecretCipher cipher,
       MeterRegistry meterRegistry,
       TwoFactorProperties twofa,
       RecoveryCodes recoveryCodes,
-      @Qualifier("twoFactorClock") Clock clock) {
+      Clock clock) {
     this.userRepository = userRepository;
     this.repository = repository;
     this.cipher = cipher;

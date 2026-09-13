@@ -11,11 +11,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 /**
- * Markdown ↔ block-model conversion, matching the web editor's {@code markdown-to-blocks.ts} so the
- * native app and the web produce identical block streams for the same markdown. 13 block types
- * round-trip except {@code CTA_REF}, which has no markdown authoring path and is preserved
- * verbatim. The frontend copy remains the reference — when the mapping changes there, mirror it
- * here (and vice versa).
+ * Keep conversion compatible with the web editor's {@code markdown-to-blocks.ts}. CTA_REF has no
+ * markdown authoring path; serialization preserves its payload verbatim.
  */
 @Component
 @RequiredArgsConstructor
@@ -49,7 +46,6 @@ public class MarkdownBlocksConverter {
       case "LIST_BULLET", "LIST_NUMBERED" -> list(content, block.type().equals("LIST_NUMBERED"));
       case "EMBED" -> embed(content);
       case "CODE" -> code(content);
-        // TABLE, CTA_REF, PARAGRAPH 및 알 수 없는 타입은 원문을 유지한다.
       default -> content == null || content.isEmpty() ? null : content;
     };
   }

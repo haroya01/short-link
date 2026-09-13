@@ -9,10 +9,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 public class AsyncConfig {
 
-  /**
-   * Default executor for everything not explicitly routed elsewhere — OG fetch, API key revocation
-   * audit logs, etc. DiscardOldest is fine here because every consumer treats it as best-effort.
-   */
+  /** Default consumers are best-effort, so saturation may discard the oldest queued task. */
   @Bean(name = "taskExecutor")
   public Executor taskExecutor() {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -28,11 +25,8 @@ public class AsyncConfig {
   }
 
   /**
-   * Dedicated pool for outgoing webhook POSTs. Click-rate spikes (e.g., one link goes viral)
-   * previously shared the default pool with OG-fetch / preview scrape, and the DiscardOldest policy
-   * silently dropped click webhooks before they fired. Isolated pool + CallerRunsPolicy on
-   * saturation — the click thread blocks for the HTTP timeout (5s), which is acceptable
-   * backpressure compared to losing events the user explicitly subscribed to.
+   * Isolates webhook delivery from other async work. On saturation, CallerRunsPolicy applies
+   * backpressure to the click thread for up to the HTTP timeout (5s), avoiding dropped deliveries.
    */
   @Bean(name = "webhookExecutor")
   public Executor webhookExecutor() {

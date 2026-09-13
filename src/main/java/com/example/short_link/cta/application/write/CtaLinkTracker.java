@@ -7,14 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * Makes a CTA's target measurable by ensuring it resolves to a kurl short link: an external URL is
- * wrapped into a short link (deduped per user, so editing the same CTA reuses one), an existing
- * kurl link is taken as-is. The returned short code is stored on the CTA and served from the public
- * post, so clicks flow through the redirect and attribute to the post ("이 글이 만든 클릭"). Best-effort:
- * if link creation fails (e.g. the user's link quota is full), tracking is skipped rather than
- * blocking the CTA save.
- */
+/** 추적 링크 생성에 실패해도 CTA 저장은 허용한다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

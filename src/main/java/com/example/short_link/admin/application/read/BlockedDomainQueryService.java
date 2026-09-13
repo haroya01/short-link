@@ -9,11 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Read-side of the operator-managed block list. {@link #isBlocked(String)} is called per
- * link-create so the {@code blocked-domains} cache fronts the domain-name set — write paths evict
- * the cache on block / unblock.
- */
 @Service
 @RequiredArgsConstructor
 public class BlockedDomainQueryService implements BlockedDomainChecker {

@@ -10,10 +10,8 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Base64;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
-/** Signs APNs provider credentials with the configured .p8 key and reuses them for 50 minutes. */
 @Component
 public class ApnsTokenProvider {
 
@@ -26,12 +24,7 @@ public class ApnsTokenProvider {
   private String cachedJwt;
   private Instant jwtIssuedAt = Instant.EPOCH;
 
-  @Autowired
-  public ApnsTokenProvider(ApnsProperties props) {
-    this(props, Clock.systemUTC());
-  }
-
-  ApnsTokenProvider(ApnsProperties props, Clock clock) {
+  public ApnsTokenProvider(ApnsProperties props, Clock clock) {
     this.props = props;
     this.clock = clock;
     this.signingKey = props.configured() ? parseKey(props.privateKey()) : null;

@@ -21,10 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 짧은 글(노트). 읽기는 공개(/public), 쓰기·좋아요는 인증. likedByMe 는 피드에 싣지 않고 배치 상태 조회로 분리한다 — 공개 피드 캐시가 사용자별로
- * 갈라지지 않게(#538 과 동일).
- */
+/** 공개 피드 캐시가 사용자별로 갈라지지 않도록 likedByMe는 인증 배치 조회로 제공한다. */
 @RestController
 @RequiredArgsConstructor
 public class NoteController {

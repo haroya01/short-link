@@ -3,11 +3,7 @@ package com.example.short_link.post.application.read;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * One bookmarked post in the owner's reading list — a full feed card plus the folder it's filed
- * under ({@code folderId == null} = unfiled). Flat (not a nested feed item) so the frontend's
- * {@code SavedPost = PublicFeedItem & { folderId }} shape maps field-for-field.
- */
+/** {@code folderId == null} means unfiled. Fields match the flat SavedPost client shape. */
 public record SavedView(
     long id,
     PublicAuthorView author,

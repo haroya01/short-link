@@ -35,12 +35,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * {@code GET /{shortCode}} entry point. Handles the entry-point-specific bits — preview-crawler
- * branch, custom-domain owner check, password-protected detection — and delegates the post-load
- * check chain to {@link LinkRedirectFlow}. {@link RedirectOutcome} pattern-match then renders the
- * appropriate HTTP shape.
- */
 @RestController
 @RequiredArgsConstructor
 public class RedirectController {
@@ -112,22 +106,17 @@ public class RedirectController {
       }
       throw e;
     }
-    // Custom-domain owner check — keep here, not in the flow, because it's a pre-flight check that
-    // depends on the inbound Host header, not on the post-load decision chain.
+    // Match the inbound Host owner before exposing a link on a custom domain.
     Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
     if (customOwner != null && !customOwner.equals(link.userId())) {
       throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
-    // 크롤러 프리뷰 분기보다 먼저 — 차단된 도메인은 OG 미리보기 카드도 내주지 않는다(#659).
-    // originalUrl 만이 아니라 목적지 변형(variant)까지 본다: 사람 경로는 picked.url() 로 걸러지지만
-    // 크롤러는 지오/AB 컨텍스트가 없어 어떤 변형이든 걸릴 수 있으므로, 하나라도 차단이면 카드를 막는다.
+    // 크롤러는 지오·AB 선택 맥락이 없으므로 활성 목적지 하나라도 차단되면 미리보기도 막는다.
     if (anyDestinationBlocked(link)) {
       meterRegistry.counter("redirect.domain_blocked").increment();
       return LinkHtmlRenderer.domainBlockedPageResponse();
     }
-    // 비밀번호 게이트를 크롤러 분기보다 먼저 — 안 그러면 스푸핑된 크롤러 UA 가 미리보기로
-    // 비밀번호 보호를 우회해 목적지를 통째로 노출한다(캐시 300초로 재배포까지). 보호 링크는
-    // 크롤러에게도 비밀번호 프롬프트만 준다(목적지 없는 페이지).
+    // 비밀번호 검사는 크롤러 분기보다 먼저 해야 스푸핑된 UA가 목적지를 노출하지 못한다.
     if (link.passwordRequired()) {
       return LinkHtmlRenderer.passwordPromptResponse(
           HttpStatus.OK, shortCode, false, turnstile.siteKey());
@@ -144,10 +133,6 @@ public class RedirectController {
             LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)));
   }
 
-  /**
-   * originalUrl + 활성 변형 목적지 중 하나라도 차단 도메인이면 참. 크롤러 미리보기·사람 리다이렉트 진입 전 공통 프리플라이트 — 생성 후 차단된 도메인이 변형
-   * 뒤에 숨어도 카드를 못 받게 한다.
-   */
   private boolean anyDestinationBlocked(CachedLink link) {
     if (blockedDomainChecker.isBlocked(link.originalUrl())) {
       return true;

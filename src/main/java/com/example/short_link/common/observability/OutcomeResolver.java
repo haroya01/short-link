@@ -3,11 +3,8 @@ package com.example.short_link.common.observability;
 import jakarta.servlet.http.HttpServletRequest;
 
 /**
- * Classifies a finished request into a coarse {@code outcome} that's friendlier than a bare HTTP
- * status for ops dashboards. The mapping is intentionally simple — the controller can override by
- * setting the {@link #ATTRIBUTE} request attribute (e.g. RedirectController stamps {@code expired}
- * / {@code blocked} for the 410/451 paths) so we get a domain-aware label without coupling this
- * resolver to every controller's semantics.
+ * Controllers can override status-based outcomes through {@link #ATTRIBUTE} without adding
+ * domain-specific rules here.
  */
 public final class OutcomeResolver {
 

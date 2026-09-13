@@ -4,7 +4,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** Maps verification outcomes to the established operational metric names and result tags. */
 @Component
 @RequiredArgsConstructor
 final class PowMetrics {

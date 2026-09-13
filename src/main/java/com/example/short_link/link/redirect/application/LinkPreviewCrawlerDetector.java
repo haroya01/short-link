@@ -5,9 +5,8 @@ import java.util.Locale;
 import org.springframework.stereotype.Component;
 
 /**
- * Decides whether a request should get OG-tagged HTML instead of a 302. Intentionally separate from
- * {@link UserAgentClassifier}, which classifies for analytics — a given crawler is usually both,
- * but the two lists are not identical.
+ * Preview rendering and analytics bot classification use different crawler lists; keep this
+ * separate from {@link UserAgentClassifier}.
  */
 @Component
 public class LinkPreviewCrawlerDetector {
@@ -37,9 +36,8 @@ public class LinkPreviewCrawlerDetector {
           "googlebot");
 
   /**
-   * Returns the matched crawler token (lowercase) so callers can attach it as a bot name when
-   * persisting the preview hit — yauaa would otherwise drop it as "unknown" since most messenger
-   * crawlers aren't in its analyzer data.
+   * Returns the lowercase token so preview hits retain a bot name even when yauaa does not
+   * recognize the crawler.
    */
   public String crawlerName(String userAgent) {
     if (userAgent == null || userAgent.isBlank()) return null;

@@ -4,12 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Builds the public web URL of a blog post — {@code {frontend}/p/{username}/{slug}}. The single
- * source of truth for that shape on the server side (the client mirror lives in the SPA's postHref
- * helper). The frontend runs next-intl with {@code localePrefix: "always"}, so a locale-less path
- * redirects to the default-locale route; keeping the URL locale-agnostic lets one server value work
- * for every viewer. Returns null when the author has no claimed handle, since the public route is
- * keyed by handle.
+ * Returns a locale-free public post URL; the frontend redirects to its default locale. Returns null
+ * when the author has no handle, which the public route requires.
  */
 @Component
 public class PostPublicUrlBuilder {

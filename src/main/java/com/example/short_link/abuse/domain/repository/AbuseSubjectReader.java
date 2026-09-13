@@ -4,25 +4,16 @@ import com.example.short_link.abuse.domain.AbuseSubjectType;
 import java.util.Collection;
 import java.util.List;
 
-/** 신고 대상의 존재와 관리자 화면에 필요한 현재 스냅샷을 조회한다. */
 public interface AbuseSubjectReader {
-  /**
-   * Snapshots of the POST subjects behind a batch of reports — title / slug / status / author
-   * handle — joined in one query so the moderation queue can enrich rows without an N+1. Ids with
-   * no matching post (hard-deleted) are simply absent from the result.
-   */
+  /** 여러 글을 한 번에 조회하며, 존재하지 않는 글은 결과에서 제외한다. */
   List<PostSubjectSnapshot> findPostSubjectSnapshots(Collection<Long> postIds);
 
-  /**
-   * COMMENT 대상 스냅샷 — 본문 발췌(앞 200자)와 작성자 핸들을 한 쿼리로. soft 삭제된 댓글도 관리자 큐에는 보여야 하므로 deleted_at 로 거르지
-   * 않는다(뷰의 removed 플래그로 표시). 없는 댓글은 결과에서 빠진다.
-   */
+  /** 관리자가 삭제 여부를 확인할 수 있도록 soft 삭제 댓글도 포함한다. 없는 댓글은 제외한다. */
   List<CommentSubjectSnapshot> findCommentSubjectSnapshots(Collection<Long> commentIds);
 
-  /** USER 대상 스냅샷 — 핸들/제재상태를 한 쿼리로. 없는 유저는 결과에서 빠진다. */
+  /** 존재하지 않는 사용자는 결과에서 제외한다. */
   List<UserSubjectSnapshot> findUserSubjectSnapshots(Collection<Long> userIds);
 
-  /** 단일 대상 존재검사 — 없는 대상 신고를 제출 시점에 거부하기 위함. */
   boolean subjectExists(AbuseSubjectType subjectType, Long subjectId);
 
   interface PostSubjectSnapshot {

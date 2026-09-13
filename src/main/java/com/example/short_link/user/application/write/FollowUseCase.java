@@ -15,7 +15,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Follow / unfollow another author (velog 식 구독). Following yourself is rejected. */
 @Service
 @RequiredArgsConstructor
 public class FollowUseCase {
@@ -31,13 +30,10 @@ public class FollowUseCase {
     if (target.getId().equals(followerId)) {
       throw new UserException(UserErrorCode.CANNOT_FOLLOW_SELF);
     }
-    // 차단 서버집행: 대상이 팔로워를 차단했다면 팔로우 거부.
     if (blockRepository.existsByBlockerIdAndBlockedId(target.getId(), followerId)) {
       throw new UserException(UserErrorCode.BLOCKED_TARGET);
     }
-    // Attribute only the edge that actually gets created — a re-follow of someone you already
-    // follow leaves the original (and its original source) untouched, so the metric isn't inflated
-    // by repeats, and only a genuinely new follow notifies the author.
+    // Only a new follow records attribution and notifies; repeats preserve the original source.
     if (!followRepository.existsByFollowerIdAndFollowingId(followerId, target.getId())) {
       followRepository.save(new FollowEntity(followerId, target.getId(), sourcePostId));
       events.publishEvent(BlogInteractionEvent.follow(target.getId(), followerId, Instant.now()));

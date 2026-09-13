@@ -9,11 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Cross-author series discovery for the blog home (blog.kurl.me) — active series across every
- * author, surfaced as the feed's series cards. Unauthenticated; covered by SecurityConfig's
- * permitAll on GET /api/v1/public/**.
- */
 @RestController
 @RequestMapping("/api/v1/public/series")
 @RequiredArgsConstructor

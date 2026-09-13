@@ -9,13 +9,10 @@ import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /**
- * Fail-fast (or loudly warn) on production misconfiguration that silently weakens security. Secrets
- * whose absence degrades quietly — a blank JWT key (ephemeral keypair per JVM → every session dies
- * on restart) or a blank 2FA key (TOTP secrets stored in plaintext) — abort startup. Toggles that
- * only raise abuse risk warn instead, so an operator can still flip them deliberately.
- *
- * <p>Values are read straight from configuration (not the feature {@code *Properties} records) so
- * this neutral {@code common} guard doesn't depend on the {@code user} slice.
+ * Missing JWT or 2FA keys abort production startup: ephemeral JWT keys invalidate sessions on
+ * restart, and missing 2FA keys store secrets in plaintext. Abuse-risk toggles only warn so
+ * operators can disable them deliberately. Reads raw configuration to avoid a common-to-user
+ * dependency.
  */
 @Slf4j
 @Component

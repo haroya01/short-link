@@ -6,11 +6,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Delivery-gate inputs grouped into one embeddable so the entity stops growing a flat column wall.
- * Same table as {@code link_webhook} — no schema change, just JPA mapping reshape via {@link
- * jakarta.persistence.Embedded}.
- */
 @Embeddable
 @Getter
 @NoArgsConstructor(access = AccessLevel.PUBLIC)
@@ -34,10 +29,7 @@ public class WebhookFilter {
   @Column(name = "utm_source_filter", length = 100)
   private String utmSourceFilter;
 
-  /**
-   * Mirror of the legacy {@code LinkWebhookEntity.updateConfig} contract: nulls leave fields
-   * untouched.
-   */
+  /** Null arguments leave existing fields untouched. */
   public void update(
       Boolean includeBots,
       Integer sampleRate,

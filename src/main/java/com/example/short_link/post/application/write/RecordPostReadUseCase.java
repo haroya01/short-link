@@ -10,9 +10,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Records / clears the caller's reading history. Recording is a beacon — only published posts
- * count, a re-read just floats the entry to the top ({@code touch}), and a read of a missing /
- * unpublished post is silently ignored so it never disrupts the reader.
+ * Rereading moves the history entry to the top. Missing or unpublished posts are silently ignored
+ * because recording is a beacon.
  */
 @Service
 @RequiredArgsConstructor
@@ -37,13 +36,11 @@ public class RecordPostReadUseCase {
             () -> postReadRepository.save(new PostReadEntity(userId, postId, now)));
   }
 
-  /** Forget one post from the history. */
   @Transactional
   public void remove(Long userId, Long postId) {
     postReadRepository.deleteByUserIdAndPostId(userId, postId);
   }
 
-  /** Clear the whole reading history. */
   @Transactional
   public void clear(Long userId) {
     postReadRepository.deleteByUserId(userId);

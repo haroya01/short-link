@@ -14,12 +14,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Subscribe / unsubscribe to a series. All endpoints require auth (subscriptions are per-user) —
- * covered by SecurityConfig's {@code anyRequest().authenticated()}. The "my subscriptions" list
- * lives under {@code /users/me/...} (mirroring /users/me/likes) to avoid colliding with {@code GET
- * /api/v1/series/{id}}.
- */
 @RestController
 @RequiredArgsConstructor
 public class SeriesSubscriptionController {
@@ -33,9 +27,6 @@ public class SeriesSubscriptionController {
     return seriesSubscriptionQueryService.mySubscriptions(userId);
   }
 
-  /**
-   * The viewer's subscribed series as feed cards — the blog home "시리즈" tab (latest active first).
-   */
   @GetMapping("/api/v1/users/me/subscribed-series")
   public List<PublicSeriesCard> subscribedSeries(@AuthenticationPrincipal Long userId) {
     return publicSeriesQueryService.subscribedSeries(userId);

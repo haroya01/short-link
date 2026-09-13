@@ -34,11 +34,7 @@ public class AuthService {
    */
   private static final String TERMS_VERSION = "2026-07-21";
 
-  /**
-   * Result of an OAuth login. If the user has 2FA enabled this returns only a short-lived challenge
-   * token — the caller redirects the user to the 2FA prompt where they exchange the challenge +
-   * TOTP code for a full pair via {@link #completeTwoFactor}.
-   */
+  /** For 2FA users, returns only a challenge until {@link #completeTwoFactor} succeeds. */
   public sealed interface TokenLoginResult {
     record Tokens(IssuedTokens issued) implements TokenLoginResult {}
 
@@ -63,9 +59,8 @@ public class AuthService {
   }
 
   /**
-   * Mobile variant of {@link #loginWithOAuth}: the browser sheet can't receive tokens directly, so
-   * a successful login yields a one-time exchange code instead — the app redeems it for the pair
-   * via {@link #exchangeMobileCode}. No session is issued until the code is redeemed.
+   * Returns a one-time code because the browser sheet cannot deliver tokens to the app. No session
+   * is issued until {@link #exchangeMobileCode} redeems it.
    */
   @Transactional
   public MobileLoginResult loginWithOAuthMobile(
@@ -101,13 +96,9 @@ public class AuthService {
   }
 
   /**
-   * Sign in with Apple — shared by the native app and the web "Sign in with Apple JS" flow (only
-   * the delivery differs: the app reads body tokens, the web gets a refresh cookie + body access
-   * token). {@link AppleIdentityVerifier} has already pinned signature/issuer/audience/nonce, so
-   * subject and email arrive trusted. Linking rule: an existing account with the same email logs
-   * into that account. Both Google and Apple hand us IdP-verified addresses and {@code users.email}
-   * is UNIQUE, so one kurl account per email stays the invariant; the row keeps its original
-   * oauth_provider/oauth_id identity and later Apple logins keep arriving through the email match.
+   * Requires subject/email verified by {@link AppleIdentityVerifier}. An existing IdP-verified
+   * email links to that account, preserving one account per unique email and leaving its original
+   * OAuth identity unchanged.
    */
   @Transactional
   public TokenLoginResult loginWithApple(String appleSubject, String email) {
@@ -135,15 +126,13 @@ public class AuthService {
   }
 
   private UserEntity createAppleUser(String email, String appleSubject) {
-    // A brand-new account needs an address; Apple always offers one (relay or real) on first
-    // consent, so an absent claim here means a returning user we somehow can't match — surface it.
+    // Apple may omit email for returning users; an unmatched account still needs one for signup.
     if (email == null || email.isBlank()) {
       throw new UserException(UserErrorCode.APPLE_EMAIL_REQUIRED);
     }
     return userRepository.save(newUserWithConsent(email, "apple", appleSubject));
   }
 
-  /** New account from sign-up — stamps the legal terms version/time accepted via the click-wrap. */
   private UserEntity newUserWithConsent(String email, String provider, String oauthId) {
     UserEntity user = new UserEntity(email, provider, oauthId);
     user.recordTermsConsent(TERMS_VERSION, Instant.now());
@@ -177,24 +166,18 @@ public class AuthService {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
     if (refreshStore.exists(parsed.userId(), parsed.jti())) {
-      // Live session: rotate it (one-time use) and leave a short grace marker, so a stale replay of
-      // this same token from another tab/subdomain isn't mistaken for theft.
+      // Keep a brief rotation marker so a shared-cookie race is not mistaken for theft.
       refreshStore.delete(parsed.userId(), parsed.jti());
       refreshStore.markRotated(parsed.userId(), parsed.jti(), jwtProperties.refreshRotationGrace());
       return issue(loadActiveUser(parsed.userId()));
     }
     if (refreshStore.wasRecentlyRotated(parsed.userId(), parsed.jti())) {
-      // Replay inside the grace window — the benign cross-tab / cross-subdomain race. Re-issue a
-      // fresh pair instead of wiping the user's other (still valid) sessions.
+      // Tolerate shared-cookie races within the grace window by issuing a fresh pair.
       log.debug("refresh within rotation grace for userId={}, reissuing", parsed.userId());
       return issue(loadActiveUser(parsed.userId()));
     }
-    // Unknown jti past its grace window: most often a stale token the client never advanced to (a
-    // dropped rotation, an idle tab), occasionally a replayed/stolen old one. Reject just THIS
-    // token
-    // — nuking every session over a single stale token logged the owner out on all devices (the
-    // "logged out whenever I step away" report), and a rotated token is already worthless, so the
-    // blast radius bought little. Other live sessions stay intact.
+    // Reject only the stale or unknown token: a dropped rotation does not invalidate other live
+    // sessions.
     log.warn(
         "refresh token unknown or expired for userId={}, rejecting this token "
             + "(other sessions kept)",
@@ -227,9 +210,8 @@ public class AuthService {
   }
 
   private IssuedTokens issue(UserEntity user) {
-    // 영구 차단(BANNED) 계정은 세션 발급을 막는다 — 모든 로그인·토큰 교환·리프레시 경로가 이 지점을 지난다.
-    // 임시 정지(SUSPENDED)는 로그인은 허용하고 쓰기 게이트(UserModerationGuard)에서만 막아, 사용자가
-    // 상태를 확인·소명할 수 있게 한다.
+    // 모든 세션 발급에서 BANNED를 거부한다. SUSPENDED는 상태 확인·소명을 위해 로그인을 허용하고
+    // 콘텐츠 생성만 UserModerationGuard에서 막는다.
     if (user.isBanned()) {
       throw new UserException(UserErrorCode.ACCOUNT_BANNED);
     }

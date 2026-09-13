@@ -15,10 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 도메인 차단 직후 그 도메인으로 연결되는 링크의 소유자 전원에게 약관 7조 통지를 자동 발송한다 — 계정당 한 건, 수신자 locale 카피. 커밋된 차단 이후에 호출되므로
- * 트랜잭션 밖(푸시 네트워크 호출 포함).
- */
+/** 차단 커밋 후 트랜잭션 밖에서 약관 위반 경고를 소유자당 한 번 발송한다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

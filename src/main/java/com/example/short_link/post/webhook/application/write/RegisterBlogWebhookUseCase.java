@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Registers a blog notification webhook for the author. The secret is issued once, here. */
 @Service
 @RequiredArgsConstructor
 public class RegisterBlogWebhookUseCase {

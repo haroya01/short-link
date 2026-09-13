@@ -14,12 +14,16 @@ import java.security.spec.ECGenParameterSpec;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.Arrays;
 import java.util.Base64;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
 class ApnsTokenProviderTest {
+
+  private static final Clock FIXED_CLOCK =
+      Clock.fixed(Instant.parse("2026-01-01T00:00:00Z"), ZoneOffset.UTC);
 
   private static KeyPair p256() throws Exception {
     KeyPairGenerator generator = KeyPairGenerator.getInstance("EC");
@@ -41,7 +45,7 @@ class ApnsTokenProviderTest {
   @Test
   void jwtIsEs256SignedAndVerifiableWithTheKey() throws Exception {
     KeyPair pair = p256();
-    ApnsTokenProvider provider = new ApnsTokenProvider(properties(pem(pair)));
+    ApnsTokenProvider provider = new ApnsTokenProvider(properties(pem(pair)), FIXED_CLOCK);
     assertThat(provider.configured()).isTrue();
     String jwt = provider.token();
 
@@ -84,16 +88,17 @@ class ApnsTokenProviderTest {
 
   @Test
   void missingCredentialsDisableTokenCreationWithoutParsingTheKey() {
-    assertThat(new ApnsTokenProvider(properties(null)).configured()).isFalse();
+    assertThat(new ApnsTokenProvider(properties(null), FIXED_CLOCK).configured()).isFalse();
     assertThat(
-            new ApnsTokenProvider(new ApnsProperties("", "KEY1234567", null, "not-a-key", false))
+            new ApnsTokenProvider(
+                    new ApnsProperties("", "KEY1234567", null, "not-a-key", false), FIXED_CLOCK)
                 .configured())
         .isFalse();
   }
 
   @Test
   void configuredButMalformedPemFailsDuringInitialization() {
-    assertThatThrownBy(() -> new ApnsTokenProvider(properties("not-a-key")))
+    assertThatThrownBy(() -> new ApnsTokenProvider(properties("not-a-key"), FIXED_CLOCK))
         .isInstanceOf(IllegalStateException.class)
         .hasMessage("APNs private key (.p8 PEM) is malformed");
   }

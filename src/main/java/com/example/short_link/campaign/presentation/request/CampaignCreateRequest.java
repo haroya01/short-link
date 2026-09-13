@@ -9,11 +9,7 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import org.hibernate.validator.constraints.URL;
 
-/**
- * startsAt 이 null 이면 "지금 시작" 으로 해석되어 service 가 now 로 박는다. endsAt 은 필수 — 무기한 캠페인은 도구 정체성을 흐려서 막는다.
- * postEndAction = REDIRECT 일 때 postEndDestinationUrl 은 service 가 필수 검증한다 (cross-field 라 record 단위
- * validation 에서 빠짐).
- */
+/** {@code startsAt} 생략 시 즉시 시작한다. REDIRECT 정책은 종료 후 목적지 URL이 필수다. */
 public record CampaignCreateRequest(
     @NotBlank @Size(max = 255) String name,
     Instant startsAt,

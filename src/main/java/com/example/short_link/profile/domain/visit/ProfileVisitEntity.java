@@ -13,12 +13,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * One row per visit to a public profile page (/u/&lt;handle&gt;). Mirrors {@code click_event} minus
- * the link-specific fields so the owner-side stats UI can reuse the same aggregation pipeline +
- * chart components — total / human / unique / by-country / by-channel — just keyed on the profile
- * owner instead of a short code.
- */
 @Entity
 @Table(name = "profile_visit_event")
 @Getter

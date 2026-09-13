@@ -31,7 +31,7 @@ class TwoFactorConsumptionConcurrencyTest {
   @Autowired private UserRepository users;
   @Autowired private JdbcTemplate jdbc;
 
-  @MockitoBean(name = "twoFactorClock")
+  @MockitoBean(enforceOverride = true)
   private Clock clock;
 
   private Long userId;

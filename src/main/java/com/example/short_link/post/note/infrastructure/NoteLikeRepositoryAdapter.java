@@ -20,7 +20,7 @@ public class NoteLikeRepositoryAdapter implements NoteLikeRepository {
     try {
       jpa.save(new NoteLikeEntity(noteId, userId));
     } catch (DataIntegrityViolationException ignored) {
-      // 기존 동시 중복 요청 처리 방식. 트랜잭션 경계와 flush 시점은 변경하지 않는다.
+      // 동시 요청이 먼저 같은 좋아요를 저장한 경우 중복을 무시한다.
     }
   }
 

@@ -6,7 +6,6 @@ public enum CollectionVisibility {
   UNLISTED,
   PUBLIC;
 
-  /** 비주인에게도 보이는가 — PRIVATE 만 막는다(UNLISTED 는 링크를 아는 사람에게 열린다). */
   public boolean isVisibleToOthers() {
     return this != PRIVATE;
   }

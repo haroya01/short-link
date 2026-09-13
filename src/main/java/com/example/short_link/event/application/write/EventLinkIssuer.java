@@ -13,10 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * 이벤트의 배포용 단축링크 발급. 별칭마다 독립 단축 코드 (deduplicate=false — 같은 목적지라도 채널별로 코드가 달라야 클릭이 채널로 갈린다). 발급 실패(쿼터
- * 초과 등)는 이벤트 저장을 막지 않는 best-effort — {@code CtaLinkTracker} 와 같은 원칙.
- */
+/** 같은 목적지라도 채널별 클릭을 구분하려고 deduplicate=false로 발급한다. 쿼터 초과 등 발급 실패는 이벤트 저장을 막지 않는다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

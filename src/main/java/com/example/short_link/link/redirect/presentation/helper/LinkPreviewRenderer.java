@@ -7,10 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 /**
- * Renders an HTML page that embeds Open Graph + Twitter Card metadata for a short link, so social
- * crawlers (KakaoTalk, Slack, Twitter, etc.) display a rich preview when the short URL is shared.
- * Falls back to the original URL via meta-refresh and an explicit anchor — important for clients
- * that ignore JS but still follow refresh.
+ * Includes meta-refresh and an anchor so clients without JavaScript can still reach the
+ * destination.
  */
 @Component
 @RequiredArgsConstructor

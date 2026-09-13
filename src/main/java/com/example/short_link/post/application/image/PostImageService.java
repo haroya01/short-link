@@ -17,15 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * Post 본문 IMAGE 블록용 이미지 업로드. ProfileImageService 패턴 정합 — presign / commit two-step. key prefix 는
- * {@code post-images/{userId}/{postId}/{uuid}.{ext}}. 글 소유권 검증 PostOwnership 통해.
- *
- * <p>{@link #importFromUrl}은 외부 URL(노션 등에서 붙여넣은 이미지)을 서버가 직접 받아 우리 버킷에 재호스팅한다 — 노션 서명 URL 은 만료되므로
- * 핫링크하면 발행 후 깨지기 때문. 외부 URL과 응답 검증은 {@link ExternalPostImageReader}가 담당한다.
- *
- * <p>업로드 용량·서명 유효 시간은 공통 ImageUploadPolicy를 따른다. 저장소 연결과 공개 주소는 별도 협력자가 담당한다.
- */
+/** 외부 이미지는 서명 URL 만료로 본문이 깨지지 않도록 서버에서 받아 재호스팅한다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -97,10 +89,8 @@ public class PostImageService {
   }
 
   /**
-   * Server-side re-host: fetch an external image URL through the SSRF guard, validate it's a real
-   * image within the size cap, and store it in our bucket. Returns the same shape as {@link
-   * #commitUpload} so the editor inserts a kurl-owned URL that won't expire (unlike a hotlinked 노션
-   * 서명 URL).
+   * Fetches through the SSRF guard and stores a verified image within the size cap. Returns the
+   * same result shape as {@link #commitUpload}.
    */
   public CommitResult importFromUrl(Long userId, Long postId, String url) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");

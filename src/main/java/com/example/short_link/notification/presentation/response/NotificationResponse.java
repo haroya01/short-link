@@ -4,13 +4,10 @@ import com.example.short_link.notification.application.dto.NotificationView;
 import java.time.Instant;
 
 /**
- * One notification as the client renders it. Actor fields are flat (and null when the actor was
- * deleted, so the UI shows an anonymous label). Post fields are set for LIKE/COMMENT/REPLY/NEW_POST
- * (null otherwise); {@code postAuthorUsername} is set only when the recipient isn't the post's
- * author (REPLY / NEW_POST), so the client can build the post link. Series fields are set only for
- * SERIES_SUBSCRIBE. Collection fields are set only for the graph notices (CONNECTED / PATH_GREW):
- * {@code collectionId} is the deep-link target and {@code postId} carries the occasioning post for
- * a preview (a connected note leaves {@code postId} null).
+ * Deleted actors have null identity fields. Target fields depend on notification type; collection
+ * notices link to {@code collectionId} and use {@code postId} only for preview context, with null
+ * for connected notes. {@code postAuthorUsername}, when present, identifies another author for the
+ * post link.
  */
 public record NotificationResponse(
     Long id,
@@ -50,11 +47,6 @@ public record NotificationResponse(
         view.createdAt());
   }
 
-  /**
-   * The post id to preview: a post notice's own post, or a graph notice's occasioning post (the
-   * connected post, or the post a connected highlight sits on). Null for FOLLOW / SERIES_SUBSCRIBE
-   * and for a connected note.
-   */
   private static Long postId(NotificationView view) {
     if (view.post() != null) {
       return view.post().postId();

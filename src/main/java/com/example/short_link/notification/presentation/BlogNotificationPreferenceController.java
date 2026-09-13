@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 블로그 벨 알림 종류별 켜고끄기 — 설정 화면이 읽고(GET) 토글한다(PUT). 행 없으면 켜짐(기본 on). */
 @RestController
 @RequestMapping("/api/v1/notifications/blog-preferences")
 @RequiredArgsConstructor
@@ -23,7 +22,7 @@ public class BlogNotificationPreferenceController {
 
   private final BlogNotificationPreferenceService service;
 
-  /** type → enabled 전체 맵(모든 종류, 기본 true). */
+  /** 설정이 없는 유형도 포함하며 기본값은 true다. */
   @GetMapping
   public Map<NotificationType, Boolean> list(@AuthenticationPrincipal Long userId) {
     return service.all(userId);

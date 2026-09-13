@@ -11,23 +11,19 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventEntity, Long> {
 
-  /** Projection for the GROUP BY DATE(viewed_at) aggregation — alias names map to the getters. */
   interface DailyViewRow {
     LocalDate getViewDate();
 
     long getViews();
   }
 
-  /** One distinct (post, human-reader) pair — alias names map to the getters. */
   interface ReaderRow {
     Long getPostId();
 
     String getVisitorHash();
   }
 
-  // Distinct human readers (visitor_hash) per post for a set of posts — powers the series
-  // read-through funnel, where we intersect adjacent episodes' reader sets. Bots and hashless
-  // (pre-V80) rows are dropped so the funnel reflects real continued reading.
+  // Bots and hashless rows cannot contribute to the series reader-overlap funnel.
   @Query(
       nativeQuery = true,
       value =
@@ -37,9 +33,7 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
               + "GROUP BY e.post_id, e.visitor_hash")
   List<ReaderRow> findDistinctReaders(@Param("postIds") Collection<Long> postIds);
 
-  // Native because it groups on a SQL date function over post_view_event, mirroring the trending
-  // window query's native style. UTC dates (viewed_at is stored as an Instant) — good enough for v0
-  // dashboards; per-author-timezone bucketing would be a later refinement.
+  // Group by UTC date; viewed_at is stored as an Instant.
   @Query(
       nativeQuery = true,
       value =
@@ -63,16 +57,13 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
   List<DailyViewRow> countDailyByUserId(
       @Param("userId") Long userId, @Param("since") Instant since);
 
-  /** Projection for the GROUP BY referrer_host aggregation — alias names map to the getters. */
   interface ReferrerRow {
     String getHost();
 
     long getViews();
   }
 
-  // 작가 전체(post join)의 윈도우 유입 호스트 집계 — 개요 대시보드의 "유입 경로". 사람 조회만
-  // (is_bot = FALSE), referrer 없는 direct 는 제외(글 단위 독자 분석의 topReferrerHosts 와 같은
-  // 의미론). daily-by-user 와 같은 native 스타일이고, 동률은 host 로 고정해 페이지가 안 흔들린다.
+  // 사람 조회만 집계하고 direct 유입은 제외한다. 동률은 host로 정렬해 순서를 고정한다.
   @Query(
       nativeQuery = true,
       value =

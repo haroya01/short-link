@@ -14,8 +14,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 /**
- * "Your link expires soon." Fires once per link by scanning a single one-day band at the threshold
- * (e.g. [now+6d, now+7d) for a 7-day threshold) each daily run, so a link crosses it exactly once.
+ * Scans one daily expiry band, e.g. [now+6d, now+7d) for a seven-day threshold, so each link
+ * crosses the band once.
  */
 @Slf4j
 @Component

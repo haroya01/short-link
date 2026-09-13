@@ -4,15 +4,13 @@ import java.util.Locale;
 import java.util.Set;
 
 /**
- * Short codes that must not be claimable as custom codes (and not generated either) because they
- * collide with frontend routes, API paths, or operational endpoints. Comparison is case-insensitive
- * — short codes are case-sensitive in storage, but route collisions don't care about case.
+ * Reserves route and operational endpoint names case-insensitively, even though stored short codes
+ * are case-sensitive.
  */
 public final class ReservedShortCodes {
 
   private static final Set<String> RESERVED =
       Set.of(
-          // frontend routes
           "login",
           "logout",
           "signup",
@@ -31,7 +29,6 @@ public final class ReservedShortCodes {
           "monitoring",
           "learn",
           "campaigns",
-          // api / ops
           "api",
           "v1",
           "v2",
@@ -49,7 +46,6 @@ public final class ReservedShortCodes {
           "icon",
           "manifest",
           "graphql",
-          // marketing / generic
           "home",
           "index",
           "www",
@@ -64,7 +60,6 @@ public final class ReservedShortCodes {
           "blog",
           "press",
           "kurl",
-          // operational reserved
           "static",
           "assets",
           "public",

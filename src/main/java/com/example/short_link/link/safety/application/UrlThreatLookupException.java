@@ -1,6 +1,5 @@
 package com.example.short_link.link.safety.application;
 
-/** A lookup failure whose policy does not depend on an HTTP client or a threat provider. */
 public final class UrlThreatLookupException extends RuntimeException {
 
   public enum Kind {

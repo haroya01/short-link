@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-/** 발행된 버전을 기록하고 검색·프로필·최초 발행 알림을 갱신한다. 호출자의 트랜잭션에 참여한다. */
+/** 호출자의 트랜잭션에 참여한다. */
 @Component
 @RequiredArgsConstructor
 public class PostPublicationCompletion {

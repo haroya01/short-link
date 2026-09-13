@@ -16,11 +16,6 @@ import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Fetches OG metadata for new/updated links in the background. Failures are flagged RETRYABLE so a
- * scheduled job can pick them up later, until {@code max-attempts} is reached and the link is
- * stamped ERROR for good.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -33,12 +28,11 @@ public class LinkOgFetchService {
   private final CacheManager cacheManager;
   private final OgFetchProperties ogFetch;
 
-  /** AFTER_COMMIT의 비동기 이벤트 경로: 저장소별 기존 트랜잭션을 유지한다. */
+  /** AFTER_COMMIT 비동기 경로는 조회·저장 전체를 감싸지 않고 저장소별 트랜잭션을 사용한다. */
   public void fetchAfterCommit(ShortCode shortCode, String originalUrl) {
     fetchAndStore(shortCode, originalUrl);
   }
 
-  /** 스케줄러 경로는 이전과 같이 조회·저장을 하나의 트랜잭션으로 실행한다. */
   @Transactional
   public void refresh(ShortCode shortCode, String originalUrl) {
     fetchAndStore(shortCode, originalUrl);

@@ -105,10 +105,8 @@ public class JwtTokenService {
   }
 
   /**
-   * Short-lived token issued after primary auth succeeds for a 2FA-enabled user. The frontend holds
-   * it while the user enters their TOTP code; on success it's exchanged for a real access token.
-   * Cannot be used as an access token (different {@code type} claim) so it won't pass {@link
-   * #parseAccessTokenDetailed}.
+   * Issued after primary authentication for 2FA users. Its distinct {@code type} claim prevents use
+   * as an access token; successful second-factor verification exchanges it for a session.
    */
   public String createTwoFactorChallengeToken(Long userId) {
     Instant now = Instant.now();

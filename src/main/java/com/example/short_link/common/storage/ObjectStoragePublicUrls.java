@@ -3,7 +3,6 @@ package com.example.short_link.common.storage;
 import com.example.short_link.common.storage.s3.S3StorageProperties;
 import org.springframework.stereotype.Component;
 
-/** Builds public image addresses independently of upload and ownership operations. */
 @Component
 public final class ObjectStoragePublicUrls {
 

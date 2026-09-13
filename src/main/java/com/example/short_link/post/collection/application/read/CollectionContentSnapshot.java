@@ -10,7 +10,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-/** 공개 범위에 맞춰 조회한 자료로 라벨과 카드를 만든다. 추가 저장소 조회는 하지 않는다. */
 record CollectionContentSnapshot(
     Map<Long, PostEntity> posts,
     Map<Long, PostHighlightEntity> highlights,

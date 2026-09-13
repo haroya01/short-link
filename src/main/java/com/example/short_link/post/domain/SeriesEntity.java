@@ -12,12 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * A named, ordered grouping of an author's posts (velog-style series). Membership + ordering live
- * on {@link PostEntity#getSeriesId()} / {@code seriesOrder} so a post can be reordered without
- * touching this aggregate. Unlike post slugs, a series slug is not frozen — series are
- * organizational and renaming them is low-stakes.
- */
+/** Membership and order live on PostEntity. Series slugs remain editable. */
 @Entity
 @Table(
     name = "series",

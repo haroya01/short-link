@@ -10,18 +10,15 @@ public interface PostReadRepository {
 
   PostReadEntity save(PostReadEntity read);
 
-  /** A page of the user's reading history, most recently read first. */
   List<PostReadEntity> findByUserIdOrderByReadAtDesc(Long userId, int page, int size);
 
-  /** How many distinct posts the user has read — drives {@code hasNext}. */
   long countByUserId(Long userId);
 
-  /** Forget one entry (per-row remove from history). Returns rows deleted. */
+  /** Returns the number of rows deleted. */
   int deleteByUserIdAndPostId(Long userId, Long postId);
 
-  /** Clear the user's whole reading history. Returns rows deleted. */
+  /** Returns the number of rows deleted. */
   int deleteByUserId(Long userId);
 
-  /** Purge every read record on a post — used when the post is permanently deleted. */
   int deleteAllByPostId(Long postId);
 }

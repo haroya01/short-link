@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Service health, request outcomes, errors, and runtime metrics for incident investigation. */
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
@@ -59,21 +58,12 @@ public class AdminMetricsController {
     return recentErrorsService.recent(limit);
   }
 
-  /**
-   * Per-route count / p50 / p95 / p99 / error rate over the requested window, sourced from the
-   * {@code request_metrics} table. Replaces {@link #routeMetrics(String)} once the in-process ring
-   * buffer is retired in the follow-up PR.
-   */
   @GetMapping("/metrics/routes")
   public List<AdminRequestMetricsService.RouteAggregate> requestRouteMetrics(
       @RequestParam(name = "window", required = false) String window) {
     return requestMetricsService.routes(AdminRequestMetricsService.Window.parse(window));
   }
 
-  /**
-   * Outcome distribution for a single {@code shortCode} over the requested window — answers "what
-   * proportion of clicks on this code ended up as redirect / not_found / expired / blocked".
-   */
   @GetMapping("/metrics/outcomes")
   public AdminRequestMetricsService.OutcomeDistribution requestOutcomeDistribution(
       @RequestParam(name = "shortCode") String shortCode,
@@ -82,21 +72,11 @@ public class AdminMetricsController {
         shortCode, AdminRequestMetricsService.Window.parse(window));
   }
 
-  /**
-   * Single-snapshot view of what Micrometer / Actuator already collects — JVM (heap / threads /
-   * GC), HikariCP pool, and per-cache hit/miss. Zero hot-path cost: gauges are read on demand when
-   * the admin opens this endpoint, not measured from request traffic.
-   */
   @GetMapping("/metrics/system")
   public AdminSystemMetricsService.SystemMetrics systemMetrics() {
     return systemMetricsService.snapshot();
   }
 
-  /**
-   * Raw rows for incident drill-down. Filters compose: any combination of route / outcome /
-   * shortCode / userId narrows the scan; from/to bound the time window (default last 1h). {@code
-   * limit} is capped server-side; for deeper history pull a wider window.
-   */
   @GetMapping("/metrics/requests")
   public List<AdminRequestMetricsService.RawRow> requestRawRows(
       @RequestParam(required = false) Instant from,

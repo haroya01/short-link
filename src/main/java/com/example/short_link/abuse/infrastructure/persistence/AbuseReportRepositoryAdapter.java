@@ -13,7 +13,6 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 class AbuseReportRepositoryAdapter implements AbuseReportRepository {
 
-  // "열린" 신고 — 아직 종결(RESOLVED/REJECTED)되지 않은 상태. 이 상태 집합에서만 중복을 막는다.
   private static final List<AbuseReportStatus> OPEN_STATUSES =
       List.of(AbuseReportStatus.OPEN, AbuseReportStatus.REVIEWING);
 

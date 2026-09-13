@@ -209,7 +209,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("lang") String lang,
       Pageable pageable);
 
-  // 검색에서도 최근 구간 조회수를 사용한다. JOIN 중복은 DISTINCT와 GROUP BY로 제거한다.
   @Query(
       nativeQuery = true,
       value =
@@ -239,14 +238,12 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("titleLike") String titleLike,
       @Param("lang") String lang);
 
-  // 반환 열 순서: userId, postCount, totalViews.
   @Query(
       "select p.userId, count(p), coalesce(sum(p.viewCount), 0) from PostEntity p "
           + "where p.status = :status group by p.userId "
           + "order by count(p) desc, coalesce(sum(p.viewCount), 0) desc")
   List<Object[]> findTopAuthorIds(@Param("status") PostStatus status, Pageable pageable);
 
-  // 반환 열 순서: seriesId, postCount, lastPublishedAt.
   @Query(
       "select p.seriesId, count(p), max(p.publishedAt) from PostEntity p "
           + "where p.status = :status and p.seriesId is not null "

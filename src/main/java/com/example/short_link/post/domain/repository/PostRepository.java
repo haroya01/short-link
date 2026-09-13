@@ -53,7 +53,7 @@ public interface PostRepository {
 
   long countUserAnalyticsPosts(Long userId);
 
-  /** SCHEDULED posts whose scheduledAt has arrived (<= now) — the auto-publish job's work list. */
+  /** Includes {@code scheduledAt <= now}; the work list may become stale before publication. */
   List<Long> findScheduledDueIds(Instant now);
 
   List<PostEntity> findAllBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
@@ -67,7 +67,6 @@ public interface PostRepository {
   /** Locks an author's currently published posts in id order before replacing the pinned set. */
   List<PostEntity> findPublishedByUserIdForUpdate(Long userId);
 
-  /** 여러 시리즈를 일괄 조회하며 각 시리즈 안의 글 순서를 유지한다. */
   List<PostEntity> findAllBySeriesIdInOrderBySeriesOrderAsc(Collection<Long> seriesIds);
 
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
@@ -81,7 +80,6 @@ public interface PostRepository {
 
   long countPublished(String lang);
 
-  /** Count of an author's PUBLISHED posts — backs the public profile's blog entry-point flag. */
   long countPublishedByUserId(Long userId);
 
   /** Published posts carrying a tag (case-insensitive), newest first. */
@@ -117,12 +115,8 @@ public interface PostRepository {
 
   long countForYouCandidates(Long userId, Collection<String> tags, Collection<Long> excludeIds);
 
-  /** Most-used tags across published posts, most popular first — the 주제 index. */
   List<TagCount> findPopularTags(int limit);
 
-  /**
-   * [authorId, publishedPostCount, totalViews] ranked for the discovery rail, top authors first.
-   */
   List<AuthorPostStats> findTopAuthorStats(int limit);
 
   /** 발행 글이 minPosts개 이상인 시리즈를 최근 활동순으로 반환한다. */

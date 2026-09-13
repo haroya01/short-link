@@ -10,11 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Per-minute auto-publish for scheduled posts. Mirrors {@code CampaignLifecycleJob}: a distributed
- * lock keeps a single instance doing the work in a multi-node deploy, and the actual transition
- * lives in the use case. Cron is configurable (default every minute, KST).
- */
+/** A distributed lock prevents multiple nodes from publishing the same scheduled batch. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

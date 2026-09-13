@@ -35,10 +35,7 @@ public class UpdateLinkUseCase {
     LinkEntity link = ownership.requireOwned(command.userId(), command.shortCode());
     boolean urlChanged = false;
     if (command.originalUrl() != null && !command.originalUrl().equals(link.getOriginalUrl())) {
-      // Same self-reference guard as creation — otherwise an update could repoint a link at the
-      // short-link host itself and reopen the redirect-loop hole. The full validateUrl (Safe
-      // Browsing HTTP round-trip) stays creation-only: this method is @Transactional and must not
-      // hold a JDBC connection across an outbound call.
+      // Safe Browsing HTTP calls stay outside this transaction to avoid holding a JDBC connection.
       validator.rejectSelfReference(command.originalUrl());
       link.changeOriginalUrl(command.originalUrl());
       urlChanged = true;

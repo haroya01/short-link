@@ -6,9 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Reads of the current user's series subscriptions — per-series state + the full subscribed-id set.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -23,7 +20,6 @@ public class SeriesSubscriptionQueryService {
         subscribed, subscriptionRepository.countBySeriesId(seriesId));
   }
 
-  /** Series ids the user subscribes to — lets the feed mark every series card without an N+1. */
   public List<Long> mySubscriptions(Long userId) {
     return subscriptionRepository.findSubscribedSeriesIds(userId);
   }

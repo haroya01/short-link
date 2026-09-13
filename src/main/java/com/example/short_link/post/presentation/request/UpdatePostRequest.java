@@ -8,8 +8,7 @@ import java.util.List;
  * = 전체 삭제 (서버가 trim / dedup / cap 정규화).
  */
 public record UpdatePostRequest(
-    // Blank allowed: a draft may be saved untitled (title is required only at publish). null = 변경 안
-    // 함.
+    // Blank titles are allowed for drafts; publishing requires a title.
     @Size(max = 200) String title,
     @Size(min = 2, max = 200) String slug,
     @Size(max = 500) String excerpt,

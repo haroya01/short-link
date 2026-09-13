@@ -8,14 +8,12 @@ import com.example.short_link.link.stats.domain.repository.ClickTotalsReadReposi
 import com.example.short_link.link.webhook.application.helper.ThresholdSpikePayload;
 import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
-import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
@@ -24,18 +22,9 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Click-driven counterpart to {@link DailyWebhookSummaryJob}. On every committed click, finds hooks
- * subscribed to {@link WebhookDeliveryMode#THRESHOLD_SPIKE} (or {@link WebhookDeliveryMode#BOTH})
- * for this link, counts human clicks in the rolling {@code spikeWindowMinutes} window, and fires
- * one alert when the count crosses {@code spikeThreshold}.
- *
- * <p>Cooldown: once a hook fires, it can't fire again until {@code spikeWindowMinutes} elapses — a
- * sustained spike (e.g. 500 clicks over an hour with a 10-min/50-click rule) becomes one alert per
- * window, not one per click.
- *
- * <p>{@code AFTER_COMMIT} + {@code REQUIRES_NEW} mirrors {@link LinkWebhookDispatcher} so the count
- * query never sees the still-uncommitted click and the {@code markSpikeFired} write lands even
- * though the outer click-recording transaction has already closed.
+ * Counts committed human clicks in the rolling window. A fired hook stays in cooldown for {@code
+ * spikeWindowMinutes}. AFTER_COMMIT avoids uncommitted counts; REQUIRES_NEW persists {@code
+ * markSpikeFired} after the click transaction closes.
  */
 @Slf4j
 @Component
@@ -48,17 +37,7 @@ public class ThresholdSpikeDetector {
   private final WebhookHttpDeliveryClient deliveryClient;
   private final Clock clock;
 
-  @Autowired
   public ThresholdSpikeDetector(
-      LinkWebhookRepository hooks,
-      LinkRepository links,
-      ClickTotalsReadRepository clickTotals,
-      ClickAlertReadRepository clickAlerts,
-      WebhookHttpDeliveryClient deliveryClient) {
-    this(hooks, links, clickTotals, clickAlerts, deliveryClient, Clock.systemUTC());
-  }
-
-  ThresholdSpikeDetector(
       LinkWebhookRepository hooks,
       LinkRepository links,
       ClickTotalsReadRepository clickTotals,

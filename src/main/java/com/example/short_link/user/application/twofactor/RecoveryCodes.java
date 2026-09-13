@@ -9,7 +9,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
-/** Generates the codes shown once to the user and matches them against stored password hashes. */
 @Component
 class RecoveryCodes {
 

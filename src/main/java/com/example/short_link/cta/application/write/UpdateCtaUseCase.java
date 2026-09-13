@@ -20,7 +20,6 @@ public class UpdateCtaUseCase {
     if (cmd.label() != null) cta.updateLabel(cmd.label());
     if (cmd.url() != null) {
       cta.updateUrl(cmd.url());
-      // URL changed → re-establish tracking (dedup means the same target reuses one short link).
       cta.trackVia(linkTracker.trackingCodeFor(cmd.userId(), cmd.url()));
     }
     if (cmd.style() != null) cta.updateStyle(cmd.style());

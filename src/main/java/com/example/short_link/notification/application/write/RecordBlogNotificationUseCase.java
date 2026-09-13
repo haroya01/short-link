@@ -1,8 +1,6 @@
 package com.example.short_link.notification.application.write;
 
 import com.example.short_link.notification.application.NotificationTargetCodec;
-import com.example.short_link.notification.application.dto.NotificationCollectionRef;
-import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationTarget;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
@@ -50,10 +48,7 @@ public class RecordBlogNotificationUseCase {
         recipientUserId, pushMessage(type, actorUserId, payload, localeOf(recipientUserId)));
   }
 
-  /**
-   * {@link NotificationPostRef}·{@link NotificationCollectionRef} 등의 대상 참조를 수신자마다 저장한다. 수신 거부자를
-   * 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다.
-   */
+  /** 수신 거부자를 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다. */
   public void recordForEach(
       List<Long> recipientUserIds,
       NotificationType type,
@@ -72,7 +67,6 @@ public class RecordBlogNotificationUseCase {
           enabledRecipients.subList(i, Math.min(i + FANOUT_CHUNK, enabledRecipients.size()));
       fanoutWriter.persistChunk(chunk, type, actorUserId, json);
     }
-    // 수신자를 로케일별로 묶어 각 언어로 푸시 — 한 번의 조합을 그 로케일 그룹에 보낸다.
     Map<String, List<Long>> byLocale =
         userReader.findAllByIdIn(enabledRecipients).stream()
             .collect(
@@ -85,7 +79,6 @@ public class RecordBlogNotificationUseCase {
                 ids, pushMessage(type, actorUserId, payload, Locale.forLanguageTag(tag))));
   }
 
-  /** 앱 벨과 같은 문구를 수신자 로케일로 — MessageSource 번들(messages_*.properties)에서 렌더한다. */
   private PushSender.PushMessage pushMessage(
       NotificationType type, Long actorUserId, NotificationTarget payload, Locale locale) {
     String actor =
@@ -99,7 +92,6 @@ public class RecordBlogNotificationUseCase {
     return new PushSender.PushMessage("kurl", subtitle, body);
   }
 
-  /** 수신자의 저장된 선호 로케일(모르면 ko). */
   private Locale localeOf(Long recipientUserId) {
     return Locale.forLanguageTag(
         userReader.findById(recipientUserId).map(NotificationUser::locale).orElse("ko"));

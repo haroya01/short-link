@@ -14,10 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 신고 entity. spec decision #20 — 익명 / 로그인 user 둘 다 가능. CSAM auto-quarantine (PhotoDNA 같은 외부 서비스) 은
- * 별도 트랙. v0 는 단순 list + manual resolve.
- */
 @Entity
 @Table(name = "abuse_report")
 @Getter
@@ -28,7 +24,7 @@ public class AbuseReportEntity extends BaseCreatedEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  /** 로그인 user 가 신고했으면 user id, 익명이면 null. captcha/PoW 게이트는 별도 트랙 (v0 미적용). */
+  /** 익명 신고는 신고자 ID가 null이다. */
   @Column(name = "reporter_user_id")
   private Long reporterUserId;
 
@@ -39,12 +35,12 @@ public class AbuseReportEntity extends BaseCreatedEntity {
   @Column(name = "subject_id", nullable = false)
   private Long subjectId;
 
-  /** 정형 사유 코드(iOS/웹 6종). legacy 신고엔 없어 null 허용. */
+  /** 기존 자유서술 신고에는 사유 코드가 없다. */
   @Enumerated(EnumType.STRING)
   @Column(name = "reason_code", length = 16)
   private AbuseReason reasonCode;
 
-  /** 자유서술 상세 — 기존 free-text {@code reason} 컬럼을 그대로 재사용(데이터 이관 없음). 최대 2000자. */
+  /** 기존 신고 내용을 보존하기 위해 reason 컬럼을 재사용한다. */
   @Column(name = "reason", length = 2000)
   private String detail;
 

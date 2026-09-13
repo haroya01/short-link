@@ -9,10 +9,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * The "For You" tab — a personalized discovery feed ranked by the reader's tag affinity.
- * Authenticated (not under /api/v1/public), so {@code anyRequest().authenticated()} guards it.
- */
 @RestController
 @RequestMapping("/api/v1/feed/for-you")
 @RequiredArgsConstructor

@@ -12,14 +12,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * AES-GCM at-rest encryption for sensitive secrets (TOTP seeds, webhook signing secrets). Reads the
- * master key from {@code TWOFA_AES_KEY} (base64-encoded 32 bytes). If unset — only acceptable in
- * dev — values are stored unencrypted with a {@code plain:} prefix so we can roll over later by
- * re-encrypting at read time.
- *
- * <p>Output format: {@code v1:<base64(iv|ciphertext|tag)>} for encrypted, {@code plain:<value>} for
- * the dev fallback. The version prefix lets us migrate algorithms without losing existing rows; a
- * value with neither prefix is treated as a pre-encryption plaintext row and returned verbatim.
+ * AES-GCM uses {@code TWOFA_AES_KEY}, a base64-encoded 32-byte key. Encrypted values use {@code
+ * v1:<base64(iv|ciphertext|tag)>}; without a key, the dev fallback stores {@code plain:<value>}.
+ * Unprefixed legacy rows are returned as plaintext.
  */
 @Slf4j
 @Component

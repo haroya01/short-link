@@ -24,9 +24,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * 발견 = 큐레이터의 연결을 따라가기(§0). 내가 팔로우한 사람들의 *공개* 컬렉션에 최근 이어진 연결을 최신순으로 흘린다 — 알고리즘 랭킹이 아니라 사람의 큐레이션.
- * 블록·큐레이터를 일괄 해석(N+1 없이) 하고, 대상이 사라진 연결은 건너뛴다. 팔로우가 없거나 팔로우들의 활동이 없어 첫 페이지가 비면 전역 공개 피드로 폴백한다 —
- * 콜드스타트에도 빈 화면을 주지 않는다(응답 {@code source} 로 구분, 1페이지 이후의 빈 결과는 정상 종료라 폴백하지 않는다).
+ * 팔로우한 큐레이터의 PUBLIC 컬렉션 연결을 최신순으로 반환한다. 팔로우가 없거나 첫 페이지가 비면 전역 피드로 폴백하며, 이후 빈 페이지는 종료다. 대상이 사라진 연결은
+ * 제외하고 응답의 {@code source}로 피드 종류를 구분한다.
  */
 @Service
 @RequiredArgsConstructor
@@ -57,10 +56,6 @@ public class DiscoverFeedQueryService {
     return assemble(rows, page, size, DiscoverFeedView.SOURCE_FOLLOWING);
   }
 
-  /**
-   * 공개 발견 피드(비로그인 첫 표면이자 콜드스타트 폴백) — 전역의 *공개* 컬렉션에 최근 이어진 연결을 최신순으로. 팔로우 게이트 없이(viewer-무관) 개인화판과 같은
-   * 블록·큐레이터 일괄 해석을 재사용한다. 사람의 큐레이션을 그대로 흘리며, 대상이 사라진 연결은 건너뛴다.
-   */
   public DiscoverFeedView publicFeed(int page, int size) {
     return globalFeed(page, size);
   }
@@ -70,7 +65,6 @@ public class DiscoverFeedQueryService {
     return assemble(rows, page, size, DiscoverFeedView.SOURCE_GLOBAL);
   }
 
-  /** rows → view 조립(viewer-무관). 블록·큐레이터를 일괄 해석하고 대상 소실 연결은 건너뛴다. */
   private DiscoverFeedView assemble(
       List<DiscoverConnectionRow> rows, int page, int size, String source) {
     Map<Long, PostHighlightEntity> highlights =
@@ -82,14 +76,12 @@ public class DiscoverFeedQueryService {
 
     Set<Long> postIds = new HashSet<>(refIds(rows, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
-    // 발행된 글만 남긴다 — 초안·비공개·관리자 차단 글은 여기서 빠지고, 아래 null-가드가 그 연결을 흐름에서 뺀다.
-    // 단건 공개 read 가 미발행을 숨기는 것과 같은 규칙(viewer 무관).
+    // 원문이 미발행이면 글과 그 하이라이트 인용을 모두 제외한다. 소유자에게도 같은 규칙을 적용한다.
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
             .filter(PostEntity::isPublished)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 
-    // 큐레이터(컬렉션 주인) + 블록 작가 — 한 번에.
     Set<Long> userIds =
         rows.stream().map(DiscoverConnectionRow::ownerId).collect(Collectors.toSet());
     posts.values().forEach(p -> userIds.add(p.getUserId()));
@@ -98,7 +90,7 @@ public class DiscoverFeedQueryService {
     List<DiscoverConnectionView> items = new ArrayList<>();
     for (DiscoverConnectionRow row : rows) {
       UserEntity curator = users.get(row.ownerId());
-      if (curator == null) continue; // 큐레이터 소실 — 흐름에서 뺀다.
+      if (curator == null) continue;
       DiscoverConnectionView view = resolve(row, curator, posts, highlights, notes, users);
       if (view != null) items.add(view);
     }
@@ -134,7 +126,7 @@ public class DiscoverFeedQueryService {
         PostHighlightEntity hl = highlights.get(row.refId());
         if (hl == null) yield null;
         PostEntity post = posts.get(hl.getPostId());
-        if (post == null) yield null; // 원문이 미발행·차단 — 하이라이트 인용째로 흐름에서 뺀다.
+        if (post == null) yield null;
         UserEntity author = users.get(post.getUserId());
         yield view(
             row,

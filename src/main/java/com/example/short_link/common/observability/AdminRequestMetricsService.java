@@ -8,13 +8,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 /**
- * Percentiles are computed in-process from the windowed slice. At 100k req/day a 7-day window is
- * ~700k rows; the indexed range scan keeps the read cheap, but the in-memory sort would not scale
- * past that, so {@link Window} caps the window length and {@link RawQuery} caps the page size.
+ * Percentiles sort the window's rows in memory; {@link Window} limits that workload and {@link
+ * RawQuery} caps the raw page size.
  */
 @Service
 public class AdminRequestMetricsService {
@@ -24,12 +22,7 @@ public class AdminRequestMetricsService {
   private final RequestMetricJpaRepository repository;
   private final Clock clock;
 
-  @Autowired
-  public AdminRequestMetricsService(RequestMetricJpaRepository repository) {
-    this(repository, Clock.systemUTC());
-  }
-
-  AdminRequestMetricsService(RequestMetricJpaRepository repository, Clock clock) {
+  public AdminRequestMetricsService(RequestMetricJpaRepository repository, Clock clock) {
     this.repository = repository;
     this.clock = clock;
   }

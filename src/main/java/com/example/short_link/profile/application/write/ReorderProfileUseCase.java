@@ -57,9 +57,7 @@ public class ReorderProfileUseCase {
           ProfileBlockEntity block = parseBlockId(item.id()).map(ownedBlocks::get).orElse(null);
           if (block != null) block.setProfileOrder(order++);
         }
-        default -> {
-          // Skip stale or unknown client items.
-        }
+        default -> {}
       }
     }
     cacheEviction.evictByUserId(cmd.userId());

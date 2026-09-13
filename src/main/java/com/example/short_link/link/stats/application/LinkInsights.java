@@ -134,7 +134,6 @@ public class LinkInsights {
     return Optional.of(new LinkStats.Insight("IN_APP_BROWSER", "info", message, data));
   }
 
-  /** 클릭 수가 아닌 재방문율로 채널을 비교한다. */
   public Optional<LinkStats.Insight> channelLoyalty(List<LinkStats.ChannelDepth> channelDepth) {
     if (channelDepth == null || channelDepth.isEmpty()) return Optional.empty();
     LinkStats.ChannelDepth best = null;
@@ -153,7 +152,6 @@ public class LinkInsights {
     return Optional.of(new LinkStats.Insight("CHANNEL_LOYALTY", "info", message, data));
   }
 
-  // 표시 이름이 없으면 저장된 값을 그대로 사용한다.
   private String appName(String app) {
     return messages.getMessage("clientApp." + app, null, app, LocaleContextHolder.getLocale());
   }
@@ -167,7 +165,6 @@ public class LinkInsights {
     return String.format(Locale.ROOT, "%.1f", ratio * 100);
   }
 
-  // 알 수 없는 요일 값은 그대로 표시한다.
   private String dayName(String dow) {
     return messages.getMessage("dayOfWeek." + dow, null, dow, LocaleContextHolder.getLocale());
   }

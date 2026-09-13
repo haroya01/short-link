@@ -9,7 +9,6 @@ import java.util.concurrent.ConcurrentLinkedDeque;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/** Retains a bounded history and presents the newest errors first. */
 @Component
 public class RecentErrorsBuffer {
 

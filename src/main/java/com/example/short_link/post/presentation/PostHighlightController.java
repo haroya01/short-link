@@ -22,7 +22,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Authed highlight surface — create/delete a highlight, and the reader's own library. */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -60,10 +59,7 @@ public class PostHighlightController {
     return highlightQuery.listMine(userId);
   }
 
-  /**
-   * "남들 하이라이트" 피드 — 팔로우한 큐레이터가 최근 칠한 공개 구절(최신순, 페이지). 팔로우가 없거나 첫 페이지가 비면 전역 공개 하이라이트로 폴백하고(응답
-   * source 로 구분), {@code scope=global} 이면 페이지네이션 고정을 위해 무조건 전역 피드를 준다.
-   */
+  /** {@code scope=global}은 폴백 후 페이지네이션을 전역 하이라이트로 고정한다. */
   @GetMapping("/highlights/feed")
   public HighlightFeedView highlightFeed(
       @AuthenticationPrincipal Long userId,

@@ -25,10 +25,7 @@ public record CampaignStatsView(
       ShortCode shortCode,
       long clicks) {}
 
-  /**
-   * 그루핑 비교 — 어느 배포자/지역이 잘했는지. clickRatePerHundred 는 100장당 클릭 비율 (배포 효율). 단순 클릭 수만 보면 quantity 차이가 큰
-   * batch 묶음 끼리 비교 안 됨.
-   */
+  /** 배포 수량이 다른 묶음을 비교하기 위해 클릭 수를 100장 기준으로 환산한다. */
   public record GroupStats(
       String key, long clicks, int totalQuantity, double clickRatePerHundred) {}
 

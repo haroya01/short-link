@@ -5,9 +5,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 /**
- * SHA-256 prefix of a user-supplied URL — used in malicious-URL responses / logs so we never echo
- * the raw URL back (avoids reflecting phishing strings into logs and clients while keeping enough
- * fingerprint to correlate with upstream Safe Browsing telemetry).
+ * Hashes URLs for malicious-URL responses and logs so phishing strings are never reflected while
+ * upstream findings remain correlatable.
  */
 public final class LinkUrlHasher {
 

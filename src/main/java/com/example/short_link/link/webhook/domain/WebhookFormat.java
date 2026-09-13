@@ -4,14 +4,8 @@ import java.net.URI;
 import java.util.Locale;
 
 /**
- * Wire format for a webhook POST. Receivers like Discord/Slack reject anything that doesn't match
- * their own contract ({@code content}/{@code text}+{@code blocks}), so the dispatcher needs to
- * branch on this before serializing the payload. {@link #GENERIC} keeps the original kurl JSON +
- * HMAC signature for self-hosted endpoints.
- *
- * <p>Detection is host-based (Discord/Slack publish hooks under fixed domains) and runs once at
- * registration time — the result is persisted on the row so a single domain rename doesn't silently
- * flip the format under live traffic.
+ * Persist the detected receiver format at registration so host changes do not silently alter live
+ * payloads. {@link #GENERIC} retains the kurl JSON and HMAC contract.
  */
 public enum WebhookFormat {
   GENERIC,
@@ -19,9 +13,8 @@ public enum WebhookFormat {
   SLACK;
 
   /**
-   * Pick a format from the receiver URL. Falls back to {@link #GENERIC} on parse failure — the URL
-   * has already passed {@code PublicHttpUrlGuard}, so this is just a sniff for the well-known
-   * managed receivers.
+   * Falls back to {@link #GENERIC} on parse failure; URL safety validation belongs to {@code
+   * PublicHttpUrlGuard}.
    */
   public static WebhookFormat detect(String url) {
     if (url == null) return GENERIC;

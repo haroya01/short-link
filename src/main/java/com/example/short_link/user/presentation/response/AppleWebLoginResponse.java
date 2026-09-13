@@ -3,10 +3,8 @@ package com.example.short_link.user.presentation.response;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Web "Sign in with Apple" result. On success the refresh token rides an HTTP-only cookie (never
- * the body), so only the access token comes back here — the mirror of {@link TokenResponse}. With
- * 2FA enabled only {@code challenge} is set, and the browser finishes through {@code
- * /api/v1/auth/2fa/verify} (the same endpoint the Google flow uses).
+ * Success returns accessToken and sets an HTTP-only refresh cookie. For 2FA users only challenge is
+ * set; complete it through /api/v1/auth/2fa/verify.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record AppleWebLoginResponse(String accessToken, String challenge) {

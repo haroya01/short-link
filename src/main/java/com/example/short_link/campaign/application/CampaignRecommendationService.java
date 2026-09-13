@@ -11,23 +11,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 다음 배포 시 각 batch 의 quantity 를 어떻게 조정할지 추천.
- *
- * <p>알고리즘 — Proportional reallocation + threshold-based prune:
- *
- * <ol>
- *   <li>평균 100장당 클릭 (avgRate) 계산
- *   <li>각 batch 의 ratePerHundred / avgRate 비율 (ratio) 계산
- *   <li>ratio < PRUNE_THRESHOLD (0.3) → 폐기 (recommended = 0)
- *   <li>그 외 → quantity × min(ratio, MAX_BOOST(3.0)) 로 raw 산출
- *   <li>총 quantity 유지하도록 normalize (sum(raw) → totalQuantity)
- *   <li>0 < final < MIN_QUANTITY (50) → MIN_QUANTITY 로 올림 (운영 효율 — 너무 작은 batch 비효율)
- * </ol>
- *
- * <p>Insufficient guards — 총 클릭 < 10 또는 batch 수 < 2 면 추천 안 함 (insufficient = true). 데이터 부족 시 추천이
- * statistical noise 라 사용자 손해.
- */
+/** 배포 수량 차이를 보정한 클릭률로 수량을 재배분한다. 표본이 적으면 우연한 차이를 추천하지 않도록 결과를 보류한다. */
 @Service
 @RequiredArgsConstructor
 public class CampaignRecommendationService {
@@ -35,16 +19,14 @@ public class CampaignRecommendationService {
   /** 평균의 X% 미만 batch 는 다음 배포에서 폐기. */
   private static final double PRUNE_THRESHOLD = 0.3;
 
-  /** 한 batch 가 최대 3배까지 증가 가능 (특정 batch 가 전체를 독점하지 못하게). */
+  /** 한 묶음으로 배분이 과도하게 쏠리지 않도록 가중치 증가를 제한한다. */
   private static final double MAX_BOOST = 3.0;
 
-  /** Non-zero batch 의 최소 quantity — 운영 비효율 회피. */
+  /** 지나치게 작은 묶음의 인쇄·배포 비효율을 줄이기 위한 최소 수량이다. */
   private static final int MIN_QUANTITY = 50;
 
-  /** 추천 신뢰 임계 — 총 클릭 미만이면 추천 안 함. */
   private static final int MIN_TOTAL_CLICKS = 10;
 
-  /** 추천 신뢰 임계 — batch 1개면 재할당 의미 없음. */
   private static final int MIN_BATCH_COUNT = 2;
 
   private final CampaignStatsService statsService;

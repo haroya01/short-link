@@ -10,10 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * post 슬라이스의 {@link CommentModerationPort} 구현 — abuse 슬라이스의 신고 처리(resolve)가 post 에 직접 의존하지 않고 댓글
- * soft 삭제를 집행하게 한다. 없는 댓글은 404, 이미 삭제됐으면 무연산. 호출자 트랜잭션 안에서 실행된다.
- */
+/** 없는 댓글은 404, 이미 삭제된 댓글은 무연산이다. 호출자 트랜잭션 안에서 실행된다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

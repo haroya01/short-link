@@ -18,15 +18,13 @@ public class SubmitAbuseReportUseCase {
 
   @Transactional
   public AbuseReportEntity execute(SubmitAbuseReportCommand cmd) {
-    // 존재검사: 없는 대상 신고는 거부(400/404). 오타·정리된 대상으로 큐를 오염시키지 않는다.
     if (!subjects.subjectExists(cmd.subjectType(), cmd.subjectId())) {
       throw new AbuseException(
               AbuseErrorCode.SUBJECT_NOT_FOUND, cmd.subjectType() + "#" + cmd.subjectId())
           .with("subjectType", cmd.subjectType().name())
           .with("subjectId", cmd.subjectId());
     }
-    // 중복 신고 가드: 로그인 신고자가 같은 대상에 대해 이미 열린(OPEN/REVIEWING) 신고를 갖고 있으면 거부.
-    // 익명 신고는 신고자 식별이 없어 가드 밖(existsOpenReport 가 null 이면 false 반환).
+    // 익명 신고는 신고자를 식별할 수 없어 중복 검사에서 제외한다.
     if (abuseReportRepository.existsOpenReport(
         cmd.reporterUserId(), cmd.subjectType(), cmd.subjectId())) {
       throw new AbuseException(AbuseErrorCode.DUPLICATE_REPORT)

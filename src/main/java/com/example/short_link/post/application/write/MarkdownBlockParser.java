@@ -9,7 +9,7 @@ import java.util.regex.Pattern;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-/** 한 문서의 문법 인식 순서와 커서를 소유한다. 인스턴스는 변환 요청마다 생성한다. */
+/** 인스턴스마다 한 변환 요청의 커서를 보유한다. */
 final class MarkdownBlockParser {
   private final JsonMapper json;
   private final String[] lines;
@@ -24,21 +24,16 @@ final class MarkdownBlockParser {
   private static final Pattern FENCE = Pattern.compile("^(`{3,}|~{3,})(.*)$");
   private static final Pattern HEADING = Pattern.compile("^(#{1,3})\\s+(.+)$");
   private static final Pattern QUOTE = Pattern.compile("^>\\s*(.*)$");
-  // 표준 마크다운 image title `![alt](url "캡션")` 의 title 을 캡션으로 분리 캡처(group 3). The title
-  // allows escaped quotes (`\"`) — the web editor backslash-escapes a `"` inside the caption, so a
-  // caption like `she said "hi"` serializes as `"she said \"hi\""`; without honoring the escape the
-  // whole image match failed and the image fell back to a literal-text PARAGRAPH.
+  // Image titles allow escaped quotes so editor captions round-trip through markdown.
   private static final Pattern IMAGE =
       Pattern.compile("!\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+\"((?:[^\"\\\\]|\\\\.)*)\")?\\)");
-  // Backslash escapes inside an image title (`\"` → `"`, `\\` → `\`), undone when reading a caption
-  // back out. Mirrors the web's unescapeTitle.
+  // Mirrors the web editor's unescapeTitle for escaped quotes and backslashes.
   private static final Pattern TITLE_ESCAPE = Pattern.compile("\\\\([\"\\\\])");
   private static final Pattern AUTOLINK = Pattern.compile("^<(https?://[^>\\s]+)>$");
   private static final Pattern LINK_ONLY =
       Pattern.compile("^\\[[^\\]]*\\]\\((https?://[^)\\s]+)\\)$");
   private static final Pattern BARE_URL = Pattern.compile("^(https?://\\S+)$");
-  // A URL path ending in one of the image formats the upload/import pipeline handles — used to send
-  // a standalone bare image URL to an IMAGE block instead of a link-preview EMBED.
+  // Standalone image URLs become IMAGE blocks before the generic embed rule can claim them.
   private static final Pattern IMAGE_EXT =
       Pattern.compile("\\.(?:jpe?g|png|gif|webp)$", Pattern.CASE_INSENSITIVE);
   private static final Pattern LIST_START = Pattern.compile("^(?:[-*]|\\d+\\.)\\s+.*");
@@ -48,8 +43,7 @@ final class MarkdownBlockParser {
   private static final Pattern PARA_BREAK =
       Pattern.compile("^(#{1,3}\\s|>\\s|!\\[|[-*]\\s|\\d+\\.\\s).*");
 
-  // Medium-style per-image width, carried as an alt-text marker prefix (the only metadata that
-  // survives the markdown round-trip). Stripped before storage, re-attached on serialize.
+  // The alt-text width marker survives markdown round-trips; strip on read and restore on write.
   private static final String[] WIDTHS = {"wide", "full", "half"};
 
   List<ReplacePostBlocksCommand.BlockInput> parse() {
@@ -75,8 +69,8 @@ final class MarkdownBlockParser {
 
   private boolean readFence() {
     String line = lines[i];
-    // Fenced code block — consume the whole region (incl. blank / markdown-like lines) so the
-    // line-based rules below can't tear it apart.
+    // Consume the whole fence so line-based rules cannot split code at blank or markdown-like
+    // lines.
     Matcher fence = FENCE.matcher(line);
     if (fence.matches()) {
       String marker = fence.group(1).substring(0, 1).repeat(3);
@@ -107,7 +101,6 @@ final class MarkdownBlockParser {
 
   private boolean readTable() {
     String line = lines[i];
-    // GFM table (header row + "| --- |" separator + body rows) → raw markdown in one block.
     if (isTableStart(line, i + 1 < lines.length ? lines[i + 1] : null)) {
       List<String> rows = new ArrayList<>();
       while (i < lines.length && lines[i].stripLeading().startsWith("|")) {
@@ -151,8 +144,7 @@ final class MarkdownBlockParser {
     String line = lines[i];
     Matcher quote = QUOTE.matcher(line);
     if (quote.matches()) {
-      // Coalesce consecutive `>` lines into ONE quote — one block per line rendered as N
-      // adjacent quote boxes.
+      // Coalesce consecutive quote lines so one quote does not render as several adjacent boxes.
       StringBuilder quoteLines = new StringBuilder(quote.group(1));
       i++;
       while (i < lines.length) {
@@ -171,8 +163,7 @@ final class MarkdownBlockParser {
 
   private boolean readImages() {
     String line = lines[i];
-    // One OR MORE images on a line (a side-by-side «half» pair serializes adjacent) → one IMAGE
-    // block each. Only when the line is *nothing but* images.
+    // Side-by-side half-width images serialize adjacently; accept a line containing only images.
     Matcher img = IMAGE.matcher(line);
     List<Image> images = new ArrayList<>();
     while (img.find()) {
@@ -212,9 +203,7 @@ final class MarkdownBlockParser {
 
   private boolean readImageUrl() {
     String line = lines[i];
-    // A standalone bare image URL (e.g. an external image pasted on its own line) → IMAGE block,
-    // so it renders as the image and not a link-preview card. Must run before the embed check,
-    // which would otherwise claim every standalone http(s) URL.
+    // Must precede the embed rule, which accepts every standalone HTTP(S) URL.
     String imageUrl = standaloneImageUrl(line);
     if (imageUrl != null) {
       ObjectNode node = json.createObjectNode();
@@ -240,8 +229,7 @@ final class MarkdownBlockParser {
 
   private boolean readList() {
     String line = lines[i];
-    // A markdown list (bullet or numbered), possibly NESTED — capture the whole region as raw
-    // markdown so nesting round-trips. Block type follows the first line.
+    // Keep the complete list as markdown to preserve nesting; its first line sets the block type.
     if (LIST_START.matcher(line).matches()) {
       boolean ordered = Character.isDigit(line.charAt(0));
       List<String> listLines = new ArrayList<>();
@@ -261,9 +249,7 @@ final class MarkdownBlockParser {
   }
 
   private void readParagraph() {
-    // PARAGRAPH — consecutive non-empty lines. Always consume the current line FIRST so `i`
-    // advances even when the line matched no rule above (e.g. an image with a trailing caption);
-    // otherwise the loop would spin forever.
+    // Consume the current line first to guarantee progress when no earlier rule accepts it.
     List<String> paraLines = new ArrayList<>();
     paraLines.add(lines[i]);
     i++;
@@ -282,7 +268,6 @@ final class MarkdownBlockParser {
     blocks.add(block(PostBlockType.PARAGRAPH, String.join("\n", paraLines)));
   }
 
-  /** A pipe-led line whose next line is a GFM separator row (`| --- |`) — the start of a table. */
   private static boolean isTableStart(String line, String next) {
     if (!line.stripLeading().startsWith("|") || next == null) return false;
     String t = next.trim();
@@ -290,11 +275,8 @@ final class MarkdownBlockParser {
   }
 
   /**
-   * A line that is just a single URL (bare, an autolink, or a `[text](url)` link) → that URL.
-   * velog-style: ANY standalone parseable http(s) URL on its own line becomes an EMBED card
-   * (video→iframe, map→static map, everything else→OG link card — the reader decides). The web's
-   * {@code planEmbed} only returns null for unparseable / non-http URLs, so "parseable" is the
-   * whole gate here. A URL with surrounding text stays an inline link.
+   * Any standalone parseable HTTP(S) URL becomes an embed, matching the web editor. A URL
+   * surrounded by text remains an inline link.
    */
   private static String standaloneEmbedUrl(String line) {
     String t = line.trim();
@@ -313,10 +295,8 @@ final class MarkdownBlockParser {
   }
 
   /**
-   * A line that is just a bare (or {@code <autolink>}) URL pointing at an image file (by extension)
-   * → that URL, so a pasted external image renders as an IMAGE block instead of a link-preview
-   * EMBED. A labeled {@code [text](url)} link is deliberately left to the embed path (the author
-   * meant a link, not an image). Mirrors the web's {@code standaloneImageUrl}.
+   * Labeled {@code [text](url)} image links stay on the embed path: the author requested a link.
+   * Bare URLs and autolinks with image extensions become IMAGE blocks, matching the web editor.
    */
   private static String standaloneImageUrl(String line) {
     String t = line.trim();
@@ -334,7 +314,6 @@ final class MarkdownBlockParser {
     }
   }
 
-  /** Undo the image-title escaping ({@code \"} → {@code "}, {@code \\} → {@code \}). */
   private static String unescapeTitle(String s) {
     return TITLE_ESCAPE.matcher(s).replaceAll("$1");
   }

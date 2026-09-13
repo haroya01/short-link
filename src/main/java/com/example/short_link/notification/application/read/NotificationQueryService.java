@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Reads a recipient's notification feed and unread count, resolving actor identity per page. */
 @Service
 @RequiredArgsConstructor
 public class NotificationQueryService {

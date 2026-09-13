@@ -4,12 +4,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Aggregated profile visit stats. Subset of {@code LinkStats} — drops link-only signals (preview /
- * lifecycle / destinations / return rate / insights) and renames clicks → visits so the field names
- * line up with what {@code /profile/stats/page.tsx} expects. JSON shape is intentionally identical
- * to the TS {@code ProfileStats} type in the frontend.
- */
 public record ProfileStats(
     String timezone,
     long totalVisits,

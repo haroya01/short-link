@@ -66,7 +66,7 @@ public record CollectionSummaryView(
         connectionId);
   }
 
-  /** 조회한 큐레이터의 표시 정보. 누락된 사용자는 기존 응답처럼 두 필드를 null로 둔다. */
+  /** 누락된 큐레이터는 username과 avatarUrl을 모두 null로 둔다. */
   public record Curator(String username, String avatarUrl) {
     public static final Curator UNKNOWN = new Curator(null, null);
   }

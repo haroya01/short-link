@@ -74,8 +74,6 @@ public class PostEntity extends BaseTimeEntity {
   @Column(length = 500)
   private String excerpt;
 
-  // 검색 평문은 일반 글 조회에서 큰 본문을 읽지 않도록 post_search_text에 따로 저장한다.
-
   @Column(name = "og_image_url", length = 512)
   private String ogImageUrl;
 
@@ -182,7 +180,6 @@ public class PostEntity extends BaseTimeEntity {
     this.lastEditedAt = Instant.now();
   }
 
-  /** A title may be blank while drafting, but is required before a post goes public. */
   private void requireTitleToGoPublic() {
     if (title == null || title.isBlank()) {
       throw new PostException(PostErrorCode.TITLE_REQUIRED);
@@ -250,7 +247,6 @@ public class PostEntity extends BaseTimeEntity {
     this.tags.addAll(normalizeTags(raw));
   }
 
-  /** 기존 토큰이 있으면 새 토큰으로 교체하지 않는다. */
   public String ensurePreviewToken(String token) {
     if (this.previewToken == null) {
       this.previewToken = token;

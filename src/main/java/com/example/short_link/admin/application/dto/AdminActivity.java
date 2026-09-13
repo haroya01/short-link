@@ -3,12 +3,7 @@ package com.example.short_link.admin.application.dto;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Live activity feed for the admin console: the newest links and clicks across all users, plus the
- * links picking up the most human traffic in the last 24h. Deliberately PII-minimal — click rows
- * carry only coarse dimensions (country code, referrer host, device class), never IP or visitor
- * hash.
- */
+/** 클릭 기록에는 IP와 방문자 해시를 노출하지 않는다. */
 public record AdminActivity(
     List<RecentLink> recentLinks, List<RecentClick> recentClicks, List<TrendingLink> trending24h) {
 

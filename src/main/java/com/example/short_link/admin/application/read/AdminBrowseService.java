@@ -21,11 +21,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Operational browse over the full user / link tables for the admin console. Read-only and
- * paginated; input shaping (blank→null, role validation, page/size clamps) happens here so the
- * repository port speaks only in already-normalized filters.
- */
 @Service
 @RequiredArgsConstructor
 public class AdminBrowseService {
@@ -59,11 +54,7 @@ public class AdminBrowseService {
     return new LinksPage(rows.items().stream().map(r -> toLinkRow(r, now)).toList(), rows.total());
   }
 
-  /**
-   * Full metadata plus the owner-grade click report for one link. The metadata row and the stats
-   * report are read separately; the stats come from the owner-facing assembler with its ownership
-   * gate skipped (this endpoint is already ADMIN-only).
-   */
+  /** 관리자 전용 호출이므로 소유권 검사 없이 통계를 조회한다. */
   @Transactional(readOnly = true)
   public AdminLinkDetail linkDetail(ShortCode shortCode) {
     LinkRow row =

@@ -33,11 +33,7 @@ public class PostLikeQueryService {
     return new PostLikeStatus(post.getLikeCount(), liked);
   }
 
-  /**
-   * The caller's liked posts as full feed cards, newest-liked first. Stale likes (post
-   * deleted/unpublished or author gone) are skipped — unpublished posts are filtered here and the
-   * assembler drops deleted-author posts. Posts are batch-loaded to avoid an N+1 over the list.
-   */
+  /** Newest-liked first. Skips deleted/unpublished posts and deleted authors. */
   public List<PublicFeedItem> likedPosts(Long userId) {
     List<PostLikeEntity> likes = postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (likes.isEmpty()) return List.of();

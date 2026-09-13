@@ -16,10 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Reusable Call-to-Action library entity. 작성자가 라이브러리에서 생성/관리하고 글의 CTA_REF 블록에서 참조. 소프트 삭제 (분석 데이터
- * 보존, 과거 발행 글의 참조 무결성).
- */
+/** 분석 데이터와 발행된 글의 CTA_REF 참조를 보존하기 위해 soft 삭제한다. */
 @Entity
 @Table(name = "cta")
 @Getter
@@ -50,11 +47,7 @@ public class CtaEntity extends BaseTimeEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  /**
-   * Short code of the kurl link this CTA's target resolves to (wrapped at save time, or the code of
-   * an already-kurl URL). The public post serves this short link so clicks are measured +
-   * attributed. Null when tracking couldn't be established (e.g. the user's link quota is full).
-   */
+  /** 추적 링크를 만들지 못한 경우 null이다. */
   @Column(name = "tracked_short_code", length = 16)
   private String trackedShortCode;
 
@@ -66,7 +59,6 @@ public class CtaEntity extends BaseTimeEntity {
     this.purpose = purpose;
   }
 
-  /** Set/replace the tracking short code (the kurl link a click on this CTA flows through). */
   public void trackVia(String shortCode) {
     this.trackedShortCode = shortCode;
   }

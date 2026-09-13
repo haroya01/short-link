@@ -1,10 +1,6 @@
 package com.example.short_link.common.post;
 
-/**
- * 중립 집행 포트 — abuse(모더레이션) 슬라이스가 post 슬라이스에 직접 의존하지 않고 글 게시취소를 집행한다. {@code
- * common.post.PublishedPostCountReader} 와 같은 방식으로 슬라이스 그래프를 비순환으로 유지한다(ArchUnit 강제). 구현은 post 슬라이스가
- * 제공하며 호출자 트랜잭션 안에서 실행된다 — 신고 처리(resolve)와 원자적으로 묶기 위함.
- */
+/** post 슬라이스가 구현한다. 순환 의존 없이 신고 처리와 같은 트랜잭션에서 게시취소를 집행한다. */
 public interface PostModerationPort {
 
   /**

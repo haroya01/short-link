@@ -10,15 +10,9 @@ import java.util.Locale;
 import java.util.Optional;
 
 /**
- * Shared SSRF / private-IP guard. Used anywhere we make outbound HTTP from user-supplied URLs — OG
- * fetcher, click webhooks, etc. Rejects schemes other than http/https, missing host, and any host
- * whose DNS resolution lands on a loopback / link-local / site-local (RFC1918) / multicast /
- * carrier-grade NAT (RFC6598) / IPv6 unique-local (fc00::/7) address.
- *
- * <p>The {@link #isPublic(String)} boolean form is convenient but TOCTOU-unsafe: a malicious DNS
- * server can return a public IP at validation time and a private one at fetch time (DNS rebinding).
- * For real outbound HTTP, callers should use {@link #resolve(String)} and connect directly to the
- * returned IP, preserving the Host header from the original URL.
+ * Rejects non-HTTP(S) URLs and hosts resolving to non-public IPs. {@link #isPublic(String)} alone
+ * is vulnerable to DNS rebinding: outbound callers must use {@link #resolve(String)}, connect to
+ * its returned IPs, and preserve the original Host header.
  */
 public final class PublicHttpUrlGuard {
 
@@ -29,10 +23,8 @@ public final class PublicHttpUrlGuard {
   }
 
   /**
-   * Parse, scheme-check, and resolve the URL's host. Returns the resolved addresses (all of them —
-   * if any one is private the URL is rejected outright). Callers that actually open a connection
-   * should use the resolved address to connect, not re-resolve the host, to close the DNS rebinding
-   * window.
+   * Rejects the URL if any resolved IP is private. Connect to a returned address without
+   * re-resolving the host to prevent DNS rebinding.
    */
   public static Optional<Resolved> resolve(String url) {
     if (url == null || url.isBlank()) return Optional.empty();
@@ -61,9 +53,8 @@ public final class PublicHttpUrlGuard {
   }
 
   /**
-   * Resolution result paired with the URI that produced it. {@code addresses} contains every IP the
-   * host resolved to at validation time — outbound clients should connect to one of these directly
-   * (with the original Host header) rather than re-resolving.
+   * All IPs resolved at validation time. Connect directly to one of them with the original Host
+   * header.
    */
   public record Resolved(URI uri, List<InetAddress> addresses) {}
 

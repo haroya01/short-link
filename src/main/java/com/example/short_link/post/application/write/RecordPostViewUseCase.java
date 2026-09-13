@@ -20,7 +20,6 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
 import java.util.Locale;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,27 +37,7 @@ public class RecordPostViewUseCase {
   private final BotHeuristic botHeuristic;
   private final Clock clock;
 
-  @Autowired
   public RecordPostViewUseCase(
-      UserRepository userRepository,
-      PostRepository postRepository,
-      PostViewEventRepository postViewEventRepository,
-      UserAgentClassifier userAgentClassifier,
-      GeoIpResolver geoIpResolver,
-      AsnResolver asnResolver,
-      BotHeuristic botHeuristic) {
-    this(
-        userRepository,
-        postRepository,
-        postViewEventRepository,
-        userAgentClassifier,
-        geoIpResolver,
-        asnResolver,
-        botHeuristic,
-        Clock.systemUTC());
-  }
-
-  RecordPostViewUseCase(
       UserRepository userRepository,
       PostRepository postRepository,
       PostViewEventRepository postViewEventRepository,

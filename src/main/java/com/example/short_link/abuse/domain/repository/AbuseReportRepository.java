@@ -16,9 +16,6 @@ public interface AbuseReportRepository {
 
   List<AbuseReportEntity> findAllByOrderByCreatedAtDesc();
 
-  /**
-   * 같은 신고자가 같은 대상에 대해 아직 열린(OPEN/REVIEWING) 신고를 갖고 있는지 — 중복 신고 가드용. 익명 신고 (reporterUserId=null)는 대상
-   * 못하므로 가드 밖.
-   */
+  /** OPEN/REVIEWING 신고만 중복으로 간주한다. 익명 신고자는 false를 반환한다. */
   boolean existsOpenReport(Long reporterUserId, AbuseSubjectType subjectType, Long subjectId);
 }

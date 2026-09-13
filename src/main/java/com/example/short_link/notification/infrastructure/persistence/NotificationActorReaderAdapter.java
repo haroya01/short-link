@@ -11,8 +11,7 @@ import java.util.Map;
 import org.springframework.stereotype.Repository;
 
 /**
- * Resolves notification actors via one native batch read against the user module's {@code users}
- * table — a native query so the notification module needn't depend on the user module's entity.
+ * Uses a native batch query to avoid an entity dependency on the user module and per-actor lookups.
  */
 @Repository
 class NotificationActorReaderAdapter implements NotificationActorReader {

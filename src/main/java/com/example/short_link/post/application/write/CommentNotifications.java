@@ -22,7 +22,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-/** 댓글·하이라이트 답글의 알림 우선순위와 멘션 중복 제거를 담당한다. */
 @Component
 @RequiredArgsConstructor
 public class CommentNotifications {

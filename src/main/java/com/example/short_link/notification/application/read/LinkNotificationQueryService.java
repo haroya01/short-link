@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 링크 알림 인박스 조회 — 커서 페이지네이션 + 안 읽음 카운트. 블로그 NotificationQueryService 와 같은 결. */
 @Service
 @RequiredArgsConstructor
 public class LinkNotificationQueryService {

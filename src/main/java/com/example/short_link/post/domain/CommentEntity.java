@@ -38,7 +38,6 @@ public class CommentEntity extends BaseTimeEntity {
   @Column(nullable = false, length = MAX_BODY)
   private String body;
 
-  /** 관리자 모더레이션 soft 삭제 시각. null 이면 살아있는 댓글. */
   @Column(name = "deleted_at")
   private Instant deletedAt;
 

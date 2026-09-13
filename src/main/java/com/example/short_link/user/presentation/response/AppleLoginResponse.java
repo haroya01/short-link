@@ -4,8 +4,8 @@ import com.example.short_link.user.application.dto.IssuedTokens;
 import com.fasterxml.jackson.annotation.JsonInclude;
 
 /**
- * Either a full token pair, or only {@code challenge} when the account has 2FA enabled — the app
- * then finishes through the shared {@code /2fa/verify} with that challenge token.
+ * Contains either a token pair or only a 2FA challenge, which must be completed through
+ * /2fa/verify.
  */
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record AppleLoginResponse(String accessToken, String refreshToken, String challenge) {

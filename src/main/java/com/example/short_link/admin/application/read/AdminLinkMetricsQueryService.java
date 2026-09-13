@@ -19,7 +19,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,14 +30,7 @@ public class AdminLinkMetricsQueryService {
   private final AdminMetricsRepository metricsRepository;
   private final Clock clock;
 
-  @Autowired
   public AdminLinkMetricsQueryService(
-      RequestMetricJpaRepository requestMetricRepository,
-      AdminMetricsRepository metricsRepository) {
-    this(requestMetricRepository, metricsRepository, Clock.systemUTC());
-  }
-
-  AdminLinkMetricsQueryService(
       RequestMetricJpaRepository requestMetricRepository,
       AdminMetricsRepository metricsRepository,
       Clock clock) {

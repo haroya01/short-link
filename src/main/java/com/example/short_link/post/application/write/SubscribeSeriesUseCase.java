@@ -13,11 +13,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Subscribe / unsubscribe to a series ("구독"). Idempotent — subscribing an already-subscribed series
- * is a no-op, unsubscribing one that isn't subscribed is a no-op. New episodes of subscribed series
- * surface in the subscriber's following feed (see {@code PublicFeedQueryService#feedFollowing}).
- */
+/** Subscribe and unsubscribe are idempotent. */
 @Service
 @RequiredArgsConstructor
 public class SubscribeSeriesUseCase {
@@ -29,12 +25,9 @@ public class SubscribeSeriesUseCase {
   @Transactional
   public SeriesSubscriptionStatus subscribe(Long userId, Long seriesId) {
     SeriesEntity series = requireSeries(seriesId);
-    // INSERT IGNORE: idempotent + race-safe — a concurrent duplicate becomes a no-op instead of a
-    // unique-key violation. Rows>0 means this call is the one that actually created the
-    // subscription.
+    // Only a newly inserted row triggers notification; concurrent duplicate inserts return zero.
     int inserted = subscriptionRepository.insertIgnore(userId, seriesId);
     if (inserted > 0) {
-      // Notify the series owner of a new subscriber — never for subscribing your own series.
       if (!series.getUserId().equals(userId)) {
         events.publishEvent(
             BlogInteractionEvent.seriesSubscribe(

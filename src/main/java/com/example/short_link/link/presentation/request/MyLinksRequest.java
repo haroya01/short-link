@@ -10,7 +10,6 @@ import java.time.format.DateTimeParseException;
 import java.util.Locale;
 import lombok.Builder;
 
-/** 내 링크의 HTTP 문자열 조건을 타입이 있는 조회 입력으로 바꾼다. */
 @Builder
 public record MyLinksRequest(
     String after,

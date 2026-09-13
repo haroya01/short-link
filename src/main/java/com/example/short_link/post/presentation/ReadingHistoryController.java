@@ -15,10 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * The reader's private reading history. All authenticated (it's per-user): a read beacon on a post,
- * the paged history list, and clear-all / forget-one for control over what's kept.
- */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor

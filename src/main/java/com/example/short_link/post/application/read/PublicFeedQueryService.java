@@ -20,11 +20,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Global public feed across all authors — the velog-style home where anyone browses published
- * posts. Only PUBLISHED posts from non-deleted authors are exposed. Authors are batch-hydrated to
- * avoid per-post N+1.
- */
+/** Exposes only PUBLISHED posts from non-deleted authors. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -73,15 +69,12 @@ public class PublicFeedQueryService {
     return assemble(posts, postRepository.countSearchPublished(text, language), page, size);
   }
 
-  /** Most-used tags across published posts, most popular first — the 주제 index. */
   public List<TagCount> popularTags(int limit) {
     return postRepository.findPopularTags(limit);
   }
 
   /**
-   * Authors for the discovery rail — most published posts first. Over-fetches so deleted authors
-   * (filtered during hydration) don't shrink the list below {@code limit}, then trims to {@code
-   * limit} while preserving the ranking order.
+   * Over-fetches to allow for deleted authors being removed, then preserves ranking when trimming.
    */
   public List<SuggestedAuthorView> suggestedAuthors(int limit) {
     List<AuthorPostStats> ranked = postRepository.findTopAuthorStats(limit * 2);
@@ -102,14 +95,13 @@ public class PublicFeedQueryService {
   }
 
   /**
-   * The "following" feed — everything the user opted into, merged newest-first: posts from authors
-   * they follow, new episodes of series they subscribe to, AND posts carrying a tag they follow (주제
-   * 팔로우). Empty when the user follows/subscribes to nothing on all three axes.
+   * Merges followed authors, subscribed series and followed tags, newest first. Returns empty when
+   * none of those signals exist.
    */
   public PublicFeedView feedFollowing(Long userId, int page, int size) {
     List<Long> followingIds = followRepository.findFollowingIds(userId);
     List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);
-    // Match the tag query's lower() — followed tags are user-entered, compare case-insensitively.
+    // Match the query's lower() comparison for user-entered tags.
     List<String> followedTags =
         tagPrefQueryService.get(userId).followed().stream()
             .map(t -> t.toLowerCase(Locale.ROOT))
@@ -124,13 +116,11 @@ public class PublicFeedQueryService {
         postRepository.countPublishedByAuthorsSeriesOrTags(
             followingIds, subscribedSeriesIds, followedTags);
 
-    // Annotate each card with why it matched (작가/시리즈/주제) so the UI can explain it. Keyed by post
-    // id, not list index — the assembler drops deleted-author posts, so positions wouldn't line up.
+    // Key reasons by post ID: the assembler can remove deleted-author posts and shift positions.
     Set<Long> followingSet = Set.copyOf(followingIds);
     Set<Long> seriesSet = Set.copyOf(subscribedSeriesIds);
     Set<String> tagSet = Set.copyOf(followedTags);
-    // Plain HashMap, not Collectors.toMap — a post with no matching signal maps to a null reason,
-    // which toMap rejects. Absent key == null reason == unannotated card.
+    // Absent reasons leave cards unannotated; Collectors.toMap rejects null values.
     Map<Long, FollowReason> reasonById = new HashMap<>();
     for (PostEntity p : posts) {
       FollowReason reason = followReason(p, followingSet, seriesSet, tagSet);
@@ -145,9 +135,6 @@ public class PublicFeedQueryService {
     return new PublicFeedView(items, page, size, hasNext);
   }
 
-  // AUTHOR > SERIES > TOPIC — the most direct relationship wins, so a followed author's post reads
-  // as
-  // "팔로잉" rather than incidentally "주제". For TOPIC, name the first followed tag the post carries.
   private FollowReason followReason(
       PostEntity post, Set<Long> followingSet, Set<Long> seriesSet, Set<String> tagSet) {
     if (followingSet.contains(post.getUserId())) return FollowReason.author();
@@ -161,10 +148,6 @@ public class PublicFeedQueryService {
         .orElse(null);
   }
 
-  /**
-   * Popular posts grouped by tag — one section per topic, for the 인기 tab. For each of the top
-   * {@code tagLimit} tags, the top {@code perTag} published posts (deleted-author posts filtered).
-   */
   public List<TrendingTagSection> trendingByTag(int tagLimit, int perTag) {
     List<TrendingTagSection> sections = new ArrayList<>();
     for (TagCount tag : postRepository.findPopularTags(tagLimit)) {

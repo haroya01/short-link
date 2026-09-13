@@ -17,12 +17,6 @@ import tools.jackson.databind.DeserializationFeature;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Verifies a Cloudflare Turnstile token against the siteverify endpoint. No-op (always passes) when
- * no secret is configured, so the password gate keeps working until the owner provisions keys.
- * Fail-closed when configured: if the verification call errors or the token is bad, unlock is
- * denied (the password is still the primary gate; this only adds bot resistance).
- */
 @Slf4j
 @Component
 public class CloudflareTurnstileVerifier implements TurnstileVerifier {
@@ -40,13 +34,11 @@ public class CloudflareTurnstileVerifier implements TurnstileVerifier {
   private final HttpClient http =
       HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(3)).build();
 
-  // 생성자가 둘이라 스프링이 주입용을 못 고른다 — 운영용을 @Autowired 로 명시(2-arg 는 테스트 심).
   @Autowired
   public CloudflareTurnstileVerifier(TurnstileProperties props) {
     this(props, SITEVERIFY);
   }
 
-  // 테스트 심: siteverify 엔드포인트를 로컬 스텁으로 바꿔 검증 경로를 결정적으로 돌린다.
   CloudflareTurnstileVerifier(TurnstileProperties props, URI endpoint) {
     this.props = props;
     this.endpoint = endpoint;
@@ -57,7 +49,6 @@ public class CloudflareTurnstileVerifier implements TurnstileVerifier {
     return props.verifyEnabled();
   }
 
-  /** True if the challenge passes, or if Turnstile isn't configured. */
   @Override
   public boolean verify(String token, String remoteIp) {
     if (!props.verifyEnabled()) {
@@ -95,7 +86,6 @@ public class CloudflareTurnstileVerifier implements TurnstileVerifier {
         .build();
   }
 
-  /** Only the top-level JSON Boolean success=true accepts a proof. */
   private boolean reportsSuccess(String body) {
     if (body == null || body.isBlank()) return false;
     JsonNode response = JSON.readTree(body);

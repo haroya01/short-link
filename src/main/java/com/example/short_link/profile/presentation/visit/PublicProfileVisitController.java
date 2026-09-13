@@ -12,12 +12,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Anonymous beacon endpoint called by the public /u/&lt;handle&gt; page on each render. Records a
- * row in {@code profile_visit_event} for the owner's stats dashboard. The frontend fires this once
- * per page-mount via {@code navigator.sendBeacon}; the response is intentionally a 204 No Content
- * so the beacon doesn't block paint.
- */
 @RestController
 @RequestMapping("/api/v1/public/profiles")
 @RequiredArgsConstructor

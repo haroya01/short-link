@@ -9,10 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 한 큐레이터의 *공개* 컬렉션/길 목록 — 작가 홈의 "컬렉션" 탭이 읽는다(미로그인 독자도 본다). 연결 그래프의 발견 고리를 닫는다: 한 길의 큐레이터에서 그가 엮은 다른
- * 길들로. 비공개·링크공유는 빠진다.
- */
+/** PUBLIC 컬렉션만 노출한다. PRIVATE와 UNLISTED는 제외한다. */
 @RestController
 @RequestMapping("/api/v1/public/profiles")
 @RequiredArgsConstructor

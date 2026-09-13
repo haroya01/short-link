@@ -48,7 +48,6 @@ public final class RequestRouteMetrics {
       latencies[i] = row.getLatencyMs();
       if (row.getStatus() >= 500) errors++;
       statuses.merge(String.valueOf(row.getStatus()), 1L, Long::sum);
-      // 경로 지연 통계만 필요한 소비자는 outcome 값이나 분포에 의존하지 않는다.
       if (includeOutcomes) outcomes.merge(row.getOutcome(), 1L, Long::sum);
     }
     Arrays.sort(latencies);

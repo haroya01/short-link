@@ -12,10 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 발행 시점 스냅샷. (b) revision history — diff 뷰는 v0 X, 이전 발행 버전 복원만. titleSnapshot 은 revision list 표시 시
- * contentJson 파싱 안 하려고 따로 둠.
- */
+/** {@code titleSnapshot}은 리비전 목록에서 contentJson을 파싱하지 않도록 별도로 저장한다. */
 @Entity
 @Table(
     name = "post_revision",

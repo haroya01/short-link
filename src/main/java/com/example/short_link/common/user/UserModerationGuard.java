@@ -1,9 +1,6 @@
 package com.example.short_link.common.user;
 
-/**
- * 중립 쓰기 게이트 — post 슬라이스(글·댓글 생성)가 user 슬라이스에 직접 의존하지 않고 제재 상태를 확인한다. {@code
- * common.user.UserModerationPort}(집행) 와 짝이며 슬라이스 그래프를 비순환으로 유지한다(ArchUnit 강제). 구현은 user 슬라이스가 제공한다.
- */
+/** user 슬라이스가 구현하며, 콘텐츠 쓰기 경로와의 순환 의존을 막는다. */
 public interface UserModerationGuard {
 
   /**

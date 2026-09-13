@@ -6,9 +6,7 @@ import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.access.application.write.PasswordUnlockUseCase;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkException;
-import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
-import com.example.short_link.link.redirect.presentation.RedirectController;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
 import jakarta.servlet.http.HttpServletRequest;
@@ -21,11 +19,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Password-protected unlock — same path / different method from {@link RedirectController}. Checks
- * the password, then hands off to {@link LinkRedirectFlow} for the same post-load pipeline the GET
- * side uses. Failed password renders the prompt at 401; otherwise the outcome renders identically.
- */
 @RestController
 @RequiredArgsConstructor
 public class PasswordUnlockController {
@@ -97,7 +90,6 @@ public class PasswordUnlockController {
 
   private ResponseEntity<?> renderUnlock(RedirectOutcome outcome) {
     return switch (outcome) {
-        // 비밀번호가 맞으면 곧장 302 하지 않고, kurl 마크가 그려지는 잠금 해제 화면을 잠깐 보여준 뒤 이동한다.
       case RedirectOutcome.Redirect r -> LinkHtmlRenderer.unlockedPageResponse(r.picked().url());
       case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
       case RedirectOutcome.DomainBlocked db -> LinkHtmlRenderer.domainBlockedPageResponse();

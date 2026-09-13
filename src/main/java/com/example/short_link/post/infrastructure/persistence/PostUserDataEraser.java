@@ -6,10 +6,8 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
 /**
- * Purges the post slice's user-owned rows on account hard delete. Native SQL keeps the user slice
- * free of post entity types (see {@code common.user.UserDataEraser}). Order matters only for
- * post_block/post_revision → posts (their FKs lack ON DELETE CASCADE); comment/post_like/
- * post_bookmark carry no FK to posts, and post_tag/post_view_event cascade from posts.
+ * Delete post_block/post_revision before posts: their FKs do not cascade. Comment/like/bookmark
+ * references to posts need explicit cleanup; tags and view events cascade.
  */
 @Repository
 class PostUserDataEraser implements UserDataEraser {
@@ -18,8 +16,7 @@ class PostUserDataEraser implements UserDataEraser {
 
   @Override
   public void eraseFor(long userId) {
-    // Likes this user placed on other authors' posts back a denormalized counter — settle it
-    // before the like rows disappear, or those posts overcount forever.
+    // Settle other authors' like counters before deleting this user's like rows.
     execute(
         """
         UPDATE posts p JOIN post_like pl ON pl.post_id = p.id
@@ -31,13 +28,8 @@ class PostUserDataEraser implements UserDataEraser {
         "DELETE FROM comment WHERE user_id = :userId"
             + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",
         userId);
-    // comment_like / note_like carry a user FK WITHOUT ON DELETE CASCADE (V88/V89) — the likes this
-    // user placed on *other* people's comments/notes would otherwise trip the final users delete
-    // and
-    // loop the cleanup job forever. Likes on this user's own comments cascade via the comment
-    // delete
-    // above; likes on their own notes cascade via note → users (note carries the cascade, note_like
-    // → note does too), so only the user_id-scoped rows need an explicit purge here.
+    // comment_like and note_like user FKs do not cascade; purge the user's likes on surviving
+    // content.
     execute("DELETE FROM comment_like WHERE user_id = :userId", userId);
     execute("DELETE FROM note_like WHERE user_id = :userId", userId);
     execute(
@@ -49,12 +41,8 @@ class PostUserDataEraser implements UserDataEraser {
             + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",
         userId);
     execute("DELETE FROM bookmark_folder WHERE user_id = :userId", userId);
-    // Highlight replies this user wrote on surviving highlights — replies under highlights we're
-    // about to drop cascade via the highlight FK, but the user's own replies elsewhere must go
-    // first or the final users delete trips fk_highlight_reply_user.
+    // Replies on surviving highlights must be removed before the user FK can be deleted.
     execute("DELETE FROM highlight_reply WHERE user_id = :userId", userId);
-    // Reader highlights and reading history are private per-user records (PII) — drop the ones this
-    // user made, plus any others left on this user's own posts.
     execute(
         "DELETE FROM post_highlight WHERE user_id = :userId"
             + " OR post_id IN (SELECT id FROM posts WHERE user_id = :userId)",

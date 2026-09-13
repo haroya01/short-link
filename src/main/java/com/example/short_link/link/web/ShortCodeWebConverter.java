@@ -7,10 +7,8 @@ import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /**
- * Lets Spring MVC bind {@code @PathVariable ShortCode shortCode} and {@code @RequestParam ShortCode
- * ...} from plain strings. Validation (3..16 alphanumeric) happens in {@link ShortCode}'s
- * constructor — invalid input becomes {@link IllegalArgumentException}, which the global handler
- * maps to 400.
+ * Invalid {@link ShortCode} input throws {@link IllegalArgumentException}, which the global handler
+ * maps to HTTP 400.
  */
 @Configuration
 public class ShortCodeWebConverter implements WebMvcConfigurer {

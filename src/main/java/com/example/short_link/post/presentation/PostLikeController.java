@@ -12,7 +12,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Authenticated like (공감) on a post. Public like counts come from the public post views. */
 @RestController
 @RequestMapping("/api/v1/posts/{postId}/like")
 @RequiredArgsConstructor

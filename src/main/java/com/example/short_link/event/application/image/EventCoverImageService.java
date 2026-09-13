@@ -17,10 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 이벤트 커버 이미지 — {@code PostImageService} 의 presign/commit two-step 축소판 (URL import 없음). key prefix
- * {@code event-covers/{userId}/{eventId}/{uuid}.{ext}}, 업로드 제한은 공통 ImageUploadPolicy를 따른다.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor

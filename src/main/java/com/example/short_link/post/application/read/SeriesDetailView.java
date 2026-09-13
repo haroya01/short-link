@@ -2,5 +2,5 @@ package com.example.short_link.post.application.read;
 
 import java.util.List;
 
-/** Owner-facing series detail: the series plus its ordered member posts (any status). */
+/** Member posts are in series order and include every publication status. */
 public record SeriesDetailView(SeriesView series, List<PostView> posts) {}

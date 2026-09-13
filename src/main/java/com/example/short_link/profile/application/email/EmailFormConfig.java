@@ -7,14 +7,8 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * EMAIL_FORM block payload. Stored as JSON in {@code profile_block.content}; the editor controls
- * the visible copy (title / subtitle / placeholder / success message) without us inventing
- * per-field columns. Lengths are capped to keep the rendered form sane on mobile.
- *
- * <p>{@code subtitle} carries the "why should I leave my email?" value-prop sentence that sits
- * between the title and the input — added (PR #...) when the form felt anonymous without it. Null
- * when the seller doesn't write one; renderer skips the slot entirely so legacy records render
- * identically.
+ * Stored in {@code profile_block.content}. Null subtitle omits the slot so older records render
+ * unchanged.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record EmailFormConfig(
@@ -22,10 +16,6 @@ public record EmailFormConfig(
 
   private static final int TITLE_MAX = 60;
 
-  /**
-   * Cap is larger than the success-message slot (success is a one-liner) but smaller than a full
-   * markdown body — this is a single short paragraph, not a sales page.
-   */
   private static final int SUBTITLE_MAX = 200;
 
   private static final int PLACEHOLDER_MAX = 60;

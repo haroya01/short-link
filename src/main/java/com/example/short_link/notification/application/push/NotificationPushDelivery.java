@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/** Submits the optional push mirror after the in-app notification commits, for any transport. */
+/** Push submission waits for the in-app notification transaction to commit. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

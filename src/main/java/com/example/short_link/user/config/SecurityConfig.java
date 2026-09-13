@@ -41,21 +41,12 @@ import tools.jackson.databind.json.JsonMapper;
 public class SecurityConfig {
 
   /**
-   * Short-code surface — {@code /{shortCode}} for GET redirects and POST password unlocks.
-   * Single-segment alphanumeric, 3–16 chars, matching {@code RedirectController}'s path constraint
-   * so the security layer can't open paths the controller would never serve.
-   *
-   * <p>The trailing {@code (\?.*)?} is required: {@link
-   * org.springframework.security.web.util.matcher.RegexRequestMatcher} matches against the URL
-   * <em>including the query string</em>, so a tracked link like {@code /abc123?src=kakao} or a UTM
-   * link ({@code ?utm_source=…}) wouldn't match a query-less anchor — it would fall through to
-   * {@code anyRequest().authenticated()} and 401 instead of redirecting. {@code src} is a
-   * first-class redirect feature ({@code RedirectController} reads it), so query strings must be
-   * permitted here.
+   * Keep the path constraint aligned with RedirectController. RegexRequestMatcher includes the
+   * query string, so the optional query suffix is needed for tracked public links to bypass session
+   * authentication.
    */
   static final String SHORT_CODE_REGEX = "^/[0-9A-Za-z]{3,16}(\\?.*)?$";
 
-  /** OG preview image rendered for crawlers — same short-code shape with {@code /og.png} suffix. */
   static final String OG_CARD_REGEX = "^/[0-9A-Za-z]{3,16}/og\\.png(\\?.*)?$";
 
   private final JwtAuthenticationFilter jwtFilter;
@@ -121,8 +112,7 @@ public class SecurityConfig {
       throws Exception {
     http.csrf(AbstractHttpConfigurer::disable)
         .cors(c -> {})
-        // Spring Security already emits nosniff + X-Frame-Options DENY by default; add HSTS
-        // (HTTPS-only) and a referrer policy so links/referrers don't leak across origins.
+        // Spring supplies nosniff and frame denial; restrict referrer details across origins too.
         .headers(
             h ->
                 h.httpStrictTransportSecurity(
@@ -136,9 +126,7 @@ public class SecurityConfig {
         .exceptionHandling(e -> e.authenticationEntryPoint(authenticationEntryPoint))
         .authorizeHttpRequests(
             auth ->
-                auth
-                    // Infra: health probe, PoW challenge, OAuth callbacks.
-                    .requestMatchers(
+                auth.requestMatchers(
                         GET,
                         "/actuator/health",
                         "/actuator/health/liveness",
@@ -147,15 +135,9 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers("/oauth2/**", "/login/oauth2/**")
                     .permitAll()
-                    // Swagger docs are admin-only — the API surface is internal product, not public
-                    // reference. Don't widen to permitAll without a docs gating story.
+                    // Keep the internal API documentation restricted to administrators.
                     .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**")
                     .hasRole("ADMIN")
-
-                    // Short-code surface. The regex matchers keep this from accidentally opening
-                    // {@code GET /anything} the way {@code GET /*} did; the controller's path
-                    // constraint and the security matcher are now declared in one place
-                    // (SHORT_CODE_REGEX).
                     .requestMatchers(GET, "/")
                     .permitAll()
                     .requestMatchers(regexMatcher(GET, SHORT_CODE_REGEX))
@@ -164,8 +146,6 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(regexMatcher(GET, OG_CARD_REGEX))
                     .permitAll()
-
-                    // Public read + low-trust write surface (rate-limited / PoW-gated upstream).
                     .requestMatchers(GET, "/api/v1/public/**")
                     .permitAll()
                     .requestMatchers(
@@ -180,48 +160,40 @@ public class SecurityConfig {
                         "/api/v1/public/events/*/registrations",
                         "/api/v1/public/events/registrations/cancel")
                     .permitAll()
-                    // 스트림은 EventSource 라 Authorization 헤더가 없다 — 인증은 컨트롤러의
-                    // 단명 streamToken 이 대신한다(계정 채널 /users/me/clicks/stream 동일).
+                    // EventSource는 Authorization 헤더를 못 보내므로 컨트롤러가 단명 streamToken을 검증한다.
                     .requestMatchers(
                         GET,
                         "/api/v1/links/*/public-stats",
                         "/api/v1/links/*/stream",
                         "/api/v1/users/me/clicks/stream")
                     .permitAll()
-                    // 컬렉션 상세는 공유 가능한 단위 — 공개 컬렉션은 비로그인도 읽는다. 컨트롤러가
-                    // null principal 을 받아 isVisibleTo()로 비공개를 404 로 감춘다(정보 누출 없음).
-                    // 단일 세그먼트 매처라 /collections/{id}/connections 등 쓰기 경로는 안 열린다.
+                    // 컨트롤러가 isVisibleTo()로 비공개 컬렉션을 404로 감춘다. 단일 세그먼트만 허용해
+                    // 하위 connections 등의 쓰기 경로는 인증을 유지한다.
                     .requestMatchers(GET, "/api/v1/collections/*")
                     .permitAll()
-                    // Author follower count is public; following-state needs auth but the
-                    // controller reads a null principal for anonymous viewers. PUT/DELETE stay
-                    // authenticated via anyRequest().
+                    // Controllers support a null viewer for public reads; mutations require a
+                    // session.
                     .requestMatchers(GET, "/api/v1/users/*/follow")
                     .permitAll()
-                    // The followers / following lists are public too (Medium shows them openly);
-                    // per-row followedByMe just needs the optional principal.
                     .requestMatchers(GET, "/api/v1/users/*/followers", "/api/v1/users/*/following")
                     .permitAll()
-                    // Anonymous link creation — PoW filter sits in front of this in the controller
-                    // path so it isn't an unauthenticated free-for-all.
+                    // Anonymous creation is protected by PoW in the controller.
                     .requestMatchers(POST, "/api/v1/links")
                     .permitAll()
 
-                    // Auth flows that must work pre-login. /2fa/verify is the second factor after
-                    // primary login (challenge token only, not full session).
+                    // 2FA verification authenticates with the primary-login challenge, before a
+                    // session exists.
                     .requestMatchers(
                         POST,
                         "/api/v1/auth/refresh",
                         "/api/v1/auth/2fa/verify",
-                        // Web "Sign in with Apple" — the id_token IS the credential (verified
-                        // against
-                        // Apple's JWKS), so this lands before a session exists, like /refresh.
+                        // The Apple identity token is the credential; the verifier checks Apple's
+                        // signature and claims.
                         "/api/v1/auth/apple",
                         "/api/v1/auth/dev-login")
                     .permitAll()
-                    // Native-app auth: /start opens the OAuth dance from the browser sheet, the
-                    // rest speak tokens in the body (Keychain, not cookies). /logout is permitAll
-                    // because presenting the refresh token IS the authorization to kill it.
+                    // Mobile logout authorizes with the supplied refresh token; no access session
+                    // is required.
                     .requestMatchers(GET, "/api/v1/auth/mobile/start")
                     .permitAll()
                     .requestMatchers(
@@ -232,15 +204,8 @@ public class SecurityConfig {
                         "/api/v1/auth/mobile/apple",
                         "/api/v1/auth/mobile/logout")
                     .permitAll()
-                    // Admin surface.
                     .requestMatchers("/api/v1/admin/**")
                     .hasRole("ADMIN")
-
-                    // Everything else (links management, profiles, webhooks,
-                    // custom-domains, tags, campaigns, 2FA setup, /users/me, ...) needs a
-                    // session. Letting `anyRequest().authenticated()` cover them keeps the matcher
-                    // list short and removes ~70 lines of per-endpoint matchers that all said the
-                    // same thing.
                     .anyRequest()
                     .authenticated())
         .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)

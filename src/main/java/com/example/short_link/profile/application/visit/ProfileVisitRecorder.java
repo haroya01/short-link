@@ -23,7 +23,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 프로필 방문에도 링크 클릭과 같은 UA·지역·봇 분류기를 적용한다. */
 @Slf4j
 @Service
 @RequiredArgsConstructor

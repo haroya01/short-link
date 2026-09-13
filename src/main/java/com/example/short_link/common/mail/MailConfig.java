@@ -8,10 +8,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
-/**
- * 트랜잭션 메일 포트. SMTP 설정(spring.mail.*)과 {@code short-link.mail.enabled=true} 가 있으면 실발송, 없으면 로그만 남기는
- * no-op — 로컬/CI 가 메일 자격증명 없이 그대로 돈다. SES 는 SMTP 엔드포인트로 붙는다.
- */
+/** SMTP 설정과 {@code short-link.mail.enabled=true}가 있을 때만 발송한다. 그 외에는 자격증명 없이 실행할 수 있도록 로그만 남긴다. */
 @Slf4j
 @Configuration
 public class MailConfig {

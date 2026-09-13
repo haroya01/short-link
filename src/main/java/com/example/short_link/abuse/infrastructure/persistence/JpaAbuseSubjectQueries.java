@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
-/** 신고 대상 조회 전용 SQL. soft 삭제 포함 여부는 관리자 큐의 기존 조회 규칙을 따른다. */
 public interface JpaAbuseSubjectQueries extends Repository<AbuseReportEntity, Long> {
   @Query(
       value =

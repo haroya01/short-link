@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 컬렉션의 공개 범위와 조회 맥락을 적용한다. 연결 본문은 CollectionContentReader가 해석한다. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -81,10 +80,7 @@ public class CollectionQueryService {
         .toList();
   }
 
-  /**
-   * 여러 블록의 공개 컬렉션을 일괄 조회한다. 요청한 블록 순서를 보존하고, 공개 연결이 없는 블록도 빈 목록으로 돌려준다. 역연결·컬렉션·개수·큐레이터·순위를 각각 일괄
-   * 조회한 뒤 메모리에서 블록별로 묶는다.
-   */
+  /** 요청한 블록 순서를 보존하고, 공개 연결이 없는 블록도 빈 목록으로 돌려준다. */
   public Map<Long, List<CollectionSummaryView>> publicCollectionsContainingBatch(
       ConnectionBlockType blockType, List<Long> refIds) {
     List<Long> distinctRefIds = refIds.stream().filter(Objects::nonNull).distinct().toList();
@@ -189,7 +185,6 @@ public class CollectionQueryService {
 
   private record BlockInCollection(Long collectionId, Long refId) {}
 
-  /** 내 목록의 미리보기와, 연결 시트에서 선택한 블록의 기존 connectionId를 채운다. */
   public List<CollectionSummaryView> listMine(
       Long userId, ConnectionBlockType blockType, Long refId) {
     List<CollectionEntity> collections =

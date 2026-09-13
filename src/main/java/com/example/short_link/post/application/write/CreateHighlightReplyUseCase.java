@@ -11,7 +11,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 하이라이트 작성자에게 답글 알림을 보내며 멘션 알림은 댓글과 같은 정책으로 처리한다. */
 @Service
 @RequiredArgsConstructor
 public class CreateHighlightReplyUseCase {

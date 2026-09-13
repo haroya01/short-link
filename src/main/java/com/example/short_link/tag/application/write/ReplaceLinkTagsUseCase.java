@@ -21,10 +21,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Full replace — missing tags are auto-created so the UI can let users type a new tag inline
- * without a separate "create tag" step.
- */
+/** 별도 생성 요청 없이 새 태그를 입력할 수 있도록 없는 태그는 함께 생성한다. */
 @Service
 @RequiredArgsConstructor
 public class ReplaceLinkTagsUseCase {

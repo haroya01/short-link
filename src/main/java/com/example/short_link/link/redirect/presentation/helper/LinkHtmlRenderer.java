@@ -8,12 +8,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
 /**
- * Static-HTML interstitials rendered inline by the redirect / unlock flow — not-found, expired,
- * view-limit reached, blocked, password prompt, and the post-unlock kurl reveal. No external assets
- * (served from the redirect hot path), but responsive (desktop + mobile, 16px inputs = no iOS
- * zoom), dark-mode aware, and on-brand: a centered card with the kurl green mark and a gentle
- * entrance. The password prompt shakes on a wrong password and optionally renders a Cloudflare
- * Turnstile widget; a correct password animates a kurl mark, then forwards to the destination.
+ * Interstitials are self-contained on the redirect path. Keep inputs at 16px to avoid iOS focus
+ * zoom.
  */
 public final class LinkHtmlRenderer {
 
@@ -117,15 +113,13 @@ public final class LinkHtmlRenderer {
     return htmlResponse(status, passwordPrompt(shortCode, failed, turnstileSiteKey));
   }
 
-  /** Post-unlock kurl reveal — animates, then forwards to {@code destinationUrl}. */
   public static ResponseEntity<byte[]> unlockedPageResponse(String destinationUrl) {
     return htmlResponse(HttpStatus.OK, unlockedPage(destinationUrl));
   }
 
   /**
-   * Maps a visitor-facing terminal error to its branded HTML page so the bare {@code /{code}} link
-   * never shows raw JSON. Returns {@code null} for codes that aren't visitor-facing, so the caller
-   * propagates them to the API error handler.
+   * Returns null for errors that should propagate to the API error handler; visitor errors render
+   * HTML.
    */
   public static ResponseEntity<byte[]> visitorErrorPage(LinkErrorCode code) {
     return switch (code) {
@@ -193,14 +187,12 @@ public final class LinkHtmlRenderer {
             + error
             + "</form>"
             + script;
-    // 비밀번호 오류 시 카드를 흔들어(shake) 즉각적인 피드백을 준다.
     return page(shortCode + " · 비밀번호", inner, failed ? " shake" : "", "");
   }
 
   static String unlockedPage(String destinationUrl) {
     String safe = escape(destinationUrl);
-    // no-JS 폴백(3초) + JS 즉시(1.3초). URL 은 HTML 이스케이프해 data 속성에 싣고 JS 가 DOM 에서 읽어
-    // 문자열 인젝션 없이 location.replace 한다.
+    // URL은 HTML data 속성에서 읽어 JS 문자열 삽입을 피한다. JS가 없으면 meta-refresh로 이동한다.
     String head = "<meta http-equiv=\"refresh\" content=\"3; url=" + safe + "\">";
     String inner =
         "<div class=\"unlock\">"

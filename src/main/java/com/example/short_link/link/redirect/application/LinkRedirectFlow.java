@@ -17,7 +17,6 @@ import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/** 일반 리다이렉트와 비밀번호 해제 뒤에 공통 접근 정책을 적용한다. */
 @Service
 @RequiredArgsConstructor
 public class LinkRedirectFlow {

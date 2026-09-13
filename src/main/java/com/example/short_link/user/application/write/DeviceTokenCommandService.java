@@ -8,7 +8,6 @@ import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 푸시 디바이스 등록 — 토큰 콜백마다 upsert(소유자 갈아끼움 포함), 로그아웃 때 삭제. */
 @Service
 @RequiredArgsConstructor
 public class DeviceTokenCommandService {

@@ -23,15 +23,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Read side of author analytics. Lifetime totals come from the denormalized counters on the post
- * (views/likes shown on cards); the view-over-time line comes from the post_view_event log, grouped
- * per UTC day and then gap-filled here so the dashboard draws a continuous series. Ownership is
- * enforced for the per-post view — analytics are private to the author.
+ * Lifetime totals use post counters; daily views use the event log, grouped by UTC day and
+ * zero-filled. Per-post analytics are private to the author.
  */
 @Service
 @Transactional(readOnly = true)
@@ -51,27 +48,7 @@ public class PostAnalyticsQueryService {
   private final SeriesSubscriptionRepository subscriptionRepository;
   private final Clock clock;
 
-  // @Autowired marks the constructor Spring must use — without it the extra (test-only) Clock
-  // constructor makes the bean ambiguous and Spring falls back to a no-arg ctor that doesn't exist.
-  @Autowired
   public PostAnalyticsQueryService(
-      PostRepository postRepository,
-      PostViewEventRepository viewEventRepository,
-      PostLinkClickReader linkClickReader,
-      PostFollowReader followReader,
-      SeriesRepository seriesRepository,
-      SeriesSubscriptionRepository subscriptionRepository) {
-    this(
-        postRepository,
-        viewEventRepository,
-        linkClickReader,
-        followReader,
-        seriesRepository,
-        subscriptionRepository,
-        Clock.systemUTC());
-  }
-
-  PostAnalyticsQueryService(
       PostRepository postRepository,
       PostViewEventRepository viewEventRepository,
       PostLinkClickReader linkClickReader,
@@ -130,8 +107,6 @@ public class PostAnalyticsQueryService {
     long lifetimeViews = posts.stream().mapToLong(PostEntity::getViewCount).sum();
     long lifetimeLikes = posts.stream().mapToLong(PostEntity::getLikeCount).sum();
     long published = posts.stream().filter(PostEntity::isPublished).count();
-    // 윈도우 유입 호스트 top — 글 단위 독자 분석(PostReadStats)의 작가 전체 합. 같은 since 를 써
-    // 위 windowViews 와 한 윈도우를 본다.
     List<ReferrerPoint> referrers =
         viewEventRepository.topReferrerHostsByUserSince(userId, since, REFERRER_LIMIT).stream()
             .map(r -> new ReferrerPoint(r.host(), r.views()))
@@ -151,11 +126,7 @@ public class PostAnalyticsQueryService {
         referrers);
   }
 
-  /**
-   * One page of the author's per-post performance (views·likes·follows), ordered by {@code sort}.
-   * Only posts that have been public (PUBLISHED / UNPUBLISHED) appear — drafts have no reads. The
-   * follows each post drove are pulled for just this page in a single grouped query.
-   */
+  /** Only PUBLISHED and UNPUBLISHED posts appear; drafts have no reads. */
   public PostPerformanceResult postPerformance(
       Long userId,
       int page,
@@ -182,18 +153,12 @@ public class PostAnalyticsQueryService {
     return new PostPerformanceResult(items, p, hasNext);
   }
 
-  /**
-   * Per-series analytics for the author: subscriber count (the recurring-readership signal) plus
-   * the traction of each series' member posts. Newest series first. Bounded by the author's series
-   * count.
-   */
   public List<SeriesAnalyticsRow> seriesAnalytics(Long userId) {
     List<SeriesEntity> series = seriesRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (series.isEmpty()) {
       return List.of();
     }
     List<Long> seriesIds = series.stream().map(SeriesEntity::getId).toList();
-    // 시리즈마다 멤버글·구독자수를 따로 조회하던 1+2N 을, 멤버글 배치 조회 + 구독자수 묶음 조회 후 메모리 집계로 축약.
     Map<Long, List<PostEntity>> membersBySeries =
         postRepository.findAllBySeriesIdInOrderBySeriesOrderAsc(seriesIds).stream()
             .collect(Collectors.groupingBy(PostEntity::getSeriesId));
@@ -216,7 +181,6 @@ public class PostAnalyticsQueryService {
         .toList();
   }
 
-  /** One series' detail: headline row + a cumulative subscriber-growth line over the window. */
   public SeriesAnalyticsDetail seriesDetail(Long userId, Long seriesId, int days) {
     SeriesEntity series =
         seriesRepository
@@ -230,7 +194,6 @@ public class PostAnalyticsQueryService {
     Instant since = fetchSince(days, today);
     List<DailyViewCount> sparse = subscriptionRepository.countDailyBySeriesIdSince(seriesId, since);
     Window w = resolveWindow(days, sparse, today);
-    // New subscribers per day, accumulated into the running total the chart draws.
     List<DailyPoint> cumulative = new ArrayList<>();
     long running = 0;
     for (DailyPoint d : fillDaily(sparse, w.from(), today)) {
@@ -241,12 +204,7 @@ public class PostAnalyticsQueryService {
         seriesRow(series), w.windowDays(), cumulative, seriesMembers(seriesId));
   }
 
-  /**
-   * Per-episode performance in series order, with the read-through funnel: each episode's distinct
-   * human readers and how many of them also read the next episode. Lifetime — a reader's path
-   * through the series isn't bounded by the dashboard's day-window. Bounded by the series' member
-   * count (one reader-set query for the whole series).
-   */
+  /** Read-through uses lifetime human-reader sets, independent of the dashboard day window. */
   private List<SeriesMemberStat> seriesMembers(Long seriesId) {
     List<PostEntity> members = postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(seriesId);
     if (members.isEmpty()) {
@@ -279,7 +237,6 @@ public class PostAnalyticsQueryService {
     return out;
   }
 
-  /** Size of {@code a ∩ b}, iterating the smaller set for the larger one's contains-checks. */
   private static long intersectionSize(Set<String> a, Set<String> b) {
     Set<String> smaller = a.size() <= b.size() ? a : b;
     Set<String> larger = smaller == a ? b : a;
@@ -307,20 +264,14 @@ public class PostAnalyticsQueryService {
         totalLikes);
   }
 
-  /**
-   * Caps a positive day-window at the max; all-time (days &lt;= 0) is handled before this is
-   * called.
-   */
+  /** Requires a positive window; callers handle {@code days <= 0} as all-time. */
   private int clampWindow(int days) {
     return Math.min(days, MAX_WINDOW_DAYS);
   }
 
-  /** The chart span + windowed-metric window. {@code days <= 0} means all-time (the "전체" tab). */
   private record Window(LocalDate from, int windowDays) {}
 
-  /**
-   * When-to-query-from: EPOCH for all-time (counts everything), else the start of the N-day window.
-   */
+  /** {@code days <= 0} queries from EPOCH to include all recorded events. */
   private Instant fetchSince(int days, LocalDate today) {
     return days <= 0 ? Instant.EPOCH : startOfDay(today.minusDays(clampWindow(days) - 1L));
   }
@@ -340,7 +291,7 @@ public class PostAnalyticsQueryService {
     return date.atStartOfDay(ZoneOffset.UTC).toInstant();
   }
 
-  /** Expands the sparse GROUP BY output into a continuous [from, to] daily line, filling 0s. */
+  /** Fills missing days with zero; both {@code from} and {@code to} are inclusive. */
   static List<DailyPoint> fillDaily(List<DailyViewCount> sparse, LocalDate from, LocalDate to) {
     Map<LocalDate, Long> byDate = new HashMap<>();
     for (DailyViewCount c : sparse) {

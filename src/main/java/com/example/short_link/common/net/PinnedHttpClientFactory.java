@@ -12,15 +12,9 @@ import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuil
 import org.apache.hc.core5.util.Timeout;
 
 /**
- * Per-request Apache HttpClient pinned to the IPs {@link PublicHttpUrlGuard} already resolved.
- * Shared between LinkWebhookDispatcher and OgScraper — both make outbound HTTP from user-supplied
- * URLs and need the same DNS-rebinding closure: the DnsResolver returns only the pre-resolved
- * addresses, and throws UnknownHostException for any other host (which kills cross-host redirects
- * but prevents a re-resolve to a private IP).
- *
- * <p>Connection manager is per-request — not shared. Pinning per-host with a shared pool defeats
- * the intent (the pool would key by host name, but the DnsResolver pins to one specific resolved
- * batch), and bursty outbound traffic doesn't gain much from pooling.
+ * Connects only to IPs validated by {@link PublicHttpUrlGuard}; unknown hosts fail rather than
+ * re-resolving and risking DNS rebinding. The connection manager must remain per-request: a
+ * host-keyed shared pool could reuse a connection from a different resolved IP batch.
  */
 public final class PinnedHttpClientFactory {
 

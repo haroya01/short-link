@@ -18,7 +18,6 @@ import java.util.Map;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-/** Translates Logback WARN/ERROR events into the admin application's error records. */
 @Component
 public class RecentErrorsLogAppender extends UnsynchronizedAppenderBase<ILoggingEvent> {
 
@@ -52,8 +51,7 @@ public class RecentErrorsLogAppender extends UnsynchronizedAppenderBase<ILogging
 
   @Override
   protected void append(ILoggingEvent event) {
-    // WARN included so non-fatal anomalies (rate-limit spikes, webhook retries) are reviewable
-    // alongside hard errors — the UI filter lets operators narrow to ERROR-only when triaging.
+    // 장애 전조도 조사할 수 있도록 WARN을 함께 보관한다.
     if (event.getLevel().toInt() < Level.WARN.toInt()) return;
 
     IThrowableProxy throwable = event.getThrowableProxy();

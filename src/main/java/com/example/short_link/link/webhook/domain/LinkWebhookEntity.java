@@ -110,7 +110,6 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
     this.format = format == null ? WebhookFormat.GENERIC : format;
   }
 
-  /** 재활성화할 때 실패 횟수와 이전 오류 표시도 초기화한다. */
   public void resetFailureState() {
     this.enabled = true;
     this.consecutiveFailures = 0;

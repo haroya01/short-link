@@ -17,9 +17,7 @@ import org.springframework.stereotype.Repository;
 @RequiredArgsConstructor
 class AdminBrowseRepositoryAdapter implements AdminBrowseRepository {
 
-  /**
-   * Same shape {@link ShortCode} enforces — a search term shorter/longer than this isn't a code.
-   */
+  /** {@link ShortCode}가 허용하는 길이와 문자 집합을 함께 유지해야 한다. */
   private static final Pattern SHORT_CODE = Pattern.compile("^[0-9A-Za-z]{3,16}$");
 
   private final JpaAdminBrowseRepository jpa;

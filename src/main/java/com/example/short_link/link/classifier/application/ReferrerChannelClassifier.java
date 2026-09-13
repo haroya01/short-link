@@ -38,7 +38,6 @@ public class ReferrerChannelClassifier {
           Map.entry("web.whatsapp.com", "messaging"),
           Map.entry("line.me", "messaging"),
           Map.entry("open.kakao.com", "messaging"),
-          // 뉴스레터·구독 출판
           Map.entry("substack.com", "newsletter"),
           Map.entry("google.com", "search"),
           Map.entry("bing.com", "search"),

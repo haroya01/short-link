@@ -2,7 +2,5 @@ package com.example.short_link.post.application.read;
 
 import java.time.LocalDate;
 
-/**
- * One point on the analytics view-over-time line. Every day in the window is present (filled 0).
- */
+/** Daily analytics include every day in the window, with zero for days without views. */
 public record DailyPoint(LocalDate date, long views) {}

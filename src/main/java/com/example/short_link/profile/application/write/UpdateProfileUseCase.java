@@ -59,7 +59,6 @@ public class UpdateProfileUseCase {
     String previousUsername = user.getUsername();
     updateUsername(user, cmd.username(), cmd.userId());
     updateAppearance(user, cmd);
-    // 사용자명을 바꿀 때는 이전 이름의 캐시도 무효화한다.
     cacheEviction.evictByUsername(previousUsername);
     String currentUsername = user.getUsername();
     if (currentUsername != null && !currentUsername.equals(previousUsername)) {

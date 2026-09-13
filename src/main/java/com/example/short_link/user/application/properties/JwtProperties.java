@@ -14,9 +14,8 @@ public record JwtProperties(
   public JwtProperties {
     if (privateKey == null) privateKey = "";
     if (publicKey == null) publicKey = "";
-    // Tolerance window during which a just-rotated refresh token may be replayed without tripping
-    // theft detection — absorbs the cross-tab / cross-subdomain race where two origins share one
-    // rotating refresh cookie and one sends the stale copy a moment after the other rotated it.
+    // Allow brief replay after rotation so tabs/subdomains sharing a cookie do not trigger theft
+    // detection.
     if (refreshRotationGrace == null) refreshRotationGrace = Duration.ofSeconds(10);
   }
 }

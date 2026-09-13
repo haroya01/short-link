@@ -8,10 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Hot-swappable holder around the GeoLite2 {@link DatabaseReader}. The startup config seeds it from
- * the bundled fallback mmdb; a scheduled refresh job can {@link #set(DatabaseReader)} a freshly
- * downloaded reader without restarting the app. The previous reader is closed shortly after — any
- * in-flight {@code tryCity()} calls will see the new reader on the next invocation.
+ * Starts with the bundled fallback database and supports refresh without restarting. Replacing the
+ * reader closes the previous one; subsequent lookups use the new reader.
  */
 @Slf4j
 @Component

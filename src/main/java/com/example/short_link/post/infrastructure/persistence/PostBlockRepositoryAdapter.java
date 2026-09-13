@@ -27,10 +27,8 @@ class PostBlockRepositoryAdapter implements PostBlockRepository {
     if (blocks.isEmpty()) {
       return;
     }
-    // One multi-row INSERT instead of saveAll's per-row INSERTs. PostBlockEntity is IDENTITY-keyed,
-    // so Hibernate must read each auto-increment id back and can't batch — it emits one INSERT per
-    // block. created_at/updated_at are normally stamped by Hibernate, so we set them here. Runs on
-    // the JPA transaction's connection (JpaTransactionManager exposes it to JDBC).
+    // Use one multi-row INSERT because Hibernate cannot batch IDENTITY entities. Set timestamps
+    // explicitly; JdbcTemplate uses the JPA transaction's connection.
     StringBuilder sql = new StringBuilder(INSERT_PREFIX);
     List<Object> args = new ArrayList<>(blocks.size() * 6);
     Timestamp now = Timestamp.from(Instant.now());

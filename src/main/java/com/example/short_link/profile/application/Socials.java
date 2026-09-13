@@ -12,7 +12,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Set;
 
-/** 사용자의 소셜 프로필 URL을 검증해 users.socials의 JSON 배열로 저장한다. */
 public final class Socials {
 
   public static final List<String> ALLOWED =

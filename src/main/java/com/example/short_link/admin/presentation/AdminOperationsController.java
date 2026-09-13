@@ -24,7 +24,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** User and link investigation, account actions, and operational maintenance. */
 @RestController
 @RequestMapping("/api/v1/admin")
 @RequiredArgsConstructor
@@ -36,19 +35,11 @@ public class AdminOperationsController {
   private final MintAccessTokenUseCase mintAccessToken;
   private final WarnUserUseCase warnUser;
 
-  /**
-   * Mint a fresh access token for the calling admin — a convenience for scripting against the API
-   * (seeding, one-off automation). The token carries the admin's own role only.
-   */
   @PostMapping("/access-token")
   public MintedAccessToken mintAccessToken(@AuthenticationPrincipal Long userId) {
     return mintAccessToken.mintFor(userId);
   }
 
-  /**
-   * Full user-table browse. {@code q} matches email / handle case-insensitively; {@code role}
-   * filters by USER / ADMIN; newest first. Page size is capped server-side.
-   */
   @GetMapping("/users")
   public AdminBrowseService.UsersPage users(
       @RequestParam(required = false) String q,
@@ -63,10 +54,6 @@ public class AdminOperationsController {
     return browseService.user(id);
   }
 
-  /**
-   * 약관 위반 계정에 보내는 운영자 경고. 링크 알림 인박스에 남고 푸시 설정과 무관하게 푸시된다. {@code shortCode} 는 어느 링크 건인지 가리키는
-   * 맥락(선택).
-   */
   @PostMapping("/users/{id}/warning")
   public ResponseEntity<Void> warnUser(
       @PathVariable long id, @Valid @RequestBody WarnUserRequest request) {
@@ -74,11 +61,6 @@ public class AdminOperationsController {
     return ResponseEntity.noContent().build();
   }
 
-  /**
-   * Full link-table browse. {@code q} matches an exact short code or a substring of the destination
-   * URL; {@code ownerId} narrows to one user's links (anonymous links have no owner); {@code sort}
-   * is {@code recent} (default, newest first) or {@code clicks} (busiest first).
-   */
   @GetMapping("/links")
   public AdminBrowseService.LinksPage links(
       @RequestParam(required = false) String q,
@@ -89,33 +71,17 @@ public class AdminOperationsController {
     return browseService.links(q, ownerId, sort, page, size);
   }
 
-  /**
-   * Live activity feed for the console: newest links and clicks across all users plus the links
-   * trending in the last 24h. Cheap enough to poll; click rows are PII-minimal (country / referrer
-   * host / device class only — never IP or visitor hash). Declared before {@code /links/{code}} so
-   * the literal path wins the match.
-   */
   @GetMapping("/links/activity")
   public AdminActivity linkActivity() {
     return activityService.activity();
   }
 
-  /**
-   * One link's full metadata (owner, lifecycle, protection) plus the owner-grade click report —
-   * daily / hourly / referrer / device / country breakdowns — for support and observability. Reuses
-   * the owner stats assembler with the ownership check skipped.
-   */
   @GetMapping("/links/{code}")
   public AdminLinkDetail linkDetail(@PathVariable ShortCode code) {
     return browseService.linkDetail(code);
   }
 
-  /**
-   * Re-detects {@code WebhookFormat} for every persisted hook and reactivates rows that were
-   * auto-disabled by a payload-shape mismatch we just fixed (e.g. a new receiver format added in
-   * code, or a URL pattern V53/V54 didn't anticipate). Returns the per-bucket count so the caller
-   * can confirm what actually changed before the next click trigger fires.
-   */
+  /** 포맷을 다시 판별하고 포맷 불일치로 비활성화된 웹훅을 재활성화한다. */
   @PostMapping("/webhooks/redetect-formats")
   public WebhookReDetectResult redetectWebhookFormats() {
     return reDetectWebhooks.execute();

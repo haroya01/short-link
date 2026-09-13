@@ -14,10 +14,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 /**
- * Pre-transaction validation for link creation — self-reference, blocked-domain lookup, Safe
- * Browsing, reserved short codes. Lives outside the @Transactional boundary so the outbound
- * Safe-Browsing HTTP call doesn't hold a JDBC connection for the round-trip (pool starvation under
- * load).
+ * Validation runs outside the creation transaction so Safe Browsing HTTP calls do not hold a JDBC
+ * connection.
  */
 @Component
 class CreateLinkValidator {

@@ -27,10 +27,7 @@ public class UserEntity extends BaseCreatedEntity {
     ADMIN
   }
 
-  /**
-   * 관리자 모더레이션 제재 상태. ACTIVE 기본, SUSPENDED 는 {@code suspendedUntil} 까지 쓰기 차단(로그인 허용), BANNED 는
-   * 영구(로그인·쓰기 차단). abuse 슬라이스의 {@code UserModerationPort} 로만 전이된다.
-   */
+  /** SUSPENDED는 만료 전까지 쓰기만 막고, BANNED는 로그인도 막는다. 제재는 UserModerationPort로 전이한다. */
   public enum ModerationStatus {
     ACTIVE,
     SUSPENDED,
@@ -57,7 +54,7 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = 64)
   private String timezone = "Asia/Seoul";
 
-  /** 선호 로케일 — 서버가 조합하는 푸시를 이 언어로 렌더(모르면 ko). {@link #updateLocale}로만 바꾼다. */
+  /** 서버가 조합하는 푸시의 언어이며, 알 수 없으면 ko를 사용한다. */
   @Column(nullable = false, length = 16)
   private String locale = "ko";
 
@@ -83,7 +80,6 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "banner_url", length = 512)
   private String bannerUrl;
 
-  /** S3 object key under {@code banners/{userId}/...} — see {@link #avatarKey} note. */
   @Column(name = "banner_key", length = 256)
   private String bannerKey;
 
@@ -99,7 +95,6 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "hide_follower_count", nullable = false)
   private boolean hideFollowerCount = false;
 
-  /** 제재 상태 — 관리자 모더레이션에서만 바뀐다. 기본 ACTIVE. */
   @Enumerated(EnumType.STRING)
   @Column(name = "moderation_status", nullable = false, length = 16)
   private ModerationStatus moderationStatus = ModerationStatus.ACTIVE;
@@ -216,13 +211,11 @@ public class UserEntity extends BaseCreatedEntity {
     this.deletedAt = null;
   }
 
-  /** 임시 정지 — {@code until} 까지 쓰기 차단. 로그인은 허용한다. */
   public void suspend(Instant until) {
     this.moderationStatus = ModerationStatus.SUSPENDED;
     this.suspendedUntil = until;
   }
 
-  /** 영구 차단 — 로그인·쓰기 모두 차단. 정지 만료시각은 의미가 없으므로 비운다. */
   public void ban() {
     this.moderationStatus = ModerationStatus.BANNED;
     this.suspendedUntil = null;

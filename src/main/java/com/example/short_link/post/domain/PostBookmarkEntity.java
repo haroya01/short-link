@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One user's bookmark on a post (reading list). (post_id, user_id) is unique. */
 @Entity
 @Table(
     name = "post_bookmark",
@@ -34,7 +33,7 @@ public class PostBookmarkEntity extends BaseCreatedEntity {
   @Column(name = "user_id", nullable = false)
   private Long userId;
 
-  /** Which folder this bookmark is filed under. NULL = unfiled (auto-grouped by tag in the UI). */
+  /** {@code null} means the bookmark is unfiled. */
   @Column(name = "folder_id")
   private Long folderId;
 
@@ -43,7 +42,6 @@ public class PostBookmarkEntity extends BaseCreatedEntity {
     this.userId = userId;
   }
 
-  /** File this bookmark under {@code folderId}, or NULL to unfile it. */
   public void moveToFolder(Long folderId) {
     this.folderId = folderId;
   }

@@ -17,7 +17,6 @@ import com.example.short_link.link.redirect.application.RedirectVisit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/** Runs the unlock gates in order before handing the accepted visit to the redirect pipeline. */
 @Service
 @RequiredArgsConstructor
 public class PasswordUnlockUseCase {

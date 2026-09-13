@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Authenticated list of the caller's liked posts (the "내가 좋아요한 글" surface), as feed cards. */
 @RestController
 @RequestMapping("/api/v1/users/me/likes")
 @RequiredArgsConstructor

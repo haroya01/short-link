@@ -6,11 +6,8 @@ import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
 /**
- * Purges the notification slice's user-owned rows on account hard delete — none of these FKs carry
- * ON DELETE CASCADE. Covers the blog interaction inbox ({@code notification}, both as recipient and
- * as the actor referenced from other inboxes), the link-owner notification feed ({@code
- * link_notification}), and both per-type opt-out tables ({@code notification_preference} for link
- * alerts, {@code blog_notification_preference} for the blog bell).
+ * Delete explicitly because these user-owned rows have no ON DELETE CASCADE; include notifications
+ * referencing the user as actor in other recipients' inboxes.
  */
 @Repository
 class NotificationUserDataEraser implements UserDataEraser {
@@ -30,8 +27,7 @@ class NotificationUserDataEraser implements UserDataEraser {
     em.createNativeQuery("DELETE FROM notification_preference WHERE user_id = :userId")
         .setParameter("userId", userId)
         .executeUpdate();
-    // 블로그 벨 옵트아웃(V108)은 users FK 가 아예 없어 cascade 로도 안 지워진다 — 여기서 안 비우면
-    // 계정 영구삭제 뒤 고아 행이 남아 방침의 삭제 약속(§8)과 어긋난다(2026-07-15 감사에서 발견).
+    // blog_notification_preference에는 users FK가 없어 명시적으로 삭제해야 한다.
     em.createNativeQuery("DELETE FROM blog_notification_preference WHERE user_id = :userId")
         .setParameter("userId", userId)
         .executeUpdate();

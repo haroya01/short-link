@@ -4,13 +4,9 @@ import com.example.short_link.link.domain.LinkId;
 import java.time.Instant;
 
 /**
- * Fired right after a click is persisted. Carries only the lightweight slice the live-stream
- * handler needs — no IP, no UA — so it can be safely fanned out to multiple subscribers without
- * leaking PII. {@code referrerHost} is serialized as {@code channel} at the SSE/webhook boundaries
- * for compatibility with existing consumers.
- *
- * <p>{@code shortCode}/{@code ownerUserId} 는 계정 단위 라이브 스트림(대시보드 "첫 클릭 도착" 모먼트)의 팬아웃 키 — 익명 링크는
- * ownerUserId 가 null 이고 계정 채널로는 나가지 않는다.
+ * Published after persistence; excludes IP and UA to keep subscriber fan-out free of PII. {@code
+ * referrerHost} is serialized as {@code channel} at SSE/webhook boundaries for compatibility. A
+ * null {@code ownerUserId} denotes an anonymous link and excludes it from account streams.
  */
 public record ClickRecordedEvent(
     LinkId linkId,

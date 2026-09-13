@@ -14,7 +14,6 @@ import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
 import java.net.URI;
 
-/** Throws {@link ProfileException} on bad input — controller turns it into HTTP 400. */
 public final class BlockContentValidator {
 
   private BlockContentValidator() {}

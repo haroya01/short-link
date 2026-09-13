@@ -71,7 +71,7 @@ public class PublicSeriesQueryService {
     List<PostEntity> published =
         postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
             s.getId(), PostStatus.PUBLISHED);
-    if (published.isEmpty()) return null; // no public posts yet → not worth a card
+    if (published.isEmpty()) return null;
     Instant last =
         published.stream()
             .map(PostEntity::getPublishedAt)
@@ -125,7 +125,7 @@ public class PublicSeriesQueryService {
       SeriesActivity activity, SeriesEntity series, Map<Long, UserEntity> authors) {
     if (series == null) return null;
     UserEntity author = authors.get(series.getUserId());
-    if (author == null) return null; // deleted/missing author → drop
+    if (author == null) return null;
     return new Resolved(activity, series, author);
   }
 

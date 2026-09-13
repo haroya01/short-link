@@ -8,9 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 /**
- * Optional holder for the GeoLite2-ASN reader. Unlike the city holder, this one is allowed to stay
- * empty — if no ASN db is bundled or downloaded, ASN resolution is simply skipped (returns null org
- * / 0 asn). This keeps the app bootable in dev without requiring a MaxMind license key.
+ * May remain empty when no ASN database is available; lookups then return null organization / 0
+ * ASN.
  */
 @Slf4j
 @Component

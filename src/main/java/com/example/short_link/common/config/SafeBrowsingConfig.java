@@ -19,7 +19,6 @@ public class SafeBrowsingConfig {
 
   static final String CACHE_NAME = "safebrowsing";
 
-  /** Resolvable via {@code circuitBreakerRegistry.circuitBreaker(SAFE_BROWSING_CB)}. */
   public static final String SAFE_BROWSING_CB = "safe-browsing";
 
   @Bean
@@ -45,9 +44,8 @@ public class SafeBrowsingConfig {
   }
 
   /**
-   * Drives the circuit breaker around the SafeBrowsing API. Tuned around the existing 2s read
-   * timeout: we open after a short burst of failures so a quota-exhausted or down API doesn't
-   * stretch every shorten call to its full timeout, and we re-probe after 30s.
+   * Opens after a short failure burst so an unavailable or quota-exhausted API does not impose the
+   * full 2s read timeout on every shorten call. Re-probes after 30s.
    */
   @Bean
   public CircuitBreakerRegistry circuitBreakerRegistry(MeterRegistry meterRegistry) {

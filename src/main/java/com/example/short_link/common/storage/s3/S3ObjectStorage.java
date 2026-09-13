@@ -24,10 +24,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 @RequiredArgsConstructor
 public class S3ObjectStorage implements ObjectStorage {
 
-  /**
-   * 이 버킷의 키는 전부 UUID 기반이라 같은 키의 내용이 바뀔 일이 없다 — 1년 + immutable 로 박아도 안전하고, 이게 없으면 CloudFront/브라우저/앱의
-   * HTTP 캐시가 휴리스틱에만 의존해 갓 올린 이미지일수록 매번 재다운로드된다.
-   */
+  /** UUID 기반 키는 덮어쓰지 않으므로 1년 immutable 캐시를 적용할 수 있다. */
   static final String IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
   private final S3Client s3Client;
@@ -77,9 +74,8 @@ public class S3ObjectStorage implements ObjectStorage {
   @Override
   public void applyImmutableCacheControl(String key) {
     try {
-      // presign PUT 은 서명에 없는 헤더를 못 싣는다(넣으면 모든 클라이언트가 같은 헤더를 보내야
-      // 해서 구버전 앱 업로드가 깨진다). 대신 commit 시점에 제자리 복사로 메타데이터만 바꾼다 —
-      // REPLACE 는 기존 메타데이터를 통째로 갈아끼우므로 contentType 을 읽어 보존한다.
+      // 서명 헤더를 추가하면 구버전 클라이언트 업로드가 깨지므로 commit 때 메타데이터를 바꾼다.
+      // REPLACE는 메타데이터 전체를 교체하므로 기존 contentType을 보존한다.
       HeadObjectResponse head =
           s3Client.headObject(HeadObjectRequest.builder().bucket(props.bucket()).key(key).build());
       CopyObjectRequest copy =

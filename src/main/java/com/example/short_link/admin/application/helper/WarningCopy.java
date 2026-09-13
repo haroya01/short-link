@@ -1,6 +1,5 @@
 package com.example.short_link.admin.application.helper;
 
-/** 운영자 경고 알림 카피 — 수신자 계정의 {@code user.locale} 로 렌더된다(미지원 값은 ko 폴백). */
 public final class WarningCopy {
 
   private WarningCopy() {}

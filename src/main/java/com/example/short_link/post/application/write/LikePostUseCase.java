@@ -25,7 +25,6 @@ public class LikePostUseCase {
   @Transactional
   public PostLikeStatus like(Long userId, Long postId) {
     PostEntity post = access.requireInteractablePostForUpdate(userId, postId);
-    // 새 좋아요 행이 생긴 경우에만 원자적으로 카운터를 증가시킨다.
     if (postLikeRepository.insertIgnore(postId, userId) > 0) {
       postRepository.incrementLikeCount(postId);
       if (!post.getUserId().equals(userId)) {

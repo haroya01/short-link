@@ -132,7 +132,7 @@ public class PublicPostQueryService {
         break;
       }
     }
-    if (index < 0) return null; // post not published in its own series — defensive
+    if (index < 0) return null;
     PublicPostSeriesNav.NavLink prev = index > 0 ? navLink(siblings.get(index - 1)) : null;
     PublicPostSeriesNav.NavLink next =
         index < siblings.size() - 1 ? navLink(siblings.get(index + 1)) : null;
@@ -179,7 +179,6 @@ public class PublicPostQueryService {
             cta.getLabel(), url, cta.getStyle().name(), cta.getPurpose().name(), cta.isDeleted()));
   }
 
-  /** CTA_REF block content = JSON {"ctaId": N}. 파싱 실패 시 null. */
   private Long parseCtaId(String content) {
     if (content == null || content.isBlank()) return null;
     try {

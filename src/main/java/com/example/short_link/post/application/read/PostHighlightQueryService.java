@@ -19,7 +19,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Highlight reads — public attributed list per post, and the viewer's own library. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -31,7 +30,6 @@ public class PostHighlightQueryService {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
 
-  /** Public, attributed highlights on a published post (Medium-style social highlights). */
   public List<HighlightView> listForPost(Long postId) {
     if (postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
       return List.of();
@@ -66,7 +64,6 @@ public class PostHighlightQueryService {
         .toList();
   }
 
-  /** The viewer's own highlights across all posts — the "my highlights" library. */
   public List<MyHighlightView> listMine(Long userId) {
     List<PostHighlightEntity> highlights =
         highlightRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
@@ -100,10 +97,8 @@ public class PostHighlightQueryService {
   }
 
   /**
-   * "남들 하이라이트" 피드 — 팔로우한 큐레이터가 최근 칠한 공개 구절을 최신순으로. 대상 글·큐레이터·작가·답글수를 일괄 해석(N+1 없이) 하고, 대상 글이 사라진
-   * 하이라이트는 건너뛴다. 팔로우가 없거나 팔로우들의 활동이 없어 첫 페이지가 비면 전역 공개 하이라이트로 폴백한다 — 콜드스타트에도 빈 화면을 주지 않는다(응답 {@code
-   * source} 로 구분, 1페이지 이후의 빈 결과는 정상 종료라 폴백하지 않는다). {@code forceGlobal} 은 폴백으로 넘어간 클라이언트가 페이지네이션을 전역
-   * 기준으로 고정할 때 쓴다.
+   * 팔로우가 없거나 첫 페이지가 비면 전역 공개 하이라이트로 폴백한다. 이후 페이지의 빈 결과는 종료다. {@code forceGlobal}은 폴백 후 페이지네이션의 기준을
+   * 전역으로 유지한다.
    */
   public HighlightFeedView feed(Long userId, int page, int size, boolean forceGlobal) {
     if (forceGlobal) {
@@ -122,14 +117,12 @@ public class PostHighlightQueryService {
     return assemble(highlights, page, size, HighlightFeedView.SOURCE_FOLLOWING);
   }
 
-  /** 전역 공개 하이라이트(발행 글 위의 구절만) — 팔로우 그래프와 무관한 콜드스타트 폴백 흐름. */
   private HighlightFeedView globalFeed(int page, int size) {
     List<PostHighlightEntity> highlights =
         highlightRepository.findRecentOnPublishedPosts(page, size);
     return assemble(highlights, page, size, HighlightFeedView.SOURCE_GLOBAL);
   }
 
-  /** highlights → view 조립. 대상 글·큐레이터·작가·답글수를 일괄 해석하고 대상 글이 사라진 구절은 건너뛴다. */
   private HighlightFeedView assemble(
       List<PostHighlightEntity> highlights, int page, int size, String source) {
     List<Long> postIds =
@@ -156,7 +149,7 @@ public class PostHighlightQueryService {
             .map(
                 h -> {
                   PostEntity post = posts.get(h.getPostId());
-                  if (post == null) return null; // 대상 글 소실 — 피드에서 뺀다.
+                  if (post == null) return null;
                   UserEntity curator = users.get(h.getUserId());
                   UserEntity author = users.get(post.getUserId());
                   return new HighlightFeedItem(

@@ -17,11 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Author-private analytics: the author dashboard overview and per-post detail. The "글이 만든 클릭"
- * differentiator (kurl link/CTA attribution) layers on later; this first cut serves the view/like
- * traction that the post_view_event log already records.
- */
+/** Analytics are private to the owning author. */
 @RestController
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
@@ -36,10 +32,6 @@ public class PostAnalyticsController {
     return analytics.overview(userId, days);
   }
 
-  /**
-   * Paginated per-post performance table (views·likes·follows) — infinite scroll. {@code sort} is
-   * one of views|likes|recent (unknown falls back to views).
-   */
   @GetMapping("/analytics/posts")
   public PostPerformanceResult performance(
       @AuthenticationPrincipal Long userId,
@@ -50,13 +42,11 @@ public class PostAnalyticsController {
         userId, page, size, com.example.short_link.post.domain.PostPerformanceSort.fromParam(sort));
   }
 
-  /** Per-series analytics — subscriber count + member-post traction, newest series first. */
   @GetMapping("/analytics/series")
   public List<SeriesAnalyticsRow> seriesAnalytics(@AuthenticationPrincipal Long userId) {
     return analytics.seriesAnalytics(userId);
   }
 
-  /** One series' detail — headline metrics + cumulative subscriber trend over the window. */
   @GetMapping("/analytics/series/{id}")
   public SeriesAnalyticsDetail seriesDetail(
       @AuthenticationPrincipal Long userId,
@@ -73,7 +63,6 @@ public class PostAnalyticsController {
     return analytics.postAnalytics(userId, id, days);
   }
 
-  /** Deep reader breakdown for one post (누가·어디서 봤나) — same shape as the profile-visit dashboard. */
   @GetMapping("/{id}/stats")
   public PostReadStats postStats(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return readStats.forPost(userId, id);

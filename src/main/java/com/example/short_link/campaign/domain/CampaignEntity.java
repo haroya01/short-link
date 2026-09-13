@@ -140,7 +140,7 @@ public class CampaignEntity extends BaseTimeEntity {
         endsAt, defaultDestinationUrl, postEndAction, postEndDestinationUrl, postEndMessage);
   }
 
-  /** 이름과 정책을 함께 수정할 때 모든 입력을 검증한 후 상태를 변경한다. */
+  /** 검증 실패 시 이름만 바뀐 상태가 남지 않도록 모든 검증을 변경 전에 마친다. */
   public void updateDetails(
       String name,
       Instant endsAt,

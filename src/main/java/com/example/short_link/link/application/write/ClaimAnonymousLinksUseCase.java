@@ -9,12 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Claims anonymously-created links into a freshly authenticated account. Tokens were issued at
- * shorten time and stored in the client's localStorage; once the user signs up/logs in the client
- * sends them here. Only links that still have the matching unused token AND are still anonymous
- * (user_id IS NULL) are claimed — replays are no-ops.
- */
+/** Claims only still-anonymous links with matching unused tokens; replayed tokens are no-ops. */
 @Service
 @RequiredArgsConstructor
 public class ClaimAnonymousLinksUseCase {

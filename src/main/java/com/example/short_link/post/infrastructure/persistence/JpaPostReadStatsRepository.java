@@ -10,12 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/**
- * Reader-breakdown queries over post_view_event, scoped to a set of post ids. Mirrors
- * JpaProfileVisitRepository (same CONVERT_TZ time bucketing, human-only filter, projection rows) so
- * the post/series reader dashboard matches the profile-visit dashboard. Used only via
- * PostReadStatsReaderAdapter.
- */
+/** Uses the profile dashboard's time bucketing and projection shape, scoped to post IDs. */
 public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventEntity, Long> {
 
   @Query("SELECT COUNT(e) FROM PostViewEventEntity e WHERE e.postId IN :ids")

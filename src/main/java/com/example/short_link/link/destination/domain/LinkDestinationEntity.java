@@ -14,7 +14,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 국가·기기·OS 조건과 가중치가 있는 목적지 변형이다. 국가는 ISO 3166 alpha-2 대문자 코드다. 선택 가능한 변형이 없으면 링크의 원본 URL을 사용한다. */
+/** 국가는 ISO 3166 alpha-2 대문자 코드다. 선택 가능한 변형이 없으면 링크의 원본 URL을 사용한다. */
 @Entity
 @Table(name = "link_destination")
 @Getter

@@ -28,12 +28,12 @@ public class ApiKeyService {
   private final MeterRegistry meterRegistry;
   private final SecureRandom random = new SecureRandom();
 
-  /** Issues a new key. Raw key is returned ONCE; only the SHA-256 hash is persisted. */
+  /** Returns the raw key only once; persists only its SHA-256 hash. */
   @Transactional
   public IssuedApiKey issue(Long userId, String name) {
     String raw = KEY_PREFIX + randomString();
     String hash = sha256(raw);
-    String shownPrefix = raw.substring(0, Math.min(raw.length(), 12)); // kurl_ + 7 chars
+    String shownPrefix = raw.substring(0, Math.min(raw.length(), 12));
     ApiKeyEntity entity = repository.save(new ApiKeyEntity(userId, shownPrefix, hash, name));
     meterRegistry.counter("api_key.issued").increment();
     return new IssuedApiKey(entity.getId(), raw, shownPrefix, name, entity.getCreatedAt());

@@ -14,11 +14,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Lets the link owner override the auto-scraped OG metadata. Override values are returned to social
- * crawlers in preference to the scraped ones; pass {@code null} (or blank) to clear an override and
- * fall back to the scraped value.
- */
+/** Null or blank clears an override and restores the scraped value. */
 @Service
 @RequiredArgsConstructor
 public class OgOverrideService {

@@ -11,10 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * user 슬라이스의 {@link UserModerationPort} 구현 — abuse 슬라이스의 신고 처리(resolve)가 호출자 트랜잭션 안에서 유저 제재를 집행하게
- * 한다. {@code adminUserId} 는 감사 로그에만 쓰이며 게이트는 {@code /api/v1/admin/**} 보안 레이어가 이미 담당한다.
- */
+/** 호출자 트랜잭션에서 제재를 집행한다. adminUserId는 감사용이며, 권한 검사는 관리자 API 보안 레이어가 담당한다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

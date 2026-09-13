@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 
-/** Google Safe Browsing v4 transport, outage protection, and failure translation. */
 @Component
 public class GoogleSafeBrowsingLookup implements UrlThreatLookup {
   private static final List<String> THREAT_TYPES =
@@ -43,7 +42,7 @@ public class GoogleSafeBrowsingLookup implements UrlThreatLookup {
     try {
       return circuitBreaker.executeSupplier(() -> requestVerdict(fullUrl));
     } catch (CallNotPermittedException open) {
-      // Preserve the existing outage policy: an open circuit yields a cacheable safe result.
+      // An open circuit intentionally yields a cacheable allow-through result.
       return true;
     } catch (HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden failure) {
       throw UrlThreatLookupException.authenticationFailure(failure);

@@ -3,12 +3,7 @@ package com.example.short_link.user.presentation.security;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
-/**
- * Marks an OAuth dance as app-initiated. {@code /api/v1/auth/mobile/start} sets the flag before
- * forwarding to the provider; the success/failure handlers consume it to pick the custom-scheme
- * redirect over the web callback. Rides the same HTTP session Spring Security already uses to keep
- * the OAuth authorization request across the redirect round-trip, so it needs no extra state.
- */
+/** Uses the OAuth HTTP session to choose a custom-scheme callback for app-initiated login. */
 public final class MobileLoginFlag {
 
   private static final String ATTR = "short-link.mobile-oauth-login";

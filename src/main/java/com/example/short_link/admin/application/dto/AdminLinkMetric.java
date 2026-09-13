@@ -4,12 +4,7 @@ import java.time.Instant;
 import java.util.Map;
 
 /**
- * One row of the per-{@code shortCode} performance table. {@code totalRedirects} is the lifetime
- * click count read from the DB; latency/error fields are computed off the in-memory rolling sample
- * ring inside the requested window. {@code outcomeCounts} carries the per-outcome breakdown ({@code
- * redirect}, {@code preview}, {@code not_found}, {@code expired}, {@code view_limit}, {@code
- * blocked}, {@code password_required}, {@code error}) so the admin drill-down can show where errors
- * come from.
+ * {@code totalRedirects}는 전체 클릭 수이며, 지연·오류 지표는 요청 기간의 기록으로 계산한다. 링크 정보가 없으면 클릭 수도 요청 기간 기록으로 대체한다.
  */
 public record AdminLinkMetric(
     String shortCode,
