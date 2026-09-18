@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.common.net.TxtResolver;
 import com.example.short_link.customdomain.domain.repository.CustomDomainRepository;
-import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -30,6 +29,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -47,8 +47,8 @@ class CustomDomainVerificationE2ETest {
   @Autowired private StubTxtResolver txtResolver;
   @Autowired private CacheManager cacheManager;
   @Autowired private CustomDomainRepository domainRepository;
-  @Autowired private LinkRepository linkRepository;
   @Autowired private PlatformTransactionManager transactionManager;
+  @Autowired private JdbcTemplate jdbc;
 
   private final List<Long> createdUserIds = new ArrayList<>();
 
@@ -67,8 +67,7 @@ class CustomDomainVerificationE2ETest {
                 domainRepository
                     .findAllByUserIdOrderByIdAsc(userId)
                     .forEach(domainRepository::delete);
-                linkRepository.deleteAll(
-                    linkRepository.findAllByUserIdOrderByCreatedAtDesc(userId));
+                jdbc.update("DELETE FROM link WHERE user_id = ?", userId);
                 userRepository.deleteById(userId);
               }
             });
