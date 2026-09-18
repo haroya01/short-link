@@ -1,5 +1,6 @@
 package com.example.short_link.link.og.application;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
@@ -11,8 +12,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +24,7 @@ public class LinkOgFetchService {
   private final LinkRepository repository;
   private final LinkOgMetadataRepository ogMetadataRepository;
   private final MeterRegistry meterRegistry;
-  private final CacheManager cacheManager;
+  private final LinkCacheEviction linkCacheEviction;
   private final OgFetchProperties ogFetch;
 
   /** AFTER_COMMIT 비동기 경로는 조회·저장 전체를 감싸지 않고 저장소별 트랜잭션을 사용한다. */
@@ -65,9 +64,6 @@ public class LinkOgFetchService {
           .counter("short_link.og_fetch", "result", willRetry ? "retryable" : "error")
           .increment();
     }
-    Cache cache = cacheManager.getCache("link");
-    if (cache != null) {
-      cache.evict(shortCode.value());
-    }
+    linkCacheEviction.evictAfterCommit(shortCode);
   }
 }

@@ -29,12 +29,22 @@ public class AuditLogService {
     this.meterRegistry = meterRegistry;
   }
 
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(AuditAction action, String targetType, String targetId, Long actorUserId) {
-    record(action, targetType, targetId, actorUserId, Map.of());
+    write(action, targetType, targetId, actorUserId, Map.of());
   }
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
+      AuditAction action,
+      String targetType,
+      String targetId,
+      Long actorUserId,
+      Map<String, ?> metadata) {
+    write(action, targetType, targetId, actorUserId, metadata);
+  }
+
+  private void write(
       AuditAction action,
       String targetType,
       String targetId,

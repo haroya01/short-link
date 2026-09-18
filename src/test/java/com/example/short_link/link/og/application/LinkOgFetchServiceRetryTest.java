@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
@@ -36,7 +37,7 @@ class LinkOgFetchServiceRetryTest {
             repo,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            new NoOpCacheManager(),
+            new LinkCacheEviction(new NoOpCacheManager()),
             new OgFetchProperties(3, 30, true));
 
     listener.fetchAfterCommit(new ShortCode("retry001"), "https://example.com/x");
@@ -62,7 +63,7 @@ class LinkOgFetchServiceRetryTest {
             repo,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            new NoOpCacheManager(),
+            new LinkCacheEviction(new NoOpCacheManager()),
             new OgFetchProperties(3, 30, true));
 
     listener.fetchAfterCommit(new ShortCode("retry002"), "https://example.com/x");

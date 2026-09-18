@@ -1,6 +1,7 @@
 package com.example.short_link.link.og.application;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -10,7 +11,6 @@ import com.example.short_link.link.og.application.dto.OgOverrideResult;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,9 +22,9 @@ public class OgOverrideService {
   private final LinkRepository repository;
   private final LinkOgMetadataRepository ogMetadataRepository;
   private final ProfileCacheInvalidator cacheEviction;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
-  @CacheEvict(value = "link", key = "#shortCode")
   public OgOverrideResult update(
       Long userId, ShortCode shortCode, String title, String description, String image) {
     LinkEntity link =
@@ -42,6 +42,7 @@ public class OgOverrideService {
     ogMeta.changeOverride(title, description, image);
     ogMetadataRepository.save(ogMeta);
     cacheEviction.evictByUserId(userId);
+    linkCacheEviction.evictAfterCommit(shortCode);
     return new OgOverrideResult(
         link.getShortCode(),
         link.getOgTitleOverride(),

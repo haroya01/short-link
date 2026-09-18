@@ -1,5 +1,6 @@
 package com.example.short_link.link.destination.application.write;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
 import com.example.short_link.link.destination.domain.DestinationPolicy;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
@@ -10,7 +11,6 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,9 +25,9 @@ public class AddDestinationUseCase {
   private final LinkDestinationOwnership ownership;
   private final LinkDestinationRepository repository;
   private final MeterRegistry meterRegistry;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
-  @CacheEvict(value = "link", key = "#shortCode")
   public DestinationSummary execute(
       Long userId,
       ShortCode shortCode,
@@ -56,6 +56,7 @@ public class AddDestinationUseCase {
                 deviceClass,
                 os));
     meterRegistry.counter("link.destination.added").increment();
+    linkCacheEviction.evictAfterCommit(shortCode);
     return DestinationSummary.from(saved);
   }
 }

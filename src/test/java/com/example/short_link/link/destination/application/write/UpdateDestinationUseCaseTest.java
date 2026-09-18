@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkId;
@@ -14,7 +15,9 @@ import org.junit.jupiter.api.Test;
 class UpdateDestinationUseCaseTest {
 
   private final LinkDestinationOwnership ownership = mock(LinkDestinationOwnership.class);
-  private final UpdateDestinationUseCase useCase = new UpdateDestinationUseCase(ownership);
+  private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
+  private final UpdateDestinationUseCase useCase =
+      new UpdateDestinationUseCase(ownership, linkCacheEviction);
 
   private LinkDestinationEntity dest() {
     LinkDestinationEntity d =

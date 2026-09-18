@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
 import com.example.short_link.link.destination.domain.DestinationPolicy;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
@@ -21,10 +22,11 @@ import org.junit.jupiter.api.Test;
 class AddDestinationUseCaseTest {
 
   private final LinkDestinationOwnership ownership = mock(LinkDestinationOwnership.class);
+  private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
   private final LinkDestinationRepository repository = mock(LinkDestinationRepository.class);
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private final AddDestinationUseCase useCase =
-      new AddDestinationUseCase(ownership, repository, registry);
+      new AddDestinationUseCase(ownership, repository, registry, linkCacheEviction);
 
   @Test
   void isValidUrlAcceptsHttps() {

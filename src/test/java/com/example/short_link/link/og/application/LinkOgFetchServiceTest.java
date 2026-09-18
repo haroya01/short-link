@@ -6,6 +6,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.LinkEntity;
@@ -44,7 +45,7 @@ class LinkOgFetchServiceTest {
             repository,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            cacheManager,
+            new LinkCacheEviction(cacheManager),
             new OgFetchProperties(3, 30, true));
 
     listener.fetchAfterCommit(new ShortCode("abc1234"), "https://example.com/x");
@@ -54,7 +55,7 @@ class LinkOgFetchServiceTest {
     assertThat(entity.getOgImage()).isEqualTo("https://example.com/img.png");
     assertThat(entity.getOgFetchStatus()).isEqualTo("OK");
     assertThat(entity.getOgFetchedAt()).isNotNull();
-    verify(cache).evict("abc1234");
+    verify(cache).evictIfPresent(new ShortCode("abc1234"));
   }
 
   @Test
@@ -73,7 +74,7 @@ class LinkOgFetchServiceTest {
             repository,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            new NoOpCacheManager(),
+            new LinkCacheEviction(new NoOpCacheManager()),
             new OgFetchProperties(1, 30, true));
 
     listener.fetchAfterCommit(new ShortCode("zzz1234"), "https://example.com/none");
@@ -97,7 +98,7 @@ class LinkOgFetchServiceTest {
             repository,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            new NoOpCacheManager(),
+            new LinkCacheEviction(new NoOpCacheManager()),
             new OgFetchProperties(3, 30, true));
 
     listener.fetchAfterCommit(new ShortCode("gone1234"), "https://example.com/x");
