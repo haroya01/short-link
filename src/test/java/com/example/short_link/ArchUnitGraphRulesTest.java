@@ -89,6 +89,18 @@ class ArchUnitGraphRulesTest {
           .resideInAPackage("org.jsoup..");
 
   @ArchTest
+  static final ArchRule burstHeuristicConfinedToBotClassifier =
+      noClasses()
+          .that()
+          .doNotHaveFullyQualifiedName(
+              "com.example.short_link.link.classifier.application.BotClassifier")
+          .should()
+          .callMethod(
+              "com.example.short_link.link.classifier.application.BotHeuristic",
+              "isSuspectBurst",
+              "java.lang.String");
+
+  @ArchTest
   static final ArchRule yauaaSdkConfinedToUserAgentClassifier =
       noClasses()
           .that()

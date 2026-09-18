@@ -3,7 +3,7 @@ package com.example.short_link.post.application.write;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
-import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.classifier.application.helper.IpMasker;
@@ -34,7 +34,7 @@ public class RecordPostViewUseCase {
   private final UserAgentClassifier userAgentClassifier;
   private final GeoIpResolver geoIpResolver;
   private final AsnResolver asnResolver;
-  private final BotHeuristic botHeuristic;
+  private final BotClassifier botClassifier;
   private final Clock clock;
 
   public RecordPostViewUseCase(
@@ -44,7 +44,7 @@ public class RecordPostViewUseCase {
       UserAgentClassifier userAgentClassifier,
       GeoIpResolver geoIpResolver,
       AsnResolver asnResolver,
-      BotHeuristic botHeuristic,
+      BotClassifier botClassifier,
       Clock clock) {
     this.userRepository = userRepository;
     this.postRepository = postRepository;
@@ -52,7 +52,7 @@ public class RecordPostViewUseCase {
     this.userAgentClassifier = userAgentClassifier;
     this.geoIpResolver = geoIpResolver;
     this.asnResolver = asnResolver;
-    this.botHeuristic = botHeuristic;
+    this.botClassifier = botClassifier;
     this.clock = clock;
   }
 
@@ -78,15 +78,7 @@ public class RecordPostViewUseCase {
       UserAgentInfo ua = userAgentClassifier.classify(ctx.userAgent());
       GeoLocation geo = geoIpResolver.resolve(ctx.clientIp());
       AsnResolver.AsnInfo asn = asnResolver.resolve(ctx.clientIp());
-      boolean bot = ua.bot();
-      String botName = ua.botName();
-      if (!bot && botHeuristic.isSuspectBurst(ctx.clientIp())) {
-        bot = true;
-        botName = BotHeuristic.SUSPECT_LABEL;
-      } else if (!bot && asn.datacenter()) {
-        bot = true;
-        botName = "datacenter:" + (asn.organization() == null ? "unknown" : asn.organization());
-      }
+      BotClassifier.Verdict bot = botClassifier.classify(ua, asn, ctx.clientIp());
       return PostViewEventEntity.builder()
           .postId(postId)
           .viewedAt(clock.instant())
@@ -102,8 +94,8 @@ public class RecordPostViewUseCase {
           .deviceClass(ua.deviceClass())
           .osName(ua.osName())
           .browserName(ua.browserName())
-          .bot(bot)
-          .botName(botName)
+          .bot(bot.isBot())
+          .botName(bot.botName())
           .countryCode(geo.countryCode())
           .regionName(geo.region())
           .cityName(geo.city())

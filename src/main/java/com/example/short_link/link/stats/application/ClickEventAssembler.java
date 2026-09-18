@@ -4,7 +4,7 @@ import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.application.dto.UtmParams;
 import com.example.short_link.link.classifier.application.AsnResolver;
-import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.ClientAppClassifier;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
@@ -26,7 +26,7 @@ public class ClickEventAssembler {
   private final ClientAppClassifier clientAppClassifier;
   private final GeoIpResolver geoIpResolver;
   private final AsnResolver asnResolver;
-  private final BotHeuristic botHeuristic;
+  private final BotClassifier botClassifier;
 
   public ClickEventEntity assemble(PendingClick click) {
     ClickContext ctx = click.ctx();
@@ -34,7 +34,10 @@ public class ClickEventAssembler {
     UserAgentInfo ua = userAgentClassifier.classify(ctx.userAgent());
     GeoLocation geo = geoIpResolver.resolve(ctx.clientIp());
     AsnResolver.AsnInfo asnInfo = asnResolver.resolve(ctx.clientIp());
-    BotClassification bot = classifyBot(ua, asnInfo, ctx.clientIp(), click.forcedBotName());
+    BotClassifier.Verdict bot =
+        click.forcedBotName() != null
+            ? BotClassifier.Verdict.bot(click.forcedBotName())
+            : botClassifier.classify(ua, asnInfo, ctx.clientIp());
     return ClickEventEntity.builder()
         .linkId(ctx.linkId())
         .clickedAt(click.occurredAt())
@@ -72,24 +75,4 @@ public class ClickEventAssembler {
         .fetchSite(ctx.fetchSite())
         .build();
   }
-
-  private BotClassification classifyBot(
-      UserAgentInfo ua, AsnResolver.AsnInfo asnInfo, String clientIp, String forcedBotName) {
-    if (forcedBotName != null) {
-      return new BotClassification(true, forcedBotName);
-    }
-    if (ua.bot()) {
-      return new BotClassification(true, ua.botName());
-    }
-    if (botHeuristic.isSuspectBurst(clientIp)) {
-      return new BotClassification(true, BotHeuristic.SUSPECT_LABEL);
-    }
-    if (asnInfo.datacenter()) {
-      String org = asnInfo.organization() == null ? "unknown" : asnInfo.organization();
-      return new BotClassification(true, "datacenter:" + org);
-    }
-    return new BotClassification(false, null);
-  }
-
-  private record BotClassification(boolean isBot, String botName) {}
 }
