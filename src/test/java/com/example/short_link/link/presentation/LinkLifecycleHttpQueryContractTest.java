@@ -262,7 +262,7 @@ class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
     assertThat(storedVisitAt)
         .isBetween(
             Instant.ofEpochSecond(visitStartedAt.getEpochSecond()),
-            Instant.ofEpochSecond(visitCompletedAt.getEpochSecond() + 1));
+            Instant.ofEpochSecond(visitCompletedAt.getEpochSecond()));
     assertThat(clickEvents.findEventsByLinkIdLatest(linkId, 1).getFirst().getClickedAt())
         .isEqualTo(storedVisitAt);
     assertThat(clickTotals.findFirstClickAt(linkId)).isEqualTo(storedVisitAt);
