@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.properties.OgFetchProperties;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -14,7 +15,6 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.aop.framework.ProxyFactory;
-import org.springframework.cache.CacheManager;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
@@ -32,7 +32,7 @@ class LinkOgFetchTransactionTest {
             links,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            mock(CacheManager.class),
+            mock(LinkCacheEviction.class),
             mock(OgFetchProperties.class));
     PlatformTransactionManager transactions = mock(PlatformTransactionManager.class);
     when(transactions.getTransaction(any())).thenReturn(new SimpleTransactionStatus());

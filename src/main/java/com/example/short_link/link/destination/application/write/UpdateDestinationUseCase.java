@@ -1,5 +1,6 @@
 package com.example.short_link.link.destination.application.write;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
 import com.example.short_link.link.destination.domain.DestinationPolicy;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
@@ -7,7 +8,6 @@ import com.example.short_link.link.destination.exception.DestinationErrorCode;
 import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.ShortCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,9 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
 public class UpdateDestinationUseCase {
 
   private final LinkDestinationOwnership ownership;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
-  @CacheEvict(value = "link", key = "#shortCode")
   public DestinationSummary execute(
       Long userId,
       ShortCode shortCode,
@@ -43,6 +43,7 @@ public class UpdateDestinationUseCase {
         countryCode,
         deviceClass,
         os);
+    linkCacheEviction.evictAfterCommit(shortCode);
     return DestinationSummary.from(dest);
   }
 }

@@ -2,14 +2,13 @@ package com.example.short_link.link.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.Cache;
-import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,7 +18,7 @@ public class BulkDeleteLinksUseCase {
 
   private final LinkRepository repository;
   private final AuditLogService auditLogService;
-  private final CacheManager cacheManager;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
   public int execute(BulkDeleteLinksCommand command) {
@@ -30,9 +29,8 @@ public class BulkDeleteLinksUseCase {
             command.userId());
     if (owned.isEmpty()) return 0;
     repository.deleteAll(owned);
-    Cache cache = cacheManager.getCache("link");
+    linkCacheEviction.evictAllAfterCommit(owned.stream().map(LinkEntity::getShortCode).toList());
     for (LinkEntity link : owned) {
-      if (cache != null) cache.evict(link.getShortCode());
       auditLogService.record(
           AuditAction.LINK_DELETED,
           "link",

@@ -2,10 +2,10 @@ package com.example.short_link.link.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,12 +16,13 @@ public class DeleteLinkUseCase {
   private final LinkOwnership ownership;
   private final LinkRepository repository;
   private final AuditLogService auditLogService;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
-  @CacheEvict(value = "link", key = "#command.shortCode()")
   public void execute(DeleteLinkCommand command) {
     LinkEntity link = ownership.requireOwned(command.userId(), command.shortCode());
     repository.delete(link);
+    linkCacheEviction.evictAfterCommit(command.shortCode());
     auditLogService.record(
         AuditAction.LINK_DELETED, "link", command.shortCode().value(), command.userId());
   }

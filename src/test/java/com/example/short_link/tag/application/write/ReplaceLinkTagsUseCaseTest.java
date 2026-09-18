@@ -10,6 +10,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
@@ -38,6 +39,7 @@ class ReplaceLinkTagsUseCaseTest {
   @Mock private LinkRepository linkRepository;
   @Mock private TagRepository tagRepository;
   @Mock private LinkTagRepository linkTagRepository;
+  @Mock private LinkCacheEviction linkCacheEviction;
   @InjectMocks private ReplaceLinkTagsUseCase useCase;
 
   private static final long USER = 7L;
@@ -107,6 +109,7 @@ class ReplaceLinkTagsUseCaseTest {
     assertThat(result).isEmpty();
     verify(linkTagRepository).deleteByLinkId(100L);
     verify(linkTagRepository, never()).save(any());
+    verify(linkCacheEviction).evictAfterCommit(CODE);
   }
 
   @Test
