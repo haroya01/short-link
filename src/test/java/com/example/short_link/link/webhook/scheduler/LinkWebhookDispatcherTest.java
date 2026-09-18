@@ -2,7 +2,7 @@ package com.example.short_link.link.webhook.scheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.counter.RedisWindowCounter;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.webhook.application.helper.WebhookNotification;
@@ -19,6 +20,7 @@ import com.example.short_link.link.webhook.domain.WebhookFormat;
 import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -30,14 +32,12 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.RedisScript;
 
 @ExtendWith(MockitoExtension.class)
 class LinkWebhookDispatcherTest {
 
   @Mock private LinkWebhookRepository repository;
-  @Mock private StringRedisTemplate redis;
+  @Mock private RedisWindowCounter counter;
 
   private SimpleMeterRegistry meterRegistry;
   private WebhookDeliveryGate deliveryGate;
@@ -49,7 +49,7 @@ class LinkWebhookDispatcherTest {
   @BeforeEach
   void setUp() {
     meterRegistry = new SimpleMeterRegistry();
-    deliveryGate = new WebhookDeliveryGate(meterRegistry, redis);
+    deliveryGate = new WebhookDeliveryGate(meterRegistry, counter);
     batchBuffer = new WebhookBatchBuffer(meterRegistry);
     deliveryClient = mock(WebhookHttpDeliveryClient.class);
     batchDeliverer = new WebhookBatchDeliverer(repository, batchBuffer, deliveryClient);
@@ -118,7 +118,7 @@ class LinkWebhookDispatcherTest {
   void shouldDeliverConsultsQuotaWhenSet() {
     LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
     h.updateConfig(null, null, null, 100, null, null);
-    when(redis.execute(any(RedisScript.class), anyList(), eq("86400"))).thenReturn(101L);
+    when(counter.increment(anyString(), eq(Duration.ofDays(1)))).thenReturn(101L);
     assertThat(deliveryGate.shouldDeliver(h, event(false, "x", null))).isFalse();
     assertThat(meterRegistry.counter("webhook.delivery", "result", "skipped_quota").count())
         .isEqualTo(1.0);
@@ -128,7 +128,7 @@ class LinkWebhookDispatcherTest {
   void shouldDeliverPassesQuotaWhenUnderLimit() {
     LinkWebhookEntity h = hook(WebhookFormat.GENERIC);
     h.updateConfig(null, null, null, 100, null, null);
-    when(redis.execute(any(RedisScript.class), anyList(), eq("86400"))).thenReturn(5L);
+    when(counter.increment(anyString(), eq(Duration.ofDays(1)))).thenReturn(5L);
     assertThat(deliveryGate.shouldDeliver(h, event(false, "x", null))).isTrue();
   }
 
