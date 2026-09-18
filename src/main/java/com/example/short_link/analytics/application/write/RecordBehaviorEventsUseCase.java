@@ -4,7 +4,7 @@ import com.example.short_link.analytics.domain.BehaviorEventEntity;
 import com.example.short_link.analytics.domain.repository.BehaviorEventRepository;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
-import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.classifier.application.helper.VisitorHasher;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -36,7 +36,7 @@ public class RecordBehaviorEventsUseCase {
   private final BehaviorEventRepository repository;
   private final UserAgentClassifier userAgentClassifier;
   private final AsnResolver asnResolver;
-  private final BotHeuristic botHeuristic;
+  private final BotClassifier botClassifier;
   private final MeterRegistry meterRegistry;
   private final Clock clock;
 
@@ -44,13 +44,13 @@ public class RecordBehaviorEventsUseCase {
       BehaviorEventRepository repository,
       UserAgentClassifier userAgentClassifier,
       AsnResolver asnResolver,
-      BotHeuristic botHeuristic,
+      BotClassifier botClassifier,
       MeterRegistry meterRegistry,
       Clock clock) {
     this.repository = repository;
     this.userAgentClassifier = userAgentClassifier;
     this.asnResolver = asnResolver;
-    this.botHeuristic = botHeuristic;
+    this.botClassifier = botClassifier;
     this.meterRegistry = meterRegistry;
     this.clock = clock;
   }
@@ -131,19 +131,9 @@ public class RecordBehaviorEventsUseCase {
   private Classification classify(BehaviorContext ctx) {
     try {
       UserAgentInfo ua = userAgentClassifier.classify(ctx.userAgent());
-      boolean bot = ua.bot();
-      String botName = ua.botName();
-      if (!bot && botHeuristic.isSuspectBurst(ctx.clientIp())) {
-        bot = true;
-        botName = BotHeuristic.SUSPECT_LABEL;
-      } else if (!bot) {
-        AsnResolver.AsnInfo asn = asnResolver.resolve(ctx.clientIp());
-        if (asn.datacenter()) {
-          bot = true;
-          botName = "datacenter:" + (asn.organization() == null ? "unknown" : asn.organization());
-        }
-      }
-      return new Classification(ua.deviceClass(), bot, botName);
+      BotClassifier.Verdict bot =
+          botClassifier.classify(ua, asnResolver.resolve(ctx.clientIp()), ctx.clientIp());
+      return new Classification(ua.deviceClass(), bot.isBot(), bot.botName());
     } catch (RuntimeException e) {
       log.warn("behavior event classification failed", e);
       return new Classification(null, false, null);

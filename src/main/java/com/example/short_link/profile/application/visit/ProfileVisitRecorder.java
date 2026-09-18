@@ -3,7 +3,7 @@ package com.example.short_link.profile.application.visit;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
-import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.classifier.application.helper.IpMasker;
@@ -33,7 +33,7 @@ public class ProfileVisitRecorder {
   private final UserAgentClassifier userAgentClassifier;
   private final GeoIpResolver geoIpResolver;
   private final AsnResolver asnResolver;
-  private final BotHeuristic botHeuristic;
+  private final BotClassifier botClassifier;
 
   @Transactional
   public void recordUsername(
@@ -86,16 +86,7 @@ public class ProfileVisitRecorder {
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
       GeoLocation geo = geoIpResolver.resolve(clientIp);
       AsnResolver.AsnInfo asnInfo = asnResolver.resolve(clientIp);
-      boolean uaBot = ua.bot();
-      String botName = ua.botName();
-      if (!uaBot && botHeuristic.isSuspectBurst(clientIp)) {
-        uaBot = true;
-        botName = BotHeuristic.SUSPECT_LABEL;
-      } else if (!uaBot && asnInfo.datacenter()) {
-        uaBot = true;
-        botName =
-            "datacenter:" + (asnInfo.organization() == null ? "unknown" : asnInfo.organization());
-      }
+      BotClassifier.Verdict bot = botClassifier.classify(ua, asnInfo, clientIp);
       ProfileVisitEntity event =
           ProfileVisitEntity.builder()
               .profileUserId(profileUserId)
@@ -111,8 +102,8 @@ public class ProfileVisitRecorder {
               .deviceClass(ua.deviceClass())
               .osName(ua.osName())
               .browserName(ua.browserName())
-              .bot(uaBot)
-              .botName(botName)
+              .bot(bot.isBot())
+              .botName(bot.botName())
               .countryCode(geo.countryCode())
               .regionName(geo.region())
               .cityName(geo.city())

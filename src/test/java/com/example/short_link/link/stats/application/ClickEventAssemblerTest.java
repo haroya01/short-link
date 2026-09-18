@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.BotHeuristic;
 import com.example.short_link.link.classifier.application.ClientAppClassifier;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
@@ -18,7 +19,6 @@ import java.time.Instant;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -33,13 +33,20 @@ class ClickEventAssemblerTest {
   @Mock private GeoIpResolver geoIpResolver;
   @Mock private AsnResolver asnResolver;
   @Mock private BotHeuristic botHeuristic;
-  @InjectMocks private ClickEventAssembler assembler;
+  private ClickEventAssembler assembler;
 
   @BeforeEach
   void stubDefaults() {
     lenient().when(asnResolver.resolve(any())).thenReturn(AsnResolver.AsnInfo.empty());
     lenient().when(userAgentClassifier.classify(any())).thenReturn(UserAgentInfo.unknown());
     lenient().when(geoIpResolver.resolve(any())).thenReturn(GeoLocation.empty());
+    assembler =
+        new ClickEventAssembler(
+            userAgentClassifier,
+            clientAppClassifier,
+            geoIpResolver,
+            asnResolver,
+            new BotClassifier(botHeuristic));
   }
 
   private ClickContext ctx(String referrer, String clientIp, String acceptLanguage) {

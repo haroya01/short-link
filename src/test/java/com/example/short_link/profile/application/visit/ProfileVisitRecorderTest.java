@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.BotHeuristic;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
@@ -39,7 +40,12 @@ class ProfileVisitRecorderTest {
   void setUp() {
     recorder =
         new ProfileVisitRecorder(
-            repository, userRepository, uaClassifier, geoResolver, asnResolver, botHeuristic);
+            repository,
+            userRepository,
+            uaClassifier,
+            geoResolver,
+            asnResolver,
+            new BotClassifier(botHeuristic));
   }
 
   @Test
