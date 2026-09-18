@@ -67,6 +67,12 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<LinkEntity> findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(
+      Long userId) {
+    return jpa.findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(userId);
+  }
+
+  @Override
   public List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId) {
     return jpa.findAllByUserIdOrderByCreatedAtDesc(userId);
   }

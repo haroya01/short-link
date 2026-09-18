@@ -1,6 +1,7 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.domain.ClickEventEntity;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayOfWeekClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
@@ -13,6 +14,38 @@ import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
 
 public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity, Long> {
+
+  /** Boundaries come from the owner's ZoneId, including historical daylight-saving offsets. */
+  @Query(
+      value =
+          """
+      SELECT c.link_id AS linkId,
+        CASE
+          WHEN c.clicked_at < FROM_UNIXTIME(:b1) THEN 0
+          WHEN c.clicked_at < FROM_UNIXTIME(:b2) THEN 1
+          WHEN c.clicked_at < FROM_UNIXTIME(:b3) THEN 2
+          WHEN c.clicked_at < FROM_UNIXTIME(:b4) THEN 3
+          WHEN c.clicked_at < FROM_UNIXTIME(:b5) THEN 4
+          WHEN c.clicked_at < FROM_UNIXTIME(:b6) THEN 5
+          ELSE 6
+        END AS bucket,
+        COUNT(*) AS count
+      FROM click_event c
+      WHERE c.link_id IN (:ids) AND c.is_bot = false
+        AND c.clicked_at >= FROM_UNIXTIME(:b0) AND c.clicked_at <= FROM_UNIXTIME(:until)
+      GROUP BY c.link_id, bucket
+      """,
+      nativeQuery = true)
+  List<DailyClickBucketRow> findDailyClickBucketsByLinkIds(
+      @Param("ids") List<Long> ids,
+      @Param("b0") BigDecimal b0,
+      @Param("b1") BigDecimal b1,
+      @Param("b2") BigDecimal b2,
+      @Param("b3") BigDecimal b3,
+      @Param("b4") BigDecimal b4,
+      @Param("b5") BigDecimal b5,
+      @Param("b6") BigDecimal b6,
+      @Param("until") BigDecimal until);
 
   @Query(
       "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS day, "
@@ -84,28 +117,4 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       @Param("linkIds") List<Long> linkIds,
       @Param("since") Instant since,
       @Param("tz") String timezone);
-
-  /** UTC epoch 일자로 묶고, 하한도 epoch에서 변환해 세션 시간대가 날짜와 기간을 바꾸지 않게 한다. */
-  @Query(
-      value =
-          """
-      SELECT c.link_id AS linkId,
-             FLOOR(UNIX_TIMESTAMP(c.clicked_at) / 86400) AS epochDay,
-             COUNT(*) AS count
-      FROM click_event c
-      WHERE c.link_id IN (:ids) AND c.is_bot = false
-        AND c.clicked_at >= FROM_UNIXTIME(:fromEpoch)
-      GROUP BY c.link_id, FLOOR(UNIX_TIMESTAMP(c.clicked_at) / 86400)
-      """,
-      nativeQuery = true)
-  List<UtcDailyClicksByLinkRow> findUtcDailyClicksByLinkIdsSince(
-      @Param("ids") List<Long> ids, @Param("fromEpoch") BigDecimal fromEpoch);
-
-  interface UtcDailyClicksByLinkRow {
-    Long getLinkId();
-
-    Long getEpochDay();
-
-    Long getCount();
-  }
 }

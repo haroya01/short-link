@@ -51,11 +51,11 @@
 @junit | binding-link-create | 6 | 6 | 2 | 0 | 14
 @junit | binding-links-invalid-size | 0 | 0 | 0 | 0 | 0
 @junit | binding-links-overflow-size | 0 | 0 | 0 | 0 | 0
-@junit | binding-links-valid-after-rejection | 4 | 0 | 0 | 0 | 4
+@junit | binding-links-valid-after-rejection | 6 | 0 | 0 | 0 | 6
 
 # Two new tags + their associations; PATCH includes real metadata and the triggered OG refresh.
 @junit | link-update-stat-tags | 4 | 4 | 0 | 1 | 9
-@junit | link-update-with-statistics | 10 | 1 | 4 | 0 | 15
+@junit | link-update-with-statistics | 12 | 1 | 4 | 0 | 17
 @junit | link-utc-day-fixture-create | 6 | 6 | 2 | 0 | 14
 
 # A real like creates a notification; account deletion preserves it but removes actor display data.

@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.read;
 
+import com.example.short_link.common.security.UserAccessLookup;
 import com.example.short_link.link.application.dto.MyLink;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
@@ -7,12 +8,13 @@ import com.example.short_link.link.stats.domain.repository.ClickTotalsReadReposi
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,16 +25,28 @@ public class MyLinkReader {
   private final ClickTimeReadRepository clickTime;
   private final LinkTagLookup linkTags;
   private final Clock clock;
+  private final UserAccessLookup users;
 
   public MyLinkReader(
       ClickTotalsReadRepository clickTotals,
       ClickTimeReadRepository clickTime,
       LinkTagLookup linkTags,
       Clock clock) {
+    this(clickTotals, clickTime, linkTags, clock, null);
+  }
+
+  @Autowired
+  public MyLinkReader(
+      ClickTotalsReadRepository clickTotals,
+      ClickTimeReadRepository clickTime,
+      LinkTagLookup linkTags,
+      Clock clock,
+      UserAccessLookup users) {
     this.clickTotals = clickTotals;
     this.clickTime = clickTime;
     this.linkTags = linkTags;
     this.clock = clock;
+    this.users = users;
   }
 
   @Transactional(readOnly = true)
@@ -48,11 +62,42 @@ public class MyLinkReader {
     return counts;
   }
 
+  Map<Long, Long> humanClickCountsByLinkIds(List<Long> ids) {
+    if (ids.isEmpty()) return Map.of();
+    Map<Long, Long> counts = new HashMap<>();
+    clickTotals
+        .humanCountsByLinkIds(ids)
+        .forEach(row -> counts.put(row.getLinkId(), row.getCount()));
+    return counts;
+  }
+
   /** 클릭 수 정렬에 사용한 집계를 다시 읽지 않고 같은 값으로 응답을 만든다. */
   List<MyLink> assemble(List<LinkEntity> links, Map<Long, Long> counts) {
     List<Long> ids = links.stream().map(LinkEntity::getId).toList();
     Map<Long, List<String>> tagsByLinkId = linkTags.tagNamesByLinkIds(ids);
-    Map<Long, List<Long>> sparkByLinkId = sparklineByLinkIds(ids);
+    ZoneId zone = ownerZone(links.isEmpty() ? null : links.getFirst().getUserId());
+    Map<Long, List<Long>> sparkByLinkId = dailySeries(ids, zone, clock.instant());
+    return assemble(links, counts, tagsByLinkId, sparkByLinkId, zone);
+  }
+
+  List<MyLink> assemble(
+      List<LinkEntity> links, Map<Long, Long> counts, Map<Long, List<Long>> sparks, ZoneId zone) {
+    return assemble(
+        links,
+        counts,
+        linkTags.tagNamesByLinkIds(links.stream().map(LinkEntity::getId).toList()),
+        sparks,
+        zone);
+  }
+
+  private List<MyLink> assemble(
+      List<LinkEntity> links,
+      Map<Long, Long> counts,
+      Map<Long, List<String>> tagsByLinkId,
+      Map<Long, List<Long>> sparkByLinkId,
+      ZoneId zone) {
+    Map<Long, Long> humans =
+        humanClickCountsByLinkIds(links.stream().map(LinkEntity::getId).toList());
     return links.stream()
         .map(
             link ->
@@ -63,25 +108,36 @@ public class MyLinkReader {
                     link.getExpiresAt(),
                     counts.getOrDefault(link.getId(), 0L),
                     tagsByLinkId.getOrDefault(link.getId(), List.of()),
-                    sparkByLinkId.getOrDefault(link.getId(), zeroes())))
+                    sparkByLinkId.getOrDefault(link.getId(), zeroes()),
+                    link.getNote(),
+                    zone.getId(),
+                    humans.getOrDefault(link.getId(), 0L)))
         .toList();
   }
 
-  /** 최근 7개 UTC 날짜를 오래된 날부터 정렬하고, 클릭이 없는 날짜를 0으로 채운다. */
-  private Map<Long, List<Long>> sparklineByLinkIds(List<Long> ids) {
+  ZoneId ownerZone(Long userId) {
+    if (users == null || userId == null) return ZoneOffset.UTC;
+    try {
+      return ZoneId.of(users.timezone(userId).orElse("Asia/Seoul"));
+    } catch (java.time.DateTimeException invalid) {
+      return ZoneId.of("Asia/Seoul");
+    }
+  }
+
+  Map<Long, List<Long>> dailySeries(List<Long> ids, ZoneId zone, Instant now) {
     if (ids.isEmpty()) return Map.of();
-    Instant now = clock.instant();
-    LocalDate today = now.atZone(ZoneOffset.UTC).toLocalDate();
-    Instant from = today.minusDays(6).atStartOfDay(ZoneOffset.UTC).toInstant();
-    Map<Long, long[]> byLink = new HashMap<>();
-    for (var row : clickTime.findDailyClicksByLinkIdsSince(ids, from)) {
-      long offset = ChronoUnit.DAYS.between(row.getDay(), today);
-      if (offset < 0 || offset >= 7) continue;
-      long[] bucket = byLink.computeIfAbsent(row.getLinkId(), key -> new long[7]);
-      bucket[6 - (int) offset] = row.getCount();
+    LocalDate today = now.atZone(zone).toLocalDate();
+    List<Instant> starts =
+        java.util.stream.IntStream.range(0, 7)
+            .mapToObj(i -> today.minusDays(6 - i).atStartOfDay(zone).toInstant())
+            .toList();
+    Map<Long, long[]> values = new HashMap<>();
+    for (var row : clickTime.findDailyClickBucketsByLinkIds(ids, starts, now)) {
+      if (row.getBucket() < 0 || row.getBucket() > 6) continue;
+      values.computeIfAbsent(row.getLinkId(), key -> new long[7])[row.getBucket()] = row.getCount();
     }
     Map<Long, List<Long>> result = new HashMap<>();
-    byLink.forEach((linkId, counts) -> result.put(linkId, toList(counts)));
+    values.forEach((id, series) -> result.put(id, toList(series)));
     return result;
   }
 

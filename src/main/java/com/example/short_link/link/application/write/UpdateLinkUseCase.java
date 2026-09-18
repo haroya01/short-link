@@ -40,7 +40,7 @@ public class UpdateLinkUseCase {
       link.changeOriginalUrl(command.originalUrl());
       urlChanged = true;
     }
-    if (command.expiresAt() != null) {
+    if (command.expiresAt() != null || command.clearExpiresAt()) {
       link.changeExpiresAt(command.expiresAt());
     }
     if (command.note() != null) link.updateNote(command.note());
@@ -67,7 +67,11 @@ public class UpdateLinkUseCase {
         "link",
         link.getShortCode().value(),
         command.userId(),
-        Map.of("urlChanged", urlChanged, "expiresAtChanged", command.expiresAt() != null));
+        Map.of(
+            "urlChanged",
+            urlChanged,
+            "expiresAtChanged",
+            command.expiresAt() != null || command.clearExpiresAt()));
     linkCacheEviction.evictAfterCommit(command.shortCode());
     return linkReader.read(link);
   }

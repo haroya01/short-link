@@ -7,11 +7,11 @@ import com.example.short_link.link.stats.application.ClickFlusher;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClicksByLinkRow;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +29,57 @@ class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
   @Autowired private ClickTimeReadRepository clickTime;
   @Autowired private ClickTotalsReadRepository clickTotals;
   @Autowired private PlatformTransactionManager transactionManager;
+
+  @Test
+  void ownerKeepsFavoritesInOrderAndOpensAccountOverview() throws Exception {
+    String first = createLink("workspace-create-first");
+    String second = createLink("workspace-create-second");
+    request(
+        "workspace-favorite-add-first",
+        owner,
+        "PUT",
+        "/api/v1/links/me/favorites/" + first,
+        null,
+        204);
+    request(
+        "workspace-favorite-add-second",
+        owner,
+        "PUT",
+        "/api/v1/links/me/favorites/" + second,
+        null,
+        204);
+    request(
+        "workspace-favorite-order",
+        owner,
+        "PUT",
+        "/api/v1/links/me/favorites/order",
+        Map.of("shortCodes", List.of(second, first)),
+        204);
+    var favorites =
+        request("workspace-favorite-list", owner, "GET", "/api/v1/links/me/favorites", null, 200);
+    assertThat(favorites.path("items").get(0).path("shortCode").asText()).isEqualTo(second);
+    assertThat(favorites.path("items").size()).isEqualTo(2);
+    var selected =
+        request(
+            "workspace-selected-links",
+            owner,
+            "GET",
+            "/api/v1/links/me/by-codes?codes=" + first,
+            null,
+            200);
+    assertThat(selected.path("items").get(0).path("shortCode").asText()).isEqualTo(first);
+    var overview =
+        request("workspace-overview", owner, "GET", "/api/v1/links/me/overview", null, 200);
+    assertThat(overview.path("totalLinks").asInt()).isEqualTo(2);
+    assertThat(overview.path("dailyClicks").size()).isEqualTo(7);
+    request(
+        "workspace-favorite-remove",
+        owner,
+        "DELETE",
+        "/api/v1/links/me/favorites/" + first,
+        null,
+        204);
+  }
 
   @Test
   void ownerManagesLinkMetadataTagsAndRoutingWithoutGivingAnotherUserWriteAccess()
@@ -248,17 +299,18 @@ class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
             linkId);
     assertThat(storedTags).containsExactly("measured", "release");
     assertThat(updated.path("tags")).isEqualTo(json.valueToTree(storedTags));
-    LocalDate today = LocalDate.now(ZoneOffset.UTC);
+    ZoneId ownerZone = ZoneId.of(updated.path("timezone").asText());
+    LocalDate today = LocalDate.now(ownerZone);
     List<Long> storedDailyClicks = new ArrayList<>();
     for (int daysAgo = 6; daysAgo >= 0; daysAgo--) {
-      Instant dayStart = today.minusDays(daysAgo).atStartOfDay(ZoneOffset.UTC).toInstant();
+      Instant dayStart = today.minusDays(daysAgo).atStartOfDay(ownerZone).toInstant();
       storedDailyClicks.add(
           number(
               "SELECT COUNT(*) FROM click_event WHERE link_id = ? AND is_bot = false "
                   + "AND UNIX_TIMESTAMP(clicked_at) >= ? AND UNIX_TIMESTAMP(clicked_at) < ?",
               linkId,
               dayStart.getEpochSecond(),
-              dayStart.plusSeconds(86400).getEpochSecond()));
+              today.minusDays(daysAgo).plusDays(1).atStartOfDay(ownerZone).toEpochSecond()));
     }
     assertThat(storedDailyClicks).containsExactly(0L, 0L, 0L, 0L, 0L, 0L, 1L);
     List<Long> responseDailyClicks = new ArrayList<>();
@@ -351,19 +403,16 @@ class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
       var rows = dailyClicksInSessionZone(linkId, from, sessionZone);
       assertThat(rows)
           .as("UTC dates in session %s", sessionZone)
-          .extracting(DailyClicksByLinkRow::getDay, DailyClicksByLinkRow::getCount)
-          .containsExactlyInAnyOrder(
-              tuple(LocalDate.of(2026, 9, 5), 1L),
-              tuple(LocalDate.of(2026, 9, 10), 1L),
-              tuple(LocalDate.of(2026, 9, 11), 2L));
+          .extracting(DailyClickBucketRow::getBucket, DailyClickBucketRow::getCount)
+          .containsExactlyInAnyOrder(tuple(0, 1L), tuple(5, 1L), tuple(6, 2L));
       // A fractional Instant cutoff must not be truncated to the previous whole second.
       assertThat(dailyClicksInSessionZone(linkId, from.plusMillis(500), sessionZone))
-          .extracting(DailyClicksByLinkRow::getDay)
-          .containsExactlyInAnyOrder(LocalDate.of(2026, 9, 10), LocalDate.of(2026, 9, 11));
+          .extracting(DailyClickBucketRow::getBucket)
+          .containsExactlyInAnyOrder(5, 6);
     }
   }
 
-  private List<DailyClicksByLinkRow> dailyClicksInSessionZone(
+  private List<DailyClickBucketRow> dailyClicksInSessionZone(
       long linkId, Instant from, String zone) {
     return new TransactionTemplate(transactionManager)
         .execute(
@@ -373,7 +422,16 @@ class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
                 jdbc.update("SET SESSION time_zone = ?", zone);
                 assertThat(jdbc.queryForObject("SELECT @@session.time_zone", String.class))
                     .isEqualTo(zone);
-                return clickTime.findDailyClicksByLinkIdsSince(List.of(linkId), from);
+                List<Instant> starts =
+                    java.util.stream.IntStream.range(0, 7)
+                        .mapToObj(
+                            i ->
+                                i == 0
+                                    ? from
+                                    : Instant.parse("2026-09-05T00:00:00Z").plusSeconds(i * 86400L))
+                        .toList();
+                return clickTime.findDailyClickBucketsByLinkIds(
+                    List.of(linkId), starts, Instant.parse("2026-09-11T23:59:59.999999Z"));
               } finally {
                 jdbc.update("SET SESSION time_zone = ?", originalZone);
               }

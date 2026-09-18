@@ -10,6 +10,8 @@ public interface UserRepository {
 
   Optional<UserEntity> findById(Long id);
 
+  Optional<UserEntity> findByIdForUpdate(Long id);
+
   List<UserEntity> findAllByIdIn(Collection<Long> ids);
 
   UserEntity save(UserEntity user);
