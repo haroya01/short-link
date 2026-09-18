@@ -62,7 +62,8 @@ final class MyLinksJpaSpecifications {
       String like = likeContains(text);
       return cb.or(
           cb.like(cb.lower(root.get("originalUrl").as(String.class)), like, '!'),
-          cb.like(cb.lower(root.get("shortCode")), like, '!'));
+          cb.like(cb.lower(root.get("shortCode")), like, '!'),
+          cb.like(cb.lower(root.get("note")), like, '!'));
     };
   }
 

@@ -99,6 +99,15 @@ public class LinkEntity extends BaseCreatedEntity {
   @Column(name = "blocked_countries", length = 255)
   private String blockedCountries;
 
+  /** Null means not favorited; positions belong to this link owner. */
+  @Column(name = "favorite_order")
+  private Integer favoriteOrder;
+
+  public void changeFavoriteOrder(Integer order) {
+    if (order != null && order < 0) throw new IllegalArgumentException("negative favorite order");
+    this.favoriteOrder = order;
+  }
+
   /** Owner-only memo; never shown to visitors. */
   @Column(length = 280)
   private String note;

@@ -21,6 +21,11 @@ class UserRepositoryAdapter implements UserRepository {
   }
 
   @Override
+  public Optional<UserEntity> findByIdForUpdate(Long id) {
+    return jpa.findByIdForUpdate(id);
+  }
+
+  @Override
   public List<UserEntity> findAllByIdIn(Collection<Long> ids) {
     return jpa.findAllById(ids);
   }

@@ -28,6 +28,8 @@ public interface ClickTotalsReadRepository {
 
   List<LinkClickCount> countsByLinkIds(List<Long> ids);
 
+  List<LinkClickCount> humanCountsByLinkIds(List<Long> ids);
+
   List<LinkClickCount> countsByLinkIdsSince(List<Long> ids, Instant since);
 
   List<LinkClickCount> countsByLinkIdsBefore(List<Long> ids, Instant before);

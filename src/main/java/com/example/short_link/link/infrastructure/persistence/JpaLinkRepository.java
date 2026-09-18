@@ -47,6 +47,9 @@ public interface JpaLinkRepository
       """)
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);
 
+  List<LinkEntity> findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(
+      Long userId);
+
   List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
   long countByCreatedAtAfter(Instant since);

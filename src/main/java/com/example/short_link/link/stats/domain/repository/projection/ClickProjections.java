@@ -24,15 +24,15 @@ public final class ClickProjections {
     Long getCount();
   }
 
-  public interface DailyClickRow {
-    LocalDate getDay();
+  public interface DailyClickBucketRow {
+    Long getLinkId();
+
+    Integer getBucket();
 
     Long getCount();
   }
 
-  public interface DailyClicksByLinkRow {
-    Long getLinkId();
-
+  public interface DailyClickRow {
     LocalDate getDay();
 
     Long getCount();

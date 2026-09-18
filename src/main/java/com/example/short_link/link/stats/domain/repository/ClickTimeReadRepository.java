@@ -1,7 +1,7 @@
 package com.example.short_link.link.stats.domain.repository;
 
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClicksByLinkRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayOfWeekClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
@@ -9,6 +9,9 @@ import java.time.Instant;
 import java.util.List;
 
 public interface ClickTimeReadRepository {
+
+  List<DailyClickBucketRow> findDailyClickBucketsByLinkIds(
+      List<Long> ids, List<Instant> dayStarts, Instant until);
 
   List<DailyClickRow> findDailyClicks(Long linkId, Instant from, String timezone);
 
@@ -25,6 +28,4 @@ public interface ClickTimeReadRepository {
       List<Long> linkIds, Instant since, String timezone);
 
   List<HeatmapRow> findHeatmapByLinkIdsSince(List<Long> linkIds, Instant since, String timezone);
-
-  List<DailyClicksByLinkRow> findDailyClicksByLinkIdsSince(List<Long> ids, Instant from);
 }

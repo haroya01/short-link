@@ -257,8 +257,8 @@
 @junit | link-detail-owned | 3 | 0 | 0 | 0 | 3
 @junit | link-events | 2 | 0 | 0 | 0 | 2
 @junit | link-events-csv | 2 | 0 | 0 | 0 | 2
-@junit | link-list-filter-tag | 7 | 0 | 0 | 0 | 7
-@junit | link-list-owned | 4 | 0 | 0 | 0 | 4
+@junit | link-list-filter-tag | 9 | 0 | 0 | 0 | 9
+@junit | link-list-owned | 6 | 0 | 0 | 0 | 6
 @junit | link-og-card | 1 | 0 | 0 | 0 | 1
 @junit | link-og-override | 3 | 0 | 2 | 0 | 5
 @junit | link-password-prompt | 3 | 0 | 0 | 0 | 3
@@ -285,8 +285,8 @@
 @junit | link-unlock-view-limit | 3 | 0 | 1 | 0 | 4
 @junit | link-unlock-wrong | 1 | 0 | 0 | 0 | 1
 @junit | link-update-foreign-denied | 1 | 0 | 0 | 0 | 1
-# Read actual click totals, tag links, and UTC daily counts for the PATCH response (+3 SELECT).
-@junit | link-update-owned | 5 | 1 | 2 | 0 | 8
+# Read total/human counts, owner timezone, tags, and local-day buckets for the PATCH response.
+@junit | link-update-owned | 7 | 1 | 2 | 0 | 10
 @junit | link-webhook-configure | 2 | 0 | 1 | 0 | 3
 @junit | link-webhook-delete | 2 | 0 | 0 | 1 | 3
 @junit | link-webhook-disable | 2 | 0 | 1 | 0 | 3
@@ -514,3 +514,14 @@
 @junit | tag-delete | 2 | 0 | 0 | 2 | 4
 @junit | tag-list | 2 | 0 | 0 | 0 | 2
 @junit | tag-rename | 3 | 0 | 1 | 0 | 4
+
+# Owner workspace: all counts are batched; adding a link does not add per-link SELECTs.
+@junit | workspace-create-first | 6 | 6 | 2 | 0 | 14
+@junit | workspace-create-second | 5 | 6 | 2 | 0 | 13
+@junit | workspace-favorite-add-first | 3 | 0 | 1 | 0 | 4
+@junit | workspace-favorite-add-second | 3 | 0 | 1 | 0 | 4
+@junit | workspace-favorite-list | 6 | 0 | 0 | 0 | 6
+@junit | workspace-favorite-order | 2 | 0 | 2 | 0 | 4
+@junit | workspace-favorite-remove | 2 | 0 | 1 | 0 | 3
+@junit | workspace-selected-links | 6 | 0 | 0 | 0 | 6
+@junit | workspace-overview | 7 | 0 | 0 | 0 | 7

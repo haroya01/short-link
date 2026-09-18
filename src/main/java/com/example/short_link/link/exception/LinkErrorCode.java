@@ -18,6 +18,8 @@ public enum LinkErrorCode {
   SELF_REFERENCING_URL(HttpStatus.BAD_REQUEST, "url points back at the short link service: %s"),
   BULK_IMPORT_TOO_LARGE(
       HttpStatus.PAYLOAD_TOO_LARGE, "bulk import too large: %d rows (limit %d)", "rows", "limit"),
+  INVALID_FAVORITE_ORDER(
+      HttpStatus.BAD_REQUEST, "favorite order must contain every current favorite exactly once"),
   INVALID_CURSOR(HttpStatus.BAD_REQUEST, "Invalid cursor"),
   INVALID_EXPORT_DIMENSION(HttpStatus.BAD_REQUEST, "Invalid export dimension: %s");
 
