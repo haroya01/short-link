@@ -1,14 +1,11 @@
 name: Deploy
 
 on:
-  push:
+  # push 로 직접 돌면 CI 와 나란히 달려서, 테스트가 빨개도 배포가 나간다.
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
     branches: [main]
-    paths:
-      - "src/**"
-      - "build.gradle"
-      - "Dockerfile"
-      - "deploy/**"
-      - ".github/workflows/deploy.yml"
   workflow_dispatch:
 
 concurrency:
@@ -24,10 +21,44 @@ permissions:
   packages: write
 
 jobs:
+  release:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.pick.outputs.sha }}
+      ships: ${{ steps.pick.outputs.ships }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+          fetch-depth: 2
+
+      - name: Pick the verified commit and decide whether it ships
+        id: pick
+        run: |
+          sha="${{ github.event.workflow_run.head_sha || github.sha }}"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          # 트리거가 CI 로 바뀌면서 paths 필터를 잃었다. main 은 스쿼시 머지라
+          # HEAD^..HEAD 가 그 머지의 변경 전부다.
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! git rev-parse --verify -q HEAD^ >/dev/null; then
+            echo "ships=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only HEAD^ HEAD \
+            | grep -qE '^(src/|build\.gradle$|Dockerfile$|deploy/|\.github/workflows/deploy\.yml$)'; then
+            echo "ships=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ships=false" >> "$GITHUB_OUTPUT"
+          fi
+
   build-and-deploy:
+    needs: release
+    if: needs.release.outputs.ships == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.sha }}
 
       - uses: docker/setup-qemu-action@v3
         with:
@@ -53,7 +84,7 @@ jobs:
             MAXMIND_LICENSE_KEY=${{ secrets.MAXMIND_LICENSE_KEY }}
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ needs.release.outputs.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -64,7 +95,7 @@ jobs:
           host: ${{ vars.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
-          envs: GHCR_TOKEN,APNS_TEAM_ID,APNS_KEY_ID,APNS_PRIVATE_KEY
+          envs: GHCR_TOKEN,APNS_TEAM_ID,APNS_KEY_ID,APNS_PRIVATE_KEY,RELEASE_SHA
           script_stop: true
           script: |
             set -e
@@ -74,8 +105,11 @@ jobs:
             # 원격 상태로 강제 동기화한다. reset --hard 는 tracked 파일만 만지므로 서버의 .env 등
             # untracked 설정은 그대로다.
             git fetch origin main
-            git reset --hard origin/main
+            # CI 가 통과시킨 그 커밋. 대기 중 main 이 앞서 나가면 설정과 이미지가 섞인다.
+            git reset --hard "$RELEASE_SHA"
             cd deploy
+            # compose 는 셸 환경을 .env 보다 우선한다 — latest 대신 검증된 이미지를 받는다.
+            export APP_IMAGE_TAG="sha-$RELEASE_SHA"
             # APNs 푸시 설정을 서버 .env 에 upsert — 값은 GH Actions 시크릿에서 온다(로그 미출력).
             # docker-compose 가 이 .env 를 읽어 컨테이너 env(APNS_*)로 넣고, ApnsPushSender 가
             # BEGIN/END·공백을 벗겨 PKCS8 로 디코드한다(그래서 base64 한 줄이면 충분). production=true 로
@@ -104,8 +138,12 @@ jobs:
             # success. Without this the Discord notify below would fire green even on a
             # crash-looping container — the v1/v2 Sentry-starter outage was invisible to
             # CI for that exact reason.
+            # 'unhealthy' 안에 'healthy' 가 들어 있어서, 문자열 매칭은 크래시 루프를 초록으로
+            # 읽는다 — 이 대기가 막으려던 바로 그 상황이다. 상태를 정확히 비교한다.
             for i in $(seq 1 30); do
-              if docker compose ps app --format '{{.Status}}' | grep -q healthy; then
+              cid=$(docker compose ps -q app)
+              health=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}none{{end}}' "$cid" 2>/dev/null || echo missing)
+              if [ "$health" = healthy ]; then
                 echo "app healthy after ${i} attempts"
                 break
               fi
@@ -125,6 +163,7 @@ jobs:
             docker compose exec -T nginx nginx -s reload
             docker compose ps
         env:
+          RELEASE_SHA: ${{ needs.release.outputs.sha }}
           GHCR_TOKEN: ${{ secrets.GHCR_RO_TOKEN }}
           APNS_TEAM_ID: ${{ secrets.APNS_TEAM_ID }}
           APNS_KEY_ID: ${{ secrets.APNS_KEY_ID }}
@@ -134,9 +173,10 @@ jobs:
         if: success()
         env:
           WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+          RELEASE_SHA: ${{ needs.release.outputs.sha }}
         run: |
           MSG=$(jq -nc \
-            --arg sha "${GITHUB_SHA:0:7}" \
+            --arg sha "${RELEASE_SHA:0:7}" \
             --arg msg "$(git log -1 --pretty=%s)" \
             --arg run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{ content: "✅ **BE deploy success** · \($sha) — \($msg)\n<\($run)>" }')
@@ -146,9 +186,10 @@ jobs:
         if: failure()
         env:
           WEBHOOK: ${{ secrets.DISCORD_DEPLOY_WEBHOOK }}
+          RELEASE_SHA: ${{ needs.release.outputs.sha }}
         run: |
           MSG=$(jq -nc \
-            --arg sha "${GITHUB_SHA:0:7}" \
+            --arg sha "${RELEASE_SHA:0:7}" \
             --arg msg "$(git log -1 --pretty=%s)" \
             --arg run "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
             '{ content: "🚨 **BE deploy FAILED** · \($sha) — \($msg)\n<\($run)>" }')

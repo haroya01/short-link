@@ -99,6 +99,24 @@ class RedisWindowCounterTest {
   }
 
   @Test
+  void checkingTheCounterDoesNotPushTheWindowBack() {
+    LinkPasswordAttemptLimiter limiter = new LinkPasswordAttemptLimiter(counter);
+    String code = "p" + UUID.randomUUID().toString().substring(0, 8);
+    String ip = "203.0.113.11";
+    String key = key("pwd-attempt:" + code + ":" + ip);
+    for (int i = 0; i < 10; i++) {
+      limiter.recordFailure(code, ip);
+    }
+    redis.expire(key, Duration.ofSeconds(10));
+
+    for (int i = 0; i < 5; i++) {
+      assertThat(limiter.isLockedOut(code, ip)).isTrue();
+    }
+
+    assertThat(redis.getExpire(key, TimeUnit.MILLISECONDS)).isBetween(1L, 10_000L);
+  }
+
+  @Test
   void aWindowShorterThanASecondIsNotRoundedDownToImmediateDeletion() {
     String key = key("bot:click:ip:test-" + UUID.randomUUID());
 
