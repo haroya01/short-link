@@ -6,10 +6,12 @@ import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.lang.ArchRule;
 import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,6 +55,15 @@ class ArchUnitSemanticRulesFixtureTest {
                 ArchUnitSemanticRulesTest.cacheEntriesAreNotEvictedWithoutWaiting,
                 EvictsDirectly.class))
         .hasSize(1);
+  }
+
+  @Test
+  void redisCountersAreFlaggedWhenTheyIncrementAndExpireSeparately() {
+    assertThat(
+            violations(
+                ArchUnitSemanticRulesTest.redisCountersExpireInTheSameScriptAsTheyIncrement,
+                IncrementsThenExpires.class))
+        .hasSize(2);
   }
 
   private static List<String> violations(ArchRule rule, Class<?>... fixtures) {
@@ -114,6 +125,14 @@ class ArchUnitSemanticRulesFixtureTest {
   static class EvictsDirectly {
     public void run(Cache cache) {
       cache.evict("key");
+    }
+  }
+
+  static class IncrementsThenExpires {
+    public void run(StringRedisTemplate redis) {
+      if (redis.opsForValue().increment("k") == 1L) {
+        redis.expire("k", Duration.ofSeconds(1));
+      }
     }
   }
 }

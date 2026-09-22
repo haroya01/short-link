@@ -1,11 +1,13 @@
 package com.example.short_link;
 
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
 import com.tngtech.archunit.core.domain.JavaMethod;
@@ -57,6 +59,17 @@ class ArchUnitSemanticRulesTest {
           "org.springframework.mail.javamail.JavaMailSender",
           "com.example.short_link.common.mail.MailSender");
 
+  // Jars are not imported, so Redis types are matched by name rather than by assignability.
+  private static final Set<String> REDIS_OPERATION_TYPES =
+      Set.of(
+          "org.springframework.data.redis.core.RedisOperations",
+          "org.springframework.data.redis.core.RedisTemplate",
+          "org.springframework.data.redis.core.StringRedisTemplate",
+          "org.springframework.data.redis.core.ValueOperations");
+
+  private static final Set<String> REDIS_COUNTER_CALLS =
+      Set.of("increment", "decrement", "expire", "expireAt");
+
   private static final Set<Propagation> OWN_TRANSACTION =
       Set.of(
           Propagation.REQUIRES_NEW,
@@ -75,6 +88,13 @@ class ArchUnitSemanticRulesTest {
   @ArchTest
   static final ArchRule proxiedBehaviourIsNotBypassedBySelfInvocation =
       methods().should(keepTheirProxyBehaviourWhenCalledFromTheirOwnClass());
+
+  @ArchTest
+  static final ArchRule redisCountersExpireInTheSameScriptAsTheyIncrement =
+      classes()
+          .that()
+          .doNotHaveFullyQualifiedName("com.example.short_link.common.counter.RedisWindowCounter")
+          .should(notIncrementOrExpireRedisKeysDirectly());
 
   @ArchTest
   static final ArchRule transactionsDoNotCallOutboundClients =
@@ -182,6 +202,20 @@ class ArchUnitSemanticRulesTest {
       public void check(JavaMethod method, ConditionEvents events) {
         for (JavaMethodCall call : method.getMethodCallsFromSelf()) {
           if (OUTBOUND_CLIENTS.contains(call.getTargetOwner().getName())) {
+            events.add(SimpleConditionEvent.violated(call, call.getDescription()));
+          }
+        }
+      }
+    };
+  }
+
+  private static ArchCondition<JavaClass> notIncrementOrExpireRedisKeysDirectly() {
+    return new ArchCondition<>("not increment or expire Redis keys outside RedisWindowCounter") {
+      @Override
+      public void check(JavaClass javaClass, ConditionEvents events) {
+        for (JavaMethodCall call : javaClass.getMethodCallsFromSelf()) {
+          boolean redis = REDIS_OPERATION_TYPES.contains(call.getTargetOwner().getName());
+          if (redis && REDIS_COUNTER_CALLS.contains(call.getName())) {
             events.add(SimpleConditionEvent.violated(call, call.getDescription()));
           }
         }
