@@ -81,7 +81,31 @@ final class ArchRuleProofs {
           "RepositoryUnusedMethodTest.no_unused_repository_methods",
           "RepositoryUnusedMethodTest.no_unused_service_or_usecase_methods");
 
-  static final int RULES_WITHOUT_A_PROOF_BASELINE = 22;
+  /** 위 목록이 처음 만들어졌을 때의 이름. 하나를 증명하고 다른 하나를 슬쩍 넣으면 크기는 같아도 이 집합 밖이라 걸린다. */
+  static final Set<String> RULES_WITHOUT_A_PROOF_BASELINE =
+      Set.of(
+          "ArchUnitGraphRulesTest.domainDoesNotDependOnPresentation",
+          "ArchUnitGraphRulesTest.domainDoesNotDependOnApplication",
+          "ArchUnitGraphRulesTest.domainDoesNotDependOnInfrastructure",
+          "ArchUnitGraphRulesTest.applicationDoesNotDependOnPresentation",
+          "ArchUnitGraphRulesTest.awsSdkConfinedToCommonStorage",
+          "ArchUnitGraphRulesTest.maxmindSdkConfinedToCommonGeoip",
+          "ArchUnitGraphRulesTest.jjwtSdkConfinedToUserApplication",
+          "ArchUnitGraphRulesTest.jsoupSdkConfinedToOgScraper",
+          "ArchUnitGraphRulesTest.burstHeuristicConfinedToBotClassifier",
+          "ArchUnitGraphRulesTest.yauaaSdkConfinedToUserAgentClassifier",
+          "ArchUnitGraphRulesTest.zxingSdkConfinedToQrPngEncoder",
+          "ArchUnitGraphRulesTest.useCasesLiveInApplicationWrite",
+          "ArchUnitGraphRulesTest.apacheHttpClientConfined",
+          "ArchUnitGraphRulesTest.springDataNotInApplication",
+          "ArchUnitGraphRulesTest.springDataNotInDomain",
+          "ArchUnitGraphRulesTest.contextsAreFreeOfCycles",
+          "ArchUnitGraphRulesTest.queryServicesLiveInApplicationRead",
+          "ArchUnitGraphRulesTest.controllersLiveInPresentation",
+          "ArchUnitGraphRulesTest.transactionalNotInPresentationOrDomain",
+          "ArchUnitGraphRulesTest.propertiesAreRecords",
+          "RepositoryUnusedMethodTest.no_unused_repository_methods",
+          "RepositoryUnusedMethodTest.no_unused_service_or_usecase_methods");
 
   private ArchRuleProofs() {}
 }
