@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -36,6 +37,8 @@ public class ClickEventEntity {
 
   @Column(name = "clicked_at", nullable = false, updatable = false)
   // MySQL TIMESTAMP uses the connection time zone; forcing a UTC calendar would shift the epoch.
+  // The column holds whole seconds and MySQL rounds fractions, so a click at x.5s or later would be
+  // stored in the next second: after a read in that same second, or in the next hour or day.
   @JdbcTypeCode(SqlTypes.TIMESTAMP)
   private Instant clickedAt;
 
@@ -159,7 +162,7 @@ public class ClickEventEntity {
       String clientApp,
       String fetchSite) {
     this.linkId = linkId == null ? null : linkId.value();
-    this.clickedAt = clickedAt;
+    this.clickedAt = clickedAt == null ? null : clickedAt.truncatedTo(ChronoUnit.SECONDS);
     this.referrer = referrer;
     this.referrerHost = referrerHost;
     this.userAgent = userAgent;
@@ -191,7 +194,7 @@ public class ClickEventEntity {
   @PrePersist
   void prePersist() {
     if (this.clickedAt == null) {
-      this.clickedAt = Instant.now();
+      this.clickedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS);
     }
   }
 }
