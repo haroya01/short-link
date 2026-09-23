@@ -51,36 +51,53 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS day, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "AND c.clickedAt >= :from "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :until "
           + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY day")
   List<DailyClickRow> findDailyClicks(
-      @Param("linkId") Long linkId, @Param("from") Instant from, @Param("tz") String timezone);
+      @Param("linkId") Long linkId,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String timezone);
 
   @Query(
       "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS hour, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :until "
           + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY hour")
-  List<HourClickRow> findHourlyClicks(@Param("linkId") Long linkId, @Param("tz") String timezone);
+  List<HourClickRow> findHourlyClicks(
+      @Param("linkId") Long linkId,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String timezone);
 
   @Query(
       "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS dow, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :until "
           + "GROUP BY FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY dow")
   List<DayOfWeekClickRow> findDayOfWeekClicks(
-      @Param("linkId") Long linkId, @Param("tz") String timezone);
+      @Param("linkId") Long linkId,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String timezone);
 
   @Query(
       "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS dow, "
           + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS hour, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
+          + "AND c.clickedAt >= :from AND c.clickedAt < :until "
           + "GROUP BY dow, hour ORDER BY dow, hour")
-  List<HeatmapRow> findHeatmap(@Param("linkId") Long linkId, @Param("tz") String timezone);
+  List<HeatmapRow> findHeatmap(
+      @Param("linkId") Long linkId,
+      @Param("from") Instant from,
+      @Param("until") Instant until,
+      @Param("tz") String timezone);
 
   @Query(
       "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS hour, "

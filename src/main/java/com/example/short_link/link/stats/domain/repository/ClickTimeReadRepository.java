@@ -13,13 +13,14 @@ public interface ClickTimeReadRepository {
   List<DailyClickBucketRow> findDailyClickBucketsByLinkIds(
       List<Long> ids, List<Instant> dayStarts, Instant until);
 
-  List<DailyClickRow> findDailyClicks(Long linkId, Instant from, String timezone);
+  List<DailyClickRow> findDailyClicks(Long linkId, Instant from, Instant until, String timezone);
 
-  List<HourClickRow> findHourlyClicks(Long linkId, String timezone);
+  List<HourClickRow> findHourlyClicks(Long linkId, Instant from, Instant until, String timezone);
 
-  List<DayOfWeekClickRow> findDayOfWeekClicks(Long linkId, String timezone);
+  List<DayOfWeekClickRow> findDayOfWeekClicks(
+      Long linkId, Instant from, Instant until, String timezone);
 
-  List<HeatmapRow> findHeatmap(Long linkId, String timezone);
+  List<HeatmapRow> findHeatmap(Long linkId, Instant from, Instant until, String timezone);
 
   List<HourClickRow> findHourlyClicksByLinkIdsSince(
       List<Long> linkIds, Instant since, String timezone);
