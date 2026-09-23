@@ -1,8 +1,9 @@
 package com.example.short_link.link.og.application;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -25,7 +26,7 @@ import org.springframework.cache.support.NoOpCacheManager;
 class LinkOgFetchServiceTest {
 
   @Test
-  void appliesScrapedMetadataAndEvictsCacheOnSuccess() {
+  void recordsScrapedMetadataAndEvictsCacheOnSuccess() {
     OgScraper scraper = mock(OgScraper.class);
     when(scraper.fetch("https://example.com/x"))
         .thenReturn(new OgMetadata("Title", "Desc", "https://example.com/img.png"));
@@ -33,7 +34,6 @@ class LinkOgFetchServiceTest {
     LinkRepository repository = mock(LinkRepository.class);
     LinkEntity entity = link("abc1234", "https://example.com/x");
     when(repository.findByShortCode(new ShortCode("abc1234"))).thenReturn(Optional.of(entity));
-    when(repository.save(any(LinkEntity.class))).thenAnswer(i -> i.getArgument(0));
 
     Cache cache = mock(Cache.class);
     CacheManager cacheManager = mock(CacheManager.class);
@@ -50,23 +50,25 @@ class LinkOgFetchServiceTest {
 
     listener.fetchAfterCommit(new ShortCode("abc1234"), "https://example.com/x");
 
-    assertThat(entity.getOgTitle()).isEqualTo("Title");
-    assertThat(entity.getOgDescription()).isEqualTo("Desc");
-    assertThat(entity.getOgImage()).isEqualTo("https://example.com/img.png");
-    assertThat(entity.getOgFetchStatus()).isEqualTo("OK");
-    assertThat(entity.getOgFetchedAt()).isNotNull();
+    verify(repository)
+        .recordOgFetched(
+            eq(entity.getId()),
+            eq("Title"),
+            eq("Desc"),
+            eq("https://example.com/img.png"),
+            any(Instant.class));
+    verify(repository, never()).save(any());
     verify(cache).evictIfPresent(new ShortCode("abc1234"));
   }
 
   @Test
-  void marksErrorWhenScraperReturnsEmpty() {
+  void recordsAFinalFailureWhenScraperReturnsEmpty() {
     OgScraper scraper = mock(OgScraper.class);
     when(scraper.fetch(any())).thenReturn(OgMetadata.empty());
 
     LinkRepository repository = mock(LinkRepository.class);
     LinkEntity entity = link("zzz1234", "https://example.com/none");
     when(repository.findByShortCode(new ShortCode("zzz1234"))).thenReturn(Optional.of(entity));
-    when(repository.save(any())).thenAnswer(i -> i.getArgument(0));
 
     LinkOgFetchService listener =
         new LinkOgFetchService(
@@ -79,9 +81,9 @@ class LinkOgFetchServiceTest {
 
     listener.fetchAfterCommit(new ShortCode("zzz1234"), "https://example.com/none");
 
-    assertThat(entity.getOgFetchStatus()).isEqualTo("ERROR");
-    assertThat(entity.getOgFetchedAt()).isNotNull();
-    assertThat(entity.getOgTitle()).isNull();
+    verify(repository).recordOgFetchFailed(eq(entity.getId()), any(Instant.class), eq(false));
+    verify(repository, never()).recordOgFetched(any(), any(), any(), any(), any());
+    verify(repository, never()).save(any());
   }
 
   @Test

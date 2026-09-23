@@ -102,8 +102,8 @@
 @junit | author-unpublished-body-edit | 3 | 2 | 1 | 1 | 7
 @junit | blocked-reader-comment-denied | 3 | 0 | 0 | 0 | 3
 @junit | campaign-archive | 2 | 0 | 1 | 0 | 3
-@junit | campaign-batch-bulk | 13 | 14 | 4 | 0 | 31
-@junit | campaign-batch-create | 8 | 7 | 2 | 0 | 17
+@junit | campaign-batch-bulk | 11 | 14 | 4 | 0 | 29
+@junit | campaign-batch-create | 7 | 7 | 2 | 0 | 16
 @junit | campaign-batch-delete | 3 | 0 | 0 | 2 | 5
 @junit | campaign-batch-detail | 3 | 0 | 0 | 0 | 3
 @junit | campaign-batch-list | 5 | 0 | 0 | 0 | 5
@@ -124,7 +124,7 @@
 @junit | campaign-policy-update | 2 | 0 | 1 | 0 | 3
 @junit | campaign-recommendations | 10 | 0 | 0 | 0 | 10
 @junit | campaign-scheduled-activate-tick | 2 | 0 | 1 | 0 | 3
-@junit | campaign-scheduled-batch-create | 8 | 7 | 2 | 0 | 17
+@junit | campaign-scheduled-batch-create | 7 | 7 | 2 | 0 | 16
 @junit | campaign-scheduled-contended-tick | 0 | 0 | 0 | 0 | 0
 @junit | campaign-scheduled-create | 0 | 1 | 0 | 0 | 1
 @junit | campaign-scheduled-end-tick | 5 | 0 | 3 | 0 | 8
@@ -140,7 +140,7 @@
 @junit | creator-blog-hook-list | 1 | 0 | 0 | 0 | 1
 @junit | creator-blog-hook-update | 1 | 0 | 1 | 0 | 2
 @junit | creator-cta-active-list-after-delete | 1 | 0 | 0 | 0 | 1
-@junit | creator-cta-create | 7 | 7 | 2 | 0 | 16
+@junit | creator-cta-create | 6 | 7 | 2 | 0 | 15
 @junit | creator-cta-delete | 1 | 0 | 1 | 0 | 2
 @junit | creator-cta-deleted-detail | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-denies-other | 1 | 0 | 0 | 0 | 1
@@ -201,7 +201,7 @@
 @junit | discovery-tag-feed | 4 | 0 | 0 | 0 | 4
 @junit | discovery-trending-feed | 4 | 0 | 0 | 0 | 4
 @junit | discovery-trending-tag-sections | 7 | 0 | 0 | 0 | 7
-@junit | event-alias-link | 7 | 7 | 2 | 0 | 16
+@junit | event-alias-link | 6 | 7 | 2 | 0 | 15
 @junit | event-analytics | 4 | 0 | 0 | 0 | 4
 @junit | event-attendees | 3 | 0 | 0 | 0 | 3
 @junit | event-attendees-csv | 4 | 0 | 0 | 0 | 4
@@ -211,8 +211,8 @@
 @junit | event-cover-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | event-cover-presign | 1 | 0 | 0 | 0 | 1
 @junit | event-cover-read | 4 | 0 | 0 | 0 | 4
-@junit | event-create | 11 | 9 | 3 | 0 | 23
-@junit | event-create-cover | 11 | 9 | 3 | 0 | 23
+@junit | event-create | 10 | 9 | 3 | 0 | 22
+@junit | event-create-cover | 10 | 9 | 3 | 0 | 22
 @junit | event-detail | 4 | 0 | 0 | 0 | 4
 @junit | event-detail-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | event-list | 1 | 0 | 0 | 0 | 1
@@ -237,17 +237,17 @@
 @junit | link-account-stream | 0 | 0 | 0 | 0 | 0
 @junit | link-account-stream-token | 0 | 0 | 0 | 0 | 0
 @junit | link-bulk-delete | 1 | 2 | 0 | 2 | 5
-@junit | link-bulk-import | 11 | 12 | 4 | 0 | 27
+@junit | link-bulk-import | 9 | 12 | 4 | 0 | 25
 @junit | link-claim-anonymous | 1 | 0 | 1 | 0 | 2
 @junit | link-claim-replay | 1 | 0 | 0 | 0 | 1
 @junit | link-click-worker-persist | 6 | 2 | 0 | 0 | 8
 @junit | link-countries-block | 2 | 0 | 2 | 0 | 4
 @junit | link-countries-read | 1 | 0 | 0 | 0 | 1
-@junit | link-create-anonymous | 5 | 6 | 2 | 0 | 13
-@junit | link-create-bulk-companion | 5 | 6 | 2 | 0 | 13
-@junit | link-create-owned | 6 | 6 | 2 | 0 | 14
-@junit | link-create-protected | 6 | 6 | 2 | 0 | 14
-@junit | link-create-webhook | 6 | 6 | 2 | 0 | 14
+@junit | link-create-anonymous | 4 | 6 | 2 | 0 | 12
+@junit | link-create-bulk-companion | 4 | 6 | 2 | 0 | 12
+@junit | link-create-owned | 5 | 6 | 2 | 0 | 13
+@junit | link-create-protected | 5 | 6 | 2 | 0 | 13
+@junit | link-create-webhook | 5 | 6 | 2 | 0 | 13
 @junit | link-delete-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | link-delete-owned | 1 | 1 | 0 | 1 | 3
 @junit | link-destination-add | 2 | 1 | 0 | 0 | 3
@@ -516,8 +516,8 @@
 @junit | tag-rename | 3 | 0 | 1 | 0 | 4
 
 # Owner workspace: all counts are batched; adding a link does not add per-link SELECTs.
-@junit | workspace-create-first | 6 | 6 | 2 | 0 | 14
-@junit | workspace-create-second | 5 | 6 | 2 | 0 | 13
+@junit | workspace-create-first | 5 | 6 | 2 | 0 | 13
+@junit | workspace-create-second | 4 | 6 | 2 | 0 | 12
 @junit | workspace-favorite-add-first | 3 | 0 | 1 | 0 | 4
 @junit | workspace-favorite-add-second | 3 | 0 | 1 | 0 | 4
 @junit | workspace-favorite-list | 6 | 0 | 0 | 0 | 6

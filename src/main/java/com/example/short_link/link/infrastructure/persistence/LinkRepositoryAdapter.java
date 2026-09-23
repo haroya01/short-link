@@ -171,6 +171,17 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public void recordOgFetched(
+      Long linkId, String title, String description, String image, Instant fetchedAt) {
+    jpa.recordOgFetched(linkId, title, description, image, fetchedAt, LinkEntity.ogFetchedStatus());
+  }
+
+  @Override
+  public void recordOgFetchFailed(Long linkId, Instant fetchedAt, boolean willRetry) {
+    jpa.recordOgFetchFailed(linkId, fetchedAt, LinkEntity.ogFetchFailedStatus(willRetry));
+  }
+
+  @Override
   public int deleteByUserId(Long userId) {
     return jpa.deleteByUserId(userId);
   }
