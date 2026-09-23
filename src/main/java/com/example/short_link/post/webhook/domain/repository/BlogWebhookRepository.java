@@ -8,6 +8,8 @@ public interface BlogWebhookRepository {
 
   BlogWebhookEntity save(BlogWebhookEntity hook);
 
+  Optional<BlogWebhookEntity> findById(Long id);
+
   Optional<BlogWebhookEntity> findByIdAndUserId(Long id, Long userId);
 
   /** Newest first. */

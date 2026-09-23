@@ -11,8 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
@@ -28,13 +26,12 @@ public class LinkWebhookDispatcher {
   private final WebhookBatchDeliverer batchDeliverer;
 
   /**
-   * AFTER_COMMIT prevents delivery of rolled-back clicks. REQUIRES_NEW persists delivery-state
-   * changes after the outer transaction closes. A dedicated executor isolates slow receivers from
-   * OG fetches.
+   * AFTER_COMMIT prevents delivery of rolled-back clicks. No transaction is held across HTTP; the
+   * delivery client records each outcome in its own short transaction. A dedicated executor
+   * isolates slow receivers from OG fetches.
    */
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onClickRecorded(ClickRecordedEvent event) {
     List<LinkWebhookEntity> hooks =
         repository.findAllByLinkIdAndEnabledTrue(event.linkId().value());

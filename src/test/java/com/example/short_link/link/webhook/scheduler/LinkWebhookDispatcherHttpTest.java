@@ -14,6 +14,7 @@ import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.webhook.application.helper.WebhookNotification;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookFormat;
+import com.example.short_link.link.webhook.domain.repository.LinkWebhookRepository;
 import com.example.short_link.support.TestEntities;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
@@ -25,6 +26,8 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
 class LinkWebhookDispatcherHttpTest {
@@ -59,13 +62,12 @@ class LinkWebhookDispatcherHttpTest {
   @Test
   void blocksWhenUrlNotPublic() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    WebhookHttpDeliveryClient client =
-        new WebhookHttpDeliveryClient(
-            registry, mock(HttpFetcher.class), new SecretCipher(""), JsonMapper.builder().build());
+    WebhookHttpDeliveryClient client = client(registry, mock(HttpFetcher.class));
     LinkWebhookEntity hook =
         new LinkWebhookEntity(
             new LinkId(1L), "http://localhost/hook", "secret", "n", WebhookFormat.GENERIC);
     TestEntities.withId(hook, 99L);
+    stored(hook);
 
     client.deliver(hook, new WebhookNotification.Click(Map.of("a", 1)));
 
@@ -76,13 +78,12 @@ class LinkWebhookDispatcherHttpTest {
   @Test
   void failsToSignWhenSecretInvalid() {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    WebhookHttpDeliveryClient client =
-        new WebhookHttpDeliveryClient(
-            registry, mock(HttpFetcher.class), new SecretCipher(""), JsonMapper.builder().build());
+    WebhookHttpDeliveryClient client = client(registry, mock(HttpFetcher.class));
     LinkWebhookEntity hook =
         new LinkWebhookEntity(
             new LinkId(1L), "https://example.com/hook", null, "n", WebhookFormat.GENERIC);
     TestEntities.withId(hook, 99L);
+    stored(hook);
 
     client.deliver(hook, new WebhookNotification.Click(Map.of("a", 1)));
 
@@ -92,14 +93,30 @@ class LinkWebhookDispatcherHttpTest {
 
   private record Probe(LinkWebhookEntity hook, SimpleMeterRegistry registry) {}
 
-  private static Probe run(HttpFetcher fetcher) {
+  private final LinkWebhookRepository repository = mock(LinkWebhookRepository.class);
+
+  private WebhookHttpDeliveryClient client(SimpleMeterRegistry registry, HttpFetcher fetcher) {
+    return new WebhookHttpDeliveryClient(
+        registry,
+        fetcher,
+        new SecretCipher(""),
+        JsonMapper.builder().build(),
+        repository,
+        new TransactionTemplate(mock(PlatformTransactionManager.class)));
+  }
+
+  private LinkWebhookEntity stored(LinkWebhookEntity hook) {
+    when(repository.findById(hook.getId())).thenReturn(Optional.of(hook));
+    return hook;
+  }
+
+  private Probe run(HttpFetcher fetcher) {
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
-    WebhookHttpDeliveryClient client =
-        new WebhookHttpDeliveryClient(
-            registry, fetcher, new SecretCipher(""), JsonMapper.builder().build());
+    WebhookHttpDeliveryClient client = client(registry, fetcher);
     LinkWebhookEntity hook =
         new LinkWebhookEntity(new LinkId(1L), URL, "secret", "test", WebhookFormat.GENERIC);
     TestEntities.withId(hook, 99L);
+    stored(hook);
     try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {
       Resolved resolved = new Resolved(URI.create(URL), List.<InetAddress>of());
       guard.when(() -> PublicHttpUrlGuard.resolve(URL)).thenReturn(Optional.of(resolved));

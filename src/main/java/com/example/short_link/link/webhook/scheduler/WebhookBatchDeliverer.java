@@ -7,12 +7,10 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 /**
- * REQUIRES_NEW gives each hook an independent commit boundary; the scheduler loop must not hold one
- * transaction across slow HTTP deliveries.
+ * Holds no transaction across HTTP; each hook's outcome commits on its own after delivery, so the
+ * scheduler loop never keeps a connection open for a slow receiver.
  */
 @Component
 @RequiredArgsConstructor
@@ -22,7 +20,6 @@ class WebhookBatchDeliverer {
   private final WebhookBatchBuffer batchBuffer;
   private final WebhookHttpDeliveryClient deliveryClient;
 
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void deliverOne(Long hookId) {
     if (batchBuffer.isEmpty(hookId)) return;
     LinkWebhookEntity hook = repository.findById(hookId).orElse(null);
