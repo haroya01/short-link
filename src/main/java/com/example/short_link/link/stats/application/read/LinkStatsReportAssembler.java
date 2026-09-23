@@ -4,6 +4,7 @@ import com.example.short_link.link.application.dto.LinkStats;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.stats.application.LinkInsights;
+import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
@@ -19,15 +20,16 @@ class LinkStatsReportAssembler {
   private final LinkStatsDimensionBreakdownsReader dimensionsReader;
   private final LinkStatsLifecycleReader lifecycleReader;
   private final LinkInsights insightsCalculator;
+  private final Clock clock;
 
   LinkStats assemble(LinkEntity link, ZoneId reportZone) {
     LinkId linkId = link.linkId();
-    Instant reportTime = Instant.now();
+    Instant reportTime = clock.instant();
     String reportTz = LinkStatsDateSupport.offsetAt(reportZone, reportTime);
 
     LinkStatsTotalsReader.Totals totals = totalsReader.totals(linkId, link.getCreatedAt());
     LinkStats.Velocity velocity = totalsReader.velocity(linkId);
-    LinkStatsTimeBucketsReader.TimeBuckets time = timeReader.read(linkId, reportTz);
+    LinkStatsTimeBucketsReader.TimeBuckets time = timeReader.read(linkId, reportTz, reportTime);
     LinkStatsDimensionBreakdownsReader.ChannelBreakdowns channels =
         dimensionsReader.channels(linkId);
     LinkStatsDimensionBreakdownsReader.DeviceBreakdowns devices = dimensionsReader.devices(linkId);

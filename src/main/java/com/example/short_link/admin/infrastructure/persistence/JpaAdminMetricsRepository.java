@@ -31,26 +31,26 @@ public interface JpaAdminMetricsRepository extends JpaRepository<ClickEventEntit
   long linksWithoutClicks();
 
   @Query(
-      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', u.createdAt, '+00:00', :tz)) AS day, "
+      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', u.createdAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS day, "
           + "COUNT(u) AS count "
           + "FROM UserEntity u WHERE u.createdAt >= :since "
-          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', u.createdAt, '+00:00', :tz)) "
+          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', u.createdAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY day")
   List<DailyRow> dailySignupsSince(@Param("since") Instant since, @Param("tz") String tz);
 
   @Query(
-      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', l.createdAt, '+00:00', :tz)) AS day, "
+      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', l.createdAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS day, "
           + "COUNT(l) AS count "
           + "FROM LinkEntity l WHERE l.createdAt >= :since "
-          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', l.createdAt, '+00:00', :tz)) "
+          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', l.createdAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY day")
   List<DailyRow> dailyLinksSince(@Param("since") Instant since, @Param("tz") String tz);
 
   @Query(
-      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS day, "
+      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS day, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.clickedAt >= :since "
-          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
+          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY day")
   List<DailyRow> dailyClicksSince(@Param("since") Instant since, @Param("tz") String tz);
 

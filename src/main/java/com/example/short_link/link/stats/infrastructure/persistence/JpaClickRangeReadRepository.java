@@ -53,8 +53,8 @@ public interface JpaClickRangeReadRepository extends Repository<ClickEventEntity
       Pageable pageable);
 
   @Query(
-      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
-          + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
+      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS dow, "
+          + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS hour, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c "
           + "WHERE c.linkId IN (SELECT l.id FROM LinkEntity l WHERE l.userId = :userId) "
