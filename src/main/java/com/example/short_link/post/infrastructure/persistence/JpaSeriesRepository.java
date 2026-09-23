@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
@@ -23,4 +24,11 @@ public interface JpaSeriesRepository extends JpaRepository<SeriesEntity, Long> {
   boolean existsByUserIdAndSlug(Long userId, String slug);
 
   List<SeriesEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+
+  @Query(
+      "select s.id, s.slug, s.title, count(p) from SeriesEntity s, PostEntity p "
+          + "where p.seriesId = s.id and s.id in :ids and p.status = :status "
+          + "group by s.id, s.slug, s.title")
+  List<Object[]> findPublishedSummaries(
+      @Param("ids") Collection<Long> ids, @Param("status") PostStatus status);
 }

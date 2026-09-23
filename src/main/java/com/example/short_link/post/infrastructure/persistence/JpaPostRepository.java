@@ -85,6 +85,11 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
               + "WHERE p.status = 'PUBLISHED' AND (:lang IS NULL OR p.language_tag = :lang) "
+              + "AND (p.series_id IS NULL OR NOT EXISTS (SELECT 1 FROM posts q "
+              + "WHERE q.series_id = p.series_id AND q.status = 'PUBLISHED' "
+              + "AND (:lang IS NULL OR q.language_tag = :lang) "
+              + "AND (q.published_at > p.published_at "
+              + "OR (q.published_at = p.published_at AND q.id > p.id)))) "
               + "GROUP BY p.id "
               + "ORDER BY COUNT(e.id) DESC, p.published_at DESC")
   List<PostEntity> findPublishedTrendingSince(
@@ -92,13 +97,24 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   @Query(
       "select p from PostEntity p where p.status = :status "
-          + "and (:lang is null or p.languageTag = :lang) order by p.publishedAt desc")
+          + "and (:lang is null or p.languageTag = :lang) "
+          + "and (p.seriesId is null or not exists (select 1 from PostEntity q "
+          + "where q.seriesId = p.seriesId and q.status = :status "
+          + "and (:lang is null or q.languageTag = :lang) "
+          + "and (q.publishedAt > p.publishedAt "
+          + "or (q.publishedAt = p.publishedAt and q.id > p.id)))) "
+          + "order by p.publishedAt desc")
   List<PostEntity> findPublishedRecent(
       @Param("status") PostStatus status, @Param("lang") String lang, Pageable pageable);
 
   @Query(
       "select count(p) from PostEntity p where p.status = :status "
-          + "and (:lang is null or p.languageTag = :lang)")
+          + "and (:lang is null or p.languageTag = :lang) "
+          + "and (p.seriesId is null or not exists (select 1 from PostEntity q "
+          + "where q.seriesId = p.seriesId and q.status = :status "
+          + "and (:lang is null or q.languageTag = :lang) "
+          + "and (q.publishedAt > p.publishedAt "
+          + "or (q.publishedAt = p.publishedAt and q.id > p.id)))) ")
   long countPublishedByLang(@Param("status") PostStatus status, @Param("lang") String lang);
 
   @Query(

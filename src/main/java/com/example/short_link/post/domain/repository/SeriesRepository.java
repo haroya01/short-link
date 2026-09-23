@@ -1,6 +1,7 @@
 package com.example.short_link.post.domain.repository;
 
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesSummary;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -23,4 +24,6 @@ public interface SeriesRepository {
   boolean existsByUserIdAndSlug(Long userId, String slug);
 
   List<SeriesEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
+
+  List<SeriesSummary> findPublishedSummaries(Collection<Long> seriesIds);
 }

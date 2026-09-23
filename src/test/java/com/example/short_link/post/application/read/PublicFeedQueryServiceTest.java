@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -24,6 +25,7 @@ class PublicFeedQueryServiceTest {
 
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
+  @Mock private SeriesRepository seriesRepository;
   @Mock private FollowRepository followRepository;
   @Mock private SeriesSubscriptionRepository seriesSubscriptionRepository;
   @Mock private TagPrefQueryService tagPrefQueryService;
@@ -39,7 +41,7 @@ class PublicFeedQueryServiceTest {
             followRepository,
             seriesSubscriptionRepository,
             tagPrefQueryService,
-            new PostFeedItemAssembler(userRepository));
+            new PostFeedItemAssembler(userRepository, seriesRepository));
   }
 
   private UserEntity user(long id, String username) {

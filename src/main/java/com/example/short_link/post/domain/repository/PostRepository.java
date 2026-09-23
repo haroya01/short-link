@@ -72,10 +72,13 @@ public interface PostRepository {
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 
-  /** 발행 최신순. page는 0부터, lang의 null·공백은 전체 언어다. */
+  /** 발행 최신순, 시리즈는 가장 최근 편 하나만. page는 0부터, lang의 null·공백은 전체 언어다. */
   List<PostEntity> findPublishedRecent(String lang, int page, int size);
 
-  /** 최근 구간 조회수 내림차순, 동률은 발행 최신순이다. 누적 조회수는 사용하지 않는다. 최근 조회가 없는 글도 포함하며 lang의 null·공백은 전체 언어다. */
+  /**
+   * 최근 구간 조회수 내림차순, 동률은 발행 최신순이다. 누적 조회수는 사용하지 않는다. 최근 조회가 없는 글도 포함하며 시리즈는 가장 최근 편 하나만, lang의
+   * null·공백은 전체 언어다.
+   */
   List<PostEntity> findPublishedTrending(String lang, int page, int size);
 
   long countPublished(String lang);

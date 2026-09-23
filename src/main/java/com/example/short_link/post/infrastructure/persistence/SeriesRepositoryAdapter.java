@@ -1,6 +1,8 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesSummary;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import java.util.Collection;
 import java.util.List;
@@ -52,5 +54,19 @@ class SeriesRepositoryAdapter implements SeriesRepository {
   @Override
   public List<SeriesEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId) {
     return jpa.findAllByUserIdOrderByCreatedAtDesc(userId);
+  }
+
+  @Override
+  public List<SeriesSummary> findPublishedSummaries(Collection<Long> seriesIds) {
+    if (seriesIds.isEmpty()) return List.of();
+    return jpa.findPublishedSummaries(seriesIds, PostStatus.PUBLISHED).stream()
+        .map(
+            row ->
+                new SeriesSummary(
+                    ((Number) row[0]).longValue(),
+                    (String) row[1],
+                    (String) row[2],
+                    ((Number) row[3]).longValue()))
+        .toList();
   }
 }
