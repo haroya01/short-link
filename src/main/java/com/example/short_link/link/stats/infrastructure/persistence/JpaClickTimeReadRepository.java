@@ -48,46 +48,46 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       @Param("until") BigDecimal until);
 
   @Query(
-      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS day, "
+      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS day, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "AND c.clickedAt >= :from "
-          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
+          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY day")
   List<DailyClickRow> findDailyClicks(
       @Param("linkId") Long linkId, @Param("from") Instant from, @Param("tz") String timezone);
 
   @Query(
-      "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
+      "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS hour, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
+          + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY hour")
   List<HourClickRow> findHourlyClicks(@Param("linkId") Long linkId, @Param("tz") String timezone);
 
   @Query(
-      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
+      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS dow, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
-          + "GROUP BY FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
+          + "GROUP BY FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY dow")
   List<DayOfWeekClickRow> findDayOfWeekClicks(
       @Param("linkId") Long linkId, @Param("tz") String timezone);
 
   @Query(
-      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
-          + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
+      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS dow, "
+          + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS hour, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId = :linkId AND c.bot = false "
           + "GROUP BY dow, hour ORDER BY dow, hour")
   List<HeatmapRow> findHeatmap(@Param("linkId") Long linkId, @Param("tz") String timezone);
 
   @Query(
-      "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
+      "SELECT FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS hour, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId IN :linkIds AND c.bot = false "
           + "AND c.clickedAt >= :since "
-          + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
+          + "GROUP BY FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY hour")
   List<HourClickRow> findHourlyClicksByLinkIdsSince(
       @Param("linkIds") List<Long> linkIds,
@@ -95,11 +95,11 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       @Param("tz") String timezone);
 
   @Query(
-      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS day, "
+      "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS day, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId IN :linkIds AND c.bot = false "
           + "AND c.clickedAt >= :since "
-          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
+          + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY day")
   List<DailyClickRow> findDailyClicksByLinkIdsSince(
       @Param("linkIds") List<Long> linkIds,
@@ -107,8 +107,8 @@ public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity,
       @Param("tz") String timezone);
 
   @Query(
-      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS dow, "
-          + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS hour, "
+      "SELECT FUNCTION('DAYOFWEEK', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS dow, "
+          + "FUNCTION('HOUR', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS hour, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.linkId IN :linkIds AND c.bot = false "
           + "AND c.clickedAt >= :since "

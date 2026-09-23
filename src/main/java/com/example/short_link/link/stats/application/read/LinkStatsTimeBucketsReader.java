@@ -18,11 +18,9 @@ class LinkStatsTimeBucketsReader {
 
   private final ClickTimeReadRepository clickTime;
 
-  TimeBuckets read(LinkId linkId, String reportTz) {
+  TimeBuckets read(LinkId linkId, String reportTz, Instant reportTime) {
     List<LinkStats.DailyClick> daily =
-        clickTime
-            .findDailyClicks(linkId.value(), Instant.now().minus(DAILY_WINDOW), reportTz)
-            .stream()
+        clickTime.findDailyClicks(linkId.value(), reportTime.minus(DAILY_WINDOW), reportTz).stream()
             .map(r -> new LinkStats.DailyClick(r.getDay(), r.getCount()))
             .toList();
     List<LinkStats.HourClick> hourly =
