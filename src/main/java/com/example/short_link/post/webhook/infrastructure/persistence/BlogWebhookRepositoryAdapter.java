@@ -19,6 +19,11 @@ class BlogWebhookRepositoryAdapter implements BlogWebhookRepository {
   }
 
   @Override
+  public Optional<BlogWebhookEntity> findById(Long id) {
+    return jpa.findById(id);
+  }
+
+  @Override
   public Optional<BlogWebhookEntity> findByIdAndUserId(Long id, Long userId) {
     return jpa.findByIdAndUserId(id, userId);
   }
