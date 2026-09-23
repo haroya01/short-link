@@ -25,11 +25,11 @@ class LinkStatsReportAssembler {
   LinkStats assemble(LinkEntity link, ZoneId reportZone) {
     LinkId linkId = link.linkId();
     Instant reportTime = clock.instant();
-    String reportTz = LinkStatsDateSupport.offsetAt(reportZone, reportTime);
 
     LinkStatsTotalsReader.Totals totals = totalsReader.totals(linkId, link.getCreatedAt());
     LinkStats.Velocity velocity = totalsReader.velocity(linkId);
-    LinkStatsTimeBucketsReader.TimeBuckets time = timeReader.read(linkId, reportTz, reportTime);
+    LinkStatsTimeBucketsReader.TimeBuckets time =
+        timeReader.read(linkId, link.getCreatedAt(), reportZone, reportTime);
     LinkStatsDimensionBreakdownsReader.ChannelBreakdowns channels =
         dimensionsReader.channels(linkId);
     LinkStatsDimensionBreakdownsReader.DeviceBreakdowns devices = dimensionsReader.devices(linkId);

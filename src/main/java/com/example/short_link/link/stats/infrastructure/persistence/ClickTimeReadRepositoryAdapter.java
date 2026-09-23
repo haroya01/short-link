@@ -34,23 +34,26 @@ class ClickTimeReadRepositoryAdapter implements ClickTimeReadRepository {
   }
 
   @Override
-  public List<DailyClickRow> findDailyClicks(Long linkId, Instant from, String timezone) {
-    return jpa.findDailyClicks(linkId, from, timezone);
+  public List<DailyClickRow> findDailyClicks(
+      Long linkId, Instant from, Instant until, String timezone) {
+    return jpa.findDailyClicks(linkId, from, until, timezone);
   }
 
   @Override
-  public List<HourClickRow> findHourlyClicks(Long linkId, String timezone) {
-    return jpa.findHourlyClicks(linkId, timezone);
+  public List<HourClickRow> findHourlyClicks(
+      Long linkId, Instant from, Instant until, String timezone) {
+    return jpa.findHourlyClicks(linkId, from, until, timezone);
   }
 
   @Override
-  public List<DayOfWeekClickRow> findDayOfWeekClicks(Long linkId, String timezone) {
-    return jpa.findDayOfWeekClicks(linkId, timezone);
+  public List<DayOfWeekClickRow> findDayOfWeekClicks(
+      Long linkId, Instant from, Instant until, String timezone) {
+    return jpa.findDayOfWeekClicks(linkId, from, until, timezone);
   }
 
   @Override
-  public List<HeatmapRow> findHeatmap(Long linkId, String timezone) {
-    return jpa.findHeatmap(linkId, timezone);
+  public List<HeatmapRow> findHeatmap(Long linkId, Instant from, Instant until, String timezone) {
+    return jpa.findHeatmap(linkId, from, until, timezone);
   }
 
   @Override

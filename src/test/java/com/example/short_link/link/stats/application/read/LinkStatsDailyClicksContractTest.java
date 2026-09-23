@@ -39,9 +39,11 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class LinkStatsDailyClicksContractTest {
   private static final Instant NOW = Instant.parse("2026-11-10T15:00:00Z");
+  private static final Instant LINK_CREATED = Instant.parse("2026-10-01T00:00:00Z");
   private static final List<Instant> EARLIER_CLICKS =
       List.of(
           Instant.parse("2026-10-25T02:00:00Z"),
+          Instant.parse("2026-10-27T04:30:00Z"),
           Instant.parse("2026-10-28T10:00:00Z"),
           Instant.parse("2026-10-30T16:00:00Z"),
           Instant.parse("2026-11-03T12:00:00Z"),
@@ -67,6 +69,12 @@ class LinkStatsDailyClicksContractTest {
     link =
         links.save(
             new LinkEntity("https://example.com/" + suffix, "c" + suffix, owner.getId(), null));
+    em.flush();
+    em.createNativeQuery("UPDATE link SET created_at = FROM_UNIXTIME(:epoch) WHERE id = :id")
+        .setParameter("epoch", LINK_CREATED.getEpochSecond())
+        .setParameter("id", link.getId())
+        .executeUpdate();
+    em.refresh(link);
     EARLIER_CLICKS.forEach(this::click);
   }
 
@@ -76,6 +84,7 @@ class LinkStatsDailyClicksContractTest {
     "Asia/Seoul, 2026-11-05T15:00:00Z",
     "Asia/Kathmandu, 2026-11-01T18:14:59.600Z",
     "America/New_York, 2026-11-05T04:59:59.600Z",
+    "America/New_York, 2026-10-31T04:30:00Z",
   })
   void oneMoreClickRaisesOnlyItsOwnLocalDayAndHourByOne(String zone, Instant at) {
     owner.changeTimezone(zone);
