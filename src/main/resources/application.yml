@@ -66,6 +66,8 @@ management:
         redirect.latency: 0.5, 0.95, 0.99
 
 short-link:
+  admin:
+    smoke-user-id: ${SMOKE_USER_ID:-1}
   avatar:
     bucket: ${AVATAR_S3_BUCKET:}
     region: ${AVATAR_S3_REGION:ap-northeast-2}

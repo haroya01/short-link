@@ -97,12 +97,13 @@ class LocalTimeBucketQueriesIntegrationTest {
 
   @Test
   void adminDailyClicksAndActiveUsersCountAClickOnItsLocalDay() {
-    Map<LocalDate, Long> clicksBefore = days(() -> adminMetrics.dailyClicksSince(SINCE, SEOUL));
+    Map<LocalDate, Long> clicksBefore =
+        days(() -> adminMetrics.dailyClicksSince(SINCE, SEOUL, -1L));
     Map<LocalDate, Long> activeBefore = active();
 
     click(SEOUL_EVENING);
 
-    assertThat(change(clicksBefore, days(() -> adminMetrics.dailyClicksSince(SINCE, SEOUL))))
+    assertThat(change(clicksBefore, days(() -> adminMetrics.dailyClicksSince(SINCE, SEOUL, -1L))))
         .containsExactly(Map.entry(SEOUL_DAY, 1L));
     assertThat(change(activeBefore, active())).containsExactly(Map.entry(SEOUL_DAY, 1L));
   }
