@@ -19,11 +19,13 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaAdminMetricsRepository extends JpaRepository<ClickEventEntity, Long> {
 
-  @Query("SELECT COUNT(c) FROM ClickEventEntity c")
-  long totalClicks();
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c WHERE c.linkId NOT IN (SELECT s.id FROM LinkEntity s WHERE s.userId = :smokeUserId)")
+  long totalClicks(@Param("smokeUserId") long smokeUserId);
 
-  @Query("SELECT COUNT(c) FROM ClickEventEntity c WHERE c.clickedAt >= :since")
-  long clicksSince(@Param("since") Instant since);
+  @Query(
+      "SELECT COUNT(c) FROM ClickEventEntity c WHERE c.clickedAt >= :since AND c.linkId NOT IN (SELECT s.id FROM LinkEntity s WHERE s.userId = :smokeUserId)")
+  long clicksSince(@Param("since") Instant since, @Param("smokeUserId") long smokeUserId);
 
   @Query(
       "SELECT COUNT(l) FROM LinkEntity l WHERE NOT EXISTS "
@@ -50,9 +52,13 @@ public interface JpaAdminMetricsRepository extends JpaRepository<ClickEventEntit
       "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS day, "
           + "COUNT(c) AS count "
           + "FROM ClickEventEntity c WHERE c.clickedAt >= :since "
+          + "AND c.linkId NOT IN (SELECT s.id FROM LinkEntity s WHERE s.userId = :smokeUserId) "
           + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
           + "ORDER BY day")
-  List<DailyRow> dailyClicksSince(@Param("since") Instant since, @Param("tz") String tz);
+  List<DailyRow> dailyClicksSince(
+      @Param("since") Instant since,
+      @Param("tz") String tz,
+      @Param("smokeUserId") long smokeUserId);
 
   @Query(
       value =
@@ -112,8 +118,9 @@ public interface JpaAdminMetricsRepository extends JpaRepository<ClickEventEntit
           + "c.countryCode AS countryCode, c.referrerHost AS referrerHost, "
           + "c.deviceClass AS deviceClass "
           + "FROM ClickEventEntity c JOIN LinkEntity l ON l.id = c.linkId "
+          + "WHERE l.userId IS NULL OR l.userId <> :smokeUserId "
           + "ORDER BY c.clickedAt DESC")
-  List<RecentClickRow> recentClicks(Pageable pageable);
+  List<RecentClickRow> recentClicks(@Param("smokeUserId") long smokeUserId, Pageable pageable);
 
   @Query(
       "SELECT l.shortCode AS shortCode, COUNT(c) AS count, u.email AS ownerEmail "

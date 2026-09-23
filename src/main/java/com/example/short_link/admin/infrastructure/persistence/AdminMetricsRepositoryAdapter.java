@@ -9,24 +9,31 @@ import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
 @Repository
-@RequiredArgsConstructor
 class AdminMetricsRepositoryAdapter implements AdminMetricsRepository {
 
   private final JpaAdminMetricsRepository jpa;
+  private final long smokeUserId;
+
+  AdminMetricsRepositoryAdapter(
+      JpaAdminMetricsRepository jpa,
+      @Value("${short-link.admin.smoke-user-id:-1}") long smokeUserId) {
+    this.jpa = jpa;
+    this.smokeUserId = smokeUserId;
+  }
 
   @Override
   public long totalClicks() {
-    return jpa.totalClicks();
+    return jpa.totalClicks(smokeUserId);
   }
 
   @Override
   public long clicksSince(Instant since) {
-    return jpa.clicksSince(since);
+    return jpa.clicksSince(since, smokeUserId);
   }
 
   @Override
@@ -46,7 +53,7 @@ class AdminMetricsRepositoryAdapter implements AdminMetricsRepository {
 
   @Override
   public List<DailyRow> dailyClicksSince(Instant since, String tz) {
-    return jpa.dailyClicksSince(since, tz);
+    return jpa.dailyClicksSince(since, tz, smokeUserId);
   }
 
   @Override
@@ -61,7 +68,7 @@ class AdminMetricsRepositoryAdapter implements AdminMetricsRepository {
 
   @Override
   public List<RecentClickRow> recentClicks(int limit) {
-    return jpa.recentClicks(PageRequest.ofSize(limit));
+    return jpa.recentClicks(smokeUserId, PageRequest.ofSize(limit));
   }
 
   @Override
