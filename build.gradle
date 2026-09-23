@@ -150,10 +150,8 @@ def coverageClassExcludes = [
 				'**/exception/*ErrorCode.class',
 				'**/exception/*ErrorCode$*.class',
 				'**/exception/*Exception.class',
-				// Infrastructure schedulers and external-integration adapters — branches here
-				// are dominated by retry/backoff paths that need real network conditions to hit.
-				'**/scheduler/**',
-				'**/observability/**',
+				// External-integration adapters — branches here are dominated by retry/backoff
+				// paths that need real network conditions to hit.
 				'**/audit/**',
 				'**/geoip/scheduler/**',
 				'**/storage/s3/S3StorageConfig*.class',
