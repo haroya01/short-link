@@ -16,7 +16,8 @@ public record PublicFeedItem(
     Instant publishedAt,
     long viewCount,
     long likeCount,
-    FollowReason followReason) {
+    FollowReason followReason,
+    FeedSeriesRef series) {
 
   public PublicFeedItem(
       long id,
@@ -42,6 +43,7 @@ public record PublicFeedItem(
         publishedAt,
         viewCount,
         likeCount,
+        null,
         null);
   }
 
@@ -58,6 +60,24 @@ public record PublicFeedItem(
         publishedAt,
         viewCount,
         likeCount,
-        reason);
+        reason,
+        series);
+  }
+
+  public PublicFeedItem withSeries(FeedSeriesRef ref) {
+    return new PublicFeedItem(
+        id,
+        author,
+        slug,
+        title,
+        excerpt,
+        ogImageUrl,
+        languageTag,
+        tags,
+        publishedAt,
+        viewCount,
+        likeCount,
+        followReason,
+        ref);
   }
 }

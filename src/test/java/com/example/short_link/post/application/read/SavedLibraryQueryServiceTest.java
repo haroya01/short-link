@@ -11,6 +11,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.BookmarkFolderRepository;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -28,6 +29,7 @@ class SavedLibraryQueryServiceTest {
   @Mock private BookmarkFolderRepository folderRepository;
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
+  @Mock private SeriesRepository seriesRepository;
 
   private SavedLibraryQueryService service;
 
@@ -38,7 +40,7 @@ class SavedLibraryQueryServiceTest {
             bookmarkRepository,
             folderRepository,
             postRepository,
-            new PostFeedItemAssembler(userRepository));
+            new PostFeedItemAssembler(userRepository, seriesRepository));
   }
 
   private PostEntity publishedPost(long id, long authorId, String slug) {

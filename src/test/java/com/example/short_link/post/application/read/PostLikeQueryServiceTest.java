@@ -7,6 +7,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -24,6 +25,7 @@ class PostLikeQueryServiceTest {
   @Mock private PostRepository postRepository;
   @Mock private PostLikeRepository postLikeRepository;
   @Mock private UserRepository userRepository;
+  @Mock private SeriesRepository seriesRepository;
 
   private PostLikeQueryService service;
 
@@ -31,7 +33,9 @@ class PostLikeQueryServiceTest {
   void setUp() {
     service =
         new PostLikeQueryService(
-            postRepository, postLikeRepository, new PostFeedItemAssembler(userRepository));
+            postRepository,
+            postLikeRepository,
+            new PostFeedItemAssembler(userRepository, seriesRepository));
   }
 
   private PostEntity publishedPost(long id, long authorId, String slug) {
