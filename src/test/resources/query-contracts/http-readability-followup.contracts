@@ -48,15 +48,15 @@
 # Invalid scalar input stops before a repository; a following valid read still sees the saved link.
 @junit | binding-feed-invalid-page | 0 | 0 | 0 | 0 | 0
 @junit | binding-feed-invalid-size | 0 | 0 | 0 | 0 | 0
-@junit | binding-link-create | 6 | 6 | 2 | 0 | 14
+@junit | binding-link-create | 5 | 6 | 2 | 0 | 13
 @junit | binding-links-invalid-size | 0 | 0 | 0 | 0 | 0
 @junit | binding-links-overflow-size | 0 | 0 | 0 | 0 | 0
 @junit | binding-links-valid-after-rejection | 6 | 0 | 0 | 0 | 6
 
 # Two new tags + their associations; PATCH includes real metadata and the triggered OG refresh.
 @junit | link-update-stat-tags | 4 | 4 | 0 | 1 | 9
-@junit | link-update-with-statistics | 12 | 1 | 4 | 0 | 17
-@junit | link-utc-day-fixture-create | 6 | 6 | 2 | 0 | 14
+@junit | link-update-with-statistics | 11 | 1 | 4 | 0 | 16
+@junit | link-utc-day-fixture-create | 5 | 6 | 2 | 0 | 13
 
 # A real like creates a notification; account deletion preserves it but removes actor display data.
 @junit | notification-actor-account-delete | 2 | 1 | 1 | 0 | 4
@@ -69,7 +69,7 @@
 # Real Cloudflare adapter against a local HTTP provider: only Boolean true passes.
 # The explicit worker contract includes the click and first-click notification persistence.
 @junit | turnstile-click-worker-persist | 6 | 2 | 0 | 0 | 8
-@junit | turnstile-link-create | 6 | 6 | 2 | 0 | 14
+@junit | turnstile-link-create | 5 | 6 | 2 | 0 | 13
 @junit | turnstile-link-protect | 2 | 0 | 2 | 0 | 4
 @junit | turnstile-unlock-json-success | 3 | 0 | 1 | 0 | 4
 @junit | turnstile-unlock-nested-success-rejected | 0 | 0 | 0 | 0 | 0

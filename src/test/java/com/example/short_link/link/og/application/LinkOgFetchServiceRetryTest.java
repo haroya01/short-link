@@ -23,7 +23,7 @@ import org.springframework.cache.support.NoOpCacheManager;
 class LinkOgFetchServiceRetryTest {
 
   @Test
-  void firstFailureMarksRetryableWhenAttemptsRemaining() {
+  void anEarlierAttemptIsRecordedForRetry() {
     OgScraper scraper = mock(OgScraper.class);
     when(scraper.fetch(any())).thenReturn(OgMetadata.empty());
 
@@ -46,7 +46,7 @@ class LinkOgFetchServiceRetryTest {
   }
 
   @Test
-  void finalFailureMarksError() {
+  void theLastAttemptIsRecordedWithoutRetry() {
     OgScraper scraper = mock(OgScraper.class);
     when(scraper.fetch(any())).thenReturn(OgMetadata.empty());
 

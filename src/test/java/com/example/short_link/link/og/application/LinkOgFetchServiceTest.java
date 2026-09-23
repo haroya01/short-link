@@ -26,7 +26,7 @@ import org.springframework.cache.support.NoOpCacheManager;
 class LinkOgFetchServiceTest {
 
   @Test
-  void appliesScrapedMetadataAndEvictsCacheOnSuccess() {
+  void recordsScrapedMetadataAndEvictsCacheOnSuccess() {
     OgScraper scraper = mock(OgScraper.class);
     when(scraper.fetch("https://example.com/x"))
         .thenReturn(new OgMetadata("Title", "Desc", "https://example.com/img.png"));
@@ -62,7 +62,7 @@ class LinkOgFetchServiceTest {
   }
 
   @Test
-  void marksErrorWhenScraperReturnsEmpty() {
+  void recordsAFinalFailureWhenScraperReturnsEmpty() {
     OgScraper scraper = mock(OgScraper.class);
     when(scraper.fetch(any())).thenReturn(OgMetadata.empty());
 
