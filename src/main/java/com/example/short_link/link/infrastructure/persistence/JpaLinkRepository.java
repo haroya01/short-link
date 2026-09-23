@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface JpaLinkRepository
     extends JpaRepository<LinkEntity, Long>, JpaSpecificationExecutor<LinkEntity> {
@@ -97,6 +98,30 @@ public interface JpaLinkRepository
       "UPDATE LinkEntity l SET l.viewCount = l.viewCount + 1 "
           + "WHERE l.id = :linkId AND (l.maxViews IS NULL OR l.viewCount < l.maxViews)")
   int incrementViewCountIfBelowLimit(@Param("linkId") Long linkId);
+
+  @Transactional
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      "UPDATE LinkEntity l SET l.ogTitle = :title, l.ogDescription = :description, "
+          + "l.ogImage = :image, l.ogFetchedAt = :fetchedAt, l.ogFetchStatus = :status, "
+          + "l.ogFetchAttempts = l.ogFetchAttempts + 1 WHERE l.id = :linkId")
+  int recordOgFetched(
+      @Param("linkId") Long linkId,
+      @Param("title") String title,
+      @Param("description") String description,
+      @Param("image") String image,
+      @Param("fetchedAt") Instant fetchedAt,
+      @Param("status") String status);
+
+  @Transactional
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      "UPDATE LinkEntity l SET l.ogFetchedAt = :fetchedAt, l.ogFetchStatus = :status, "
+          + "l.ogFetchAttempts = l.ogFetchAttempts + 1 WHERE l.id = :linkId")
+  int recordOgFetchFailed(
+      @Param("linkId") Long linkId,
+      @Param("fetchedAt") Instant fetchedAt,
+      @Param("status") String status);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM LinkEntity l WHERE l.userId = :userId")

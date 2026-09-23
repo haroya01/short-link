@@ -190,8 +190,16 @@ public class LinkEntity extends BaseCreatedEntity {
 
   public void markOgFetchFailed(Instant fetchedAt, boolean willRetry) {
     this.ogFetchedAt = fetchedAt;
-    this.ogFetchStatus = OgFetchStatus.failure(willRetry).value();
+    this.ogFetchStatus = ogFetchFailedStatus(willRetry);
     this.ogFetchAttempts++;
+  }
+
+  public static String ogFetchedStatus() {
+    return OgFetchStatus.OK.value();
+  }
+
+  public static String ogFetchFailedStatus(boolean willRetry) {
+    return OgFetchStatus.failure(willRetry).value();
   }
 
   public void changeStatsVisibility(boolean isPublic) {

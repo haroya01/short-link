@@ -1,8 +1,9 @@
 package com.example.short_link.link.og.application;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.LinkCacheEviction;
@@ -29,7 +30,6 @@ class LinkOgFetchServiceRetryTest {
     LinkRepository repo = mock(LinkRepository.class);
     LinkEntity entity = link("retry001", "https://example.com/x");
     when(repo.findByShortCode(new ShortCode("retry001"))).thenReturn(Optional.of(entity));
-    when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
 
     LinkOgFetchService listener =
         new LinkOgFetchService(
@@ -42,8 +42,7 @@ class LinkOgFetchServiceRetryTest {
 
     listener.fetchAfterCommit(new ShortCode("retry001"), "https://example.com/x");
 
-    assertThat(entity.getOgFetchStatus()).isEqualTo("RETRYABLE");
-    assertThat(entity.getOgFetchAttempts()).isEqualTo(1);
+    verify(repo).recordOgFetchFailed(eq(1L), any(Instant.class), eq(true));
   }
 
   @Test
@@ -55,7 +54,6 @@ class LinkOgFetchServiceRetryTest {
     LinkEntity entity = link("retry002", "https://example.com/x");
     setField(entity, "ogFetchAttempts", 2);
     when(repo.findByShortCode(new ShortCode("retry002"))).thenReturn(Optional.of(entity));
-    when(repo.save(any())).thenAnswer(i -> i.getArgument(0));
 
     LinkOgFetchService listener =
         new LinkOgFetchService(
@@ -68,8 +66,7 @@ class LinkOgFetchServiceRetryTest {
 
     listener.fetchAfterCommit(new ShortCode("retry002"), "https://example.com/x");
 
-    assertThat(entity.getOgFetchStatus()).isEqualTo("ERROR");
-    assertThat(entity.getOgFetchAttempts()).isEqualTo(3);
+    verify(repo).recordOgFetchFailed(eq(1L), any(Instant.class), eq(false));
   }
 
   private static LinkEntity link(String shortCode, String url) {

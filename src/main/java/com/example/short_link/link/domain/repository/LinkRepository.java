@@ -76,6 +76,11 @@ public interface LinkRepository {
 
   int incrementViewCountIfBelowLimit(Long linkId);
 
+  void recordOgFetched(
+      Long linkId, String title, String description, String image, Instant fetchedAt);
+
+  void recordOgFetchFailed(Long linkId, Instant fetchedAt, boolean willRetry);
+
   int deleteByUserId(Long userId);
 
   interface CachedLinkRow {
