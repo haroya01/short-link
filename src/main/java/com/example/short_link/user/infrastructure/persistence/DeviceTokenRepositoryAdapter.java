@@ -1,5 +1,6 @@
 package com.example.short_link.user.infrastructure.persistence;
 
+import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.DeviceTokenEntity;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import java.util.Collection;
@@ -30,12 +31,17 @@ public class DeviceTokenRepositoryAdapter implements DeviceTokenRepository {
   }
 
   @Override
-  public List<String> tokensForUser(Long userId) {
-    return jpa.tokensForUser(userId);
+  public List<DeviceTarget> targetsForUser(Long userId) {
+    return jpa.targetsForUser(userId);
   }
 
   @Override
-  public List<String> tokensForUsers(Collection<Long> userIds) {
-    return userIds.isEmpty() ? List.of() : jpa.tokensForUsers(userIds);
+  public List<DeviceTarget> targetsForUsers(Collection<Long> userIds) {
+    return userIds.isEmpty() ? List.of() : jpa.targetsForUsers(userIds);
+  }
+
+  @Override
+  public void updateTopic(String token, String topic) {
+    jpa.updateTopic(token, topic);
   }
 }

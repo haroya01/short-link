@@ -1,6 +1,7 @@
 package com.example.short_link.notification.application.link;
 
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.LinkNotificationEntity;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -31,6 +32,7 @@ public class LinkNotificationDispatcher {
       return;
     }
     pushDelivery.send(
-        userId, new PushSender.PushMessage("kurl", subtitle, body, type.name(), shortCode));
+        userId,
+        new PushSender.PushMessage("kurl", subtitle, body, type.name(), shortCode, PushApp.LINKS));
   }
 }

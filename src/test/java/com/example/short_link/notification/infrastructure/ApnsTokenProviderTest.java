@@ -39,7 +39,7 @@ class ApnsTokenProviderTest {
   }
 
   private static ApnsProperties properties(String privateKeyPem) {
-    return new ApnsProperties("TEAM123456", "KEY1234567", null, privateKeyPem, false);
+    return new ApnsProperties("TEAM123456", "KEY1234567", null, privateKeyPem, false, null);
   }
 
   @Test
@@ -91,7 +91,8 @@ class ApnsTokenProviderTest {
     assertThat(new ApnsTokenProvider(properties(null), FIXED_CLOCK).configured()).isFalse();
     assertThat(
             new ApnsTokenProvider(
-                    new ApnsProperties("", "KEY1234567", null, "not-a-key", false), FIXED_CLOCK)
+                    new ApnsProperties("", "KEY1234567", null, "not-a-key", false, null),
+                    FIXED_CLOCK)
                 .configured())
         .isFalse();
   }

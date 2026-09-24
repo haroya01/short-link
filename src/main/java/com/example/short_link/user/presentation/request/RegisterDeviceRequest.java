@@ -1,7 +1,10 @@
 package com.example.short_link.user.presentation.request;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
 public record RegisterDeviceRequest(
-    @NotBlank @Size(max = 200) String token, @NotBlank @Size(max = 16) String platform) {}
+    @NotBlank @Size(max = 200) String token,
+    @NotBlank @Size(max = 16) String platform,
+    @Size(max = 100) @Pattern(regexp = "[A-Za-z0-9.-]+") String topic) {}

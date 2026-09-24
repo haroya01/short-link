@@ -11,7 +11,9 @@ import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.push.ApnsProperties;
+import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import java.io.IOException;
 import java.net.http.HttpClient;
@@ -40,7 +42,7 @@ class ApnsPushSenderTest {
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final ApnsProperties props =
-      new ApnsProperties("TEAM123456", "KEY1234567", null, null, false);
+      new ApnsProperties("TEAM123456", "KEY1234567", null, null, false, null);
 
   private ApnsPushSender sender() {
     return new ApnsPushSender(props, deviceTokens, jsonMapper, tokenProvider, http, Runnable::run);
@@ -60,8 +62,8 @@ class ApnsPushSenderTest {
   @Test
   void sendWithoutRegisteredDevicesDispatchesNothing() {
     when(tokenProvider.configured()).thenReturn(true);
-    when(deviceTokens.tokensForUser(1L)).thenReturn(List.of());
-    when(deviceTokens.tokensForUsers(List.of(1L, 2L))).thenReturn(List.of());
+    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of());
+    when(deviceTokens.targetsForUsers(List.of(1L, 2L))).thenReturn(List.of());
 
     ApnsPushSender sender = sender();
     sender.send(1L, new PushSender.PushMessage("kurl", "제목", "본문"));
@@ -75,7 +77,9 @@ class ApnsPushSenderTest {
   @Test
   void dispatchSerializesOnePayloadBeforeQueuingEachDevice() {
     when(tokenProvider.configured()).thenReturn(true);
-    when(deviceTokens.tokensForUser(1L)).thenReturn(List.of("device-one", "device-two"));
+    when(deviceTokens.targetsForUser(1L))
+        .thenReturn(
+            List.of(new DeviceTarget("device-one", null), new DeviceTarget("device-two", null)));
     JsonMapper mapper = mock(JsonMapper.class);
     when(mapper.writeValueAsString(any())).thenReturn("encoded-payload");
     List<Runnable> pending = new ArrayList<>();
@@ -102,7 +106,8 @@ class ApnsPushSenderTest {
       int status, String reason, int expectedDeletions) throws Exception {
     when(tokenProvider.configured()).thenReturn(true);
     when(tokenProvider.token()).thenReturn("provider-token");
-    when(deviceTokens.tokensForUser(1L)).thenReturn(List.of("device-one"));
+    when(deviceTokens.targetsForUser(1L))
+        .thenReturn(List.of(new DeviceTarget("device-one", "focustime.kurl")));
     when(response.statusCode()).thenReturn(status);
     if (status >= 400 && status != 410) when(response.body()).thenReturn(reason);
     when(http.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
@@ -129,7 +134,8 @@ class ApnsPushSenderTest {
   void transportFailureDoesNotRetryOrDiscardTheDevice() throws Exception {
     when(tokenProvider.configured()).thenReturn(true);
     when(tokenProvider.token()).thenReturn("provider-token");
-    when(deviceTokens.tokensForUser(1L)).thenReturn(List.of("device-one"));
+    when(deviceTokens.targetsForUser(1L))
+        .thenReturn(List.of(new DeviceTarget("device-one", "focustime.kurl")));
     when(http.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenThrow(new IOException("offline"));
 
@@ -144,7 +150,8 @@ class ApnsPushSenderTest {
   void interruptedDeliveryRestoresTheThreadInterruptFlag() throws Exception {
     when(tokenProvider.configured()).thenReturn(true);
     when(tokenProvider.token()).thenReturn("provider-token");
-    when(deviceTokens.tokensForUser(1L)).thenReturn(List.of("device-one"));
+    when(deviceTokens.targetsForUser(1L))
+        .thenReturn(List.of(new DeviceTarget("device-one", "focustime.kurl")));
     when(http.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenThrow(new InterruptedException("cancelled"));
 
@@ -164,7 +171,7 @@ class ApnsPushSenderTest {
         sender()
             .payloadJson(
                 new PushSender.PushMessage(
-                    "kurl", "/spring", "첫 클릭이 들어왔어요 🎉", "FIRST_CLICK", "spring"));
+                    "kurl", "/spring", "첫 클릭이 들어왔어요 🎉", "FIRST_CLICK", "spring", PushApp.LINKS));
 
     JsonNode root = jsonMapper.readTree(payload);
     assertThat(root.get("type").asString()).isEqualTo("FIRST_CLICK");
@@ -183,7 +190,9 @@ class ApnsPushSenderTest {
     // 다이제스트처럼 링크 단위가 아닌 알림 — type 은 싣되 shortCode·category 는 생략.
     String payload =
         sender()
-            .payloadJson(new PushSender.PushMessage("kurl", "어제 요약", "어제 12 클릭", "DIGEST", null));
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl", "어제 요약", "어제 12 클릭", "DIGEST", null, PushApp.LINKS));
 
     JsonNode root = jsonMapper.readTree(payload);
     assertThat(root.get("type").asString()).isEqualTo("DIGEST");
@@ -201,5 +210,72 @@ class ApnsPushSenderTest {
     assertThat(root.has("shortCode")).isFalse();
     assertThat(root.get("aps").has("category")).isFalse();
     assertThat(root.get("aps").get("alert").get("body").asString()).isEqualTo("좋아합니다");
+  }
+
+  private void respond(int status, String body) throws Exception {
+    when(tokenProvider.configured()).thenReturn(true);
+    when(tokenProvider.token()).thenReturn("provider-token");
+    when(response.statusCode()).thenReturn(status);
+    if (status >= 400) when(response.body()).thenReturn(body);
+    when(http.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+        .thenReturn(response);
+  }
+
+  private String sentTopic() throws Exception {
+    ArgumentCaptor<HttpRequest> request = ArgumentCaptor.forClass(HttpRequest.class);
+    verify(http).send(request.capture(), any(HttpResponse.BodyHandler.class));
+    return request.getValue().headers().firstValue("apns-topic").orElseThrow();
+  }
+
+  private static PushSender.PushMessage linkMessage() {
+    return new PushSender.PushMessage(
+        "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring", PushApp.LINKS);
+  }
+
+  @Test
+  void linkNotificationsGoToTheLinksAppTopic() throws Exception {
+    respond(200, "");
+    when(deviceTokens.targetsForUser(1L))
+        .thenReturn(List.of(new DeviceTarget("links-device", "focustime.kurl.links")));
+
+    sender().send(1L, linkMessage());
+
+    assertThat(sentTopic()).isEqualTo("focustime.kurl.links");
+    verify(deviceTokens, never()).updateTopic(any(), any());
+  }
+
+  @Test
+  void devicesOfTheOtherAppAreSkipped() {
+    when(tokenProvider.configured()).thenReturn(true);
+    when(deviceTokens.targetsForUser(1L))
+        .thenReturn(List.of(new DeviceTarget("blog-device", "focustime.kurl")));
+
+    sender().send(1L, linkMessage());
+
+    verifyNoInteractions(http);
+  }
+
+  @Test
+  void legacyDeviceLearnsItsTopicOnSuccess() throws Exception {
+    respond(200, "");
+    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of(new DeviceTarget("old-device", null)));
+
+    sender().send(1L, linkMessage());
+
+    assertThat(sentTopic()).isEqualTo("focustime.kurl.links");
+    verify(deviceTokens).updateTopic("old-device", "focustime.kurl.links");
+    verify(deviceTokens, never()).deleteByToken(any());
+  }
+
+  @Test
+  void legacyDeviceOfTheOtherAppIsRecordedAsThatApp() throws Exception {
+    respond(400, "{\"reason\":\"DeviceTokenNotForTopic\"}");
+    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of(new DeviceTarget("old-device", null)));
+
+    sender().send(1L, new PushSender.PushMessage("kurl", "글 제목", "좋아합니다"));
+
+    assertThat(sentTopic()).isEqualTo("focustime.kurl");
+    verify(deviceTokens).updateTopic("old-device", "focustime.kurl.links");
+    verify(deviceTokens, never()).deleteByToken(any());
   }
 }

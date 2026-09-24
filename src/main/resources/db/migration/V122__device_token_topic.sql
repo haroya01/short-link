@@ -1,0 +1,1 @@
+ALTER TABLE device_token ADD COLUMN topic VARCHAR(100) NULL;

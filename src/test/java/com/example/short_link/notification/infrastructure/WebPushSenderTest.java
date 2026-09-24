@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
@@ -83,7 +84,7 @@ class WebPushSenderTest {
             configured()
                 .payload(
                     new PushSender.PushMessage(
-                        "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring")));
+                        "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring", PushApp.LINKS)));
 
     assertThat(root.get("type").asString()).isEqualTo("FIRST_CLICK");
     assertThat(root.get("shortCode").asString()).isEqualTo("spring");
