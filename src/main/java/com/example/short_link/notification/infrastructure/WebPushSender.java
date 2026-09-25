@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure;
 
+import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
 import com.example.short_link.user.domain.WebPushSubscriptionEntity;
@@ -51,7 +52,7 @@ public class WebPushSender implements PushSender {
 
   @Override
   public void send(Long recipientUserId, PushMessage message) {
-    if (pushService == null) {
+    if (pushService == null || message.app() != PushApp.BLOG) {
       return;
     }
     dispatch(subscriptions.findAllByUserId(recipientUserId), message);
@@ -59,7 +60,7 @@ public class WebPushSender implements PushSender {
 
   @Override
   public void sendToAll(Collection<Long> recipientUserIds, PushMessage message) {
-    if (pushService == null || recipientUserIds.isEmpty()) {
+    if (pushService == null || message.app() != PushApp.BLOG || recipientUserIds.isEmpty()) {
       return;
     }
     dispatch(subscriptions.findAllByUserIdIn(recipientUserIds), message);

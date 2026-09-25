@@ -11,10 +11,21 @@ public interface PushSender {
 
   /** subtitle은 선택 보조 문구다. type·shortCode는 기기 앱의 라우팅 힌트이며, 라우팅 대상이나 특정 링크가 없는 알림에서는 null이다. */
   record PushMessage(
-      String title, String subtitle, String body, String type, String shortCode, PushApp app) {
+      String title,
+      String subtitle,
+      String body,
+      String type,
+      String shortCode,
+      PushApp app,
+      PushRoute route) {
 
     public PushMessage(String title, String subtitle, String body) {
-      this(title, subtitle, body, null, null, PushApp.BLOG);
+      this(title, subtitle, body, null, null, PushApp.BLOG, null);
+    }
+
+    public PushMessage(
+        String title, String subtitle, String body, String type, String shortCode, PushApp app) {
+      this(title, subtitle, body, type, shortCode, app, null);
     }
   }
 }

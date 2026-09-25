@@ -1,6 +1,7 @@
 package com.example.short_link.notification.infrastructure;
 
 import com.example.short_link.notification.application.push.ApnsProperties;
+import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
@@ -152,6 +153,14 @@ public class ApnsPushSender implements PushSender {
     root.put("aps", aps);
     if (message.type() != null) root.put("type", message.type());
     if (message.shortCode() != null) root.put("shortCode", message.shortCode());
+    PushRoute route = message.route();
+    if (route != null) {
+      if (route.actorUsername() != null) root.put("actorUsername", route.actorUsername());
+      if (route.ownerUsername() != null) root.put("ownerUsername", route.ownerUsername());
+      if (route.postSlug() != null) root.put("postSlug", route.postSlug());
+      if (route.seriesSlug() != null) root.put("seriesSlug", route.seriesSlug());
+      if (route.collectionId() != null) root.put("collectionId", route.collectionId());
+    }
     return jsonMapper.writeValueAsString(root);
   }
 

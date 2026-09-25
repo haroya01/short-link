@@ -1,9 +1,14 @@
 package com.example.short_link.notification.application.write;
 
 import com.example.short_link.notification.application.NotificationTargetCodec;
+import com.example.short_link.notification.application.dto.NotificationCollectionRef;
+import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.dto.NotificationTarget;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushApp;
+import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -13,6 +18,7 @@ import com.example.short_link.notification.domain.repository.NotificationUserRea
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
@@ -44,8 +50,15 @@ public class RecordBlogNotificationUseCase {
     }
     String json = targetCodec.encode(payload);
     repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
+    Optional<NotificationUser> recipient = userReader.findById(recipientUserId);
     pushDelivery.send(
-        recipientUserId, pushMessage(type, actorUserId, payload, localeOf(recipientUserId)));
+        recipientUserId,
+        pushMessage(
+            type,
+            actorUserId,
+            payload,
+            Locale.forLanguageTag(recipient.map(NotificationUser::locale).orElse("ko")),
+            recipient.map(NotificationUser::username).orElse(null)));
   }
 
   /** 수신 거부자를 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다. */
@@ -76,24 +89,51 @@ public class RecordBlogNotificationUseCase {
     byLocale.forEach(
         (tag, ids) ->
             pushDelivery.sendToAll(
-                ids, pushMessage(type, actorUserId, payload, Locale.forLanguageTag(tag))));
+                ids, pushMessage(type, actorUserId, payload, Locale.forLanguageTag(tag), null)));
   }
 
   private PushSender.PushMessage pushMessage(
-      NotificationType type, Long actorUserId, NotificationTarget payload, Locale locale) {
-    String actor =
-        userReader
-            .findById(actorUserId)
-            .map(user -> user.username() == null ? "kurl" : user.username())
-            .orElse("kurl");
+      NotificationType type,
+      Long actorUserId,
+      NotificationTarget payload,
+      Locale locale,
+      String recipientUsername) {
+    String actorUsername =
+        userReader.findById(actorUserId).map(NotificationUser::username).orElse(null);
+    String actor = actorUsername == null ? "kurl" : actorUsername;
     String subtitle = payload == null ? null : payload.pushSubtitle();
     String body =
         messageSource.getMessage("notification.push." + type.name(), new Object[] {actor}, locale);
-    return new PushSender.PushMessage("kurl", subtitle, body);
+    return new PushSender.PushMessage(
+        "kurl",
+        subtitle,
+        body,
+        type.name(),
+        null,
+        PushApp.BLOG,
+        route(type, actorUsername, recipientUsername, payload));
   }
 
-  private Locale localeOf(Long recipientUserId) {
-    return Locale.forLanguageTag(
-        userReader.findById(recipientUserId).map(NotificationUser::locale).orElse("ko"));
+  private static PushRoute route(
+      NotificationType type,
+      String actorUsername,
+      String recipientUsername,
+      NotificationTarget payload) {
+    return switch (payload) {
+      case NotificationPostRef post ->
+          new PushRoute(
+              actorUsername,
+              post.authorUsername() != null
+                  ? post.authorUsername()
+                  : type == NotificationType.NEW_POST ? actorUsername : recipientUsername,
+              post.slug(),
+              null,
+              null);
+      case NotificationSeriesRef series ->
+          new PushRoute(actorUsername, recipientUsername, null, series.slug(), null);
+      case NotificationCollectionRef collection ->
+          new PushRoute(actorUsername, null, null, null, collection.collectionId());
+      case null -> new PushRoute(actorUsername, null, null, null, null);
+    };
   }
 }
