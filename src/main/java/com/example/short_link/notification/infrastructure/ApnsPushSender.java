@@ -97,14 +97,22 @@ public class ApnsPushSender implements PushSender {
     String topic = props.topicFor(message.app());
     List<DeviceTarget> reachable =
         targets.stream().filter(t -> t.topic() == null || t.topic().equals(topic)).toList();
-    if (reachable.isEmpty()) return;
+    if (reachable.isEmpty()) {
+      log.info(
+          "push apns app={} type={} outcome=no_device devices={}",
+          message.app(),
+          message.type(),
+          targets.size());
+      return;
+    }
     String payload = payloadJson(message);
     for (DeviceTarget target : reachable) {
-      executor.execute(() -> post(target.token(), topic, target.topic() == null, payload));
+      executor.execute(() -> post(target.token(), topic, target.topic() == null, payload, message));
     }
   }
 
-  private void post(String token, String topic, boolean learnTopic, String payload) {
+  private void post(
+      String token, String topic, boolean learnTopic, String payload, PushMessage message) {
     try {
       HttpRequest request =
           HttpRequest.newBuilder(URI.create(props.host() + "/3/device/" + token))
@@ -115,22 +123,37 @@ public class ApnsPushSender implements PushSender {
               .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
               .build();
       HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() == 410
-          || (response.statusCode() == 400 && response.body().contains("BadDeviceToken"))) {
+      int status = response.statusCode();
+      String outcome;
+      if (status == 410 || (status == 400 && response.body().contains("BadDeviceToken"))) {
         deviceTokens.deleteByToken(token);
-      } else if (learnTopic && response.statusCode() < 300) {
-        deviceTokens.updateTopic(token, topic);
-      } else if (learnTopic
-          && response.statusCode() == 400
-          && response.body().contains("DeviceTokenNotForTopic")) {
-        deviceTokens.updateTopic(token, props.otherTopic(topic));
-      } else if (response.statusCode() >= 400) {
-        log.debug("APNs {} for token …{}: {}", response.statusCode(), tail(token), response.body());
+        outcome = "gone";
+      } else if (status < 300) {
+        if (learnTopic) deviceTokens.updateTopic(token, topic);
+        outcome = "sent";
+      } else if (status == 400 && response.body().contains("DeviceTokenNotForTopic")) {
+        if (learnTopic) deviceTokens.updateTopic(token, props.otherTopic(topic));
+        outcome = "wrong_topic";
+      } else {
+        outcome = "rejected";
       }
+      log.info(
+          "push apns app={} type={} outcome={} status={} token=…{}{}",
+          message.app(),
+          message.type(),
+          outcome,
+          status,
+          tail(token),
+          status < 300 ? "" : " reason=" + response.body());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } catch (Exception e) {
-      log.debug("APNs send failed for token …{}: {}", tail(token), e.toString());
+      log.warn(
+          "push apns app={} type={} outcome=error token=…{}: {}",
+          message.app(),
+          message.type(),
+          tail(token),
+          e.toString());
     }
   }
 

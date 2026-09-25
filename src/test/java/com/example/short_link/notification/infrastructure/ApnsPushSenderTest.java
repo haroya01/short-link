@@ -30,10 +30,12 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 class ApnsPushSenderTest {
 
   @Mock private DeviceTokenRepository deviceTokens;
@@ -295,6 +297,30 @@ class ApnsPushSenderTest {
     sender().send(1L, linkMessage());
 
     verifyNoInteractions(http);
+  }
+
+  @Test
+  void everyDeliveryOutcomeIsLoggedWithItsReason(CapturedOutput output) throws Exception {
+    respond(400, "{\"reason\":\"TopicDisallowed\"}");
+    when(deviceTokens.targetsForUser(1L))
+        .thenReturn(List.of(new DeviceTarget("device-abcdef", "focustime.kurl.links")));
+
+    sender().send(1L, linkMessage());
+
+    assertThat(output)
+        .contains(
+            "push apns app=LINKS type=FIRST_CLICK outcome=rejected status=400 token=…abcdef"
+                + " reason={\"reason\":\"TopicDisallowed\"}");
+  }
+
+  @Test
+  void recipientWithoutDeviceIsLogged(CapturedOutput output) {
+    when(tokenProvider.configured()).thenReturn(true);
+    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of());
+
+    sender().send(1L, linkMessage());
+
+    assertThat(output).contains("push apns app=LINKS type=FIRST_CLICK outcome=no_device devices=0");
   }
 
   @Test
