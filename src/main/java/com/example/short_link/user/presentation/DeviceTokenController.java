@@ -24,7 +24,7 @@ public class DeviceTokenController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void register(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody RegisterDeviceRequest request) {
-    deviceTokens.register(userId, request.token(), request.platform());
+    deviceTokens.register(userId, request.token(), request.platform(), request.topic());
   }
 
   @DeleteMapping

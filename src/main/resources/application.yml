@@ -97,6 +97,7 @@ short-link:
     private-key: ${APNS_PRIVATE_KEY:}
     # 기본 sandbox — 개발 서명 앱(aps-environment=development)과 짝. 스토어 빌드 때 true.
     production: ${APNS_PRODUCTION:false}
+    links-bundle-id: ${APNS_LINKS_BUNDLE_ID:}
   rate-limit:
     anonymous: 100
     authenticated: 1000

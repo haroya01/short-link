@@ -31,13 +31,18 @@ public class DeviceTokenEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = 16)
   private String platform;
 
-  public DeviceTokenEntity(Long userId, String token, String platform) {
+  @Column(length = 100)
+  private String topic;
+
+  public DeviceTokenEntity(Long userId, String token, String platform, String topic) {
     this.userId = userId;
     this.token = token;
     this.platform = platform;
+    this.topic = topic;
   }
 
-  public void reassign(Long newUserId) {
+  public void reassign(Long newUserId, String topic) {
     this.userId = newUserId;
+    if (topic != null) this.topic = topic;
   }
 }

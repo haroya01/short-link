@@ -2,6 +2,7 @@ package com.example.short_link.notification.infrastructure;
 
 import com.example.short_link.notification.application.push.ApnsProperties;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -20,7 +21,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 /**
  * 전송은 전용 풀에서 실행하며 실패는 로그로 남긴다. 기기 조회·직렬화 실패는 호출자에게 전파된다. 410(Unregistered)과 BadDeviceToken은 기기 토큰을
- * 폐기한다.
+ * 폐기한다. 메시지의 대상 앱 topic 으로만 보내며, topic 을 모르는 기존 토큰은 성공하면 그 topic 으로, DeviceTokenNotForTopic 이면 다른 앱
+ * topic 으로 기록해 다음부터 고른다.
  */
 @Component
 @Slf4j
@@ -81,29 +83,32 @@ public class ApnsPushSender implements PushSender {
   @Override
   public void send(Long recipientUserId, PushMessage message) {
     if (!tokenProvider.configured()) return;
-    dispatch(deviceTokens.tokensForUser(recipientUserId), message);
+    dispatch(deviceTokens.targetsForUser(recipientUserId), message);
   }
 
   @Override
   public void sendToAll(Collection<Long> recipientUserIds, PushMessage message) {
     if (!tokenProvider.configured() || recipientUserIds.isEmpty()) return;
-    dispatch(deviceTokens.tokensForUsers(recipientUserIds), message);
+    dispatch(deviceTokens.targetsForUsers(recipientUserIds), message);
   }
 
-  private void dispatch(List<String> tokens, PushMessage message) {
-    if (tokens.isEmpty()) return;
+  private void dispatch(List<DeviceTarget> targets, PushMessage message) {
+    String topic = props.topicFor(message.app());
+    List<DeviceTarget> reachable =
+        targets.stream().filter(t -> t.topic() == null || t.topic().equals(topic)).toList();
+    if (reachable.isEmpty()) return;
     String payload = payloadJson(message);
-    for (String token : tokens) {
-      executor.execute(() -> post(token, payload));
+    for (DeviceTarget target : reachable) {
+      executor.execute(() -> post(target.token(), topic, target.topic() == null, payload));
     }
   }
 
-  private void post(String token, String payload) {
+  private void post(String token, String topic, boolean learnTopic, String payload) {
     try {
       HttpRequest request =
           HttpRequest.newBuilder(URI.create(props.host() + "/3/device/" + token))
               .header("authorization", "bearer " + tokenProvider.token())
-              .header("apns-topic", props.bundleId())
+              .header("apns-topic", topic)
               .header("apns-push-type", "alert")
               .timeout(Duration.ofSeconds(10))
               .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
@@ -112,6 +117,12 @@ public class ApnsPushSender implements PushSender {
       if (response.statusCode() == 410
           || (response.statusCode() == 400 && response.body().contains("BadDeviceToken"))) {
         deviceTokens.deleteByToken(token);
+      } else if (learnTopic && response.statusCode() < 300) {
+        deviceTokens.updateTopic(token, topic);
+      } else if (learnTopic
+          && response.statusCode() == 400
+          && response.body().contains("DeviceTokenNotForTopic")) {
+        deviceTokens.updateTopic(token, props.otherTopic(topic));
       } else if (response.statusCode() >= 400) {
         log.debug("APNs {} for token …{}: {}", response.statusCode(), tail(token), response.body());
       }

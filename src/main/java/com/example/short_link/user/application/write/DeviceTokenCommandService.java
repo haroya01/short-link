@@ -17,12 +17,12 @@ public class DeviceTokenCommandService {
 
   /** 같은 기기에 다른 계정이 로그인하면 소유자를 갈아끼운다 — 이전 계정으로의 오발송 방지. */
   @Transactional
-  public void register(Long userId, String token, String platform) {
+  public void register(Long userId, String token, String platform, String topic) {
     deviceTokens
         .findByToken(token)
         .ifPresentOrElse(
-            existing -> existing.reassign(userId),
-            () -> deviceTokens.save(new DeviceTokenEntity(userId, token, platform)));
+            existing -> existing.reassign(userId, topic),
+            () -> deviceTokens.save(new DeviceTokenEntity(userId, token, platform, topic)));
     // 이 기기의 언어를 사용자 로케일로 — 서버조합 푸시를 그 언어로 낸다(Accept-Language).
     userRepository
         .findById(userId)

@@ -8,10 +8,24 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  */
 @ConfigurationProperties(prefix = "short-link.apns")
 public record ApnsProperties(
-    String teamId, String keyId, String bundleId, String privateKey, boolean production) {
+    String teamId,
+    String keyId,
+    String bundleId,
+    String privateKey,
+    boolean production,
+    String linksBundleId) {
 
   public ApnsProperties {
     if (bundleId == null || bundleId.isBlank()) bundleId = "focustime.kurl";
+    if (linksBundleId == null || linksBundleId.isBlank()) linksBundleId = "focustime.kurl.links";
+  }
+
+  public String topicFor(PushApp app) {
+    return app == PushApp.LINKS ? linksBundleId : bundleId;
+  }
+
+  public String otherTopic(String topic) {
+    return bundleId.equals(topic) ? linksBundleId : bundleId;
   }
 
   public boolean configured() {

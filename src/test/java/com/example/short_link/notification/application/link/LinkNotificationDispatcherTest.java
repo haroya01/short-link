@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.LinkNotificationEntity;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -65,6 +66,7 @@ class LinkNotificationDispatcherTest {
     verify(pushSender).send(eq(7L), captor.capture());
     assertThat(captor.getValue().type()).isEqualTo("FIRST_CLICK");
     assertThat(captor.getValue().shortCode()).isEqualTo("spring");
+    assertThat(captor.getValue().app()).isEqualTo(PushApp.LINKS);
   }
 
   @Test

@@ -1,5 +1,6 @@
 package com.example.short_link.user.domain.repository;
 
+import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.DeviceTokenEntity;
 import java.util.Collection;
 import java.util.List;
@@ -13,7 +14,9 @@ public interface DeviceTokenRepository {
 
   void deleteByToken(String token);
 
-  List<String> tokensForUser(Long userId);
+  List<DeviceTarget> targetsForUser(Long userId);
 
-  List<String> tokensForUsers(Collection<Long> userIds);
+  List<DeviceTarget> targetsForUsers(Collection<Long> userIds);
+
+  void updateTopic(String token, String topic);
 }
