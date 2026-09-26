@@ -382,4 +382,21 @@ class MarkdownBlocksConverterTest {
     assertThat(MarkdownBlocksConverter.fenceFor("plain")).isEqualTo("```");
     assertThat(MarkdownBlocksConverter.fenceFor("a ````raw```` b")).isEqualTo("`````");
   }
+
+  @Test
+  void codeAndSubListsAfterABlankLineStayInTheListItem() {
+    List<BlockInput> blocks = toBlocks("- 自動変換です\n\n  ```java\n  int a = 10;\n  ```\n- 強制変換\n\nあと");
+    assertThat(blocks)
+        .extracting(BlockInput::type)
+        .containsExactly(PostBlockType.LIST_BULLET, PostBlockType.PARAGRAPH);
+    assertThat(blocks.get(0).content()).contains("int a = 10;");
+  }
+
+  @Test
+  void codeFenceOnlyClosesOnAFenceAsLongAsTheOpener() {
+    List<BlockInput> blocks = toBlocks("````markdown\n```bash\nls\n```\n````");
+    assertThat(blocks).extracting(BlockInput::type).containsExactly(PostBlockType.CODE);
+    assertThat(blocks.get(0).content()).contains("```bash");
+    assertThat(toBlocks("```\nfirst\n```java\nsecond\n```")).hasSize(1);
+  }
 }
