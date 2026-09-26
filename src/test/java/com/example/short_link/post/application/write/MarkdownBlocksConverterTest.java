@@ -399,4 +399,30 @@ class MarkdownBlocksConverterTest {
     assertThat(blocks.get(0).content()).contains("```bash");
     assertThat(toBlocks("```\nfirst\n```java\nsecond\n```")).hasSize(1);
   }
+
+  @Test
+  void qiitaAndZennBoxesBecomeAlertQuotes() {
+    List<BlockInput> blocks =
+        toBlocks(
+            "前\n\n:::note warn\n**なぜ？**\n説明\n:::\n\n:::message alert\n危険\n:::\n\n:::details 開く\n中身\n:::");
+    assertThat(blocks.get(1))
+        .isEqualTo(new BlockInput(PostBlockType.QUOTE, "[!WARNING]\n**なぜ？**\n説明"));
+    assertThat(blocks.get(2)).isEqualTo(new BlockInput(PostBlockType.QUOTE, "[!CAUTION]\n危険"));
+    assertThat(blocks.get(3).content()).startsWith(":::details");
+  }
+
+  @Test
+  void boxesInsideCodeAreLeftAlone() {
+    String code = ":::note warn\n例\n:::";
+    List<BlockInput> blocks = toBlocks("```markdown\n" + code + "\n```");
+    assertThat(blocks).hasSize(1);
+    assertThat(blocks.get(0).content()).contains(":::note warn");
+  }
+
+  @Test
+  void alertQuotesRoundTripUnchanged() {
+    List<BlockInput> blocks = toBlocks("> [!TIP]\n> 使えます");
+    assertThat(blocks).containsExactly(new BlockInput(PostBlockType.QUOTE, "[!TIP]\n使えます"));
+    assertThat(roundTrip(blocks)).isEqualTo("> [!TIP]\n> 使えます");
+  }
 }

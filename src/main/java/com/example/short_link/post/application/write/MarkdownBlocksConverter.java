@@ -22,7 +22,54 @@ public class MarkdownBlocksConverter {
 
   public List<ReplacePostBlocksCommand.BlockInput> toBlocks(String markdown) {
     if (markdown == null || markdown.isBlank()) return List.of();
-    return new MarkdownBlockParser(json, markdown).parse();
+    return new MarkdownBlockParser(json, convertCalloutContainers(markdown)).parse();
+  }
+
+  private static final Pattern FENCE_LINE = Pattern.compile("^\\s*(`{3,}|~{3,})(.*)$");
+
+  static String convertCalloutContainers(String markdown) {
+    if (!markdown.contains(":::")) return markdown;
+    String[] lines = markdown.replace("\r\n", "\n").split("\n", -1);
+    List<String> out = new ArrayList<>();
+    String fence = null;
+    for (int i = 0; i < lines.length; i++) {
+      Matcher f = FENCE_LINE.matcher(lines[i]);
+      if (f.matches()) {
+        if (fence == null) fence = f.group(1);
+        else if (f.group(1).startsWith(fence) && f.group(2).isBlank()) fence = null;
+        out.add(lines[i]);
+        continue;
+      }
+      String kind = fence == null ? calloutContainerKind(lines[i]) : null;
+      int close = -1;
+      if (kind != null) {
+        for (int j = i + 1; j < lines.length; j++) {
+          if (lines[j].trim().equals(":::")) {
+            close = j;
+            break;
+          }
+        }
+      }
+      if (close < 0) {
+        out.add(lines[i]);
+        continue;
+      }
+      out.add("> [!" + kind + "]");
+      for (int j = i + 1; j < close; j++) {
+        out.add(lines[j].isBlank() ? ">" : "> " + lines[j]);
+      }
+      i = close;
+    }
+    return String.join("\n", out);
+  }
+
+  private static String calloutContainerKind(String line) {
+    return switch (line.trim().replaceAll("\\s+", " ").replace("::: ", ":::")) {
+      case ":::note", ":::note info", ":::message" -> "NOTE";
+      case ":::note warn" -> "WARNING";
+      case ":::note alert", ":::message alert" -> "CAUTION";
+      default -> null;
+    };
   }
 
   public String toMarkdown(List<? extends PostBlockContent> blocks) {
