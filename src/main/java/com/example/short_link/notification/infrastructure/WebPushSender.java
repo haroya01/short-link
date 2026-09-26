@@ -1,10 +1,12 @@
 package com.example.short_link.notification.infrastructure;
 
+import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
 import com.example.short_link.user.domain.WebPushSubscriptionEntity;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.util.Collection;
@@ -51,7 +53,7 @@ public class WebPushSender implements PushSender {
 
   @Override
   public void send(Long recipientUserId, PushMessage message) {
-    if (pushService == null) {
+    if (pushService == null || message.app() != PushApp.BLOG) {
       return;
     }
     dispatch(subscriptions.findAllByUserId(recipientUserId), message);
@@ -59,7 +61,7 @@ public class WebPushSender implements PushSender {
 
   @Override
   public void sendToAll(Collection<Long> recipientUserIds, PushMessage message) {
-    if (pushService == null || recipientUserIds.isEmpty()) {
+    if (pushService == null || message.app() != PushApp.BLOG || recipientUserIds.isEmpty()) {
       return;
     }
     dispatch(subscriptions.findAllByUserIdIn(recipientUserIds), message);
@@ -67,26 +69,47 @@ public class WebPushSender implements PushSender {
 
   private void dispatch(List<WebPushSubscriptionEntity> targets, PushMessage message) {
     if (targets.isEmpty()) {
+      log.info("push web type={} outcome=no_subscription", message.type());
       return;
     }
     byte[] payload = payload(message);
     for (WebPushSubscriptionEntity sub : targets) {
-      executor.submit(() -> deliver(sub, payload));
+      executor.submit(() -> deliver(sub, payload, message));
     }
   }
 
-  private void deliver(WebPushSubscriptionEntity sub, byte[] payload) {
+  private void deliver(WebPushSubscriptionEntity sub, byte[] payload, PushMessage message) {
     try {
       Notification notification =
           new Notification(sub.getEndpoint(), sub.getP256dh(), sub.getAuth(), payload);
       HttpResponse response = pushService.send(notification);
       int status = response.getStatusLine().getStatusCode();
+      String outcome = status < 300 ? "sent" : "rejected";
       if (status == 404 || status == 410) {
         subscriptions.deleteByEndpoint(sub.getEndpoint());
+        outcome = "gone";
       }
+      log.info(
+          "push web type={} outcome={} status={} host={}",
+          message.type(),
+          outcome,
+          status,
+          host(sub.getEndpoint()));
     } catch (Exception e) {
       // Push is best-effort; delivery failure must not invalidate the in-app notification.
-      log.warn("web push send failed for endpoint {}: {}", sub.getEndpoint(), e.toString());
+      log.warn(
+          "push web type={} outcome=error host={}: {}",
+          message.type(),
+          host(sub.getEndpoint()),
+          e.toString());
+    }
+  }
+
+  private static String host(String endpoint) {
+    try {
+      return URI.create(endpoint).getHost();
+    } catch (IllegalArgumentException e) {
+      return "?";
     }
   }
 

@@ -6,8 +6,11 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
 import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushApp;
+import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
@@ -148,6 +151,77 @@ class RecordBlogNotificationUseCaseTest {
     assertThat(pushed.getAllValues())
         .extracting(PushSender.PushMessage::body)
         .containsExactlyInAnyOrderElementsOf(expected.values());
+  }
+
+  @Test
+  void pushCarriesTypeAndRouteOfTheTarget() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L))
+        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
+
+    useCase()
+        .record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "my-post", "Hi", null));
+    useCase()
+        .record(
+            9L,
+            NotificationType.MENTION,
+            2L,
+            new NotificationPostRef(11L, "their-post", "Yo", "mika"));
+    useCase()
+        .record(
+            9L,
+            NotificationType.SERIES_SUBSCRIBE,
+            2L,
+            new NotificationSeriesRef(5L, "tokyo-walks", "도쿄 산책"));
+    useCase()
+        .record(
+            9L, NotificationType.CONNECTED, 2L, new NotificationCollectionRef(42L, "산책 모음", 10L));
+    useCase().record(9L, NotificationType.FOLLOW, 2L, null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(5))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::type, PushSender.PushMessage::app)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("LIKE", PushApp.BLOG),
+            org.assertj.core.groups.Tuple.tuple("MENTION", PushApp.BLOG),
+            org.assertj.core.groups.Tuple.tuple("SERIES_SUBSCRIBE", PushApp.BLOG),
+            org.assertj.core.groups.Tuple.tuple("CONNECTED", PushApp.BLOG),
+            org.assertj.core.groups.Tuple.tuple("FOLLOW", PushApp.BLOG));
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::route)
+        .containsExactly(
+            new PushRoute("yuki", "me", "my-post", null, null),
+            new PushRoute("yuki", "mika", "their-post", null, null),
+            new PushRoute("yuki", "me", null, "tokyo-walks", null),
+            new PushRoute("yuki", null, null, null, 42L),
+            new PushRoute("yuki", null, null, null, null));
+  }
+
+  @Test
+  void fannedOutNewPostRoutesToTheActorsPost() {
+    when(userRepository.findById(2L))
+        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    when(userRepository.findAllByIdIn(List.of(7L, 8L)))
+        .thenReturn(List.of(userWith(7L, "ko"), userWith(8L, "ko")));
+
+    useCase()
+        .recordForEach(
+            List.of(7L, 8L),
+            NotificationType.NEW_POST,
+            2L,
+            new NotificationPostRef(10L, "fresh", "새 글", null));
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 8L)), pushed.capture());
+    assertThat(pushed.getValue().route())
+        .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null));
   }
 
   @Test

@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.push.ApnsProperties;
 import com.example.short_link.notification.application.push.PushApp;
+import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
@@ -29,10 +30,12 @@ import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-@ExtendWith(MockitoExtension.class)
+@ExtendWith({MockitoExtension.class, OutputCaptureExtension.class})
 class ApnsPushSenderTest {
 
   @Mock private DeviceTokenRepository deviceTokens;
@@ -212,6 +215,47 @@ class ApnsPushSenderTest {
     assertThat(root.get("aps").get("alert").get("body").asString()).isEqualTo("좋아합니다");
   }
 
+  @Test
+  void payloadCarriesBlogRouteKeys() {
+    String payload =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "글 제목",
+                    "yuki님이 글을 좋아합니다",
+                    "LIKE",
+                    null,
+                    PushApp.BLOG,
+                    new PushRoute("yuki", null, "my-post", null, null)));
+
+    JsonNode root = jsonMapper.readTree(payload);
+    assertThat(root.get("type").asString()).isEqualTo("LIKE");
+    assertThat(root.get("actorUsername").asString()).isEqualTo("yuki");
+    assertThat(root.get("postSlug").asString()).isEqualTo("my-post");
+    assertThat(root.has("ownerUsername")).isFalse();
+    assertThat(root.has("seriesSlug")).isFalse();
+    assertThat(root.has("collectionId")).isFalse();
+    assertThat(root.get("aps").has("category")).isFalse();
+  }
+
+  @Test
+  void payloadCarriesCollectionIdAsNumber() {
+    String payload =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "도쿄 산책",
+                    "yuki님이 회원님의 글을 컬렉션에 엮었습니다",
+                    "CONNECTED",
+                    null,
+                    PushApp.BLOG,
+                    new PushRoute("yuki", null, null, null, 42L)));
+
+    assertThat(jsonMapper.readTree(payload).get("collectionId").asLong()).isEqualTo(42L);
+  }
+
   private void respond(int status, String body) throws Exception {
     when(tokenProvider.configured()).thenReturn(true);
     when(tokenProvider.token()).thenReturn("provider-token");
@@ -253,6 +297,30 @@ class ApnsPushSenderTest {
     sender().send(1L, linkMessage());
 
     verifyNoInteractions(http);
+  }
+
+  @Test
+  void everyDeliveryOutcomeIsLoggedWithItsReason(CapturedOutput output) throws Exception {
+    respond(400, "{\"reason\":\"TopicDisallowed\"}");
+    when(deviceTokens.targetsForUser(1L))
+        .thenReturn(List.of(new DeviceTarget("device-abcdef", "focustime.kurl.links")));
+
+    sender().send(1L, linkMessage());
+
+    assertThat(output)
+        .contains(
+            "push apns app=LINKS type=FIRST_CLICK outcome=rejected status=400 token=…abcdef"
+                + " reason={\"reason\":\"TopicDisallowed\"}");
+  }
+
+  @Test
+  void recipientWithoutDeviceIsLogged(CapturedOutput output) {
+    when(tokenProvider.configured()).thenReturn(true);
+    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of());
+
+    sender().send(1L, linkMessage());
+
+    assertThat(output).contains("push apns app=LINKS type=FIRST_CLICK outcome=no_device devices=0");
   }
 
   @Test

@@ -78,6 +78,18 @@ class WebPushSenderTest {
   }
 
   @Test
+  void linkAppMessagesNeverReachWebSubscriptions() {
+    PushSender.PushMessage links =
+        new PushSender.PushMessage(
+            "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring", PushApp.LINKS);
+
+    configured().send(1L, links);
+    configured().sendToAll(List.of(1L, 2L), links);
+
+    verifyNoInteractions(subscriptions);
+  }
+
+  @Test
   void payloadCarriesRoutingHintsForLinkNotification() {
     JsonNode root =
         jsonMapper.readTree(
