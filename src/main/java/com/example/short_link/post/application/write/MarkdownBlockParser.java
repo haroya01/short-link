@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import com.example.short_link.post.domain.PostBlockType;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -73,13 +74,15 @@ final class MarkdownBlockParser {
     // lines.
     Matcher fence = FENCE.matcher(line);
     if (fence.matches()) {
-      String marker = fence.group(1).substring(0, 1).repeat(3);
+      Pattern closing =
+          Pattern.compile(
+              "^\\s*" + fence.group(1).charAt(0) + "{" + fence.group(1).length() + ",}\\s*$");
       String langPart = fence.group(2).trim();
       String lang = langPart.isEmpty() ? null : langPart.split("\\s+")[0];
       List<String> code = new ArrayList<>();
       i++;
       while (i < lines.length) {
-        if (lines[i].stripLeading().startsWith(marker)) {
+        if (closing.matcher(lines[i]).matches()) {
           i++;
           break;
         }
@@ -233,9 +236,18 @@ final class MarkdownBlockParser {
     if (LIST_START.matcher(line).matches()) {
       boolean ordered = Character.isDigit(line.charAt(0));
       List<String> listLines = new ArrayList<>();
-      while (i < lines.length
-          && !lines[i].trim().isEmpty()
-          && (LIST_CONT.matcher(lines[i]).matches() || INDENTED.matcher(lines[i]).matches())) {
+      while (i < lines.length) {
+        if (lines[i].trim().isEmpty()) {
+          int j = i;
+          while (j < lines.length && lines[j].trim().isEmpty()) j++;
+          if (j < lines.length && INDENTED.matcher(lines[j]).matches() && !listLines.isEmpty()) {
+            listLines.addAll(Arrays.asList(lines).subList(i, j));
+            i = j;
+            continue;
+          }
+          break;
+        }
+        if (!LIST_CONT.matcher(lines[i]).matches() && !INDENTED.matcher(lines[i]).matches()) break;
         listLines.add(lines[i]);
         i++;
       }
