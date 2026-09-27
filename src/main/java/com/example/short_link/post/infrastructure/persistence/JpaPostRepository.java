@@ -183,7 +183,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   // 검색 평문이 없는 글도 작성자 핸들로 찾을 수 있도록 LEFT JOIN한다.
   // :match는 연산자를 제거한 BOOLEAN 검색어, :like는 이스케이프한 핸들 검색어다.
-  // :titleLike는 2글자 ngram이 처리하지 못하는 짧은 질의의 제목·요약 폴백에만 사용한다.
+  // :titleLike는 ngram 색인에 남는 항이 없는 질의(두 글자 미만·스톱워드)의 제목·요약 폴백에만 사용한다.
   // ngram에서 접두·구문 연산자는 한글 다중 바이그램을 깨뜨리고 NATURAL MODE는 일부 바이그램만
   // 겹쳐도 매칭되므로, 연산자 없는 BOOLEAN 항을 유지한다.
   String SEARCH_PREDICATE =
@@ -209,7 +209,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("lang") String lang,
       Pageable pageable);
 
-  // 핸들·짧은 질의 폴백으로만 매칭된 글은 관련성 점수가 0이어도 결과에 포함한다.
+  // 핸들·제목·요약 폴백으로만 매칭된 글은 관련성 점수가 0이어도 결과에 포함한다.
   @Query(
       nativeQuery = true,
       value =

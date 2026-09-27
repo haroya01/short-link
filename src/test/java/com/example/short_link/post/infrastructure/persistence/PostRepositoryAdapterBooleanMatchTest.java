@@ -41,8 +41,7 @@ class PostRepositoryAdapterBooleanMatchTest {
 
   @Test
   void titleLikeFallbackEngagesForStopwordDeadTerms() {
-    // 모든 바이그램이 InnoDB 기본 스톱워드('a'·'i' substring 포함)에 오염된 용어는 색인이 0개 —
-    // "java"(ja·av·va)·"data"(da·at·ta)가 프로드 실측 0건이던 원인. 폴백으로 구제한다.
+    // 모든 바이그램이 기본 스톱워드('a'·'i' 포함)에 걸리는 항은 ngram 색인에 남지 않는다.
     assertThat(PostRepositoryAdapter.titleLikeFallback("java")).isEqualTo("%java%");
     assertThat(PostRepositoryAdapter.titleLikeFallback("Java")).isEqualTo("%java%");
     assertThat(PostRepositoryAdapter.titleLikeFallback("data")).isEqualTo("%data%");
@@ -52,8 +51,7 @@ class PostRepositoryAdapterBooleanMatchTest {
 
   @Test
   void titleLikeFallbackOffWhenAnyTermVisibleToNgram() {
-    // 인덱스에 보이는(스톱워드 오염을 피한 바이그램이 있는) 토큰이 하나라도 있으면 MATCH 가
-    // 담당하므로 폴백은 꺼둔다(null = 쿼리 가지 off). "jpa"는 "jp", "docker"는 "do" 등이 생존.
+    // 색인에 남는 바이그램이 있는 항이 하나라도 있으면 MATCH가 맡는다(jpa의 jp, docker의 do).
     assertThat(PostRepositoryAdapter.titleLikeFallback("리다이렉트")).isNull();
     assertThat(PostRepositoryAdapter.titleLikeFallback("C++ 성능")).isNull();
     assertThat(PostRepositoryAdapter.titleLikeFallback("jpa")).isNull();
