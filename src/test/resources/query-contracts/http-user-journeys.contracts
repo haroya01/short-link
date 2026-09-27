@@ -141,12 +141,12 @@
 @junit | creator-blog-hook-update | 1 | 0 | 1 | 0 | 2
 @junit | creator-cta-active-list-after-delete | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-create | 6 | 7 | 2 | 0 | 15
-@junit | creator-cta-delete | 1 | 0 | 1 | 0 | 2
+@junit | creator-cta-delete | 2 | 0 | 1 | 0 | 3
 @junit | creator-cta-deleted-detail | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-denies-other | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-detail | 1 | 0 | 0 | 0 | 1
 @junit | creator-cta-list | 1 | 0 | 0 | 0 | 1
-@junit | creator-cta-update | 1 | 0 | 1 | 0 | 2
+@junit | creator-cta-update | 2 | 0 | 1 | 0 | 3
 @junit | creator-reader-behavior | 0 | 1 | 0 | 0 | 1
 @junit | curation-collection-delete | 1 | 0 | 0 | 1 | 2
 @junit | curation-connect-highlight | 8 | 2 | 0 | 0 | 10

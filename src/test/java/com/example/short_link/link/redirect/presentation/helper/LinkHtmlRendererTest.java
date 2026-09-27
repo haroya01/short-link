@@ -2,6 +2,7 @@ package com.example.short_link.link.redirect.presentation.helper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import java.io.IOException;
@@ -176,6 +177,43 @@ class LinkHtmlRendererTest {
       assertThat(body).contains("<b>kurl</b>");
       assertThat(body).doesNotContain("\u0000");
     }
+  }
+
+  @Test
+  void splashShowsTheOwnersWordsSafelyAndCountsDown() {
+    String body =
+        new String(
+            renderer
+                .splashPageResponse(
+                    KO,
+                    new CachedLink.Splash("쿠폰 <SPRING20>", 2, "앱 받기", "https://kurl.me/app1"),
+                    "https://dest.example.com/?a=1&b=2",
+                    null)
+                .getBody());
+
+    assertThat(body).contains("<p class=\"msg\">쿠폰 &lt;SPRING20&gt;</p>");
+    assertThat(body).contains("<a class=\"btn\" href=\"https://kurl.me/app1\">앱 받기</a>");
+    assertThat(body).contains("data-u=\"https://dest.example.com/?a=1&amp;b=2\"");
+    assertThat(body).contains("<span id=\"n\">2</span>초 후 자동으로 이동해요");
+    assertThat(body).contains("animation-duration:2s");
+    assertThat(body).doesNotContain("class=\"stay\"");
+  }
+
+  @Test
+  void splashWithoutAButtonStillOffersToContinue() {
+    String body =
+        new String(
+            renderer
+                .splashPageResponse(
+                    Locale.JAPANESE,
+                    new CachedLink.Splash("お知らせ", 3, null, null),
+                    "kakaotalk://web/openExternal?url=x",
+                    "https://dest.example.com/")
+                .getBody());
+
+    assertThat(body).doesNotContain("class=\"btn\"");
+    assertThat(body).contains("今すぐ移動");
+    assertThat(body).contains("<a class=\"stay\" href=\"https://dest.example.com/\">");
   }
 
   @Test

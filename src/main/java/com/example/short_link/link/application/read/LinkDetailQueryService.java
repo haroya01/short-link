@@ -9,6 +9,7 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.visit.domain.LinkVisitOptionEntity;
 import com.example.short_link.link.visit.domain.repository.LinkVisitOptionRepository;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class LinkDetailQueryService {
             .findByShortCode(shortCode)
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     accessGuard.requireView(userId, link);
+    Optional<LinkVisitOptionEntity> option = visitOptions.findById(link.getId());
     return new LinkDetailView(
         link.getShortCode(),
         link.getOriginalUrl(),
@@ -46,9 +48,15 @@ public class LinkDetailQueryService {
         linkTagService.tagNamesFor(userId, shortCode),
         link.getNote(),
         link.getExpiredMessage(),
-        visitOptions
-            .findById(link.getId())
-            .map(LinkVisitOptionEntity::isOpenInBrowser)
-            .orElse(false));
+        option.map(LinkVisitOptionEntity::isOpenInBrowser).orElse(false),
+        option
+            .map(
+                o ->
+                    new LinkDetailView.Splash(
+                        o.isSplashEnabled(),
+                        o.getSplashMessage(),
+                        o.getSplashSeconds(),
+                        o.getSplashCtaId()))
+            .orElse(LinkDetailView.Splash.OFF));
   }
 }

@@ -65,6 +65,62 @@ class VisitHandoffTest {
         .isEqualTo(HttpStatus.FOUND);
   }
 
+  private static RedirectOutcome.Redirect withSplash(String url, boolean openInBrowser) {
+    return new RedirectOutcome.Redirect(
+        new CachedLink.Picked(url, null),
+        new CachedLink.VisitOptions(openInBrowser, new CachedLink.Splash("안내", 2, null, null)));
+  }
+
+  @Test
+  void theSplashComesFirstAndThenTheHandoff() {
+    String line =
+        new String(
+            (byte[])
+                handoff
+                    .redirect(withSplash("https://dest.example.com/", true), LINE, Locale.KOREAN)
+                    .getBody());
+    String kakao =
+        new String(
+            (byte[])
+                handoff
+                    .redirect(
+                        withSplash("https://dest.example.com/", true), KAKAOTALK, Locale.KOREAN)
+                    .getBody());
+
+    assertThat(line).contains("data-u=\"https://dest.example.com/?openExternalBrowser=1\"");
+    assertThat(line).doesNotContain("class=\"stay\"");
+    assertThat(kakao)
+        .contains("data-u=\"kakaotalk://web/openExternal?url=https%3A%2F%2Fdest.example.com%2F\"");
+    assertThat(kakao).contains("<a class=\"stay\" href=\"https://dest.example.com/\">");
+  }
+
+  @Test
+  void pagesOnTheWayCountAsRedirects() {
+    assertThat(
+            LinkRedirectSupport.classifyOutcome(
+                handoff.redirect(
+                    withSplash("https://dest.example.com/", false), null, Locale.KOREAN)))
+        .isEqualTo("redirect");
+    assertThat(
+            LinkRedirectSupport.classifyOutcome(
+                handoff.redirect(to("https://dest.example.com/", true), KAKAOTALK, Locale.KOREAN)))
+        .isEqualTo("redirect");
+    assertThat(LinkRedirectSupport.classifyOutcome(renderer().notFoundPageResponse(Locale.KOREAN)))
+        .isEqualTo("other");
+  }
+
+  @Test
+  void unlockingALinkWithASplashShowsTheSplash() {
+    String body =
+        new String(
+            handoff
+                .unlocked(withSplash("https://dest.example.com/", false), null, Locale.KOREAN)
+                .getBody());
+
+    assertThat(body).contains("<p class=\"msg\">안내</p>");
+    assertThat(body).doesNotContain("class=\"bigmark\"");
+  }
+
   @Test
   void unlockedLinksContinueThroughTheSameHandoff() {
     var redirect = to("https://dest.example.com/a?b=1", true);

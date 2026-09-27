@@ -3,6 +3,7 @@ package com.example.short_link.cta.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.cta.domain.CtaEntity;
@@ -11,6 +12,7 @@ import com.example.short_link.cta.domain.CtaStyle;
 import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.cta.exception.CtaErrorCode;
 import com.example.short_link.cta.exception.CtaException;
+import com.example.short_link.link.visit.application.SplashCtaChanges;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -23,12 +25,13 @@ class UpdateCtaUseCaseTest {
   @Mock private CtaOwnership ctaOwnership;
   @Mock private CtaRepository ctaRepository;
   @Mock private CtaLinkTracker linkTracker;
+  @Mock private SplashCtaChanges splashCtaChanges;
 
   private UpdateCtaUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new UpdateCtaUseCase(ctaOwnership, ctaRepository, linkTracker);
+    useCase = new UpdateCtaUseCase(ctaOwnership, ctaRepository, linkTracker, splashCtaChanges);
   }
 
   private CtaEntity owned() {
@@ -61,6 +64,7 @@ class UpdateCtaUseCaseTest {
     assertThat(cta.getUrl()).isEqualTo("https://new");
     assertThat(cta.getStyle()).isEqualTo(CtaStyle.SECONDARY);
     assertThat(cta.getPurpose()).isEqualTo(CtaPurpose.SUBSCRIBE);
+    verify(splashCtaChanges).ctaChanged(cta.getId());
   }
 
   @Test

@@ -8,6 +8,8 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.visit.application.SplashCta;
+import com.example.short_link.link.visit.application.SplashCtaCatalog;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
@@ -22,6 +24,7 @@ public class CachedLinkLoader {
 
   private final LinkRepository repository;
   private final LinkDestinationRepository destinationRepository;
+  private final SplashCtaCatalog ctaCatalog;
 
   @Cacheable("link")
   @Transactional(readOnly = true)
@@ -48,7 +51,22 @@ public class CachedLinkLoader {
         link.getMaxViews(),
         link.getExpiredMessage(),
         variants,
-        new CachedLink.VisitOptions(Boolean.TRUE.equals(link.getOpenInBrowser())));
+        new CachedLink.VisitOptions(Boolean.TRUE.equals(link.getOpenInBrowser()), splash(link)));
+  }
+
+  private CachedLink.Splash splash(LinkRepository.CachedLinkRow link) {
+    if (!Boolean.TRUE.equals(link.getSplashEnabled()) || link.getSplashMessage() == null) {
+      return null;
+    }
+    SplashCta cta =
+        link.getSplashCtaId() == null
+            ? null
+            : ctaCatalog.findOwned(link.getSplashCtaId(), link.getUserId()).orElse(null);
+    return new CachedLink.Splash(
+        link.getSplashMessage(),
+        link.getSplashSeconds() == null ? 3 : link.getSplashSeconds(),
+        cta == null ? null : cta.label(),
+        cta == null ? null : cta.url());
   }
 
   private static CachedLink.Variant toVariant(LinkDestinationEntity d) {

@@ -26,6 +26,11 @@ public class LinkVisitOptionController {
       @PathVariable ShortCode shortCode,
       @Valid @RequestBody LinkVisitOptionsRequest request) {
     return LinkVisitOptionsResponse.from(
-        shortCode, service.update(userId, shortCode, request.openInBrowser()));
+        shortCode,
+        service.update(
+            userId,
+            shortCode,
+            request.openInBrowser(),
+            request.splash() == null ? null : request.splash().toChange()));
   }
 }

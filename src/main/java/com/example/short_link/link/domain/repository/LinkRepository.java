@@ -107,5 +107,13 @@ public interface LinkRepository {
     String getExpiredMessage();
 
     Boolean getOpenInBrowser();
+
+    Boolean getSplashEnabled();
+
+    String getSplashMessage();
+
+    Integer getSplashSeconds();
+
+    Long getSplashCtaId();
   }
 }

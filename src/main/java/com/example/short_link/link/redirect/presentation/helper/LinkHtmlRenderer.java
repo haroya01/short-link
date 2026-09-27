@@ -1,5 +1,6 @@
 package com.example.short_link.link.redirect.presentation.helper;
 
+import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import java.nio.charset.StandardCharsets;
@@ -63,6 +64,15 @@ public class LinkHtmlRenderer {
       .pow{font-size:12px;color:var(--muted);margin-top:14px}.pow b{color:var(--brand);font-weight:600}
       .stay{display:inline-block;margin-top:18px;font-size:14px;font-weight:600;color:var(--brand);\
       text-decoration:none}
+      .splash .msg{font-size:16px;color:var(--ink);word-break:break-word}
+      .splash .btn{display:block;margin-top:18px;padding:13px;border-radius:10px;background:var(--brand);\
+      color:#fff;text-align:center;font-size:15px;font-weight:600;text-decoration:none}
+      .splash .go{display:inline-block;margin-top:14px;font-size:14px;font-weight:600;color:var(--brand);\
+      text-decoration:none}
+      .splash .bar{width:100%;margin:18px 0 0}
+      .splash .bar span{animation-delay:0s}
+      .splash .count{font-size:12px;margin-top:8px}
+      .splash .stay{margin-top:10px;font-size:13px;font-weight:500;color:var(--muted)}
       """;
 
   private final MessageSource messages;
@@ -145,9 +155,14 @@ public class LinkHtmlRenderer {
     return htmlResponse(HttpStatus.OK, unlockedPage(locale, destinationUrl));
   }
 
-  public ResponseEntity<byte[]> inAppHandoffPageResponse(
+  public VisitPage splashPageResponse(
+      Locale locale, CachedLink.Splash splash, String nextUrl, String stayUrl) {
+    return visitPage(splashPage(locale, splash, nextUrl, stayUrl));
+  }
+
+  public VisitPage inAppHandoffPageResponse(
       Locale locale, String handoffUrl, String destinationUrl) {
-    return htmlResponse(HttpStatus.OK, inAppHandoffPage(locale, handoffUrl, destinationUrl));
+    return visitPage(inAppHandoffPage(locale, handoffUrl, destinationUrl));
   }
 
   /**
@@ -239,6 +254,63 @@ public class LinkHtmlRenderer {
     return page(locale, text(locale, "visitor.unlocked.pageTitle"), inner, " unlock", head);
   }
 
+  String splashPage(Locale locale, CachedLink.Splash splash, String nextUrl, String stayUrl) {
+    int seconds = Math.max(1, splash.seconds());
+    String cta =
+        splash.ctaLabel() == null || splash.ctaUrl() == null
+            ? ""
+            : "<a class=\"btn\" href=\""
+                + escape(splash.ctaUrl())
+                + "\">"
+                + escape(splash.ctaLabel())
+                + "</a>";
+    String stay =
+        stayUrl == null
+            ? ""
+            : "<a class=\"stay\" href=\""
+                + escape(stayUrl)
+                + "\">"
+                + escape(text(locale, "visitor.handoff.stay"))
+                + "</a>";
+    String inner =
+        "<p class=\"msg\">"
+            + escape(splash.message())
+            + "</p>"
+            + cta
+            + "<a class=\"go\" href=\""
+            + escape(nextUrl)
+            + "\">"
+            + escape(text(locale, "visitor.splash.continue"))
+            + " →</a>"
+            + "<div class=\"bar\"><span style=\"animation-duration:"
+            + seconds
+            + "s\"></span></div>"
+            + "<p class=\"count\" id=\"c\">"
+            + withMarker(
+                locale, "visitor.splash.countdown", "<span id=\"n\">" + seconds + "</span>")
+            + "</p>"
+            + stay
+            + "<p class=\"pow\">"
+            + poweredBy(locale)
+            + "</p>"
+            + "<span id=\"d\" data-u=\""
+            + escape(nextUrl)
+            + "\" data-s=\""
+            + seconds
+            + "\" data-p=\""
+            + escape(text(locale, "visitor.splash.paused"))
+            + "\" hidden></span>"
+            + "<script>(function(){var d=document.getElementById('d'),s=+d.dataset.s,"
+            + "n=document.getElementById('n'),c=document.getElementById('c'),"
+            + "b=document.querySelector('.bar span');"
+            + "var t=setInterval(function(){s--;if(s<=0){clearInterval(t);location.replace(d.dataset.u);return}"
+            + "n.textContent=s},1000);"
+            + "function stop(){clearInterval(t);c.textContent=d.dataset.p;if(b){b.style.animationPlayState='paused'}}"
+            + "document.addEventListener('pointerdown',stop,{once:true});"
+            + "document.addEventListener('keydown',stop,{once:true})})()</script>";
+    return page(locale, text(locale, "visitor.splash.pageTitle"), inner, " splash", "");
+  }
+
   String inAppHandoffPage(Locale locale, String handoffUrl, String destinationUrl) {
     String title = text(locale, "visitor.handoff.title");
     String inner =
@@ -258,9 +330,13 @@ public class LinkHtmlRenderer {
   }
 
   private String poweredBy(Locale locale) {
+    return withMarker(locale, "visitor.poweredBy", "<b>kurl</b>");
+  }
+
+  private String withMarker(Locale locale, String key, String html) {
     String marker = "\u0000";
-    String line = messages.getMessage("visitor.poweredBy", new Object[] {marker}, locale);
-    return escape(line).replace(marker, "<b>kurl</b>");
+    String line = messages.getMessage(key, new Object[] {marker}, locale);
+    return escape(line).replace(marker, html);
   }
 
   private static String escape(String s) {
@@ -281,11 +357,20 @@ public class LinkHtmlRenderer {
 
   private static ResponseEntity<byte[]> htmlResponse(HttpStatus status, String html) {
     byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
-    return ResponseEntity.status(status)
-        .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))
-        .contentLength(bytes.length)
-        .header("X-Robots-Tag", "noindex, nofollow")
-        .header(HttpHeaders.VARY, "Accept-Language")
-        .body(bytes);
+    return ResponseEntity.status(status).headers(htmlHeaders(bytes.length)).body(bytes);
+  }
+
+  private static VisitPage visitPage(String html) {
+    byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
+    return new VisitPage(bytes, htmlHeaders(bytes.length));
+  }
+
+  private static HttpHeaders htmlHeaders(int length) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.parseMediaType("text/html; charset=utf-8"));
+    headers.setContentLength(length);
+    headers.set("X-Robots-Tag", "noindex, nofollow");
+    headers.set(HttpHeaders.VARY, "Accept-Language");
+    return headers;
   }
 }

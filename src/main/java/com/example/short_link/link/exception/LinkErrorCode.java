@@ -21,7 +21,8 @@ public enum LinkErrorCode {
   INVALID_FAVORITE_ORDER(
       HttpStatus.BAD_REQUEST, "favorite order must contain every current favorite exactly once"),
   INVALID_CURSOR(HttpStatus.BAD_REQUEST, "Invalid cursor"),
-  INVALID_EXPORT_DIMENSION(HttpStatus.BAD_REQUEST, "Invalid export dimension: %s");
+  INVALID_EXPORT_DIMENSION(HttpStatus.BAD_REQUEST, "Invalid export dimension: %s"),
+  SPLASH_CTA_NOT_FOUND(HttpStatus.BAD_REQUEST, "cta not available for a splash: %s");
 
   private final HttpStatus status;
   private final String template;

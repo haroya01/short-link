@@ -40,7 +40,11 @@ public interface JpaLinkRepository
         END AS passwordRequired,
         COALESCE(acl.maxViews, l.maxViews) AS maxViews,
         COALESCE(policy.expiredMessage, l.expiredMessage) AS expiredMessage,
-        visit.openInBrowser AS openInBrowser
+        visit.openInBrowser AS openInBrowser,
+        visit.splashEnabled AS splashEnabled,
+        visit.splashMessage AS splashMessage,
+        visit.splashSeconds AS splashSeconds,
+        visit.splashCtaId AS splashCtaId
       FROM LinkEntity l
       LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
