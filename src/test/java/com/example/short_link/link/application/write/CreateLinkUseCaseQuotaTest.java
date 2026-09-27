@@ -25,6 +25,7 @@ import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 
@@ -52,6 +53,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 
@@ -85,6 +87,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 
@@ -118,6 +121,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 
@@ -148,6 +152,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 
@@ -190,6 +195,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 

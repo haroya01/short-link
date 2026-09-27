@@ -19,9 +19,11 @@ public class LinkSidecarPersister implements LinkDefaultsWriter {
   private final EntityManager entityManager;
 
   @Override
-  public void initialize(LinkId linkId) {
+  public void initialize(LinkId linkId, String passwordHash) {
     entityManager.persist(new LinkOgMetadataEntity(linkId));
-    entityManager.persist(new LinkAccessControlEntity(linkId));
+    LinkAccessControlEntity access = new LinkAccessControlEntity(linkId);
+    access.changePasswordHash(passwordHash);
+    entityManager.persist(access);
     entityManager.persist(new LinkProfileBindingEntity(linkId));
     entityManager.persist(new LinkExpirationPolicyEntity(linkId));
   }

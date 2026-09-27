@@ -10,7 +10,8 @@ public record CreateLinkCommand(
     String customCode,
     Instant expiresAt,
     boolean deduplicate,
-    boolean allowSelfHost) {
+    boolean allowSelfHost,
+    String password) {
 
   public CreateLinkCommand {
     if (url == null || url.isBlank()) {
@@ -19,12 +20,27 @@ public record CreateLinkCommand(
   }
 
   public CreateLinkCommand(
+      String url,
+      Long userId,
+      String customCode,
+      Instant expiresAt,
+      boolean deduplicate,
+      boolean allowSelfHost) {
+    this(url, userId, customCode, expiresAt, deduplicate, allowSelfHost, null);
+  }
+
+  public CreateLinkCommand(
       String url, Long userId, String customCode, Instant expiresAt, boolean deduplicate) {
-    this(url, userId, customCode, expiresAt, deduplicate, false);
+    this(url, userId, customCode, expiresAt, deduplicate, false, null);
   }
 
   public static CreateLinkCommand of(
       String url, Long userId, String customCode, Instant expiresAt) {
-    return new CreateLinkCommand(url, userId, customCode, expiresAt, true);
+    return of(url, userId, customCode, expiresAt, null);
+  }
+
+  public static CreateLinkCommand of(
+      String url, Long userId, String customCode, Instant expiresAt, String password) {
+    return new CreateLinkCommand(url, userId, customCode, expiresAt, true, false, password);
   }
 }
