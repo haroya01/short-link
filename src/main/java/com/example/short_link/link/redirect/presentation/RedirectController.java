@@ -17,6 +17,7 @@ import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkPreviewRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
+import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
 import com.example.short_link.link.redirect.presentation.helper.VisitorLocale;
 import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
@@ -52,6 +53,7 @@ public class RedirectController {
   private final TurnstileProperties turnstile;
   private final BlockedDomainChecker blockedDomainChecker;
   private final LinkHtmlRenderer html;
+  private final VisitHandoff handoff;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -136,6 +138,7 @@ public class RedirectController {
             link,
             null,
             LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)),
+        userAgent,
         locale);
   }
 
@@ -151,14 +154,9 @@ public class RedirectController {
     return false;
   }
 
-  private ResponseEntity<?> render(RedirectOutcome outcome, Locale locale) {
+  private ResponseEntity<?> render(RedirectOutcome outcome, String userAgent, Locale locale) {
     return switch (outcome) {
-      case RedirectOutcome.Redirect r ->
-          ResponseEntity.status(HttpStatus.FOUND)
-              .location(URI.create(r.picked().url()))
-              .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
-              .header("X-Robots-Tag", "noindex, nofollow")
-              .build();
+      case RedirectOutcome.Redirect r -> handoff.redirect(r, userAgent, locale);
       case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
       case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());

@@ -30,7 +30,8 @@ class LinkDetailResponseTest {
             true,
             List.of("a", "b"),
             "note body",
-            "expired msg");
+            "expired msg",
+            true);
 
     LinkDetailResponse response = LinkDetailResponse.from(view);
 
@@ -71,7 +72,8 @@ class LinkDetailResponseTest {
             false,
             List.of(),
             null,
-            null);
+            null,
+            false);
 
     LinkDetailResponse response = LinkDetailResponse.from(view);
 

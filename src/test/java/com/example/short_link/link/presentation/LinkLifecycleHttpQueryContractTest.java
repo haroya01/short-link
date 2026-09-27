@@ -335,6 +335,15 @@ class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
         Map.of("statsPublic", true),
         200);
     assertThat(number("SELECT stats_public FROM link WHERE id = ?", linkId)).isEqualTo(1);
+    request(
+        "link-visit-options-update",
+        owner,
+        "PATCH",
+        path + "/visit-options",
+        Map.of("openInBrowser", true),
+        200);
+    assertThat(number("SELECT open_in_browser FROM link_visit_option WHERE link_id = ?", linkId))
+        .isEqualTo(1);
     assertThat(
             request("link-stats-public", null, "GET", path + "/public-stats", null, 200)
                 .path("totalClicks")

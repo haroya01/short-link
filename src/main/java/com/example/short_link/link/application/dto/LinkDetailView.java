@@ -20,4 +20,5 @@ public record LinkDetailView(
     boolean statsPublic,
     List<String> tags,
     String note,
-    String expiredMessage) {}
+    String expiredMessage,
+    boolean openInBrowser) {}

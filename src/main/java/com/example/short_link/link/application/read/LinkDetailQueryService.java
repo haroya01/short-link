@@ -7,6 +7,8 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.visit.domain.LinkVisitOptionEntity;
+import com.example.short_link.link.visit.domain.repository.LinkVisitOptionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,6 +20,7 @@ public class LinkDetailQueryService {
   private final LinkRepository repository;
   private final LinkTagLookup linkTagService;
   private final LinkAccessGuard accessGuard;
+  private final LinkVisitOptionRepository visitOptions;
 
   @Transactional(readOnly = true)
   public LinkDetailView detail(Long userId, ShortCode shortCode) {
@@ -42,6 +45,10 @@ public class LinkDetailQueryService {
         link.isStatsPublic(),
         linkTagService.tagNamesFor(userId, shortCode),
         link.getNote(),
-        link.getExpiredMessage());
+        link.getExpiredMessage(),
+        visitOptions
+            .findById(link.getId())
+            .map(LinkVisitOptionEntity::isOpenInBrowser)
+            .orElse(false));
   }
 }

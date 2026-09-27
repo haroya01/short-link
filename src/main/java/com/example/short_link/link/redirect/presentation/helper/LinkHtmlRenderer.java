@@ -61,6 +61,8 @@ public class LinkHtmlRenderer {
       transform:scaleX(0);animation:fill 1.25s linear .3s forwards}
       @keyframes fill{to{transform:scaleX(1)}}
       .pow{font-size:12px;color:var(--muted);margin-top:14px}.pow b{color:var(--brand);font-weight:600}
+      .stay{display:inline-block;margin-top:18px;font-size:14px;font-weight:600;color:var(--brand);\
+      text-decoration:none}
       """;
 
   private final MessageSource messages;
@@ -141,6 +143,11 @@ public class LinkHtmlRenderer {
 
   public ResponseEntity<byte[]> unlockedPageResponse(Locale locale, String destinationUrl) {
     return htmlResponse(HttpStatus.OK, unlockedPage(locale, destinationUrl));
+  }
+
+  public ResponseEntity<byte[]> inAppHandoffPageResponse(
+      Locale locale, String handoffUrl, String destinationUrl) {
+    return htmlResponse(HttpStatus.OK, inAppHandoffPage(locale, handoffUrl, destinationUrl));
   }
 
   /**
@@ -230,6 +237,24 @@ public class LinkHtmlRenderer {
             + "<script>setTimeout(function(){var u=document.getElementById('d').dataset.u;"
             + "if(u){location.replace(u)}},1300)</script>";
     return page(locale, text(locale, "visitor.unlocked.pageTitle"), inner, " unlock", head);
+  }
+
+  String inAppHandoffPage(Locale locale, String handoffUrl, String destinationUrl) {
+    String title = text(locale, "visitor.handoff.title");
+    String inner =
+        "<h1>"
+            + escape(title)
+            + "</h1><p>"
+            + escape(text(locale, "visitor.handoff.body"))
+            + "</p><a class=\"stay\" href=\""
+            + escape(destinationUrl)
+            + "\">"
+            + escape(text(locale, "visitor.handoff.stay"))
+            + "</a><span id=\"d\" data-u=\""
+            + escape(handoffUrl)
+            + "\" hidden></span>"
+            + "<script>var u=document.getElementById('d').dataset.u;if(u){location.replace(u)}</script>";
+    return page(locale, title, inner);
   }
 
   private String poweredBy(Locale locale) {

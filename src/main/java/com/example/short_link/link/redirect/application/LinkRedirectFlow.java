@@ -71,7 +71,7 @@ public class LinkRedirectFlow {
     } else {
       clickRecorder.record(ctx);
     }
-    return new RedirectOutcome.Redirect(picked);
+    return new RedirectOutcome.Redirect(picked, link.visitOptions());
   }
 
   private static String normalizeOs(String osName) {
