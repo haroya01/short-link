@@ -17,6 +17,7 @@ import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkPreviewRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
+import com.example.short_link.link.redirect.presentation.helper.VisitorLocale;
 import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -24,6 +25,7 @@ import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -49,6 +51,7 @@ public class RedirectController {
   private final CustomDomainQueryService customDomainService;
   private final TurnstileProperties turnstile;
   private final BlockedDomainChecker blockedDomainChecker;
+  private final LinkHtmlRenderer html;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -61,9 +64,10 @@ public class RedirectController {
       HttpServletRequest req) {
     Timer.Sample sample = Timer.start(meterRegistry);
     String outcome = "error";
+    Locale locale = VisitorLocale.resolve(acceptLanguage);
     try {
       ResponseEntity<?> response =
-          handleRedirect(shortCode, src, post, referrer, userAgent, acceptLanguage, req);
+          handleRedirect(shortCode, src, post, referrer, userAgent, acceptLanguage, locale, req);
       outcome = LinkRedirectSupport.classifyOutcome(response);
       return response;
     } catch (LinkException e) {
@@ -75,7 +79,7 @@ public class RedirectController {
             default -> "error";
           };
       // 방문자가 연 링크 — 만료·한도초과·없음은 JSON 대신 브랜드 HTML 페이지로 보여준다.
-      ResponseEntity<byte[]> page = LinkHtmlRenderer.visitorErrorPage(e.errorCode());
+      ResponseEntity<byte[]> page = html.visitorErrorPage(locale, e.errorCode());
       if (page != null) {
         return page;
       }
@@ -93,6 +97,7 @@ public class RedirectController {
       String referrer,
       String userAgent,
       String acceptLanguage,
+      Locale locale,
       HttpServletRequest req) {
     CachedLink link;
     try {
@@ -101,7 +106,7 @@ public class RedirectController {
       if (e.errorCode() == LinkErrorCode.LINK_EXPIRED) {
         LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
         if (expired != null && expired.getExpiredMessage() != null) {
-          return LinkHtmlRenderer.expiredPageResponse(expired.getExpiredMessage());
+          return html.expiredPageResponse(locale, expired.getExpiredMessage());
         }
       }
       throw e;
@@ -114,12 +119,12 @@ public class RedirectController {
     // 크롤러는 지오·AB 선택 맥락이 없으므로 활성 목적지 하나라도 차단되면 미리보기도 막는다.
     if (anyDestinationBlocked(link)) {
       meterRegistry.counter("redirect.domain_blocked").increment();
-      return LinkHtmlRenderer.domainBlockedPageResponse();
+      return html.domainBlockedPageResponse(locale);
     }
     // 비밀번호 검사는 크롤러 분기보다 먼저 해야 스푸핑된 UA가 목적지를 노출하지 못한다.
     if (link.passwordRequired()) {
-      return LinkHtmlRenderer.passwordPromptResponse(
-          HttpStatus.OK, shortCode, false, turnstile.siteKey());
+      return html.passwordPromptResponse(
+          locale, HttpStatus.OK, shortCode, false, turnstile.siteKey());
     }
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
     if (crawlerLabel != null) {
@@ -130,7 +135,8 @@ public class RedirectController {
         flow.execute(
             link,
             null,
-            LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)));
+            LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)),
+        locale);
   }
 
   private boolean anyDestinationBlocked(CachedLink link) {
@@ -145,7 +151,7 @@ public class RedirectController {
     return false;
   }
 
-  private ResponseEntity<?> render(RedirectOutcome outcome) {
+  private ResponseEntity<?> render(RedirectOutcome outcome, Locale locale) {
     return switch (outcome) {
       case RedirectOutcome.Redirect r ->
           ResponseEntity.status(HttpStatus.FOUND)
@@ -153,10 +159,9 @@ public class RedirectController {
               .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
               .header("X-Robots-Tag", "noindex, nofollow")
               .build();
-      case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
-      case RedirectOutcome.DomainBlocked db -> LinkHtmlRenderer.domainBlockedPageResponse();
-      case RedirectOutcome.ExpiredWithMessage em ->
-          LinkHtmlRenderer.expiredPageResponse(em.message());
+      case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
+      case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
+      case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException(
               "PasswordRequired decided at controller before flow.execute()");

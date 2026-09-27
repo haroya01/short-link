@@ -58,7 +58,7 @@ class RedirectControllerDomainBlockTest {
     repository.save(new LinkEntity("https://spam.example.com/promo", "dbk1234"));
     blockDomainNow("spam.example.com");
 
-    mvc.perform(get("/dbk1234"))
+    mvc.perform(get("/dbk1234").header("Accept-Language", "ko-KR"))
         .andExpect(status().isForbidden())
         .andExpect(content().string(Matchers.containsString("차단된 링크")));
   }
@@ -76,7 +76,10 @@ class RedirectControllerDomainBlockTest {
     repository.save(new LinkEntity("https://spam.example.com/promo", "dbk3456"));
     blockDomainNow("spam.example.com");
 
-    mvc.perform(get("/dbk3456").header("User-Agent", "facebookexternalhit/1.1"))
+    mvc.perform(
+            get("/dbk3456")
+                .header("User-Agent", "facebookexternalhit/1.1")
+                .header("Accept-Language", "ko-KR"))
         .andExpect(status().isForbidden())
         .andExpect(content().string(Matchers.containsString("차단된 링크")));
   }
@@ -91,7 +94,10 @@ class RedirectControllerDomainBlockTest {
             new LinkId(stored.getId()), "https://spam.example.com/promo", 1, "geo", "KR"));
     blockDomainNow("spam.example.com");
 
-    mvc.perform(get("/dbk7890").header("User-Agent", "Discordbot/2.0"))
+    mvc.perform(
+            get("/dbk7890")
+                .header("User-Agent", "Discordbot/2.0")
+                .header("Accept-Language", "ko-KR"))
         .andExpect(status().isForbidden())
         .andExpect(content().string(Matchers.containsString("차단된 링크")));
   }

@@ -24,8 +24,11 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
+import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.MessageSource;
+import org.springframework.context.support.ResourceBundleMessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockHttpServletRequest;
@@ -43,7 +46,16 @@ class PasswordUnlockControllerTest {
       new PasswordUnlockController(
           new PasswordUnlockUseCase(
               lookup, protectionService, attemptLimiter, flow, turnstileVerifier),
-          turnstile);
+          turnstile,
+          new LinkHtmlRenderer(messageSource()));
+
+  private static MessageSource messageSource() {
+    var ms = new ResourceBundleMessageSource();
+    ms.setBasename("messages");
+    ms.setDefaultEncoding("UTF-8");
+    ms.setFallbackToSystemLocale(false);
+    return ms;
+  }
 
   private static final ShortCode CODE = new ShortCode("abc123");
 
