@@ -44,6 +44,32 @@ class CachedLinkCacheJsonTest {
   }
 
   @Test
+  void aSplashSurvivesTheCache() {
+    CachedLink.Splash splash = new CachedLink.Splash("쿠폰", 2, "앱 받기", "https://kurl.me/app1");
+    CachedLink restored =
+        (CachedLink)
+            serializer.deserialize(
+                serializer.serialize(link(new CachedLink.VisitOptions(false, splash))));
+
+    assertThat(restored.visitOptions().splash()).isEqualTo(splash);
+  }
+
+  @Test
+  void entriesCachedBeforeTheSplashExistedStillLoad() {
+    String json =
+        new String(
+            serializer.serialize(link(new CachedLink.VisitOptions(true))), StandardCharsets.UTF_8);
+    String legacy = json.replace(",\"splash\":null", "");
+    assertThat(legacy).doesNotContain("splash");
+
+    CachedLink restored =
+        (CachedLink) serializer.deserialize(legacy.getBytes(StandardCharsets.UTF_8));
+
+    assertThat(restored.visitOptions().openInBrowser()).isTrue();
+    assertThat(restored.visitOptions().splash()).isNull();
+  }
+
+  @Test
   void entriesCachedBeforeVisitOptionsExistedStillLoad() {
     String json =
         new String(

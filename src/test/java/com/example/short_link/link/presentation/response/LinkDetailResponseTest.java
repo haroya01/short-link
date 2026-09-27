@@ -31,7 +31,8 @@ class LinkDetailResponseTest {
             List.of("a", "b"),
             "note body",
             "expired msg",
-            true);
+            true,
+            new LinkDetailView.Splash(true, "coupon SPRING20", 2, 9L));
 
     LinkDetailResponse response = LinkDetailResponse.from(view);
 
@@ -73,7 +74,8 @@ class LinkDetailResponseTest {
             List.of(),
             null,
             null,
-            false);
+            false,
+            LinkDetailView.Splash.OFF);
 
     LinkDetailResponse response = LinkDetailResponse.from(view);
 

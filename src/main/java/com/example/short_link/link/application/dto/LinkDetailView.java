@@ -21,4 +21,10 @@ public record LinkDetailView(
     List<String> tags,
     String note,
     String expiredMessage,
-    boolean openInBrowser) {}
+    boolean openInBrowser,
+    Splash splash) {
+
+  public record Splash(boolean enabled, String message, int seconds, Long ctaId) {
+    public static final Splash OFF = new Splash(false, null, 3, null);
+  }
+}

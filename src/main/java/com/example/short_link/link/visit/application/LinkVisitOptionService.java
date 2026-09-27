@@ -19,9 +19,11 @@ public class LinkVisitOptionService {
   private final LinkRepository links;
   private final LinkVisitOptionRepository options;
   private final LinkCacheEviction linkCacheEviction;
+  private final SplashCtaCatalog ctaCatalog;
 
   @Transactional
-  public LinkVisitOptionEntity update(Long userId, ShortCode shortCode, Boolean openInBrowser) {
+  public LinkVisitOptionEntity update(
+      Long userId, ShortCode shortCode, Boolean openInBrowser, SplashChange splash) {
     LinkEntity link =
         links
             .findByShortCode(shortCode)
@@ -33,6 +35,17 @@ public class LinkVisitOptionService {
         options.findById(link.getId()).orElseGet(() -> new LinkVisitOptionEntity(link.linkId()));
     if (openInBrowser != null) {
       option.changeOpenInBrowser(openInBrowser);
+    }
+    if (splash != null) {
+      Long ctaId = splash.ctaId();
+      if (ctaId != null && ctaCatalog.findOwned(ctaId, userId).isEmpty()) {
+        throw new LinkException(LinkErrorCode.SPLASH_CTA_NOT_FOUND, ctaId);
+      }
+      option.changeSplash(
+          splash.enabled(),
+          splash.message(),
+          splash.seconds() == null ? 3 : splash.seconds(),
+          ctaId);
     }
     linkCacheEviction.evictAfterCommit(shortCode);
     return options.save(option);

@@ -23,11 +23,30 @@ public class LinkVisitOptionEntity extends BaseTimeEntity {
   @Column(name = "open_in_browser", nullable = false)
   private boolean openInBrowser;
 
+  @Column(name = "splash_enabled", nullable = false)
+  private boolean splashEnabled;
+
+  @Column(name = "splash_message", length = 280)
+  private String splashMessage;
+
+  @Column(name = "splash_seconds", nullable = false)
+  private int splashSeconds = 3;
+
+  @Column(name = "splash_cta_id")
+  private Long splashCtaId;
+
   public LinkVisitOptionEntity(LinkId linkId) {
     this.linkId = linkId == null ? null : linkId.value();
   }
 
   public void changeOpenInBrowser(boolean openInBrowser) {
     this.openInBrowser = openInBrowser;
+  }
+
+  public void changeSplash(boolean enabled, String message, int seconds, Long ctaId) {
+    this.splashEnabled = enabled;
+    this.splashMessage = message == null || message.isBlank() ? null : message.strip();
+    this.splashSeconds = seconds;
+    this.splashCtaId = ctaId;
   }
 }

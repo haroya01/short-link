@@ -2,6 +2,7 @@ package com.example.short_link.cta.application.write;
 
 import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.repository.CtaRepository;
+import com.example.short_link.link.visit.application.SplashCtaChanges;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -13,6 +14,7 @@ public class UpdateCtaUseCase {
   private final CtaOwnership ctaOwnership;
   private final CtaRepository ctaRepository;
   private final CtaLinkTracker linkTracker;
+  private final SplashCtaChanges splashCtaChanges;
 
   @Transactional
   public CtaEntity execute(UpdateCtaCommand cmd) {
@@ -24,6 +26,8 @@ public class UpdateCtaUseCase {
     }
     if (cmd.style() != null) cta.updateStyle(cmd.style());
     if (cmd.purpose() != null) cta.updatePurpose(cmd.purpose());
-    return ctaRepository.save(cta);
+    CtaEntity saved = ctaRepository.save(cta);
+    splashCtaChanges.ctaChanged(saved.getId());
+    return saved;
   }
 }

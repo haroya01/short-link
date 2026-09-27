@@ -1,5 +1,6 @@
 package com.example.short_link.link.redirect.presentation.helper;
 
+import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.classifier.application.ClientAppClassifier;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import java.net.URI;
@@ -25,14 +26,17 @@ public class VisitHandoff {
   public ResponseEntity<?> redirect(
       RedirectOutcome.Redirect redirect, String userAgent, Locale locale) {
     String destination = redirect.picked().url();
-    String app = inAppBrowser(redirect, userAgent);
-    if ("kakaotalk".equals(app)) {
-      return html.inAppHandoffPageResponse(locale, kakaoTalkExternal(destination), destination);
+    String next = nextHop(redirect, userAgent);
+    CachedLink.Splash splash = redirect.visitOptions().splash();
+    boolean leavesViaScheme = next.startsWith(KAKAOTALK_EXTERNAL);
+    if (splash != null) {
+      return html.splashPageResponse(locale, splash, next, leavesViaScheme ? destination : null);
     }
-    String location =
-        "line".equals(app) ? withParam(destination, LINE_EXTERNAL_PARAM) : destination;
+    if (leavesViaScheme) {
+      return html.inAppHandoffPageResponse(locale, next, destination);
+    }
     return ResponseEntity.status(HttpStatus.FOUND)
-        .location(URI.create(location))
+        .location(URI.create(next))
         .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
         .header("X-Robots-Tag", "noindex, nofollow")
         .build();
@@ -40,15 +44,23 @@ public class VisitHandoff {
 
   public ResponseEntity<byte[]> unlocked(
       RedirectOutcome.Redirect redirect, String userAgent, Locale locale) {
+    String next = nextHop(redirect, userAgent);
+    CachedLink.Splash splash = redirect.visitOptions().splash();
+    if (splash != null) {
+      String stay = next.startsWith(KAKAOTALK_EXTERNAL) ? redirect.picked().url() : null;
+      return html.splashPageResponse(locale, splash, next, stay);
+    }
+    return html.unlockedPageResponse(locale, next);
+  }
+
+  private String nextHop(RedirectOutcome.Redirect redirect, String userAgent) {
     String destination = redirect.picked().url();
     String app = inAppBrowser(redirect, userAgent);
-    String next =
-        switch (app == null ? "" : app) {
-          case "kakaotalk" -> kakaoTalkExternal(destination);
-          case "line" -> withParam(destination, LINE_EXTERNAL_PARAM);
-          default -> destination;
-        };
-    return html.unlockedPageResponse(locale, next);
+    return switch (app == null ? "" : app) {
+      case "kakaotalk" -> kakaoTalkExternal(destination);
+      case "line" -> withParam(destination, LINE_EXTERNAL_PARAM);
+      default -> destination;
+    };
   }
 
   private String inAppBrowser(RedirectOutcome.Redirect redirect, String userAgent) {

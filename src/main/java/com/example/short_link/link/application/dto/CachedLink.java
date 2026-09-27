@@ -257,7 +257,13 @@ public record CachedLink(
 
   public record Picked(String url, Long destinationId) {}
 
-  public record VisitOptions(boolean openInBrowser) {
-    public static final VisitOptions NONE = new VisitOptions(false);
+  public record VisitOptions(boolean openInBrowser, Splash splash) {
+    public static final VisitOptions NONE = new VisitOptions(false, null);
+
+    public VisitOptions(boolean openInBrowser) {
+      this(openInBrowser, null);
+    }
   }
+
+  public record Splash(String message, int seconds, String ctaLabel, String ctaUrl) {}
 }
