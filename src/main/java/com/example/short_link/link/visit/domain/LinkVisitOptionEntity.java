@@ -6,6 +6,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -35,6 +36,9 @@ public class LinkVisitOptionEntity extends BaseTimeEntity {
   @Column(name = "splash_cta_id")
   private Long splashCtaId;
 
+  @Column(name = "opens_at")
+  private Instant opensAt;
+
   public LinkVisitOptionEntity(LinkId linkId) {
     this.linkId = linkId == null ? null : linkId.value();
   }
@@ -48,5 +52,9 @@ public class LinkVisitOptionEntity extends BaseTimeEntity {
     this.splashMessage = message == null || message.isBlank() ? null : message.strip();
     this.splashSeconds = seconds;
     this.splashCtaId = ctaId;
+  }
+
+  public void changeOpensAt(Instant opensAt) {
+    this.opensAt = opensAt;
   }
 }

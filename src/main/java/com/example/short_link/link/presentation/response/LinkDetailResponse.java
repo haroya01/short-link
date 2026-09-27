@@ -23,7 +23,8 @@ public record LinkDetailResponse(
     String note,
     String expiredMessage,
     boolean openInBrowser,
-    LinkDetailView.Splash splash) {
+    LinkDetailView.Splash splash,
+    Instant opensAt) {
 
   public static LinkDetailResponse from(LinkDetailView view) {
     return new LinkDetailResponse(
@@ -44,6 +45,7 @@ public record LinkDetailResponse(
         view.note(),
         view.expiredMessage(),
         view.openInBrowser(),
-        view.splash());
+        view.splash(),
+        view.opensAt());
   }
 }

@@ -57,6 +57,7 @@ public class LinkDetailQueryService {
                         o.getSplashMessage(),
                         o.getSplashSeconds(),
                         o.getSplashCtaId()))
-            .orElse(LinkDetailView.Splash.OFF));
+            .orElse(LinkDetailView.Splash.OFF),
+        option.map(LinkVisitOptionEntity::getOpensAt).orElse(null));
   }
 }

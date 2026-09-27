@@ -13,11 +13,18 @@ public class LinkPreviewRenderer {
   private final LinkPreviewQueryService previews;
 
   public String render(LinkEntity link, String shortUrl, long clickCount) {
+    return render(link, shortUrl, clickCount, true);
+  }
+
+  public String render(
+      LinkEntity link, String shortUrl, long clickCount, boolean revealDestination) {
     LinkPreviewData preview = previews.find(link, shortUrl, clickCount);
-    String title = preview.title();
+    String original = preview.originalUrl();
+    // 제목이 없을 때 목적지 주소로 대신 채우는데, 공개 전에는 그게 곧 누출이다.
+    String title =
+        !revealDestination && preview.title().equals(original) ? shortUrl : preview.title();
     String description = preview.description();
     String image = preview.image();
-    String original = preview.originalUrl();
     boolean useGenerated = preview.generatedImage();
 
     StringBuilder sb = new StringBuilder(2048);
@@ -52,16 +59,22 @@ public class LinkPreviewRenderer {
       sb.append("<meta name=\"twitter:image\" content=\"").append(escape(image)).append("\">\n");
     }
 
-    sb.append("<link rel=\"canonical\" href=\"").append(escape(original)).append("\">\n");
-    sb.append("<meta http-equiv=\"refresh\" content=\"0;url=")
-        .append(escape(original))
-        .append("\">\n");
+    if (revealDestination) {
+      sb.append("<link rel=\"canonical\" href=\"").append(escape(original)).append("\">\n");
+      sb.append("<meta http-equiv=\"refresh\" content=\"0;url=")
+          .append(escape(original))
+          .append("\">\n");
+    }
     sb.append("</head>\n<body>\n");
-    sb.append("<p>Redirecting to <a href=\"")
-        .append(escape(original))
-        .append("\">")
-        .append(escape(original))
-        .append("</a>&hellip;</p>\n");
+    if (revealDestination) {
+      sb.append("<p>Redirecting to <a href=\"")
+          .append(escape(original))
+          .append("\">")
+          .append(escape(original))
+          .append("</a>&hellip;</p>\n");
+    } else {
+      sb.append("<p>").append(escape(title)).append("</p>\n");
+    }
     sb.append("</body></html>\n");
     return sb.toString();
   }

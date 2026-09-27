@@ -257,11 +257,19 @@ public record CachedLink(
 
   public record Picked(String url, Long destinationId) {}
 
-  public record VisitOptions(boolean openInBrowser, Splash splash) {
-    public static final VisitOptions NONE = new VisitOptions(false, null);
+  public record VisitOptions(boolean openInBrowser, Splash splash, Instant opensAt) {
+    public static final VisitOptions NONE = new VisitOptions(false, null, null);
 
     public VisitOptions(boolean openInBrowser) {
-      this(openInBrowser, null);
+      this(openInBrowser, null, null);
+    }
+
+    public VisitOptions(boolean openInBrowser, Splash splash) {
+      this(openInBrowser, splash, null);
+    }
+
+    public boolean opensLaterThan(Instant now) {
+      return opensAt != null && now.isBefore(opensAt);
     }
   }
 

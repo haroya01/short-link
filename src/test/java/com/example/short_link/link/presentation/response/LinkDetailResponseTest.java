@@ -32,7 +32,8 @@ class LinkDetailResponseTest {
             "note body",
             "expired msg",
             true,
-            new LinkDetailView.Splash(true, "coupon SPRING20", 2, 9L));
+            new LinkDetailView.Splash(true, "coupon SPRING20", 2, 9L),
+            Instant.parse("2026-10-01T01:00:00Z"));
 
     LinkDetailResponse response = LinkDetailResponse.from(view);
 
@@ -75,7 +76,8 @@ class LinkDetailResponseTest {
             null,
             null,
             false,
-            LinkDetailView.Splash.OFF);
+            LinkDetailView.Splash.OFF,
+            null);
 
     LinkDetailResponse response = LinkDetailResponse.from(view);
 

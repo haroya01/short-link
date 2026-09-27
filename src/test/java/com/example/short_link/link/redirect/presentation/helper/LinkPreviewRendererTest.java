@@ -53,6 +53,22 @@ class LinkPreviewRendererTest {
   }
 
   @Test
+  void aCardForALinkThatIsNotOpenYetKeepsTheDestinationOut() {
+    LinkEntity untitled = link("https://secret.example.com/launch");
+    LinkEntity titled = link("https://secret.example.com/launch");
+    titled.applyOgMetadata("Spring drop", "Coming soon", null, Instant.now());
+
+    String bare = renderer.render(untitled, "https://kurl.me/abcdefg", 0L, false);
+    String card = renderer.render(titled, "https://kurl.me/abcdefg", 0L, false);
+
+    assertThat(bare).doesNotContain("secret.example.com");
+    assertThat(bare).contains("<meta property=\"og:title\" content=\"https://kurl.me/abcdefg\">");
+    assertThat(card).doesNotContain("secret.example.com");
+    assertThat(card).contains("<meta property=\"og:title\" content=\"Spring drop\">");
+    assertThat(card).doesNotContain("http-equiv=\"refresh\"");
+  }
+
+  @Test
   void fallsBackToOriginalUrlAndDefaultDescription() {
     LinkEntity link = link("https://example.com/article");
 

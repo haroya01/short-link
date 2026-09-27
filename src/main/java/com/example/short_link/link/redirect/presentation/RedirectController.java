@@ -26,6 +26,7 @@ import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -54,6 +55,7 @@ public class RedirectController {
   private final BlockedDomainChecker blockedDomainChecker;
   private final LinkHtmlRenderer html;
   private final VisitHandoff handoff;
+  private final Clock clock;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -123,6 +125,15 @@ public class RedirectController {
       meterRegistry.counter("redirect.domain_blocked").increment();
       return html.domainBlockedPageResponse(locale);
     }
+    // 공개 전에는 비밀번호도 묻지 않고, 미리보기 카드에도 목적지를 싣지 않는다.
+    if (link.visitOptions().opensLaterThan(clock.instant())) {
+      String crawler = crawlerDetector.crawlerName(userAgent);
+      if (crawler != null) {
+        return handlePreview(
+            shortCode, link, referrer, userAgent, acceptLanguage, src, crawler, req, false);
+      }
+      return html.notYetOpenPageResponse(locale, link.visitOptions().opensAt());
+    }
     // 비밀번호 검사는 크롤러 분기보다 먼저 해야 스푸핑된 UA가 목적지를 노출하지 못한다.
     if (link.passwordRequired()) {
       return html.passwordPromptResponse(
@@ -131,7 +142,7 @@ public class RedirectController {
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
     if (crawlerLabel != null) {
       return handlePreview(
-          shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req);
+          shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req, true);
     }
     return render(
         flow.execute(
@@ -160,6 +171,7 @@ public class RedirectController {
       case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
       case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
+      case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException(
               "PasswordRequired decided at controller before flow.execute()");
@@ -174,7 +186,8 @@ public class RedirectController {
       String acceptLanguage,
       String src,
       String crawlerLabel,
-      HttpServletRequest req) {
+      HttpServletRequest req,
+      boolean revealDestination) {
     meterRegistry.counter("short_link.preview").increment();
     clickRecorder.recordPreview(
         ClickContext.of(
@@ -188,6 +201,9 @@ public class RedirectController {
             .withFetchSite(LinkRedirectSupport.fetchSite(req)),
         crawlerLabel);
     LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
+    if (entity == null && !revealDestination) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
     if (entity == null) {
       return ResponseEntity.status(HttpStatus.FOUND)
           .location(URI.create(link.originalUrl()))
@@ -195,7 +211,8 @@ public class RedirectController {
           .build();
     }
     long clicks = lookup.countHumanClicks(link.linkId());
-    String html = previewRenderer.render(entity, urlBuilder.build(shortCode), clicks);
+    String html =
+        previewRenderer.render(entity, urlBuilder.build(shortCode), clicks, revealDestination);
     byte[] body = html.getBytes(StandardCharsets.UTF_8);
     return ResponseEntity.ok()
         .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))

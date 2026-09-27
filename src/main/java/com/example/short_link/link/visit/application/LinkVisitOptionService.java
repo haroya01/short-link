@@ -8,6 +8,7 @@ import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.visit.domain.LinkVisitOptionEntity;
 import com.example.short_link.link.visit.domain.repository.LinkVisitOptionRepository;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +24,12 @@ public class LinkVisitOptionService {
 
   @Transactional
   public LinkVisitOptionEntity update(
-      Long userId, ShortCode shortCode, Boolean openInBrowser, SplashChange splash) {
+      Long userId,
+      ShortCode shortCode,
+      Boolean openInBrowser,
+      SplashChange splash,
+      Instant opensAt,
+      boolean clearOpensAt) {
     LinkEntity link =
         links
             .findByShortCode(shortCode)
@@ -46,6 +52,14 @@ public class LinkVisitOptionService {
           splash.message(),
           splash.seconds() == null ? 3 : splash.seconds(),
           ctaId);
+    }
+    if (clearOpensAt) {
+      option.changeOpensAt(null);
+    } else if (opensAt != null) {
+      if (link.getExpiresAt() != null && !opensAt.isBefore(link.getExpiresAt())) {
+        throw new LinkException(LinkErrorCode.OPENS_AFTER_EXPIRY, shortCode);
+      }
+      option.changeOpensAt(opensAt);
     }
     linkCacheEviction.evictAfterCommit(shortCode);
     return options.save(option);

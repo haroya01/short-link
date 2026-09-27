@@ -51,7 +51,8 @@ public class CachedLinkLoader {
         link.getMaxViews(),
         link.getExpiredMessage(),
         variants,
-        new CachedLink.VisitOptions(Boolean.TRUE.equals(link.getOpenInBrowser()), splash(link)));
+        new CachedLink.VisitOptions(
+            Boolean.TRUE.equals(link.getOpenInBrowser()), splash(link), link.getOpensAt()));
   }
 
   private CachedLink.Splash splash(LinkRepository.CachedLinkRow link) {

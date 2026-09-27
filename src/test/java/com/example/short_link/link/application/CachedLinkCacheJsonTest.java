@@ -70,6 +70,21 @@ class CachedLinkCacheJsonTest {
   }
 
   @Test
+  void entriesCachedBeforeTheOpeningTimeExistedStillLoad() {
+    String json =
+        new String(
+            serializer.serialize(link(new CachedLink.VisitOptions(true))), StandardCharsets.UTF_8);
+    String legacy = json.replace(",\"opensAt\":null", "");
+    assertThat(legacy).doesNotContain("opensAt");
+
+    CachedLink restored =
+        (CachedLink) serializer.deserialize(legacy.getBytes(StandardCharsets.UTF_8));
+
+    assertThat(restored.visitOptions().opensAt()).isNull();
+    assertThat(restored.visitOptions().openInBrowser()).isTrue();
+  }
+
+  @Test
   void entriesCachedBeforeVisitOptionsExistedStillLoad() {
     String json =
         new String(

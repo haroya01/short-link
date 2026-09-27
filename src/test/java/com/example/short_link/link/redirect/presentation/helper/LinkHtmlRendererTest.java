@@ -217,6 +217,22 @@ class LinkHtmlRendererTest {
   }
 
   @Test
+  void notYetOpenPageShowsTheTimeForTheVisitorsClock() {
+    VisitPage page =
+        renderer.notYetOpenPageResponse(
+            Locale.JAPANESE, java.time.Instant.parse("2026-10-01T01:00:00Z"));
+    String body = new String(page.getBody());
+
+    assertThat(page.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+    assertThat(page.outcome()).isEqualTo("not_open");
+    assertThat(body).contains("まだ公開前のリンクです");
+    assertThat(body)
+        .contains(
+            "<time id=\"t\" datetime=\"2026-10-01T01:00:00Z\">2026-10-01 01:00 UTC</time>に公開されます。");
+    assertThat(body).contains("location.reload()");
+  }
+
+  @Test
   void responsesVaryByLanguage() {
     assertThat(renderer.notFoundPageResponse(KO).getHeaders().getFirst("Vary"))
         .isEqualTo("Accept-Language");

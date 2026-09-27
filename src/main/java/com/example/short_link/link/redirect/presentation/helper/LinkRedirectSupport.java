@@ -52,9 +52,8 @@ public final class LinkRedirectSupport {
   }
 
   public static String classifyOutcome(ResponseEntity<?> response) {
-    if (response instanceof VisitPage || response.getStatusCode().is3xxRedirection()) {
-      return "redirect";
-    }
+    if (response instanceof VisitPage page) return page.outcome();
+    if (response.getStatusCode().is3xxRedirection()) return "redirect";
     if (response.getStatusCode() == HttpStatus.OK) return "preview";
     if (response.getStatusCode() == HttpStatus.UNAUTHORIZED) return "password_required";
     if (response.getStatusCode() == HttpStatus.FORBIDDEN) return "blocked";
