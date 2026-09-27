@@ -21,7 +21,8 @@ public record LinkDetailResponse(
     boolean statsPublic,
     List<String> tags,
     String note,
-    String expiredMessage) {
+    String expiredMessage,
+    boolean openInBrowser) {
 
   public static LinkDetailResponse from(LinkDetailView view) {
     return new LinkDetailResponse(
@@ -40,6 +41,7 @@ public record LinkDetailResponse(
         view.statsPublic(),
         view.tags(),
         view.note(),
-        view.expiredMessage());
+        view.expiredMessage(),
+        view.openInBrowser());
   }
 }

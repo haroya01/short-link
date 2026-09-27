@@ -105,5 +105,7 @@ public interface LinkRepository {
     Integer getMaxViews();
 
     String getExpiredMessage();
+
+    Boolean getOpenInBrowser();
   }
 }

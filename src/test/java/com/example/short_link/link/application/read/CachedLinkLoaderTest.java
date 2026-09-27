@@ -39,7 +39,8 @@ class CachedLinkLoaderTest {
                     "KR,JP",
                     true,
                     10,
-                    "ended")));
+                    "ended",
+                    true)));
     when(destinations.findAllByLinkIdOrderByIdAsc(7L))
         .thenReturn(
             List.of(
@@ -58,6 +59,7 @@ class CachedLinkLoaderTest {
     assertThat(cached.passwordRequired()).isTrue();
     assertThat(cached.maxViews()).isEqualTo(10);
     assertThat(cached.expiredMessage()).isEqualTo("ended");
+    assertThat(cached.visitOptions().openInBrowser()).isTrue();
     assertThat(cached.variants()).hasSize(1);
     assertThat(cached.variants().getFirst().url()).isEqualTo("https://variant.example");
   }
@@ -74,7 +76,8 @@ class CachedLinkLoaderTest {
       String blockedCountries,
       Boolean passwordRequired,
       Integer maxViews,
-      String expiredMessage) {
+      String expiredMessage,
+      Boolean openInBrowser) {
     return new LinkRepository.CachedLinkRow() {
       @Override
       public Long getId() {
@@ -134,6 +137,11 @@ class CachedLinkLoaderTest {
       @Override
       public String getExpiredMessage() {
         return expiredMessage;
+      }
+
+      @Override
+      public Boolean getOpenInBrowser() {
+        return openInBrowser;
       }
     };
   }

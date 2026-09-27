@@ -21,10 +21,43 @@ public record CachedLink(
     boolean passwordRequired,
     Integer maxViews,
     String expiredMessage,
-    List<Variant> variants) {
+    List<Variant> variants,
+    VisitOptions visitOptions) {
 
   public CachedLink {
     variants = variants == null ? List.of() : List.copyOf(variants);
+    visitOptions = visitOptions == null ? VisitOptions.NONE : visitOptions;
+  }
+
+  public CachedLink(
+      LinkId linkId,
+      ShortCode shortCode,
+      Long userId,
+      String originalUrl,
+      Instant expiresAt,
+      String ogTitle,
+      String ogDescription,
+      String ogImage,
+      String blockedCountries,
+      boolean passwordRequired,
+      Integer maxViews,
+      String expiredMessage,
+      List<Variant> variants) {
+    this(
+        linkId,
+        shortCode,
+        userId,
+        originalUrl,
+        expiresAt,
+        ogTitle,
+        ogDescription,
+        ogImage,
+        blockedCountries,
+        passwordRequired,
+        maxViews,
+        expiredMessage,
+        variants,
+        VisitOptions.NONE);
   }
 
   public CachedLink(
@@ -223,4 +256,8 @@ public record CachedLink(
   }
 
   public record Picked(String url, Long destinationId) {}
+
+  public record VisitOptions(boolean openInBrowser) {
+    public static final VisitOptions NONE = new VisitOptions(false);
+  }
 }

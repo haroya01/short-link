@@ -4,7 +4,17 @@ import com.example.short_link.link.application.dto.CachedLink;
 
 public sealed interface RedirectOutcome {
 
-  record Redirect(CachedLink.Picked picked) implements RedirectOutcome {}
+  record Redirect(CachedLink.Picked picked, CachedLink.VisitOptions visitOptions)
+      implements RedirectOutcome {
+
+    public Redirect {
+      visitOptions = visitOptions == null ? CachedLink.VisitOptions.NONE : visitOptions;
+    }
+
+    public Redirect(CachedLink.Picked picked) {
+      this(picked, CachedLink.VisitOptions.NONE);
+    }
+  }
 
   record PasswordRequired() implements RedirectOutcome {}
 

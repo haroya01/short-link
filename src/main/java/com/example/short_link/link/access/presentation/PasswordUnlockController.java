@@ -9,6 +9,7 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
+import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
 import com.example.short_link.link.redirect.presentation.helper.VisitorLocale;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Locale;
@@ -28,6 +29,7 @@ public class PasswordUnlockController {
   private final PasswordUnlockUseCase unlockUseCase;
   private final TurnstileProperties turnstile;
   private final LinkHtmlRenderer html;
+  private final VisitHandoff handoff;
 
   @PostMapping(
       value = "/{shortCode:[0-9A-Za-z]{3,16}}",
@@ -65,7 +67,7 @@ public class PasswordUnlockController {
         return html.passwordPromptResponse(locale, status, shortCode, failed, turnstile.siteKey());
       }
       RedirectOutcome result = ((PasswordUnlockResult.Completed) unlocked).redirect();
-      ResponseEntity<?> response = renderUnlock(result, locale);
+      ResponseEntity<?> response = renderUnlock(result, userAgent, locale);
       outcome =
           (result instanceof RedirectOutcome.Blocked
                   || result instanceof RedirectOutcome.DomainBlocked)
@@ -91,9 +93,9 @@ public class PasswordUnlockController {
     }
   }
 
-  private ResponseEntity<?> renderUnlock(RedirectOutcome outcome, Locale locale) {
+  private ResponseEntity<?> renderUnlock(RedirectOutcome outcome, String userAgent, Locale locale) {
     return switch (outcome) {
-      case RedirectOutcome.Redirect r -> html.unlockedPageResponse(locale, r.picked().url());
+      case RedirectOutcome.Redirect r -> handoff.unlocked(r, userAgent, locale);
       case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
       case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());

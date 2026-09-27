@@ -17,6 +17,7 @@ import com.example.short_link.link.access.infrastructure.CloudflareTurnstileVeri
 import com.example.short_link.link.access.infrastructure.LinkPasswordAttemptLimiter;
 import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.application.read.LinkLookupQueryService;
+import com.example.short_link.link.classifier.application.ClientAppClassifier;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
@@ -25,6 +26,7 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
+import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
@@ -47,7 +49,10 @@ class PasswordUnlockControllerTest {
           new PasswordUnlockUseCase(
               lookup, protectionService, attemptLimiter, flow, turnstileVerifier),
           turnstile,
-          new LinkHtmlRenderer(messageSource()));
+          HTML,
+          new VisitHandoff(new ClientAppClassifier(), HTML));
+
+  private static final LinkHtmlRenderer HTML = new LinkHtmlRenderer(messageSource());
 
   private static MessageSource messageSource() {
     var ms = new ResourceBundleMessageSource();

@@ -68,7 +68,8 @@ class LinkReadAndClaimControllersTest {
             true,
             List.of("a", "b"),
             null,
-            null);
+            null,
+            false);
     when(linkDetailQueryService.detail(eq(USER_ID), any(ShortCode.class))).thenReturn(view);
 
     mvc.perform(

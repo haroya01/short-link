@@ -47,7 +47,8 @@ public class CachedLinkLoader {
         Boolean.TRUE.equals(link.getPasswordRequired()),
         link.getMaxViews(),
         link.getExpiredMessage(),
-        variants);
+        variants,
+        new CachedLink.VisitOptions(Boolean.TRUE.equals(link.getOpenInBrowser())));
   }
 
   private static CachedLink.Variant toVariant(LinkDestinationEntity d) {

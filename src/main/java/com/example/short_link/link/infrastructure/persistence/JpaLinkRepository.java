@@ -39,11 +39,13 @@ public interface JpaLinkRepository
           ELSE true
         END AS passwordRequired,
         COALESCE(acl.maxViews, l.maxViews) AS maxViews,
-        COALESCE(policy.expiredMessage, l.expiredMessage) AS expiredMessage
+        COALESCE(policy.expiredMessage, l.expiredMessage) AS expiredMessage,
+        visit.openInBrowser AS openInBrowser
       FROM LinkEntity l
       LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
       LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
+      LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
       WHERE l.shortCode = :shortCode
       """)
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);
