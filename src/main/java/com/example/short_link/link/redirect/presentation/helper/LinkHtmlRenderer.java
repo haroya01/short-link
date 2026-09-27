@@ -3,15 +3,22 @@ package com.example.short_link.link.redirect.presentation.helper;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import java.nio.charset.StandardCharsets;
+import java.util.Locale;
+import lombok.RequiredArgsConstructor;
+import org.springframework.context.MessageSource;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 
-// Interstitials are self-contained on the redirect path. Keep inputs at 16px to avoid iOS focus
-// zoom.
-public final class LinkHtmlRenderer {
-
-  private LinkHtmlRenderer() {}
+/**
+ * Interstitials are self-contained on the redirect path. Keep inputs at 16px to avoid iOS focus
+ * zoom.
+ */
+@Component
+@RequiredArgsConstructor
+public class LinkHtmlRenderer {
 
   private static final String STYLE =
       """
@@ -56,7 +63,9 @@ public final class LinkHtmlRenderer {
       .pow{font-size:12px;color:var(--muted);margin-top:14px}.pow b{color:var(--brand);font-weight:600}
       """;
 
-  // Canonical kurl mark — same geometry as the web Logo (components/common/logo.tsx) and iOS.
+  private final MessageSource messages;
+
+  /** Canonical kurl mark — same geometry as the web Logo (components/common/logo.tsx) and iOS. */
   private static String markSvg(String cls) {
     return "<svg class=\""
         + cls
@@ -66,16 +75,23 @@ public final class LinkHtmlRenderer {
         + "<rect x=\"9\" y=\"13.6\" width=\"17\" height=\"3.4\" rx=\"1.0\"/></svg>";
   }
 
-  private static String page(String title, String inner) {
-    return page(title, inner, "", "");
+  private String text(Locale locale, String key) {
+    return messages.getMessage(key, null, key, locale);
   }
 
-  private static String page(String title, String inner, String cardClass, String headExtra) {
-    return "<!doctype html><html lang=\"ko\"><head><meta charset=\"utf-8\">"
+  private String page(Locale locale, String title, String inner) {
+    return page(locale, title, inner, "", "");
+  }
+
+  private String page(
+      Locale locale, String title, String inner, String cardClass, String headExtra) {
+    return "<!doctype html><html lang=\""
+        + locale.getLanguage()
+        + "\"><head><meta charset=\"utf-8\">"
         + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">"
         + headExtra
         + "<title>"
-        + title
+        + escape(title)
         + "</title><style>"
         + STYLE
         + "</style></head><body><main class=\"card"
@@ -86,77 +102,69 @@ public final class LinkHtmlRenderer {
         + "</main></body></html>";
   }
 
-  public static ResponseEntity<byte[]> expiredPageResponse(String message) {
-    return htmlResponse(HttpStatus.GONE, expiredPage(message));
+  private String notice(Locale locale, String key) {
+    String title = text(locale, key + ".title");
+    return page(
+        locale,
+        title,
+        "<h1>" + escape(title) + "</h1><p>" + escape(text(locale, key + ".body")) + "</p>");
   }
 
-  public static ResponseEntity<byte[]> blockedPageResponse() {
-    return htmlResponse(HttpStatus.FORBIDDEN, blockedPage());
+  public ResponseEntity<byte[]> expiredPageResponse(Locale locale, String message) {
+    return htmlResponse(HttpStatus.GONE, expiredPage(locale, message));
   }
 
-  public static ResponseEntity<byte[]> domainBlockedPageResponse() {
-    return htmlResponse(HttpStatus.FORBIDDEN, domainBlockedPage());
+  public ResponseEntity<byte[]> blockedPageResponse(Locale locale) {
+    return htmlResponse(HttpStatus.FORBIDDEN, notice(locale, "visitor.blocked"));
   }
 
-  public static ResponseEntity<byte[]> notFoundPageResponse() {
-    return htmlResponse(HttpStatus.NOT_FOUND, notFoundPage());
+  public ResponseEntity<byte[]> domainBlockedPageResponse(Locale locale) {
+    return htmlResponse(HttpStatus.FORBIDDEN, notice(locale, "visitor.domainBlocked"));
   }
 
-  public static ResponseEntity<byte[]> viewLimitPageResponse() {
-    return htmlResponse(HttpStatus.GONE, viewLimitPage());
+  public ResponseEntity<byte[]> notFoundPageResponse(Locale locale) {
+    return htmlResponse(HttpStatus.NOT_FOUND, notice(locale, "visitor.notFound"));
   }
 
-  public static ResponseEntity<byte[]> passwordPromptResponse(
-      HttpStatus status, ShortCode shortCode, boolean failed, String turnstileSiteKey) {
-    return htmlResponse(status, passwordPrompt(shortCode, failed, turnstileSiteKey));
+  public ResponseEntity<byte[]> viewLimitPageResponse(Locale locale) {
+    return htmlResponse(HttpStatus.GONE, notice(locale, "visitor.viewLimit"));
   }
 
-  public static ResponseEntity<byte[]> unlockedPageResponse(String destinationUrl) {
-    return htmlResponse(HttpStatus.OK, unlockedPage(destinationUrl));
+  public ResponseEntity<byte[]> passwordPromptResponse(
+      Locale locale,
+      HttpStatus status,
+      ShortCode shortCode,
+      boolean failed,
+      String turnstileSiteKey) {
+    return htmlResponse(status, passwordPrompt(locale, shortCode, failed, turnstileSiteKey));
   }
 
-  public static ResponseEntity<byte[]> visitorErrorPage(LinkErrorCode code) {
+  public ResponseEntity<byte[]> unlockedPageResponse(Locale locale, String destinationUrl) {
+    return htmlResponse(HttpStatus.OK, unlockedPage(locale, destinationUrl));
+  }
+
+  /**
+   * Returns null for errors that should propagate to the API error handler; visitor errors render
+   * HTML.
+   */
+  public ResponseEntity<byte[]> visitorErrorPage(Locale locale, LinkErrorCode code) {
     return switch (code) {
-      case LINK_NOT_FOUND -> notFoundPageResponse();
-      case LINK_EXPIRED -> expiredPageResponse(null);
-      case LINK_VIEW_LIMIT_EXCEEDED -> viewLimitPageResponse();
+      case LINK_NOT_FOUND -> notFoundPageResponse(locale);
+      case LINK_EXPIRED -> expiredPageResponse(locale, null);
+      case LINK_VIEW_LIMIT_EXCEEDED -> viewLimitPageResponse(locale);
       default -> null;
     };
   }
 
-  static String expiredPage(String message) {
+  String expiredPage(Locale locale, String message) {
+    String title = text(locale, "visitor.expired.title");
     String body =
-        (message == null || message.isBlank())
-            ? "<p>설정된 기간이 지났거나 만든 사람이 만료시킨 링크예요.</p>"
-            : "<p>" + escape(message) + "</p>";
-    return page("Link no longer available", "<h1>이 링크는 더 이상 열 수 없어요</h1>" + body);
+        (message == null || message.isBlank()) ? text(locale, "visitor.expired.body") : message;
+    return page(locale, title, "<h1>" + escape(title) + "</h1><p>" + escape(body) + "</p>");
   }
 
-  static String blockedPage() {
-    return page(
-        "Not available", "<h1>이 지역에서는 열 수 없는 링크예요</h1>" + "<p>잘못된 것 같다면 링크를 만든 사람에게 문의하세요.</p>");
-  }
-
-  static String domainBlockedPage() {
-    return page(
-        "Link disabled",
-        "<h1>차단된 링크예요</h1>" + "<p>운영 정책 위반으로 더 이상 열 수 없는 링크예요.\n잘못된 차단 같다면 운영자에게 문의하세요.</p>");
-  }
-
-  static String notFoundPage() {
-    return page(
-        "Link not found",
-        "<h1>찾을 수 없는 링크예요</h1>" + "<p>주소가 틀렸거나, 삭제됐거나, 아직 만들어지지 않은 링크일 수 있어요.</p>");
-  }
-
-  static String viewLimitPage() {
-    return page(
-        "Link no longer available",
-        "<h1>조회 한도에 도달한 링크예요</h1>"
-            + "<p>이 링크는 만든 사람이 정한 최대 조회수를 모두 채워 더 이상 열 수 없어요.\n새 링크가 필요하면 만든 사람에게 문의하세요.</p>");
-  }
-
-  static String passwordPrompt(ShortCode shortCode, boolean failed, String turnstileSiteKey) {
+  String passwordPrompt(
+      Locale locale, ShortCode shortCode, boolean failed, String turnstileSiteKey) {
     boolean hasTurnstile = turnstileSiteKey != null && !turnstileSiteKey.isBlank();
     String script =
         hasTurnstile
@@ -168,40 +176,66 @@ public final class LinkHtmlRenderer {
                 + escape(turnstileSiteKey)
                 + "\" data-theme=\"auto\"></div></div>"
             : "";
-    String error = failed ? "<p class=\"err\">비밀번호가 올바르지 않아요.</p>" : "";
+    String error =
+        failed ? "<p class=\"err\">" + escape(text(locale, "visitor.password.wrong")) + "</p>" : "";
     String inner =
-        "<h1>비밀번호가 필요한 링크</h1>"
-            + "<p>이 링크를 만든 사람이 설정한 비밀번호를 입력하세요.</p>"
+        "<h1>"
+            + escape(text(locale, "visitor.password.title"))
+            + "</h1>"
+            + "<p>"
+            + escape(text(locale, "visitor.password.body"))
+            + "</p>"
             + "<form method=\"post\" action=\"/"
             + shortCode
-            + "\"><label for=\"pw\">비밀번호</label>"
+            + "\"><label for=\"pw\">"
+            + escape(text(locale, "visitor.password.label"))
+            + "</label>"
             + "<input id=\"pw\" type=\"password\" name=\"password\" autofocus required autocomplete=\"off\">"
             + widget
-            + "<button type=\"submit\">열기</button>"
+            + "<button type=\"submit\">"
+            + escape(text(locale, "visitor.password.submit"))
+            + "</button>"
             + error
             + "</form>"
             + script;
-    return page(shortCode + " · 비밀번호", inner, failed ? " shake" : "", "");
+    return page(
+        locale,
+        shortCode + " · " + text(locale, "visitor.password.label"),
+        inner,
+        failed ? " shake" : "",
+        "");
   }
 
-  static String unlockedPage(String destinationUrl) {
+  String unlockedPage(Locale locale, String destinationUrl) {
     String safe = escape(destinationUrl);
     // URL은 HTML data 속성에서 읽어 JS 문자열 삽입을 피한다. JS가 없으면 meta-refresh로 이동한다.
     String head = "<meta http-equiv=\"refresh\" content=\"3; url=" + safe + "\">";
     String inner =
         "<div class=\"unlock\">"
             + markSvg("bigmark")
-            + "<h1>열렸어요</h1>"
-            + "<p>kurl 로 안전하게 잠금을 풀었어요.\n곧 이동합니다.</p>"
+            + "<h1>"
+            + escape(text(locale, "visitor.unlocked.title"))
+            + "</h1>"
+            + "<p>"
+            + escape(text(locale, "visitor.unlocked.body"))
+            + "</p>"
             + "<div class=\"bar\"><span></span></div>"
-            + "<p class=\"pow\"><b>kurl</b> 로 단축한 링크</p>"
+            + "<p class=\"pow\">"
+            + poweredBy(locale)
+            + "</p>"
             + "<span id=\"d\" data-u=\""
             + safe
             + "\" hidden></span>"
             + "</div>"
             + "<script>setTimeout(function(){var u=document.getElementById('d').dataset.u;"
             + "if(u){location.replace(u)}},1300)</script>";
-    return page("여는 중…", inner, " unlock", head);
+    return page(locale, text(locale, "visitor.unlocked.pageTitle"), inner, " unlock", head);
+  }
+
+  private String poweredBy(Locale locale) {
+    String marker = "\u0000";
+    String line = messages.getMessage("visitor.poweredBy", new Object[] {marker}, locale);
+    return escape(line).replace(marker, "<b>kurl</b>");
   }
 
   private static String escape(String s) {
@@ -226,6 +260,7 @@ public final class LinkHtmlRenderer {
         .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))
         .contentLength(bytes.length)
         .header("X-Robots-Tag", "noindex, nofollow")
+        .header(HttpHeaders.VARY, "Accept-Language")
         .body(bytes);
   }
 }

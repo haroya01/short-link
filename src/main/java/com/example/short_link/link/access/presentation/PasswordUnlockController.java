@@ -9,7 +9,9 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
+import com.example.short_link.link.redirect.presentation.helper.VisitorLocale;
 import jakarta.servlet.http.HttpServletRequest;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,7 @@ public class PasswordUnlockController {
 
   private final PasswordUnlockUseCase unlockUseCase;
   private final TurnstileProperties turnstile;
+  private final LinkHtmlRenderer html;
 
   @PostMapping(
       value = "/{shortCode:[0-9A-Za-z]{3,16}}",
@@ -39,6 +42,7 @@ public class PasswordUnlockController {
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
       HttpServletRequest req) {
     String outcome = "error";
+    Locale locale = VisitorLocale.resolve(acceptLanguage);
     try {
       PasswordUnlockResult unlocked =
           unlockUseCase.execute(
@@ -58,11 +62,10 @@ public class PasswordUnlockController {
                 ? HttpStatus.TOO_MANY_REQUESTS
                 : HttpStatus.UNAUTHORIZED;
         boolean failed = rejected.reason() != PasswordUnlockResult.RejectionReason.CAPTCHA_FAILED;
-        return LinkHtmlRenderer.passwordPromptResponse(
-            status, shortCode, failed, turnstile.siteKey());
+        return html.passwordPromptResponse(locale, status, shortCode, failed, turnstile.siteKey());
       }
       RedirectOutcome result = ((PasswordUnlockResult.Completed) unlocked).redirect();
-      ResponseEntity<?> response = renderUnlock(result);
+      ResponseEntity<?> response = renderUnlock(result, locale);
       outcome =
           (result instanceof RedirectOutcome.Blocked
                   || result instanceof RedirectOutcome.DomainBlocked)
@@ -78,7 +81,7 @@ public class PasswordUnlockController {
             default -> "error";
           };
       // 비밀번호를 맞춰도 한도초과·만료면 JSON 대신 브랜드 HTML 페이지로.
-      ResponseEntity<byte[]> page = LinkHtmlRenderer.visitorErrorPage(e.errorCode());
+      ResponseEntity<byte[]> page = html.visitorErrorPage(locale, e.errorCode());
       if (page != null) {
         return page;
       }
@@ -88,13 +91,12 @@ public class PasswordUnlockController {
     }
   }
 
-  private ResponseEntity<?> renderUnlock(RedirectOutcome outcome) {
+  private ResponseEntity<?> renderUnlock(RedirectOutcome outcome, Locale locale) {
     return switch (outcome) {
-      case RedirectOutcome.Redirect r -> LinkHtmlRenderer.unlockedPageResponse(r.picked().url());
-      case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
-      case RedirectOutcome.DomainBlocked db -> LinkHtmlRenderer.domainBlockedPageResponse();
-      case RedirectOutcome.ExpiredWithMessage em ->
-          LinkHtmlRenderer.expiredPageResponse(em.message());
+      case RedirectOutcome.Redirect r -> html.unlockedPageResponse(locale, r.picked().url());
+      case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
+      case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
+      case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException("PasswordRequired not reachable from unlock flow");
     };

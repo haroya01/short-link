@@ -93,10 +93,21 @@ class RedirectControllerTest {
 
   @Test
   void returns404HtmlForUnknownCode() throws Exception {
-    mvc.perform(get("/zzzzzzz"))
+    mvc.perform(get("/zzzzzzz").header("Accept-Language", "ko-KR,ko;q=0.9"))
         .andExpect(status().isNotFound())
         .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
         .andExpect(content().string(Matchers.containsString("찾을 수 없는 링크")));
+  }
+
+  @Test
+  void visitorPagesFollowTheBrowserLanguage() throws Exception {
+    mvc.perform(get("/zzzzzzz").header("Accept-Language", "ja-JP,ja;q=0.9,en;q=0.8"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().string(Matchers.containsString("<html lang=\"ja\">")))
+        .andExpect(content().string(Matchers.containsString("リンクが見つかりません")));
+    mvc.perform(get("/zzzzzzz"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().string(Matchers.containsString("Link not found")));
   }
 
   @Test
@@ -155,7 +166,7 @@ class RedirectControllerTest {
             null,
             Instant.now().minus(1, ChronoUnit.MINUTES)));
 
-    mvc.perform(get("/exp1234"))
+    mvc.perform(get("/exp1234").header("Accept-Language", "ko-KR"))
         .andExpect(status().isGone())
         .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
         .andExpect(content().string(Matchers.containsString("더 이상 열 수 없")));
