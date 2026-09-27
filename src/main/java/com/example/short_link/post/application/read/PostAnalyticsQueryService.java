@@ -26,10 +26,6 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Lifetime totals use post counters; daily views use the event log, grouped by UTC day and
- * zero-filled. Per-post analytics are private to the author.
- */
 @Service
 @Transactional(readOnly = true)
 public class PostAnalyticsQueryService {
@@ -126,7 +122,6 @@ public class PostAnalyticsQueryService {
         referrers);
   }
 
-  /** Only PUBLISHED and UNPUBLISHED posts appear; drafts have no reads. */
   public PostPerformanceResult postPerformance(
       Long userId,
       int page,
@@ -204,7 +199,6 @@ public class PostAnalyticsQueryService {
         seriesRow(series), w.windowDays(), cumulative, seriesMembers(seriesId));
   }
 
-  /** Read-through uses lifetime human-reader sets, independent of the dashboard day window. */
   private List<SeriesMemberStat> seriesMembers(Long seriesId) {
     List<PostEntity> members = postRepository.findAllBySeriesIdOrderBySeriesOrderAsc(seriesId);
     if (members.isEmpty()) {
@@ -264,19 +258,16 @@ public class PostAnalyticsQueryService {
         totalLikes);
   }
 
-  /** Requires a positive window; callers handle {@code days <= 0} as all-time. */
   private int clampWindow(int days) {
     return Math.min(days, MAX_WINDOW_DAYS);
   }
 
   private record Window(LocalDate from, int windowDays) {}
 
-  /** {@code days <= 0} queries from EPOCH to include all recorded events. */
   private Instant fetchSince(int days, LocalDate today) {
     return days <= 0 ? Instant.EPOCH : startOfDay(today.minusDays(clampWindow(days) - 1L));
   }
 
-  /** All-time spans from the first day that actually has data (no leading empty stretch). */
   private Window resolveWindow(int days, List<DailyViewCount> sparse, LocalDate today) {
     if (days > 0) {
       int w = clampWindow(days);
@@ -291,7 +282,6 @@ public class PostAnalyticsQueryService {
     return date.atStartOfDay(ZoneOffset.UTC).toInstant();
   }
 
-  /** Fills missing days with zero; both {@code from} and {@code to} are inclusive. */
   static List<DailyPoint> fillDaily(List<DailyViewCount> sparse, LocalDate from, LocalDate to) {
     Map<LocalDate, Long> byDate = new HashMap<>();
     for (DailyViewCount c : sparse) {

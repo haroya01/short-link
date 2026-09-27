@@ -86,7 +86,6 @@ public class ProfileVisitEntity {
   @Column(name = "visitor_hash", length = 64)
   private String visitorHash;
 
-  /** Channel hint (?src= on the share URL), same semantics as on click_event. */
   @Column(name = "source_channel", length = 40)
   private String sourceChannel;
 

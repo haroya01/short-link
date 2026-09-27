@@ -133,7 +133,6 @@ class SseClickStreamRegistryTest {
     assertThat(registry.activeStreams(new LinkId(8L))).isEqualTo(1);
   }
 
-  /** Minimal SseEmitter that lets us count send() calls without Tomcat. */
   private static class CountingEmitter extends SseEmitter {
     int sent = 0;
     Map<?, ?> payload;

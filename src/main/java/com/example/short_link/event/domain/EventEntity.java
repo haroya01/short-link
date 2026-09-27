@@ -16,7 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 정원 판정에 쓰는 registrationCount는 저장소의 조건부 원자 UPDATE로만 증감한다. */
+// 정원 판정에 쓰는 registrationCount는 저장소의 조건부 원자 UPDATE로만 증감한다.
 @Entity
 @Table(name = "event")
 @Getter
@@ -122,7 +122,7 @@ public class EventEntity extends BaseTimeEntity {
         && (capacity == null || registrationCount < capacity);
   }
 
-  /** 상태와 마감만 검사한다. 실제 정원 확보는 저장소의 원자 갱신이 결정한다. */
+  // 상태와 마감만 검사한다. 실제 정원 확보는 저장소의 원자 갱신이 결정한다.
   public void requireRegistrationOpen(Instant now) {
     EventErrorCode reason = registrationClosureReason(now);
     if (reason != null) {
@@ -143,7 +143,6 @@ public class EventEntity extends BaseTimeEntity {
     return Math.max(0, capacity - registrationCount);
   }
 
-  /** PII 파기 기준 시각 — endsAt 없으면 startsAt 기준. */
   public Instant effectiveEnd() {
     return endsAt != null ? endsAt : startsAt;
   }

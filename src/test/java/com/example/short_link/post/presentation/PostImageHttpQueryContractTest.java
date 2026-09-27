@@ -16,7 +16,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/** DB ownership and HTTP flow are real; object-store and remote-image I/O are external fixtures. */
 class PostImageHttpQueryContractTest extends OperationalHttpJourneySupport {
   @MockitoBean private ObjectStorage objectStorage;
   @MockitoBean private ExternalPostImageReader remoteImages;

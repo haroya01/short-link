@@ -3,7 +3,7 @@ package archfixtures.domain;
 import java.time.Clock;
 import java.time.Instant;
 
-/** Sits in a ..domain.. package so the wall-clock rule applies to it. */
+// Sits in a ..domain.. package so the wall-clock rule applies to it.
 public final class ClockFixtures {
 
   private ClockFixtures() {}

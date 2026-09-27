@@ -2,7 +2,6 @@ package com.example.short_link.admin.application.dto;
 
 import java.time.Instant;
 
-/** 익명 링크의 {@code ownerId}와 {@code ownerEmail}은 null이다. */
 public record AdminLinkRow(
     String shortCode,
     String originalUrl,

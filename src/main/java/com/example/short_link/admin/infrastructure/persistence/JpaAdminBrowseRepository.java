@@ -13,7 +13,6 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long> {
 
-  /** {@code q}는 소문자 {@code %pattern%}이며, null이면 검색하지 않는다. */
   @Query(
       value =
           "SELECT u.id AS id, u.email AS email, u.username AS username, "
@@ -39,7 +38,7 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
           + "FROM UserEntity u WHERE u.id = :id")
   Optional<UserRow> findUserRowById(@Param("id") long id);
 
-  /** ShortCode의 AttributeConverter 때문에 LIKE 대신 일치 비교를 쓴다. null 필터는 적용하지 않는다. */
+  // ShortCode의 AttributeConverter 때문에 LIKE 대신 일치 비교를 쓴다. null 필터는 적용하지 않는다.
   @Query(
       value =
           "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "
@@ -64,7 +63,7 @@ public interface JpaAdminBrowseRepository extends JpaRepository<UserEntity, Long
       @Param("ownerId") Long ownerId,
       Pageable pageable);
 
-  /** JPQL의 SELECT 별칭 정렬 지원에 의존하지 않도록 ORDER BY에 집계식을 반복한다. */
+  // JPQL의 SELECT 별칭 정렬 지원에 의존하지 않도록 ORDER BY에 집계식을 반복한다.
   @Query(
       value =
           "SELECT l.shortCode AS shortCode, l.originalUrl AS originalUrl, "

@@ -24,7 +24,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Pow challenge / link detail / anonymous claim 컨트롤러 슬라이스. */
 @KurlWebMvcTest(
     controllers = {PowController.class, LinkDetailController.class, AnonymousClaimController.class})
 class LinkReadAndClaimControllersTest {

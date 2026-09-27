@@ -36,7 +36,6 @@ class PublicHttpUrlGuardTest {
 
   @Test
   void rejectsIpv6UniqueLocal() {
-    // fc00::/7 — both fc and fd prefixes.
     assertThat(PublicHttpUrlGuard.isPublic("http://[fc00::1]/")).isFalse();
     assertThat(PublicHttpUrlGuard.isPublic("http://[fd12:3456:789a::1]/")).isFalse();
   }

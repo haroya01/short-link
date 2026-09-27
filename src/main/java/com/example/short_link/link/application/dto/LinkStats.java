@@ -88,19 +88,12 @@ public record LinkStats(
 
   public record SourceChannelClick(String source, long count) {}
 
-  /**
-   * Human clicks inside an in-app browser; ordinary browsers are excluded. This dimension is not a
-   * bot signal.
-   */
   public record ClientAppClick(String app, long count) {}
 
-  /**
-   * Human clicks by {@code Sec-Fetch-Site}: {@code none} means direct navigation and {@code
-   * cross-site} means a followed link. Missing headers are excluded, not bucketed.
-   */
+  // Human clicks by Sec-Fetch-Site: none means direct navigation and cross-site means a followed
+  // link. Missing headers are excluded, not bucketed.
   public record FetchSiteClick(String fetchSite, long count) {}
 
-  /** {@code title} is null for a deleted post; its attributed human-click count is retained. */
   public record PostClick(Long postId, String title, long count) {}
 
   public record ChannelDepth(

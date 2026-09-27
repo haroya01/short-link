@@ -44,9 +44,7 @@ services:
     networks: [internal]
 
   app:
-    # Image is built and pushed by .github/workflows/deploy.yml on every main push.
-    # `docker compose pull` here just fetches the latest tag — no Gradle build on this
-    # tiny EC2, which keeps RAM headroom comfortable.
+    # The image is built in CI, so this small EC2 never runs a Gradle build.
     image: ghcr.io/haroya01/short-link:${APP_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped

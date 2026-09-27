@@ -56,12 +56,10 @@ class FollowUseCaseTest {
 
     assertThat(status.following()).isTrue();
     assertThat(status.followerCount()).isEqualTo(1);
-    // The new edge carries the post the follow came from — drives the per-post follow metric.
     org.mockito.ArgumentCaptor<FollowEntity> saved =
         org.mockito.ArgumentCaptor.forClass(FollowEntity.class);
     verify(followRepository).save(saved.capture());
     assertThat(saved.getValue().getSourcePostId()).isEqualTo(42L);
-    // A new follow notifies the followed author.
     org.mockito.ArgumentCaptor<com.example.short_link.common.event.BlogInteractionEvent> evt =
         org.mockito.ArgumentCaptor.forClass(
             com.example.short_link.common.event.BlogInteractionEvent.class);
@@ -104,7 +102,6 @@ class FollowUseCaseTest {
   @Test
   void followRejectedWhenTargetBlockedFollower() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    // 대상(2)이 팔로워(9)를 차단한 상태.
     when(blockRepository.existsByBlockerIdAndBlockedId(2L, 9L)).thenReturn(true);
 
     assertThatThrownBy(() -> useCase.follow(9L, "bob", null))

@@ -76,7 +76,6 @@ class PostRevisionCaptureTest {
     ArgumentCaptor<PostRevisionEntity> saved = ArgumentCaptor.forClass(PostRevisionEntity.class);
     verify(postRevisionRepository).save(saved.capture());
     assertThat(saved.getValue().getVersionNumber()).isEqualTo(4);
-    // 본문 블록이 snapshot JSON 에 직렬화됐는지 — 내용 일부로 확인.
     assertThat(saved.getValue().getContentJson()).contains("hello").contains("PARAGRAPH");
   }
 }

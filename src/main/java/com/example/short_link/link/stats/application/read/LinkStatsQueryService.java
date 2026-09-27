@@ -45,10 +45,8 @@ public class LinkStatsQueryService {
     return reportAssembler.assemble(link, ownerZone(link.getUserId()));
   }
 
-  /**
-   * Caller must enforce ADMIN access; this path intentionally skips ownership checks and reports in
-   * the link owner's timezone.
-   */
+  // Caller must enforce ADMIN access; this path intentionally skips ownership checks and reports in
+  // the link owner's timezone.
   public LinkStats adminStats(ShortCode shortCode) {
     LinkEntity link =
         linkRepository

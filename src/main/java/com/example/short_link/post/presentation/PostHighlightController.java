@@ -59,7 +59,6 @@ public class PostHighlightController {
     return highlightQuery.listMine(userId);
   }
 
-  /** {@code scope=global}은 폴백 후 페이지네이션을 전역 하이라이트로 고정한다. */
   @GetMapping("/highlights/feed")
   public HighlightFeedView highlightFeed(
       @AuthenticationPrincipal Long userId,

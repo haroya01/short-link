@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 저장된 설정이 없으면 알림을 허용한다. */
 @Service
 @RequiredArgsConstructor
 public class NotificationPreferenceService {
@@ -24,7 +23,7 @@ public class NotificationPreferenceService {
         .orElse(true);
   }
 
-  /** 운영자 WARNING은 수신 거부 대상이 아니므로 설정 목록에서 제외한다. */
+  // 운영자 WARNING은 수신 거부 대상이 아니므로 설정 목록에서 제외한다.
   @Transactional(readOnly = true)
   public Map<LinkNotificationType, Boolean> all(Long userId) {
     Map<LinkNotificationType, Boolean> result = new EnumMap<>(LinkNotificationType.class);

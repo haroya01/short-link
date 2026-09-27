@@ -13,7 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 변경일부터 30일 동안 이전 이름을 새 이름으로 리다이렉트하고 타인의 선점을 막는다. 만료 후에는 이전 이름을 다시 사용할 수 있다. */
+// 변경일부터 30일 동안 이전 이름을 새 이름으로 리다이렉트하고 타인의 선점을 막는다. 만료 후에는 이전 이름을 다시 사용할 수 있다.
 @Entity
 @Table(name = "username_history")
 @Getter

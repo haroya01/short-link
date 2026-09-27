@@ -47,11 +47,11 @@ class SetSeriesPostsUseCaseTest {
     ReflectionTestUtils.setField(series, "id", 5L);
     when(seriesOwnership.requireOwnedForUpdate(7L, 5L)).thenReturn(series);
 
-    PostEntity p1 = postWithId(1L); // currently in series, gets dropped
+    PostEntity p1 = postWithId(1L);
     p1.assignToSeries(5L, 1);
-    PostEntity p2 = postWithId(2L); // stays, moves to order 1
+    PostEntity p2 = postWithId(2L);
     p2.assignToSeries(5L, 0);
-    PostEntity p3 = postWithId(3L); // new, order 0
+    PostEntity p3 = postWithId(3L);
     p3.assignToSeries(6L, 4);
     when(postRepository.findSeriesMembersAndRequestedForUpdate(5L, List.of(3L, 2L)))
         .thenReturn(List.of(p1, p2, p3));

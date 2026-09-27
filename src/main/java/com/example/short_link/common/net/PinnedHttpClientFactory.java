@@ -11,11 +11,9 @@ import org.apache.hc.client5.http.impl.classic.HttpClients;
 import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
 import org.apache.hc.core5.util.Timeout;
 
-/**
- * Connects only to IPs validated by {@link PublicHttpUrlGuard}; unknown hosts fail rather than
- * re-resolving and risking DNS rebinding. The connection manager must remain per-request: a
- * host-keyed shared pool could reuse a connection from a different resolved IP batch.
- */
+// Connects only to IPs validated by PublicHttpUrlGuard; unknown hosts fail rather than re-resolving
+// and risking DNS rebinding. The connection manager must remain per-request: a host-keyed shared
+// pool could reuse a connection from a different resolved IP batch.
 public final class PinnedHttpClientFactory {
 
   private PinnedHttpClientFactory() {}

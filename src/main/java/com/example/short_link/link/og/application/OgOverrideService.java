@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Null or blank clears an override and restores the scraped value. */
 @Service
 @RequiredArgsConstructor
 public class OgOverrideService {

@@ -24,7 +24,6 @@ public class AbuseReportEntity extends BaseCreatedEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  /** 익명 신고는 신고자 ID가 null이다. */
   @Column(name = "reporter_user_id")
   private Long reporterUserId;
 
@@ -35,12 +34,11 @@ public class AbuseReportEntity extends BaseCreatedEntity {
   @Column(name = "subject_id", nullable = false)
   private Long subjectId;
 
-  /** 기존 자유서술 신고에는 사유 코드가 없다. */
   @Enumerated(EnumType.STRING)
   @Column(name = "reason_code", length = 16)
   private AbuseReason reasonCode;
 
-  /** 기존 신고 내용을 보존하기 위해 reason 컬럼을 재사용한다. */
+  // 기존 신고 내용을 보존하기 위해 reason 컬럼을 재사용한다.
   @Column(name = "reason", length = 2000)
   private String detail;
 

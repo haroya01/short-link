@@ -4,9 +4,7 @@ import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Owner-only link data. clickCount includes bots; humanClickCount and clicksLast7d exclude them.
- */
+// Owner-only link data. clickCount includes bots; humanClickCount and clicksLast7d exclude them.
 public record MyLink(
     ShortCode shortCode,
     String originalUrl,

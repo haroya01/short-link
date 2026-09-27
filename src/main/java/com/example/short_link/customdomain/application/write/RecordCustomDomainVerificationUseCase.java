@@ -10,7 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Records the DNS outcome before the caller translates a failed check into an API error. */
+// Records the DNS outcome before the caller translates a failed check into an API error.
 @Service
 @RequiredArgsConstructor
 public class RecordCustomDomainVerificationUseCase {
@@ -29,7 +29,7 @@ public class RecordCustomDomainVerificationUseCase {
     return CustomDomainPolicy.toSummary(entity);
   }
 
-  /** An automatic check can race with deletion after the job selected its pending domains. */
+  // An automatic check can race with deletion after the job selected its pending domains.
   @Transactional
   public boolean executeIfPresent(Long domainId, boolean verified) {
     return repository

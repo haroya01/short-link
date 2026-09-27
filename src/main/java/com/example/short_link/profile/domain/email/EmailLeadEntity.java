@@ -39,7 +39,7 @@ public class EmailLeadEntity {
   @Column(nullable = false, length = 254)
   private String email;
 
-  /** sha256(ip + per-instance salt). Lets us dedupe burst submissions without storing raw IPs. */
+  // sha256(ip + per-instance salt). Lets us dedupe burst submissions without storing raw IPs.
   @Column(name = "ip_hash", length = 64)
   private String ipHash;
 

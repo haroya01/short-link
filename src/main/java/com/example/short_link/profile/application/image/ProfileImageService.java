@@ -14,10 +14,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * Commit returns an image URL for a later block update without mutating the block. Uploads may
- * coexist, so a new upload must not delete previous keys.
- */
+// Commit returns an image URL for a later block update without mutating the block. Uploads may
+// coexist, so a new upload must not delete previous keys.
 @Slf4j
 @Service
 @RequiredArgsConstructor

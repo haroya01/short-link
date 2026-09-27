@@ -333,8 +333,8 @@ class LinkInsightsTest {
   void detectsSecondWindAfterDormancy() {
     LocalDate base = LocalDate.of(2026, 4, 1);
     var daily = new ArrayList<LinkStats.DailyClick>();
-    for (int i = 0; i < 7; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 0L)); // 잠잠
-    for (int i = 7; i < 10; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 2L)); // 최근 부활
+    for (int i = 0; i < 7; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 0L));
+    for (int i = 7; i < 10; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 2L));
     List<LinkStats.Insight> result =
         insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
     var sw = result.stream().filter(i -> i.type().equals("SECOND_WIND")).findFirst().orElseThrow();
@@ -345,7 +345,7 @@ class LinkInsightsTest {
   void secondWindSkippedWhenSteady() {
     LocalDate base = LocalDate.of(2026, 4, 1);
     var daily = new ArrayList<LinkStats.DailyClick>();
-    for (int i = 0; i < 10; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 5L)); // 꾸준
+    for (int i = 0; i < 10; i++) daily.add(new LinkStats.DailyClick(base.plusDays(i), 5L));
     List<LinkStats.Insight> result =
         insights.computeReport(generalFacts(100).dailyClicks(daily).build(), List::of);
     assertThat(result).extracting(LinkStats.Insight::type).doesNotContain("SECOND_WIND");

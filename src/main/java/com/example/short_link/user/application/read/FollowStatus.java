@@ -2,10 +2,8 @@ package com.example.short_link.user.application.read;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 
-/**
- * Hidden follower/following totals are null and omitted from JSON. {@code hideFollowerCount} is
- * always present so clients can distinguish hidden counts from zero.
- */
+// Hidden follower/following totals are null and omitted from JSON. hideFollowerCount is always
+// present so clients can distinguish hidden counts from zero.
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record FollowStatus(
     boolean following, Long followerCount, Long followingCount, boolean hideFollowerCount) {

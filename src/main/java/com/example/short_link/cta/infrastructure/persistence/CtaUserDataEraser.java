@@ -5,7 +5,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
-/** Purges CTAs on account hard delete — fk_cta_user lacks ON DELETE CASCADE. */
+// Purges CTAs on account hard delete — fk_cta_user lacks ON DELETE CASCADE.
 @Repository
 class CtaUserDataEraser implements UserDataEraser {
 

@@ -28,7 +28,6 @@ class LinkStatsLifecycleReader {
     return new LinkStats.ReturnRate(newCount, returningCount, ratio);
   }
 
-  /** 재방문은 링크 전체와 같은 30분 세션화 정의를 사용한다. */
   List<LinkStats.ChannelDepth> channelDepth(LinkId linkId) {
     return clickLifecycle.findChannelDepth(linkId.value(), CHANNEL_DEPTH_TOP).stream()
         .map(

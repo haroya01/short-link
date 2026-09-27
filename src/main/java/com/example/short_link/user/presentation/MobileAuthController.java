@@ -23,10 +23,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Mobile refresh tokens travel in request/response bodies for app storage. Browser OAuth returns a
- * one-time custom-scheme code, redeemed at /exchange for the token pair.
- */
+// Mobile refresh tokens travel in request/response bodies for app storage. Browser OAuth returns a
+// one-time custom-scheme code, redeemed at /exchange for the token pair.
 @RestController
 @RequestMapping("/api/v1/auth/mobile")
 @RequiredArgsConstructor

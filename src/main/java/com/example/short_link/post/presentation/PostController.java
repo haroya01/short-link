@@ -97,7 +97,6 @@ public class PostController {
     return postQueryService.listMyPosts(userId);
   }
 
-  /** 비공개·초안·예약을 포함한 모든 글을 slug.md 파일로 내보낸다. */
   @GetMapping(value = "/export", produces = "application/zip")
   public ResponseEntity<byte[]> exportAll(@AuthenticationPrincipal Long userId) throws IOException {
     return ResponseEntity.ok()
@@ -192,7 +191,7 @@ public class PostController {
         markdownBlocks.toMarkdown(postQueryService.listBlocks(userId, id)));
   }
 
-  /** 클라이언트가 서버의 정규화된 표현을 사용하도록 저장 후 마크다운을 다시 반환한다. */
+  // 클라이언트가 서버의 정규화된 표현을 사용하도록 저장 후 마크다운을 다시 반환한다.
   @PutMapping("/{id}/markdown")
   public PostMarkdownResponse replaceMarkdown(
       @AuthenticationPrincipal Long userId,

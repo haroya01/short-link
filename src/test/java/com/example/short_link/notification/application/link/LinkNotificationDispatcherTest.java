@@ -37,7 +37,7 @@ class LinkNotificationDispatcherTest {
   void recordsButSkipsPushWhenDisabled() {
     when(prefs.isEnabled(7L, LinkNotificationType.MILESTONE)).thenReturn(false);
     dispatcher.dispatch(7L, LinkNotificationType.MILESTONE, "spring", "/spring", "100 클릭");
-    verify(repository).save(any(LinkNotificationEntity.class)); // 인박스엔 남는다
+    verify(repository).save(any(LinkNotificationEntity.class));
     verify(pushSender, never()).send(any(), any());
   }
 

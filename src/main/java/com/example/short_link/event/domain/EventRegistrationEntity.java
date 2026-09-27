@@ -16,7 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** name/contact/answersJson은 이벤트 종료 30일 후 파기한다. 채널은 신청 시점의 스냅샷이며, 취소 토큰은 SHA-256 해시만 저장한다. */
+// name/contact/answersJson은 이벤트 종료 30일 후 파기한다. 채널은 신청 시점의 스냅샷이며, 취소 토큰은 SHA-256 해시만 저장한다.
 @Entity
 @Table(name = "event_registration")
 @Getter
@@ -103,7 +103,6 @@ public class EventRegistrationEntity extends BaseCreatedEntity {
     return true;
   }
 
-  /** 취소 후 같은 contact 재신청 — UNIQUE(event_id, contact) 위에서 CANCELED 행을 되살린다. */
   public void reactivate(String name, String answersJson, String cancelTokenHash) {
     if (isConfirmed()) {
       throw new EventException(EventErrorCode.ALREADY_REGISTERED);

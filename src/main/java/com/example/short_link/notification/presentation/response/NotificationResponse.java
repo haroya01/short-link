@@ -3,12 +3,6 @@ package com.example.short_link.notification.presentation.response;
 import com.example.short_link.notification.application.dto.NotificationView;
 import java.time.Instant;
 
-/**
- * Deleted actors have null identity fields. Target fields depend on notification type; collection
- * notices link to {@code collectionId} and use {@code postId} only for preview context, with null
- * for connected notes. {@code postAuthorUsername}, when present, identifies another author for the
- * post link.
- */
 public record NotificationResponse(
     Long id,
     String type,

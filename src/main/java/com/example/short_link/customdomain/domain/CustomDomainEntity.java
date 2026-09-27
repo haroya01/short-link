@@ -13,7 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** {@code _kurl-verify.<domain>}의 TXT 토큰으로 소유권을 검증한다. 검증 전 도메인은 리다이렉트에 사용하지 않는다. */
+// _kurl-verify.<domain>의 TXT 토큰으로 소유권을 검증한다. 검증 전 도메인은 리다이렉트에 사용하지 않는다.
 @Entity
 @Table(name = "custom_domain")
 @Getter

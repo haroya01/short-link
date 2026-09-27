@@ -6,10 +6,8 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Ignores handles inside email addresses. Returns distinct handles in first-seen order, capped to
- * prevent unbounded notification fan-out.
- */
+// Ignores handles inside email addresses. Returns distinct handles in first-seen order, capped to
+// prevent unbounded notification fan-out.
 final class MentionParser {
 
   static final int MAX_MENTIONS = 10;

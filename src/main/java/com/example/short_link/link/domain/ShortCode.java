@@ -3,10 +3,8 @@ package com.example.short_link.link.domain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-/**
- * Keep validation aligned with the redirect path regex and {@code SecurityConfig.SHORT_CODE_REGEX}.
- * JSON remains a bare string; JPA stores VARCHAR through {@code ShortCodeAttributeConverter}.
- */
+// Keep validation aligned with the redirect path regex and SecurityConfig.SHORT_CODE_REGEX. JSON
+// remains a bare string; JPA stores VARCHAR through ShortCodeAttributeConverter.
 public record ShortCode(@JsonValue String value) {
 
   public ShortCode {

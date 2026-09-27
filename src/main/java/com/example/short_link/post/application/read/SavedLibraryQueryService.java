@@ -16,7 +16,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Skips bookmarks whose post is deleted/unpublished or whose author is deleted. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

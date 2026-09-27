@@ -96,10 +96,8 @@ public class PostHighlightQueryService {
         .toList();
   }
 
-  /**
-   * 팔로우가 없거나 첫 페이지가 비면 전역 공개 하이라이트로 폴백한다. 이후 페이지의 빈 결과는 종료다. {@code forceGlobal}은 폴백 후 페이지네이션의 기준을
-   * 전역으로 유지한다.
-   */
+  // 팔로우가 없거나 첫 페이지가 비면 전역 공개 하이라이트로 폴백한다. 이후 페이지의 빈 결과는 종료다. forceGlobal은 폴백 후 페이지네이션의 기준을 전역으로
+  // 유지한다.
   public HighlightFeedView feed(Long userId, int page, int size, boolean forceGlobal) {
     if (forceGlobal) {
       return globalFeed(page, size);

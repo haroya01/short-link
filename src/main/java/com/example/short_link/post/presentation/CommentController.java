@@ -60,7 +60,7 @@ public class CommentController {
     return likeComment.unlike(userId, id);
   }
 
-  /** 공개 댓글 목록은 비인증 — 보는 사람의 likedByMe 만 이 인증 엔드포인트가 따로 답한다. */
+  // 공개 댓글 목록은 비인증 — 보는 사람의 likedByMe 만 이 인증 엔드포인트가 따로 답한다.
   @GetMapping("/posts/{postId}/comments/liked")
   public List<Long> likedCommentIds(
       @AuthenticationPrincipal Long userId, @PathVariable Long postId) {

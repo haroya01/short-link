@@ -17,10 +17,8 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/**
- * EventSource는 Authorization 헤더를 지원하지 않아 단명 토큰을 쿼리로 받는다. 계정 스트림은 JWT의 shortCode 스코프 자리에 {@code
- * me:clicks}를 사용한다.
- */
+// EventSource는 Authorization 헤더를 지원하지 않아 단명 토큰을 쿼리로 받는다. 계정 스트림은 JWT의 shortCode 스코프 자리에 me:clicks를
+// 사용한다.
 @RestController
 @RequestMapping("/api/v1/users/me/clicks")
 @RequiredArgsConstructor

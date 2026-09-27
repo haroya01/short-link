@@ -3,7 +3,6 @@ package com.example.short_link.cta.application.write;
 import com.example.short_link.cta.domain.CtaPurpose;
 import com.example.short_link.cta.domain.CtaStyle;
 
-/** PATCH 의미. null = 변경 안 함. */
 public record UpdateCtaCommand(
     Long userId, Long ctaId, String label, String url, CtaStyle style, CtaPurpose purpose) {
 

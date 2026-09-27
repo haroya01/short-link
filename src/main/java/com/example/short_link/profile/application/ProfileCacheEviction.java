@@ -11,7 +11,6 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Service;
 
-/** public-profile 캐시 키는 정규화된 사용자명이다. 해당 키만 커밋 후 무효화한다. */
 @Service
 @RequiredArgsConstructor
 @Slf4j

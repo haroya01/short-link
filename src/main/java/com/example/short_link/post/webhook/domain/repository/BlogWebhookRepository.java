@@ -12,10 +12,8 @@ public interface BlogWebhookRepository {
 
   Optional<BlogWebhookEntity> findByIdAndUserId(Long id, Long userId);
 
-  /** Newest first. */
   List<BlogWebhookEntity> findAllByUserId(Long userId);
 
-  /** Filters enabled hooks by owner; the dispatcher applies interaction-type filtering. */
   List<BlogWebhookEntity> findAllByUserIdAndEnabledTrue(Long userId);
 
   long countByUserId(Long userId);

@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Accepts a null viewerId for anonymous reads; their following flag is false. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

@@ -12,10 +12,6 @@ import java.util.Map;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-/**
- * Shares SSRF validation, signatures, timeouts, and delivery metrics across webhook sources.
- * Callers persist the returned delivery result.
- */
 public final class WebhookSender {
 
   private static final String USER_AGENT = "kurl-webhook/1.0 (+https://kurl.me)";
@@ -34,17 +30,12 @@ public final class WebhookSender {
     SIGN_ERROR
   }
 
-  /** {@code statusCode} is null when no HTTP response was received. */
   public record Result(Outcome outcome, Integer statusCode, String error) {
     public boolean ok() {
       return outcome == Outcome.OK;
     }
   }
 
-  /**
-   * {@code eventType} becomes the X-Kurl-Event header. Never throws: all delivery failures become a
-   * {@link Result}.
-   */
   public static Result send(
       HttpFetcher httpFetcher,
       MeterRegistry registry,

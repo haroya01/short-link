@@ -7,21 +7,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.Set;
 
-/**
- * Reads JSON {@code {body, layout?, accent?, icon?}} and legacy markdown strings; writes always
- * emit JSON. Legacy strings use inline layout with no accent or icon. Rendering and raw-HTML
- * filtering belong to the frontend.
- */
+// Reads JSON {body, layout?, accent?, icon?} and legacy markdown strings; writes always emit JSON.
+// Legacy strings use inline layout with no accent or icon. Rendering and raw-HTML filtering belong
+// to the frontend.
 public final class TextBlockBody {
 
   private static final int BODY_MAX = 2000;
 
   private static final int ICON_MAX = 8;
 
-  /**
-   * Unknown layouts fall back to inline so a frontend deployed ahead of the backend does not reject
-   * writes.
-   */
+  // Unknown layouts fall back to inline so a frontend deployed ahead of the backend does not reject
+  // writes.
   private static final Set<String> LAYOUT_IDS = Set.of("inline", "card", "quote");
 
   private static final Set<String> ACCENT_IDS = Set.of("blue", "amber", "green", "red", "violet");
@@ -30,7 +26,6 @@ public final class TextBlockBody {
 
   private TextBlockBody() {}
 
-  /** {@code body} is required; visual hints are optional. */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record Payload(String body, String layout, String accent, String icon) {}
 

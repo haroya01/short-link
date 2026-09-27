@@ -10,9 +10,6 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-/**
- * A real scheduled worker publishes an HTTP-authored post and delivers its follower's notification.
- */
 class ScheduledPublicationHttpQueryContractTest extends ContentHttpJourneySupport {
 
   @Autowired private PublishScheduledPostsJob publishScheduled;

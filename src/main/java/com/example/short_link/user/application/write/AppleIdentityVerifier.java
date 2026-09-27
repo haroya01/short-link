@@ -13,7 +13,6 @@ import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtException;
 import org.springframework.stereotype.Component;
 
-/** Apple 서명·issuer·audience·만료를 검증하고 nonce를 요청 원문의 SHA-256과 대조한다. */
 @Component
 public class AppleIdentityVerifier {
 

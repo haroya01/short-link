@@ -51,13 +51,10 @@ public interface LinkRepository {
 
   List<Long> findDistinctUserIds();
 
-  /**
-   * Coarse LIKE scan for links whose destination mentions {@code fragment} — the domain-block
-   * warning fan-out narrows the result by parsed host, so false positives here are fine.
-   */
+  // Coarse LIKE scan for links whose destination mentions fragment — the domain-block warning
+  // fan-out narrows the result by parsed host, so false positives here are fine.
   List<LinkEntity> findByOriginalUrlContaining(String fragment);
 
-  /** Links whose expiry falls in [from, to). */
   List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to);
 
   List<LinkEntity> findOgRetryCandidates(int maxAttempts, Instant before, int limit);

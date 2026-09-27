@@ -2,13 +2,10 @@ package com.example.short_link.common.observability;
 
 import jakarta.servlet.http.HttpServletRequest;
 
-/**
- * Controllers can override status-based outcomes through {@link #ATTRIBUTE} without adding
- * domain-specific rules here.
- */
+// Controllers can override status-based outcomes through ATTRIBUTE without adding domain-specific
+// rules here.
 public final class OutcomeResolver {
 
-  /** Request attribute the controller can set to override the default status-based mapping. */
   public static final String ATTRIBUTE = "kurl.request.outcome";
 
   private OutcomeResolver() {}

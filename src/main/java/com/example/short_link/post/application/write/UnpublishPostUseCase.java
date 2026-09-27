@@ -31,7 +31,6 @@ public class UnpublishPostUseCase {
     return writeViews.fromSaved(saved);
   }
 
-  /** 관리자 권한은 HTTP 보안 계층에서 검사한다. 이미 내려간 글은 그대로 두고, 없는 글은 404다. adminUserId는 감사 로그용이다. */
   @Transactional
   public void adminExecute(Long adminUserId, Long postId) {
     log.info("admin post takedown: adminUserId={}, postId={}", adminUserId, postId);

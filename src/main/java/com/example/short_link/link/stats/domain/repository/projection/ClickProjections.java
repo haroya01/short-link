@@ -70,7 +70,6 @@ public final class ClickProjections {
     Long getCount();
   }
 
-  /** referrer host별 최초 클릭 시각이며 epoch 초 단위다. */
   public interface HostFirstSeenRow {
     String getHost();
 
@@ -137,14 +136,12 @@ public final class ClickProjections {
     Long getCount();
   }
 
-  /** 인앱 브라우저(카카오톡·인스타그램 …) 별 사람 클릭 — 일반 브라우저는 client_app 이 NULL 이라 빠진다. */
   public interface ClientAppClickRow {
     String getApp();
 
     Long getCount();
   }
 
-  /** Sec-Fetch-Site 값별 사람 클릭 — 헤더를 안 보내는 브라우저의 클릭은 NULL 이라 빠진다. */
   public interface FetchSiteClickRow {
     String getFetchSite();
 
@@ -157,7 +154,6 @@ public final class ClickProjections {
     Long getCount();
   }
 
-  /** {@code firstSeenEpoch}는 epoch 초다. 방문자와 재방문 수는 해당 referrer host에 한정한다. */
   public interface ChannelDepthRow {
     String getHost();
 

@@ -169,7 +169,6 @@ class ApnsPushSenderTest {
 
   @Test
   void payloadCarriesRoutingKeysForLinkNotificationWithShortCode() {
-    // shortCode 있는 링크 알림 — aps 형제 최상위 type·shortCode + category="LINK_STATS"(→ 앱의 "통계 보기" 액션).
     String payload =
         sender()
             .payloadJson(
@@ -190,7 +189,6 @@ class ApnsPushSenderTest {
 
   @Test
   void payloadOmitsShortCodeAndCategoryForCodelessType() {
-    // 다이제스트처럼 링크 단위가 아닌 알림 — type 은 싣되 shortCode·category 는 생략.
     String payload =
         sender()
             .payloadJson(
@@ -205,7 +203,6 @@ class ApnsPushSenderTest {
 
   @Test
   void payloadHasNoRoutingKeysForRoutinglessMessage() {
-    // 블로그 벨 등 라우팅 없는 알림 — 페이로드는 예전과 동일(aps.alert/sound 만).
     String payload = sender().payloadJson(new PushSender.PushMessage("kurl", "글 제목", "좋아합니다"));
 
     JsonNode root = jsonMapper.readTree(payload);

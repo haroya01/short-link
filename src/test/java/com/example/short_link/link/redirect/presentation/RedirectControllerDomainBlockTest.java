@@ -27,7 +27,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 생성 후 차단된 도메인 — 기존 링크의 302·크롤러 프리뷰가 모두 차단 페이지로 죽는지. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -82,10 +81,7 @@ class RedirectControllerDomainBlockTest {
         .andExpect(content().string(Matchers.containsString("차단된 링크")));
   }
 
-  /**
-   * originalUrl 은 깨끗한데 목적지 변형(variant)만 차단 도메인인 링크 — 크롤러도 OG 카드를 못 받는다. 예전엔 크롤러 경로가 originalUrl 만
-   * 검사해 legitimate 카드가 나갔다(#659 의도 무력화).
-   */
+  // originalUrl이 깨끗해도 목적지 변형이 차단 도메인이면 크롤러에게 OG 카드를 주면 안 된다.
   @Test
   void crawlerGetsDisabledPageWhenOnlyVariantDestinationIsBlocked() throws Exception {
     LinkEntity link = repository.save(new LinkEntity("https://clean.example.com/ok", "dbk7890"));

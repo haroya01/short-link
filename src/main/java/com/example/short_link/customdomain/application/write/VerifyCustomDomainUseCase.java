@@ -21,7 +21,7 @@ public class VerifyCustomDomainUseCase {
   private final TxtResolver txtResolver;
   private final RecordCustomDomainVerificationUseCase recordVerification;
 
-  /** DNS checks and their recorded outcome must survive a caller transaction's rollback. */
+  // DNS checks and their recorded outcome must survive a caller transaction's rollback.
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   public DomainSummary execute(Long userId, Long domainId) {
     CustomDomainEntity entity = ownership.ownedDomain(userId, domainId);

@@ -3,7 +3,6 @@ package com.example.short_link.abuse.application.write;
 import com.example.short_link.abuse.domain.ModerationAction;
 import java.time.Instant;
 
-/** {@code suspendUntil}은 SUSPEND_USER 조치에만 사용한다. */
 public record ResolveAbuseReportCommand(
     Long reportId,
     Long adminUserId,

@@ -40,11 +40,9 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-  /**
-   * Keep the path constraint aligned with RedirectController. RegexRequestMatcher includes the
-   * query string, so the optional query suffix is needed for tracked public links to bypass session
-   * authentication.
-   */
+  // Keep the path constraint aligned with RedirectController. RegexRequestMatcher includes the
+  // query string, so the optional query suffix is needed for tracked public links to bypass session
+  // authentication.
   static final String SHORT_CODE_REGEX = "^/[0-9A-Za-z]{3,16}(\\?.*)?$";
 
   static final String OG_CARD_REGEX = "^/[0-9A-Za-z]{3,16}/og\\.png(\\?.*)?$";

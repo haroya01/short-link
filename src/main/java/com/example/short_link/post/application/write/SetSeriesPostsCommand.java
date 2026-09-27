@@ -2,7 +2,6 @@ package com.example.short_link.post.application.write;
 
 import java.util.List;
 
-/** Replace the ordered membership of a series with exactly {@code postIds} (0-based order). */
 public record SetSeriesPostsCommand(Long userId, Long seriesId, List<Long> postIds) {
 
   public SetSeriesPostsCommand {

@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/** Push submission waits for the in-app notification transaction to commit. */
+// Push submission waits for the in-app notification transaction to commit.
 @Slf4j
 @Component
 @RequiredArgsConstructor

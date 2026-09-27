@@ -3,19 +3,13 @@ package com.example.short_link.link.webhook.domain;
 import java.net.URI;
 import java.util.Locale;
 
-/**
- * Persist the detected receiver format at registration so host changes do not silently alter live
- * payloads. {@link #GENERIC} retains the kurl JSON and HMAC contract.
- */
+// Persist the detected receiver format at registration so host changes do not silently alter live
+// payloads. GENERIC retains the kurl JSON and HMAC contract.
 public enum WebhookFormat {
   GENERIC,
   DISCORD,
   SLACK;
 
-  /**
-   * Falls back to {@link #GENERIC} on parse failure; URL safety validation belongs to {@code
-   * PublicHttpUrlGuard}.
-   */
   public static WebhookFormat detect(String url) {
     if (url == null) return GENERIC;
     try {

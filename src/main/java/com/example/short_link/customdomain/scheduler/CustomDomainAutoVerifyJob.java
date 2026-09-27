@@ -9,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** 자동 검증 기간이 지나면 DNS 전파가 늦은 도메인은 수동 검증으로 확인한다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

@@ -10,10 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Recipients are resolved and deduplicated by the event producer; both notices target the
- * collection. AFTER_COMMIT prevents notifications for rolled-back connections.
- */
+// Recipients are resolved and deduplicated by the event producer; both notices target the
+// collection. AFTER_COMMIT prevents notifications for rolled-back connections.
 @Component
 @RequiredArgsConstructor
 public class CollectionNotificationListener {

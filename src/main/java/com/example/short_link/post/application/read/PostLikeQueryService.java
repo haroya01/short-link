@@ -33,7 +33,6 @@ public class PostLikeQueryService {
     return new PostLikeStatus(post.getLikeCount(), liked);
   }
 
-  /** Newest-liked first. Skips deleted/unpublished posts and deleted authors. */
   public List<PublicFeedItem> likedPosts(Long userId) {
     List<PostLikeEntity> likes = postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     if (likes.isEmpty()) return List.of();

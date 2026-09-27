@@ -24,7 +24,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignReques
 @RequiredArgsConstructor
 public class S3ObjectStorage implements ObjectStorage {
 
-  /** UUID 기반 키는 덮어쓰지 않으므로 1년 immutable 캐시를 적용할 수 있다. */
+  // UUID 기반 키는 덮어쓰지 않으므로 1년 immutable 캐시를 적용할 수 있다.
   static final String IMMUTABLE_CACHE_CONTROL = "public, max-age=31536000, immutable";
 
   private final S3Client s3Client;

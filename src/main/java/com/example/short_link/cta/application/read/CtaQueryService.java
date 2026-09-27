@@ -22,7 +22,7 @@ public class CtaQueryService {
         .toList();
   }
 
-  /** soft-delete 된 것도 조회 가능 — 과거 글의 CTA_REF 가 가리키는 CTA 가 삭제됐을 때 표시 위해. */
+  // soft-delete 된 것도 조회 가능 — 과거 글의 CTA_REF 가 가리키는 CTA 가 삭제됐을 때 표시 위해.
   public CtaView findOwnCta(Long userId, Long ctaId) {
     CtaEntity cta = ctaOwnership.requireOwned(userId, ctaId);
     return CtaView.from(cta);

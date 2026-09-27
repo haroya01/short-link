@@ -17,10 +17,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import org.springframework.web.servlet.HandlerMapping;
 
-/**
- * Records the matched route after dispatch to avoid one metrics group per raw URL. Excludes
- * actuator noise and the metrics read endpoint so dashboard reads do not feed their own metrics.
- */
+// Records the matched route after dispatch to avoid one metrics group per raw URL. Excludes
+// actuator noise and the metrics read endpoint so dashboard reads do not feed their own metrics.
 @Component
 @Order(Ordered.LOWEST_PRECEDENCE)
 public class RequestMetricsFilter extends OncePerRequestFilter {

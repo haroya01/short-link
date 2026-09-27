@@ -5,10 +5,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
-/**
- * Delete explicitly because these user-owned rows have no ON DELETE CASCADE; include notifications
- * referencing the user as actor in other recipients' inboxes.
- */
+// Delete explicitly because these user-owned rows have no ON DELETE CASCADE; include notifications
+// referencing the user as actor in other recipients' inboxes.
 @Repository
 class NotificationUserDataEraser implements UserDataEraser {
 

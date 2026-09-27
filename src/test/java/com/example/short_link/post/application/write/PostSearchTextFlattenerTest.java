@@ -69,7 +69,6 @@ class PostSearchTextFlattenerTest {
 
   @Test
   void fallsBackToRawContentForPlainCode() {
-    // 구형/평문 CODE 블록은 content 자체가 코드.
     String text =
         flattener.flatten(
             null, null, List.of(), List.of(block(PostBlockType.CODE, "plain code body")));
@@ -89,7 +88,6 @@ class PostSearchTextFlattenerTest {
 
   @Test
   void keepsRawMarkdownListItems() {
-    // 신형 리스트는 원본 마크다운 — 항목 텍스트가 그대로 들어간다.
     String text =
         flattener.flatten(
             null, null, List.of(), List.of(block(PostBlockType.LIST_NUMBERED, "1. 사과\n2. 배")));
@@ -118,13 +116,11 @@ class PostSearchTextFlattenerTest {
                 block(PostBlockType.DIVIDER, null),
                 block(PostBlockType.EMBED, "https://youtube.com/watch?v=x"),
                 block(PostBlockType.CTA_REF, "{\"ctaId\":9}")));
-    // 자연어 없는 블록은 무시 — 제목만 남는다(임베드 URL·CTA 참조 노이즈 제외).
     assertThat(text).isEqualTo("제목");
   }
 
   @Test
   void handlesMalformedJsonGracefully() {
-    // 깨진 JSON 은 파싱 실패해도 예외 없이(IMAGE→빈 문자열, LIST→원문 그대로).
     String image =
         flattener.flatten(null, null, List.of(), List.of(block(PostBlockType.IMAGE, "{not json")));
     assertThat(image).isEmpty();

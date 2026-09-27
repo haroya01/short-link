@@ -13,10 +13,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * {@code refId}는 {@code blockType}에 따라 post/post_highlight/note의 PK를 참조한다. 다형 참조에는 FK를 걸 수 없어
- * 애플리케이션에서 대상 존재를 검증한다.
- */
+// refId는 blockType에 따라 post/post_highlight/note의 PK를 참조한다. 다형 참조에는 FK를 걸 수 없어 애플리케이션에서 대상 존재를 검증한다.
 @Entity
 @Table(name = "collection_connection")
 @Getter

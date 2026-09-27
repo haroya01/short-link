@@ -11,7 +11,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 호출자 트랜잭션에서 제재를 집행한다. adminUserId는 감사용이며, 권한 검사는 관리자 API 보안 레이어가 담당한다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

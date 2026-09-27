@@ -7,29 +7,8 @@ import java.sql.Statement;
 import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 
-/**
- * V53 added the {@code format} column and back-filled it with two narrow LIKE patterns ({@code
- * 'https://discord.com/api/webhooks/%'} and the Slack variant). Two problems showed up in
- * production:
- *
- * <ul>
- *   <li>The Java-side {@link WebhookFormat#detect(String)} matches every subdomain that ends in
- *       {@code .discord.com} (canary / ptb), while the SQL patterns covered only the bare {@code
- *       discord.com} host. Rows registered with a canary/ptb URL stayed on {@code GENERIC} and kept
- *       POSTing the kurl JSON to a receiver that rejects it.
- *   <li>Any row whose hook had already racked up 5 consecutive failures by the time V53 ran was
- *       still {@code enabled = false} after the format flip — the user never sees the receiver come
- *       back to life on its own because the dispatcher short-circuits on {@code enabled}.
- * </ul>
- *
- * <p>This migration re-evaluates {@code format} for every row using the same {@link
- * WebhookFormat#detect} logic the application uses at registration time, and reactivates rows that
- * (a) were auto-disabled and (b) flipped to a non-GENERIC format — those are the rows whose
- * failures were a payload-shape mismatch we just fixed, not a real receiver problem.
- *
- * <p>We deliberately do not reactivate rows that stay on {@code GENERIC}: their failures were not
- * payload-shape related, so flipping them back on would just re-trigger the same auto-disable.
- */
+// V53의 LIKE 패턴은 canary·ptb 같은 discord.com 하위 도메인을 놓쳤다. 앱과 같은 detect 로직으로 format을 다시 판정하고,
+// 자동 비활성화됐다가 GENERIC이 아닌 형식으로 바뀐 훅만 다시 켠다. GENERIC으로 남은 훅의 실패는 형식 문제가 아니라서 그대로 둔다.
 public class V54__backfill_webhook_format_and_reactivate extends BaseJavaMigration {
 
   @Override

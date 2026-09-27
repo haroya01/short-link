@@ -15,7 +15,6 @@ public record PublicProfile(
     long publishedPostCount,
     boolean hideFollowerCount) {
 
-  /** {@code kind} selects the JSON shape; fields irrelevant to that kind are null. */
   public record ProfileEntry(
       String kind,
       Long id,

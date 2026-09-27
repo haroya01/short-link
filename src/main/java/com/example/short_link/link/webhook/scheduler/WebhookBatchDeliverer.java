@@ -8,10 +8,8 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Holds no transaction across HTTP; each hook's outcome commits on its own after delivery, so the
- * scheduler loop never keeps a connection open for a slow receiver.
- */
+// Holds no transaction across HTTP; each hook's outcome commits on its own after delivery, so the
+// scheduler loop never keeps a connection open for a slow receiver.
 @Component
 @RequiredArgsConstructor
 class WebhookBatchDeliverer {

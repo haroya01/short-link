@@ -150,7 +150,6 @@ class RedisWindowCounterTest {
     return key;
   }
 
-  /** A connection that stays up for INCR but drops before a separate EXPIRE reaches the server. */
   private StringRedisTemplate expiryDropped() {
     return new StringRedisTemplate(connections) {
       @Override

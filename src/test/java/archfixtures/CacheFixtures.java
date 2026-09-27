@@ -3,7 +3,7 @@ package archfixtures;
 import org.springframework.cache.Cache;
 import org.springframework.cache.annotation.CacheEvict;
 
-/** Breaks the cache eviction rules on purpose so the rules can be shown to catch it. */
+// Breaks the cache eviction rules on purpose so the rules can be shown to catch it.
 public final class CacheFixtures {
 
   private CacheFixtures() {}

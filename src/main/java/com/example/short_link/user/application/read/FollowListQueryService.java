@@ -15,10 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Anonymous viewers have {@code followedByMe=false}. Hidden counts also hide pageable lists from
- * non-owners (403), because enumerating the lists would reveal the counts.
- */
+// Anonymous viewers have followedByMe=false. Hidden counts also hide pageable lists from non-owners
+// (403), because enumerating the lists would reveal the counts.
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -27,7 +25,6 @@ public class FollowListQueryService {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
 
-  /** Users who follow {@code username}, newest follower first. */
   public FollowListView followers(Long viewerId, String username, int page, int size) {
     UserEntity target = resolve(viewerId, username);
     List<Long> ids = followRepository.findFollowerIds(target.getId(), page, size);
@@ -36,7 +33,6 @@ public class FollowListQueryService {
     return new FollowListView(hydrate(viewerId, ids), page, size, hasNext);
   }
 
-  /** Users {@code username} follows, most recently followed first. */
   public FollowListView following(Long viewerId, String username, int page, int size) {
     UserEntity target = resolve(viewerId, username);
     List<Long> ids = followRepository.findFollowingIds(target.getId(), page, size);
@@ -55,7 +51,6 @@ public class FollowListQueryService {
     return target;
   }
 
-  /** 삭제됐거나 username이 없는 사용자는 건너뛰고, 나머지는 입력한 최신순을 유지한다. */
   private List<FollowUserView> hydrate(Long viewerId, List<Long> ids) {
     if (ids.isEmpty()) {
       return List.of();

@@ -55,7 +55,6 @@ class EventTest {
     assertThatThrownBy(() -> Event.normalize("{\"title\":\"x\",\"startsAt\":\"yesterday\"}"))
         .isInstanceOf(ProfileException.class)
         .hasMessageContaining("ISO 8601");
-    // Missing offset — OffsetDateTime requires it explicitly.
     assertThatThrownBy(
             () -> Event.normalize("{\"title\":\"x\",\"startsAt\":\"2026-06-15T14:00:00\"}"))
         .isInstanceOf(ProfileException.class);
@@ -100,7 +99,6 @@ class EventTest {
             + longDesc
             + "\"}";
     String out = Event.normalize(json);
-    // Should not throw; description gets trimmed to 500.
     assertThat(out).doesNotContain(longDesc);
     assertThat(out).contains("xxxxx");
   }
@@ -113,9 +111,7 @@ class EventTest {
 
   @Test
   void ignoresUnknownFields() {
-    // Forward compat — same class of bug as ContactCard logoFocalX/Y hotfix (PR #256). A frontend
-    // shipping recurrence / reminders / capacity ahead of the backend shouldn't 400 every EVENT
-    // save just because the record doesn't yet know the field.
+    // 프론트가 백엔드보다 먼저 새 필드를 보내도 저장이 400으로 막히면 안 된다.
     String out =
         Event.normalize(
             "{\"title\":\"x\",\"startsAt\":\"2026-06-15T14:00:00+09:00\","

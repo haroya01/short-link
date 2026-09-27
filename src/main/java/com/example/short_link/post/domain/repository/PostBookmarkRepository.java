@@ -13,17 +13,14 @@ public interface PostBookmarkRepository {
 
   List<PostBookmarkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  /** Bookmark counts per folder for one user (unfiled bookmarks excluded). */
   List<FolderBookmarkCount> countByFolder(Long userId);
 
   PostBookmarkEntity save(PostBookmarkEntity bookmark);
 
   void delete(PostBookmarkEntity bookmark);
 
-  /**
-   * Returns 1 for a new bookmark or 0 for a duplicate. Duplicate inserts must not fail the
-   * transaction.
-   */
+  // Returns 1 for a new bookmark or 0 for a duplicate. Duplicate inserts must not fail the
+  // transaction.
   int insertIgnore(Long postId, Long userId);
 
   int deleteAllByPostId(Long postId);

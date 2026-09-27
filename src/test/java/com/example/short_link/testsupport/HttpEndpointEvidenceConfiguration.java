@@ -21,7 +21,6 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.mvc.method.annotation.RequestMappingHandlerMapping;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Records which real server handlers each journey exercised, independent of test method names. */
 @Configuration(proxyBeanMethods = false)
 @Profile("test")
 public class HttpEndpointEvidenceConfiguration implements WebMvcConfigurer {

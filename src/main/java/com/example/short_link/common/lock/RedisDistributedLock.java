@@ -5,10 +5,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-/**
- * SET-NX-EX lock for scheduled jobs; has no fencing tokens or auto-renewal. Use only when skipping
- * a contended run is acceptable.
- */
+// SET-NX-EX lock for scheduled jobs; has no fencing tokens or auto-renewal. Use only when skipping
+// a contended run is acceptable.
 @Component
 @RequiredArgsConstructor
 public class RedisDistributedLock {

@@ -153,7 +153,6 @@ class PasswordUnlockControllerTest {
     MockHttpServletRequest req = request();
     ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);
 
-    // 방문자 오류는 JSON 예외로 새지 않고 브랜드 HTML 페이지로 렌더된다(상태코드 유지).
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     assertThat(req.getAttribute(OutcomeResolver.ATTRIBUTE)).isEqualTo("not_found");
   }

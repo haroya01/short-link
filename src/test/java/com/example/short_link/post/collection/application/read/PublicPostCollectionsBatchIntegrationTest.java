@@ -21,11 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * "이 글들이 속한 길" 배치 — 실제 MySQL 로 벌크 쿼리(findAllByBlockTypeAndRefIdIn · findAllByIdIn ·
- * countByCollectionIdIn)를 검증한다. 여러 글을 한 번에 물어도 공개 컬렉션만 흐르고, 요청한 모든 글이 응답에 있으며(없으면 빈 올), count 는
- * 그룹-바이 한 쿼리로 맞는다. 공유 DB 오염 대비 이 테스트가 만든 고유 콘텐츠로만 단언한다.
- */
+// 공유 DB가 오염돼 있을 수 있어서 이 테스트가 만든 고유 콘텐츠로만 단언한다.
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -66,45 +62,36 @@ class PublicPostCollectionsBatchIntegrationTest {
 
     Long p1 = post(alice, "batch-uniq-one");
     Long p2 = post(alice, "batch-uniq-two");
-    Long p3 = post(alice, "batch-uniq-none"); // 아무 공개 컬렉션에도 없음.
+    Long p3 = post(alice, "batch-uniq-none");
 
-    // 공개 컬렉션 pubA{p1,p2}, pubB{p1} — p1 은 두 공개 컬렉션에, p2 는 하나에.
     Long pubA = collection(alice, "batch-pubA", CollectionVisibility.PUBLIC);
     connect(pubA, p1, 0);
     connect(pubA, p2, 1);
     Long pubB = collection(alice, "batch-pubB", CollectionVisibility.PUBLIC);
     connect(pubB, p1, 0);
-    // 비공개 컬렉션 — p2 를 담지만 절대 새지 않아야.
     Long priv = collection(alice, "batch-priv", CollectionVisibility.PRIVATE);
     connect(priv, p2, 0);
 
     Map<Long, List<CollectionSummaryView>> result =
         service.publicCollectionsContainingBatch(ConnectionBlockType.POST, List.of(p1, p2, p3));
 
-    // 요청한 세 글 모두 응답에 있다.
     assertThat(result).containsOnlyKeys(p1, p2, p3);
 
-    // p1 은 공개 두 컬렉션(pubA·pubB) 모두, 비공개는 없음.
     assertThat(result.get(p1))
         .extracting(CollectionSummaryView::id)
         .containsExactlyInAnyOrder(pubA, pubB);
     assertThat(result.get(p1)).allSatisfy(v -> assertThat(v.visibility()).isEqualTo("PUBLIC"));
 
-    // p2 는 공개 pubA 만(비공개 priv 는 빠진다).
     assertThat(result.get(p2)).extracting(CollectionSummaryView::id).containsExactly(pubA);
 
-    // p3 은 어느 공개 컬렉션에도 없으니 빈 올.
     assertThat(result.get(p3)).isEmpty();
 
-    // count 는 group-by 한 쿼리로 — pubA 는 두 글을 담았으니 2.
     CollectionSummaryView pubAView =
         result.get(p2).stream().filter(v -> v.id().equals(pubA)).findFirst().orElseThrow();
     assertThat(pubAView.count()).isEqualTo(2);
 
-    // 큐레이터(소유자) 핸들이 실린다 — "카테고리"가 아니라 "@큐레이터의 길".
     assertThat(pubAView.curatorUsername()).isEqualTo("alice-batch");
 
-    // 위치는 정렬된 연결 안 1-based 자리 — pubA{p1=0, p2=1} 이므로 p1=1번째, p2=2번째.
     Integer p1PosInPubA =
         result.get(p1).stream()
             .filter(v -> v.id().equals(pubA))
@@ -112,9 +99,8 @@ class PublicPostCollectionsBatchIntegrationTest {
             .orElseThrow()
             .position();
     assertThat(p1PosInPubA).isEqualTo(1);
-    assertThat(pubAView.position()).isEqualTo(2); // p2 는 pubA 에서 2번째
+    assertThat(pubAView.position()).isEqualTo(2);
 
-    // 같은 글 p1 이 다른 컬렉션 pubB 에서는 1번째(pubB 에 홀로).
     Integer p1PosInPubB =
         result.get(p1).stream()
             .filter(v -> v.id().equals(pubB))
@@ -140,9 +126,8 @@ class PublicPostCollectionsBatchIntegrationTest {
 
     CollectionSummaryView view =
         result.get(target).stream().filter(v -> v.id().equals(col)).findFirst().orElseThrow();
-    // raw position=5 이지만 정렬 순위는 2 — position 은 값이 아니라 순서다.
     assertThat(view.position()).isEqualTo(2);
-    assertThat(view.count()).isEqualTo(2); // 분모
+    assertThat(view.count()).isEqualTo(2);
   }
 
   @Test
@@ -163,7 +148,7 @@ class PublicPostCollectionsBatchIntegrationTest {
     CollectionSummaryView view =
         views.stream().filter(v -> v.id().equals(col)).findFirst().orElseThrow();
     assertThat(view.curatorUsername()).isEqualTo("carol-single");
-    assertThat(view.position()).isEqualTo(3); // "3편 중 3번째"
+    assertThat(view.position()).isEqualTo(3);
     assertThat(view.count()).isEqualTo(3);
   }
 

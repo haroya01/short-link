@@ -81,7 +81,6 @@ class NotificationControllerTest {
         .andExpect(jsonPath("$.items[0].type").value("CONNECTED"))
         .andExpect(jsonPath("$.items[0].collectionId").value(42))
         .andExpect(jsonPath("$.items[0].collectionName").value("긴 여름의 독서"))
-        // The occasioning post surfaces on the shared postId field for a preview.
         .andExpect(jsonPath("$.items[0].postId").value(10))
         .andExpect(jsonPath("$.items[0].postSlug").doesNotExist());
   }

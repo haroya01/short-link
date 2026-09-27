@@ -8,9 +8,7 @@ import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.springframework.stereotype.Service;
 
-/**
- * Unavailable gauges return null or 0 so missing Micrometer bindings do not break the dashboard.
- */
+// Unavailable gauges return null or 0 so missing Micrometer bindings do not break the dashboard.
 @Service
 public class AdminSystemMetricsService {
 
@@ -24,7 +22,6 @@ public class AdminSystemMetricsService {
     return new SystemMetrics(jvm(), hikari(), caches(), outboundHttp(), scheduledTasks());
   }
 
-  /** Mean/max only, as with {@link #outboundHttp()}: default timers publish no histogram. */
   private Map<String, ScheduledTaskStat> scheduledTasks() {
     Map<String, Map<String, Long>> resultCountsByTask = new LinkedHashMap<>();
     Map<String, Long> totalCountByTask = new LinkedHashMap<>();
@@ -58,9 +55,7 @@ public class AdminSystemMetricsService {
     return out;
   }
 
-  /**
-   * Uses mean/max because the default timers do not publish the histograms needed for percentiles.
-   */
+  // Uses mean/max because the default timers do not publish the histograms needed for percentiles.
   private Map<String, OutboundHttpStat> outboundHttp() {
     Map<String, Map<String, Long>> resultCountsByClient = new LinkedHashMap<>();
     Map<String, Long> totalCountByClient = new LinkedHashMap<>();

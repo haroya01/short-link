@@ -33,10 +33,6 @@ public class FollowEntity extends BaseCreatedEntity {
   @Column(name = "following_id", nullable = false)
   private Long followingId;
 
-  /**
-   * Null for a direct profile follow. Attribution is net: unfollowing removes this contribution to
-   * the post's follower metric.
-   */
   @Column(name = "source_post_id")
   private Long sourcePostId;
 

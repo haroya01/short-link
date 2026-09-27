@@ -26,7 +26,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** stats / compare / recommendation read controllers — 단일 책임이라 한 슬라이스에 묶음. */
 @KurlWebMvcTest(
     controllers = {
       CampaignStatsController.class,

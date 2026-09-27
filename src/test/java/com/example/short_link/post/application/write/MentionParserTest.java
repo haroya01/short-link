@@ -21,7 +21,6 @@ class MentionParserTest {
 
   @Test
   void ignoresInvalidHandles() {
-    // too short (<3), uppercase, leading underscore — none match the username grammar.
     assertThat(MentionParser.parse("@ab @Alice @_nope")).isEmpty();
   }
 

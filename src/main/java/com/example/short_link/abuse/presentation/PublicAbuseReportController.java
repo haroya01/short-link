@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 익명 사용자와 로그인 사용자 모두 신고할 수 있다. */
 @RestController
 @RequestMapping("/api/v1/public/abuse-reports")
 @RequiredArgsConstructor

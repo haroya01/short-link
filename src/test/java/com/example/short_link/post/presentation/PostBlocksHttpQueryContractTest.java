@@ -39,9 +39,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Exercises the authenticated HTTP write/read paths and verifies their committed database results.
- */
 class PostBlocksHttpQueryContractTest extends DockerHttpTest {
 
   @LocalServerPort private int port;

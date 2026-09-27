@@ -14,9 +14,6 @@ import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Access to new public interactions. Removing an existing interaction uses its own ownership rules.
- */
 @Component
 @RequiredArgsConstructor
 public class PostInteractionAccess {
@@ -47,7 +44,7 @@ public class PostInteractionAccess {
     return publishedPost(postId, actorId, PostErrorCode.POST_INTERACTION_BLOCKED);
   }
 
-  /** Parent counter mutations must lock the post before inserting or deleting interaction rows. */
+  // Parent counter mutations must lock the post before inserting or deleting interaction rows.
   public PostEntity requireInteractablePostForUpdate(Long actorId, Long postId) {
     moderation.requireCanWrite(actorId);
     return publishedPost(

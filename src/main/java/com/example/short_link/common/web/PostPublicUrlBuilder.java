@@ -3,10 +3,8 @@ package com.example.short_link.common.web;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/**
- * Returns a locale-free public post URL; the frontend redirects to its default locale. Returns null
- * when the author has no handle, which the public route requires.
- */
+// Returns a locale-free public post URL; the frontend redirects to its default locale. Returns null
+// when the author has no handle, which the public route requires.
 @Component
 public class PostPublicUrlBuilder {
 

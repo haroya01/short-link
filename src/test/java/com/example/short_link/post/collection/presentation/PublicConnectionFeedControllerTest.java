@@ -49,7 +49,6 @@ class PublicConnectionFeedControllerTest {
     when(discoverFeedQuery.publicFeed(0, 20))
         .thenReturn(new DiscoverFeedView(List.of(item), 0, 20, false, "global"));
 
-    // 미로그인(헤더 없음)에도 200 — GET /api/v1/public/** 은 permitAll.
     mvc.perform(get("/api/v1/public/feed/connections"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items[0].curator.username").value("minji"))
@@ -72,7 +71,6 @@ class PublicConnectionFeedControllerTest {
     verify(discoverFeedQuery).publicFeed(2, 10);
   }
 
-  // ?size=2000000 같은 익명 요청도 상한(50)으로 묶어 대형 쿼리·팬아웃으로 번지지 않게 한다.
   @Test
   void clampsOversizedPageSize() throws Exception {
     when(discoverFeedQuery.publicFeed(0, 50))

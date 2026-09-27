@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Uses the authenticated requester's own role, granting no additional privileges. */
 @Service
 @RequiredArgsConstructor
 public class MintAccessTokenUseCase {

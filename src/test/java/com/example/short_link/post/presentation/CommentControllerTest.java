@@ -19,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** HTTP 매핑·status·인증 게이트만 — 검증/소유권 규칙은 서비스 단위 테스트가 진짜로 돈다. */
 @KurlWebMvcTest(controllers = CommentController.class)
 class CommentControllerTest {
 

@@ -2,10 +2,6 @@ package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.domain.LinkId;
 
-/**
- * {@code sourceChannel}, {@code destinationId}, and {@code postId} default to null via {@link #of}.
- * {@code postId} comes from {@code ?post=} and attributes the click to the embedding post.
- */
 public record ClickContext(
     LinkId linkId,
     String originalUrl,

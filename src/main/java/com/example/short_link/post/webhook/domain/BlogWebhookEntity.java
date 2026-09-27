@@ -19,7 +19,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 개별 글이 아닌 작성자의 모든 글에 적용되는 알림 훅이다. 반복 실패 시 자동 비활성화한다. */
 @Entity
 @Table(name = "blog_webhook")
 @Getter
@@ -48,7 +47,6 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = 16)
   private BlogWebhookFormat format = BlogWebhookFormat.GENERIC;
 
-  /** CSV of {@link BlogInteractionType} names this hook fires on (e.g. "LIKE,COMMENT,FOLLOW"). */
   @Column(name = "events", nullable = false, length = 255)
   private String events;
 
@@ -108,7 +106,6 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
     return enabled && events().contains(type);
   }
 
-  /** GENERIC hooks carry an HMAC signature; chat formats don't support one. */
   public boolean signed() {
     return format == BlogWebhookFormat.GENERIC;
   }

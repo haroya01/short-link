@@ -50,7 +50,6 @@ class SocialsTest {
 
   @Test
   void rejectsTooManyEntries() {
-    // MAX=2 — try 3 and verify rejection.
     String json =
         "["
             + "{\"channel\":\"x\",\"url\":\"https://x.com/a\"},"
@@ -123,7 +122,6 @@ class SocialsTest {
 
   @Test
   void allBlankEntriesYieldNull() {
-    // After filtering blanks, if nothing remains the whole list collapses to null (= "clear").
     String out =
         Socials.normalize("[{\"channel\":\"\",\"url\":\"\"},{\"channel\":\"  \",\"url\":\"  \"}]");
     assertThat(out).isNull();

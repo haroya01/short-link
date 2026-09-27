@@ -8,7 +8,6 @@ import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
 import org.junit.jupiter.api.Test;
 
-/** 신·구 사유 계약 하위호환 매핑 검증. */
 class SubmitAbuseReportRequestTest {
 
   private SubmitAbuseReportRequest req(String reasonCode, String detail, String reason) {
@@ -49,7 +48,6 @@ class SubmitAbuseReportRequestTest {
 
   @Test
   void newContract_existingDetailIsPreservedOverLegacyReason() {
-    // reasonCode 신규 경로에서는 옛 reason 을 상세로 흡수하지 않고, 신규 detail 을 유지한다.
     SubmitAbuseReportRequest r = req("COPYRIGHT", "원본 URL 첨부", "무시될 옛 텍스트");
 
     assertThat(r.resolvedReasonCode()).isEqualTo(AbuseReason.COPYRIGHT);

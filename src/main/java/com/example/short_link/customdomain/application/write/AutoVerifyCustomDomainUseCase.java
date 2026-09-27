@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** DNS 불일치는 전파 지연일 수 있으므로 예외 없이 다음 자동 검증에서 재시도한다. */
+// DNS 불일치는 전파 지연일 수 있으므로 예외 없이 다음 자동 검증에서 재시도한다.
 @Service
 @RequiredArgsConstructor
 public class AutoVerifyCustomDomainUseCase {

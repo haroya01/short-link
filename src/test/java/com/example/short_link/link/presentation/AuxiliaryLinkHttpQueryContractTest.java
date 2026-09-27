@@ -29,7 +29,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.JsonNode;
 
-/** Anonymous adoption, import, DNS verification and live click delivery use real HTTP. */
 class AuxiliaryLinkHttpQueryContractTest extends LinkJourneyHttpSupport {
   @MockitoBean private TxtResolver remoteDns;
   @Autowired private StringRedisTemplate redis;
@@ -274,9 +273,6 @@ class AuxiliaryLinkHttpQueryContractTest extends LinkJourneyHttpSupport {
     return captured.response();
   }
 
-  /**
-   * Keeps the HTTP response open between frames and bounds a missing-event failure to ten seconds.
-   */
   private static final class EventStream implements AutoCloseable {
     private final InputStream body;
     private final BufferedReader reader;

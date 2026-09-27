@@ -3,7 +3,6 @@ package com.example.short_link.abuse.application.read;
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import java.time.Instant;
 
-/** 대상을 찾지 못하면 스냅샷 필드는 null/false로 반환한다. */
 public record AbuseReportView(
     Long id,
     Long reporterUserId,

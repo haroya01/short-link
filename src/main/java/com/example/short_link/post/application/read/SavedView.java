@@ -3,7 +3,6 @@ package com.example.short_link.post.application.read;
 import java.time.Instant;
 import java.util.List;
 
-/** {@code folderId == null} means unfiled. Fields match the flat SavedPost client shape. */
 public record SavedView(
     long id,
     PublicAuthorView author,

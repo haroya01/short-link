@@ -27,7 +27,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/** 테스트 바깥 트랜잭션 없이 실제 유스케이스 커밋 후 응답과 저장값을 비교한다. */
+// 테스트 바깥 트랜잭션 없이 실제 유스케이스 커밋 후 응답과 저장값을 비교한다.
 @SpringBootTest
 @ActiveProfiles("test")
 class PostWriteViewCommitIntegrationTest {

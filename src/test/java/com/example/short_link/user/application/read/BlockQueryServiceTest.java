@@ -39,14 +39,14 @@ class BlockQueryServiceTest {
 
   @Test
   void myBlocksResolvesInBlockOrder() {
-    when(blockRepository.findBlockedIds(9L)).thenReturn(List.of(3L, 2L)); // newest first
+    when(blockRepository.findBlockedIds(9L)).thenReturn(List.of(3L, 2L));
     when(userRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(user(2L, "bob"), user(3L, "carol")));
 
     List<BlockedUserView> result = service.myBlocks(9L);
 
     assertThat(result).hasSize(2);
-    assertThat(result.get(0).username()).isEqualTo("carol"); // order from findBlockedIds preserved
+    assertThat(result.get(0).username()).isEqualTo("carol");
     assertThat(result.get(1).username()).isEqualTo("bob");
   }
 
@@ -54,7 +54,7 @@ class BlockQueryServiceTest {
   void myBlocksSkipsUsersWithoutHandle() {
     when(blockRepository.findBlockedIds(9L)).thenReturn(List.of(2L, 4L));
     when(userRepository.findAllByIdIn(anyCollection()))
-        .thenReturn(List.of(user(2L, "bob"), user(4L, null))); // 4 has no username
+        .thenReturn(List.of(user(2L, "bob"), user(4L, null)));
 
     List<BlockedUserView> result = service.myBlocks(9L);
 

@@ -11,11 +11,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/**
- * AES-GCM uses {@code TWOFA_AES_KEY}, a base64-encoded 32-byte key. Encrypted values use {@code
- * v1:<base64(iv|ciphertext|tag)>}; without a key, the dev fallback stores {@code plain:<value>}.
- * Unprefixed legacy rows are returned as plaintext.
- */
+// AES-GCM uses TWOFA_AES_KEY, a base64-encoded 32-byte key. Encrypted values use
+// v1:<base64(iv|ciphertext|tag)>; without a key, the dev fallback stores plain:<value>. Unprefixed
+// legacy rows are returned as plaintext.
 @Slf4j
 @Component
 public class SecretCipher {

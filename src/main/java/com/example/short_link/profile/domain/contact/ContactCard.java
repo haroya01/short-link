@@ -9,10 +9,8 @@ import java.net.URI;
 import java.util.Set;
 import java.util.regex.Pattern;
 
-/**
- * Only name is required; absent optional fields are hidden. vCard serialization occurs on the
- * frontend. Palette IDs must stay allow-listed to prevent arbitrary CSS values reaching rendering.
- */
+// Only name is required; absent optional fields are hidden. vCard serialization occurs on the
+// frontend. Palette IDs must stay allow-listed to prevent arbitrary CSS values reaching rendering.
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record ContactCard(
     String name,
@@ -36,19 +34,13 @@ public record ContactCard(
   private static final int WEBSITE_MAX = 256;
   private static final int LOGO_URL_MAX = 512;
 
-  /**
-   * Focal points are percentages from 0 to 100 matching CSS {@code object-position}; missing values
-   * default to the center (50/50).
-   */
   private static final int FOCAL_DEFAULT = 50;
 
   private static final int FOCAL_MIN = 0;
   private static final int FOCAL_MAX = 100;
 
-  /**
-   * Keep IDs aligned with the frontend palette map. Null or blank selects the default amethyst
-   * palette for compatibility.
-   */
+  // Keep IDs aligned with the frontend palette map. Null or blank selects the default amethyst
+  // palette for compatibility.
   private static final Set<String> ALLOWED_PALETTES =
       Set.of(
           "amethyst",

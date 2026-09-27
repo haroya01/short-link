@@ -14,10 +14,8 @@ public interface PostReadRepository {
 
   long countByUserId(Long userId);
 
-  /** Returns the number of rows deleted. */
   int deleteByUserIdAndPostId(Long userId, Long postId);
 
-  /** Returns the number of rows deleted. */
   int deleteByUserId(Long userId);
 
   int deleteAllByPostId(Long postId);

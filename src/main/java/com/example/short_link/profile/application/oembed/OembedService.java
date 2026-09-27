@@ -25,10 +25,6 @@ public class OembedService {
     this.restClient = oembedRestClient;
   }
 
-  /**
-   * Unknown provider hosts produce HTTP 422. Provider failures return an empty result for bare-URL
-   * fallback; results are cached per URL for 24 hours.
-   */
   @Cacheable(value = CACHE, key = "#url")
   public OembedMetadata fetch(String url) {
     EmbedProvider provider =

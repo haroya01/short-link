@@ -10,7 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/** A distributed lock prevents multiple nodes from publishing the same scheduled batch. */
+// A distributed lock prevents multiple nodes from publishing the same scheduled batch.
 @Slf4j
 @Component
 @RequiredArgsConstructor

@@ -4,10 +4,6 @@ import com.example.short_link.post.domain.PostEntity;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * Exposes the stable post ID for typed references such as abuse reports; omits private lifecycle
- * fields.
- */
 public record PublicPostListItem(
     Long id,
     String slug,

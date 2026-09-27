@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 공개 글의 요청마다 조회수와 방문 이벤트를 기록한다. 방문자 중복은 제거하지 않는다. 분류기 오류가 나면 부가 정보 없는 이벤트를 저장해 조회 집계를 유지한다. */
+// 공개 글의 요청마다 조회수와 방문 이벤트를 기록한다. 방문자 중복은 제거하지 않는다. 분류기 오류가 나면 부가 정보 없는 이벤트를 저장해 조회 집계를 유지한다.
 @Slf4j
 @Service
 public class RecordPostViewUseCase {

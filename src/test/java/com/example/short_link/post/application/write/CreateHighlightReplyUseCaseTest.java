@@ -65,7 +65,6 @@ class CreateHighlightReplyUseCaseTest {
             new CommentNotifications(userRepository, postRepository, events, muteReader));
   }
 
-  /** Highlight 50 on post 42, authored by {@code authorId}. */
   private PostHighlightEntity highlight(long authorId) {
     PostHighlightEntity h = new PostHighlightEntity(42L, authorId, 0, 0, 0, 3, "quote", null);
     ReflectionTestUtils.setField(h, "id", 50L);
@@ -73,7 +72,7 @@ class CreateHighlightReplyUseCaseTest {
   }
 
   private PostEntity publishedPost() {
-    PostEntity p = new PostEntity(7L, "slug", "Title", "ko"); // post owner 7
+    PostEntity p = new PostEntity(7L, "slug", "Title", "ko");
     p.publish();
     return p;
   }
@@ -87,10 +86,10 @@ class CreateHighlightReplyUseCaseTest {
 
   @Test
   void createsReplyAndNotifiesHighlightAuthor() {
-    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L))); // author 3
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L)));
     when(replyRepository.save(any(PostHighlightReplyEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(userWithId(7L, "olivia")));
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
 
@@ -103,7 +102,7 @@ class CreateHighlightReplyUseCaseTest {
     verify(events, times(1)).publishEvent(evt.capture());
     assertThat(evt.getValue()).isInstanceOf(HighlightReplyEvent.class);
     HighlightReplyEvent reply = (HighlightReplyEvent) evt.getValue();
-    assertThat(reply.recipientUserId()).isEqualTo(3L); // highlight author
+    assertThat(reply.recipientUserId()).isEqualTo(3L);
     assertThat(reply.actorUserId()).isEqualTo(9L);
     // Carries the post owner's handle (not the recipient's) so the post link resolves.
     assertThat(reply.postAuthorUsername()).isEqualTo("olivia");
@@ -122,8 +121,7 @@ class CreateHighlightReplyUseCaseTest {
   @Test
   void replyingToYourOwnHighlightSendsNoReplyNotice() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
-    when(highlightRepository.findById(50L))
-        .thenReturn(Optional.of(highlight(9L))); // author == actor
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(9L)));
     when(replyRepository.save(any(PostHighlightReplyEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
@@ -135,17 +133,16 @@ class CreateHighlightReplyUseCaseTest {
 
   @Test
   void mentionNotifiesTheMentionedUser() {
-    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L))); // author 3
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L)));
     when(replyRepository.save(any(PostHighlightReplyEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(userWithId(7L, "olivia")));
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(userWithId(5L, "bob")));
 
     useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "good point @bob"));
 
-    // REPLY to the highlight author (3) + MENTION to the mentioned user (5).
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
     HighlightMentionEvent mention =
@@ -161,10 +158,10 @@ class CreateHighlightReplyUseCaseTest {
 
   @Test
   void mentioningTheHighlightAuthorCollapsesIntoTheReplyNotice() {
-    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L))); // author 3
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L)));
     when(replyRepository.save(any(PostHighlightReplyEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(userWithId(7L, "olivia")));
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
     when(userRepository.findByUsername("dan")).thenReturn(Optional.of(userWithId(3L, "dan")));
@@ -180,10 +177,10 @@ class CreateHighlightReplyUseCaseTest {
   @Test
   void mentioningTheHighlightAuthorWhoMutedReplyStillFiresTheirMention() {
     // REPLY를 꺼둔 작성자에게는 MENTION을 별도로 전달해야 한다.
-    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L))); // author 3
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(3L)));
     when(replyRepository.save(any(PostHighlightReplyEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(userWithId(7L, "olivia")));
     when(userRepository.findById(9L)).thenReturn(Optional.of(userWithId(9L, "carol")));
     when(userRepository.findByUsername("dan")).thenReturn(Optional.of(userWithId(3L, "dan")));
@@ -191,7 +188,6 @@ class CreateHighlightReplyUseCaseTest {
 
     useCase.execute(new CreateHighlightReplyCommand(9L, 50L, "thanks @dan"));
 
-    // REPLY는 하위 처리에서 차단되고 MENTION은 전달된다.
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
     HighlightMentionEvent mention =

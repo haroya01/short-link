@@ -24,11 +24,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * End-to-end coverage for the my-links filter pipeline. Each test seeds a small set of links and
- * checks that the {@link MyLinksQueryService} returns exactly the matching subset for a given
- * filter combination.
- */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -164,7 +159,6 @@ class MyLinksFilterTest {
     assertThat(page3.hasMore()).isFalse();
     assertThat(page3.nextCursor()).isNull();
 
-    // Union of page contents should equal full set with no duplicates.
     Set<String> all = new HashSet<>();
     for (var p : List.of(page1, page2, page3)) {
       for (MyLink it : p.items()) {

@@ -16,22 +16,15 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Catches dead methods on Repository / Service / UseCase classes. Byte-code call analysis sees
- * every static call site (including Spring Data JPA derivation queries and AOP'd targets) — a
- * method with zero callers in main source is confirmed dead, even when grep would have missed it
- * (substring match / declaring-class noise).
- *
- * <p>Excluded on purpose:
- *
- * <ul>
- *   <li>Test-source callers — a method "only used in tests" is still dead from production.
- *   <li>Controllers — Spring routes HTTP requests via {@code @RequestMapping}, so there's no
- *       byte-code caller.
- *   <li>Schedulers / event listeners — {@code @Scheduled}, {@code @EventListener},
- *       {@code @TransactionalEventListener} are reflection-invoked by Spring.
- * </ul>
- */
+// Catches dead methods on Repository / Service / UseCase classes. Byte-code call analysis sees
+// every static call site (including Spring Data JPA derivation queries and AOP'd targets) — a
+// method with zero callers in main source is confirmed dead, even when grep would have missed it
+// (substring match / declaring-class noise).
+// Excluded on purpose:
+// - Test-source callers — a method "only used in tests" is still dead from production.
+// - Controllers — Spring routes HTTP requests via @RequestMapping, so there's no byte-code caller.
+// - Schedulers / event listeners — @Scheduled, @EventListener, @TransactionalEventListener are
+// reflection-invoked by Spring.
 @AnalyzeClasses(
     packages = "com.example.short_link",
     importOptions = ImportOption.DoNotIncludeTests.class)

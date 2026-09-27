@@ -134,10 +134,7 @@ jobs:
             docker logout ghcr.io
             # Cleanup stale images so disk doesn't fill up over time.
             docker image prune -f
-            # Wait for the app container to report healthy before the workflow declares
-            # success. Without this the Discord notify below would fire green even on a
-            # crash-looping container — the v1/v2 Sentry-starter outage was invisible to
-            # CI for that exact reason.
+            # Wait for healthy so a crash-looping container is not reported as a green deploy.
             # 'unhealthy' 안에 'healthy' 가 들어 있어서, 문자열 매칭은 크래시 루프를 초록으로
             # 읽는다 — 이 대기가 막으려던 바로 그 상황이다. 상태를 정확히 비교한다.
             for i in $(seq 1 30); do
@@ -158,8 +155,7 @@ jobs:
             # recreates the app container its IP can shift inside the compose network,
             # and nginx will keep proxying the stale IP — every /api, /oauth2 call
             # returns 502 until reload. Reload is graceful and re-resolves upstream
-            # without dropping in-flight requests. Caught after the 12-day stale-IP
-            # outage where nginx had been up far longer than the app it was fronting.
+            # without dropping in-flight requests.
             docker compose exec -T nginx nginx -s reload
             docker compose ps
         env:

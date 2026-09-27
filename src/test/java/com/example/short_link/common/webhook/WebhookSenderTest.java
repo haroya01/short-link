@@ -51,7 +51,6 @@ class WebhookSenderTest {
 
   @Test
   void unsignedSuccessSkipsSignature() {
-    // Discord/Slack path: sign=false. Exercises the no-signature branch.
     SimpleMeterRegistry registry = new SimpleMeterRegistry();
     WebhookSender.Result r = send(returning(204), false, "secret", registry);
     assertThat(r.ok()).isTrue();

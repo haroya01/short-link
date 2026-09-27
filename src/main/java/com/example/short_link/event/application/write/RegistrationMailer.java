@@ -11,7 +11,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/** 신청 확인 메일 (연락처가 이메일인 이벤트만). 실패해도 신청은 유효 — best-effort. */
+// 신청 확인 메일 (연락처가 이메일인 이벤트만). 실패해도 신청은 유효 — best-effort.
 @Slf4j
 @Component
 @RequiredArgsConstructor

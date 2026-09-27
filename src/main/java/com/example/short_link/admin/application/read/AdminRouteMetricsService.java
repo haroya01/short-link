@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 @Service
 public class AdminRouteMetricsService {
 
-  /** 전체 요청을 메모리에서 정렬하므로 집계 기간을 제한한다. */
+  // 전체 요청을 메모리에서 정렬하므로 집계 기간을 제한한다.
   private static final Duration LIFETIME_CAP = Duration.ofDays(7);
 
   private final RequestMetricJpaRepository repository;

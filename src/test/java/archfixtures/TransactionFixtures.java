@@ -4,7 +4,7 @@ import java.net.http.HttpClient;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Breaks the transaction rules on purpose, next to the calls that must stay unflagged. */
+// Breaks the transaction rules on purpose, next to the calls that must stay unflagged.
 public final class TransactionFixtures {
 
   private TransactionFixtures() {}

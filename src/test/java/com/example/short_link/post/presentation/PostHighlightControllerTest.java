@@ -23,7 +23,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** HTTP 매핑·status·인증 게이트만 — 검증/소유권 규칙은 서비스 단위 테스트가 진짜로 돈다. */
 @KurlWebMvcTest(controllers = PostHighlightController.class)
 class PostHighlightControllerTest {
 
@@ -149,7 +148,6 @@ class PostHighlightControllerTest {
     verify(highlightQuery).feed(USER_ID, 0, 20, false);
   }
 
-  // scope=global — 폴백으로 넘어간 클라이언트가 전역 페이지네이션을 고정해서 이어간다.
   @Test
   void highlightFeedScopeGlobalPinsGlobalFeed() throws Exception {
     when(highlightQuery.feed(USER_ID, 1, 20, true))

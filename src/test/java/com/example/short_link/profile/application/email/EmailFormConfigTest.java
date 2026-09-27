@@ -50,7 +50,6 @@ class EmailFormConfigTest {
                 + "\",\"successMessage\":\""
                 + longStr
                 + "\"}");
-    // titles cap at 60, placeholder 60, success 120 — verify by counting x's between quotes
     assertThat(out).contains("\"title\":\"" + "x".repeat(60) + "\"");
     assertThat(out).contains("\"placeholder\":\"" + "x".repeat(60) + "\"");
     assertThat(out).contains("\"successMessage\":\"" + "x".repeat(120) + "\"");
@@ -92,10 +91,7 @@ class EmailFormConfigTest {
 
   @Test
   void ignoresUnknownFields() {
-    // Forward compat — same hotfix pattern as ContactCard logoFocalX/Y (PR #256). A frontend
-    // shipping a new field (consentCheckbox, marketingOptInLabel) before the backend deploy
-    // shouldn't bounce every EMAIL_FORM PATCH with a 400 from Jackson's default
-    // FAIL_ON_UNKNOWN_PROPERTIES.
+    // 프론트가 백엔드보다 먼저 새 필드를 보내도 Jackson 기본값 FAIL_ON_UNKNOWN_PROPERTIES 때문에 저장이 400으로 막히면 안 된다.
     String out =
         EmailFormConfig.normalize(
             "{\"title\":\"Subscribe\",\"consentCheckbox\":true,\"marketingOptInLabel\":\"yes\"}");

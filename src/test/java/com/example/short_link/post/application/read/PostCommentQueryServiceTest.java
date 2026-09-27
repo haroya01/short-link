@@ -139,7 +139,7 @@ class PostCommentQueryServiceTest {
 
     List<MyCommentView> views = service.listMyComments(1L);
 
-    assertThat(views).hasSize(2); // 사라진 글의 댓글은 빠짐
+    assertThat(views).hasSize(2);
 
     MyCommentView present = views.get(0);
     assertThat(present.id()).isEqualTo(10L);
@@ -155,6 +155,6 @@ class PostCommentQueryServiceTest {
     assertThat(authorMissing.parentId()).isEqualTo(10L);
     assertThat(authorMissing.likeCount()).isZero();
     assertThat(authorMissing.postSlug()).isEqualTo("slug-6");
-    assertThat(authorMissing.postUsername()).isNull(); // author 3 not found
+    assertThat(authorMissing.postUsername()).isNull();
   }
 }

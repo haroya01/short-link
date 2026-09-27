@@ -41,7 +41,6 @@ public final class LinkRedirectSupport {
     return ClientIp.of(req);
   }
 
-  /** Sec-Fetch-Site의 표준 값 네 가지만 저장하며, 누락·알 수 없는 값은 null이다. */
   public static String fetchSite(HttpServletRequest req) {
     String raw = req.getHeader("Sec-Fetch-Site");
     if (raw == null) return null;

@@ -4,11 +4,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Account-wide summary: totalClicks includes bots; humanClicks and all daily buckets exclude bots.
- * dailyClicks contains seven owner-local dates, including the partial current day. Expiring links
- * have an expiry in the inclusive interval [updatedAt, updatedAt + 3 days].
- */
+// Account-wide summary: totalClicks includes bots; humanClicks and all daily buckets exclude bots.
+// dailyClicks contains seven owner-local dates, including the partial current day. Expiring links
+// have an expiry in the inclusive interval [updatedAt, updatedAt + 3 days].
 public record MyLinksOverview(
     long totalLinks,
     long totalClicks,

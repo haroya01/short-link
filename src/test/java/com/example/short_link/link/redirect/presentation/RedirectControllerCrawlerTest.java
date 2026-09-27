@@ -25,7 +25,6 @@ class RedirectControllerCrawlerTest {
   @Autowired private MockMvc mvc;
   @Autowired private LinkRepository repository;
 
-  /** 메신저/SNS 봇이 링크 미리보기를 위해 접근하면 302 가 아닌 OG-tagged HTML 을 반환해야 함. 각 토큰 마다 분기 cover. */
   @Test
   void twitterBotGetsOgPreviewHtml() throws Exception {
     repository.save(new LinkEntity("https://example.com", "twb0001"));

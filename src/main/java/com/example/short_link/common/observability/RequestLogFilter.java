@@ -11,10 +11,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Runs inside MdcFilter so completion logs carry requestId/userId. Probe paths are omitted because
- * Micrometer already covers them.
- */
+// Runs inside MdcFilter so completion logs carry requestId/userId. Probe paths are omitted because
+// Micrometer already covers them.
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 50)

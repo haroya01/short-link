@@ -21,7 +21,6 @@ class BlogNotificationPreferenceRepositoryTest {
 
   @Test
   void findDisabledUserIdsReturnsOnlyExplicitOptOutsForTheType() {
-    // 설정이 없는 사용자는 기본 활성이고, 명시적으로 끈 설정만 조회된다.
     repository.setEnabled(1L, NotificationType.NEW_POST, true);
     repository.setEnabled(2L, NotificationType.NEW_POST, true);
     repository.setEnabled(3L, NotificationType.NEW_POST, false);

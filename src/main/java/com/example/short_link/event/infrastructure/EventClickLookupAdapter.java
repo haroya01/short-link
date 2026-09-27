@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Component;
 
-/** 최근 48시간 내 human 클릭만 후보 — 오래된 클릭 매칭은 채널 귀속의 신뢰를 깎는다. */
+// 최근 48시간 내 human 클릭만 후보 — 오래된 클릭 매칭은 채널 귀속의 신뢰를 깎는다.
 @Component
 class EventClickLookupAdapter implements RegistrationClickLookup {
 

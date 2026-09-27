@@ -12,7 +12,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Deletes rows beyond the retention window; all other audit-log paths are append-only. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

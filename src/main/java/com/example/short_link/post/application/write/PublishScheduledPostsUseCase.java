@@ -8,7 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/** 글별 트랜잭션으로 발행하며, 한 글이 실패해도 나머지 예약 글은 계속 처리한다. */
+// 글별 트랜잭션으로 발행하며, 한 글이 실패해도 나머지 예약 글은 계속 처리한다.
 @Slf4j
 @Service
 @RequiredArgsConstructor

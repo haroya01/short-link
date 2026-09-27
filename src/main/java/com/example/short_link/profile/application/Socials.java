@@ -31,7 +31,6 @@ public final class Socials {
 
   public record Social(String channel, String url) {}
 
-  /** null·공백은 삭제를 뜻한다. 순서를 유지하며 같은 채널은 첫 값만 남긴다. */
   public static String normalize(String raw) {
     if (raw == null) return null;
     String trimmed = raw.trim();
@@ -74,7 +73,6 @@ public final class Socials {
     }
   }
 
-  /** null·공백인 저장 값은 빈 목록으로 반환한다. */
   public static List<Social> toList(String json) {
     if (json == null || json.isBlank()) return List.of();
     try {

@@ -10,10 +10,8 @@ import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Keep conversion compatible with the web editor's {@code markdown-to-blocks.ts}. CTA_REF has no
- * markdown authoring path; serialization preserves its payload verbatim.
- */
+// Keep conversion compatible with the web editor's markdown-to-blocks.ts. CTA_REF has no markdown
+// authoring path; serialization preserves its payload verbatim.
 @Component
 @RequiredArgsConstructor
 public class MarkdownBlocksConverter {
@@ -149,7 +147,7 @@ public class MarkdownBlocksConverter {
     return fence + lang + "\n" + code + "\n" + fence;
   }
 
-  /** A backtick fence longer than any run of backticks in the code, so the code can't break out. */
+  // A backtick fence longer than any run of backticks in the code, so the code can't break out.
   static String fenceFor(String code) {
     int longest = 0;
     Matcher m = Pattern.compile("`+").matcher(code);

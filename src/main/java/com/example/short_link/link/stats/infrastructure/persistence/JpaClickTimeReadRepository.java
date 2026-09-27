@@ -15,7 +15,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface JpaClickTimeReadRepository extends Repository<ClickEventEntity, Long> {
 
-  /** Boundaries come from the owner's ZoneId, including historical daylight-saving offsets. */
+  // Boundaries come from the owner's ZoneId, including historical daylight-saving offsets.
   @Query(
       value =
           """

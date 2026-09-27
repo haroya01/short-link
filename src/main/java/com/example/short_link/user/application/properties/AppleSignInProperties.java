@@ -3,10 +3,7 @@ package com.example.short_link.user.application.properties;
 import java.util.List;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * {@code clientIds} lists accepted token audiences: native bundle IDs and, for web login, the
- * Services ID.
- */
+// clientIds lists accepted token audiences: native bundle IDs and, for web login, the Services ID.
 @ConfigurationProperties(prefix = "short-link.apple")
 public record AppleSignInProperties(String issuer, String jwkSetUri, List<String> clientIds) {
 

@@ -20,9 +20,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-/**
- * A link owner creates, organizes, protects, visits, measures, and deletes real persisted links.
- */
 class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
   @Autowired private ClickFlusher clickFlusher;
   @Autowired private ClickEventRepository clickEvents;
@@ -380,8 +377,6 @@ class LinkLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
   void utcDailyReadKeepsBoundaryInstantsAcrossDatabaseSessionTimeZones() throws Exception {
     long linkId = linkId(createLink("link-utc-day-fixture-create"));
     Instant from = Instant.parse("2026-09-05T00:00:00Z");
-    // Clock fixtures around the seven-day cutoff and UTC midnight, independent of the real visit
-    // above.
     for (Instant clickedAt :
         List.of(
             from.minusSeconds(1),

@@ -14,10 +14,8 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Kept in a separate bean so the {@link Cacheable} proxy intercepts redirect lookups;
- * self-invocation would bypass the cache.
- */
+// Kept in a separate bean so the Cacheable proxy intercepts redirect lookups; self-invocation would
+// bypass the cache.
 @Component
 @RequiredArgsConstructor
 public class CachedLinkLoader {

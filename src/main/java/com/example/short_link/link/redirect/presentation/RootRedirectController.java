@@ -6,7 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Uses 301 to consolidate indexing at the frontend URL, shared with OAuth configuration. */
+// Uses 301 to consolidate indexing at the frontend URL, shared with OAuth configuration.
 @RestController
 public class RootRedirectController {
 

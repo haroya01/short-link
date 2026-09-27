@@ -25,9 +25,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
 
-/**
- * Real profile state and read models; only external object/oEmbed provider boundaries are replaced.
- */
 @TestPropertySource(properties = "short-link.avatar.public-base-url=https://cdn.example.test")
 class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
   @Autowired private LinkRepository links;

@@ -10,7 +10,7 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/** 약관 위반 경고는 사용자의 푸시 수신 설정과 무관하게 전달한다. */
+// 약관 위반 경고는 사용자의 푸시 수신 설정과 무관하게 전달한다.
 @Service
 @RequiredArgsConstructor
 public class WarnUserUseCase {

@@ -3,10 +3,8 @@ package com.example.short_link.link.application.helper;
 import java.util.Locale;
 import java.util.Set;
 
-/**
- * Reserves route and operational endpoint names case-insensitively, even though stored short codes
- * are case-sensitive.
- */
+// Reserves route and operational endpoint names case-insensitively, even though stored short codes
+// are case-sensitive.
 public final class ReservedShortCodes {
 
   private static final Set<String> RESERVED =

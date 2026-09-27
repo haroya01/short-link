@@ -41,7 +41,7 @@ public class CampaignEntity extends BaseTimeEntity {
   @Column(name = "ends_at", nullable = false)
   private Instant endsAt;
 
-  /** 실제 ENDED 적용 시각. endsAt(예정) 과 분리 — 스케줄러 지연, 수동 종료, 연장을 다 흡수. */
+  // 실제 ENDED 적용 시각. endsAt(예정) 과 분리 — 스케줄러 지연, 수동 종료, 연장을 다 흡수.
   @Column(name = "ended_at")
   private Instant endedAt;
 
@@ -55,7 +55,7 @@ public class CampaignEntity extends BaseTimeEntity {
   @Column(name = "post_end_destination_url", length = 2048)
   private String postEndDestinationUrl;
 
-  /** EXPIRE에서만 링크에 적용한다. 다른 정책에서도 보관해 EXPIRE로 돌아올 때 재사용한다. */
+  // EXPIRE에서만 링크에 적용한다. 다른 정책에서도 보관해 EXPIRE로 돌아올 때 재사용한다.
   @Column(name = "post_end_message", length = 500)
   private String postEndMessage;
 
@@ -108,7 +108,6 @@ public class CampaignEntity extends BaseTimeEntity {
     this.status = CampaignStatus.ARCHIVED;
   }
 
-  /** 수동 종료는 보관된 캠페인에서 거부하고, 재호출 시 최초 종료 시각을 유지한다. */
   public Instant endNow(Instant now) {
     requireNotArchived();
     markEnded(now);
@@ -140,7 +139,7 @@ public class CampaignEntity extends BaseTimeEntity {
         endsAt, defaultDestinationUrl, postEndAction, postEndDestinationUrl, postEndMessage);
   }
 
-  /** 검증 실패 시 이름만 바뀐 상태가 남지 않도록 모든 검증을 변경 전에 마친다. */
+  // 검증 실패 시 이름만 바뀐 상태가 남지 않도록 모든 검증을 변경 전에 마친다.
   public void updateDetails(
       String name,
       Instant endsAt,

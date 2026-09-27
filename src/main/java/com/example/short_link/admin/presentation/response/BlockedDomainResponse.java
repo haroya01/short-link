@@ -11,7 +11,6 @@ public record BlockedDomainResponse(
     String reason,
     Long blockedByUserId,
     Instant blockedAt,
-    /** 차단 시 자동 경고를 받은 소유자 수 — block 응답에만 실리고 목록 조회엔 없다. */
     Integer warnedOwners) {
 
   public static BlockedDomainResponse from(BlockedDomainEntity e) {

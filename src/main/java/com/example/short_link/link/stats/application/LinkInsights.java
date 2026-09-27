@@ -30,7 +30,7 @@ public class LinkInsights {
 
   private static final double CHANNEL_LOYALTY_THRESHOLD = 0.3;
 
-  /** 적은 표본에서 비율이 크게 흔들리는 것을 막는다. */
+  // 적은 표본에서 비율이 크게 흔들리는 것을 막는다.
   private static final long CHANNEL_LOYALTY_MIN_VISITORS = 5;
 
   private final MessageSource messages;
@@ -58,7 +58,6 @@ public class LinkInsights {
     }
   }
 
-  /** 채널 최초 관측은 기본 표본 조건을 만족할 때만 읽는다. 인앱·충성도는 각각의 표본 조건을 적용한다. */
   public List<LinkStats.Insight> computeReport(
       ReportFacts facts, Supplier<List<HostFirstSeenRow>> channelFirstSeen) {
     List<LinkStats.Insight> insights = generalInsights(facts);
@@ -70,7 +69,6 @@ public class LinkInsights {
     return insights;
   }
 
-  /** 최초 채널보다 한 시간 이상 늦게 관측된 첫 채널을 찾는다. 입력은 최초 관측 시각 순서다. */
   public Optional<LinkStats.Insight> channelJump(List<HostFirstSeenRow> rows) {
     if (rows.size() < 2) return Optional.empty();
     HostFirstSeenRow origin = rows.get(0);
@@ -111,7 +109,6 @@ public class LinkInsights {
     return insights;
   }
 
-  /** 링크가 게시된 곳이 아니라 열린 앱의 비중을 집계한다. */
   public Optional<LinkStats.Insight> inAppBrowser(
       List<LinkStats.ClientAppClick> clientApps, long humanClicks) {
     if (clientApps == null || clientApps.isEmpty() || humanClicks < MIN_TOTAL_FOR_INSIGHTS) {

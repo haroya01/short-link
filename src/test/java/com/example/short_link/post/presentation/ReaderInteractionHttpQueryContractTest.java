@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/** Two real users discover an author, react, discuss, save and remove their own reading data. */
 class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
 
   @Test

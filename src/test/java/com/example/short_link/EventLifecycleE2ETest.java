@@ -62,14 +62,12 @@ class EventLifecycleE2ETest {
     String slug = JsonPath.read(created, "$.slug");
     int eventId = JsonPath.read(created, "$.id");
 
-    // 공개 페이지 — 비로그인 읽기
     mvc.perform(get("/api/v1/public/events/" + slug))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.title").value("도쿄 개발자 스터디"))
         .andExpect(jsonPath("$.acceptingRegistrations").value(true))
         .andExpect(jsonPath("$.spotsLeft").value(1));
 
-    // 익명 신청 (정원 1)
     String registered =
         mvc.perform(
                 post("/api/v1/public/events/" + slug + "/registrations")
@@ -83,21 +81,18 @@ class EventLifecycleE2ETest {
             .getContentAsString();
     String cancelToken = JsonPath.read(registered, "$.cancelToken");
 
-    // 만석 — 다음 신청 거절
     mvc.perform(
             post("/api/v1/public/events/" + slug + "/registrations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"참가자B\",\"contact\":\"guest-b@x.com\"}"))
         .andExpect(status().isConflict());
 
-    // 같은 연락처 중복 신청 거절
     mvc.perform(
             post("/api/v1/public/events/" + slug + "/registrations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"참가자A\",\"contact\":\"guest-a@x.com\"}"))
         .andExpect(status().isConflict());
 
-    // 토큰 취소 → 자리가 다시 생긴다
     mvc.perform(
             post("/api/v1/public/events/registrations/cancel")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -108,14 +103,12 @@ class EventLifecycleE2ETest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.spotsLeft").value(1));
 
-    // 취소했던 연락처 재신청 — CANCELED 행 재활성화
     mvc.perform(
             post("/api/v1/public/events/" + slug + "/registrations")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"name\":\"참가자A\",\"contact\":\"guest-a@x.com\"}"))
         .andExpect(status().isCreated());
 
-    // 주최자 명단 + CSV + 분석
     mvc.perform(
             get("/api/v1/events/" + eventId + "/attendees")
                 .header("Authorization", "Bearer " + token))
@@ -139,7 +132,6 @@ class EventLifecycleE2ETest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalRegistrations").value(1));
 
-    // 다른 유저는 주최자 API 접근 불가
     UserEntity stranger = userRepository.save(new UserEntity("ev-str@x.com", "google", "g-ev-str"));
     String strangerToken = jwt.createAccessToken(stranger.getId(), "USER");
     mvc.perform(

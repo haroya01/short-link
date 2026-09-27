@@ -75,9 +75,7 @@ class PostImageServiceTest {
     return new CommitResultRunner();
   }
 
-  /**
-   * Stubs the SSRF guard (static) so importFromUrl runs without real DNS, like OgScraperFetchTest.
-   */
+  // Stubs the SSRF guard (static) so importFromUrl runs without real DNS, like OgScraperFetchTest.
   private final class CommitResultRunner {
     PostImageService.CommitResult run() {
       try (MockedStatic<PublicHttpUrlGuard> guard = mockStatic(PublicHttpUrlGuard.class)) {

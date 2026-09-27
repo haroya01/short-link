@@ -10,7 +10,7 @@ public interface SeriesRepository {
 
   Optional<SeriesEntity> findById(Long id);
 
-  /** Serializes membership changes and deletion before any member post is locked. */
+  // Serializes membership changes and deletion before any member post is locked.
   Optional<SeriesEntity> findByIdForUpdate(Long id);
 
   List<SeriesEntity> findAllByIdIn(Collection<Long> ids);

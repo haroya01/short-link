@@ -104,10 +104,8 @@ public class JwtTokenService {
     return new ParsedRefresh(Long.valueOf(claims.getSubject()), claims.getId());
   }
 
-  /**
-   * Issued after primary authentication for 2FA users. Its distinct {@code type} claim prevents use
-   * as an access token; successful second-factor verification exchanges it for a session.
-   */
+  // Issued after primary authentication for 2FA users. Its distinct type claim prevents use as an
+  // access token; successful second-factor verification exchanges it for a session.
   public String createTwoFactorChallengeToken(Long userId) {
     Instant now = Instant.now();
     return Jwts.builder()

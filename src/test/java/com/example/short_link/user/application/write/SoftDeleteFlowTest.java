@@ -20,11 +20,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Soft-delete contract: deleteAccount marks deleted_at, OAuth login restores within the grace
- * window, refresh fails for soft-deleted users, and the cleanup job hard-deletes when the cutoff
- * has passed.
- */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional

@@ -11,7 +11,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** {@link BlockedDomainQueryService} 내부 호출에도 Spring 캐시 프록시가 적용되도록 분리한다. */
+// BlockedDomainQueryService 내부 호출에도 Spring 캐시 프록시가 적용되도록 분리한다.
 @Component
 @RequiredArgsConstructor
 public class BlockedDomainCache {

@@ -23,10 +23,6 @@ import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-/**
- * Fetches Open Graph metadata. Outbound HTTP goes through {@link HttpFetcher} (DNS-pinned via the
- * adapter). Body capped at {@link #MAX_BODY_BYTES} and parsed with Jsoup as text/html only.
- */
 @Slf4j
 @Service
 public class OgScraper {

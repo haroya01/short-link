@@ -8,7 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
 import org.springframework.stereotype.Component;
 
-/** 채널별 실패를 격리해 한 푸시 채널의 실패가 다른 채널의 전달을 막지 않게 한다. */
+// 채널별 실패를 격리해 한 푸시 채널의 실패가 다른 채널의 전달을 막지 않게 한다.
 @Slf4j
 @Component
 @Primary

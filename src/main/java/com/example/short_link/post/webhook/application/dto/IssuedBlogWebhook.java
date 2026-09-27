@@ -5,7 +5,7 @@ import com.example.short_link.post.webhook.domain.BlogWebhookFormat;
 import java.time.Instant;
 import java.util.Set;
 
-/** Returned once at registration — the only time the plaintext {@code secret} is exposed. */
+// Returned once at registration — the only time the plaintext secret is exposed.
 public record IssuedBlogWebhook(
     Long id,
     String url,

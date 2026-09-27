@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** CORS 사전 요청 없는 sendBeacon/text/plain을 받기 위해 문자열로 파싱한다. 잘못된 본문은 비콘의 사용자 흐름을 막지 않도록 무시한다. */
+// CORS 사전 요청 없는 sendBeacon/text/plain을 받기 위해 문자열로 파싱한다. 잘못된 본문은 비콘의 사용자 흐름을 막지 않도록 무시한다.
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/public")

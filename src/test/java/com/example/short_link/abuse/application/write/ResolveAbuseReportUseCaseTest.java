@@ -161,7 +161,6 @@ class ResolveAbuseReportUseCaseTest {
         .extracting(e -> ((AbuseException) e).errorCode())
         .isEqualTo(AbuseErrorCode.ACTION_SUBJECT_MISMATCH);
 
-    // 집행 실패 → 상태 전이(save)도 일어나지 않는다.
     verify(abuseReportRepository, never()).save(any());
     verifyNoInteractions(userModerationPort);
   }

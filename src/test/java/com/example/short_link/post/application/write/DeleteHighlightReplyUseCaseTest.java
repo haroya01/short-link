@@ -58,14 +58,13 @@ class DeleteHighlightReplyUseCaseTest {
 
   @Test
   void postOwnerCanDeleteOthersReply() {
-    PostHighlightReplyEntity r = reply(1L, 9L); // reply by user 9
+    PostHighlightReplyEntity r = reply(1L, 9L);
     when(replyRepository.findById(1L)).thenReturn(Optional.of(r));
-    when(highlightRepository.findById(50L))
-        .thenReturn(Optional.of(highlight())); // highlight post=42
-    PostEntity post = new PostEntity(7L, "s", "T", "ko"); // post owner = 7
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight()));
+    PostEntity post = new PostEntity(7L, "s", "T", "ko");
     when(postRepository.findById(42L)).thenReturn(Optional.of(post));
 
-    useCase.execute(new DeleteHighlightReplyCommand(7L, 1L)); // caller 7 = post owner
+    useCase.execute(new DeleteHighlightReplyCommand(7L, 1L));
 
     verify(replyRepository).delete(r);
   }

@@ -13,7 +13,6 @@ public class SetPinnedPostsUseCase {
 
   private final PostRepository postRepository;
 
-  /** 본인 공개 글만 목록 순서(0부터)로 고정한다. 없는 글·타인 글·비공개 글 ID는 무시하고, 목록에서 빠진 공개 글은 고정을 해제한다. */
   @Transactional
   public void execute(Long userId, List<Long> orderedPostIds) {
     List<Long> requested = orderedPostIds == null ? List.of() : orderedPostIds;

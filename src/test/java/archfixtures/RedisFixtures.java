@@ -6,7 +6,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 
-/** Breaks the Redis counter rule on purpose so the rule can be shown to catch it. */
+// Breaks the Redis counter rule on purpose so the rule can be shown to catch it.
 public final class RedisFixtures {
 
   private RedisFixtures() {}

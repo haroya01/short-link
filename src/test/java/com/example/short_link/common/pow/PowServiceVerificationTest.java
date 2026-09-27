@@ -23,9 +23,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
-/**
- * Boundary tests use the real proof, store and metrics implementations with an observed Redis API.
- */
 @ExtendWith(MockitoExtension.class)
 class PowServiceVerificationTest {
   private static final String CHALLENGE = "0123456789abcdef0123456789abcdef";

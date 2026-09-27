@@ -4,10 +4,6 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 
-/**
- * Uses the ProfileStats response shape for the shared dashboard. "Visits" are post reads from
- * {@code post_view_event}.
- */
 public record PostReadStats(
     String timezone,
     long totalVisits,

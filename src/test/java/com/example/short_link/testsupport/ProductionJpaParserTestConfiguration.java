@@ -8,7 +8,7 @@ import org.springframework.data.jpa.repository.query.QueryEnhancerFactories;
 import org.springframework.data.jpa.repository.query.QueryEnhancerSelector;
 import org.springframework.data.jpa.repository.support.JpaRepositoryFactoryBean;
 
-/** Keeps QueryAudit's test-only JSqlParser dependency from changing JPA's native query handling. */
+// Keeps QueryAudit's test-only JSqlParser dependency from changing JPA's native query handling.
 @Configuration(proxyBeanMethods = false)
 @Profile("test")
 public class ProductionJpaParserTestConfiguration {

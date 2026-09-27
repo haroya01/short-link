@@ -15,14 +15,11 @@ import java.util.Map;
 import java.util.concurrent.Callable;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Measures an HTTP round trip or an explicit worker invocation, excluding fixture setup and
- * database assertions. Journeys can await their real background queues before capture ends.
- *
- * <p>QueryAudit 0.6 captures every thread using the wrapped DataSource while this window is open.
- * Use an isolated database with background scheduling disabled and run these tests sequentially.
- * This helper owns capture directly; its tests must not also use {@code @QueryAudit}.
- */
+// Measures an HTTP round trip or an explicit worker invocation, excluding fixture setup and
+// database assertions. Journeys can await their real background queues before capture ends.
+// QueryAudit 0.6 captures every thread using the wrapped DataSource while this window is open. Use
+// an isolated database with background scheduling disabled and run these tests sequentially. This
+// helper owns capture directly; its tests must not also use @QueryAudit.
 public final class HttpQueryContracts {
 
   private static final Path CONTRACTS_DIRECTORY = Path.of("src/test/resources/query-contracts");
@@ -85,7 +82,6 @@ public final class HttpQueryContracts {
     return captured;
   }
 
-  /** Checks the reviewed exact counts. This method never records or updates contracts. */
   public void verify(CapturedRequest<?> captured) {
     String contractId = captured.contractId();
     Map<String, QueryCounts> contracts = loadContracts();

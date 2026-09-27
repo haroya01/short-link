@@ -121,11 +121,8 @@ class ContactCardTest {
 
   @Test
   void ignoresUnknownFields() {
-    // Forward compat — a frontend rolled out ahead of a backend that doesn't yet know about a
-    // field shouldn't 400 every write. This guard was missing when the frontend started sending
-    // logoFocalX/logoFocalY (PR #133) and the backend Jackson default FAIL_ON_UNKNOWN_PROPERTIES
-    // bounced every contact-card PATCH with a 400. Adding this test catches the same class of
-    // bug for future fields without remembering to add a forward-compat case each time.
+    // 프론트가 백엔드보다 먼저 새 필드를 보내도 Jackson 기본값 FAIL_ON_UNKNOWN_PROPERTIES 때문에 쓰기가 400으로 막히면 안 된다.
+    // logoFocalX/Y를 추가할 때 실제로 연락처 카드 저장이 전부 400으로 막혔다.
     String out =
         ContactCard.normalize("{\"name\":\"x\",\"futureField\":\"hello\",\"anotherFuture\":42}");
     assertThat(out).contains("\"name\":\"x\"");

@@ -1,6 +1,5 @@
 package com.example.short_link.post.application.write;
 
-/** {@link #empty()} records a bare view without dimensions when request context is unavailable. */
 public record ViewContext(
     String referrer,
     String userAgent,
@@ -22,7 +21,6 @@ public record ViewContext(
     return EMPTY;
   }
 
-  /** No usable visitor signal → record a bare view rather than running the classifiers. */
   public boolean isEmpty() {
     return userAgent == null && clientIp == null && referrer == null;
   }

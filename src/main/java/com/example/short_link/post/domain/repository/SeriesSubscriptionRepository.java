@@ -16,19 +16,15 @@ public interface SeriesSubscriptionRepository {
 
   void delete(SeriesSubscriptionEntity subscription);
 
-  /**
-   * Returns 1 for a new subscription or 0 for a duplicate, so notification fires exactly once.
-   * Duplicate inserts must not fail the transaction.
-   */
+  // Returns 1 for a new subscription or 0 for a duplicate, so notification fires exactly once.
+  // Duplicate inserts must not fail the transaction.
   int insertIgnore(Long userId, Long seriesId);
 
   long countBySeriesId(Long seriesId);
 
-  /** Maps series ID to subscriber count; series with zero subscribers are absent. */
   Map<Long, Long> countBySeriesIdIn(Collection<Long> seriesIds);
 
   List<Long> findSubscribedSeriesIds(Long userId);
 
-  /** Sparse new-subscriber counts per UTC day. {@link DailyViewCount#views()} carries the count. */
   List<DailyViewCount> countDailyBySeriesIdSince(Long seriesId, Instant since);
 }

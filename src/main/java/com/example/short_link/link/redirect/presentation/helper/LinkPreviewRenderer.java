@@ -6,10 +6,6 @@ import com.example.short_link.link.redirect.application.read.LinkPreviewQuerySer
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Includes meta-refresh and an anchor so clients without JavaScript can still reach the
- * destination.
- */
 @Component
 @RequiredArgsConstructor
 public class LinkPreviewRenderer {

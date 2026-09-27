@@ -18,7 +18,6 @@ class LinkHtmlRendererTest {
 
     assertThat(html).contains("challenges.cloudflare.com/turnstile/v0/api.js");
     assertThat(html).contains("class=\"cf-turnstile\" data-sitekey=\"0xSITEKEY\"");
-    // 실패 표시는 없다.
     assertThat(html).doesNotContain("비밀번호가 올바르지 않아요");
   }
 
@@ -71,7 +70,6 @@ class LinkHtmlRendererTest {
         .isEqualTo(HttpStatus.FORBIDDEN);
     ResponseEntity<byte[]> expired = LinkHtmlRenderer.expiredPageResponse("만료된 캠페인 <link>");
     assertThat(expired.getStatusCode()).isEqualTo(HttpStatus.GONE);
-    // 메시지는 escape 되어 들어간다.
     assertThat(new String(expired.getBody())).contains("&lt;link&gt;");
   }
 
@@ -109,7 +107,7 @@ class LinkHtmlRendererTest {
     String body = new String(r.getBody());
     assertThat(body).contains("http-equiv=\"refresh\"");
     assertThat(body).contains("data-u=\"https://example.com/a?b=1&amp;c=2\"");
-    assertThat(body).contains("bigmark"); // kurl 마크 애니메이션
+    assertThat(body).contains("bigmark");
   }
 
   @Test

@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Stored JSON target shapes have no discriminator for compatibility with existing payloads. */
+// Stored JSON target shapes have no discriminator for compatibility with existing payloads.
 @Component
 @RequiredArgsConstructor
 public class NotificationTargetCodec {

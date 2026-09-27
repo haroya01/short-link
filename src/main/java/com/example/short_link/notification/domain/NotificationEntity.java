@@ -14,10 +14,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Actor identity is resolved at read time to keep display names current; target payload JSON is a
- * write-time snapshot. Null {@code readAt} means unread.
- */
+// Actor identity is resolved at read time to keep display names current; target payload JSON is a
+// write-time snapshot. Null readAt means unread.
 @Entity
 @Table(name = "notification")
 @Getter

@@ -19,7 +19,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 정원을 원자적으로 확보한 뒤 저장한다. 연락처 중복 경합으로 저장에 실패하면 확보한 정원을 돌려준다. 취소된 연락처의 재신청은 기존 행을 복구한다. */
+// 정원을 원자적으로 확보한 뒤 저장한다. 연락처 중복 경합으로 저장에 실패하면 확보한 정원을 돌려준다. 취소된 연락처의 재신청은 기존 행을 복구한다.
 @Service
 @RequiredArgsConstructor
 public class RegisterForEventUseCase {

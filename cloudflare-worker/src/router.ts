@@ -1,12 +1,5 @@
-/**
- * Pure routing logic for the kurl.me Cloudflare Worker. Decides whether an incoming request
- * should be proxied to the Spring Boot backend (short-code redirects + REST API) or to the
- * Vercel-hosted Next.js frontend (marketing pages, profile pages, /u/<handle>, etc.).
- *
- * Reserved frontend paths take priority over the short-code regex so a customCode that
- * collided with a frontend route (e.g. "login", "u") wouldn't shadow the actual app — the
- * backend should also blacklist these as customCodes, but the Worker is the front line.
- */
+// Reserved frontend paths win over the short-code regex so a custom code such as "login" or "u"
+// cannot shadow an app route.
 
 export type Target = "backend" | "frontend";
 
@@ -30,12 +23,7 @@ const FRONTEND_PATHS: RegExp[] = [
 
 const SHORT_CODE = /^\/[0-9A-Za-z]{3,16}\/?$/;
 
-/**
- * Decide which origin should serve a given path. See module doc for the precedence rules.
- *
- * <p>Returns {@code "frontend"} for unrecognized paths so the Next.js 404 page can render —
- * leaking unknown paths to the backend would just produce a worse 404 (plaintext, no nav).
- */
+// Unknown paths go to the frontend so the Next.js 404 page renders instead of a plaintext one.
 export function routeFor(path: string): Target {
   if (BACKEND_PATH.test(path)) return "backend";
   if (FRONTEND_PATHS.some((re) => re.test(path))) return "frontend";

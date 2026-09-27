@@ -23,7 +23,6 @@ class ProductCardCarouselTest {
     assertThat(out).contains("\"focalX\":40");
     assertThat(out).contains("\"focalY\":30");
     assertThat(out).contains("\"ctaUrl\":\"https://pf.kakao.com/_abc\"");
-    // Legacy field is dropped from output even if it sneaks in.
     assertThat(out).doesNotContain("\"image\":");
   }
 
@@ -32,7 +31,6 @@ class ProductCardCarouselTest {
     String out =
         ProductCardCarousel.normalize(
             "{\"items\":[{\"name\":\"x\",\"image\":\"https://img.example/1.jpg\"}]}");
-    // Old shape gets wrapped into a 1-element images list with default focal (50/50).
     assertThat(out).contains("\"url\":\"https://img.example/1.jpg\"");
     assertThat(out).contains("\"focalX\":50");
     assertThat(out).contains("\"focalY\":50");
@@ -187,7 +185,6 @@ class ProductCardCarouselTest {
                     "{\"items\":[{\"name\":\"x\","
                         + "\"images\":[{\"url\":\"javascript:alert(1)\"}]}]}"))
         .isInstanceOf(ProfileException.class);
-    // Legacy field still validated.
     assertThatThrownBy(
             () ->
                 ProductCardCarousel.normalize(
@@ -223,8 +220,6 @@ class ProductCardCarouselTest {
 
   @Test
   void ignoresUnknownItemFields() {
-    // Forward compat — a frontend rolled out ahead of a backend that doesn't know about a field
-    // shouldn't 400 every write.
     String out =
         ProductCardCarousel.normalize("{\"items\":[{\"name\":\"x\",\"futureField\":\"hello\"}]}");
     assertThat(out).contains("\"name\":\"x\"");

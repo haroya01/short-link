@@ -12,7 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 답글은 최상위 댓글만 참조한다. 작성자·글 소유자의 삭제는 물리 삭제, 관리자 삭제는 감사·복구를 위해 deletedAt으로 숨긴다. */
+// 답글은 최상위 댓글만 참조한다. 작성자·글 소유자의 삭제는 물리 삭제, 관리자 삭제는 감사·복구를 위해 deletedAt으로 숨긴다.
 @Entity
 @Table(name = "comment")
 @Getter
@@ -31,7 +31,6 @@ public class CommentEntity extends BaseTimeEntity {
   @Column(name = "user_id", nullable = false)
   private Long userId;
 
-  /** Null = top-level comment. Otherwise the id of the top-level comment this replies to. */
   @Column(name = "parent_id")
   private Long parentId;
 

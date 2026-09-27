@@ -16,7 +16,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 분석 데이터와 발행된 글의 CTA_REF 참조를 보존하기 위해 soft 삭제한다. */
+// 분석 데이터와 발행된 글의 CTA_REF 참조를 보존하기 위해 soft 삭제한다.
 @Entity
 @Table(name = "cta")
 @Getter
@@ -47,7 +47,6 @@ public class CtaEntity extends BaseTimeEntity {
   @Column(name = "deleted_at")
   private Instant deletedAt;
 
-  /** 추적 링크를 만들지 못한 경우 null이다. */
   @Column(name = "tracked_short_code", length = 16)
   private String trackedShortCode;
 

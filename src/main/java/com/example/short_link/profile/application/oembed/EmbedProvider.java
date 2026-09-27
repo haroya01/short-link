@@ -6,10 +6,8 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * Only allow-listed provider hosts may trigger outbound requests. Add explicit provider entries
- * rather than widening host matching.
- */
+// Only allow-listed provider hosts may trigger outbound requests. Add explicit provider entries
+// rather than widening host matching.
 public enum EmbedProvider {
   YOUTUBE(
       "youtube",

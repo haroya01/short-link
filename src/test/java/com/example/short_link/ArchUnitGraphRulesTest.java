@@ -173,7 +173,6 @@ class ArchUnitGraphRulesTest {
           .should()
           .resideInAPackage("..presentation..");
 
-  // 트랜잭션은 application과 infrastructure에서만 관리한다.
   @ArchTest
   static final ArchRule transactionalNotInPresentationOrDomain =
       methods()
@@ -183,7 +182,6 @@ class ArchUnitGraphRulesTest {
           .beDeclaredInClassesThat()
           .resideOutsideOfPackages("..presentation..", "..domain..");
 
-  // 설정은 불변 record로 유지한다.
   @ArchTest
   static final ArchRule propertiesAreRecords =
       classes()

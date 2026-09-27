@@ -4,12 +4,9 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Base64;
 
-/**
- * Resumes strictly after the previous page's last row. Computed sorts also require {@code
- * sortValue}. Wire format is unpadded base64url of {@code <createdAtMicros>:<id>} or {@code
- * v2:<createdAtMicros>:<id>:<sortValue>}. Malformed input throws {@link IllegalArgumentException},
- * mapped to HTTP 400.
- */
+// Resumes strictly after the previous page's last row. Computed sorts also require sortValue. Wire
+// format is unpadded base64url of <createdAtMicros>:<id> or v2:<createdAtMicros>:<id>:<sortValue>.
+// Malformed input throws IllegalArgumentException, mapped to HTTP 400.
 public record MyLinksCursor(Instant createdAt, long id, Long sortValue) {
 
   public MyLinksCursor(Instant createdAt, long id) {

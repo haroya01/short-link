@@ -34,7 +34,6 @@ class LinkPreviewRendererTest {
     assertThat(html).contains("여름밤 링크 밋업");
     assertThat(html).contains("8월 21일 (금) 19:00 · 성수 카페 어딘가");
     assertThat(html).doesNotContain("스크랩된 제목");
-    // 커버 없는 이벤트는 기존 생성 카드 폴백 그대로.
     assertThat(html).contains("https://kurl.me/qe1/og.png?c=3");
   }
 
@@ -135,7 +134,6 @@ class LinkPreviewRendererTest {
 
     String html = renderer.render(link, "https://kurl.me/xyz", 12L);
 
-    // Blank image (whitespace) is treated identically to null — substitute the generated card.
     assertThat(html).contains("https://kurl.me/xyz/og.png?c=12");
   }
 

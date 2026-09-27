@@ -5,10 +5,8 @@ import java.util.List;
 
 public interface PostBlockRepository {
 
-  /**
-   * Uses one multi-row INSERT because Hibernate cannot batch IDENTITY inserts. Generated IDs are
-   * not returned; re-read with {@link #findAllByPostIdOrderByBlockOrderAsc} if needed.
-   */
+  // Uses one multi-row INSERT because Hibernate cannot batch IDENTITY inserts. Generated IDs are
+  // not returned; re-read with findAllByPostIdOrderByBlockOrderAsc if needed.
   void insertAll(List<PostBlockEntity> blocks);
 
   List<PostBlockEntity> findAllByPostIdOrderByBlockOrderAsc(Long postId);

@@ -18,10 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Skips owners with no human clicks. Repository-scoped transactions release the connection between
- * owners.
- */
+// Skips owners with no human clicks. Repository-scoped transactions release the connection between
+// owners.
 @Slf4j
 @Component
 @RequiredArgsConstructor

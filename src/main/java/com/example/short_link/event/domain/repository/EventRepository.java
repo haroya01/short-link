@@ -15,7 +15,7 @@ public interface EventRepository {
 
   List<EventEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  /** 정원 원자 판정 — capacity 미만일 때만 registration_count 를 +1. 0 rows 면 만석. 마지막 1자리 동시 신청도 DB 가 직렬화한다. */
+  // 정원 원자 판정 — capacity 미만일 때만 registration_count 를 +1. 0 rows 면 만석. 마지막 1자리 동시 신청도 DB 가 직렬화한다.
   int tryIncrementRegistrationCount(Long eventId);
 
   int decrementRegistrationCount(Long eventId);

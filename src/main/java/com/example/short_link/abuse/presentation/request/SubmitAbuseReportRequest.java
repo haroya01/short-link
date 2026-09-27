@@ -8,10 +8,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import java.util.Locale;
 
-/**
- * 구형 클라이언트의 자유서술 {@code reason}을 {@link AbuseReason#OTHER}와 상세로 변환한다. 신규 {@code reasonCode}/{@code
- * detail}이 있으면 우선한다.
- */
+// 구형 클라이언트의 자유서술 reason을 AbuseReason.OTHER와 상세로 변환한다. 신규 reasonCode/detail이 있으면 우선한다.
 public record SubmitAbuseReportRequest(
     @NotBlank String subjectType,
     @NotNull Long subjectId,
@@ -29,7 +26,6 @@ public record SubmitAbuseReportRequest(
     throw new AbuseException(AbuseErrorCode.REASON_REQUIRED);
   }
 
-  /** 신규 reasonCode가 있으면 구형 reason은 상세로 사용하지 않는다. */
   public String resolvedDetail() {
     if (detail != null && !detail.isBlank()) {
       return detail;

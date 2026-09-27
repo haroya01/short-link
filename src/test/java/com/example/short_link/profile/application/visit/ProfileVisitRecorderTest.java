@@ -170,7 +170,7 @@ class ProfileVisitRecorderTest {
         .thenReturn(new AsnResolver.AsnInfo(15169, "Google", false, false));
     when(botHeuristic.isSuspectBurst("1.2.3.4")).thenReturn(false);
 
-    // Sec-GPC 옵트아웃 → 재방문 식별 해시를 만들지 않는다(§0, 측정 아닌 존중).
+    // Sec-GPC 옵트아웃이면 재방문 식별 해시를 만들지 않는다.
     recorder.record(7L, null, "ua", "1.2.3.4", null, null, null, null, null, null, null, true);
 
     ArgumentCaptor<ProfileVisitEntity> cap = ArgumentCaptor.forClass(ProfileVisitEntity.class);

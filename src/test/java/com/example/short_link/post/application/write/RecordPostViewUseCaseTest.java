@@ -279,7 +279,6 @@ class RecordPostViewUseCaseTest {
     when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
-    // GPC 옵트아웃이면 재방문 식별 해시를 만들지 않는다.
     useCase.execute(
         new RecordPostViewCommand("john", "p"),
         new ViewContext(

@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/** 같은 목적지라도 채널별 클릭을 구분하려고 deduplicate=false로 발급한다. 쿼터 초과 등 발급 실패는 이벤트 저장을 막지 않는다. */
+// 같은 목적지라도 채널별 클릭을 구분하려고 deduplicate=false로 발급한다. 쿼터 초과 등 발급 실패는 이벤트 저장을 막지 않는다.
 @Slf4j
 @Component
 @RequiredArgsConstructor

@@ -65,7 +65,7 @@ class PublishPostUseCaseTest {
   @Test
   void republishingAnAlreadyPublishedPostDoesNotAnnounceAgain() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
-    post.publish(); // already public once → publishedAt set
+    post.publish();
     when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 

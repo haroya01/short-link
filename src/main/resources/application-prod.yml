@@ -5,8 +5,6 @@ spring:
     password: ${DB_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      # 기본 풀(10)·기본 타임아웃(30s)으로 운영하던 중 풀이 통째로 묶이는 구간이 있었다.
-      # leak-detection-threshold 가 꺼져 있어 어떤 호출이 커넥션을 오래 쥐었는지 로그에 남지 않았다.
       maximum-pool-size: ${DB_POOL_MAX:20}
       minimum-idle: ${DB_POOL_MIN_IDLE:5}
       # 풀이 비어 있을 때 30초를 매달리는 대신 10초에 끊어 빨리 실패시킨다(스케줄 잡·요청 모두).
@@ -64,12 +62,8 @@ short-link:
     secure: true
     domain: ${COOKIE_DOMAIN:.kurl.me}
     same-site: ${COOKIE_SAME_SITE:Lax}
-  # Credentialed (refresh-cookie) requests come from EVERY platform surface, not just the apex:
-  # the apex (kurl.me), the blog (blog.kurl.me) AND each author subdomain ({username}.kurl.me).
-  # Listing only the apex is why the blog/subdomain sessions silently dropped — the credentialed
-  # /api/v1/auth/refresh preflight was blocked there, so bootstrapSession couldn't restore the token.
-  # `https://*.kurl.me` is an allowed-origin PATTERN (CorsConfiguration#setAllowedOriginPatterns) that
-  # covers blog + every author subdomain; the apex needs its own entry (the wildcard won't match it).
-  # Env still wins — but when set, CORS_ALLOWED_ORIGINS MUST include both of these.
+  # Refresh-cookie requests come from the apex, the blog, and every author subdomain.
+  # `https://*.kurl.me` is an origin pattern that covers the subdomains; the apex needs its own entry.
+  # When CORS_ALLOWED_ORIGINS is set it must include both.
   cors:
     allowed-origins: ${CORS_ALLOWED_ORIGINS:https://kurl.me,https://*.kurl.me}

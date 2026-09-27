@@ -37,10 +37,8 @@ public interface JpaClickLifecycleReadRepository extends Repository<ClickEventEn
       nativeQuery = true)
   List<DayClickRow> findLifecycleClicks(@Param("linkId") Long linkId, @Param("maxDay") int maxDay);
 
-  /**
-   * 재방문은 {@link #findReturnRate}와 같은 30분 세션화 정의를 사용한다. 윈도 함수는 링크의 사람 클릭 전체를 훑으므로 바깥 LIMIT은 응답 크기만
-   * 줄이고 스캔량은 줄이지 못한다.
-   */
+  // 재방문은 findReturnRate와 같은 30분 세션화 정의를 사용한다. 윈도 함수는 링크의 사람 클릭 전체를 훑으므로 바깥 LIMIT은 응답 크기만 줄이고 스캔량은
+  // 줄이지 못한다.
   @Query(
       value =
           "SELECT h.referrer_host AS host, h.clicks AS count, h.firstSeenEpoch AS firstSeenEpoch, "

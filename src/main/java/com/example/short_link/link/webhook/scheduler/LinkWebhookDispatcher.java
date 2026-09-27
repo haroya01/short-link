@@ -25,11 +25,9 @@ public class LinkWebhookDispatcher {
   private final WebhookHttpDeliveryClient deliveryClient;
   private final WebhookBatchDeliverer batchDeliverer;
 
-  /**
-   * AFTER_COMMIT prevents delivery of rolled-back clicks. No transaction is held across HTTP; the
-   * delivery client records each outcome in its own short transaction. A dedicated executor
-   * isolates slow receivers from OG fetches.
-   */
+  // AFTER_COMMIT prevents delivery of rolled-back clicks. No transaction is held across HTTP; the
+  // delivery client records each outcome in its own short transaction. A dedicated executor
+  // isolates slow receivers from OG fetches.
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onClickRecorded(ClickRecordedEvent event) {
@@ -52,10 +50,8 @@ public class LinkWebhookDispatcher {
     }
   }
 
-  /**
-   * Each hook flush commits independently in {@link WebhookBatchDeliverer}; a slow delivery does
-   * not keep prior hooks' state changes uncommitted.
-   */
+  // Each hook flush commits independently in WebhookBatchDeliverer; a slow delivery does not keep
+  // prior hooks' state changes uncommitted.
   @Scheduled(fixedDelay = 5000)
   public void flushBatches() {
     for (Long hookId : batchBuffer.hookIds()) {

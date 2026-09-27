@@ -29,7 +29,6 @@ public class PublicPostController {
     return publicPostQueryService.findPublicPost(username, slug);
   }
 
-  /** 발행글만 내보내며 작성자용 마크다운 API와 같은 변환기를 사용한다. */
   @GetMapping(value = "/{username}/posts/{slug}/markdown", produces = "text/markdown;charset=UTF-8")
   public ResponseEntity<String> publicMarkdown(
       @PathVariable String username, @PathVariable String slug) {

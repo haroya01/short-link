@@ -3,10 +3,6 @@ package com.example.short_link.common.pow;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/**
- * Requires {@code SHA-256(challenge:nonce)} to start with {@code difficulty} hex zeros. Challenges
- * expire after five minutes and can be consumed once; invalid proofs leave them usable.
- */
 @Service
 @RequiredArgsConstructor
 public class PowService {

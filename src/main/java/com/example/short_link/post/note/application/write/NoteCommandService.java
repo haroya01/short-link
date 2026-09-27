@@ -19,7 +19,6 @@ public class NoteCommandService {
   private final NoteLikeRepository likes;
   private final CollectionConnectionCleaner connectionCleaner;
 
-  /** 생성 즉시 공개하며 별도 발행 상태는 없다. */
   @Transactional
   public NoteRow create(Long userId, String rawBody) {
     String body = rawBody == null ? "" : rawBody.trim();
@@ -35,7 +34,6 @@ public class NoteCommandService {
         .orElseThrow(() -> new PostException(PostErrorCode.NOTE_NOT_FOUND, saved.getId()));
   }
 
-  /** 소유자만 물리 삭제할 수 있으며 좋아요도 함께 삭제한다. */
   @Transactional
   public void delete(Long userId, Long noteId) {
     NoteEntity note =
@@ -51,7 +49,6 @@ public class NoteCommandService {
     notes.delete(note);
   }
 
-  /** 동시 중복 요청은 멱등 처리한다. */
   @Transactional
   public LikeStatus setLike(Long userId, Long noteId, boolean on) {
     notes

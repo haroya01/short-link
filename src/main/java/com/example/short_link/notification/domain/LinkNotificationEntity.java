@@ -14,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** {@code readAt}가 null이면 안 읽은 알림이다. */
 @Entity
 @Table(name = "link_notification")
 @Getter

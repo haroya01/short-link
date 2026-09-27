@@ -17,12 +17,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 잘못된 이벤트는 비콘 호출을 실패시키지 않고 제외한다. 방문자 해시는 글 조회와 같은 공식으로 만들되 Sec-GPC 요청에는 생성하지 않는다. */
+// 잘못된 이벤트는 비콘 호출을 실패시키지 않고 제외한다. 방문자 해시는 글 조회와 같은 공식으로 만들되 Sec-GPC 요청에는 생성하지 않는다.
 @Slf4j
 @Service
 public class RecordBehaviorEventsUseCase {
 
-  /** 배치 상한을 넘은 이벤트는 제외한다. */
   static final int MAX_BATCH = 25;
 
   private static final Set<String> EVENT_NAMES =
@@ -55,9 +54,6 @@ public class RecordBehaviorEventsUseCase {
     this.clock = clock;
   }
 
-  /**
-   * @return 저장한 이벤트 수
-   */
   @Transactional
   public int execute(String sessionId, List<BehaviorEventCommand> batch, BehaviorContext ctx) {
     if (batch == null || batch.isEmpty()) return 0;
@@ -127,7 +123,7 @@ public class RecordBehaviorEventsUseCase {
         .build();
   }
 
-  /** 분류 실패로 이벤트가 유실되지 않도록 미분류로 저장한다. */
+  // 분류 실패로 이벤트가 유실되지 않도록 미분류로 저장한다.
   private Classification classify(BehaviorContext ctx) {
     try {
       UserAgentInfo ua = userAgentClassifier.classify(ctx.userAgent());

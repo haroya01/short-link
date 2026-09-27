@@ -21,11 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * End-to-end coverage of the API key feature: issue → list → call protected endpoint with the raw
- * key → revoke → call again and confirm rejection. Uses dev-login to seed a session, then exercises
- * both \"Authorization: Bearer kurl_...\" and \"X-API-Key\" header forms.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -122,13 +117,10 @@ class ApiKeyControllerTest {
                 .header("Authorization", "Bearer " + otherToken))
         .andExpect(status().isNotFound());
 
-    // owner's key still works
     mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + rawKey))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value(ownerId));
   }
-
-  // -------------------- helpers --------------------
 
   private String devLogin(String email) throws Exception {
     MvcResult res =

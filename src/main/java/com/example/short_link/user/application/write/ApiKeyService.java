@@ -28,7 +28,6 @@ public class ApiKeyService {
   private final MeterRegistry meterRegistry;
   private final SecureRandom random = new SecureRandom();
 
-  /** Returns the raw key only once; persists only its SHA-256 hash. */
   @Transactional
   public IssuedApiKey issue(Long userId, String name) {
     String raw = KEY_PREFIX + randomString();

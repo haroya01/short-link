@@ -45,7 +45,6 @@ class SubscribeSeriesUseCaseTest {
     verify(subscriptionRepository).insertIgnore(9L, 5L);
     assertThat(status.subscribed()).isTrue();
     assertThat(status.subscriberCount()).isEqualTo(3L);
-    // The series owner (1L ≠ subscriber 9L) is notified.
     org.mockito.ArgumentCaptor<com.example.short_link.common.event.BlogInteractionEvent> evt =
         org.mockito.ArgumentCaptor.forClass(
             com.example.short_link.common.event.BlogInteractionEvent.class);
@@ -59,7 +58,7 @@ class SubscribeSeriesUseCaseTest {
   @Test
   void subscribeIsIdempotentWhenAlreadySubscribed() {
     when(seriesRepository.findById(5L)).thenReturn(Optional.of(new SeriesEntity(1L, "s", "S")));
-    when(subscriptionRepository.insertIgnore(9L, 5L)).thenReturn(0); // already subscribed → no-op
+    when(subscriptionRepository.insertIgnore(9L, 5L)).thenReturn(0);
     when(subscriptionRepository.countBySeriesId(5L)).thenReturn(1L);
 
     SeriesSubscriptionStatus status = useCase.subscribe(9L, 5L);

@@ -93,7 +93,7 @@ class PostHighlightQueryServiceTest {
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
     assertThat(views.get(0).note()).isEqualTo("여백의 메모");
-    assertThat(views.get(1).author()).isNull(); // user 999 not found
+    assertThat(views.get(1).author()).isNull();
     assertThat(views.get(1).note()).isNull();
   }
 
@@ -101,10 +101,7 @@ class PostHighlightQueryServiceTest {
   void listForPostExposesEndBlockOrderForSingleAndMultiBlockSpans() {
     when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
     when(highlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(5L))
-        .thenReturn(
-            List.of(
-                highlight(10L, 5L, 1L), // 단일 블록: endBlockOrder == blockOrder == 0
-                multiBlockHighlight(11L, 5L, 1L, 2, 5))); // 여러 블록: 2 → 5
+        .thenReturn(List.of(highlight(10L, 5L, 1L), multiBlockHighlight(11L, 5L, 1L, 2, 5)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
 
     List<HighlightView> views = service.listForPost(5L);
@@ -127,7 +124,7 @@ class PostHighlightQueryServiceTest {
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).replyCount()).isEqualTo(3L);
-    assertThat(views.get(1).replyCount()).isZero(); // no replies → 0, not null
+    assertThat(views.get(1).replyCount()).isZero();
   }
 
   @Test
@@ -167,11 +164,10 @@ class PostHighlightQueryServiceTest {
     assertThat(postMissing.postTitle()).isNull();
 
     MyHighlightView authorMissing = views.get(2);
-    assertThat(authorMissing.postUsername()).isNull(); // author 3 not found
+    assertThat(authorMissing.postUsername()).isNull();
     assertThat(authorMissing.postSlug()).isEqualTo("slug-6");
   }
 
-  // 팔로우 0 = 콜드스타트 — 빈 화면 대신 전역 공개 하이라이트로 폴백한다(source=global).
   @Test
   void feedFallsBackToGlobalWhenViewerFollowsNoOne() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of());
@@ -190,7 +186,6 @@ class PostHighlightQueryServiceTest {
         .findByUserIdsOrderByCreatedAtDesc(anyCollection(), anyInt(), anyInt());
   }
 
-  // 팔로우는 있는데 그들이 칠한 구절이 0 — 첫 페이지만 전역으로 폴백한다.
   @Test
   void feedFallsBackToGlobalOnFirstPageWhenFollowedCuratorsAreQuiet() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
@@ -223,7 +218,6 @@ class PostHighlightQueryServiceTest {
     verify(highlightRepository, never()).findRecentOnPublishedPosts(anyInt(), anyInt());
   }
 
-  // scope=global 고정 — 팔로우 그래프를 아예 묻지 않고 전역 페이지네이션을 이어간다.
   @Test
   void feedForceGlobalPinsGlobalFeedRegardlessOfFollowGraph() {
     when(highlightRepository.findRecentOnPublishedPosts(2, 10)).thenReturn(List.of());
@@ -240,10 +234,7 @@ class PostHighlightQueryServiceTest {
     // 팔로우한 큐레이터(alice, id 1)가 그은 두 구절 — 하나는 살아있는 글(작가 bob), 하나는 소실된 글.
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(1L));
     when(highlightRepository.findByUserIdsOrderByCreatedAtDesc(anyCollection(), anyInt(), anyInt()))
-        .thenReturn(
-            List.of(
-                highlightWithNote(10L, 5L, 1L, "여백의 메모"),
-                highlight(11L, 999L, 1L))); // 글 999 소실 → 스킵
+        .thenReturn(List.of(highlightWithNote(10L, 5L, 1L, "여백의 메모"), highlight(11L, 999L, 1L)));
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(publishedPost(5L, 2L)));
     when(userRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(user(1L, "alice"), user(2L, "bob")));
@@ -251,11 +242,11 @@ class PostHighlightQueryServiceTest {
 
     HighlightFeedView feed = service.feed(1L, 0, 20, false);
 
-    assertThat(feed.items()).hasSize(1); // 소실된 글의 하이라이트는 빠진다
-    assertThat(feed.source()).isEqualTo("following"); // 개인화가 채워졌으니 폴백 없음
+    assertThat(feed.items()).hasSize(1);
+    assertThat(feed.source()).isEqualTo("following");
     HighlightFeedItem item = feed.items().get(0);
-    assertThat(item.curator().username()).isEqualTo("alice"); // 누가 칠했나
-    assertThat(item.postAuthorUsername()).isEqualTo("bob"); // 글 작가
+    assertThat(item.curator().username()).isEqualTo("alice");
+    assertThat(item.postAuthorUsername()).isEqualTo("bob");
     assertThat(item.postSlug()).isEqualTo("slug-5");
     assertThat(item.postTitle()).isEqualTo("Title 5");
     assertThat(item.note()).isEqualTo("여백의 메모");

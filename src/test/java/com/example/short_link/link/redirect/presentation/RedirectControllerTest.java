@@ -93,7 +93,6 @@ class RedirectControllerTest {
 
   @Test
   void returns404HtmlForUnknownCode() throws Exception {
-    // 방문자가 연 링크라 JSON 대신 브랜드 HTML 404 페이지를 준다(상태코드는 유지).
     mvc.perform(get("/zzzzzzz"))
         .andExpect(status().isNotFound())
         .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))

@@ -4,20 +4,15 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
 
-/**
- * In-app browser identity is independent of bot classification. Ordinary browsers and missing UAs
- * return null, allowing aggregates to exclude them with {@code client_app IS NOT NULL}.
- */
+// In-app browser identity is independent of bot classification. Ordinary browsers and missing UAs
+// return null, allowing aggregates to exclude them with client_app IS NOT NULL.
 @Component
 public class ClientAppClassifier {
 
-  /** Longest value the {@code click_event.client_app} column accepts. */
   public static final int MAX_LENGTH = 32;
 
-  /**
-   * Instagram must precede Facebook because a UA can contain both tokens. Keep this ordering
-   * aligned with the V117 backfill.
-   */
+  // Instagram must precede Facebook because a UA can contain both tokens. Keep this ordering
+  // aligned with the V117 backfill.
   private static final List<Rule> RULES =
       List.of(
           new Rule("kakaotalk", "kakaotalk"),
@@ -34,7 +29,6 @@ public class ClientAppClassifier {
           new Rule("tiktok", "tiktok"),
           new Rule("twitter", "twitter"));
 
-  /** In-app browser name, or {@code null} when this looks like an ordinary browser. */
   public String classify(String userAgent) {
     if (userAgent == null || userAgent.isBlank()) return null;
     String lower = userAgent.toLowerCase(Locale.ROOT);

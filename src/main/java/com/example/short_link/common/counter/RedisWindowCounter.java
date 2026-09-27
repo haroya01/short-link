@@ -8,10 +8,8 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
-/**
- * 고정 창 카운터. 증가와 만료를 서버에서 한 스크립트로 처리한다. INCR 과 EXPIRE 를 따로 보내면 그 사이 연결이 끊겼을 때 만료 없는 키가 남아 카운터가 영원히
- * 줄지 않는다. 만료 없이 남아 있던 키도 다음 증가·조회 때 창을 다시 건다.
- */
+// 고정 창 카운터. 증가와 만료를 서버에서 한 스크립트로 처리한다. INCR 과 EXPIRE 를 따로 보내면 그 사이 연결이 끊겼을 때 만료 없는 키가 남아 카운터가 영원히
+// 줄지 않는다. 만료 없이 남아 있던 키도 다음 증가·조회 때 창을 다시 건다.
 @Component
 @RequiredArgsConstructor
 public class RedisWindowCounter {

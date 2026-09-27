@@ -30,10 +30,8 @@ public record PublicFeedQuery(Selection selection, int page, int size) {
 
   public sealed interface Selection permits Search, Tagged, Browse {}
 
-  /** Search takes priority over a supplied tag. */
   public record Search(String text, SearchOrder order, String language) implements Selection {}
 
-  /** A tag feed spans every language and always lists newest posts first. */
   public record Tagged(String tag) implements Selection {}
 
   public record Browse(BrowseOrder order, String language) implements Selection {}

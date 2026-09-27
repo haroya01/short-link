@@ -1,6 +1,6 @@
 package com.example.short_link.profile.application.oembed;
 
-/** {@code html} is passed through unchanged; the allow-listed provider is the trust boundary. */
+// html is passed through unchanged; the allow-listed provider is the trust boundary.
 public record OembedMetadata(
     String provider,
     String type,

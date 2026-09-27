@@ -7,10 +7,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * May remain empty when no ASN database is available; lookups then return null organization / 0
- * ASN.
- */
 @Slf4j
 @Component
 public class AsnDatabaseHolder {

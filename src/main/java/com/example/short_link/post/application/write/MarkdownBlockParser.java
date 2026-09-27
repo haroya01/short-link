@@ -10,7 +10,6 @@ import java.util.regex.Pattern;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
-/** 인스턴스마다 한 변환 요청의 커서를 보유한다. */
 final class MarkdownBlockParser {
   private final JsonMapper json;
   private final String[] lines;
@@ -286,10 +285,8 @@ final class MarkdownBlockParser {
     return TABLE_SEP.matcher(t).matches() && t.contains("-") && t.contains("|");
   }
 
-  /**
-   * Any standalone parseable HTTP(S) URL becomes an embed, matching the web editor. A URL
-   * surrounded by text remains an inline link.
-   */
+  // Any standalone parseable HTTP(S) URL becomes an embed, matching the web editor. A URL
+  // surrounded by text remains an inline link.
   private static String standaloneEmbedUrl(String line) {
     String t = line.trim();
     Matcher m = AUTOLINK.matcher(t);
@@ -306,10 +303,8 @@ final class MarkdownBlockParser {
     }
   }
 
-  /**
-   * Labeled {@code [text](url)} image links stay on the embed path: the author requested a link.
-   * Bare URLs and autolinks with image extensions become IMAGE blocks, matching the web editor.
-   */
+  // Labeled [text](url) image links stay on the embed path: the author requested a link. Bare URLs
+  // and autolinks with image extensions become IMAGE blocks, matching the web editor.
   private static String standaloneImageUrl(String line) {
     String t = line.trim();
     Matcher m = AUTOLINK.matcher(t);

@@ -23,10 +23,8 @@ public class LinkEntity extends BaseCreatedEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  /**
-   * Use {@link LinkId} outside the JPA boundary; the raw key remains {@code Long} for Hibernate
-   * identity generation and persistence caching.
-   */
+  // Use LinkId outside the JPA boundary; the raw key remains Long for Hibernate identity generation
+  // and persistence caching.
   public LinkId linkId() {
     return id == null ? null : new LinkId(id);
   }
@@ -95,11 +93,9 @@ public class LinkEntity extends BaseCreatedEntity {
   @Column(name = "profile_highlighted", nullable = false)
   private boolean profileHighlighted = false;
 
-  /** Comma-separated ISO-3166 alpha-2 blocked countries. Null or blank means no blocklist. */
   @Column(name = "blocked_countries", length = 255)
   private String blockedCountries;
 
-  /** Null means not favorited; positions belong to this link owner. */
   @Column(name = "favorite_order")
   private Integer favoriteOrder;
 
@@ -108,15 +104,12 @@ public class LinkEntity extends BaseCreatedEntity {
     this.favoriteOrder = order;
   }
 
-  /** Owner-only memo; never shown to visitors. */
   @Column(length = 280)
   private String note;
 
-  /** Overrides the generic copy on the expired or view-limit page when provided. */
   @Column(name = "expired_message", length = 500)
   private String expiredMessage;
 
-  /** When set, expiry serves a 302 to this URL instead of an expired page. */
   @Column(name = "expired_redirect_url", length = 2048)
   private String expiredRedirectUrl;
 
@@ -164,11 +157,8 @@ public class LinkEntity extends BaseCreatedEntity {
     this.expiredRedirectUrl = (url == null || url.isBlank()) ? null : url.trim();
   }
 
-  /**
-   * Campaign end policy is stored here so redirects do not need campaign lookups. Null values clear
-   * existing policy; callers pass {@code expiredMessage} only for EXPIRE, since REDIRECT skips the
-   * page.
-   */
+  // Campaign end policy is stored here so redirects do not need campaign lookups. Null values clear
+  // existing policy; callers pass expiredMessage only for EXPIRE, since REDIRECT skips the page.
   public void applyCampaignExpiration(
       Instant expiresAt, String expiredRedirectUrl, String expiredMessage) {
     this.expiresAt = expiresAt;

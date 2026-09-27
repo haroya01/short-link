@@ -30,10 +30,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 공개 조회: PUBLISHED만 노출하고 UNPUBLISHED는 410, DRAFT/SCHEDULED·삭제 작성자는 404다. 삭제된 CTA 참조는 deleted=true로
- * 반환한다.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -88,7 +84,7 @@ public class PublicPostQueryService {
     return buildDetail(author, post);
   }
 
-  /** 미리보기 토큰 자체가 접근 권한이므로 로그인·공개 상태 검사를 생략한다. 없는 토큰과 삭제 작성자는 모두 404이며, 비공개 글은 시리즈 탐색에 포함하지 않는다. */
+  // 미리보기 토큰 자체가 접근 권한이므로 로그인·공개 상태 검사를 생략한다. 없는 토큰과 삭제 작성자는 모두 404이며, 비공개 글은 시리즈 탐색에 포함하지 않는다.
   public PublicPostDetail findPreviewPost(String token) {
     if (token == null || token.isBlank()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, "");

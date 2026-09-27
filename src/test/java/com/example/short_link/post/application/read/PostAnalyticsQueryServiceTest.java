@@ -28,7 +28,6 @@ class PostAnalyticsQueryServiceTest {
 
   private static final long USER = 7L;
   private static final long OTHER = 99L;
-  // Frozen "today" = 2026-06-01 (UTC).
   private final Clock clock = Clock.fixed(Instant.parse("2026-06-01T10:00:00Z"), ZoneOffset.UTC);
 
   @Mock private PostRepository postRepository;
@@ -71,7 +70,6 @@ class PostAnalyticsQueryServiceTest {
   void postAnalytics_fillsWindowAndSumsViews() {
     PostEntity p = post(USER, "hello", 12, 4);
     when(postRepository.findById(1L)).thenReturn(Optional.of(p));
-    // Sparse: two days inside a 7-day window.
     when(viewEventRepository.countDailyByPostIdSince(eqId(1L), org.mockito.ArgumentMatchers.any()))
         .thenReturn(
             List.of(
@@ -152,7 +150,7 @@ class PostAnalyticsQueryServiceTest {
   void overview_aggregatesTotals() {
     PostEntity a = post(USER, "a", 100, 10);
     a.publish();
-    PostEntity b = post(USER, "b", 5, 1); // draft
+    PostEntity b = post(USER, "b", 5, 1);
     PostEntity c = post(USER, "c", 50, 3);
     c.publish();
     when(postRepository.findAllByUserIdOrderByCreatedAtDesc(USER)).thenReturn(List.of(a, b, c));
@@ -188,7 +186,6 @@ class PostAnalyticsQueryServiceTest {
     assertThat(o.lifetimeFollows()).isEqualTo(8);
     assertThat(o.windowFollows()).isEqualTo(2);
     assertThat(o.daily()).hasSize(30);
-    // 유입 경로 — 같은 since 윈도우의 top 호스트가 순서대로 매핑된다.
     assertThat(o.referrers())
         .containsExactly(new ReferrerPoint("google.com", 7), new ReferrerPoint("t.co", 2));
   }
@@ -252,7 +249,7 @@ class PostAnalyticsQueryServiceTest {
             org.mockito.ArgumentMatchers.eq(USER), org.mockito.ArgumentMatchers.any()))
         .thenReturn(8L);
 
-    AuthorAnalyticsOverview o = service.overview(USER, 0); // 0 = 전체(all-time)
+    AuthorAnalyticsOverview o = service.overview(USER, 0);
 
     // Frozen today = 2026-06-01; earliest data 2026-05-20 → 13 days inclusive, spanning the chart.
     assertThat(o.windowDays()).isEqualTo(13);
@@ -310,7 +307,7 @@ class PostAnalyticsQueryServiceTest {
     assertThat(d.series().title()).isEqualTo("My Series");
     assertThat(d.series().subscriberCount()).isEqualTo(3);
     assertThat(d.windowDays()).isEqualTo(7);
-    assertThat(d.subscriberDaily()).hasSize(7); // 2026-05-26 .. 2026-06-01
+    assertThat(d.subscriberDaily()).hasSize(7);
     // Cumulative running total: 0,0,0,0,2(05-30),2,3(06-01).
     assertThat(d.subscriberDaily().get(4).views()).isEqualTo(2);
     assertThat(d.subscriberDaily().get(6).views()).isEqualTo(3);
@@ -368,8 +365,8 @@ class PostAnalyticsQueryServiceTest {
             m -> {
               assertThat(m.episode()).isEqualTo(3);
               assertThat(m.uniqueReaders()).isEqualTo(3);
-              assertThat(m.continuedToNext()).isZero(); // last episode — nothing follows
-              assertThat(m.follows()).isZero(); // not in the follows map → default 0
+              assertThat(m.continuedToNext()).isZero();
+              assertThat(m.follows()).isZero();
             });
   }
 

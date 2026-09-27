@@ -7,10 +7,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/**
- * Starts with the bundled fallback database and supports refresh without restarting. Replacing the
- * reader closes the previous one; subsequent lookups use the new reader.
- */
 @Slf4j
 @Component
 public class GeoIpDatabaseHolder {

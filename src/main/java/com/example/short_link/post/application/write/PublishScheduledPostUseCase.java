@@ -8,7 +8,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** One scheduled publication commits or rolls back independently of the rest of the batch. */
 @Service
 @RequiredArgsConstructor
 public class PublishScheduledPostUseCase {

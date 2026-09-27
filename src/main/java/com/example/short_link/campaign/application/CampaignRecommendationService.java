@@ -11,18 +11,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 배포 수량 차이를 보정한 클릭률로 수량을 재배분한다. 표본이 적으면 우연한 차이를 추천하지 않도록 결과를 보류한다. */
+// 배포 수량 차이를 보정한 클릭률로 수량을 재배분한다. 표본이 적으면 우연한 차이를 추천하지 않도록 결과를 보류한다.
 @Service
 @RequiredArgsConstructor
 public class CampaignRecommendationService {
 
-  /** 평균의 X% 미만 batch 는 다음 배포에서 폐기. */
+  // 평균의 30% 미만인 묶음은 다음 배포에서 뺀다.
   private static final double PRUNE_THRESHOLD = 0.3;
 
-  /** 한 묶음으로 배분이 과도하게 쏠리지 않도록 가중치 증가를 제한한다. */
+  // 한 묶음으로 배분이 과도하게 쏠리지 않도록 가중치 증가를 제한한다.
   private static final double MAX_BOOST = 3.0;
 
-  /** 지나치게 작은 묶음의 인쇄·배포 비효율을 줄이기 위한 최소 수량이다. */
+  // 지나치게 작은 묶음의 인쇄·배포 비효율을 줄이기 위한 최소 수량이다.
   private static final int MIN_QUANTITY = 50;
 
   private static final int MIN_TOTAL_CLICKS = 10;
@@ -96,7 +96,7 @@ public class CampaignRecommendationService {
     return allocations;
   }
 
-  /** 반올림과 최소 수량 적용으로 생긴 차이는 최대 배분 묶음 하나에서 보정한다. 동률이면 첫 묶음이다. */
+  // 반올림과 최소 수량 적용으로 생긴 차이는 최대 배분 묶음 하나에서 보정한다. 동률이면 첫 묶음이다.
   private static void correctRounding(List<Allocation> allocations, int totalQuantity) {
     int allocated = 0;
     int largestIndex = -1;

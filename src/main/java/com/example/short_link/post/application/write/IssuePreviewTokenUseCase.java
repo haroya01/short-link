@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 다시 요청해도 기존 토큰을 유지해 공유 URL이 바뀌지 않게 한다. */
+// 다시 요청해도 기존 토큰을 유지해 공유 URL이 바뀌지 않게 한다.
 @Service
 @RequiredArgsConstructor
 public class IssuePreviewTokenUseCase {

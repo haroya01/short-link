@@ -59,7 +59,6 @@ public class UpdatePostMetadataUseCase {
     return writeViews.fromSaved(postRepository.save(post));
   }
 
-  /** 관리자 권한은 HTTP 보안 계층에서 검사한다. adminUserId는 감사 로그용이다. */
   @Transactional
   public PostView adminExecute(Long adminUserId, Long postId, String title, List<String> tags) {
     log.info("admin post metadata edit: adminUserId={}, postId={}", adminUserId, postId);

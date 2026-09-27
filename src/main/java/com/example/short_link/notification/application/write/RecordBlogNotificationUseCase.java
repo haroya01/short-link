@@ -26,7 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 원래 작업의 커밋 이후 별도 트랜잭션으로 알림을 저장한다. 푸시는 알림 저장 트랜잭션까지 커밋된 뒤 제출한다. */
+// 원래 작업의 커밋 이후 별도 트랜잭션으로 알림을 저장한다. 푸시는 알림 저장 트랜잭션까지 커밋된 뒤 제출한다.
 @Service
 @RequiredArgsConstructor
 public class RecordBlogNotificationUseCase {
@@ -41,7 +41,6 @@ public class RecordBlogNotificationUseCase {
   private final BlogNotificationPreferenceService preferenceService;
   private final NotificationFanoutWriter fanoutWriter;
 
-  /** 수신 거부면 인앱 알림과 푸시 모두 생략한다. payload는 대상 참조 또는 null이다. */
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
       Long recipientUserId, NotificationType type, Long actorUserId, NotificationTarget payload) {
@@ -61,7 +60,7 @@ public class RecordBlogNotificationUseCase {
             recipient.map(NotificationUser::username).orElse(null)));
   }
 
-  /** 수신 거부자를 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다. */
+  // 수신 거부자를 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다.
   public void recordForEach(
       List<Long> recipientUserIds,
       NotificationType type,

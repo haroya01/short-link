@@ -45,7 +45,6 @@ public class EmailLeadService {
     this.ipHashSalt = ipHashSalt;
   }
 
-  /** 이미 등록된 이메일도 접수 완료로 처리하며, 중복 행은 만들지 않는다. */
   @Transactional
   void submit(Long ownerUserId, Long blockId, String email, String clientIp) {
     EmailLeadEntity lead = new EmailLeadEntity(ownerUserId, blockId, email, hashIp(clientIp));

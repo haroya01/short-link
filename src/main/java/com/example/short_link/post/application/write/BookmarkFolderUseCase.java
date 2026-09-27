@@ -11,10 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * All folder operations are scoped to the caller. Deleting a folder unfiles its bookmarks via ON
- * DELETE SET NULL, preserving the reading list.
- */
+// All folder operations are scoped to the caller. Deleting a folder unfiles its bookmarks via ON
+// DELETE SET NULL, preserving the reading list.
 @Service
 @RequiredArgsConstructor
 public class BookmarkFolderUseCase {
@@ -53,7 +51,6 @@ public class BookmarkFolderUseCase {
     bookmarkFolderRepository.delete(require(userId, folderId));
   }
 
-  /** File the caller's bookmark on {@code postId} under {@code folderId} (null = unfile). */
   @Transactional
   public void moveBookmark(Long userId, Long postId, Long folderId) {
     if (folderId != null) {

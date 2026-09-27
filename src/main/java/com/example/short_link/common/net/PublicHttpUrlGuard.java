@@ -9,11 +9,9 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 
-/**
- * Rejects non-HTTP(S) URLs and hosts resolving to non-public IPs. {@link #isPublic(String)} alone
- * is vulnerable to DNS rebinding: outbound callers must use {@link #resolve(String)}, connect to
- * its returned IPs, and preserve the original Host header.
- */
+// Rejects non-HTTP(S) URLs and hosts resolving to non-public IPs. isPublic(String) alone is
+// vulnerable to DNS rebinding: outbound callers must use resolve(String), connect to its returned
+// IPs, and preserve the original Host header.
 public final class PublicHttpUrlGuard {
 
   private PublicHttpUrlGuard() {}
@@ -22,10 +20,8 @@ public final class PublicHttpUrlGuard {
     return resolve(url).isPresent();
   }
 
-  /**
-   * Rejects the URL if any resolved IP is private. Connect to a returned address without
-   * re-resolving the host to prevent DNS rebinding.
-   */
+  // Rejects the URL if any resolved IP is private. Connect to a returned address without
+  // re-resolving the host to prevent DNS rebinding.
   public static Optional<Resolved> resolve(String url) {
     if (url == null || url.isBlank()) return Optional.empty();
     URI uri;
@@ -52,10 +48,6 @@ public final class PublicHttpUrlGuard {
     return Optional.of(new Resolved(uri, List.of(addrs)));
   }
 
-  /**
-   * All IPs resolved at validation time. Connect directly to one of them with the original Host
-   * header.
-   */
   public record Resolved(URI uri, List<InetAddress> addresses) {}
 
   static boolean isPrivate(InetAddress addr) {
@@ -75,7 +67,6 @@ public final class PublicHttpUrlGuard {
     return false;
   }
 
-  /** RFC 6598 — 100.64.0.0/10 — shared CGNAT space, treated as non-public. */
   private static boolean isCarrierGradeNat(Inet4Address v4) {
     byte[] b = v4.getAddress();
     int b0 = b[0] & 0xff;
@@ -83,16 +74,13 @@ public final class PublicHttpUrlGuard {
     return b0 == 100 && (b1 & 0xc0) == 64;
   }
 
-  /** RFC 4193 — fc00::/7 (high bits 1111 110x) — IPv6 unique-local addresses. */
   private static boolean isIpv6UniqueLocal(Inet6Address v6) {
     byte[] b = v6.getAddress();
     return (b[0] & 0xfe) == 0xfc;
   }
 
-  /**
-   * ::ffff:0:0/96 IPv4-mapped IPv6 — Java sometimes returns these for dual-stack hosts. Unwrap and
-   * re-check against the IPv4 rules so a mapped 10.0.0.1 doesn't sneak past.
-   */
+  // ::ffff:0:0/96 IPv4-mapped IPv6 — Java sometimes returns these for dual-stack hosts. Unwrap and
+  // re-check against the IPv4 rules so a mapped 10.0.0.1 doesn't sneak past.
   private static boolean isIpv4MappedPrivate(Inet6Address v6) {
     byte[] b = v6.getAddress();
     for (int i = 0; i < 10; i++) {

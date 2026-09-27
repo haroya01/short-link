@@ -7,11 +7,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Set a user's tag preference. FOLLOW and HIDE are mutually exclusive per tag (one row), so setting
- * one flips the row's kind. Remove deletes the row only when it currently holds that kind, so
- * "unfollow" can't clear a HIDE and vice versa. All operations are idempotent.
- */
+// Set a user's tag preference. FOLLOW and HIDE are mutually exclusive per tag (one row), so setting
+// one flips the row's kind. Remove deletes the row only when it currently holds that kind, so
+// "unfollow" can't clear a HIDE and vice versa. All operations are idempotent.
 @Service
 @RequiredArgsConstructor
 public class SetTagPrefUseCase {

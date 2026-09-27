@@ -21,10 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Runs after commit on the webhook executor, outside the redirect request. Velocity alerts have a
- * 12-hour per-link cooldown.
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor

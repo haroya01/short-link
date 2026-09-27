@@ -6,7 +6,6 @@ import com.example.short_link.event.exception.EventException;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-/** 연락처 정규화 + 필드 타입별 검증. UNIQUE(event_id, contact) 중복 판정의 기준값을 만든다. */
 public final class EventContacts {
 
   private static final Pattern EMAIL = Pattern.compile("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$");

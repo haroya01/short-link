@@ -1,6 +1,5 @@
 package com.example.short_link.post.application.write;
 
-/** PATCH 의미. title / slug null = 변경 안 함. */
 public record UpdateSeriesCommand(Long userId, Long seriesId, String title, String slug) {
 
   public UpdateSeriesCommand {

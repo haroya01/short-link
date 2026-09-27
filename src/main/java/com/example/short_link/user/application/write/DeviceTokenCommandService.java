@@ -15,7 +15,7 @@ public class DeviceTokenCommandService {
   private final DeviceTokenRepository deviceTokens;
   private final UserRepository userRepository;
 
-  /** 같은 기기에 다른 계정이 로그인하면 소유자를 갈아끼운다 — 이전 계정으로의 오발송 방지. */
+  // 같은 기기에 다른 계정이 로그인하면 소유자를 갈아끼운다 — 이전 계정으로의 오발송 방지.
   @Transactional
   public void register(Long userId, String token, String platform, String topic) {
     deviceTokens
@@ -29,7 +29,7 @@ public class DeviceTokenCommandService {
         .ifPresent(u -> u.updateLocale(LocaleContextHolder.getLocale().getLanguage()));
   }
 
-  /** 자기 소유 토큰만 해지한다 — 남의 APNs 토큰을 알아도 못 지우게(푸시 차단 방지). */
+  // 자기 소유 토큰만 해지한다 — 남의 APNs 토큰을 알아도 못 지우게(푸시 차단 방지).
   @Transactional
   public void unregister(Long userId, String token) {
     deviceTokens

@@ -8,10 +8,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import java.net.URI;
 import java.util.Set;
 
-/**
- * Places are resolved on the frontend; the backend validates and stores resolved fields without
- * outbound requests.
- */
+// Places are resolved on the frontend; the backend validates and stores resolved fields without
+// outbound requests.
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Place(
     String name,
@@ -32,10 +30,8 @@ public record Place(
   private static final int HOURS_TEXT_MAX = 200;
   private static final int PLACE_ID_MAX = 255;
 
-  /**
-   * Unknown categories become null so a frontend category added before backend deployment does not
-   * reject the whole block.
-   */
+  // Unknown categories become null so a frontend category added before backend deployment does not
+  // reject the whole block.
   private static final Set<String> CATEGORIES =
       Set.of("cafe", "bakery", "restaurant", "retail", "studio", "gallery", "popup", "space");
 
