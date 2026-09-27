@@ -8,5 +8,6 @@ public enum LinkNotificationType {
   VELOCITY_SPIKE,
   EXPIRY_IMMINENT,
   DIGEST,
-  WARNING
+  WARNING,
+  DESTINATION_BROKEN
 }

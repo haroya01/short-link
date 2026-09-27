@@ -23,7 +23,11 @@ public record LinkDetailView(
     String expiredMessage,
     boolean openInBrowser,
     Splash splash,
-    Instant opensAt) {
+    Instant opensAt,
+    DestinationHealth destinationHealth) {
+
+  public record DestinationHealth(
+      boolean broken, String failure, Integer httpStatus, Instant brokenSince, Instant checkedAt) {}
 
   public record Splash(boolean enabled, String message, int seconds, Long ctaId) {
     public static final Splash OFF = new Splash(false, null, 3, null);

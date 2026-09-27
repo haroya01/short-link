@@ -166,6 +166,12 @@ short-link:
     expiry-threshold-days: ${LINK_NOTIFICATION_EXPIRY_THRESHOLD_DAYS:7}
     velocity-min-clicks: ${LINK_NOTIFICATION_VELOCITY_MIN_CLICKS:10}
     velocity-ratio: ${LINK_NOTIFICATION_VELOCITY_RATIO:3.0}
+  destination-health:
+    enabled: ${DESTINATION_HEALTH_ENABLED:true}
+    cron: ${DESTINATION_HEALTH_CRON:0 17 * * * *}
+    batch-size: ${DESTINATION_HEALTH_BATCH_SIZE:60}
+    recheck-hours: ${DESTINATION_HEALTH_RECHECK_HOURS:20}
+    confirm-after: ${DESTINATION_HEALTH_CONFIRM_AFTER:2}
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}

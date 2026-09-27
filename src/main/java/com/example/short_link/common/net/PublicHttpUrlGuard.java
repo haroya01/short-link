@@ -48,6 +48,19 @@ public final class PublicHttpUrlGuard {
     return Optional.of(new Resolved(uri, List.of(addrs)));
   }
 
+  public static boolean hostExists(String url) {
+    try {
+      String host = URI.create(url).getHost();
+      if (host == null || host.isBlank()) return true;
+      InetAddress.getAllByName(host);
+      return true;
+    } catch (UnknownHostException e) {
+      return false;
+    } catch (IllegalArgumentException e) {
+      return true;
+    }
+  }
+
   public record Resolved(URI uri, List<InetAddress> addresses) {}
 
   static boolean isPrivate(InetAddress addr) {

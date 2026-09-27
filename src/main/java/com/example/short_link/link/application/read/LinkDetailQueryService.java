@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.health.domain.repository.LinkDestinationHealthRepository;
 import com.example.short_link.link.visit.domain.LinkVisitOptionEntity;
 import com.example.short_link.link.visit.domain.repository.LinkVisitOptionRepository;
 import java.util.Optional;
@@ -22,6 +23,7 @@ public class LinkDetailQueryService {
   private final LinkTagLookup linkTagService;
   private final LinkAccessGuard accessGuard;
   private final LinkVisitOptionRepository visitOptions;
+  private final LinkDestinationHealthRepository healths;
 
   @Transactional(readOnly = true)
   public LinkDetailView detail(Long userId, ShortCode shortCode) {
@@ -58,6 +60,17 @@ public class LinkDetailQueryService {
                         o.getSplashSeconds(),
                         o.getSplashCtaId()))
             .orElse(LinkDetailView.Splash.OFF),
-        option.map(LinkVisitOptionEntity::getOpensAt).orElse(null));
+        option.map(LinkVisitOptionEntity::getOpensAt).orElse(null),
+        healths
+            .findById(link.getId())
+            .map(
+                h ->
+                    new LinkDetailView.DestinationHealth(
+                        h.isBrokenFor(link.getOriginalUrl()),
+                        h.getFailure() == null ? null : h.getFailure().name(),
+                        h.getHttpStatus(),
+                        h.getBrokenSince(),
+                        h.getCheckedAt()))
+            .orElse(null));
   }
 }
