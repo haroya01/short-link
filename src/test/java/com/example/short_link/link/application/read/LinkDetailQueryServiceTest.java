@@ -13,6 +13,7 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.health.domain.repository.LinkDestinationHealthRepository;
 import com.example.short_link.link.visit.domain.repository.LinkVisitOptionRepository;
 import java.util.List;
 import java.util.Optional;
@@ -29,12 +30,14 @@ class LinkDetailServiceTest {
   @Mock private LinkTagLookup linkTagService;
   @Mock private LinkAccessGuard accessGuard;
   @Mock private LinkVisitOptionRepository visitOptions;
+  @Mock private LinkDestinationHealthRepository healths;
 
   private LinkDetailQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new LinkDetailQueryService(repository, linkTagService, accessGuard, visitOptions);
+    service =
+        new LinkDetailQueryService(repository, linkTagService, accessGuard, visitOptions, healths);
   }
 
   @Test

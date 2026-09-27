@@ -254,7 +254,7 @@
 @junit | link-destination-delete | 2 | 0 | 0 | 1 | 3
 @junit | link-destination-list | 2 | 0 | 0 | 0 | 2
 @junit | link-destination-update | 2 | 0 | 1 | 0 | 3
-@junit | link-detail-owned | 4 | 0 | 0 | 0 | 4
+@junit | link-detail-owned | 5 | 0 | 0 | 0 | 5
 @junit | link-events | 2 | 0 | 0 | 0 | 2
 @junit | link-events-csv | 2 | 0 | 0 | 0 | 2
 @junit | link-list-filter-tag | 9 | 0 | 0 | 0 | 9
