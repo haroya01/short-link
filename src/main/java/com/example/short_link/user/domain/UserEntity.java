@@ -27,7 +27,6 @@ public class UserEntity extends BaseCreatedEntity {
     ADMIN
   }
 
-  /** SUSPENDED는 만료 전까지 쓰기만 막고, BANNED는 로그인도 막는다. 제재는 UserModerationPort로 전이한다. */
   public enum ModerationStatus {
     ACTIVE,
     SUSPENDED,
@@ -54,7 +53,6 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = 64)
   private String timezone = "Asia/Seoul";
 
-  /** 서버가 조합하는 푸시의 언어이며, 알 수 없으면 ko를 사용한다. */
   @Column(nullable = false, length = 16)
   private String locale = "ko";
 
@@ -73,7 +71,7 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "avatar_url", length = 512)
   private String avatarUrl;
 
-  /** CDN URL에서 원본 키를 복원할 수 없으므로 재업로드 시 삭제할 키를 별도로 저장한다. */
+  // CDN URL에서 원본 키를 복원할 수 없으므로 재업로드 시 삭제할 키를 별도로 저장한다.
   @Column(name = "avatar_key", length = 256)
   private String avatarKey;
 
@@ -83,15 +81,12 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "banner_key", length = 256)
   private String bannerKey;
 
-  /** 소셜 프로필 JSON 배열. 검증·정규화는 {@link com.example.short_link.profile.application.Socials}가 담당한다. */
   @Column(name = "socials", length = 1024)
   private String socials;
 
-  /** true면 익명 방문자에게 프로필 집계 통계를 공개한다. 기본값은 비공개다. */
   @Column(name = "is_stats_public", nullable = false)
   private boolean statsPublic = false;
 
-  /** true면 공개 응답에서 팔로워·팔로잉 수를 0으로 표시하지 않고 필드 자체를 생략한다. */
   @Column(name = "hide_follower_count", nullable = false)
   private boolean hideFollowerCount = false;
 
@@ -99,11 +94,9 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "moderation_status", nullable = false, length = 16)
   private ModerationStatus moderationStatus = ModerationStatus.ACTIVE;
 
-  /** SUSPENDED 만료시각 — 이 시각을 지나면 쓰기 게이트가 자동 통과시킨다. BANNED/ACTIVE 면 null. */
   @Column(name = "suspended_until")
   private Instant suspendedUntil;
 
-  /** 가입 시 동의한 약관 버전과 시각. 동의 기록 도입 이전 계정은 null이다. */
   @Column(name = "terms_agreed_at")
   private Instant termsAgreedAt;
 
@@ -121,7 +114,6 @@ public class UserEntity extends BaseCreatedEntity {
   private static final java.util.Set<String> SUPPORTED_LOCALES =
       java.util.Set.of("ko", "ja", "en", "vi", "hi");
 
-  /** 지원 로케일로 클램프(기본 ko) — Accept-Language 로 푸시 구독/기기 등록 때 채운다. */
   public void updateLocale(String tag) {
     this.locale = tag != null && SUPPORTED_LOCALES.contains(tag) ? tag : "ko";
   }
@@ -169,7 +161,6 @@ public class UserEntity extends BaseCreatedEntity {
     this.bannerKey = key;
   }
 
-  /** Pass null or empty string to clear. Validation lives in Socials.normalize. */
   public void updateSocials(String json) {
     this.socials = json;
   }

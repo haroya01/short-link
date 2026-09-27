@@ -14,7 +14,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 집행 실패 시 처리 상태도 롤백되도록 두 변경을 같은 트랜잭션에서 수행한다. */
+// 집행 실패 시 처리 상태도 롤백되도록 두 변경을 같은 트랜잭션에서 수행한다.
 @Service
 @RequiredArgsConstructor
 public class ResolveAbuseReportUseCase {
@@ -67,7 +67,7 @@ public class ResolveAbuseReportUseCase {
       case SUSPEND_USER -> userModerationPort.suspend(adminUserId, subjectId, requireFuture(cmd));
       case BAN_USER -> userModerationPort.ban(adminUserId, subjectId);
       case NONE -> {
-        // 위에서 걸러짐 — switch 완전성 위한 no-op.
+        // 위에서 이미 걸러져 여기 올 일은 없다.
       }
     }
   }

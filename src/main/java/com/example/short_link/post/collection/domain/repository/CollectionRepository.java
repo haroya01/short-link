@@ -11,7 +11,6 @@ public interface CollectionRepository {
 
   Optional<CollectionEntity> findById(Long id);
 
-  /** {@code ids}가 비면 빈 목록을 반환한다. */
   List<CollectionEntity> findAllByIdIn(Collection<Long> ids);
 
   void delete(CollectionEntity collection);

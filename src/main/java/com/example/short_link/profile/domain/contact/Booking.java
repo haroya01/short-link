@@ -10,11 +10,9 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 
-/**
- * Only allow-listed booking hosts are accepted to keep arbitrary phishing URLs out of reservation
- * CTAs. Derive provider identity from the URL host, not client input; add providers through {@link
- * Provider} entries.
- */
+// Only allow-listed booking hosts are accepted to keep arbitrary phishing URLs out of reservation
+// CTAs. Derive provider identity from the URL host, not client input; add providers through
+// Provider entries.
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Booking(String url, String title, String description, String ctaLabel) {
 

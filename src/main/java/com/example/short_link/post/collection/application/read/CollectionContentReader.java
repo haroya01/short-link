@@ -32,7 +32,6 @@ public class CollectionContentReader {
   private final NoteRepository noteRepository;
   private final UserRepository userRepository;
 
-  /** 내 목록은 초안도 표시하지만, 공개 미리보기는 발행된 글과 그 인용만 표시한다. */
   public Map<Long, List<String>> previewByCollection(
       List<Long> collectionIds, boolean publishedOnly) {
     if (collectionIds.isEmpty()) return Map.of();
@@ -43,7 +42,6 @@ public class CollectionContentReader {
     return content.previewLabels(selected);
   }
 
-  /** 상세 카드는 소유자 여부와 관계없이 미발행 글과 그 인용을 제외한다. */
   public List<ConnectionView> connections(List<CollectionConnectionEntity> connections) {
     return loadPublishedContent(connections).connectionViews(connections);
   }

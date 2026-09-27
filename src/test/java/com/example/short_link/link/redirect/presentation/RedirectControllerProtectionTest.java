@@ -42,10 +42,7 @@ class RedirectControllerProtectionTest {
         .andExpect(content().string(Matchers.containsString("password")));
   }
 
-  /**
-   * 스푸핑된 크롤러 UA 가 비밀번호 보호를 우회하지 못한다 — 미리보기 분기가 비밀번호 게이트보다 먼저 돌면 목적지가 OG 카드로 통째로 노출됐다(캐시 300초로
-   * 재배포까지). 크롤러도 프롬프트만 받고, 목적지 URL 은 어디에도 실리지 않는다.
-   */
+  // 미리보기 분기가 비밀번호 검사보다 먼저 돌면 스푸핑된 크롤러 UA로 목적지가 OG 카드에 노출된다. 크롤러도 비밀번호 화면만 받아야 한다.
   @Test
   void crawlerCannotBypassPasswordToLeakDestination() throws Exception {
     repository.save(new LinkEntity("https://secret-destination.example.com/private", "pwd0009"));
@@ -89,7 +86,6 @@ class RedirectControllerProtectionTest {
             .getResponse()
             .getContentAsString();
 
-    // HTML escape — script tag should be encoded, not raw
     assertThat(body).doesNotContain("<script>");
     assertThat(body).contains("&lt;script&gt;");
   }

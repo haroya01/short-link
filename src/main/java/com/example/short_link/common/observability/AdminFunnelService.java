@@ -11,10 +11,8 @@ import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The window selects users by signup time; milestone counts reflect their current state, including
- * links, clicks, and webhooks created after signup.
- */
+// The window selects users by signup time; milestone counts reflect their current state, including
+// links, clicks, and webhooks created after signup.
 @Service
 public class AdminFunnelService {
 

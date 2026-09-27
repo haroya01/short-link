@@ -4,10 +4,6 @@ import com.example.short_link.post.collection.domain.CollectionEntity;
 import java.time.Instant;
 import java.util.List;
 
-/**
- * 컬렉션의 기본 정보와 조회 맥락. 목록은 preview와 기존 connectionId를, 역조회는 블록의 1-based position을 채운다. 생성·수정 응답은 저장한
- * 기본 정보와 count만 돌려준다.
- */
 public record CollectionSummaryView(
     Long id,
     String title,
@@ -66,7 +62,6 @@ public record CollectionSummaryView(
         connectionId);
   }
 
-  /** 누락된 큐레이터는 username과 avatarUrl을 모두 null로 둔다. */
   public record Curator(String username, String avatarUrl) {
     public static final Curator UNKNOWN = new Curator(null, null);
   }

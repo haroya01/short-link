@@ -6,10 +6,6 @@ import org.springframework.core.convert.converter.Converter;
 import org.springframework.format.FormatterRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/**
- * Invalid {@link ShortCode} input throws {@link IllegalArgumentException}, which the global handler
- * maps to HTTP 400.
- */
 @Configuration
 public class ShortCodeWebConverter implements WebMvcConfigurer {
 

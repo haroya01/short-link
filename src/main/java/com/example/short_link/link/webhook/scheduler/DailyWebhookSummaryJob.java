@@ -20,10 +20,8 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Uses the owner's timezone for the configured hour, yesterday's reporting window, and {@code
- * summaryLastSentDate} daily deduplication.
- */
+// Uses the owner's timezone for the configured hour, yesterday's reporting window, and
+// summaryLastSentDate daily deduplication.
 @Slf4j
 @Component
 public class DailyWebhookSummaryJob {

@@ -4,6 +4,6 @@ public interface TurnstileVerifier {
 
   boolean enabled();
 
-  /** Accepts an unconfigured challenge; configured verification fails closed. */
+  // Accepts an unconfigured challenge; configured verification fails closed.
   boolean verify(String token, String remoteIp);
 }

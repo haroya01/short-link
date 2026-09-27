@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/** 추적 링크 생성에 실패해도 CTA 저장은 허용한다. */
+// 추적 링크 생성에 실패해도 CTA 저장은 허용한다.
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -16,9 +16,6 @@ public class CtaLinkTracker {
   private final CreateLinkUseCase createLink;
   private final ShortLinkDetector detector;
 
-  /**
-   * Returns the short code to track this CTA url by, or {@code null} if tracking isn't possible.
-   */
   public String trackingCodeFor(Long userId, String url) {
     if (url == null || url.isBlank()) {
       return null;

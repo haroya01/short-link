@@ -16,6 +16,5 @@ public interface AbuseReportRepository {
 
   List<AbuseReportEntity> findAllByOrderByCreatedAtDesc();
 
-  /** OPEN/REVIEWING 신고만 중복으로 간주한다. 익명 신고자는 false를 반환한다. */
   boolean existsOpenReport(Long reporterUserId, AbuseSubjectType subjectType, Long subjectId);
 }

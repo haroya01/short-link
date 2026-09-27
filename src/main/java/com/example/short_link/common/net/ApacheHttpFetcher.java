@@ -19,10 +19,8 @@ import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
 import org.apache.hc.core5.util.Timeout;
 import org.springframework.stereotype.Component;
 
-/**
- * Uses a fresh pinned client per request to prevent DNS rebinding. Connections are deliberately not
- * pooled across resolved IP batches.
- */
+// Uses a fresh pinned client per request to prevent DNS rebinding. Connections are deliberately not
+// pooled across resolved IP batches.
 @Component
 public class ApacheHttpFetcher implements HttpFetcher {
 

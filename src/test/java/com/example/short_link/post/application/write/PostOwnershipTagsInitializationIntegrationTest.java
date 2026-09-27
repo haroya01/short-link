@@ -17,7 +17,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 쓰기 응답은 트랜잭션 안에서 완성되며, 소유권 검사 자체는 태그를 로딩하지 않는다. */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional

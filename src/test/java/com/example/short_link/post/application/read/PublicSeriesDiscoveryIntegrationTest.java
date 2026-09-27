@@ -15,11 +15,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The series discovery query groups published posts by series, drops thin series via HAVING, and
- * orders by the latest member's publish time — only the real GROUP BY / HAVING / MAX against MySQL
- * (and the Instant mapping it returns) proves it, so this drives it end-to-end through the service.
- */
+// The series discovery query groups published posts by series, drops thin series via HAVING, and
+// orders by the latest member's publish time — only the real GROUP BY / HAVING / MAX against MySQL
+// (and the Instant mapping it returns) proves it, so this drives it end-to-end through the service.
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -55,12 +53,10 @@ class PublicSeriesDiscoveryIntegrationTest {
     long deep = createSeries(a, "deep-dive", "Deep Dive");
     publishInSeries(a, "dd-1", deep, 0);
     publishInSeries(a, "dd-2", deep, 1);
-    // A draft member must not count toward the published total.
     PostEntity draft = new PostEntity(a, "dd-3-draft", "dd3", "ko");
     draft.assignToSeries(deep, 2);
     postRepository.save(draft);
 
-    // Only one published member → below MIN_POSTS, must be excluded.
     long thin = createSeries(a, "thin", "Thin");
     publishInSeries(a, "thin-1", thin, 0);
 
@@ -72,10 +68,9 @@ class PublicSeriesDiscoveryIntegrationTest {
         .doesNotContain("thin");
     PublicSeriesCard dd =
         cards.stream().filter(c -> c.slug().equals("deep-dive")).findFirst().orElseThrow();
-    assertThat(dd.postCount()).isEqualTo(2); // draft excluded
+    assertThat(dd.postCount()).isEqualTo(2);
     assertThat(dd.lastPublishedAt()).isNotNull();
     assertThat(dd.author().username()).isEqualTo("seriesauthor");
-    // Member previews list the published members in series order (draft excluded).
     assertThat(dd.posts()).extracting(SeriesPostRef::slug).containsExactly("dd-1", "dd-2");
   }
 }

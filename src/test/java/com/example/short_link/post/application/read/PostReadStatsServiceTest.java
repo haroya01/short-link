@@ -44,7 +44,7 @@ class PostReadStatsServiceTest {
   void setUp() {
     service = new PostReadStatsService(reader, postRepository, seriesOwnership, userRepository);
     UserEntity owner = new UserEntity("o@x.com", "google", "g-1");
-    when(userRepository.findById(USER)).thenReturn(Optional.of(owner)); // tz default Asia/Seoul
+    when(userRepository.findById(USER)).thenReturn(Optional.of(owner));
   }
 
   private PostEntity ownedPost() {
@@ -102,7 +102,7 @@ class PostReadStatsServiceTest {
         .thenReturn(
             List.of(heat(0), heat(1), heat(2), heat(3), heat(4), heat(5), heat(6), heat(7)));
     ClickProjections.CountryClickRow c = mock(ClickProjections.CountryClickRow.class);
-    when(c.getCountry()).thenReturn(null); // null → "unknown"
+    when(c.getCountry()).thenReturn(null);
     when(c.getCount()).thenReturn(7L);
     when(reader.topCountries(any(), anyInt())).thenReturn(List.of(c));
 
@@ -126,7 +126,7 @@ class PostReadStatsServiceTest {
   @Test
   void forPostFallsBackToDefaultTimezoneWhenUserMissing() {
     when(postRepository.findById(1L)).thenReturn(Optional.of(ownedPost()));
-    when(userRepository.findById(USER)).thenReturn(Optional.empty()); // tz null → DEFAULT_ZONE
+    when(userRepository.findById(USER)).thenReturn(Optional.empty());
 
     PostReadStats stats = service.forPost(USER, 1L);
 

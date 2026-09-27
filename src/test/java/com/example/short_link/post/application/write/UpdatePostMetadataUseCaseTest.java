@@ -123,7 +123,6 @@ class UpdatePostMetadataUseCaseTest {
             null,
             List.of("  Spring ", "spring", "JPA", "")));
 
-    // trimmed, case-insensitive dedup (first casing wins), blanks dropped
     assertThat(post.getTags()).containsExactly("Spring", "JPA");
   }
 

@@ -36,9 +36,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Real HTTP/JDBC journeys; only remote web-page metadata is supplied by a deterministic fixture.
- */
 public abstract class LinkJourneyHttpSupport extends DockerHttpTest {
   @LocalServerPort protected int port;
   @Autowired protected JdbcTemplate jdbc;

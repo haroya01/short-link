@@ -3,10 +3,8 @@ package com.example.short_link.link.classifier.application.helper;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-/**
- * Rejects unsafe {@code ?src=} values so arbitrary text and potential XSS payloads are not stored;
- * rejected hints become null.
- */
+// Rejects unsafe ?src= values so arbitrary text and potential XSS payloads are not stored; rejected
+// hints become null.
 public final class SourceChannelNormalizer {
 
   public static final int MAX_LENGTH = 40;

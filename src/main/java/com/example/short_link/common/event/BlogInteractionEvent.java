@@ -2,18 +2,8 @@ package com.example.short_link.common.event;
 
 import java.time.Instant;
 
-/**
- * Published after the interaction commits. Actor names are resolved only when a matching webhook
- * exists, avoiding a lookup on the interaction path. Self-actions do not notify.
- *
- * @param recipientUserId post owner, followed user, or series owner
- * @param postId null for FOLLOW
- * @param postSlug slug snapshot; null when no post
- * @param postTitle title snapshot; null when no post
- * @param seriesId populated only for SERIES_SUBSCRIBE
- * @param seriesSlug slug snapshot; null when no series
- * @param seriesTitle title snapshot; null when no series
- */
+// Published after the interaction commits. Actor names are resolved only when a matching webhook
+// exists, avoiding a lookup on the interaction path. Self-actions do not notify.
 public record BlogInteractionEvent(
     BlogInteractionType type,
     Long recipientUserId,

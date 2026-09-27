@@ -26,7 +26,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Real HTTP and committed fixtures shared by account, profile, and notification journeys. */
 public abstract class AccountHttpJourneySupport extends DockerHttpTest {
   @LocalServerPort private int port;
   @Autowired protected UserRepository users;

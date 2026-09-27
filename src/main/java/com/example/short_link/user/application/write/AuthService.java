@@ -29,19 +29,15 @@ public class AuthService {
   private final TwoFactorService twoFactor;
   private final JwtProperties jwtProperties;
 
-  /**
-   * Bump when the Terms/Privacy materially change so new sign-ups record the version they accepted.
-   */
+  // Bump when the Terms/Privacy materially change so new sign-ups record the version they accepted.
   private static final String TERMS_VERSION = "2026-07-21";
 
-  /** For 2FA users, returns only a challenge until {@link #completeTwoFactor} succeeds. */
   public sealed interface TokenLoginResult {
     record Tokens(IssuedTokens issued) implements TokenLoginResult {}
 
     record TwoFactorRequired(String challengeToken) implements TokenLoginResult {}
   }
 
-  /** Browser-based mobile OAuth returns a code to redeem, never a token pair. */
   public sealed interface MobileLoginResult {
     record TwoFactorRequired(String challengeToken) implements MobileLoginResult {}
 
@@ -58,10 +54,8 @@ public class AuthService {
     return new TokenLoginResult.Tokens(issue(user));
   }
 
-  /**
-   * Returns a one-time code because the browser sheet cannot deliver tokens to the app. No session
-   * is issued until {@link #exchangeMobileCode} redeems it.
-   */
+  // Returns a one-time code because the browser sheet cannot deliver tokens to the app. No session
+  // is issued until exchangeMobileCode redeems it.
   @Transactional
   public MobileLoginResult loginWithOAuthMobile(
       String email, String oauthProvider, String oauthId) {
@@ -95,11 +89,9 @@ public class AuthService {
     return user;
   }
 
-  /**
-   * Requires subject/email verified by {@link AppleIdentityVerifier}. An existing IdP-verified
-   * email links to that account, preserving one account per unique email and leaving its original
-   * OAuth identity unchanged.
-   */
+  // Requires subject/email verified by AppleIdentityVerifier. An existing IdP-verified email links
+  // to that account, preserving one account per unique email and leaving its original OAuth
+  // identity unchanged.
   @Transactional
   public TokenLoginResult loginWithApple(String appleSubject, String email) {
     UserEntity user =
@@ -200,7 +192,6 @@ public class AuthService {
     logout(refreshToken);
   }
 
-  /** Kills exactly the session whose refresh token is presented — holding the token is the auth. */
   public void logout(String refreshToken) {
     try {
       ParsedRefresh parsed = jwt.parseRefreshToken(refreshToken);

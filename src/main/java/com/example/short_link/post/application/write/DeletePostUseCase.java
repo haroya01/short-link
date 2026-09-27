@@ -37,14 +37,14 @@ public class DeletePostUseCase {
   private final ProfileCacheInvalidator cacheEviction;
   private final CollectionConnectionCleaner connectionCleaner;
 
-  /** 컬렉션 연결에는 FK가 없으므로 하이라이트 ID를 삭제 전에 읽어 연결도 제거한다. */
+  // 컬렉션 연결에는 FK가 없으므로 하이라이트 ID를 삭제 전에 읽어 연결도 제거한다.
   @Transactional
   public void execute(DeletePostCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     deleteCascade(post);
   }
 
-  /** 관리자 권한은 HTTP 보안 계층에서 검사한다. adminUserId는 감사 로그용이다. */
+  // 관리자 권한은 HTTP 보안 계층에서 검사한다. adminUserId는 감사 로그용이다.
   @Transactional
   public void adminExecute(Long adminUserId, Long postId) {
     log.info("admin post delete: adminUserId={}, postId={}", adminUserId, postId);

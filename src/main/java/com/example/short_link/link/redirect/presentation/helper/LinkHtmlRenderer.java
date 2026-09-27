@@ -7,10 +7,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 
-/**
- * Interstitials are self-contained on the redirect path. Keep inputs at 16px to avoid iOS focus
- * zoom.
- */
+// Interstitials are self-contained on the redirect path. Keep inputs at 16px to avoid iOS focus
+// zoom.
 public final class LinkHtmlRenderer {
 
   private LinkHtmlRenderer() {}
@@ -58,7 +56,7 @@ public final class LinkHtmlRenderer {
       .pow{font-size:12px;color:var(--muted);margin-top:14px}.pow b{color:var(--brand);font-weight:600}
       """;
 
-  /** Canonical kurl mark — same geometry as the web Logo (components/common/logo.tsx) and iOS. */
+  // Canonical kurl mark — same geometry as the web Logo (components/common/logo.tsx) and iOS.
   private static String markSvg(String cls) {
     return "<svg class=\""
         + cls
@@ -117,10 +115,6 @@ public final class LinkHtmlRenderer {
     return htmlResponse(HttpStatus.OK, unlockedPage(destinationUrl));
   }
 
-  /**
-   * Returns null for errors that should propagate to the API error handler; visitor errors render
-   * HTML.
-   */
   public static ResponseEntity<byte[]> visitorErrorPage(LinkErrorCode code) {
     return switch (code) {
       case LINK_NOT_FOUND -> notFoundPageResponse();

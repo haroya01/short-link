@@ -8,10 +8,8 @@ import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.stereotype.Component;
 
-/**
- * Tags scheduled timers as {@code SimpleClassName.methodName}. Exceptions are tagged as errors and
- * rethrown unchanged so Spring retains control of subsequent firings.
- */
+// Tags scheduled timers as SimpleClassName.methodName. Exceptions are tagged as errors and rethrown
+// unchanged so Spring retains control of subsequent firings.
 @Slf4j
 @Aspect
 @Component

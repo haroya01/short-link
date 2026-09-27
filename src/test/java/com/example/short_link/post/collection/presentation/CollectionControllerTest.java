@@ -34,7 +34,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** HTTP 매핑·status·인증 게이트만 — 검증/소유권/멱등 규칙은 서비스 단위 테스트가 진짜로 돈다. */
 @KurlWebMvcTest(controllers = CollectionController.class)
 @Import(PostExceptionHandler.class)
 class CollectionControllerTest {
@@ -168,7 +167,6 @@ class CollectionControllerTest {
                     null,
                     501L)));
 
-    // 연결 시트가 "이미 담김"을 그리도록 — 블록 기준 조회에 그 연결의 PK 가 실린다.
     mvc.perform(
             get("/api/v1/users/me/collections")
                 .param("blockType", "POST")

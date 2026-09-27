@@ -31,7 +31,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** 인증 없는 공개 발견 컨트롤러 슬라이스 — query 라우팅 + size 클램프 + 직렬화. */
 @KurlWebMvcTest(
     controllers = {
       PublicFeedController.class,

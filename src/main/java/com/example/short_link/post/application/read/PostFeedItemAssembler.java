@@ -13,7 +13,6 @@ import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** Batch-loads authors and series and drops deleted-author posts, preserving the input order. */
 @Component
 @RequiredArgsConstructor
 public class PostFeedItemAssembler {

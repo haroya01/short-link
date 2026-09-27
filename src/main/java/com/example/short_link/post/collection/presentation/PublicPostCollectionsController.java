@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** PUBLIC 컬렉션만 노출한다. PRIVATE와 UNLISTED는 제외한다. */
 @RestController
 @RequestMapping("/api/v1/public/posts")
 @RequiredArgsConstructor
@@ -28,7 +27,6 @@ public class PublicPostCollectionsController {
     return queryService.publicCollectionsContaining(ConnectionBlockType.POST, id);
   }
 
-  /** 요청 순서를 유지하고 없는 글도 빈 컬렉션 목록으로 반환한다. 중복 ID는 제거하며 MAX_IDS를 넘는 뒤쪽 ID는 제외한다. */
   @GetMapping("/collections")
   public List<PostCollectionsView> collectionsForPosts(@RequestParam List<Long> ids) {
     List<Long> capped = ids.stream().distinct().limit(MAX_IDS).toList();

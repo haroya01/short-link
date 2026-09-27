@@ -23,7 +23,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 도메인 차단 → 소유자 자동 경고 fan-out: 계정당 1건·수신자 locale 카피·익명/무관 도메인 제외. */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")

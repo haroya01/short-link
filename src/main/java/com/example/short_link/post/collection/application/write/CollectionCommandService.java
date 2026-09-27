@@ -25,7 +25,6 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 모든 변경은 주인만 가능하다. 연결 대상의 존재를 검증하며 같은 블록의 재연결은 멱등 처리한다. */
 @Service
 @RequiredArgsConstructor
 public class CollectionCommandService {
@@ -44,7 +43,6 @@ public class CollectionCommandService {
             cmd.userId(), cmd.title(), cmd.description(), cmd.visibility(), cmd.kind()));
   }
 
-  /** 주어진 ID 순서로 0부터 재배치한다. ID 집합은 컬렉션의 전체 연결과 중복 없이 정확히 일치해야 한다. */
   @Transactional
   public void reorder(Long userId, Long collectionId, List<Long> orderedConnectionIds) {
     CollectionEntity collection = ownedCollection(userId, collectionId);
@@ -70,7 +68,6 @@ public class CollectionCommandService {
     return collection;
   }
 
-  /** 기존 연결도 새 {@code why}가 있으면 갱신한다. */
   @Transactional
   public CollectionConnectionEntity connect(ConnectBlockCommand cmd) {
     CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
@@ -104,10 +101,8 @@ public class CollectionCommandService {
     return saved;
   }
 
-  /**
-   * 새 연결에만 이벤트를 발행한다. 노트 작성자는 큐레이터이므로 수신자에서 제외하며, PATH_GREW는 연결한 작가·큐레이터를 제외한 기존 기여자에게 작가별 한 번만
-   * 보낸다. 리스너는 커밋 후 실행하므로 롤백 시 알림도 없다.
-   */
+  // 새 연결에만 이벤트를 발행한다. 노트 작성자는 큐레이터이므로 수신자에서 제외하며, PATH_GREW는 연결한 작가·큐레이터를 제외한 기존 기여자에게 작가별 한 번만
+  // 보낸다. 리스너는 커밋 후 실행하므로 롤백 시 알림도 없다.
   private void publishConnected(
       CollectionEntity collection,
       ConnectBlockCommand cmd,
@@ -148,7 +143,6 @@ public class CollectionCommandService {
     };
   }
 
-  /** 노트는 큐레이터 자신의 것이므로 기여자로 세지 않는다. 연결한 작가와 큐레이터도 제외한다. */
   private List<Long> priorContributorAuthorIds(
       List<CollectionConnectionEntity> priorConnections, Long connectedAuthorId, Long curatorId) {
     List<Long> postIds = refIdsOf(priorConnections, ConnectionBlockType.POST);

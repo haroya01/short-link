@@ -14,11 +14,9 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Anonymous views are not deduplicated. The log supports rolling-window ranking while
- * posts.view_count holds the lifetime total. Dimensions may be null on legacy rows or when
- * enrichment fails, so view recording can continue.
- */
+// Anonymous views are not deduplicated. The log supports rolling-window ranking while
+// posts.view_count holds the lifetime total. Dimensions may be null on legacy rows or when
+// enrichment fails, so view recording can continue.
 @Entity
 @Table(name = "post_view_event")
 @Getter
@@ -97,7 +95,6 @@ public class PostViewEventEntity {
   @Column(name = "source_channel", length = 64)
   private String sourceChannel;
 
-  /** behavior_event와 퍼널 조인용 탭 수명 세션이다. 구형 행과 sid 없는 비콘은 null이다. */
   @Column(name = "session_id", length = 40)
   private String sessionId;
 

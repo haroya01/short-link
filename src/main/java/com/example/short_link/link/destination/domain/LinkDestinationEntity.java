@@ -14,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 국가는 ISO 3166 alpha-2 대문자 코드다. 선택 가능한 변형이 없으면 링크의 원본 URL을 사용한다. */
 @Entity
 @Table(name = "link_destination")
 @Getter
@@ -47,11 +46,9 @@ public class LinkDestinationEntity extends BaseCreatedEntity {
   @Column(name = "country_code", length = 2)
   private String countryCode;
 
-  /** mobile/tablet/desktop. 국가·OS 조건과 함께 적용하며 null은 제한 없음이다. */
   @Column(name = "device_class", length = 16)
   private String deviceClass;
 
-  /** ios/android/windows/macos/linux. null은 제한 없음이다. */
   @Column(length = 16)
   private String os;
 

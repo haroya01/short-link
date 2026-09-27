@@ -35,7 +35,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** Slice test — routing / validation / serialization / status mapping. Service 는 mock. */
 @KurlWebMvcTest(controllers = CampaignBatchController.class)
 @Import(CampaignExceptionHandler.class)
 class CampaignBatchControllerTest {

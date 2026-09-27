@@ -11,7 +11,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Separate OG fields keep the main link row narrow on redirect lookups. */
+// Separate OG fields keep the main link row narrow on redirect lookups.
 @Entity
 @Table(name = "link_og_metadata")
 @Getter

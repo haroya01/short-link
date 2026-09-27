@@ -31,7 +31,6 @@ class CloudflareTurnstileVerifierTest {
     return new CloudflareTurnstileVerifier(new TurnstileProperties("site", secret));
   }
 
-  /** body 를 돌려주는 로컬 스텁을 띄우고, 그 엔드포인트를 검증기에 주입한다. */
   private TurnstileVerifier stub(
       String secret, int status, String body, AtomicReference<String> seen) throws Exception {
     server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);

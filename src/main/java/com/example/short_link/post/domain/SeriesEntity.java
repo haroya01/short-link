@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Membership and order live on PostEntity. Series slugs remain editable. */
 @Entity
 @Table(
     name = "series",

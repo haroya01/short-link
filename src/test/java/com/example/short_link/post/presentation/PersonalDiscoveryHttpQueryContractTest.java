@@ -6,9 +6,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/**
- * Discovery branches, synchronized interests and short notes are exercised after real publication.
- */
 class PersonalDiscoveryHttpQueryContractTest extends ContentHttpJourneySupport {
 
   @Test

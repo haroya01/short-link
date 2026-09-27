@@ -125,7 +125,6 @@ class ReplaceLinkTagsUseCaseTest {
     List<String> result = useCase.execute(USER, CODE, List.of("java", "go"));
 
     assertThat(result).containsExactly("java", "go");
-    // "go" is missing → created once; "java" already exists → not created.
     verify(tagRepository).save(any(TagEntity.class));
     verify(linkTagRepository, times(2)).save(any(LinkTagEntity.class));
   }

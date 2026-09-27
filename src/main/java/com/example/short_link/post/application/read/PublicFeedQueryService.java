@@ -20,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Exposes only PUBLISHED posts from non-deleted authors. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -73,9 +72,7 @@ public class PublicFeedQueryService {
     return postRepository.findPopularTags(limit);
   }
 
-  /**
-   * Over-fetches to allow for deleted authors being removed, then preserves ranking when trimming.
-   */
+  // Over-fetches to allow for deleted authors being removed, then preserves ranking when trimming.
   public List<SuggestedAuthorView> suggestedAuthors(int limit) {
     List<AuthorPostStats> ranked = postRepository.findTopAuthorStats(limit * 2);
     Map<Long, UserEntity> authors =
@@ -94,10 +91,6 @@ public class PublicFeedQueryService {
         .toList();
   }
 
-  /**
-   * Merges followed authors, subscribed series and followed tags, newest first. Returns empty when
-   * none of those signals exist.
-   */
   public PublicFeedView feedFollowing(Long userId, int page, int size) {
     List<Long> followingIds = followRepository.findFollowingIds(userId);
     List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);

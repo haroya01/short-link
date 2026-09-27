@@ -18,11 +18,9 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.mysql.MySQLContainer;
 
-/**
- * Runs HTTP tests against an actual server and disposable MySQL/Redis instances. Test data must be
- * committed before HTTP requests; a test-managed transaction cannot span the server's request
- * thread.
- */
+// Runs HTTP tests against an actual server and disposable MySQL/Redis instances. Test data must be
+// committed before HTTP requests; a test-managed transaction cannot span the server's request
+// thread.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("test")
 @Testcontainers
@@ -39,7 +37,6 @@ public abstract class DockerHttpTest {
   @Qualifier("webhookExecutor")
   private ThreadPoolTaskExecutor webhookExecutor;
 
-  /** Wait for the real queues, including work enqueued by another background task. */
   protected void awaitAsyncWork() {
     long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
     long idleSince = -1;

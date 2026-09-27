@@ -13,7 +13,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 저장된 설정이 없으면 알림을 허용한다. */
 @Service
 @RequiredArgsConstructor
 public class BlogNotificationPreferenceService {
@@ -40,13 +39,12 @@ public class BlogNotificationPreferenceService {
     return result;
   }
 
-  /** 설정이 없는 경우를 포함해 동일 사용자·유형의 동시 변경을 저장소에서 직렬화한다. */
+  // 설정이 없는 경우를 포함해 동일 사용자·유형의 동시 변경을 저장소에서 직렬화한다.
   @Transactional
   public void setEnabled(Long userId, NotificationType type, boolean enabled) {
     repository.setEnabled(userId, type, enabled);
   }
 
-  /** 명시적 수신 거부만 일괄 제외하며 입력 순서와 중복은 유지한다. */
   @Transactional(readOnly = true)
   public List<Long> filterEnabled(List<Long> recipientUserIds, NotificationType type) {
     if (recipientUserIds.isEmpty()) {

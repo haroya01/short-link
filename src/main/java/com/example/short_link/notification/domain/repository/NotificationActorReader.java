@@ -6,6 +6,5 @@ import java.util.Map;
 
 public interface NotificationActorReader {
 
-  /** Identity for each given user id; ids with no (or a deleted) user are simply absent. */
   Map<Long, NotificationActor> resolve(Collection<Long> userIds);
 }

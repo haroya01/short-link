@@ -146,7 +146,7 @@ public record CachedLink(
     return pick(clientCountry, null, null);
   }
 
-  /** 모든 지정 조건이 일치하는 목적지 중 조건 수가 가장 많은 것을 선택한다. 동률이면 가중 무작위 선택, 일치 항목이 없으면 원본 URL을 사용한다. */
+  // 모든 지정 조건이 일치하는 목적지 중 조건 수가 가장 많은 것을 선택한다. 동률이면 가중 무작위 선택, 일치 항목이 없으면 원본 URL을 사용한다.
   public Picked pick(String clientCountry, String os, String deviceClass) {
     List<Variant> enabled = variants.stream().filter(Variant::enabled).toList();
     if (enabled.isEmpty()) return new Picked(originalUrl, null);
@@ -200,7 +200,6 @@ public record CachedLink(
       String deviceClass,
       String os) {
 
-    /** 불일치 조건이 있으면 null, 아니면 지정된 조건 수를 반환한다. 조건이 없으면 0이다. */
     private Integer matchSpecificity(VisitorSignals visitor) {
       int score = 0;
       if (countryCode != null) {

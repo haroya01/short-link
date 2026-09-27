@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Follow / unfollow an author. GET is public (follower count + a {@code following=false} for
- * anonymous viewers); PUT/DELETE require auth.
- */
 @RestController
 @RequestMapping("/api/v1/users/{username}/follow")
 @RequiredArgsConstructor

@@ -43,10 +43,8 @@ public class SafeBrowsingConfig {
             CACHE_NAME, RedisCacheConfiguration.defaultCacheConfig().entryTtl(ttl));
   }
 
-  /**
-   * Opens after a short failure burst so an unavailable or quota-exhausted API does not impose the
-   * full 2s read timeout on every shorten call. Re-probes after 30s.
-   */
+  // Opens after a short failure burst so an unavailable or quota-exhausted API does not impose the
+  // full 2s read timeout on every shorten call. Re-probes after 30s.
   @Bean
   public CircuitBreakerRegistry circuitBreakerRegistry(MeterRegistry meterRegistry) {
     CircuitBreakerConfig safeBrowsing =

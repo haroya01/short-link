@@ -10,9 +10,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Repository;
 
-/**
- * Uses a native batch query to avoid an entity dependency on the user module and per-actor lookups.
- */
+// Uses a native batch query to avoid an entity dependency on the user module and per-actor lookups.
 @Repository
 class NotificationActorReaderAdapter implements NotificationActorReader {
 

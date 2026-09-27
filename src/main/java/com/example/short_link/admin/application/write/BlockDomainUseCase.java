@@ -19,7 +19,7 @@ public class BlockDomainUseCase {
   private final BlockedDomainRepository repository;
   private final BlockedDomainCache blockedDomainCache;
 
-  /** 자기 서비스 호스트 — 이 도메인들의 차단은 자기 참조 링크 전체를 죽이므로 거부한다. */
+  // 자기 서비스 호스트 — 이 도메인들의 차단은 자기 참조 링크 전체를 죽이므로 거부한다.
   private final List<String> selfHosts;
 
   public BlockDomainUseCase(
@@ -55,7 +55,7 @@ public class BlockDomainUseCase {
     return blockedDomain;
   }
 
-  /** 상위 도메인 차단으로 서비스 호스트가 함께 막히지 않도록 양방향 접미사를 비교한다. */
+  // 상위 도메인 차단으로 서비스 호스트가 함께 막히지 않도록 양방향 접미사를 비교한다.
   private boolean isSelfDomain(String normalized) {
     for (String host : selfHosts) {
       if (normalized.equals(host)

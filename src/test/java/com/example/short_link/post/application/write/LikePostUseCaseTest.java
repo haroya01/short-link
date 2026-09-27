@@ -79,7 +79,7 @@ class LikePostUseCaseTest {
 
   @Test
   void newLikeOnOwnPostDoesNotNotify() {
-    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(post())); // owner 7L
+    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(post()));
     when(postLikeRepository.insertIgnore(42L, 7L)).thenReturn(1);
     when(postLikeRepository.countByPostId(42L)).thenReturn(1L);
 

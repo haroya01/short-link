@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 익명(null)은 통과한다. BANNED 또는 만료 전 SUSPENDED 계정은 쓰기를 거부한다. */
 @Component
 @RequiredArgsConstructor
 class UserModerationGuardAdapter implements UserModerationGuard {

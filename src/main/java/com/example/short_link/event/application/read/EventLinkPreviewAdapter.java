@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 미리보기 일시는 주최자가 정한 이벤트 타임존으로 표시한다. */
 @Component
 @RequiredArgsConstructor
 public class EventLinkPreviewAdapter implements EventLinkPreviewPort {

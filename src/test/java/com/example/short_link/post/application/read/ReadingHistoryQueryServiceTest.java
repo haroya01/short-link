@@ -94,7 +94,6 @@ class ReadingHistoryQueryServiceTest {
     when(postReadRepository.countByUserId(9L)).thenReturn(3L);
     when(postRepository.findAllByIdIn(List.of(5L, 6L, 7L)))
         .thenReturn(List.of(publishedPost(5L, 2L), draft(6L, 2L), publishedPost(7L, 3L)));
-    // author 2 present, author 3 deleted -> post 7's row drops; post 6 (draft) drops too
     when(userRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(user(2L, "bob", false), user(3L, "ghost", true)));
 

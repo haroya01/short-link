@@ -71,12 +71,11 @@ class PublicSeriesQueryServiceTest {
   void discoverSeriesRanksHydratesAndDropsDeletedAuthors() {
     UserEntity alice = author(1L, "alice");
     UserEntity bob = author(2L, "bob");
-    bob.softDelete(); // bob's series must be dropped
+    bob.softDelete();
     Instant recent = Instant.parse("2026-05-30T09:00:00Z");
     Instant mid = Instant.parse("2026-05-20T09:00:00Z");
     Instant old = Instant.parse("2026-05-10T09:00:00Z");
 
-    // Ranked by recency: alice s10 (newest), bob s20 (dropped), alice s30 (oldest).
     when(postRepository.findActiveSeries(2, 12))
         .thenReturn(
             List.of(
@@ -90,7 +89,6 @@ class PublicSeriesQueryServiceTest {
                 series(20L, 2L, "ghost", "Ghost"),
                 series(30L, 1L, "side-log", "Side Log")));
     when(userRepository.findAllByIdIn(any())).thenReturn(List.of(alice, bob));
-    // Member previews for the surviving series (deep-dive); fetched only for survivors.
     when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(10L, PostStatus.PUBLISHED))
         .thenReturn(
             List.of(
@@ -99,7 +97,6 @@ class PublicSeriesQueryServiceTest {
 
     List<PublicSeriesCard> cards = service.discoverSeries(6);
 
-    // bob's series dropped; activity order preserved among survivors.
     assertThat(cards).extracting(PublicSeriesCard::slug).containsExactly("deep-dive", "side-log");
     PublicSeriesCard first = cards.get(0);
     assertThat(first.title()).isEqualTo("Deep Dive");
@@ -175,10 +172,10 @@ class PublicSeriesQueryServiceTest {
   void subscribedSeriesHydratesCardsSkipsEmptyAndDeletedAuthor() {
     UserEntity alice = author(1L, "alice");
     UserEntity ghost = author(2L, "ghost");
-    ghost.softDelete(); // s30's author gone → dropped
+    ghost.softDelete();
     when(subscriptionRepository.findSubscribedSeriesIds(7L)).thenReturn(List.of(10L, 20L, 30L));
     SeriesEntity s10 = series(10L, 1L, "guide", "Guide");
-    SeriesEntity s20 = series(20L, 1L, "empty", "Empty"); // no published posts → dropped
+    SeriesEntity s20 = series(20L, 1L, "empty", "Empty");
     SeriesEntity s30 = series(30L, 2L, "gone", "Gone");
     when(seriesRepository.findAllByIdIn(List.of(10L, 20L, 30L))).thenReturn(List.of(s10, s20, s30));
     when(userRepository.findAllByIdIn(any())).thenReturn(List.of(alice, ghost));

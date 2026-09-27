@@ -10,10 +10,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 public class AsnResolver {
 
-  /**
-   * Hosting egress treated as bot traffic. Consumer privacy relays belong in {@link #RELAY_ASN}
-   * instead.
-   */
+  // Hosting egress treated as bot traffic. Consumer privacy relays belong in RELAY_ASN instead.
   static final Set<Integer> DATACENTER_ASN =
       Set.of(
           16509, // AWS
@@ -33,10 +30,8 @@ public class AsnResolver {
           19551 // Incapsula
           );
 
-  /**
-   * Consumer privacy relays count as people to avoid excluding real readers. This may admit some
-   * cloud-hosted scraping; UA and burst heuristics still apply.
-   */
+  // Consumer privacy relays count as people to avoid excluding real readers. This may admit some
+  // cloud-hosted scraping; UA and burst heuristics still apply.
   static final Set<Integer> RELAY_ASN =
       Set.of(
           13335, // Cloudflare — iCloud Private Relay egress · WARP
@@ -52,10 +47,8 @@ public class AsnResolver {
     return new AsnInfo(raw.asn(), raw.organization(), isDatacenter, isRelay);
   }
 
-  /**
-   * {@code datacenter} = hosting egress (treat as bot). {@code relay} = consumer privacy relay
-   * (treat as a person whose location/network is obscured). The two are mutually exclusive.
-   */
+  // datacenter = hosting egress (treat as bot). relay = consumer privacy relay (treat as a person
+  // whose location/network is obscured). The two are mutually exclusive.
   public record AsnInfo(Integer asn, String organization, boolean datacenter, boolean relay) {
     public static AsnInfo empty() {
       return new AsnInfo(null, null, false, false);

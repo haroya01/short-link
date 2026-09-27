@@ -21,11 +21,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Counts committed human clicks in the rolling window. A fired hook stays in cooldown for {@code
- * spikeWindowMinutes}. AFTER_COMMIT avoids uncommitted counts; REQUIRES_NEW persists {@code
- * markSpikeFired} after the click transaction closes.
- */
+// Counts committed human clicks in the rolling window. A fired hook stays in cooldown for
+// spikeWindowMinutes. AFTER_COMMIT avoids uncommitted counts; REQUIRES_NEW persists markSpikeFired
+// after the click transaction closes.
 @Slf4j
 @Component
 public class ThresholdSpikeDetector {

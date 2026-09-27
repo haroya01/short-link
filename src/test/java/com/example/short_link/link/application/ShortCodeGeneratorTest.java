@@ -21,7 +21,6 @@ class ShortCodeGeneratorTest {
 
   @Test
   void manySamplesAllMatchShape() {
-    // Catches "off-by-one length" / "alphabet leak" regressions across a representative sample.
     for (int i = 0; i < 1000; i++) {
       assertThat(generator.generate()).matches(BASE62);
     }

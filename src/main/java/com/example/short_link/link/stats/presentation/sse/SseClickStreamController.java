@@ -25,13 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/**
- * EventSource cannot set Authorization headers, so it uses a short-lived, code-scoped {@code
- * streamToken} or an anonymous link's {@code claimToken}. The stream token takes precedence when
- * both are present. Claiming clears the anonymous token; subsequent connections require a stream
- * token. Full access JWTs are rejected because URL credentials leak into browser and proxy logs.
- * Fail directly through the servlet response to avoid JSON error handling on the SSE channel.
- */
+// EventSource cannot set Authorization headers, so it uses a short-lived, code-scoped streamToken
+// or an anonymous link's claimToken. The stream token takes precedence when both are present.
+// Claiming clears the anonymous token; subsequent connections require a stream token. Full access
+// JWTs are rejected because URL credentials leak into browser and proxy logs. Fail directly through
+// the servlet response to avoid JSON error handling on the SSE channel.
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/links")

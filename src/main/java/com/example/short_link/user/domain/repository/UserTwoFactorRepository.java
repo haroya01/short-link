@@ -7,7 +7,6 @@ public interface UserTwoFactorRepository {
 
   Optional<UserTwoFactorEntity> findById(Long id);
 
-  /** Serializes enrollment changes and one-time credential consumption until transaction commit. */
   Optional<UserTwoFactorEntity> findByIdForUpdate(Long id);
 
   UserTwoFactorEntity save(UserTwoFactorEntity twoFactor);

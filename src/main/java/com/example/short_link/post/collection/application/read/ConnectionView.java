@@ -2,10 +2,6 @@ package com.example.short_link.post.collection.application.read;
 
 import java.time.Instant;
 
-/**
- * {@code blockType}에 따라 필드를 해석한다: POST는 title/excerpt/slug/username, HIGHLIGHT는 quote와 원문 정보, NOTE는
- * body. {@code why}는 큐레이터가 적은 연결 이유다.
- */
 public record ConnectionView(
     Long id,
     String blockType,

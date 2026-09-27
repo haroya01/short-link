@@ -9,7 +9,6 @@ import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import org.hibernate.validator.constraints.URL;
 
-/** {@code startsAt} 생략 시 즉시 시작한다. REDIRECT 정책은 종료 후 목적지 URL이 필수다. */
 public record CampaignCreateRequest(
     @NotBlank @Size(max = 255) String name,
     Instant startsAt,

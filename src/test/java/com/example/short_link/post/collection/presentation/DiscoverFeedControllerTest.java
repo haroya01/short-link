@@ -79,7 +79,6 @@ class DiscoverFeedControllerTest {
     verify(discoverFeedQuery).feed(USER_ID, 2, 10, false);
   }
 
-  // scope=global — 폴백으로 넘어간 클라이언트가 전역 페이지네이션을 고정해서 이어간다.
   @Test
   void scopeGlobalPinsGlobalFeed() throws Exception {
     when(discoverFeedQuery.feed(USER_ID, 1, 20, true))

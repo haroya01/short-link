@@ -5,10 +5,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
-/**
- * Purges campaigns on account hard delete. campaign.owner_id has no FK so orphans would survive
- * silently; campaign_batch cascades from campaign.
- */
+// Purges campaigns on account hard delete. campaign.owner_id has no FK so orphans would survive
+// silently; campaign_batch cascades from campaign.
 @Repository
 class CampaignUserDataEraser implements UserDataEraser {
 

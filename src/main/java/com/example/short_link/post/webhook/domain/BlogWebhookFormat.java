@@ -3,10 +3,6 @@ package com.example.short_link.post.webhook.domain;
 import java.net.URI;
 import java.util.Locale;
 
-/**
- * GENERIC sends signed JSON; DISCORD/SLACK use chat payloads without HMAC signatures. The format is
- * detected from the URL host at registration.
- */
 public enum BlogWebhookFormat {
   GENERIC,
   DISCORD,

@@ -98,7 +98,6 @@ class CreateCommentUseCaseTest {
     assertThat(c.body()).isEqualTo("hello");
     assertThat(c.parentId()).isNull();
     assertThat(c.author().username()).isEqualTo("carol");
-    // The post owner (7L ≠ commenter 9L) is notified of the new comment.
     org.mockito.ArgumentCaptor<com.example.short_link.common.event.BlogInteractionEvent> evt =
         org.mockito.ArgumentCaptor.forClass(
             com.example.short_link.common.event.BlogInteractionEvent.class);
@@ -120,8 +119,7 @@ class CreateCommentUseCaseTest {
 
   @Test
   void rejectsWhenPostAuthorBlockedCommenter() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
-    // 글 작성자(7)가 댓글 작성자(9)를 차단한 상태.
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(blockChecker.isBlocked(7L, 9L)).thenReturn(true);
 
     assertThatThrownBy(() -> useCase.execute(new CreateCommentCommand(9L, 42L, null, "hi")))
@@ -133,9 +131,8 @@ class CreateCommentUseCaseTest {
 
   @Test
   void replyNotifiesBothPostOwnerAndParentCommentAuthor() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
-    CommentEntity parent =
-        new CommentEntity(42L, 3L, null, "top"); // parent author 3 (a third party)
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
+    CommentEntity parent = new CommentEntity(42L, 3L, null, "top");
     when(commentRepository.findById(50L)).thenReturn(Optional.of(parent));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
@@ -146,7 +143,6 @@ class CreateCommentUseCaseTest {
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
     List<Object> events = evt.getAllValues();
-    // COMMENT to the post owner (7), REPLY to the parent comment's author (3).
     BlogInteractionEvent comment =
         events.stream()
             .filter(e -> e instanceof BlogInteractionEvent)
@@ -168,9 +164,8 @@ class CreateCommentUseCaseTest {
 
   @Test
   void replyToPostOwnersOwnCommentSendsOnlyTheReplyNotice() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
-    CommentEntity parent =
-        new CommentEntity(42L, 7L, null, "owner's top"); // parent author == owner
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
+    CommentEntity parent = new CommentEntity(42L, 7L, null, "owner's top");
     when(commentRepository.findById(50L)).thenReturn(Optional.of(parent));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
@@ -187,16 +182,14 @@ class CreateCommentUseCaseTest {
 
   @Test
   void replyingToYourOwnCommentSendsNoReplyNotice() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
-    CommentEntity parent =
-        new CommentEntity(42L, 9L, null, "my own top"); // parent author == actor 9
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
+    CommentEntity parent = new CommentEntity(42L, 9L, null, "my own top");
     when(commentRepository.findById(50L)).thenReturn(Optional.of(parent));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
 
     useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"));
 
-    // Only the post-owner COMMENT fires; the self-reply produces no REPLY.
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(1)).publishEvent(evt.capture());
     assertThat(evt.getValue()).isInstanceOf(BlogInteractionEvent.class);
@@ -204,7 +197,7 @@ class CreateCommentUseCaseTest {
 
   @Test
   void mentionNotifiesTheMentionedUser() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
@@ -212,7 +205,6 @@ class CreateCommentUseCaseTest {
 
     useCase.execute(new CreateCommentCommand(9L, 42L, null, "hey @bob nice post"));
 
-    // COMMENT to the owner (7) + MENTION to the mentioned user (5).
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
     CommentMentionEvent mention =
@@ -228,7 +220,7 @@ class CreateCommentUseCaseTest {
 
   @Test
   void mentioningThePostOwnerCollapsesIntoTheCommentNotice() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
@@ -245,7 +237,7 @@ class CreateCommentUseCaseTest {
   @Test
   void mentioningSomeoneWhoMutedCommentStillFiresTheirMention() {
     // COMMENT를 꺼둔 작성자에게는 MENTION을 별도로 전달해야 한다.
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
@@ -254,7 +246,6 @@ class CreateCommentUseCaseTest {
 
     useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"));
 
-    // COMMENT는 하위 처리에서 차단되고 MENTION은 전달된다.
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
     CommentMentionEvent mention =
@@ -270,7 +261,7 @@ class CreateCommentUseCaseTest {
   @Test
   void mentioningTheOwnerWithoutAnyMuteFiresExactlyOneCommentNotice() {
     // COMMENT를 받는 작성자의 MENTION은 합쳐서 한 번만 알린다.
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
@@ -286,7 +277,7 @@ class CreateCommentUseCaseTest {
 
   @Test
   void selfMentionSendsNoMentionNotice() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
@@ -295,13 +286,13 @@ class CreateCommentUseCaseTest {
     useCase.execute(new CreateCommentCommand(9L, 42L, null, "it's me @carol"));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
-    verify(events, times(1)).publishEvent(evt.capture()); // COMMENT only
+    verify(events, times(1)).publishEvent(evt.capture());
     assertThat(evt.getValue()).isInstanceOf(BlogInteractionEvent.class);
   }
 
   @Test
   void unknownMentionHandleIsSkipped() {
-    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost())); // owner 7
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
@@ -310,7 +301,7 @@ class CreateCommentUseCaseTest {
     useCase.execute(new CreateCommentCommand(9L, 42L, null, "@ghost are you there"));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
-    verify(events, times(1)).publishEvent(evt.capture()); // COMMENT only
+    verify(events, times(1)).publishEvent(evt.capture());
     assertThat(evt.getValue()).isInstanceOf(BlogInteractionEvent.class);
   }
 

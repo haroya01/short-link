@@ -8,10 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
-/**
- * Non-HTTP(S) URLs and scrape failures return a bare URL card. Results are cached per URL for 24
- * hours.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor

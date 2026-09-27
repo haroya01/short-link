@@ -66,7 +66,7 @@ class PublicFeedQueryServiceTest {
   void recentFeedMapsAuthorsAndExcludesMissingAuthor() {
     PostEntity p1 = post(1L, "a");
     ReflectionTestUtils.setField(p1, "id", 42L);
-    PostEntity p2 = post(2L, "b"); // author 2 not returned (deleted/missing) → excluded
+    PostEntity p2 = post(2L, "b");
     when(postRepository.findPublishedRecent(null, 0, 20)).thenReturn(List.of(p1, p2));
     when(userRepository.findAllByIdIn(List.of(1L, 2L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countPublished(null)).thenReturn(1L);
@@ -113,7 +113,6 @@ class PublicFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
 
-    // relevance = 새 기본값(sort 미인식/relevance 모두 관련성 쿼리로).
     PublicFeedView view =
         service.feed(PublicFeedQuery.from("spring", null, "relevance", null, 0, 20));
 
@@ -172,7 +171,6 @@ class PublicFeedQueryServiceTest {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of(2L, 3L));
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
-    // No subscriptions / followed tags → pass those selections as empty lists.
     when(postRepository.findPublishedByAuthorsSeriesOrTags(
             List.of(2L, 3L), List.of(), List.of(), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
@@ -191,7 +189,6 @@ class PublicFeedQueryServiceTest {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of(7L));
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
-    // No followed authors/tags → empty selections; series side carries the query.
     when(postRepository.findPublishedByAuthorsSeriesOrTags(
             List.of(), List.of(7L), List.of(), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
@@ -209,7 +206,6 @@ class PublicFeedQueryServiceTest {
   void followingFeedDrawsFromFollowedTagsWhenFollowingNoAuthorsOrSeries() {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
-    // Followed a tag (mixed case) → it's lower-cased before hitting the (lower(t) in :tags) query.
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of("Spring"), List.of()));
     when(postRepository.findPublishedByAuthorsSeriesOrTags(
             List.of(), List.of(), List.of("spring"), 0, 20))
@@ -288,7 +284,7 @@ class PublicFeedQueryServiceTest {
     when(postRepository.findPopularTags(6))
         .thenReturn(List.of(new com.example.short_link.post.domain.TagCount("ghost", 1L)));
     when(postRepository.findPublishedByTag("ghost", 0, 8)).thenReturn(List.of(post(9L, "x")));
-    when(userRepository.findAllByIdIn(List.of(9L))).thenReturn(List.of()); // author missing/deleted
+    when(userRepository.findAllByIdIn(List.of(9L))).thenReturn(List.of());
 
     assertThat(service.trendingByTag(6, 8)).isEmpty();
   }

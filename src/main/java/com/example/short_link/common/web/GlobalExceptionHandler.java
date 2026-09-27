@@ -19,16 +19,13 @@ import org.springframework.web.context.request.async.AsyncRequestNotUsableExcept
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
-/** 도메인 예외는 feature별 advice가 먼저 처리하고, 공통 예외와 catch-all은 여기서 처리한다. */
 @RestControllerAdvice
 @Order(Ordered.LOWEST_PRECEDENCE)
 @Slf4j
 public class GlobalExceptionHandler {
 
-  /**
-   * Return a generic 400 because IllegalArgumentException may expose JWT/TOTP internals as well as
-   * ordinary input errors. Keep the original message only in logs.
-   */
+  // Return a generic 400 because IllegalArgumentException may expose JWT/TOTP internals as well as
+  // ordinary input errors. Keep the original message only in logs.
   @ExceptionHandler(IllegalArgumentException.class)
   public ProblemDetail handleIllegalArgument(IllegalArgumentException e, HttpServletRequest req) {
     log.debug(
@@ -55,10 +52,8 @@ public class GlobalExceptionHandler {
         HttpStatus.CONFLICT, "concurrent modification, please retry", "OPTIMISTIC_LOCK", req);
   }
 
-  /**
-   * Preserve the 401 signal that tells clients to acquire a fresh PoW; the catch-all would return
-   * 500.
-   */
+  // Preserve the 401 signal that tells clients to acquire a fresh PoW; the catch-all would return
+  // 500.
   @ExceptionHandler(PowRequiredException.class)
   public ProblemDetail handlePowRequired(PowRequiredException e, HttpServletRequest req) {
     return ProblemDetails.of(e.status(), e.getMessage(), e.code(), req);
@@ -97,7 +92,7 @@ public class GlobalExceptionHandler {
         HttpStatus.PAYLOAD_TOO_LARGE, "request body too large", "PAYLOAD_TOO_LARGE", req);
   }
 
-  /** SSE 연결 종료로 응답을 쓸 수 없는 상태다. 정상 종료를 에러로 기록하거나 닫힌 응답에 ProblemDetail을 다시 쓰지 않는다. */
+  // SSE 연결 종료로 응답을 쓸 수 없는 상태다. 정상 종료를 에러로 기록하거나 닫힌 응답에 ProblemDetail을 다시 쓰지 않는다.
   @ExceptionHandler(AsyncRequestNotUsableException.class)
   public void handleAsyncRequestNotUsable(
       AsyncRequestNotUsableException e, HttpServletRequest req) {

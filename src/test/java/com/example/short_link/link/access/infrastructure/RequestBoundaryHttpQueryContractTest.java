@@ -22,7 +22,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.test.context.TestPropertySource;
 
-/** Actual request binding and password unlock, with only the remote provider replaced by HTTP. */
 @Import(RequestBoundaryHttpQueryContractTest.ProviderConfiguration.class)
 @TestPropertySource(
     properties = {

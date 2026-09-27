@@ -18,10 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Exports account, links, and masked click statistics. Blog/social data is excluded and provided
- * through the privacy policy's contact channel; policy §8 must stay aligned with this scope.
- */
+// Exports account, links, and masked click statistics. Blog/social data is excluded and provided
+// through the privacy policy's contact channel; policy §8 must stay aligned with this scope.
 @Service
 @RequiredArgsConstructor
 public class UserDataExportService {

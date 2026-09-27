@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** A private per-user record. Rereads update {@code read_at} on the existing row. */
 @Entity
 @Table(
     name = "post_read",

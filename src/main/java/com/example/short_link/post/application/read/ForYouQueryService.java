@@ -17,24 +17,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Discovers unread posts from followed tags and recent reads/likes. Readers with no interest signal
- * fall back to trending.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ForYouQueryService {
 
-  /** Recent reads excluded from recommendations. */
   private static final int EXCLUDE_CAP = 200;
 
-  /** Recent reads and likes used to derive interest tags. */
   private static final int SIGNAL_CAP = 40;
 
   private static final int MAX_INTEREST_TAGS = 12;
 
-  /** An explicit tag follow outweighs an incidental read. */
+  // An explicit tag follow outweighs an incidental read.
   private static final int FOLLOWED_WEIGHT = 3;
 
   private final PostRepository postRepository;
@@ -86,7 +80,6 @@ public class ForYouQueryService {
     return new PublicFeedView(items, page, size, hasNext);
   }
 
-  /** Ranks followed and recently read/liked tags by weight, excluding hidden tags. */
   private List<String> deriveInterestTags(
       List<String> followed, List<Long> readIds, List<Long> likedIds, Set<String> hidden) {
     Map<String, Integer> freq = new HashMap<>();

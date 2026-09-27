@@ -63,7 +63,6 @@ public interface JpaCollectionConnectionRepository
   List<CollectionConnectionCount> countByCollectionIdIn(
       @Param("collectionIds") Collection<Long> collectionIds);
 
-  /** 저장된 position에 빈자리가 있어도 (position, id) 정렬로 연속된 1-based 순위를 계산한다. */
   @Query(
       value =
           "SELECT collection_id AS collectionId, ref_id AS refId, "
@@ -83,7 +82,7 @@ public interface JpaCollectionConnectionRepository
     int getPosition();
   }
 
-  /** FK 없는 다형 참조를 정리한다. 벌크 삭제가 영속성 컨텍스트를 우회하므로 삭제 트랜잭션 안에서만 호출한다. */
+  // FK 없는 다형 참조를 정리한다. 벌크 삭제가 영속성 컨텍스트를 우회하므로 삭제 트랜잭션 안에서만 호출한다.
   @Modifying
   @Query(
       "delete from CollectionConnectionEntity c"

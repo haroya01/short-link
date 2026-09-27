@@ -54,7 +54,7 @@ class SetPinnedPostsUseCaseTest {
     when(postRepository.findPublishedByUserIdForUpdate(7L)).thenReturn(List.of(p1));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    useCase.execute(7L, List.of(99L)); // not owned / not published
+    useCase.execute(7L, List.of(99L));
 
     assertThat(p1.getPinOrder()).isNull();
   }

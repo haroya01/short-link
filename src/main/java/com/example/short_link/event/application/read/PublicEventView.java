@@ -4,7 +4,7 @@ import com.example.short_link.event.domain.EventEntity;
 import java.time.Instant;
 import java.util.List;
 
-/** 공개 페이지용 — 주최자 전용 정보(신청자 수 상세, 링크 목록)는 싣지 않는다. */
+// 공개 페이지용 — 주최자 전용 정보(신청자 수 상세, 링크 목록)는 싣지 않는다.
 public record PublicEventView(
     String slug,
     String title,

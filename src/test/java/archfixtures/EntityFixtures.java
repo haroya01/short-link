@@ -3,7 +3,7 @@ package archfixtures;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 
-/** Lives outside the application package so persistence never maps these. */
+// Lives outside the application package so persistence never maps these.
 public final class EntityFixtures {
 
   private EntityFixtures() {}

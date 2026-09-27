@@ -5,7 +5,6 @@ import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** Owns the Redis buckets and their atomic one-minute expiry. */
 @Component
 @RequiredArgsConstructor
 public class RateLimitCounter {

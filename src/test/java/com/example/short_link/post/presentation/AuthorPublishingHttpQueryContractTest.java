@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.Test;
 
-/** Author writes, previews, schedules, publishes, groups, measures, restores and removes a post. */
 class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
 
   @Test

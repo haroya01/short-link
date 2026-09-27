@@ -7,7 +7,6 @@ import java.security.SecureRandom;
 import java.util.HexFormat;
 import org.springframework.stereotype.Component;
 
-/** The client-visible proof format: random hex challenge and SHA-256(challenge:nonce). */
 @Component
 final class PowProof {
   private static final int CHALLENGE_BYTES = 16;

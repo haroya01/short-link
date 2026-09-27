@@ -23,10 +23,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 팔로우한 큐레이터의 PUBLIC 컬렉션 연결을 최신순으로 반환한다. 팔로우가 없거나 첫 페이지가 비면 전역 피드로 폴백하며, 이후 빈 페이지는 종료다. 대상이 사라진 연결은
- * 제외하고 응답의 {@code source}로 피드 종류를 구분한다.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

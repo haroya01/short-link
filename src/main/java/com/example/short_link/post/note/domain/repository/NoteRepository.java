@@ -16,7 +16,6 @@ public interface NoteRepository {
 
   void delete(NoteEntity note);
 
-  /** 최신순으로 반환한다. hasNext는 {@link #countAll()}과 조합해 판단한다. */
   List<NoteRow> feed(int page, int size);
 
   long countAll();

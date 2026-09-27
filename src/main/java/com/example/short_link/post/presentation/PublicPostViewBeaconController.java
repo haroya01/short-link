@@ -15,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 없는 글과 미발행 글의 비콘은 무시한다. 조회는 중복 제거 없이 집계한다. */
 @RestController
 @RequestMapping("/api/v1/public/profiles")
 @RequiredArgsConstructor

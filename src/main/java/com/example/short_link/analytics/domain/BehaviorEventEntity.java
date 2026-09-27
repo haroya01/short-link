@@ -13,7 +13,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 세션 ID는 탭 안의 행동 순서를 잇고, 방문자 해시는 글 조회와 조인하는 데 사용한다. Sec-GPC 요청에는 방문자 해시를 남기지 않는다. */
+// 세션 ID는 탭 안의 행동 순서를 잇고, 방문자 해시는 글 조회와 조인하는 데 사용한다. Sec-GPC 요청에는 방문자 해시를 남기지 않는다.
 @Entity
 @Table(name = "behavior_event")
 @Getter

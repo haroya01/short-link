@@ -6,10 +6,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Each request connects only to its pre-resolved IPs to prevent DNS rebinding, then closes its
- * client. Returns the complete body, capped at {@link Request#maxBodyBytes}.
- */
+// Each request connects only to its pre-resolved IPs to prevent DNS rebinding, then closes its
+// client. Returns the complete body, capped at Request.maxBodyBytes.
 public interface HttpFetcher {
 
   Response fetch(Request request);
@@ -49,11 +47,8 @@ public interface HttpFetcher {
           Method.GET, pinned, headers, null, null, connectTimeout, readTimeout, maxBodyBytes, true);
     }
 
-    /**
-     * Returns 3xx without following them. The pinned resolver rejects other hosts, so callers must
-     * follow cross-host redirects hop by hop and validate each Location with {@link
-     * PublicHttpUrlGuard}.
-     */
+    // Returns 3xx without following them. The pinned resolver rejects other hosts, so callers must
+    // follow cross-host redirects hop by hop and validate each Location with PublicHttpUrlGuard.
     public static Request getNoRedirects(
         Resolved pinned,
         Map<String, String> headers,
@@ -97,7 +92,6 @@ public interface HttpFetcher {
     }
   }
 
-  /** An absent body becomes an empty array, never null. Header lookups are case-insensitive. */
   record Response(int status, Map<String, List<String>> headers, byte[] body) {
 
     public Response {
@@ -105,7 +99,6 @@ public interface HttpFetcher {
       body = body == null ? new byte[0] : body;
     }
 
-    /** First value for the given header (case-insensitive), or null. */
     public String header(String name) {
       for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
         if (entry.getKey().equalsIgnoreCase(name) && !entry.getValue().isEmpty()) {

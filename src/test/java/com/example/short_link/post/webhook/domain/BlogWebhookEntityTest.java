@@ -111,7 +111,7 @@ class BlogWebhookEntityTest {
   @Test
   void emptyEventUpdateLeavesSetUnchanged() {
     BlogWebhookEntity h = hook(EnumSet.of(BlogInteractionType.LIKE));
-    h.update(null, Set.of(), null); // empty set ⇒ keep existing
+    h.update(null, Set.of(), null);
     assertThat(h.events()).containsExactly(BlogInteractionType.LIKE);
   }
 
@@ -119,7 +119,7 @@ class BlogWebhookEntityTest {
   void furtherFailuresAfterAutoDisableKeepCounting() {
     BlogWebhookEntity h = hook(Set.of());
     for (int i = 0; i < 6; i++) {
-      h.recordFailure(503, "boom"); // 6th lands while already disabled
+      h.recordFailure(503, "boom");
     }
     assertThat(h.isEnabled()).isFalse();
     assertThat(h.getConsecutiveFailures()).isEqualTo(6);

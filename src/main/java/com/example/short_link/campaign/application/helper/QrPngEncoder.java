@@ -23,13 +23,9 @@ import org.springframework.stereotype.Component;
 public class QrPngEncoder {
 
   public enum Ec {
-    /** 오류 정정 수준 L: 약 7%. */
     L(ErrorCorrectionLevel.L),
-    /** 오류 정정 수준 M: 약 15%. */
     M(ErrorCorrectionLevel.M),
-    /** 오류 정정 수준 Q: 약 25%. */
     Q(ErrorCorrectionLevel.Q),
-    /** 오류 정정 수준 H: 약 30%. */
     H(ErrorCorrectionLevel.H);
 
     final ErrorCorrectionLevel level;
@@ -43,7 +39,6 @@ public class QrPngEncoder {
     return encode(url, 512, Ec.M, null);
   }
 
-  /** 라벨은 QR 아래에 붙인다. {@code labelText}가 null/blank이면 QR만 반환한다. */
   public byte[] encode(String url, int sizePx, Ec ec, String labelText) {
     try {
       Map<EncodeHintType, Object> hints = new EnumMap<>(EncodeHintType.class);
@@ -71,7 +66,7 @@ public class QrPngEncoder {
         g.setColor(Color.WHITE);
         g.fillRect(0, 0, sizePx, sizePx + labelHeight);
         g.drawImage(qr, 0, 0, null);
-        g.setColor(new Color(0x0F172A)); // slate-900
+        g.setColor(new Color(0x0F172A));
         int fontSize = Math.max(12, labelHeight - 8);
         g.setFont(new Font(Font.SANS_SERIF, Font.PLAIN, fontSize));
         String text = truncateToFit(g, labelText, sizePx - 16);

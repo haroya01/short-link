@@ -9,7 +9,7 @@ public interface CustomDomainRepository {
 
   Optional<CustomDomainEntity> findById(Long id);
 
-  /** Reloads the latest verification state and serializes outcome updates until commit. */
+  // Reloads the latest verification state and serializes outcome updates until commit.
   Optional<CustomDomainEntity> findByIdForUpdate(Long id);
 
   CustomDomainEntity save(CustomDomainEntity domain);

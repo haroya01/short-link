@@ -15,7 +15,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/** 차단 커밋 후 트랜잭션 밖에서 약관 위반 경고를 소유자당 한 번 발송한다. */
+// 차단 커밋 후 트랜잭션 밖에서 약관 위반 경고를 소유자당 한 번 발송한다.
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -25,9 +25,6 @@ public class BlockedDomainWarningFanout {
   private final UserRepository users;
   private final LinkNotificationDispatcher dispatcher;
 
-  /**
-   * @return 경고가 발송된 소유자 수
-   */
   public int execute(String domain) {
     Map<Long, List<LinkEntity>> byOwner =
         links.findByOriginalUrlContaining(domain).stream()

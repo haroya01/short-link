@@ -13,10 +13,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Absent preferences enable the type; {@code enabled=false} opts out. Link notifications use {@link
- * NotificationPreferenceEntity} separately.
- */
 @Entity
 @Table(name = "blog_notification_preference")
 @Getter

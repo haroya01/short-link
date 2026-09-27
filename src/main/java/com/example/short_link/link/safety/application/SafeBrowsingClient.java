@@ -12,10 +12,8 @@ public class SafeBrowsingClient {
 
   private final UrlThreatLookup lookup;
 
-  /**
-   * Retains the Boolean cache format. Cache hits bypass the lookup entirely; failures are never
-   * cached. A lookup's allow-through result is cached just like a safe verdict.
-   */
+  // Retains the Boolean cache format. Cache hits bypass the lookup entirely; failures are never
+  // cached. A lookup's allow-through result is cached just like a safe verdict.
   @Cacheable(value = CACHE_NAME, key = "#cacheKey")
   public boolean isSafeForKey(String cacheKey, String fullUrl) {
     return lookup.isSafe(fullUrl);

@@ -6,10 +6,8 @@ import java.time.Duration;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Limits guesses per link and client IP because the global per-IP limit is too loose for password
- * brute force. Only password failures count; success resets the counter.
- */
+// Limits guesses per link and client IP because the global per-IP limit is too loose for password
+// brute force. Only password failures count; success resets the counter.
 @Component
 @RequiredArgsConstructor
 public class LinkPasswordAttemptLimiter implements PasswordAttempts {

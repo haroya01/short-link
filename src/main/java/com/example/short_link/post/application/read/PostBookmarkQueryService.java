@@ -29,7 +29,6 @@ public class PostBookmarkQueryService {
     return new PostBookmarkStatus(bookmarked);
   }
 
-  /** Newest-bookmarked first. Skips deleted/unpublished posts and deleted authors. */
   public List<BookmarkView> list(Long userId) {
     List<PostBookmarkEntity> bookmarks =
         postBookmarkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);

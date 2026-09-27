@@ -6,7 +6,6 @@ import com.example.short_link.user.domain.UserEntity;
 import java.time.Instant;
 import java.util.Optional;
 
-/** 검색 필터는 정규화된 값을 받으며, null은 해당 필터를 적용하지 않는다는 뜻이다. */
 public interface AdminBrowseRepository {
 
   StatPage<UserRow> findUsers(String q, String role, int page, int size);

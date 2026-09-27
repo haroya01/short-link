@@ -22,7 +22,6 @@ public interface PostHighlightRepository {
   List<PostHighlightEntity> findByUserIdsOrderByCreatedAtDesc(
       Collection<Long> userIds, int page, int size);
 
-  /** 발행된 글의 하이라이트만 최신순으로 반환한다. 초안·비공개 글의 인용은 제외한다. */
   List<PostHighlightEntity> findRecentOnPublishedPosts(int page, int size);
 
   int deleteAllByPostId(Long postId);

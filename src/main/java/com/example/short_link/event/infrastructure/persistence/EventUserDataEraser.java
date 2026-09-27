@@ -5,7 +5,7 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
-/** 계정 하드 삭제 시 이벤트와 하위 데이터 전부 제거 — FK 에 ON DELETE CASCADE 없음. */
+// 계정 하드 삭제 시 이벤트와 하위 데이터 전부 제거 — FK 에 ON DELETE CASCADE 없음.
 @Repository
 class EventUserDataEraser implements UserDataEraser {
 

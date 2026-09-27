@@ -81,7 +81,6 @@ public class CampaignBatchService {
     return pairWithLink(batch);
   }
 
-  /** 대표 링크와 캠페인은 변경할 수 없다. null 필드는 유지하고 종료·보관 캠페인은 거부한다. */
   @Transactional
   public BatchWithLink update(
       Long campaignId, Long batchId, Long ownerId, CampaignBatchUpdateCommand command) {
@@ -100,7 +99,7 @@ public class CampaignBatchService {
     return new BatchWithLink(batch, current.link());
   }
 
-  /** 대표 링크도 삭제하므로 인쇄된 QR도 무효화된다. 종료된 캠페인에서도 삭제할 수 있다. */
+  // 대표 링크도 삭제하므로 인쇄된 QR도 무효화된다. 종료된 캠페인에서도 삭제할 수 있다.
   @Transactional
   public void delete(Long campaignId, Long batchId, Long ownerId) {
     BatchWithLink current = detail(campaignId, batchId, ownerId);

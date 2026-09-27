@@ -18,7 +18,6 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
-/** Event storage, questions, capacity, cancellation and organizer reads all use Docker MySQL. */
 class EventLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
   @MockitoBean private MailSender outgoingMail;
   @MockitoBean private ObjectStorage remoteStorage;

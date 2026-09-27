@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** The security layer restricts {@code /api/v1/admin/**} to ADMIN. */
 @RestController
 @RequestMapping("/api/v1/admin/posts")
 @RequiredArgsConstructor
@@ -34,7 +33,6 @@ public class AdminPostController {
     unpublishPost.adminExecute(adminUserId, id);
   }
 
-  /** Null fields are unchanged. Moderation edits only title/tags; a missing post returns 404. */
   @PatchMapping("/{id}")
   public PostView update(
       @AuthenticationPrincipal Long adminUserId,
@@ -43,7 +41,6 @@ public class AdminPostController {
     return updatePostMetadata.adminExecute(adminUserId, id, request.title(), request.tags());
   }
 
-  /** Permanent deletion. Missing posts return 404, including repeated deletion requests. */
   @DeleteMapping("/{id}")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal Long adminUserId, @PathVariable Long id) {

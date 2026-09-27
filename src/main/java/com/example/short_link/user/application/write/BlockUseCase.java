@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Blocking is idempotent and rejects self-blocks. Clients use the block list to hide content. */
 @Service
 @RequiredArgsConstructor
 public class BlockUseCase {

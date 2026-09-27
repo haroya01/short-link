@@ -42,13 +42,11 @@ public class CollectionQueryService {
   private final CollectionContentReader contentReader;
   private final UserRepository userRepository;
 
-  /** 수정 응답은 저장된 기본 정보와 현재 연결 수만 돌려준다. 목록용 preview·큐레이터·순위는 채우지 않는다. */
   public CollectionSummaryView editedSummary(CollectionEntity saved) {
     long count = connectionRepository.countByCollectionId(saved.getId());
     return CollectionSummaryView.afterWrite(saved, count);
   }
 
-  /** 한 블록을 담은 공개 컬렉션. 각 컬렉션에서의 1-based 위치를 함께 보여준다. */
   public List<CollectionSummaryView> publicCollectionsContaining(
       ConnectionBlockType blockType, Long refId) {
     List<Long> collectionIds =
@@ -80,7 +78,6 @@ public class CollectionQueryService {
         .toList();
   }
 
-  /** 요청한 블록 순서를 보존하고, 공개 연결이 없는 블록도 빈 목록으로 돌려준다. */
   public Map<Long, List<CollectionSummaryView>> publicCollectionsContainingBatch(
       ConnectionBlockType blockType, List<Long> refIds) {
     List<Long> distinctRefIds = refIds.stream().filter(Objects::nonNull).distinct().toList();
@@ -133,7 +130,6 @@ public class CollectionQueryService {
                 CollectionConnectionCount::collectionId, count -> (int) count.count()));
   }
 
-  /** 공개 컬렉션만 남기고 같은 블록·컬렉션 쌍의 중복을 제거한다. 같은 수정 시각은 원래 연결 순서를 유지한다. */
   private Map<Long, List<CollectionEntity>> publicCollectionsByRef(
       List<CollectionConnectionEntity> connections, Map<Long, CollectionEntity> publicCollections) {
     Map<Long, Map<Long, CollectionEntity>> distinctByRef = new LinkedHashMap<>();
@@ -220,7 +216,6 @@ public class CollectionQueryService {
                 (first, duplicate) -> first));
   }
 
-  /** 공개 프로필에는 PUBLIC 컬렉션만 노출한다. 없는 사용자명은 빈 목록을 돌려준다. */
   public List<CollectionSummaryView> listPublicByUsername(String username) {
     Optional<UserEntity> user = userRepository.findByUsername(username);
     if (user.isEmpty()) return List.of();
@@ -244,7 +239,7 @@ public class CollectionQueryService {
         .toList();
   }
 
-  /** PRIVATE 컬렉션은 주인 외에는 존재를 노출하지 않는다. */
+  // PRIVATE 컬렉션은 주인 외에는 존재를 노출하지 않는다.
   public CollectionDetailView detail(Long viewerId, Long collectionId) {
     CollectionEntity collection =
         collectionRepository

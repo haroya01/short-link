@@ -15,7 +15,6 @@ import java.util.OptionalLong;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 인증기로 소유를 확인한 뒤 활성화하며, 복구코드 원문은 발급 때만 반환한다. */
 @Service
 public class TwoFactorService {
 
@@ -59,7 +58,6 @@ public class TwoFactorService {
     return repository.findById(userId).map(UserTwoFactorEntity::isEnabled).orElse(false);
   }
 
-  /** 미완료 등록은 비밀키를 교체할 수 있다. 활성화는 {@link #confirm}에서 수행한다. */
   @Transactional
   public SetupChallenge start(Long userId) {
     UserEntity user =
@@ -105,7 +103,6 @@ public class TwoFactorService {
     return plainCodes;
   }
 
-  /** 잘못됐거나 이미 소비한 TOTP 구간은 거부한다. 응답·시도 제한 정책은 호출자가 결정한다. */
   @Transactional
   public boolean verify(Long userId, String code) {
     UserTwoFactorEntity row = repository.findByIdForUpdate(userId).orElse(null);
@@ -122,7 +119,6 @@ public class TwoFactorService {
     return true;
   }
 
-  /** 성공한 복구코드의 해시를 제거해 재사용을 막는다. */
   @Transactional
   public boolean verifyRecovery(Long userId, String recoveryCode) {
     UserTwoFactorEntity row = repository.findByIdForUpdate(userId).orElse(null);

@@ -21,7 +21,7 @@ import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/** VAPID 미설정이면 발송하지 않는다. 전송은 전용 풀에서 실행해 알림 저장 트랜잭션을 붙잡지 않으며, 404/410 응답은 구독을 폐기한다. */
+// VAPID 미설정이면 발송하지 않는다. 전송은 전용 풀에서 실행해 알림 저장 트랜잭션을 붙잡지 않으며, 404/410 응답은 구독을 폐기한다.
 @Component
 @Slf4j
 public class WebPushSender implements PushSender {
@@ -113,7 +113,7 @@ public class WebPushSender implements PushSender {
     }
   }
 
-  /** Service Worker 호환을 위해 type·shortCode는 값이 있을 때만 추가한다. 기존 Worker는 모르는 키를 무시한다. */
+  // Service Worker 호환을 위해 type·shortCode는 값이 있을 때만 추가한다. 기존 Worker는 모르는 키를 무시한다.
   byte[] payload(PushMessage message) {
     String title = message.body();
     String body = message.subtitle() == null ? "" : message.subtitle();

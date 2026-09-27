@@ -21,9 +21,6 @@ public class BlockedDomainQueryService implements BlockedDomainChecker {
     return repository.findAllByOrderByBlockedAtDesc();
   }
 
-  /**
-   * @return true when {@code url}'s host (or a parent domain) is blocked.
-   */
   public boolean isBlocked(String url) {
     String host = BlockedDomainNormalizer.hostOf(url);
     if (host == null) return false;

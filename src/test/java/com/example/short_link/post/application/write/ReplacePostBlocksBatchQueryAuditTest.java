@@ -19,11 +19,8 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 글 본문 블록 교체 경로의 쓰기 프로파일을 query-audit 로 관측하는 하네스. saveAll() 시절엔 블록 수만큼 단일 INSERT 가 나갔고 (IDENTITY 라
- * Hibernate 가 배치 못 함 — batch_size 도 무효), query-audit 의 repeated-single-insert 로 드러났다. 지금은
- * ReplacePostBlocksUseCase 가 insertAll() 로 한 번의 multi-row INSERT 를 쏘므로 그 경고가 사라진다.
- */
+// IDENTITY라 Hibernate가 INSERT를 배치하지 못해 블록 수만큼 단일 INSERT가 나갔다(batch_size도 소용없다).
+// insertAll()이 multi-row INSERT 한 번으로 보내는지 query-audit로 확인한다.
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional

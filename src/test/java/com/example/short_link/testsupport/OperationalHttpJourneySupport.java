@@ -30,7 +30,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Authenticated operations use the actual server; only external website metadata is stubbed. */
 public abstract class OperationalHttpJourneySupport extends DockerHttpTest {
 
   @LocalServerPort private int port;

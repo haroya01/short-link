@@ -9,7 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** INSERT IGNORE로 중복 좋아요를 무시한다. 댓글 좋아요는 알림을 보내지 않는다. */
+// INSERT IGNORE로 중복 좋아요를 무시한다. 댓글 좋아요는 알림을 보내지 않는다.
 @Service
 @RequiredArgsConstructor
 public class LikeCommentUseCase {

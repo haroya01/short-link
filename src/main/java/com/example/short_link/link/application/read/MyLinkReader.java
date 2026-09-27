@@ -71,7 +71,7 @@ public class MyLinkReader {
     return counts;
   }
 
-  /** 클릭 수 정렬에 사용한 집계를 다시 읽지 않고 같은 값으로 응답을 만든다. */
+  // 클릭 수 정렬에 사용한 집계를 다시 읽지 않고 같은 값으로 응답을 만든다.
   List<MyLink> assemble(List<LinkEntity> links, Map<Long, Long> counts) {
     List<Long> ids = links.stream().map(LinkEntity::getId).toList();
     Map<Long, List<String>> tagsByLinkId = linkTags.tagNamesByLinkIds(ids);

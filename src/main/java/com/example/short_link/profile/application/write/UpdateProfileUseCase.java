@@ -27,7 +27,6 @@ public class UpdateProfileUseCase {
 
   private static final Pattern USERNAME = Pattern.compile("^[a-z0-9][a-z0-9_]{2,15}$");
 
-  /** Squat-protect old usernames for this long after a rename. */
   private static final Duration USERNAME_GRACE = Duration.ofDays(30);
 
   private final UserRepository userRepository;

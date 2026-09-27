@@ -5,10 +5,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
-/**
- * These user-owned tables lack users foreign keys and must be cleared explicitly on account
- * deletion.
- */
+// These user-owned tables lack users foreign keys and must be cleared explicitly on account
+// deletion.
 @Repository
 class ProfileUserDataEraser implements UserDataEraser {
 

@@ -10,11 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Queues metrics without a database write on the request thread. Overflow is dropped and counted to
- * bound memory during bursts or outages; each flush drains at most {@link #MAX_BATCH_PER_FLUSH}
- * rows.
- */
+// Queues metrics without a database write on the request thread. Overflow is dropped and counted to
+// bound memory during bursts or outages; each flush drains at most MAX_BATCH_PER_FLUSH rows.
 @Slf4j
 @Component
 public class RequestMetricsRecorder {

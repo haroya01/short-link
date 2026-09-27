@@ -25,10 +25,8 @@ import org.apache.commons.compress.compressors.gzip.GzipCompressorInputStream;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Refresh is fenced across instances by a Redis lock. Without a license key, the bundled fallback
- * database remains in use.
- */
+// Refresh is fenced across instances by a Redis lock. Without a license key, the bundled fallback
+// database remains in use.
 @Slf4j
 @Component
 @RequiredArgsConstructor

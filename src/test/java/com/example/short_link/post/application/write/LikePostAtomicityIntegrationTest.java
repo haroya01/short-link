@@ -14,7 +14,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 실제 DB에서 멱등 INSERT와 카운터 증감이 좋아요 행 수와 일치하는지 확인한다. */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -36,7 +35,7 @@ class LikePostAtomicityIntegrationTest {
     return userRepository.save(new UserEntity(suffix + "@x.com", "google", "g-" + suffix)).getId();
   }
 
-  /** Bulk UPDATE 이전의 엔티티를 비우고 DB의 카운터를 다시 읽는다. */
+  // Bulk UPDATE 이전의 엔티티를 비우고 DB의 카운터를 다시 읽는다.
   private long denormalizedLikeCount(long postId) {
     em.flush();
     em.clear();
@@ -49,7 +48,6 @@ class LikePostAtomicityIntegrationTest {
     long liker = user("liker");
 
     assertThat(likePost.like(liker, postId).likeCount()).isEqualTo(1);
-    // Second like by the same user — INSERT IGNORE is a no-op, counter must not double-count.
     assertThat(likePost.like(liker, postId).likeCount()).isEqualTo(1);
     assertThat(denormalizedLikeCount(postId)).isEqualTo(1);
   }
@@ -72,7 +70,6 @@ class LikePostAtomicityIntegrationTest {
     assertThat(likePost.unlike(liker, postId).likeCount()).isZero();
     assertThat(denormalizedLikeCount(postId)).isZero();
 
-    // Unliking again with no like present must not decrement below zero.
     assertThat(likePost.unlike(liker, postId).likeCount()).isZero();
     assertThat(denormalizedLikeCount(postId)).isZero();
   }

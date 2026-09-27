@@ -12,6 +12,5 @@ public interface NotificationPreferenceRepository {
 
   List<NotificationPreferenceEntity> findByUserId(Long userId);
 
-  /** Atomically creates or updates one preference; concurrent writes retain exactly one row. */
   void setEnabled(Long userId, LinkNotificationType type, boolean enabled);
 }

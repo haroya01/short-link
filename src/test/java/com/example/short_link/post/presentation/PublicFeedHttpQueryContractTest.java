@@ -36,7 +36,6 @@ import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-/** The author and tag query budget must stay constant as the HTTP feed page grows. */
 class PublicFeedHttpQueryContractTest extends DockerHttpTest {
 
   private static final int FIXTURE_POST_COUNT = 20;

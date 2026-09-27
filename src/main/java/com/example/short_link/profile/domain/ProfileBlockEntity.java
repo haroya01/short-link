@@ -31,10 +31,6 @@ public class ProfileBlockEntity extends BaseTimeEntity {
   @Column(name = "block_type", nullable = false, length = 16)
   private ProfileBlockType type;
 
-  /**
-   * Type-specific payload: TEXT and structured blocks store JSON, IMAGE/EMBED store URLs, DIVIDER
-   * is null. TEXT storage accommodates multi-item product JSON.
-   */
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;
 

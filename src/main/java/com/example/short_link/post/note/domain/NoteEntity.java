@@ -11,7 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 생성 즉시 공개하며 별도 발행 상태가 없다. 삭제는 물리 삭제다. */
 @Entity
 @Table(name = "note")
 @Getter

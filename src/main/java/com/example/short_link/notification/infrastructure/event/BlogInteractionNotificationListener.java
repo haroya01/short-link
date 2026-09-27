@@ -13,10 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * AFTER_COMMIT avoids notifications for rolled-back interactions; async delivery keeps the insert
- * off the request path.
- */
+// AFTER_COMMIT avoids notifications for rolled-back interactions; async delivery keeps the insert
+// off the request path.
 @Component
 @RequiredArgsConstructor
 public class BlogInteractionNotificationListener {

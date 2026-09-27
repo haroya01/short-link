@@ -119,7 +119,7 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
 
   public record FormatRedetection(boolean changed, boolean reactivated) {}
 
-  /** 포맷이 바뀐 자동 비활성 훅만 복구한다. 사용자가 직접 끈 훅은 그대로 둔다. */
+  // 포맷이 바뀐 자동 비활성 훅만 복구한다. 사용자가 직접 끈 훅은 그대로 둔다.
   public FormatRedetection redetectFormat() {
     WebhookFormat detected = WebhookFormat.detect(url);
     if (detected == format) return new FormatRedetection(false, false);
@@ -193,7 +193,7 @@ public class LinkWebhookEntity extends BaseCreatedEntity {
     return filter.getUtmSourceFilter();
   }
 
-  /** 새 전송 모드에서 사용하지 않는 설정은 지워 다음 모드 전환에 남지 않게 한다. */
+  // 새 전송 모드에서 사용하지 않는 설정은 지워 다음 모드 전환에 남지 않게 한다.
   public void changeDeliveryMode(
       WebhookDeliveryMode mode,
       Integer summaryHourOfDay,

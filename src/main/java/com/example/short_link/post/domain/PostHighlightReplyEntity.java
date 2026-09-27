@@ -11,7 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Deleting a highlight cascades to its reply thread through the highlight FK. */
 @Entity
 @Table(name = "highlight_reply")
 @Getter

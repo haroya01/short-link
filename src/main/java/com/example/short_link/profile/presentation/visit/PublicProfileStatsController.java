@@ -8,10 +8,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Missing users and private stats both return 404 to avoid exposing whether an opted-out profile
- * exists.
- */
+// Missing users and private stats both return 404 to avoid exposing whether an opted-out profile
+// exists.
 @RestController
 @RequestMapping("/api/v1/public/profiles")
 @RequiredArgsConstructor

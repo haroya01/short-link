@@ -28,7 +28,6 @@ public class LinkDestinationQueryService {
         .toList();
   }
 
-  /** Current blocked-country codes (CSV, possibly empty) for a link the caller owns. */
   public String blockedCountries(Long userId, ShortCode shortCode) {
     return ownedLink(userId, shortCode).getBlockedCountries();
   }

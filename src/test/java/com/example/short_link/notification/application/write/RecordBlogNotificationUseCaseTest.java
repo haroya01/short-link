@@ -49,7 +49,6 @@ class RecordBlogNotificationUseCaseTest {
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final MessageSource messageSource = pushMessages();
 
-  /** 실제 messages_*.properties 를 로드해 로컬라이즈를 실측한다. */
   private static MessageSource pushMessages() {
     ResourceBundleMessageSource ms = new ResourceBundleMessageSource();
     ms.setBasename("messages");

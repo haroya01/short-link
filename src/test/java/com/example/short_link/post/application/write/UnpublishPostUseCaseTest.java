@@ -47,7 +47,7 @@ class UnpublishPostUseCaseTest {
     PostView result = useCase.execute(new UnpublishPostCommand(7L, 42L));
 
     assertThat(result.status()).isEqualTo(PostStatus.UNPUBLISHED.name());
-    assertThat(result.publishedAt()).isNotNull(); // preserved
+    assertThat(result.publishedAt()).isNotNull();
   }
 
   @Test

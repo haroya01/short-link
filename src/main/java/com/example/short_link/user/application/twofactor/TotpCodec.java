@@ -10,7 +10,6 @@ import java.util.OptionalLong;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 
-/** RFC 6238: HMAC-SHA1, 30초 간격, 6자리, Base32 비밀키. 시계 오차로 ±1 구간을 허용한다. */
 public final class TotpCodec {
 
   public static final int CODE_DIGITS = 6;

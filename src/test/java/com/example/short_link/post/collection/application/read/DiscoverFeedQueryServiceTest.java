@@ -76,7 +76,7 @@ class DiscoverFeedQueryServiceTest {
 
   private PostEntity draftPost(long id, long authorId) {
     PostEntity p = new PostEntity(authorId, "slug-" + id, "Title " + id, "ko");
-    ReflectionTestUtils.setField(p, "id", id); // status 는 DRAFT 그대로 — 미발행.
+    ReflectionTestUtils.setField(p, "id", id);
     return p;
   }
 
@@ -87,7 +87,6 @@ class DiscoverFeedQueryServiceTest {
     return u;
   }
 
-  // 팔로우 0 = 콜드스타트 — 빈 화면 대신 전역 공개 피드로 폴백한다(source=global).
   @Test
   void fallsBackToGlobalWhenViewerFollowsNoOne() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of());
@@ -107,7 +106,6 @@ class DiscoverFeedQueryServiceTest {
         .findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt());
   }
 
-  // 팔로우는 있는데 그들의 공개 연결이 0 — 첫 페이지만 전역으로 폴백한다.
   @Test
   void fallsBackToGlobalOnFirstPageWhenFollowedCuratorsAreQuiet() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
@@ -141,7 +139,6 @@ class DiscoverFeedQueryServiceTest {
     verify(connectionRepository, never()).findRecentPublicConnections(anyInt(), anyInt());
   }
 
-  // scope=global 고정 — 팔로우 그래프를 아예 묻지 않고 전역 페이지네이션을 이어간다.
   @Test
   void forceGlobalPinsGlobalFeedRegardlessOfFollowGraph() {
     when(connectionRepository.findRecentPublicConnections(2, 10)).thenReturn(List.of());
@@ -178,8 +175,8 @@ class DiscoverFeedQueryServiceTest {
     DiscoverFeedView feed = service.feed(1L, 0, 20, false);
 
     assertThat(feed.items()).hasSize(3);
-    assertThat(feed.hasNext()).isFalse(); // 3 < 20
-    assertThat(feed.source()).isEqualTo("following"); // 개인화가 채워졌으니 폴백 없음
+    assertThat(feed.hasNext()).isFalse();
+    assertThat(feed.source()).isEqualTo("following");
     DiscoverConnectionView postItem = feed.items().get(0);
     assertThat(postItem.curator().username()).isEqualTo("minji");
     assertThat(postItem.blockType()).isEqualTo("POST");
@@ -203,7 +200,7 @@ class DiscoverFeedQueryServiceTest {
         .thenReturn(
             List.of(
                 row(100L, ConnectionBlockType.NOTE, 7L, 2L),
-                row(101L, ConnectionBlockType.NOTE, 8L, 999L))); // curator 999 absent
+                row(101L, ConnectionBlockType.NOTE, 8L, 999L)));
     NoteEntity n7 = new NoteEntity(2L, "보이는 노트");
     ReflectionTestUtils.setField(n7, "id", 7L);
     NoteEntity n8 = new NoteEntity(999L, "주인 없는 노트");
@@ -215,9 +212,9 @@ class DiscoverFeedQueryServiceTest {
 
     DiscoverFeedView feed = service.feed(1L, 0, 2, false);
 
-    assertThat(feed.items()).hasSize(1); // 999-owned row skipped
+    assertThat(feed.items()).hasSize(1);
     assertThat(feed.items().get(0).body()).isEqualTo("보이는 노트");
-    assertThat(feed.hasNext()).isTrue(); // 2 rows == requested size 2
+    assertThat(feed.hasNext()).isTrue();
   }
 
   @Test
@@ -237,9 +234,8 @@ class DiscoverFeedQueryServiceTest {
 
     DiscoverFeedView feed = service.publicFeed(0, 20);
 
-    // 팔로우와 무관하게 전역 공개 연결이 흐른다 — followRepository 는 건드리지 않는다.
     assertThat(feed.items()).hasSize(2);
-    assertThat(feed.hasNext()).isFalse(); // 2 < 20
+    assertThat(feed.hasNext()).isFalse();
     assertThat(feed.source()).isEqualTo("global");
     assertThat(feed.items().get(0).blockType()).isEqualTo("POST");
     assertThat(feed.items().get(0).curator().username()).isEqualTo("minji");
@@ -249,7 +245,7 @@ class DiscoverFeedQueryServiceTest {
     verifyNoInteractions(followRepository);
   }
 
-  // 미발행 글(초안·비공개·관리자 차단)은 공개 발견 피드에서 빠진다 — 담김 연결이 남아 있어도 메타(제목·발췌·슬러그)가 새지 않게.
+  // 미발행 글은 연결이 남아 있어도 공개 발견 피드에 제목·발췌가 새지 않아야 한다.
   @Test
   void publicFeedHidesUnpublishedPosts() {
     when(connectionRepository.findRecentPublicConnections(0, 20))
@@ -266,7 +262,7 @@ class DiscoverFeedQueryServiceTest {
 
     DiscoverFeedView feed = service.publicFeed(0, 20);
 
-    assertThat(feed.items()).hasSize(1); // 초안 글(6)은 빠지고 발행 글(5)만.
+    assertThat(feed.items()).hasSize(1);
     assertThat(feed.items().get(0).title()).isEqualTo("Title 5");
   }
 
@@ -279,7 +275,7 @@ class DiscoverFeedQueryServiceTest {
     assertThat(feed.items()).isEmpty();
     assertThat(feed.page()).isEqualTo(3);
     assertThat(feed.size()).isEqualTo(10);
-    assertThat(feed.hasNext()).isFalse(); // 0 rows != size 10
+    assertThat(feed.hasNext()).isFalse();
     assertThat(feed.source()).isEqualTo("global");
     verifyNoInteractions(followRepository);
   }

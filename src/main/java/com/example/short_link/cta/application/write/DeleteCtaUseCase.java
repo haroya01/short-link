@@ -13,7 +13,6 @@ public class DeleteCtaUseCase {
   private final CtaOwnership ctaOwnership;
   private final CtaRepository ctaRepository;
 
-  /** Soft delete. 분석 데이터 보존 + 과거 발행 글의 PostBlock CTA_REF 참조 무결성. */
   @Transactional
   public void execute(DeleteCtaCommand cmd) {
     CtaEntity cta = ctaOwnership.requireOwned(cmd.userId(), cmd.ctaId());

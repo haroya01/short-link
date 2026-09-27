@@ -10,10 +10,8 @@ import java.util.Locale;
 import java.util.Map;
 import org.springframework.stereotype.Service;
 
-/**
- * Percentiles sort the window's rows in memory; {@link Window} limits that workload and {@link
- * RawQuery} caps the raw page size.
- */
+// Percentiles sort the window's rows in memory; Window limits that workload and RawQuery caps the
+// raw page size.
 @Service
 public class AdminRequestMetricsService {
 

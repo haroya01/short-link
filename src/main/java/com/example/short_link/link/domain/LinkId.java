@@ -3,11 +3,8 @@ package com.example.short_link.link.domain;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-/**
- * Application IDs use this type; JPA identity generation and persistence-context keys remain {@code
- * Long}. Convert with {@link #of} and {@link #value} at the repository boundary. JSON remains a
- * bare number.
- */
+// Application IDs use this type; JPA identity generation and persistence-context keys remain Long.
+// Convert with of and value at the repository boundary. JSON remains a bare number.
 public record LinkId(@JsonValue Long value) {
 
   public LinkId {

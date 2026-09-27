@@ -10,7 +10,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Bounds retention of per-request telemetry and its user identifiers. */
 @Slf4j
 @Component
 public class RequestMetricsCleanupJob {

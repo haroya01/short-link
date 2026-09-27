@@ -11,7 +11,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 같은 APNs 토큰으로 다른 계정이 로그인하면 오발송 방지를 위해 소유자를 바꾼다. 로그아웃·탈퇴·BadDeviceToken 응답 시 삭제한다. */
+// 같은 APNs 토큰으로 다른 계정이 로그인하면 오발송 방지를 위해 소유자를 바꾼다. 로그아웃·탈퇴·BadDeviceToken 응답 시 삭제한다.
 @Entity
 @Table(name = "device_token")
 @Getter

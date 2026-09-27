@@ -9,7 +9,6 @@ public interface EmailLeadRepository {
 
   EmailLeadEntity save(EmailLeadEntity lead);
 
-  /** Creates a submission once per block/email, preserving an existing submission on a retry. */
   void addIfAbsent(EmailLeadEntity lead);
 
   void delete(EmailLeadEntity lead);

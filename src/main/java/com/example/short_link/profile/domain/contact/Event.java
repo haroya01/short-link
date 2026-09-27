@@ -9,10 +9,6 @@ import java.net.URI;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeParseException;
 
-/**
- * Times preserve their ISO-8601 offset for display. Calendar downloads and provider URLs are
- * generated on the frontend.
- */
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record Event(
     String title, String startsAt, String endsAt, String location, String description, String url) {

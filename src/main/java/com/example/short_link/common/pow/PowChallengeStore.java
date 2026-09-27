@@ -5,7 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
-/** Remembers issued challenges for five minutes and consumes them with one atomic Redis delete. */
 @Component
 @RequiredArgsConstructor
 final class PowChallengeStore {

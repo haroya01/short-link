@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
-/** 호출자의 트랜잭션에 참여한다. */
 @Component
 @RequiredArgsConstructor
 public class PostPublicationCompletion {

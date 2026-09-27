@@ -13,7 +13,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-/** 소유권 검사만 하는 이미지 경로는 트랜잭션 밖에서도 lazy 태그를 건드리지 않는다. */
 @SpringBootTest
 @ActiveProfiles("test")
 class PostOwnershipVerifyOwnedIntegrationTest {

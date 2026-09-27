@@ -27,7 +27,7 @@ public class LinkOgFetchService {
   private final LinkCacheEviction linkCacheEviction;
   private final OgFetchProperties ogFetch;
 
-  /** AFTER_COMMIT 비동기 경로는 조회·저장 전체를 감싸지 않고 저장소별 트랜잭션을 사용한다. */
+  // AFTER_COMMIT 비동기 경로는 조회·저장 전체를 감싸지 않고 저장소별 트랜잭션을 사용한다.
   public void fetchAfterCommit(ShortCode shortCode, String originalUrl) {
     fetchAndStore(shortCode, originalUrl);
   }

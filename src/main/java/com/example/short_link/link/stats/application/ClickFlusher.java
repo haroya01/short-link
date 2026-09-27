@@ -63,10 +63,8 @@ public class ClickFlusher {
     publishAll(saved);
   }
 
-  /**
-   * Publish inside a transaction so AFTER_COMMIT listeners run. On the scheduler path, persistence
-   * has already committed, so a synchronous SSE listener failure cannot roll back saved clicks.
-   */
+  // Publish inside a transaction so AFTER_COMMIT listeners run. On the scheduler path, persistence
+  // has already committed, so a synchronous SSE listener failure cannot roll back saved clicks.
   private void publishAll(List<ClickEventEntity> saved) {
     if (saved.isEmpty()) {
       return;

@@ -22,7 +22,7 @@ public class SeriesOwnership {
         seriesId);
   }
 
-  /** Lock the series before its member posts so deletion and membership changes are serialized. */
+  // Lock the series before its member posts so deletion and membership changes are serialized.
   public SeriesEntity requireOwnedForUpdate(Long userId, Long seriesId) {
     return verifyOwner(
         seriesRepository

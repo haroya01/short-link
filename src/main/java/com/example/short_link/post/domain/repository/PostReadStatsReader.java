@@ -5,10 +5,8 @@ import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
-/**
- * Aggregates post_view_event for a non-empty set of post IDs; callers must short-circuit empty
- * sets. Visitor breakdowns use human reads; total and bot counts are separate.
- */
+// Aggregates post_view_event for a non-empty set of post IDs; callers must short-circuit empty
+// sets. Visitor breakdowns use human reads; total and bot counts are separate.
 public interface PostReadStatsReader {
 
   long countViews(Collection<Long> postIds);

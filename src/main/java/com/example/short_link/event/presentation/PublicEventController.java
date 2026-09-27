@@ -25,7 +25,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 참가자 표면 — 읽기와 신청/취소 전부 비로그인. 신청은 익명 단축과 같은 PoW 게이트. */
 @RestController
 @RequestMapping("/api/v1/public/events")
 @RequiredArgsConstructor

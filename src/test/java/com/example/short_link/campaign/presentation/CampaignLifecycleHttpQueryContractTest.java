@@ -14,7 +14,6 @@ import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
-/** A campaign owner distributes persisted tracking links and reapplies the policy after ending. */
 class CampaignLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
   @Autowired private ClickFlusher clickFlusher;
 

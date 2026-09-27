@@ -27,7 +27,7 @@ public class BodySizeFilter extends OncePerRequestFilter {
 
   private static final long DEFAULT_MAX_BODY_BYTES = 16L * 1024L;
 
-  /** Whole editor documents and bulk CSV imports need a larger cap than ordinary API payloads. */
+  // Whole editor documents and bulk CSV imports need a larger cap than ordinary API payloads.
   private static final List<Limit> EXPANDED_LIMITS =
       List.of(
           new Limit("/api/v1/posts", 1024L * 1024L),

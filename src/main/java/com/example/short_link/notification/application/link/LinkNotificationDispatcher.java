@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-/** shortCode가 null이면 다이제스트처럼 특정 링크에 속하지 않는 알림이다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

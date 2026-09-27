@@ -11,10 +11,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Uses an independent transaction so caller rollbacks do not remove audit rows. Audit write
- * failures are logged and swallowed.
- */
+// Uses an independent transaction so caller rollbacks do not remove audit rows. Audit write
+// failures are logged and swallowed.
 @Slf4j
 @Service
 public class AuditLogService {

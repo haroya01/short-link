@@ -99,35 +99,24 @@ public class ClickEventEntity {
   @Column(name = "visitor_hash", length = 64)
   private String visitorHash;
 
-  /** {@code ?src=} attributes traffic when the referrer header is missing. */
   @Column(name = "source_channel", length = 40)
   private String sourceChannel;
 
-  /** Which A/B variant ({@link LinkDestinationEntity}) served this click — null if no variants. */
   @Column(name = "destination_id")
   private Long destinationId;
 
-  /** Set from {@code ?post=} for the embedding blog post; null for other traffic. */
   @Column(name = "post_id")
   private Long postId;
 
-  /** Autonomous System Number for the visitor's IP — null when ASN db is unavailable. */
   @Column(name = "asn")
   private Integer asn;
 
   @Column(name = "asn_org", length = 200)
   private String asnOrg;
 
-  /**
-   * In-app browser derived from the UA; null for ordinary browsers and independent of {@link #bot}.
-   */
   @Column(name = "client_app", length = 32)
   private String clientApp;
 
-  /**
-   * {@code Sec-Fetch-Site}: {@code none} for direct navigation, {@code cross-site} for followed
-   * links, null when absent.
-   */
   @Column(name = "fetch_site", length = 16)
   private String fetchSite;
 

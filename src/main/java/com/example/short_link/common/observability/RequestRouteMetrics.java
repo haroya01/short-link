@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-/** 요청 표본을 method + route 단위로 집계한다. 조회 기간과 화면별 응답은 호출자가 결정한다. */
 public final class RequestRouteMetrics {
 
   private RequestRouteMetrics() {}

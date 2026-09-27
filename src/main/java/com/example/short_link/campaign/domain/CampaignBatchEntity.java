@@ -27,7 +27,6 @@ public class CampaignBatchEntity extends BaseTimeEntity {
   @Column(name = "campaign_id", nullable = false)
   private Long campaignId;
 
-  /** 이 batch 가 대표하는 단축 링크. Batch:Link = 1:1 (DB 에서 UNIQUE). */
   @Column(name = "link_id", nullable = false)
   private Long linkId;
 
@@ -44,7 +43,7 @@ public class CampaignBatchEntity extends BaseTimeEntity {
   @Column(name = "area_label", length = 255)
   private String areaLabel;
 
-  /** 인쇄/배포 수량 메타데이터. Link 개수와는 무관 (Batch:인쇄물 = 1:N). */
+  // 인쇄/배포 수량 메타데이터. Link 개수와는 무관 (Batch:인쇄물 = 1:N).
   @Column(nullable = false)
   private int quantity;
 

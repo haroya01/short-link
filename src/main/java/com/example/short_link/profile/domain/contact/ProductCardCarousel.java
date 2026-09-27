@@ -10,11 +10,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-/**
- * Prices are free-form display strings; transactions happen at the CTA URL. Legacy {@code image}
- * input becomes a one-element {@code images} list with centered focal points; writes emit only
- * {@code images}.
- */
+// Prices are free-form display strings; transactions happen at the CTA URL. Legacy image input
+// becomes a one-element images list with centered focal points; writes emit only images.
 public final class ProductCardCarousel {
 
   public static final int MAX_ITEMS = 8;
@@ -29,12 +26,10 @@ public final class ProductCardCarousel {
   private static final int CTA_LABEL_MAX = 30;
   private static final int CTA_URL_MAX = 512;
 
-  /**
-   * Unknown badges become null so a frontend deployed ahead of the backend does not reject writes.
-   */
+  // Unknown badges become null so a frontend deployed ahead of the backend does not reject writes.
   private static final Set<String> BADGE_IDS = Set.of("NEW", "BEST", "LIMITED", "SOLD_OUT");
 
-  /** Unknown layouts fall back to carousel for compatibility with older records and clients. */
+  // Unknown layouts fall back to carousel for compatibility with older records and clients.
   private static final Set<String> LAYOUT_IDS = Set.of("carousel", "grid");
 
   private static final int FOCAL_DEFAULT = 50;
@@ -48,10 +43,8 @@ public final class ProductCardCarousel {
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record Payload(String title, String layout, List<Item> items) {}
 
-  /**
-   * Accepts legacy {@code image} on input and ignores unknown fields for frontend/backend rollout
-   * compatibility.
-   */
+  // Accepts legacy image on input and ignores unknown fields for frontend/backend rollout
+  // compatibility.
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record Item(
       String name,
@@ -64,10 +57,6 @@ public final class ProductCardCarousel {
       String ctaLabel,
       String ctaUrl) {}
 
-  /**
-   * Focal coordinates are percentages from 0 to 100 matching CSS {@code object-position}; missing
-   * values use the center (50/50).
-   */
   @JsonIgnoreProperties(ignoreUnknown = true)
   public record ImageEntry(String url, Integer focalX, Integer focalY) {}
 
@@ -153,10 +142,7 @@ public final class ProductCardCarousel {
         ctaUrl);
   }
 
-  /**
-   * 비어 있지 않은 {@code images}가 우선이다. 없거나 빈 배열이면 구형 {@code image}를 읽는다. 선택한 배열의 모든 항목이 나중에 제외되더라도 구형
-   * 이미지로 되돌아가지 않는다.
-   */
+  // 비어 있지 않은 images가 우선이다. 없거나 빈 배열이면 구형 image를 읽는다. 선택한 배열의 모든 항목이 나중에 제외되더라도 구형 이미지로 되돌아가지 않는다.
   private static List<ImageEntry> readCompatibleImages(Item item) {
     if (item.images != null && !item.images.isEmpty()) return item.images;
     if (item.image == null) return List.of();

@@ -10,10 +10,8 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.stereotype.Component;
 
-/**
- * 리다이렉트가 읽는 link 캐시는 쓰기가 커밋된 뒤에 지우고, 삭제가 끝날 때까지 기다린다. 커밋 전에 지우면 그 사이 읽은 요청이 옛 행을 다시 캐시하고, {@link
- * Cache#evict}는 삭제를 기다리지 않고 반환할 수 있다.
- */
+// 리다이렉트가 읽는 link 캐시는 쓰기가 커밋된 뒤에 지우고, 삭제가 끝날 때까지 기다린다. 커밋 전에 지우면 그 사이 읽은 요청이 옛 행을 다시 캐시하고,
+// Cache.evict는 삭제를 기다리지 않고 반환할 수 있다.
 @Slf4j
 @Component
 @RequiredArgsConstructor

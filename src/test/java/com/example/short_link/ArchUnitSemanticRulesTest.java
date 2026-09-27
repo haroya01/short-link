@@ -42,10 +42,10 @@ import org.springframework.transaction.annotation.Transactional;
     importOptions = {ImportOption.DoNotIncludeTests.class, ImportOption.DoNotIncludeJars.class})
 class ArchUnitSemanticRulesTest {
 
-  /** Existing direct wall-clock reads in domain/application; the number may only go down. */
+  // Existing direct wall-clock reads in domain/application; the number may only go down.
   private static final int WALL_CLOCK_BASELINE = 76;
 
-  /** Existing public setters on JPA entities; the number may only go down. */
+  // Existing public setters on JPA entities; the number may only go down.
   private static final int ENTITY_SETTER_BASELINE = 10;
 
   private static final Set<String> OUTBOUND_CLIENTS =

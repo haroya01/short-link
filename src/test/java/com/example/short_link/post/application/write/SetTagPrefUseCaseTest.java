@@ -57,7 +57,7 @@ class SetTagPrefUseCaseTest {
     when(repository.findByUserIdAndTag(9L, "개발"))
         .thenReturn(Optional.of(new UserTagPrefEntity(9L, "개발", TagPrefKind.HIDE)));
 
-    useCase.unfollow(9L, "개발"); // tag is HIDE, not FOLLOW → must not delete
+    useCase.unfollow(9L, "개발");
 
     verify(repository, never()).delete(any());
   }
@@ -104,7 +104,7 @@ class SetTagPrefUseCaseTest {
     when(repository.findByUserIdAndTag(9L, "광고"))
         .thenReturn(Optional.of(new UserTagPrefEntity(9L, "광고", TagPrefKind.FOLLOW)));
 
-    useCase.unhide(9L, "광고"); // tag is FOLLOW, not HIDE → must not delete
+    useCase.unhide(9L, "광고");
 
     verify(repository, never()).delete(any());
   }

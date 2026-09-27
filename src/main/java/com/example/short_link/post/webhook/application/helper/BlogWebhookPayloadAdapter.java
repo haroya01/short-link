@@ -9,14 +9,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** GENERIC은 HMAC 검증용 구조화 JSON, DISCORD/SLACK은 각 채팅 서비스의 메시지 형식이다. */
 public final class BlogWebhookPayloadAdapter {
 
   private static final int BRAND_GREEN = 0x059669;
 
   private BlogWebhookPayloadAdapter() {}
 
-  /** Header value for {@code X-Kurl-Event}: e.g. "like", "series_subscribe". */
   public static String eventType(BlogInteractionType type) {
     return type.name().toLowerCase(Locale.ROOT);
   }

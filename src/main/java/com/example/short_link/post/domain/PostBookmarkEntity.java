@@ -33,7 +33,6 @@ public class PostBookmarkEntity extends BaseCreatedEntity {
   @Column(name = "user_id", nullable = false)
   private Long userId;
 
-  /** {@code null} means the bookmark is unfiled. */
   @Column(name = "folder_id")
   private Long folderId;
 

@@ -54,7 +54,7 @@ public class AdminBrowseService {
     return new LinksPage(rows.items().stream().map(r -> toLinkRow(r, now)).toList(), rows.total());
   }
 
-  /** 관리자 전용 호출이므로 소유권 검사 없이 통계를 조회한다. */
+  // 관리자 전용 호출이므로 소유권 검사 없이 통계를 조회한다.
   @Transactional(readOnly = true)
   public AdminLinkDetail linkDetail(ShortCode shortCode) {
     LinkRow row =

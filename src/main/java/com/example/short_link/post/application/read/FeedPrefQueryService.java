@@ -14,7 +14,6 @@ public class FeedPrefQueryService {
 
   private final UserFeedPrefRepository repository;
 
-  /** The user's default feed tab, or {@link FeedTab#DEFAULT} when they haven't set one. */
   public FeedPrefsView get(Long userId) {
     return repository
         .findByUserId(userId)

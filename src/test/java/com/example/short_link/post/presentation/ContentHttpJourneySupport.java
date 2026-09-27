@@ -27,7 +27,6 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/** Each concrete class runs a complete journey against its own disposable MySQL and Redis. */
 abstract class ContentHttpJourneySupport extends DockerHttpTest {
   @LocalServerPort private int port;
   @Autowired private UserRepository users;
@@ -141,7 +140,6 @@ abstract class ContentHttpJourneySupport extends DockerHttpTest {
         .isEqualTo("PUBLISHED");
   }
 
-  /** Captures a real worker invocation separately from the HTTP requests that prepared its work. */
   protected void background(String id, Runnable work) throws Exception {
     var captured =
         contracts.captureBackgroundDelivery(

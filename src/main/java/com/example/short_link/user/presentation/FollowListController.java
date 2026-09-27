@@ -10,10 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Anonymous viewers have followedByMe=false. When counts are hidden, only the author can read the
- * lists; others receive 403.
- */
 @RestController
 @RequestMapping("/api/v1/users/{username}")
 @RequiredArgsConstructor

@@ -20,11 +20,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Dispatches after commit on {@code webhookExecutor}, so rollbacks send nothing and slow receivers
- * do not block requests. No transaction is held across HTTP; each outcome is recorded in its own
- * short transaction. Actor lookup runs only after a matching enabled hook is found.
- */
+// Dispatches after commit on webhookExecutor, so rollbacks send nothing and slow receivers do not
+// block requests. No transaction is held across HTTP; each outcome is recorded in its own short
+// transaction. Actor lookup runs only after a matching enabled hook is found.
 @Slf4j
 @Component
 @RequiredArgsConstructor

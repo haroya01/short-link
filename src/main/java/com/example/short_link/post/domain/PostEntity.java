@@ -61,10 +61,7 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "published_at")
   private Instant publishedAt;
 
-  /**
-   * 내용 편집 시 {@link #markEdited()}로만 갱신한다. 조회·좋아요 쓰기에 바뀌지 않도록 Hibernate 자동 수정 시각을 사용하지 않는다. 최초 편집
-   * 전에는 null이다.
-   */
+  // 내용 편집 시 markEdited()로만 갱신한다. 조회·좋아요 쓰기에 바뀌지 않도록 Hibernate 자동 수정 시각을 사용하지 않는다. 최초 편집 전에는 null이다.
   @Column(name = "last_edited_at")
   private Instant lastEditedAt;
 
@@ -77,21 +74,19 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "og_image_url", length = 512)
   private String ogImageUrl;
 
-  /** S3/R2 object key for custom OG override. Auto-generated OG images don't set this. */
   @Column(name = "og_image_key", length = 256)
   private String ogImageKey;
 
   @Column(name = "view_count", nullable = false)
   private long viewCount = 0L;
 
-  /** Denormalized like (공감) counter; the post_like table is the source of truth for uniqueness. */
+  // Denormalized like (공감) counter; the post_like table is the source of truth for uniqueness.
   @Column(name = "like_count", nullable = false)
   private long likeCount = 0L;
 
   public static final int MAX_TAGS = 10;
   public static final int MAX_TAG_LENGTH = 40;
 
-  /** 작성자 순서를 유지하며 정규화는 {@link #updateTags}에서 수행한다. */
   @ElementCollection
   @CollectionTable(name = "post_tag", joinColumns = @JoinColumn(name = "post_id"))
   @OrderColumn(name = "ordinal")
@@ -99,18 +94,15 @@ public class PostEntity extends BaseTimeEntity {
   @BatchSize(size = 50)
   private List<String> tags = new ArrayList<>();
 
-  /** 공개 상태를 우회하는 미리보기 권한이다. 처음 요청할 때 생성하고 이후 유지한다. */
   @Column(name = "preview_token", length = 64)
   private String previewToken;
 
-  /** Optional series membership. seriesOrder is the 0-based position within the series. */
   @Column(name = "series_id")
   private Long seriesId;
 
   @Column(name = "series_order")
   private Integer seriesOrder;
 
-  /** 고정 순서(0부터). null은 고정되지 않은 글이다. */
   @Column(name = "pin_order")
   private Integer pinOrder;
 
@@ -150,7 +142,7 @@ public class PostEntity extends BaseTimeEntity {
     this.title = title;
   }
 
-  /** Slug is frozen once the post has ever been public (published or unpublished). */
+  // Slug is frozen once the post has ever been public (published or unpublished).
   public void updateSlug(String slug) {
     if (status == PostStatus.PUBLISHED || status == PostStatus.UNPUBLISHED) {
       throw new PostException(PostErrorCode.SLUG_FROZEN, this.slug);
@@ -217,7 +209,6 @@ public class PostEntity extends BaseTimeEntity {
     this.status = PostStatus.UNPUBLISHED;
   }
 
-  /** 재공개할 때 URL과 최초 발행 시각은 유지한다. */
   public void republish() {
     if (status != PostStatus.UNPUBLISHED) {
       throw new PostException(PostErrorCode.REPUBLISH_NOT_UNPUBLISHED);
@@ -241,7 +232,6 @@ public class PostEntity extends BaseTimeEntity {
     this.likeCount++;
   }
 
-  /** 대소문자 중복은 첫 표기를 유지한다. 빈 입력은 태그 전체 삭제다. */
   public void updateTags(List<String> raw) {
     this.tags.clear();
     this.tags.addAll(normalizeTags(raw));

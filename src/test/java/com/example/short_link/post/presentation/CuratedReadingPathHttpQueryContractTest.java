@@ -6,10 +6,6 @@ import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 
-/**
- * A curator connects real posts, quotations and notes, publishes a path and controls its
- * visibility.
- */
 class CuratedReadingPathHttpQueryContractTest extends ContentHttpJourneySupport {
 
   @Test

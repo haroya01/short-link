@@ -12,7 +12,7 @@ import java.io.InputStream;
 import javax.imageio.ImageIO;
 import org.springframework.stereotype.Component;
 
-/** Logo geometry mirrors {@code components/logo.tsx}; HTTP caching belongs to the controller. */
+// Logo geometry mirrors components/logo.tsx; HTTP caching belongs to the controller.
 @Component
 public class OgCardImageRenderer {
 

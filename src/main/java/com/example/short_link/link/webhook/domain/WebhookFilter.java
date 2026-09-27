@@ -29,7 +29,6 @@ public class WebhookFilter {
   @Column(name = "utm_source_filter", length = 100)
   private String utmSourceFilter;
 
-  /** Null arguments leave existing fields untouched. */
   public void update(
       Boolean includeBots,
       Integer sampleRate,

@@ -17,7 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/** 외부 이미지는 서명 URL 만료로 본문이 깨지지 않도록 서버에서 받아 재호스팅한다. */
+// 외부 이미지는 서명 URL 만료로 본문이 깨지지 않도록 서버에서 받아 재호스팅한다.
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -88,10 +88,6 @@ public class PostImageService {
     return new CommitResult(publicUrls.forKey(key), key);
   }
 
-  /**
-   * Fetches through the SSRF guard and stores a verified image within the size cap. Returns the
-   * same result shape as {@link #commitUpload}.
-   */
   public CommitResult importFromUrl(Long userId, Long postId, String url) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
     require(objectStorage.isConfigured());

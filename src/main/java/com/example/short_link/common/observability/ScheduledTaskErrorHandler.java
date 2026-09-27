@@ -10,10 +10,8 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskScheduler;
 import org.springframework.scheduling.config.ScheduledTaskRegistrar;
 import org.springframework.util.ErrorHandler;
 
-/**
- * Adds the first application stack frame to MDC as {@code task}, allowing the admin error buffer to
- * identify which scheduled method failed.
- */
+// Adds the first application stack frame to MDC as task, allowing the admin error buffer to
+// identify which scheduled method failed.
 @Configuration
 @Slf4j
 @ConditionalOnProperty(

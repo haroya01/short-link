@@ -18,7 +18,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 노트 규칙의 본선 — 검증·소유권·멱등 좋아요·작성자 hydrate 를 실제 영속성으로 돈다. */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -82,7 +81,6 @@ class NoteServiceTest {
     assertThat(second.items()).hasSize(1);
     assertThat(second.hasNext()).isFalse();
 
-    // 음수 페이지·0 사이즈는 0페이지·1건으로 — 호출자가 무엇을 보내든 쿼리는 항상 유효 범위.
     NoteFeedView clamped = query.feed(-3, 0);
     assertThat(clamped.page()).isZero();
     assertThat(clamped.items()).hasSize(1);
@@ -95,7 +93,6 @@ class NoteServiceTest {
     Long fan = signUp("note-d@example.com", "g-note-4");
     Long noteId = command.create(author, "좋아요 대상").id();
 
-    // 누른 적 없는 좋아요 해제도 멱등 — 행이 없으면 조용히 0.
     assertThat(command.setLike(fan, noteId, false).likeCount()).isZero();
     assertThat(command.setLike(fan, noteId, true).likeCount()).isEqualTo(1);
     assertThat(command.setLike(fan, noteId, true).likeCount()).isEqualTo(1);

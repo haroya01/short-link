@@ -4,10 +4,8 @@ import java.util.List;
 import java.util.Locale;
 import org.springframework.stereotype.Component;
 
-/**
- * Preview rendering and analytics bot classification use different crawler lists; keep this
- * separate from {@link UserAgentClassifier}.
- */
+// Preview rendering and analytics bot classification use different crawler lists; keep this
+// separate from UserAgentClassifier.
 @Component
 public class LinkPreviewCrawlerDetector {
 
@@ -35,10 +33,8 @@ public class LinkPreviewCrawlerDetector {
           "googleplus",
           "googlebot");
 
-  /**
-   * Returns the lowercase token so preview hits retain a bot name even when yauaa does not
-   * recognize the crawler.
-   */
+  // Returns the lowercase token so preview hits retain a bot name even when yauaa does not
+  // recognize the crawler.
   public String crawlerName(String userAgent) {
     if (userAgent == null || userAgent.isBlank()) return null;
     String lower = userAgent.toLowerCase(Locale.ROOT);

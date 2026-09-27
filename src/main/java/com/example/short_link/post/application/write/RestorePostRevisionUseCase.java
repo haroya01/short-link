@@ -18,7 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 본문과 내용 메타데이터만 복원한다. slug·공개 상태·발행 시각은 유지한다. */
 @Service
 @RequiredArgsConstructor
 public class RestorePostRevisionUseCase {

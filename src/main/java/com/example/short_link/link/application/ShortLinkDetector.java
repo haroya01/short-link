@@ -4,7 +4,7 @@ import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/** Recognizes existing short links to avoid wrapping them again when used as CTA targets. */
+// Recognizes existing short links to avoid wrapping them again when used as CTA targets.
 @Component
 public class ShortLinkDetector {
 
@@ -20,7 +20,6 @@ public class ShortLinkDetector {
     return extractCode(url) != null;
   }
 
-  /** Returns the short code if {@code url} is one of our short links, else {@code null}. */
   public String extractCode(String url) {
     if (url == null || !url.startsWith(prefix)) {
       return null;

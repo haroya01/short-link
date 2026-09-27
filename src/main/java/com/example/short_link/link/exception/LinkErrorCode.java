@@ -2,7 +2,7 @@ package com.example.short_link.link.exception;
 
 import org.springframework.http.HttpStatus;
 
-/** Message arguments also populate the ordered metadata keys; their positions must match. */
+// Message arguments also populate the ordered metadata keys; their positions must match.
 public enum LinkErrorCode {
   LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "link not found: %s"),
   LINK_EXPIRED(HttpStatus.GONE, "link expired: %s"),

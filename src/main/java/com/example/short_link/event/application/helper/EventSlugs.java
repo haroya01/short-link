@@ -2,7 +2,7 @@ package com.example.short_link.event.application.helper;
 
 import java.security.SecureRandom;
 
-/** 슬러그는 제목이나 PII를 포함하지 않는 무작위 값이다. */
+// 슬러그는 제목이나 PII를 포함하지 않는 무작위 값이다.
 public final class EventSlugs {
 
   private static final String ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz";

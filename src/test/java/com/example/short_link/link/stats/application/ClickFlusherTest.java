@@ -78,8 +78,8 @@ class ClickFlusherTest {
     verify(events, org.mockito.Mockito.times(2)).publishEvent(captor.capture());
     assertThat(captor.getAllValues().get(0).linkId()).isEqualTo(new LinkId(1L));
     assertThat(registry.counter("click_recorder", "result", "flushed").count()).isEqualTo(2.0);
-    // 발행이 트랜잭션 템플릿 안에서 돈다(getTransaction 2회 = persist 1 + publish 1). 밖에서
-    // 발행하면 @TransactionalEventListener(AFTER_COMMIT) 소비자가 조용히 스킵된다(#656 회귀).
+    // 발행은 트랜잭션 템플릿 안에서 돌아야 한다(getTransaction 2회 = persist 1 + publish 1). 밖에서 발행하면
+    // @TransactionalEventListener(AFTER_COMMIT) 소비자가 조용히 건너뛴다.
     verify(txManager, org.mockito.Mockito.times(2)).getTransaction(any());
   }
 

@@ -20,10 +20,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-/**
- * 헤더는 선택이며 url(필수), custom_code, expires_at(ISO-8601)을 대소문자 구분 없이 인식한다. 실패한 행은 오류로 반환하고 나머지 행은 계속
- * 처리한다.
- */
+// 헤더는 선택이며 url(필수), custom_code, expires_at(ISO-8601)을 대소문자 구분 없이 인식한다. 실패한 행은 오류로 반환하고 나머지 행은 계속
+// 처리한다.
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -115,7 +113,6 @@ public class ImportLinksFromCsvUseCase {
     return line.split(",", -1);
   }
 
-  /** 헤더가 없으면 url, custom_code, expires_at 순서로 읽는다. */
   private record Header(int urlIdx, int customCodeIdx, int expiresAtIdx, boolean hasHeader) {
 
     static Header detect(String[] firstRow) {

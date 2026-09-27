@@ -12,7 +12,7 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** {@code titleSnapshot}은 리비전 목록에서 contentJson을 파싱하지 않도록 별도로 저장한다. */
+// titleSnapshot은 리비전 목록에서 contentJson을 파싱하지 않도록 별도로 저장한다.
 @Entity
 @Table(
     name = "post_revision",

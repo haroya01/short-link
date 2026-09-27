@@ -24,11 +24,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 글쓰기 파이프라인 가혹 조건 — 캡 경계(±1자)·이미지 백 장·초대형 표·리스트 천 개·발행 스무 번의 리비전 누적과 최고(最古)/최신
- * 복원·유니코드(ZWJ·결합자·RTL)·태그 캡까지, "보통 글"에선 절대 안 밟는 지점들을 실제 스택(DB·컨버터)으로 밟는다. 전부 왕복 고정점이어야 한다 — 극한에서
- * 본문이 변형되면 자동저장이 그 크기 그대로 더티 루프를 돈다.
- */
+// 저장→로드→재저장은 극한 입력에서도 고정점이어야 한다. 본문이 바뀌면 자동저장이 그 크기 그대로 더티 루프를 돈다.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -87,16 +83,13 @@ class PostWriteStressTest {
     return JSON.readTree(body).get("markdown").asText();
   }
 
-  /** 정규화 후 저장→로드→재저장이 고정점인지 — 극한 입력용 공용 단언. */
   private void assertFixedPoint(String token, long postId, String markdown) throws Exception {
     String canonical = putMarkdown(token, postId, markdown);
     assertThat(getMarkdown(token, postId)).isEqualTo(canonical);
     assertThat(putMarkdown(token, postId, canonical)).isEqualTo(canonical);
   }
 
-  // MARK: 본문 한도의 실효 경계 — 총 20만 자(요청 캡) · 블록 500개 · 블록당 10만 자
-  // "20만 자까지 된다"는 요청 필드 캡이고, 실제로는 블록 수·블록 길이 가드가 먼저 문이다.
-  // 셋 다 경계 정확히(±1)에서 갈라지는지 고정한다.
+  // 요청 필드 캡은 20만 자지만 실제로는 블록 수(500)와 블록 길이(10만 자) 검사가 먼저 걸린다. 셋 다 경계(±1)에서 갈리는지 본다.
 
   @Test
   void bodyAtExactCapWithinBlockLimitsPassesAndOneOverIsRejected() throws Exception {
@@ -130,7 +123,6 @@ class PostWriteStressTest {
                 .content(JSON.writeValueAsString(Map.of("markdown", atCap + "가"))))
         .andExpect(status().isBadRequest());
 
-    // 캡 본문이 저장 후에도 통째로 돌아온다(잘림 없음).
     assertThat(getMarkdown(token, id)).hasSize(MARKDOWN_CAP);
   }
 
@@ -189,8 +181,6 @@ class PostWriteStressTest {
     assertThat(JSON.readTree(reason).get("detail").asText()).contains("100,000");
   }
 
-  // MARK: 사진 백 장 — 마커·캡션 포함 전부 IMAGE 블록으로 왕복
-
   @Test
   void hundredImagesWithMarkersRoundTrip() throws Exception {
     String token = token("g-st-img");
@@ -215,8 +205,6 @@ class PostWriteStressTest {
 
     assertFixedPoint(token, id, md);
   }
-
-  // MARK: 초대형 표 — 100행 × 8열, 이스케이프 파이프 섞음
 
   @Test
   void hugeTableRoundTrips() throws Exception {
@@ -247,8 +235,6 @@ class PostWriteStressTest {
     assertFixedPoint(token, id, header + "\n" + sep + "\n" + body);
   }
 
-  // MARK: 리스트 천 개 — 중첩 순환·번호/글머리 혼합 인접 그룹
-
   @Test
   void thousandListItemsRoundTrip() throws Exception {
     String token = token("g-st-list");
@@ -264,8 +250,6 @@ class PostWriteStressTest {
     assertThat(putMarkdown(token, id, canonical)).isEqualTo(canonical);
     assertThat(getMarkdown(token, id)).isEqualTo(canonical);
   }
-
-  // MARK: 발행 스무 번 — 리비전 누적, 최고(最古)·최신 양끝 복원
 
   @Test
   void twentyPublishCyclesAccumulateRevisionsAndRestoreBothEnds() throws Exception {
@@ -309,7 +293,7 @@ class PostWriteStressTest {
     assertThat(getMarkdown(token, id)).isEqualTo(last);
   }
 
-  // MARK: CRLF 붙여넣기 — \r 가 블록 본문에 새면 안 된다(프론트 markdown-to-blocks 와 미러)
+  // CRLF로 붙여넣어도 블록 본문에 CR이 남으면 안 된다(프론트 markdown-to-blocks와 같은 규칙).
 
   @Test
   void crlfPasteIsNormalizedAndStable() throws Exception {
@@ -322,15 +306,13 @@ class PostWriteStressTest {
     assertThat(putMarkdown(token, id, canonical)).isEqualTo(canonical);
   }
 
-  // MARK: 유니코드 가혹 — ZWJ 가족·결합자·RTL 이 모든 블록 종류를 통과
-
   @Test
   void unicodeStressRoundTrips() throws Exception {
     String token = token("g-st-uni");
     long id = createDraft(token, "st-unicode");
 
-    String family = "👨‍👩‍👧‍👦"; // ZWJ 가족
-    String combining = "가́나́"; // 결합 악센트
+    String family = "👨‍👩‍👧‍👦";
+    String combining = "가́나́";
     String rtl = "مرحبا بالعالم";
     String md =
         """
@@ -353,8 +335,6 @@ class PostWriteStressTest {
 
     assertFixedPoint(token, id, md);
   }
-
-  // MARK: 태그 캡 — 100개(각 80자)는 통과, 101개는 400
 
   @Test
   void tagCapBoundary() throws Exception {

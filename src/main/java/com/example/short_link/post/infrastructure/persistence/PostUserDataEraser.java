@@ -5,10 +5,8 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.springframework.stereotype.Repository;
 
-/**
- * Delete post_block/post_revision before posts: their FKs do not cascade. Comment/like/bookmark
- * references to posts need explicit cleanup; tags and view events cascade.
- */
+// Delete post_block/post_revision before posts: their FKs do not cascade. Comment/like/bookmark
+// references to posts need explicit cleanup; tags and view events cascade.
 @Repository
 class PostUserDataEraser implements UserDataEraser {
 

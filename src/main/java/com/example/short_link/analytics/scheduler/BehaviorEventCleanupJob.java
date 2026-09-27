@@ -12,7 +12,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 개인정보처리방침의 보존 기간이 지난 원본을 삭제한다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

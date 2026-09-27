@@ -24,7 +24,7 @@ class IssuePreviewTokenUseCaseTest {
 
   @Test
   void issueGeneratesAndPersistsTokenForOwnedPost() {
-    PostEntity post = new PostEntity(7L, "p", "P", "ko"); // no token yet
+    PostEntity post = new PostEntity(7L, "p", "P", "ko");
     when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 

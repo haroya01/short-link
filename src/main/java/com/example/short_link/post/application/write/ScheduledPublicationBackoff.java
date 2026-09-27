@@ -8,7 +8,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import org.springframework.stereotype.Component;
 
-/** 발행에 실패한 예약 글은 1·2·4…분 간격으로, 최대 1시간마다 다시 시도한다. 실패 기록은 프로세스 메모리에만 있어 재시작하면 바로 다시 시도한다. */
+// 발행에 실패한 예약 글은 1·2·4…분 간격으로, 최대 1시간마다 다시 시도한다. 실패 기록은 프로세스 메모리에만 있어 재시작하면 바로 다시 시도한다.
 @Component
 class ScheduledPublicationBackoff {
 

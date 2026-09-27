@@ -10,10 +10,8 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Associated rows keep the main link row narrow for redirect lookups. Initialize them after the
- * link is saved.
- */
+// Associated rows keep the main link row narrow for redirect lookups. Initialize them after the
+// link is saved.
 @Component
 @RequiredArgsConstructor
 public class LinkSidecarPersister implements LinkDefaultsWriter {

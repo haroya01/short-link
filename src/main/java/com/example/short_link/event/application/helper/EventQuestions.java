@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-/** 질문은 options JSON 배열, 답변은 questionId 키의 JSON 객체다. 신청 후 구조를 바꾸면 답변 매핑이 깨진다. */
+// 질문은 options JSON 배열, 답변은 questionId 키의 JSON 객체다. 신청 후 구조를 바꾸면 답변 매핑이 깨진다.
 public final class EventQuestions {
 
   public static final int MAX_QUESTIONS = 10;

@@ -25,7 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** PUBLIC 컬렉션의 연결만 사용하며, 대상이 사라진 행은 건너뛴다. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -39,7 +38,6 @@ public class CurationGraphQueryService {
   private final NoteRepository noteRepository;
   private final UserRepository userRepository;
 
-  /** 이 블록과 같은 공개 컬렉션에 함께 놓인 블록들(자기 제외) — 함께 놓인 컬렉션 수 큰 순. */
   public List<RelatedBlockView> relatedTo(ConnectionBlockType blockType, Long refId, int limit) {
     List<CooccurrenceRow> rows =
         connectionRepository.findCooccurring(blockType, refId, clamp(limit));
@@ -68,7 +66,6 @@ public class CurationGraphQueryService {
     return out;
   }
 
-  /** 공개 컬렉션에서 겹치는 블록 수가 많은 큐레이터 순이다. 없는 핸들은 빈 목록을 반환한다. */
   public List<KindredCuratorView> kindredCurators(String username, int limit) {
     Optional<UserEntity> me = userRepository.findByUsername(username);
     if (me.isEmpty()) return List.of();

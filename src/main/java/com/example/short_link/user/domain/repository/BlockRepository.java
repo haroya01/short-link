@@ -14,9 +14,7 @@ public interface BlockRepository {
 
   void delete(UserBlockEntity block);
 
-  /** Newest block edge first. */
   List<Long> findBlockedIds(Long blockerId);
 
-  /** Removes edges where the user appears on either side. */
   int deleteAllInvolving(Long userId);
 }

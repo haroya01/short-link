@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Each fan-out chunk uses its own transaction to release the DB connection between chunks. */
+// Each fan-out chunk uses its own transaction to release the DB connection between chunks.
 @Service
 @RequiredArgsConstructor
 public class NotificationFanoutWriter {

@@ -220,7 +220,6 @@ class PostInteractionAccessHttpQueryContractTest extends ContentHttpJourneySuppo
 
   private void removeExistingInteractionsDespiteRestrictions(
       Discussion discussion, long replyId, InteractionCounts existing) throws Exception {
-    // 차단·정지·비공개 상태에서도 자신이 남긴 데이터는 삭제할 수 있어야 한다.
     assertThat(
             jdbc.update(
                 """

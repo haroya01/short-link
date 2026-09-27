@@ -6,10 +6,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-/**
- * Stored in {@code profile_block.content}. Null subtitle omits the slot so older records render
- * unchanged.
- */
+// Stored in profile_block.content. Null subtitle omits the slot so older records render unchanged.
 @JsonIgnoreProperties(ignoreUnknown = true)
 public record EmailFormConfig(
     String title, String subtitle, String placeholder, String successMessage) {

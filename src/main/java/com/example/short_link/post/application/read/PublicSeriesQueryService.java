@@ -39,7 +39,6 @@ public class PublicSeriesQueryService {
   private final PostRepository postRepository;
   private final SeriesSubscriptionRepository subscriptionRepository;
 
-  /** 구독 시리즈를 최근 활동순으로 반환한다. 삭제 작성자와 발행 글이 없는 시리즈는 제외한다. */
   public List<PublicSeriesCard> subscribedSeries(Long userId) {
     List<Long> ids = subscriptionRepository.findSubscribedSeriesIds(userId);
     if (ids.isEmpty()) return List.of();
@@ -93,7 +92,7 @@ public class PublicSeriesQueryService {
         previews);
   }
 
-  /** 삭제 작성자를 제외해도 요청 수를 채울 수 있도록 후보를 더 조회한다. */
+  // 삭제 작성자를 제외해도 요청 수를 채울 수 있도록 후보를 더 조회한다.
   public List<PublicSeriesCard> discoverSeries(int limit) {
     int safeLimit = Math.max(limit, 1);
     List<SeriesActivity> ranked = postRepository.findActiveSeries(MIN_POSTS, safeLimit * 2);

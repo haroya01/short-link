@@ -9,7 +9,7 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @Configuration
 public class AsyncConfig {
 
-  /** Default consumers are best-effort, so saturation may discard the oldest queued task. */
+  // Default consumers are best-effort, so saturation may discard the oldest queued task.
   @Bean(name = "taskExecutor")
   public Executor taskExecutor() {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
@@ -24,10 +24,8 @@ public class AsyncConfig {
     return executor;
   }
 
-  /**
-   * Isolates webhook delivery from other async work. On saturation, CallerRunsPolicy applies
-   * backpressure to the click thread for up to the HTTP timeout (5s), avoiding dropped deliveries.
-   */
+  // Isolates webhook delivery from other async work. On saturation, CallerRunsPolicy applies
+  // backpressure to the click thread for up to the HTTP timeout (5s), avoiding dropped deliveries.
   @Bean(name = "webhookExecutor")
   public Executor webhookExecutor() {
     ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();

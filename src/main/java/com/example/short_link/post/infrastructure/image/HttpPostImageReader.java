@@ -65,10 +65,7 @@ public class HttpPostImageReader implements ExternalPostImageReader {
     return new Image(body, contentType);
   }
 
-  /**
-   * 각 리다이렉트에서 {@link PublicHttpUrlGuard}로 주소를 다시 검증한다. 호스트가 바뀌는 이미지 프록시를 지원하면서 DNS 재바인딩과 사설 IP 접근을
-   * 차단한다.
-   */
+  // 각 리다이렉트에서 PublicHttpUrlGuard로 주소를 다시 검증한다. 호스트가 바뀌는 이미지 프록시를 지원하면서 DNS 재바인딩과 사설 IP 접근을 차단한다.
   private Response fetchFollowingRedirects(
       Resolved first, Map<String, String> headers, int fetchCap, String originalUrl, Long postId) {
     Resolved current = first;
@@ -111,7 +108,7 @@ public class HttpPostImageReader implements ExternalPostImageReader {
     return status == 301 || status == 302 || status == 303 || status == 307 || status == 308;
   }
 
-  /** 원격 Content-Type은 신뢰할 수 없고 정상 이미지도 octet-stream으로 올 수 있어 저장 타입은 바이트 시그니처로 판별한다. */
+  // 원격 Content-Type은 신뢰할 수 없고 정상 이미지도 octet-stream으로 올 수 있어 저장 타입은 바이트 시그니처로 판별한다.
   private static String sniffImageType(byte[] b) {
     if (b.length >= 3 && (b[0] & 0xFF) == 0xFF && (b[1] & 0xFF) == 0xD8 && (b[2] & 0xFF) == 0xFF) {
       return "image/jpeg";

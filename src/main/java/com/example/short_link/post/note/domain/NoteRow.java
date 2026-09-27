@@ -6,7 +6,6 @@ public record NoteRow(Long id, String body, Instant createdAt, long likeCount, A
 
   public record AuthorRef(Long id, String username, String avatarUrl) {}
 
-  /** JPQL constructor projection for the nested author field. */
   public NoteRow(
       Long id,
       String body,

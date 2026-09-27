@@ -10,7 +10,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/** Uses the profile dashboard's time bucketing and projection shape, scoped to post IDs. */
 public interface JpaPostReadStatsRepository extends JpaRepository<PostViewEventEntity, Long> {
 
   @Query("SELECT COUNT(e) FROM PostViewEventEntity e WHERE e.postId IN :ids")

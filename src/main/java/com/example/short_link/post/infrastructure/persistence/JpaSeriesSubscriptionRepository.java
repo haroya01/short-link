@@ -20,7 +20,6 @@ public interface JpaSeriesSubscriptionRepository
 
   long countBySeriesId(Long seriesId);
 
-  // Returns [seriesId, count]; series with zero subscribers are absent.
   @Query(
       "select s.seriesId, count(s) from SeriesSubscriptionEntity s "
           + "where s.seriesId in :seriesIds group by s.seriesId")

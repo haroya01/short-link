@@ -2,16 +2,12 @@ package com.example.short_link.support;
 
 import java.lang.reflect.Field;
 
-/**
- * Centralised entity-id reflection for tests. JPA's {@code @GeneratedValue(IDENTITY)} only fills
- * the id on flush, so tests that build entities in memory have nothing to assert against until they
- * save — except the ones that wire up object graphs (block + link + click + ...) where saving
- * everything to the DB just to get a foreign-key id back is overkill. Reflection lives in one
- * place; every test imports {@link #withId(Object, Long)} and the per-file {@code writeField}
- * helpers go away.
- *
- * <p>Production code still treats id as immutable — this only opens it for the test classpath.
- */
+// Centralised entity-id reflection for tests. JPA's @GeneratedValue(IDENTITY) only fills the id on
+// flush, so tests that build entities in memory have nothing to assert against until they save —
+// except the ones that wire up object graphs (block + link + click + ...) where saving everything
+// to the DB just to get a foreign-key id back is overkill. Reflection lives in one place; every
+// test imports Long) and the per-file writeField helpers go away.
+// Production code still treats id as immutable — this only opens it for the test classpath.
 public final class TestEntities {
 
   private TestEntities() {}

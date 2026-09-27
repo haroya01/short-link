@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Bookmark and unbookmark operations are idempotent. */
 @Service
 @RequiredArgsConstructor
 public class BookmarkPostUseCase {

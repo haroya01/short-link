@@ -52,11 +52,8 @@ public class AuthController {
     refreshCookieWriter.clear(res);
   }
 
-  /**
-   * The web identity token's Services ID audience must be included in {@code
-   * short-link.apple.client-ids}. Success sets a refresh cookie; 2FA users receive only a
-   * challenge.
-   */
+  // The web identity token's Services ID audience must be included in short-link.apple.client-ids.
+  // Success sets a refresh cookie; 2FA users receive only a challenge.
   @PostMapping("/apple")
   public AppleWebLoginResponse apple(
       @Valid @RequestBody AppleLoginRequest request, HttpServletResponse res) {

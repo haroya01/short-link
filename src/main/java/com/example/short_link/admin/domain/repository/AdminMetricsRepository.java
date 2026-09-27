@@ -24,10 +24,8 @@ public interface AdminMetricsRepository {
 
   List<RecentLinkRow> recentLinks(int limit);
 
-  /** 클릭 기록에는 IP와 방문자 해시를 포함하지 않는다. */
   List<RecentClickRow> recentClicks(int limit);
 
-  /** 봇 클릭을 제외한 횟수로 정렬한다. */
   List<LinkStatRow> topLinksByClicksSince(Instant since, int limit);
 
   record StatPage<T>(List<T> items, long total) {}

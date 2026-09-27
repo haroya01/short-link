@@ -89,9 +89,9 @@ class CreateHighlightUseCaseTest {
 
     assertThat(ref.id()).isEqualTo(99L);
     assertThat(ref.blockOrder()).isEqualTo(2);
-    assertThat(ref.endBlockOrder()).isEqualTo(2); // 단일 블록: endBlockOrder 가 blockOrder 로 채워진다
+    assertThat(ref.endBlockOrder()).isEqualTo(2);
     assertThat(ref.quote()).isEqualTo("hello");
-    assertThat(ref.note()).isEqualTo("메모"); // 양끝 공백 정규화
+    assertThat(ref.note()).isEqualTo("메모");
   }
 
   @Test
@@ -105,7 +105,6 @@ class CreateHighlightUseCaseTest {
               return e;
             });
 
-    // 블록 2 의 offset 3 에서 시작해 블록 5 의 offset 1 까지 — 여러 블록에 걸친 하이라이트
     HighlightRef ref =
         useCase.execute(new CreateHighlightCommand(1L, 5L, 2, 5, 3, 1, "hello", null));
 
@@ -163,7 +162,7 @@ class CreateHighlightUseCaseTest {
 
   @Test
   void rejectsUnpublishedPost() {
-    PostEntity draft = new PostEntity(1L, "draft", "Draft", "ko"); // not published
+    PostEntity draft = new PostEntity(1L, "draft", "Draft", "ko");
     ReflectionTestUtils.setField(draft, "id", 5L);
     when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
 

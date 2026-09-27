@@ -41,7 +41,6 @@ public class CollectionEntity extends BaseTimeEntity {
   @Column(nullable = false, length = 16)
   private CollectionVisibility visibility;
 
-  /** 생성 시 고정하며 이후 변경하지 않는다. */
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private CollectionKind kind;

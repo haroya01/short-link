@@ -37,7 +37,6 @@ class AdminRequestMetricsServiceTest {
         service.routes(AdminRequestMetricsService.Window.H1);
 
     assertThat(agg).hasSize(2);
-    // Sorted descending by count — redirect route comes first
     AdminRequestMetricsService.RouteAggregate top = agg.get(0);
     assertThat(top.method()).isEqualTo("GET");
     assertThat(top.route()).isEqualTo("/r/{shortCode}");
@@ -45,7 +44,7 @@ class AdminRequestMetricsServiceTest {
     assertThat(top.p50()).isEqualTo(20.0);
     assertThat(top.p95()).isCloseTo(216.25, within(0.0001));
     assertThat(top.p99()).isCloseTo(243.25, within(0.0001));
-    assertThat(top.errorRate()).isEqualTo(0.25); // 1 of 4 is a 500
+    assertThat(top.errorRate()).isEqualTo(0.25);
     assertThat(top.statusDistribution()).containsEntry("302", 3L).containsEntry("500", 1L);
     assertThat(top.outcomeDistribution()).containsEntry("redirect", 3L).containsEntry("error", 1L);
     assertThat(top.statusDistribution().keySet()).containsExactly("302", "500");

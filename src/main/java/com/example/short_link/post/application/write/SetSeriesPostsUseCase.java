@@ -14,7 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 목록 순서(0부터)로 본인 글을 배치하고, 목록에서 빠진 기존 멤버는 해제한다. */
 @Service
 @RequiredArgsConstructor
 public class SetSeriesPostsUseCase {

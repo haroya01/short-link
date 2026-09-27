@@ -52,7 +52,6 @@ class PublicCurationGraphControllerTest {
 
   @Test
   void relatedUnknownBlockTypeYieldsEmpty() throws Exception {
-    // parseType 가 모르는 종류 → null → 조용히 빈 결과(§0). 서비스는 호출되지 않는다.
     mvc.perform(get("/api/v1/public/graph/blocks/banana/9/related"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(0));

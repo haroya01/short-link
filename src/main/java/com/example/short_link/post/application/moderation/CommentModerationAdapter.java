@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 없는 댓글은 404, 이미 삭제된 댓글은 무연산이다. 호출자 트랜잭션 안에서 실행된다. */
 @Slf4j
 @Component
 @RequiredArgsConstructor

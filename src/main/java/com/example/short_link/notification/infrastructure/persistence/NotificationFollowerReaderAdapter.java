@@ -6,7 +6,7 @@ import jakarta.persistence.PersistenceContext;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
-/** Uses a native query to avoid an entity dependency on the user module. */
+// Uses a native query to avoid an entity dependency on the user module.
 @Repository
 class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
 

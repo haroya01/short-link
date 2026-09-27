@@ -30,7 +30,7 @@ class GoogleSafeBrowsingLookupTest {
   private final SafeBrowsingProperties properties =
       new SafeBrowsingProperties(true, "test-key", Duration.ofHours(1), Duration.ofSeconds(2));
 
-  /** Fresh registry per test so breaker state from one test doesn't leak into another. */
+  // Fresh registry per test so breaker state from one test doesn't leak into another.
   private CircuitBreakerRegistry registry() {
     return CircuitBreakerRegistry.ofDefaults();
   }

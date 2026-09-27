@@ -30,7 +30,6 @@ class TextBlockBodyTest {
 
   @Test
   void unknownLayoutFallsBackToInline() {
-    // Forward compat — a frontend rolled out ahead of a backend shouldn't 400 every write.
     String out = TextBlockBody.normalize("{\"body\":\"x\",\"layout\":\"futureLayout\"}");
     assertThat(out).contains("\"layout\":\"inline\"");
   }

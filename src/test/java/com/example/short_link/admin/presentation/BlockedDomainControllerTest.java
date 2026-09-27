@@ -73,8 +73,7 @@ class BlockedDomainControllerTest {
         .andExpect(jsonPath("$.reason").value("phishing"));
   }
 
-  /* 자기 서비스 도메인 차단 거부 — 테스트 프로필의 자기 호스트는 base-url 기본값(localhost).
-  apex 와 그 서브도메인 모두 막혀야 한다(08-19 kurl.me 자기 차단 사고의 가드). */
+  // 자기 서비스 도메인은 apex와 하위 도메인 모두 차단할 수 없어야 한다. 테스트 프로필의 자기 호스트는 base-url 기본값(localhost)이다.
   @Test
   void adminCannotBlockOwnServiceDomain() throws Exception {
     UserEntity admin = userRepository.save(new UserEntity("a5@x.com", "google", "g-ad5"));

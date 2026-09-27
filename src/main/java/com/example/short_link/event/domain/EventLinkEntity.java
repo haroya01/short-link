@@ -10,7 +10,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** primary 링크도 별칭 링크와 함께 한 행으로 저장한다. */
 @Entity
 @Table(name = "event_link")
 @Getter

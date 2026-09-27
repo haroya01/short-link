@@ -7,7 +7,7 @@ import com.example.short_link.link.exception.LinkException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/** ADMIN access is read-only. Mutation paths must still require {@link LinkEntity#isOwnedBy}. */
+// ADMIN access is read-only. Mutation paths must still require LinkEntity.isOwnedBy.
 @Component
 @RequiredArgsConstructor
 public class LinkAccessGuard {

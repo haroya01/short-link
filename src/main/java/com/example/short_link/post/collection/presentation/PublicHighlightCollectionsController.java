@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** PUBLIC 컬렉션만 노출한다. PRIVATE와 UNLISTED는 제외한다. */
 @RestController
 @RequestMapping("/api/v1/public/highlights")
 @RequiredArgsConstructor

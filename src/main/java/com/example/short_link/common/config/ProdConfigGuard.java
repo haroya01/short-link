@@ -8,12 +8,10 @@ import org.springframework.boot.ApplicationRunner;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
-/**
- * Missing JWT or 2FA keys abort production startup: ephemeral JWT keys invalidate sessions on
- * restart, and missing 2FA keys store secrets in plaintext. Abuse-risk toggles only warn so
- * operators can disable them deliberately. Reads raw configuration to avoid a common-to-user
- * dependency.
- */
+// Missing JWT or 2FA keys abort production startup: ephemeral JWT keys invalidate sessions on
+// restart, and missing 2FA keys store secrets in plaintext. Abuse-risk toggles only warn so
+// operators can disable them deliberately. Reads raw configuration to avoid a common-to-user
+// dependency.
 @Slf4j
 @Component
 @RequiredArgsConstructor

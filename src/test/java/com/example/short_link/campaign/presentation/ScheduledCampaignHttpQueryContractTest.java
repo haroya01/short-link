@@ -19,9 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.TestPropertySource;
 
-/**
- * Scheduled transitions use the production job and Redis lock, with due times prepared in MySQL.
- */
 @TestPropertySource(properties = "short-link.campaign.lifecycle-enabled=true")
 class ScheduledCampaignHttpQueryContractTest extends LinkJourneyHttpSupport {
   private static final String LIFECYCLE_LOCK = "kurl:campaign:lifecycle";

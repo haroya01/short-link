@@ -59,7 +59,7 @@ class RequestMetricsRecorderTest {
         .thenReturn(List.of());
 
     recorder.record(sample("GET /api/links", 500, "error", 3));
-    recorder.flush(); // first call throws inside saveAll — must not propagate
+    recorder.flush();
 
     assertThat(registry.counter("request_metrics.recorder", "result", "flush_error").count())
         .isEqualTo(1.0);

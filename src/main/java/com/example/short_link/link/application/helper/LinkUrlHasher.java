@@ -4,10 +4,8 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
-/**
- * Hashes URLs for malicious-URL responses and logs so phishing strings are never reflected while
- * upstream findings remain correlatable.
- */
+// Hashes URLs for malicious-URL responses and logs so phishing strings are never reflected while
+// upstream findings remain correlatable.
 public final class LinkUrlHasher {
 
   private LinkUrlHasher() {}

@@ -13,10 +13,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Scans one daily expiry band, e.g. [now+6d, now+7d) for a seven-day threshold, so each link
- * crosses the band once.
- */
+// Scans one daily expiry band, e.g. [now+6d, now+7d) for a seven-day threshold, so each link
+// crosses the band once.
 @Slf4j
 @Component
 @RequiredArgsConstructor

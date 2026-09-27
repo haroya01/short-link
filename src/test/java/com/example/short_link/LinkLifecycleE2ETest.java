@@ -33,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-/** 링크 캐시는 커밋 뒤에 지워지므로, 캐시 무효화를 보는 테스트는 테스트 트랜잭션 없이 요청마다 커밋한다. */
+// 링크 캐시는 커밋 뒤에 지워지므로, 캐시 무효화를 보는 테스트는 테스트 트랜잭션 없이 요청마다 커밋한다.
 @ActiveProfiles("test")
 @Transactional
 class LinkLifecycleE2ETest {
@@ -62,12 +62,10 @@ class LinkLifecycleE2ETest {
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void updateInvalidatesCache_redirectFollowsNewUrl() throws Exception {
-    // given
     String code = uniqueCode();
     UserEntity user = newUser();
     String token = jwt.createAccessToken(user.getId(), "USER");
 
-    // when
     mvc.perform(
             post("/api/v1/links")
                 .header("Authorization", "Bearer " + token)
@@ -86,7 +84,6 @@ class LinkLifecycleE2ETest {
                 .content("{\"originalUrl\":\"https://new.com\"}"))
         .andExpect(status().isOk());
 
-    // then
     mvc.perform(get("/" + code))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://new.com"));
@@ -95,12 +92,10 @@ class LinkLifecycleE2ETest {
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void deleteInvalidatesCache_redirectReturns404() throws Exception {
-    // given
     String code = uniqueCode();
     UserEntity user = newUser();
     String token = jwt.createAccessToken(user.getId(), "USER");
 
-    // when
     mvc.perform(
             post("/api/v1/links")
                 .header("Authorization", "Bearer " + token)
@@ -113,14 +108,12 @@ class LinkLifecycleE2ETest {
     mvc.perform(delete("/api/v1/links/" + code).header("Authorization", "Bearer " + token))
         .andExpect(status().isNoContent());
 
-    // then
     mvc.perform(get("/" + code)).andExpect(status().isNotFound());
   }
 
   @Test
   @Transactional(propagation = Propagation.NOT_SUPPORTED)
   void disableViaPastExpiresAt_redirectReturns410() throws Exception {
-    // given
     String code = uniqueCode();
     UserEntity user = newUser();
     String token = jwt.createAccessToken(user.getId(), "USER");
@@ -134,7 +127,6 @@ class LinkLifecycleE2ETest {
 
     mvc.perform(get("/" + code)).andExpect(status().isFound());
 
-    // when
     Instant past = Instant.now().minusSeconds(60);
     mvc.perform(
             patch("/api/v1/links/" + code)
@@ -143,7 +135,6 @@ class LinkLifecycleE2ETest {
                 .content("{\"expiresAt\":\"" + past + "\"}"))
         .andExpect(status().isOk());
 
-    // then
     mvc.perform(get("/" + code)).andExpect(status().isGone());
   }
 
@@ -160,7 +151,6 @@ class LinkLifecycleE2ETest {
 
   @Test
   void anonymousLinkCanBeRedirectedButNotManaged() throws Exception {
-    // given
     String body =
         mvc.perform(
                 post("/api/v1/links")
@@ -172,10 +162,8 @@ class LinkLifecycleE2ETest {
             .getContentAsString();
     String shortCode = JsonPath.read(body, "$.shortCode");
 
-    // when
     mvc.perform(get("/" + shortCode)).andExpect(status().isFound());
 
-    // then
     mvc.perform(
             patch("/api/v1/links/" + shortCode)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -187,7 +175,6 @@ class LinkLifecycleE2ETest {
 
   @Test
   void authenticatedUserSeesOnlyOwnLinksInMyList() throws Exception {
-    // given
     UserEntity me = userRepository.save(new UserEntity("me@x.com", "google", "g-e5"));
     UserEntity other = userRepository.save(new UserEntity("other@x.com", "google", "g-e5o"));
     String myToken = jwt.createAccessToken(me.getId(), "USER");
@@ -206,7 +193,6 @@ class LinkLifecycleE2ETest {
                 .content("{\"url\":\"https://yours.com\",\"customCode\":\"e2e0005o\"}"))
         .andExpect(status().isCreated());
 
-    // when
     String body =
         mvc.perform(get("/api/v1/links/me").header("Authorization", "Bearer " + myToken))
             .andExpect(status().isOk())
@@ -214,7 +200,6 @@ class LinkLifecycleE2ETest {
             .getResponse()
             .getContentAsString();
 
-    // then
     List<?> items = JsonPath.read(body, "$.items");
     assertThat(items).hasSize(1);
     boolean hasMore = JsonPath.read(body, "$.hasMore");

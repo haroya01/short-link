@@ -20,16 +20,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * 전송은 전용 풀에서 실행하며 실패는 로그로 남긴다. 기기 조회·직렬화 실패는 호출자에게 전파된다. 410(Unregistered)과 BadDeviceToken은 기기 토큰을
- * 폐기한다. 메시지의 대상 앱 topic 으로만 보내며, topic 을 모르는 기존 토큰은 성공하면 그 topic 으로, DeviceTokenNotForTopic 이면 다른 앱
- * topic 으로 기록해 다음부터 고른다.
- */
+// 전송은 전용 풀에서 실행하며 실패는 로그로 남긴다. 기기 조회·직렬화 실패는 호출자에게 전파된다. 410(Unregistered)과 BadDeviceToken은 기기 토큰을
+// 폐기한다. 메시지의 대상 앱 topic 으로만 보내며, topic 을 모르는 기존 토큰은 성공하면 그 topic 으로, DeviceTokenNotForTopic 이면 다른 앱
+// topic 으로 기록해 다음부터 고른다.
 @Component
 @Slf4j
 public class ApnsPushSender implements PushSender {
 
-  /** 앱이 이 category 에 "통계 보기" 액션 버튼을 묶어 뒀다(UNNotificationCategory) — shortCode 있는 알림에만 단다. */
+  // 앱이 이 category 에 "통계 보기" 액션 버튼을 묶어 뒀다(UNNotificationCategory) — shortCode 있는 알림에만 단다.
   private static final String LINK_STATS_CATEGORY = "LINK_STATS";
 
   private final ApnsProperties props;
@@ -157,10 +155,8 @@ public class ApnsPushSender implements PushSender {
     }
   }
 
-  /**
-   * 구버전 앱 호환을 위해 aps.alert/sound는 유지한다. type·shortCode는 최상위 키이며 값이 없으면 생략한다. shortCode가 있는 알림에만
-   * LINK_STATS category를 붙인다.
-   */
+  // 구버전 앱 호환을 위해 aps.alert/sound는 유지한다. type·shortCode는 최상위 키이며 값이 없으면 생략한다. shortCode가 있는 알림에만
+  // LINK_STATS category를 붙인다.
   String payloadJson(PushMessage message) {
     var alert = new java.util.LinkedHashMap<String, Object>();
     alert.put("title", message.title());

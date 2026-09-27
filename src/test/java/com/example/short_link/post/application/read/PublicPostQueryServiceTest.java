@@ -87,7 +87,6 @@ class PublicPostQueryServiceTest {
 
     service.listPublicPosts("  JOHN  ");
 
-    // 검증: trim + lowercase
     org.mockito.Mockito.verify(userRepository).findByUsername("john");
   }
 
@@ -138,7 +137,6 @@ class PublicPostQueryServiceTest {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "draft-post", "Draft", "ko");
-    // status remains DRAFT
     when(postRepository.findByUserIdAndSlug(author.getId(), "draft-post"))
         .thenReturn(Optional.of(post));
 
@@ -151,7 +149,7 @@ class PublicPostQueryServiceTest {
   @Test
   void previewReturnsDraftPostBypassingStatusGuard() {
     UserEntity author = authorWithUsername("john");
-    PostEntity post = new PostEntity(author.getId(), "draft-post", "Draft", "ko"); // stays DRAFT
+    PostEntity post = new PostEntity(author.getId(), "draft-post", "Draft", "ko");
     post.ensurePreviewToken("tok-123");
     when(postRepository.findByPreviewToken("tok-123")).thenReturn(Optional.of(post));
     when(userRepository.findById(author.getId())).thenReturn(Optional.of(author));
@@ -266,7 +264,7 @@ class PublicPostQueryServiceTest {
             "https://example.com/join",
             CtaStyle.PRIMARY,
             CtaPurpose.CUSTOM);
-    cta.trackVia("xy12ab"); // wrapped into a kurl short link
+    cta.trackVia("xy12ab");
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
 
     PublicPostDetail detail = service.findPublicPost("john", "p");
@@ -313,7 +311,6 @@ class PublicPostQueryServiceTest {
 
     PublicPostDetail detail = service.findPublicPost("john", "p");
 
-    // CTA lookup 실패 — block 은 존재하지만 cta = null. UI placeholder 분기 책임.
     assertThat(detail.blocks()).hasSize(1);
     assertThat(detail.blocks().get(0).cta()).isNull();
   }
@@ -359,18 +356,15 @@ class PublicPostQueryServiceTest {
     pinned.pinAt(0);
     PostEntity oldest = new PostEntity(author.getId(), "oldest", "Oldest", "ko");
     oldest.publish();
-    // Repo returns publishedAt-desc: newest, pinned, oldest.
     when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(
             author.getId(), PostStatus.PUBLISHED))
         .thenReturn(List.of(newest, pinned, oldest));
 
     PublicPostListView response = service.listPublicPosts("john");
 
-    // Pinned first; the unpinned keep their original publishedAt-desc order.
     assertThat(response.posts())
         .extracting(PublicPostListItem::slug)
         .containsExactly("pinned", "newest", "oldest");
-    // The pinned flag rides on each item so the public blog can split a 대표글 section.
     assertThat(response.posts())
         .extracting(PublicPostListItem::pinned)
         .containsExactly(true, false, false);

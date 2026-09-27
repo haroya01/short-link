@@ -63,7 +63,6 @@ class MobileAppleLoginTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.accessToken").isString());
 
-    // No second row appears; the row keeps its original google identity.
     assertThat(userRepository.findByOauthProviderAndOauthId("apple", "apple-link-1")).isEmpty();
     assertThat(userRepository.findByEmail("shared@example.com").orElseThrow().getId())
         .isEqualTo(existing.getId());

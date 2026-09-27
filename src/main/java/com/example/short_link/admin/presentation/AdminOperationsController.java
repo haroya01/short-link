@@ -81,7 +81,6 @@ public class AdminOperationsController {
     return browseService.linkDetail(code);
   }
 
-  /** 포맷을 다시 판별하고 포맷 불일치로 비활성화된 웹훅을 재활성화한다. */
   @PostMapping("/webhooks/redetect-formats")
   public WebhookReDetectResult redetectWebhookFormats() {
     return reDetectWebhooks.execute();

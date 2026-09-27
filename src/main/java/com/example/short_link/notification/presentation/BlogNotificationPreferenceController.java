@@ -22,7 +22,6 @@ public class BlogNotificationPreferenceController {
 
   private final BlogNotificationPreferenceService service;
 
-  /** 설정이 없는 유형도 포함하며 기본값은 true다. */
   @GetMapping
   public Map<NotificationType, Boolean> list(@AuthenticationPrincipal Long userId) {
     return service.all(userId);

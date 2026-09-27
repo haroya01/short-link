@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Claims only still-anonymous links with matching unused tokens; replayed tokens are no-ops. */
 @Service
 @RequiredArgsConstructor
 public class ClaimAnonymousLinksUseCase {

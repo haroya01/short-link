@@ -15,7 +15,7 @@ class ArchitectureRulesTest {
   private static final Path MAIN = Path.of("src/main/java/com/example/short_link");
   private static final Path TEST = Path.of("src/test/java/com/example/short_link");
 
-  /** New controller tests use MVC slices; the number of full-context tests must not grow. */
+  // New controller tests use MVC slices; the number of full-context tests must not grow.
   private static final int SPRING_BOOT_CONTROLLER_TEST_BASELINE = 37;
 
   private static final Pattern REPOSITORY_IMPORT =

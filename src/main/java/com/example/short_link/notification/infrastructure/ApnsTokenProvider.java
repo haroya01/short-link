@@ -59,7 +59,7 @@ public class ApnsTokenProvider {
     }
   }
 
-  /** SHA256withECDSA returns DER integers; JOSE needs two right-aligned 32-byte coordinates. */
+  // SHA256withECDSA returns DER integers; JOSE needs two right-aligned 32-byte coordinates.
   static byte[] derToJose(byte[] der) {
     int rLength = der[3];
     int rOffset = 4;

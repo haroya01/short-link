@@ -13,7 +13,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** Absent preferences enable the type; {@code enabled=false} opts out. */
 @Entity
 @Table(name = "notification_preference")
 @Getter

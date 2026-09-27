@@ -14,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 인증기 확인 전에는 비활성 상태다. 복구코드는 줄바꿈으로 구분한 bcrypt 해시로 저장한다. */
 @Entity
 @Table(name = "user_two_factor")
 @Getter
@@ -76,7 +75,6 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
     return Arrays.stream(recoveryCodes.split("\n")).filter(line -> !line.isBlank()).toList();
   }
 
-  /** Removes one matched hash and records its use as a single state change. */
   public boolean consumeRecoveryCode(String matchedHash, Instant usedAt) {
     if (!enabled) return false;
     List<String> remaining = new ArrayList<>(recoveryCodeHashes());
@@ -86,7 +84,7 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
     return true;
   }
 
-  /** The repository must lock this enrollment while an authentication consumes its step. */
+  // The repository must lock this enrollment while an authentication consumes its step.
   public boolean consumeTotpStep(long verifiedStep, Instant usedAt) {
     if (!enabled || (lastVerifiedStep != null && verifiedStep <= lastVerifiedStep)) return false;
     lastVerifiedStep = verifiedStep;

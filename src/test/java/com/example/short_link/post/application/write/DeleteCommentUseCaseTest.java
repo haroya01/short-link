@@ -53,12 +53,12 @@ class DeleteCommentUseCaseTest {
 
   @Test
   void postOwnerCanDeleteOthersComment() {
-    CommentEntity c = comment(1L, 9L, 5L); // a reply by user 9
+    CommentEntity c = comment(1L, 9L, 5L);
     when(commentRepository.findById(1L)).thenReturn(Optional.of(c));
-    PostEntity post = new PostEntity(7L, "s", "T", "ko"); // post owner = 7
+    PostEntity post = new PostEntity(7L, "s", "T", "ko");
     when(postRepository.findById(42L)).thenReturn(Optional.of(post));
 
-    useCase.execute(new DeleteCommentCommand(7L, 1L)); // caller 7 = post owner
+    useCase.execute(new DeleteCommentCommand(7L, 1L));
 
     verify(commentRepository).delete(c);
   }

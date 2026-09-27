@@ -11,11 +11,9 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Snapshots the selected quote so post edits cannot erase it. Anchors use block order, matching
- * client rendering, plus character offsets. A single-block span has equal {@code blockOrder} and
- * {@code endBlockOrder}.
- */
+// Snapshots the selected quote so post edits cannot erase it. Anchors use block order, matching
+// client rendering, plus character offsets. A single-block span has equal blockOrder and
+// endBlockOrder.
 @Entity
 @Table(name = "post_highlight")
 @Getter

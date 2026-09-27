@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 public interface RequestMetricJpaRepository extends JpaRepository<RequestMetricEntity, Long> {
 
-  /** Drop the user link on account hard delete — keeps the operational row, removes the PII. */
+  // Drop the user link on account hard delete — keeps the operational row, removes the PII.
   @Modifying
   @Transactional
   @Query("UPDATE RequestMetricEntity m SET m.userId = null WHERE m.userId = :userId")

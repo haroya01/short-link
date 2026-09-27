@@ -27,11 +27,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 대상 블록(글·하이라이트·노트)이 하드 삭제되면 그를 가리키던 collection_connection 행도 같은 트랜잭션에서 사라져야 한다 — ref_id 는 FK 없는 다형
- * 참조라 DB 가 대신 지워주지 못한다. 죽은 행이 남으면 countByCollectionId 가 상세 화면이 렌더하는 수보다 많아지는 불일치가 생긴다(실제 MySQL 로
- * 검증).
- */
+// 대상 블록(글·하이라이트·노트)이 하드 삭제되면 그를 가리키던 collection_connection 행도 같은 트랜잭션에서 사라져야 한다 — ref_id 는 FK 없는 다형
+// 참조라 DB 가 대신 지워주지 못한다. 죽은 행이 남으면 countByCollectionId 가 상세 화면이 렌더하는 수보다 많아지는 불일치가 생긴다(실제 MySQL 로
+// 검증).
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -73,7 +71,6 @@ class CollectionConnectionCleanupIntegrationTest {
     assertThat(connectionRepository.findAllByBlockTypeAndRefId(ConnectionBlockType.NOTE, noteId))
         .isEmpty();
     assertThat(connectionRepository.countByCollectionId(collectionId)).isEqualTo(1);
-    // 손대지 않은 글 연결은 그대로.
     assertThat(connectionRepository.findAllByBlockTypeAndRefId(ConnectionBlockType.POST, postId))
         .hasSize(1);
   }

@@ -150,7 +150,7 @@ class NotificationQueryServiceTest {
     NotificationEntity like = entity(5L, NotificationType.LIKE, 2L, "{\"postId\":1}");
     when(repository.findPageForRecipient(eq(RECIPIENT), isNull(), anyInt()))
         .thenReturn(List.of(like));
-    when(actorReader.resolve(Set.of(2L))).thenReturn(Map.of()); // actor since deleted
+    when(actorReader.resolve(Set.of(2L))).thenReturn(Map.of());
 
     NotificationListResult result = service().list(RECIPIENT, null, 20);
 
