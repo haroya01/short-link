@@ -46,11 +46,11 @@ public interface JpaClickAlertReadRepository extends Repository<ClickEventEntity
 
   @Query(
       value =
-          "SELECT HOUR(CONVERT_TZ(clicked_at, '+00:00', :tz)) AS hour, COUNT(*) AS count "
+          "SELECT HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) AS hour, COUNT(*) AS count "
               + "FROM click_event "
               + "WHERE link_id = :linkId AND is_bot = 0 "
               + "AND clicked_at >= :from AND clicked_at < :to "
-              + "GROUP BY HOUR(CONVERT_TZ(clicked_at, '+00:00', :tz)) "
+              + "GROUP BY HOUR(CONVERT_TZ(TIMESTAMPADD(SECOND, FLOOR(UNIX_TIMESTAMP(clicked_at)), '1970-01-01'), '+00:00', :tz)) "
               + "ORDER BY count DESC LIMIT 1",
       nativeQuery = true)
   Optional<HourClickRow> findPeakHourByLinkIdAndRange(

@@ -14,7 +14,7 @@ spring:
     # open-session-in-view 를 끈다. 기본값(true)이면 EntityManager 와 그것이 잡은 JDBC 커넥션이
     # 요청 스레드에 요청 끝까지 묶인다 — 보통 요청은 밀리초라 문제없지만, /api/v1/links/{code}/stream
     # SSE 는 최대 5분 살아 있는 async 요청이라 lookup 한 번에 잡힌 커넥션을 그 5분 내내 쥔다.
-    # 열린 스트림 하나가 풀 커넥션 하나를 점유 → 동시 대시보드가 풀(20)을 통째로 굶긴다(2026-06-22 인시던트).
+    # 열린 스트림 하나가 풀 커넥션 하나를 점유 → 동시 대시보드가 풀(20)을 통째로 굶긴다.
     # 끄면 각 @Transactional 조회가 커넥션을 즉시 반납하고, 긴 async 구간은 커넥션을 0개 쥔다.
     # (컨트롤러는 엔티티가 아닌 DTO 를 반환하므로 뷰 렌더링 중 lazy 로딩이 없어 안전하다.)
     open-in-view: false
@@ -66,6 +66,8 @@ management:
         redirect.latency: 0.5, 0.95, 0.99
 
 short-link:
+  admin:
+    smoke-user-id: ${SMOKE_USER_ID:-1}
   avatar:
     bucket: ${AVATAR_S3_BUCKET:}
     region: ${AVATAR_S3_REGION:ap-northeast-2}
@@ -85,10 +87,9 @@ short-link:
   apple:
     issuer: ${APPLE_SIGNIN_ISSUER:https://appleid.apple.com}
     jwk-set-uri: ${APPLE_SIGNIN_JWKS:https://appleid.apple.com/auth/keys}
-    # Accepted identity-token audiences. The iOS bundle id covers the native app; the WEB "Sign in
-    # with Apple JS" flow uses a separate Services ID, so add it here (comma-separated) once it's
-    # created in Apple Developer, e.g. APPLE_SIGNIN_CLIENT_IDS=focustime.kurl,me.kurl.signin
-    client-ids: ${APPLE_SIGNIN_CLIENT_IDS:focustime.kurl}
+    # Accepted identity-token audiences — each native app's bundle id (blog app + links app), plus
+    # me.kurl.signin: the registered Services ID the WEB "Sign in with Apple JS" flow presents.
+    client-ids: ${APPLE_SIGNIN_CLIENT_IDS:focustime.kurl,focustime.kurl.links,me.kurl.signin}
   apns:
     team-id: ${APNS_TEAM_ID:}
     key-id: ${APNS_KEY_ID:}
@@ -96,6 +97,7 @@ short-link:
     private-key: ${APNS_PRIVATE_KEY:}
     # 기본 sandbox — 개발 서명 앱(aps-environment=development)과 짝. 스토어 빌드 때 true.
     production: ${APNS_PRODUCTION:false}
+    links-bundle-id: ${APNS_LINKS_BUNDLE_ID:}
   rate-limit:
     anonymous: 100
     authenticated: 1000
@@ -164,13 +166,12 @@ short-link:
     expiry-threshold-days: ${LINK_NOTIFICATION_EXPIRY_THRESHOLD_DAYS:7}
     velocity-min-clicks: ${LINK_NOTIFICATION_VELOCITY_MIN_CLICKS:10}
     velocity-ratio: ${LINK_NOTIFICATION_VELOCITY_RATIO:3.0}
+  destination-health:
+    enabled: ${DESTINATION_HEALTH_ENABLED:true}
+    cron: ${DESTINATION_HEALTH_CRON:0 17 * * * *}
+    batch-size: ${DESTINATION_HEALTH_BATCH_SIZE:60}
+    recheck-hours: ${DESTINATION_HEALTH_RECHECK_HOURS:20}
+    confirm-after: ${DESTINATION_HEALTH_CONFIRM_AFTER:2}
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}
-  stripe:
-    api-key: ${STRIPE_SECRET_KEY:}
-    webhook-secret: ${STRIPE_WEBHOOK_SECRET:}
-    price-pro: ${STRIPE_PRICE_PRO:}
-    success-url: ${STRIPE_SUCCESS_URL:http://localhost:3001/ko/settings#data}
-    cancel-url: ${STRIPE_CANCEL_URL:http://localhost:3001/ko/pricing}
-    portal-return-url: ${STRIPE_PORTAL_RETURN_URL:http://localhost:3001/ko/settings#data}

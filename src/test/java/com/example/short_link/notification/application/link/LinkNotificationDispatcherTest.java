@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.LinkNotificationEntity;
 import com.example.short_link.notification.domain.LinkNotificationType;
@@ -21,7 +23,7 @@ class LinkNotificationDispatcherTest {
   private final PushSender pushSender = mock(PushSender.class);
   private final LinkNotificationRepository repository = mock(LinkNotificationRepository.class);
   private final LinkNotificationDispatcher dispatcher =
-      new LinkNotificationDispatcher(prefs, pushSender, repository);
+      new LinkNotificationDispatcher(prefs, new NotificationPushDelivery(pushSender), repository);
 
   @Test
   void recordsAndSendsWhenEnabled() {
@@ -35,8 +37,16 @@ class LinkNotificationDispatcherTest {
   void recordsButSkipsPushWhenDisabled() {
     when(prefs.isEnabled(7L, LinkNotificationType.MILESTONE)).thenReturn(false);
     dispatcher.dispatch(7L, LinkNotificationType.MILESTONE, "spring", "/spring", "100 클릭");
-    verify(repository).save(any(LinkNotificationEntity.class)); // 인박스엔 남는다
+    verify(repository).save(any(LinkNotificationEntity.class));
     verify(pushSender, never()).send(any(), any());
+  }
+
+  @Test
+  void warningPushesEvenWhenPreferenceDisabled() {
+    when(prefs.isEnabled(7L, LinkNotificationType.WARNING)).thenReturn(false);
+    dispatcher.dispatch(7L, LinkNotificationType.WARNING, "spring", "운영자 경고", "정책 위반");
+    verify(repository).save(any(LinkNotificationEntity.class));
+    verify(pushSender).send(eq(7L), any(PushSender.PushMessage.class));
   }
 
   @Test
@@ -56,6 +66,7 @@ class LinkNotificationDispatcherTest {
     verify(pushSender).send(eq(7L), captor.capture());
     assertThat(captor.getValue().type()).isEqualTo("FIRST_CLICK");
     assertThat(captor.getValue().shortCode()).isEqualTo("spring");
+    assertThat(captor.getValue().app()).isEqualTo(PushApp.LINKS);
   }
 
   @Test

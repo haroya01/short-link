@@ -14,11 +14,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The caller's reading history, most recently read first. Stale entries (post deleted / unpublished
- * or author gone) are skipped, so a cleared-up library never shows dead rows. Posts and authors are
- * batch-loaded to avoid an N+1 over the page.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)

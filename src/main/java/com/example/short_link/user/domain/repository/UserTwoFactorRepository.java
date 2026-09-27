@@ -7,5 +7,7 @@ public interface UserTwoFactorRepository {
 
   Optional<UserTwoFactorEntity> findById(Long id);
 
+  Optional<UserTwoFactorEntity> findByIdForUpdate(Long id);
+
   UserTwoFactorEntity save(UserTwoFactorEntity twoFactor);
 }

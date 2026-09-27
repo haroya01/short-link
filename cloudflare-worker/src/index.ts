@@ -1,9 +1,8 @@
 import { routeFor } from "./router";
 
 export interface Env {
-  /** Backend origin (Spring Boot). Must be reachable from Workers — e.g. https://origin.kurl.me */
+  // Must be reachable from Workers, e.g. https://origin.kurl.me
   BACKEND_ORIGIN: string;
-  /** Frontend origin (Vercel Next.js). Typically https://app.kurl.me */
   FRONTEND_ORIGIN: string;
 }
 
@@ -15,21 +14,9 @@ export default {
   },
 };
 
-/**
- * Forward the request to {@code origin}. Cloudflare's fetch() automatically sets the Host
- * header to match the target URL's hostname (app.kurl.me / origin.kurl.me) — we can't preserve
- * the original kurl.me host on the upstream connection, so instead we rewrite leaked hostnames
- * in the response headers below.
- *
- * <p>The HTML body itself is generated using {@code NEXT_PUBLIC_SITE_URL=https://kurl.me} on
- * Vercel, so canonical / og:url / alternate hreflang inside the HTML are all already kurl.me.
- * The only place upstream's own hostname leaks is the {@code Link} response header that
- * next-intl middleware generates from the request hostname — we rewrite that here.
- *
- * <p>{@code redirect: "manual"} keeps backend 302s (short-link redirects) flowing through
- * to the browser unchanged. Default {@code redirect: "follow"} would have the Worker chase
- * the redirect itself and return the destination's body to the client — wrong for short links.
- */
+// fetch() sets Host to the upstream hostname, so the upstream host can leak into the Link header
+// that next-intl builds; it is rewritten below. redirect: "manual" passes short-link 302s through
+// instead of the Worker following them and returning the destination body.
 async function proxy(request: Request, origin: string): Promise<Response> {
   const url = new URL(request.url);
   const target = `${origin}${url.pathname}${url.search}`;
@@ -45,10 +32,8 @@ async function proxy(request: Request, origin: string): Promise<Response> {
       redirect: "manual",
     });
   } catch (err) {
-    // Upstream origin unreachable (DNS, TCP, TLS, connect timeout). Without this catch the Worker
-    // bubbles its own 1101 / 1042 page — a Cloudflare-branded mystery surface that breaks both
-    // short-link redirects (user clicked a link, gets opaque error) and frontend error boundaries
-    // (no JSON to parse). Fail closed with a deterministic 503 so downstream UX is predictable.
+    // Without this the Worker returns Cloudflare's own 1101/1042 page, which neither redirects nor
+    // gives the frontend JSON to handle. A plain 503 keeps failures predictable.
     return upstreamUnavailableResponse(url);
   }
   return rewriteHostnameHeaders(response, new URL(origin).host, url.host);
@@ -81,12 +66,8 @@ function upstreamUnavailableResponse(url: URL): Response {
   return new Response(body, { status, headers });
 }
 
-/**
- * Rewrite the upstream's own hostname back to the visitor-facing one in response headers that
- * commonly carry absolute URLs (Link for hreflang alternates, Location for redirects). Google
- * uses the Link header for hreflang signals — leaking app.kurl.me there while the HTML's
- * rel="alternate" said kurl.me produced canonical confusion that blocked indexing.
- */
+// Google reads hreflang from the Link header; app.kurl.me there conflicts with the HTML's kurl.me
+// alternates and blocks indexing.
 function rewriteHostnameHeaders(
   response: Response,
   upstreamHost: string,

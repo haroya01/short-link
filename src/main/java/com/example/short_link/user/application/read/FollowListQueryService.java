@@ -15,16 +15,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The followers / following <em>lists</em> on an author page (Medium-style). Public — works
- * unauthenticated; the per-row {@code followedByMe} just stays false for anonymous viewers. Each
- * page of edge ids is batch-hydrated in three passes (users, follower counts, the viewer's own
- * edges) to avoid N+1.
- *
- * <p>An author who hides their counts ({@code hideFollowerCount}) locks these lists to themselves:
- * a list is a countable number, so omitting the totals while leaving the lists pageable would let
- * anyone rebuild the hidden count. Everyone but the owner gets {@code FOLLOW_LIST_HIDDEN} (403).
- */
+// Anonymous viewers have followedByMe=false. Hidden counts also hide pageable lists from non-owners
+// (403), because enumerating the lists would reveal the counts.
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -33,7 +25,6 @@ public class FollowListQueryService {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
 
-  /** Users who follow {@code username}, newest follower first. */
   public FollowListView followers(Long viewerId, String username, int page, int size) {
     UserEntity target = resolve(viewerId, username);
     List<Long> ids = followRepository.findFollowerIds(target.getId(), page, size);
@@ -42,7 +33,6 @@ public class FollowListQueryService {
     return new FollowListView(hydrate(viewerId, ids), page, size, hasNext);
   }
 
-  /** Users {@code username} follows, most recently followed first. */
   public FollowListView following(Long viewerId, String username, int page, int size) {
     UserEntity target = resolve(viewerId, username);
     List<Long> ids = followRepository.findFollowingIds(target.getId(), page, size);
@@ -61,9 +51,6 @@ public class FollowListQueryService {
     return target;
   }
 
-  /**
-   * ids(최신순)를 표시 가능한 작가 행으로. 삭제됐거나 아직 핸들을 안 정한(username null) 사용자는 목록에서 건너뛰되, 페이지 순서(최신순)는 유지한다.
-   */
   private List<FollowUserView> hydrate(Long viewerId, List<Long> ids) {
     if (ids.isEmpty()) {
       return List.of();

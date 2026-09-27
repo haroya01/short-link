@@ -48,7 +48,6 @@ class RegisterBlogWebhookUseCaseTest {
       assertThat(issued.secret()).hasSize(48);
       assertThat(issued.format()).isEqualTo(BlogWebhookFormat.DISCORD);
       assertThat(issued.name()).isEqualTo("My hook");
-      // Empty event set ⇒ subscribe to every interaction.
       assertThat(issued.events()).containsExactlyInAnyOrder(BlogInteractionType.values());
     }
   }

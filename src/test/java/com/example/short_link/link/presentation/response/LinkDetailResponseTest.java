@@ -30,7 +30,16 @@ class LinkDetailResponseTest {
             true,
             List.of("a", "b"),
             "note body",
-            "expired msg");
+            "expired msg",
+            true,
+            new LinkDetailView.Splash(true, "coupon SPRING20", 2, 9L),
+            Instant.parse("2026-10-01T01:00:00Z"),
+            new LinkDetailView.DestinationHealth(
+                true,
+                "NOT_FOUND",
+                404,
+                Instant.parse("2026-09-27T01:00:00Z"),
+                Instant.parse("2026-09-27T02:00:00Z")));
 
     LinkDetailResponse response = LinkDetailResponse.from(view);
 
@@ -70,6 +79,10 @@ class LinkDetailResponseTest {
             0,
             false,
             List.of(),
+            null,
+            null,
+            false,
+            LinkDetailView.Splash.OFF,
             null,
             null);
 

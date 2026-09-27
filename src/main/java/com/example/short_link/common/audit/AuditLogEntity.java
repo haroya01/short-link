@@ -59,9 +59,6 @@ public class AuditLogEntity {
     this.occurredAt = occurredAt;
   }
 
-  /**
-   * Single intended creation path — caller spells out every column so we don't get half-built rows.
-   */
   public static AuditLogEntity record(
       Long actorUserId,
       String action,

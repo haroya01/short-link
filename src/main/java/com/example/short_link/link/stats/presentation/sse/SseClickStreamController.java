@@ -25,25 +25,11 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-/**
- * Live click stream. Two auth channels share the endpoint because {@code EventSource} cannot set an
- * {@code Authorization} header:
- *
- * <ol>
- *   <li><b>{@code ?streamToken=...}</b> — short-lived, short-code-scoped token minted from the
- *       logged-in session by {@code POST /stream-token}.
- *   <li><b>{@code ?claimToken=...}</b> — the 16-byte hex token handed back at anonymous link
- *       creation. Lets the landing-page result card watch its own brand-new link in the gap between
- *       "URL shortened" and "user signs up". The token is cleared in {@link LinkEntity#claim} so
- *       this channel auto-closes the moment the link is adopted into an account; subscribers from
- *       that point need the stream-token path.
- * </ol>
- *
- * <p>When both credentials are provided the stream token wins so a signed-in user is not downgraded
- * to anonymous-token trust. A full access JWT is deliberately NOT accepted here — it would ride in
- * the EventSource URL and leak through browser/proxy/edge logs. Fast-fail uses the servlet response
- * so the global problem-detail handler doesn't wrap our SSE channel into a JSON 500.
- */
+// EventSource cannot set Authorization headers, so it uses a short-lived, code-scoped streamToken
+// or an anonymous link's claimToken. The stream token takes precedence when both are present.
+// Claiming clears the anonymous token; subsequent connections require a stream token. Full access
+// JWTs are rejected because URL credentials leak into browser and proxy logs. Fail directly through
+// the servlet response to avoid JSON error handling on the SSE channel.
 @Slf4j
 @RestController
 @RequestMapping("/api/v1/links")
@@ -92,6 +78,8 @@ public class SseClickStreamController {
       return failFast(response, HttpStatus.UNAUTHORIZED);
     }
 
+    // no-transform — 중간자(개발 프록시·게이트웨이)의 gzip 버퍼링이 이벤트 전달을 막는 것을 금지.
+    response.setHeader("Cache-Control", "no-cache, no-transform");
     SseEmitter emitter = new SseEmitter(STREAM_TIMEOUT_MS);
     boolean accepted = registry.register(link.linkId(), emitter);
     if (!accepted) {

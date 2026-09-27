@@ -6,16 +6,8 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
-/**
- * Outbound HTTP port. Wraps the Apache HttpClient 5 + DNS-pinning machinery
- * (PinnedHttpClientFactory) so callers don't depend on {@code org.apache.hc.*} directly — that
- * dependency stays confined to the adapter in {@code common.net}.
- *
- * <p>Each call is independent: the implementation builds a per-request client pinned to the
- * resolved IP (DNS rebinding defense) and closes it after the response is fully read. Body is
- * capped at {@link Request#maxBodyBytes} and returned as a complete {@code byte[]} — streaming
- * responses are out of scope, which fits the OG-scrape / webhook-delivery callers we have today.
- */
+// Each request connects only to its pre-resolved IPs to prevent DNS rebinding, then closes its
+// client. Returns the complete body, capped at Request.maxBodyBytes.
 public interface HttpFetcher {
 
   Response fetch(Request request);
@@ -55,12 +47,8 @@ public interface HttpFetcher {
           Method.GET, pinned, headers, null, null, connectTimeout, readTimeout, maxBodyBytes, true);
     }
 
-    /**
-     * GET that surfaces 3xx to the caller instead of following it. The pinned DNS resolver refuses
-     * any host other than the one already resolved, so a cross-host redirect can never be followed
-     * transparently — callers that need redirects (e.g. 노션 이미지 프록시 → S3) must walk them hop-by-hop,
-     * re-validating each Location through {@link PublicHttpUrlGuard}.
-     */
+    // Returns 3xx without following them. The pinned resolver rejects other hosts, so callers must
+    // follow cross-host redirects hop by hop and validate each Location with PublicHttpUrlGuard.
     public static Request getNoRedirects(
         Resolved pinned,
         Map<String, String> headers,
@@ -104,10 +92,6 @@ public interface HttpFetcher {
     }
   }
 
-  /**
-   * Response value. {@code body} is empty (not null) when the entity was absent. Header lookups are
-   * case-insensitive on read.
-   */
   record Response(int status, Map<String, List<String>> headers, byte[] body) {
 
     public Response {
@@ -115,7 +99,6 @@ public interface HttpFetcher {
       body = body == null ? new byte[0] : body;
     }
 
-    /** First value for the given header (case-insensitive), or null. */
     public String header(String name) {
       for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
         if (entry.getKey().equalsIgnoreCase(name) && !entry.getValue().isEmpty()) {

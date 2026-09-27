@@ -25,19 +25,14 @@ public record CampaignStatsView(
       ShortCode shortCode,
       long clicks) {}
 
-  /**
-   * 그루핑 비교 — 어느 배포자/지역이 잘했는지. clickRatePerHundred 는 100장당 클릭 비율 (배포 효율). 단순 클릭 수만 보면 quantity 차이가 큰
-   * batch 묶음 끼리 비교 안 됨.
-   */
+  // 배포 수량이 다른 묶음을 비교하기 위해 클릭 수를 100장 기준으로 환산한다.
   public record GroupStats(
       String key, long clicks, int totalQuantity, double clickRatePerHundred) {}
 
-  /** 시간대별 (0–23) 클릭 분포. */
   public record HourBucket(int hour, long clicks) {}
 
-  /** 일별 클릭 추이 (campaign.startsAt ~ 현재). */
   public record DayBucket(LocalDate day, long clicks) {}
 
-  /** Heatmap cell — DAYOFWEEK 는 1(일)~7(토), hour 는 0~23. */
+  // Heatmap cell — DAYOFWEEK 는 1(일)~7(토), hour 는 0~23.
   public record HeatmapCell(int dayOfWeek, int hour, long clicks) {}
 }

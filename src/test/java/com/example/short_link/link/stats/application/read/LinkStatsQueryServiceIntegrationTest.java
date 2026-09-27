@@ -9,6 +9,7 @@ import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.stats.application.LinkInsights;
 import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -30,6 +31,7 @@ class LinkStatsQueryServiceIntegrationTest {
   @Autowired private UserRepository userRepository;
   @Autowired private LinkVisibilityService visibilityService;
   @Autowired private LinkStatsLifecycleReader lifecycleReader;
+  @Autowired private LinkInsights insights;
   @Autowired private LinkStatsDimensionBreakdownsReader dimensionsReader;
 
   @Test
@@ -123,12 +125,12 @@ class LinkStatsQueryServiceIntegrationTest {
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "stcjmp", owner.getId(), null));
     java.time.Instant t0 = java.time.Instant.now().minus(java.time.Duration.ofHours(3));
-    hostClick(link, "instagram.com", t0); // 원래 채널(가장 이른)
+    hostClick(link, "instagram.com", t0);
     hostClick(
         link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(30))); // 30분 — gap<3600, 건너뜀
     hostClick(link, "reddit.com", t0.plus(java.time.Duration.ofHours(2))); // 2시간 — gap≥3600, 점프
 
-    var insight = lifecycleReader.channelJump(link.linkId());
+    var insight = insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()));
 
     assertThat(insight).isPresent();
     assertThat(insight.get().type()).isEqualTo("CHANNEL_JUMP");
@@ -144,7 +146,7 @@ class LinkStatsQueryServiceIntegrationTest {
         linkRepository.save(new LinkEntity("https://example.com", "stcj1h", owner.getId(), null));
     hostClick(link, "instagram.com", java.time.Instant.now().minus(java.time.Duration.ofHours(1)));
 
-    assertThat(lifecycleReader.channelJump(link.linkId())).isEmpty();
+    assertThat(insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()))).isEmpty();
   }
 
   @Test
@@ -154,13 +156,11 @@ class LinkStatsQueryServiceIntegrationTest {
         linkRepository.save(new LinkEntity("https://example.com", "stcj2h", owner.getId(), null));
     java.time.Instant t0 = java.time.Instant.now().minus(java.time.Duration.ofHours(2));
     hostClick(link, "instagram.com", t0);
-    hostClick(link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(20))); // gap<3600 → 점프 아님
+    hostClick(link, "twitter.com", t0.plus(java.time.Duration.ofMinutes(20)));
 
     // 두 host 지만 1시간 안에 다 나타나 채널 점프로 보지 않는다(루프가 점프 없이 끝나는 갈래).
-    assertThat(lifecycleReader.channelJump(link.linkId())).isEmpty();
+    assertThat(insights.channelJump(lifecycleReader.channelFirstSeen(link.linkId()))).isEmpty();
   }
-
-  // ─── 새 분석 축 (인앱 브라우저 · 글 귀속 · UTM term · 채널 깊이 · Sec-Fetch-Site) ───
 
   @Test
   void clientAppClicks_countHumanInAppClicksOnly() {
@@ -188,10 +188,8 @@ class LinkStatsQueryServiceIntegrationTest {
             .clientApp("instagram")
             .bot(false)
             .build());
-    // 일반 브라우저(client_app IS NULL) 는 행 자체가 없어야 한다.
     clickRepository.save(
         ClickEventEntity.builder().linkId(link.linkId()).clientIp("1.1.1.4").bot(false).build());
-    // 봇이 인앱 UA 를 흉내내도 사람 집계엔 안 들어간다.
     clickRepository.save(
         ClickEventEntity.builder()
             .linkId(link.linkId())
@@ -318,7 +316,6 @@ class LinkStatsQueryServiceIntegrationTest {
             .postId(987_654_321L)
             .bot(true)
             .build());
-    // post_id 없는 클릭은 귀속되지 않는다.
     clickRepository.save(
         ClickEventEntity.builder().linkId(link.linkId()).clientIp("4.1.1.4").bot(false).build());
 
@@ -357,9 +354,7 @@ class LinkStatsQueryServiceIntegrationTest {
     depthClick(link, "instagram.com", "ig-a", t0.plus(java.time.Duration.ofDays(1)), false);
     // 같은 자리 더블탭(2분 뒤)은 세션이 갈리지 않아 재방문으로 세지 않는다.
     depthClick(link, "instagram.com", "ig-b", t0.plus(java.time.Duration.ofMinutes(7)), false);
-    // notion: 하루 늦게 시작, 방문자 1명 재방문 없음
     depthClick(link, "notion.so", "nt-a", t0.plus(java.time.Duration.ofDays(1)), false);
-    // 봇은 어느 채널에도 안 들어간다.
     depthClick(link, "instagram.com", "bot-a", t0, true);
 
     var depth = lifecycleReader.channelDepth(link.linkId());
@@ -376,7 +371,6 @@ class LinkStatsQueryServiceIntegrationTest {
     assertThat(notion.count()).isEqualTo(1L);
     assertThat(notion.returningVisitors()).isZero();
     assertThat(notion.returnRatio()).isZero();
-    // 첫 등장 시각이 채널마다 다르다는 게 이 축의 존재 이유다.
     assertThat(notion.firstSeenAt()).isAfter(instagram.firstSeenAt());
   }
 
@@ -391,7 +385,6 @@ class LinkStatsQueryServiceIntegrationTest {
     assertThat(lifecycleReader.channelDepth(link.linkId())).isEmpty();
   }
 
-  /** GPC 옵트아웃 방문자는 visitor_hash 가 없어 재방문 분모에도 분자에도 안 들어간다 — 비율을 흔들지 않는다. */
   @Test
   void channelDepth_ignoresVisitorsWithoutHash() {
     UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-cd3"));

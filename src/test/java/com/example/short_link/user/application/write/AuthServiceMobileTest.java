@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.application.dto.IssuedTokens;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.MobileLoginResult;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
@@ -26,10 +26,10 @@ class AuthServiceMobileTest {
   void mobileLoginYieldsRedeemableExchangeCode() {
     UserEntity user = userRepository.save(new UserEntity("app@x.com", "google", "g-app1"));
 
-    LoginResult result = authService.loginWithOAuthMobile("app@x.com", "google", "g-app1");
+    MobileLoginResult result = authService.loginWithOAuthMobile("app@x.com", "google", "g-app1");
 
-    assertThat(result).isInstanceOf(LoginResult.MobileExchangeCode.class);
-    String code = ((LoginResult.MobileExchangeCode) result).code();
+    assertThat(result).isInstanceOf(MobileLoginResult.ExchangeCode.class);
+    String code = ((MobileLoginResult.ExchangeCode) result).code();
     IssuedTokens tokens = authService.exchangeMobileCode(code);
     assertThat(tokens.accessToken()).isNotBlank();
     assertThat(tokens.refreshToken()).isNotBlank();
@@ -38,9 +38,9 @@ class AuthServiceMobileTest {
 
   @Test
   void mobileLoginUpsertsFirstTimeUser() {
-    LoginResult result = authService.loginWithOAuthMobile("new@x.com", "google", "g-app2");
+    MobileLoginResult result = authService.loginWithOAuthMobile("new@x.com", "google", "g-app2");
 
-    assertThat(result).isInstanceOf(LoginResult.MobileExchangeCode.class);
+    assertThat(result).isInstanceOf(MobileLoginResult.ExchangeCode.class);
     assertThat(userRepository.findByOauthProviderAndOauthId("google", "g-app2")).isPresent();
   }
 

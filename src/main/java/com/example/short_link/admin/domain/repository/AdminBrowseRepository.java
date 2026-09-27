@@ -6,12 +6,6 @@ import com.example.short_link.user.domain.UserEntity;
 import java.time.Instant;
 import java.util.Optional;
 
-/**
- * Full-table browse over users and links for the admin console — the operational counterpart to the
- * aggregate reads in {@link AdminMetricsRepository}. Every method is a paginated read; {@code q} is
- * an already-normalized filter ({@code null} means "no filter") so this port stays free of
- * request-shaping concerns. Reuses {@link StatPage} for the {@code items + total} envelope.
- */
 public interface AdminBrowseRepository {
 
   StatPage<UserRow> findUsers(String q, String role, int page, int size);
@@ -22,7 +16,6 @@ public interface AdminBrowseRepository {
 
   Optional<LinkRow> findLink(ShortCode shortCode);
 
-  /** Ordering for the link browse — newest first, or by lifetime click count first. */
   enum LinkSort {
     RECENT,
     CLICKS
@@ -36,8 +29,6 @@ public interface AdminBrowseRepository {
     String getUsername();
 
     UserEntity.Role getRole();
-
-    UserEntity.Tier getTier();
 
     Instant getCreatedAt();
 

@@ -2,17 +2,28 @@ package com.example.short_link.notification.application.push;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * APNs 발송 설정. {@code privateKey} 는 Apple 개발자 포털의 APNs Auth Key(.p8) PEM 원문 — 비어 있으면 발송기는 no-op 으로
- * 내려앉고 앱은 평소처럼 돈다(키는 운영 환경변수로만). {@code production} 기본 false: 개발 서명 앱(aps-environment=development)은
- * sandbox 게이트웨이를 쓴다. 스토어 빌드 배포 시점에 true 로.
- */
+// privateKey는 APNs .p8 PEM 원문이며 운영 환경변수로만 제공한다. 비어 있으면 발송하지 않는다. 개발 서명 앱은 기본 sandbox 게이트웨이, 스토어 빌드는
+// production=true를 사용한다.
 @ConfigurationProperties(prefix = "short-link.apns")
 public record ApnsProperties(
-    String teamId, String keyId, String bundleId, String privateKey, boolean production) {
+    String teamId,
+    String keyId,
+    String bundleId,
+    String privateKey,
+    boolean production,
+    String linksBundleId) {
 
   public ApnsProperties {
     if (bundleId == null || bundleId.isBlank()) bundleId = "focustime.kurl";
+    if (linksBundleId == null || linksBundleId.isBlank()) linksBundleId = "focustime.kurl.links";
+  }
+
+  public String topicFor(PushApp app) {
+    return app == PushApp.LINKS ? linksBundleId : bundleId;
+  }
+
+  public String otherTopic(String topic) {
+    return bundleId.equals(topic) ? linksBundleId : bundleId;
   }
 
   public boolean configured() {

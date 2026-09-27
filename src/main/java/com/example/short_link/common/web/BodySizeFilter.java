@@ -1,5 +1,6 @@
 package com.example.short_link.common.web;
 
+import com.example.short_link.common.web.response.ProblemDetails;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ReadListener;
 import jakarta.servlet.ServletException;
@@ -10,12 +11,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
@@ -29,17 +27,11 @@ public class BodySizeFilter extends OncePerRequestFilter {
 
   private static final long DEFAULT_MAX_BODY_BYTES = 16L * 1024L;
 
-  /**
-   * Routes whose legitimate payloads outgrow the default cap: the block editor saves whole
-   * documents (per-block validation alone allows far more than 16KB), bulk import uploads CSV
-   * files, and Stripe webhook events can run large — a 413 there makes Stripe retry and eventually
-   * disable the endpoint.
-   */
+  // Whole editor documents and bulk CSV imports need a larger cap than ordinary API payloads.
   private static final List<Limit> EXPANDED_LIMITS =
       List.of(
           new Limit("/api/v1/posts", 1024L * 1024L),
-          new Limit("/api/v1/links/bulk", 1024L * 1024L),
-          new Limit("/api/v1/billing/webhook", 256L * 1024L));
+          new Limit("/api/v1/links/bulk", 1024L * 1024L));
 
   private record Limit(String pathPrefix, long maxBytes) {}
 
@@ -55,9 +47,8 @@ public class BodySizeFilter extends OncePerRequestFilter {
       writeTooLarge(req, res, limit);
       return;
     }
-    // Content-Length can be absent (chunked transfer) or understate the body — cap the actual
-    // stream too so a length-less body can't be read unboundedly into memory. An overrun throws
-    // PayloadTooLargeException, which GlobalExceptionHandler maps to 413.
+    // Content-Length may be absent or understated; also cap the actual stream (overrun maps to
+    // 413).
     chain.doFilter(new LimitedBodyRequest(req, limit), res);
   }
 
@@ -73,22 +64,17 @@ public class BodySizeFilter extends OncePerRequestFilter {
   private void writeTooLarge(HttpServletRequest req, HttpServletResponse res, long limit)
       throws IOException {
     ProblemDetail body =
-        ProblemDetail.forStatusAndDetail(
-            HttpStatus.PAYLOAD_TOO_LARGE, "request body exceeds " + (limit / 1024) + "KB limit");
-    body.setInstance(URI.create(req.getRequestURI()));
-    body.setProperty("code", "PAYLOAD_TOO_LARGE");
-    body.setProperty("timestamp", Instant.now().toString());
-    String requestId = MDC.get("requestId");
-    if (requestId != null) {
-      body.setProperty("requestId", requestId);
-    }
+        ProblemDetails.of(
+            HttpStatus.PAYLOAD_TOO_LARGE,
+            "request body exceeds " + (limit / 1024) + "KB limit",
+            "PAYLOAD_TOO_LARGE",
+            req);
 
     res.setStatus(HttpStatus.PAYLOAD_TOO_LARGE.value());
     res.setContentType(MediaType.APPLICATION_PROBLEM_JSON_VALUE);
     jsonMapper.writeValue(res.getOutputStream(), body);
   }
 
-  /** Wraps the request body stream to abort reads that exceed the route's byte cap. */
   private static final class LimitedBodyRequest extends HttpServletRequestWrapper {
     private final long limit;
 

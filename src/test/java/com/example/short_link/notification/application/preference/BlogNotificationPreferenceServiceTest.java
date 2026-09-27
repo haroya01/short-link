@@ -1,12 +1,10 @@
 package com.example.short_link.notification.application.preference;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,7 +14,6 @@ import com.example.short_link.notification.domain.repository.BlogNotificationPre
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DataIntegrityViolationException;
 
 class BlogNotificationPreferenceServiceTest {
 
@@ -53,44 +50,11 @@ class BlogNotificationPreferenceServiceTest {
   }
 
   @Test
-  void setEnabledUpdatesExistingRowInPlace() {
-    BlogNotificationPreferenceEntity existing =
-        new BlogNotificationPreferenceEntity(1L, NotificationType.FOLLOW, true);
-    when(repo.findByUserIdAndType(1L, NotificationType.FOLLOW)).thenReturn(Optional.of(existing));
-
-    service.setEnabled(1L, NotificationType.FOLLOW, false);
-
-    assertThat(existing.isEnabled()).isFalse();
-    verify(repo, never()).save(any());
-  }
-
-  @Test
-  void setEnabledInsertsWhenAbsent() {
-    when(repo.findByUserIdAndType(1L, NotificationType.MENTION)).thenReturn(Optional.empty());
-
-    service.setEnabled(1L, NotificationType.MENTION, false);
-
-    verify(repo).save(any(BlogNotificationPreferenceEntity.class));
-  }
-
-  @Test
-  void setEnabledRecoversFromConcurrentInsertRaceByReReadingAndUpdating() {
-    // Two toggles miss the same absent row and both insert; the loser's save trips the (user, type)
-    // unique key. The service catches it, re-reads the winner's row, and updates it in place —
-    // no 500 for the double-tapper.
-    BlogNotificationPreferenceEntity winnerRow =
-        new BlogNotificationPreferenceEntity(1L, NotificationType.LIKE, true);
-    when(repo.findByUserIdAndType(1L, NotificationType.LIKE))
-        .thenReturn(Optional.empty()) // first read: nobody there yet
-        .thenReturn(Optional.of(winnerRow)); // re-read after the race: winner's row
-    when(repo.save(any(BlogNotificationPreferenceEntity.class)))
-        .thenThrow(new DataIntegrityViolationException("uk_blog_notification_preference"));
-
+  void setEnabledUsesAtomicRepositoryWriteWithoutAnExistenceRead() {
     service.setEnabled(1L, NotificationType.LIKE, false);
 
-    // Settled on the winner's row with the requested value; no exception propagated.
-    assertThat(winnerRow.isEnabled()).isFalse();
-    verify(repo, times(2)).findByUserIdAndType(1L, NotificationType.LIKE);
+    verify(repo).setEnabled(1L, NotificationType.LIKE, false);
+    verify(repo, never()).findByUserIdAndType(1L, NotificationType.LIKE);
   }
 
   @Test

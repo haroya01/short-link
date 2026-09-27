@@ -1,7 +1,6 @@
 package com.example.short_link.notification.application.link;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -43,31 +42,27 @@ class NotificationPreferenceServiceTest {
 
     var all = service.all(1L);
 
-    assertThat(all).hasSize(LinkNotificationType.values().length);
+    assertThat(all).hasSize(LinkNotificationType.values().length - 1);
     assertThat(all.get(LinkNotificationType.VELOCITY_SPIKE)).isFalse();
     assertThat(all.get(LinkNotificationType.FIRST_CLICK)).isTrue();
   }
 
   @Test
-  void setEnabledUpdatesExistingRowInPlace() {
-    NotificationPreferenceEntity existing =
-        new NotificationPreferenceEntity(1L, LinkNotificationType.FIRST_CLICK, true);
-    when(repo.findByUserIdAndType(1L, LinkNotificationType.FIRST_CLICK))
-        .thenReturn(Optional.of(existing));
+  void allOmitsOperatorWarningFromSettingsMap() {
+    when(repo.findByUserId(1L))
+        .thenReturn(
+            List.of(new NotificationPreferenceEntity(1L, LinkNotificationType.WARNING, false)));
 
-    service.setEnabled(1L, LinkNotificationType.FIRST_CLICK, false);
+    var all = service.all(1L);
 
-    assertThat(existing.isEnabled()).isFalse();
-    verify(repo, never()).save(any());
+    assertThat(all).doesNotContainKey(LinkNotificationType.WARNING);
   }
 
   @Test
-  void setEnabledInsertsWhenAbsent() {
-    when(repo.findByUserIdAndType(1L, LinkNotificationType.EXPIRY_IMMINENT))
-        .thenReturn(Optional.empty());
+  void setEnabledUsesAtomicRepositoryWriteWithoutAnExistenceRead() {
+    service.setEnabled(1L, LinkNotificationType.FIRST_CLICK, false);
 
-    service.setEnabled(1L, LinkNotificationType.EXPIRY_IMMINENT, false);
-
-    verify(repo).save(any(NotificationPreferenceEntity.class));
+    verify(repo).setEnabled(1L, LinkNotificationType.FIRST_CLICK, false);
+    verify(repo, never()).findByUserIdAndType(1L, LinkNotificationType.FIRST_CLICK);
   }
 }

@@ -14,10 +14,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Block / unblock a user (App Store 1.2 UGC). All endpoints require auth. PUT/DELETE return 204;
- * the GET list backs the "blocked users" management screen + the client-side content filter.
- */
 @RestController
 @RequiredArgsConstructor
 public class BlockController {

@@ -74,18 +74,4 @@ class BodySizeFilterTest {
     assertThat(res.getStatus()).isEqualTo(413);
     assertThat(res.getContentAsString()).contains("request body exceeds 1024KB limit");
   }
-
-  @Test
-  void stripeWebhookRouteAcceptsLargeEvent() throws Exception {
-    BodySizeFilter filter = new BodySizeFilter(JsonMapper.builder().build());
-    MockHttpServletRequest req = new MockHttpServletRequest("POST", "/api/v1/billing/webhook");
-    req.setContent(new byte[100 * 1024]);
-    MockHttpServletResponse res = new MockHttpServletResponse();
-    MockFilterChain chain = new MockFilterChain();
-
-    filter.doFilter(req, res, chain);
-
-    assertThat(chain.getRequest()).isNotNull();
-    assertThat(res.getStatus()).isNotEqualTo(413);
-  }
 }

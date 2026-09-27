@@ -3,7 +3,7 @@ package com.example.short_link.profile.application.visit;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
-import com.example.short_link.link.classifier.application.BotHeuristic;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import com.example.short_link.link.classifier.application.helper.IpMasker;
@@ -17,17 +17,12 @@ import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Records a {@link ProfileVisitEntity} for each visit to a /u/&lt;handle&gt; page. Reuses the same
- * UA / geo / ASN / bot-heuristic services as {@link
- * com.example.short_link.link.stats.application.ClickRecorder} so the enrichment quality (and the
- * downstream stats UX) stays consistent between link clicks and profile visits.
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -38,7 +33,7 @@ public class ProfileVisitRecorder {
   private final UserAgentClassifier userAgentClassifier;
   private final GeoIpResolver geoIpResolver;
   private final AsnResolver asnResolver;
-  private final BotHeuristic botHeuristic;
+  private final BotClassifier botClassifier;
 
   @Transactional
   public void recordUsername(
@@ -56,7 +51,7 @@ public class ProfileVisitRecorder {
       boolean gpc) {
     UserEntity owner =
         userRepository
-            .findByUsername(username.toLowerCase())
+            .findByUsername(username.toLowerCase(Locale.ROOT))
             .orElseThrow(() -> new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, username));
     record(
         owner.getId(),
@@ -91,16 +86,7 @@ public class ProfileVisitRecorder {
       UserAgentInfo ua = userAgentClassifier.classify(userAgent);
       GeoLocation geo = geoIpResolver.resolve(clientIp);
       AsnResolver.AsnInfo asnInfo = asnResolver.resolve(clientIp);
-      boolean uaBot = ua.bot();
-      String botName = ua.botName();
-      if (!uaBot && botHeuristic.isSuspectBurst(clientIp)) {
-        uaBot = true;
-        botName = BotHeuristic.SUSPECT_LABEL;
-      } else if (!uaBot && asnInfo.datacenter()) {
-        uaBot = true;
-        botName =
-            "datacenter:" + (asnInfo.organization() == null ? "unknown" : asnInfo.organization());
-      }
+      BotClassifier.Verdict bot = botClassifier.classify(ua, asnInfo, clientIp);
       ProfileVisitEntity event =
           ProfileVisitEntity.builder()
               .profileUserId(profileUserId)
@@ -116,14 +102,13 @@ public class ProfileVisitRecorder {
               .deviceClass(ua.deviceClass())
               .osName(ua.osName())
               .browserName(ua.browserName())
-              .bot(uaBot)
-              .botName(botName)
+              .bot(bot.isBot())
+              .botName(bot.botName())
               .countryCode(geo.countryCode())
               .regionName(geo.region())
               .cityName(geo.city())
               .language(LanguageExtractor.extract(acceptLanguage))
-              // Sec-GPC(옵트아웃) 신호가 오면 재방문 식별 해시를 만들지 않는다 — "측정 위해 수집"이 아니라
-              // "존중 위해 수집"(§0). 방문 자체는 익명 집계로 잡히되, 그 방문자는 return-tracking 안 함.
+              // GPC 수신 시 익명 방문만 집계하고 재방문 식별 해시는 만들지 않는다.
               .visitorHash(gpc ? null : VisitorHasher.hash(profileUserId, clientIp, userAgent))
               .sourceChannel(SourceChannelNormalizer.normalize(sourceChannel))
               .asn(asnInfo.asn())

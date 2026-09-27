@@ -5,6 +5,7 @@ import com.example.short_link.link.domain.ShortCode;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 
 public record CachedLink(
@@ -20,10 +21,43 @@ public record CachedLink(
     boolean passwordRequired,
     Integer maxViews,
     String expiredMessage,
-    List<Variant> variants) {
+    List<Variant> variants,
+    VisitOptions visitOptions) {
 
   public CachedLink {
     variants = variants == null ? List.of() : List.copyOf(variants);
+    visitOptions = visitOptions == null ? VisitOptions.NONE : visitOptions;
+  }
+
+  public CachedLink(
+      LinkId linkId,
+      ShortCode shortCode,
+      Long userId,
+      String originalUrl,
+      Instant expiresAt,
+      String ogTitle,
+      String ogDescription,
+      String ogImage,
+      String blockedCountries,
+      boolean passwordRequired,
+      Integer maxViews,
+      String expiredMessage,
+      List<Variant> variants) {
+    this(
+        linkId,
+        shortCode,
+        userId,
+        originalUrl,
+        expiresAt,
+        ogTitle,
+        ogDescription,
+        ogImage,
+        blockedCountries,
+        passwordRequired,
+        maxViews,
+        expiredMessage,
+        variants,
+        VisitOptions.NONE);
   }
 
   public CachedLink(
@@ -130,7 +164,7 @@ public record CachedLink(
 
   public boolean isBlockedFor(String clientCountry) {
     if (blockedCountries == null || clientCountry == null) return false;
-    String upper = clientCountry.toUpperCase();
+    String upper = clientCountry.toUpperCase(Locale.ROOT);
     for (String code : blockedCountries.split(",")) {
       if (upper.equals(code.trim())) return true;
     }
@@ -145,24 +179,17 @@ public record CachedLink(
     return pick(clientCountry, null, null);
   }
 
-  /**
-   * Picks one destination using a layered match. Each variant's non-null predicates (country, OS,
-   * device class) must match the visitor's signals. Among matching variants, the most-specific set
-   * (most non-null predicates satisfied) wins; ties resolve by weighted random pick. If nothing
-   * matches at all, fall through to the link's control URL.
-   */
+  // 모든 지정 조건이 일치하는 목적지 중 조건 수가 가장 많은 것을 선택한다. 동률이면 가중 무작위 선택, 일치 항목이 없으면 원본 URL을 사용한다.
   public Picked pick(String clientCountry, String os, String deviceClass) {
     List<Variant> enabled = variants.stream().filter(Variant::enabled).toList();
     if (enabled.isEmpty()) return new Picked(originalUrl, null);
 
-    String country = clientCountry == null ? null : clientCountry.trim().toUpperCase();
-    String osLower = os == null ? null : os.trim().toLowerCase();
-    String dcLower = deviceClass == null ? null : deviceClass.trim().toLowerCase();
+    VisitorSignals visitor = VisitorSignals.normalized(clientCountry, os, deviceClass);
 
     int bestSpecificity = -1;
     List<Variant> winners = new ArrayList<>();
     for (Variant v : enabled) {
-      Integer specificity = matchSpecificity(v, country, osLower, dcLower);
+      Integer specificity = v.matchSpecificity(visitor);
       if (specificity == null) continue;
       if (specificity > bestSpecificity) {
         bestSpecificity = specificity;
@@ -176,27 +203,13 @@ public record CachedLink(
     return weightedPick(winners);
   }
 
-  /**
-   * Returns the number of predicates a variant matches against the visitor signals, or {@code null}
-   * if any non-null predicate fails. A variant with no predicates set always matches with
-   * specificity 0 (fully generic).
-   */
-  private static Integer matchSpecificity(
-      Variant v, String country, String os, String deviceClass) {
-    int score = 0;
-    if (v.countryCode() != null) {
-      if (!v.countryCode().equals(country)) return null;
-      score++;
+  private record VisitorSignals(String country, String os, String deviceClass) {
+    static VisitorSignals normalized(String country, String os, String deviceClass) {
+      return new VisitorSignals(
+          country == null ? null : country.trim().toUpperCase(Locale.ROOT),
+          os == null ? null : os.trim().toLowerCase(Locale.ROOT),
+          deviceClass == null ? null : deviceClass.trim().toLowerCase(Locale.ROOT));
     }
-    if (v.os() != null) {
-      if (!v.os().equals(os)) return null;
-      score++;
-    }
-    if (v.deviceClass() != null) {
-      if (!v.deviceClass().equals(deviceClass)) return null;
-      score++;
-    }
-    return score;
   }
 
   private Picked weightedPick(List<Variant> pool) {
@@ -220,10 +233,45 @@ public record CachedLink(
       String deviceClass,
       String os) {
 
+    private Integer matchSpecificity(VisitorSignals visitor) {
+      int score = 0;
+      if (countryCode != null) {
+        if (!countryCode.equals(visitor.country())) return null;
+        score++;
+      }
+      if (os != null) {
+        if (!os.equals(visitor.os())) return null;
+        score++;
+      }
+      if (deviceClass != null) {
+        if (!deviceClass.equals(visitor.deviceClass())) return null;
+        score++;
+      }
+      return score;
+    }
+
     public Variant(Long id, String url, int weight, boolean enabled, String countryCode) {
       this(id, url, weight, enabled, countryCode, null, null);
     }
   }
 
   public record Picked(String url, Long destinationId) {}
+
+  public record VisitOptions(boolean openInBrowser, Splash splash, Instant opensAt) {
+    public static final VisitOptions NONE = new VisitOptions(false, null, null);
+
+    public VisitOptions(boolean openInBrowser) {
+      this(openInBrowser, null, null);
+    }
+
+    public VisitOptions(boolean openInBrowser, Splash splash) {
+      this(openInBrowser, splash, null);
+    }
+
+    public boolean opensLaterThan(Instant now) {
+      return opensAt != null && now.isBefore(opensAt);
+    }
+  }
+
+  public record Splash(String message, int seconds, String ctaLabel, String ctaUrl) {}
 }

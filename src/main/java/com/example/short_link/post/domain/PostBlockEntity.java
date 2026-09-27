@@ -30,12 +30,7 @@ public class PostBlockEntity extends BaseTimeEntity {
   @Column(name = "block_type", nullable = false, length = 16)
   private PostBlockType type;
 
-  /**
-   * Type-specific payload. PARAGRAPH/H1/H2/H3/QUOTE: plain text. IMAGE: JSON {url, alt, caption,
-   * key}. CTA_REF: JSON {ctaId} pointing to the CTA library entity. LIST_BULLET/LIST_NUMBERED: JSON
-   * array of items. EMBED: JSON {provider, url, html}. DIVIDER: null.
-   */
-  // V114: TEXT(65,535바이트)는 블록당 100,000자 가드보다 작아 긴 블록 저장이 컬럼에서 터졌다.
+  // 블록당 100,000자 한도를 수용하려면 TEXT의 65,535바이트보다 큰 컬럼이 필요하다.
   @Column(columnDefinition = "MEDIUMTEXT")
   private String content;
 

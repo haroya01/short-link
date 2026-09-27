@@ -21,17 +21,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 임시저장(본문 교체) ↔ 발행 스냅샷(리비전) ↔ 롤백(복원)의 전체 수명주기를 실제 스택(DB·컨버터)으로 고정한다 — iOS/웹 에디터가 기대는 계약이 코드 리딩이 아니라
- * 테스트로 서 있게. 핵심 불변식:
- *
- * <ul>
- *   <li>임시저장(PUT /markdown)은 리비전을 만들지 않는다 — 롤백 대상은 "발행 시점"뿐이다.
- *   <li>공개되는 순간(발행·재게시)마다 스냅샷 한 장 — 복원은 그 시점의 본문+가벼운 메타로 되돌린다.
- *   <li>복원은 slug·status 를 건드리지 않고, 그 자체로 새 리비전을 만들지 않는다.
- *   <li>복합 마크다운은 PUT→GET 왕복의 고정점이다(서버 정규화 멱등) — 저장할 때마다 본문이 변형되면 에디터 자동저장이 무한 더티 루프에 빠진다.
- * </ul>
- */
+// 임시저장은 리비전을 만들지 않고, 공개되는 순간마다 스냅샷을 한 장 남긴다. 복원은 slug·status를 건드리지 않고 새 리비전도 만들지 않는다.
+// 저장할 때마다 본문이 바뀌면 에디터 자동저장이 더티 루프에 빠지므로 PUT→GET 왕복은 고정점이어야 한다.
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -44,7 +35,6 @@ class PostDraftRevisionLifecycleTest {
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
 
-  /** 에디터가 만드는 블록 종류를 한 몸에 담은 복합 본문 — 왕복·스냅샷·복원의 스트레스 픽스처. */
   private static final String COMPLEX_MARKDOWN =
       """
       # 제목 하나
@@ -101,7 +91,6 @@ class PostDraftRevisionLifecycleTest {
     return JSON.readTree(body).get("id").asLong();
   }
 
-  /** PUT /markdown — 응답의 정규화(canonical) 본문을 돌려준다(이후 비교의 기준). */
   private String putMarkdown(String token, long postId, String markdown) throws Exception {
     String body =
         mvc.perform(
@@ -147,8 +136,6 @@ class PostDraftRevisionLifecycleTest {
         .andExpect(status().isOk());
   }
 
-  // MARK: 임시저장 = 본문 교체(리비전 없음)
-
   @Test
   void autosaveReplacesBodyWithoutCreatingRevisions() throws Exception {
     String token = token("g-lc-autosave");
@@ -176,8 +163,6 @@ class PostDraftRevisionLifecycleTest {
     assertThat(getMarkdown(token, id)).isEqualTo(canonical);
   }
 
-  // MARK: 발행 = 스냅샷 한 장, 편집은 스냅샷을 더 만들지 않는다
-
   @Test
   void publishCapturesOneRevisionAndLaterEditsDoNot() throws Exception {
     String token = token("g-lc-pub");
@@ -194,8 +179,6 @@ class PostDraftRevisionLifecycleTest {
     assertThat(revisions(token, id)).hasSize(1);
   }
 
-  // MARK: 롤백 — 발행 시점 본문·제목으로, slug·status 는 그대로, 새 리비전 없음
-
   @Test
   void restoreRollsBackBodyAndTitleButKeepsSlugStatusAndRevisions() throws Exception {
     String token = token("g-lc-restore");
@@ -203,7 +186,6 @@ class PostDraftRevisionLifecycleTest {
     String canonicalV1 = putMarkdown(token, id, COMPLEX_MARKDOWN);
     act(token, id, "publish");
 
-    // 발행 뒤 제목·본문을 다 바꾼다.
     mvc.perform(
             patch("/api/v1/posts/" + id)
                 .header("Authorization", "Bearer " + token)
@@ -217,7 +199,6 @@ class PostDraftRevisionLifecycleTest {
                 .header("Authorization", "Bearer " + token))
         .andExpect(status().isOk());
 
-    // 본문·제목이 발행 시점으로 되돌아왔다.
     assertThat(getMarkdown(token, id)).isEqualTo(canonicalV1);
     String view =
         mvc.perform(get("/api/v1/posts/" + id).header("Authorization", "Bearer " + token))
@@ -230,11 +211,8 @@ class PostDraftRevisionLifecycleTest {
     assertThat(post.get("slug").asText()).isEqualTo("lc-restore");
     assertThat(post.get("status").asText()).isEqualTo("PUBLISHED");
 
-    // 복원 자체는 스냅샷을 만들지 않는다.
     assertThat(revisions(token, id)).hasSize(1);
   }
-
-  // MARK: 재게시도 공개되는 순간 — 스냅샷 한 장(비공개 동안의 편집이 롤백 대상에 남게)
 
   @Test
   void republishCapturesRevisionSoUnpublishedEditsAreRestorable() throws Exception {
@@ -251,7 +229,6 @@ class PostDraftRevisionLifecycleTest {
     JsonNode revs = revisions(token, id);
     assertThat(revs).hasSize(2);
 
-    // 다시 첫 본문으로 굴려도(v1), v2 로 앞으로도 굴릴 수 있다 — 양방향 롤백.
     mvc.perform(
             post("/api/v1/posts/" + id + "/revisions/1/restore")
                 .header("Authorization", "Bearer " + token))
@@ -264,8 +241,6 @@ class PostDraftRevisionLifecycleTest {
         .andExpect(status().isOk());
     assertThat(getMarkdown(token, id)).isEqualTo(canonicalV2);
   }
-
-  // MARK: 남의 글·없는 버전은 굴릴 수 없다
 
   @Test
   void restoreIsGatedByOwnershipAndVersionExistence() throws Exception {

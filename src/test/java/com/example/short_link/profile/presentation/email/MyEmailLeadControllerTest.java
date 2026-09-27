@@ -48,7 +48,7 @@ class MyEmailLeadControllerTest {
     ProfileBlockEntity block =
         blockRepository.save(
             new ProfileBlockEntity(user.getId(), ProfileBlockType.EMAIL_FORM, "{}", 1));
-    leadService.submit(user.getId(), block.getId(), "x@example.com", "1.2.3.4");
+    leadService.submitPublic(block.getId(), "x@example.com", "1.2.3.4");
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(get("/api/v1/users/me/email-leads").header("Authorization", "Bearer " + token))
@@ -63,7 +63,7 @@ class MyEmailLeadControllerTest {
     ProfileBlockEntity block =
         blockRepository.save(
             new ProfileBlockEntity(user.getId(), ProfileBlockType.EMAIL_FORM, "{}", 1));
-    leadService.submit(user.getId(), block.getId(), "csv@example.com", "1.2.3.4");
+    leadService.submitPublic(block.getId(), "csv@example.com", "1.2.3.4");
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
@@ -82,7 +82,8 @@ class MyEmailLeadControllerTest {
     ProfileBlockEntity block =
         blockRepository.save(
             new ProfileBlockEntity(user.getId(), ProfileBlockType.EMAIL_FORM, "{}", 1));
-    var lead = leadService.submit(user.getId(), block.getId(), "opt@example.com", "1.2.3.4");
+    leadService.submitPublic(block.getId(), "opt@example.com", "1.2.3.4");
+    var lead = leadService.list(user.getId(), 0, 1).getFirst();
     leadService.setOptedOut(user.getId(), lead.getId(), true);
     String token = jwt.createAccessToken(user.getId(), "USER");
 
@@ -100,7 +101,8 @@ class MyEmailLeadControllerTest {
     ProfileBlockEntity block =
         blockRepository.save(
             new ProfileBlockEntity(user.getId(), ProfileBlockType.EMAIL_FORM, "{}", 1));
-    var lead = leadService.submit(user.getId(), block.getId(), "p@example.com", "1.2.3.4");
+    leadService.submitPublic(block.getId(), "p@example.com", "1.2.3.4");
+    var lead = leadService.list(user.getId(), 0, 1).getFirst();
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(
@@ -118,7 +120,8 @@ class MyEmailLeadControllerTest {
     ProfileBlockEntity block =
         blockRepository.save(
             new ProfileBlockEntity(user.getId(), ProfileBlockType.EMAIL_FORM, "{}", 1));
-    var lead = leadService.submit(user.getId(), block.getId(), "d@example.com", "1.2.3.4");
+    leadService.submitPublic(block.getId(), "d@example.com", "1.2.3.4");
+    var lead = leadService.list(user.getId(), 0, 1).getFirst();
     String token = jwt.createAccessToken(user.getId(), "USER");
 
     mvc.perform(

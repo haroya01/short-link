@@ -10,7 +10,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** 1:1 with link.id — split out of LinkEntity for the profile-feed binding fields. */
 @Entity
 @Table(name = "link_profile_binding")
 @Getter

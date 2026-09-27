@@ -26,6 +26,11 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<LinkEntity> findAllById(Collection<Long> ids) {
+    return jpa.findAllById(ids);
+  }
+
+  @Override
   public LinkEntity save(LinkEntity link) {
     return jpa.save(link);
   }
@@ -59,6 +64,12 @@ class LinkRepositoryAdapter implements LinkRepository {
   @Override
   public Optional<CachedLinkRow> findCachedLinkRowByShortCode(ShortCode shortCode) {
     return jpa.findCachedLinkRowByShortCode(shortCode);
+  }
+
+  @Override
+  public List<LinkEntity> findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(
+      Long userId) {
+    return jpa.findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(userId);
   }
 
   @Override
@@ -109,6 +120,11 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<LinkEntity> findByOriginalUrlContaining(String fragment) {
+    return jpa.findByOriginalUrlContaining(fragment);
+  }
+
+  @Override
   public List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to) {
     return jpa.findByExpiresAtBetween(from, to);
   }
@@ -152,6 +168,17 @@ class LinkRepositoryAdapter implements LinkRepository {
   @Override
   public int incrementViewCountIfBelowLimit(Long linkId) {
     return jpa.incrementViewCountIfBelowLimit(linkId);
+  }
+
+  @Override
+  public void recordOgFetched(
+      Long linkId, String title, String description, String image, Instant fetchedAt) {
+    jpa.recordOgFetched(linkId, title, description, image, fetchedAt, LinkEntity.ogFetchedStatus());
+  }
+
+  @Override
+  public void recordOgFetchFailed(Long linkId, Instant fetchedAt, boolean willRetry) {
+    jpa.recordOgFetchFailed(linkId, fetchedAt, LinkEntity.ogFetchFailedStatus(willRetry));
   }
 
   @Override

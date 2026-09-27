@@ -4,12 +4,10 @@ import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.NoteLikeEntity;
 import com.example.short_link.post.note.domain.NoteRow;
 import com.example.short_link.post.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +19,6 @@ public class NoteCommandService {
   private final NoteLikeRepository likes;
   private final CollectionConnectionCleaner connectionCleaner;
 
-  /** 쓰는 즉시 공개 — 발행 상태 기계 없음. 응답은 피드와 같은 행(작성자 포함). */
   @Transactional
   public NoteRow create(Long userId, String rawBody) {
     String body = rawBody == null ? "" : rawBody.trim();
@@ -37,7 +34,6 @@ public class NoteCommandService {
         .orElseThrow(() -> new PostException(PostErrorCode.NOTE_NOT_FOUND, saved.getId()));
   }
 
-  /** 내 노트만 — hard delete(좋아요 행까지 같이). */
   @Transactional
   public void delete(Long userId, Long noteId) {
     NoteEntity note =
@@ -48,26 +44,18 @@ public class NoteCommandService {
       throw new PostException(PostErrorCode.NOTE_PERMISSION_DENIED);
     }
     likes.deleteAllByNoteId(noteId);
-    // Curator connections pointing at this note have no FK to cascade — drop them so the owning
-    // collection stops counting a block that no longer renders.
+    // 컬렉션 연결에는 FK가 없으므로 노트 삭제 전에 직접 제거한다.
     connectionCleaner.purgeForNote(noteId);
     notes.delete(note);
   }
 
-  /** 멱등 토글 — (note,user) 유니크가 곧 상태. 동시 PUT 의 중복 insert 는 무해하게 흡수. */
   @Transactional
   public LikeStatus setLike(Long userId, Long noteId, boolean on) {
     notes
         .findById(noteId)
         .orElseThrow(() -> new PostException(PostErrorCode.NOTE_NOT_FOUND, noteId));
     if (on) {
-      if (!likes.exists(noteId, userId)) {
-        try {
-          likes.save(new NoteLikeEntity(noteId, userId));
-        } catch (DataIntegrityViolationException ignored) {
-          // 동시 요청이 먼저 넣음 — 멱등이므로 그대로 진행.
-        }
-      }
+      likes.addIfAbsent(noteId, userId);
     } else {
       likes.delete(noteId, userId);
     }

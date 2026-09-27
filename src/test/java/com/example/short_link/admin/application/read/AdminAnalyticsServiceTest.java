@@ -26,8 +26,16 @@ class AdminAnalyticsServiceTest {
   }
 
   @Test
-  void addsWeeksAcrossYearBoundary() {
+  void addsWeeksWithinTheSameYear() {
     int next = AdminAnalyticsService.addWeeks(202618, 4);
     assertThat(AdminAnalyticsService.formatYearWeek(next)).isEqualTo("2026-W22");
+  }
+
+  @Test
+  void addsWeeksAcrossIsoWeekYearsIncludingFiftyThirdWeek() {
+    assertThat(AdminAnalyticsService.addWeeks(202052, 1)).isEqualTo(202053);
+    assertThat(AdminAnalyticsService.addWeeks(202053, 1)).isEqualTo(202101);
+    assertThat(AdminAnalyticsService.addWeeks(202101, -1)).isEqualTo(202053);
+    assertThat(AdminAnalyticsService.addWeeks(202152, 1)).isEqualTo(202201);
   }
 }

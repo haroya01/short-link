@@ -13,12 +13,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * A user's opt-out for one blog-bell {@link NotificationType} (LIKE / COMMENT / FOLLOW / ...).
- * Absent row = enabled (default on); a row with {@code enabled=false} silences that type. One row
- * per (user, type) — see the unique key. Distinct from {@link NotificationPreferenceEntity}, which
- * opts out of link notifications ({@link LinkNotificationType}).
- */
 @Entity
 @Table(name = "blog_notification_preference")
 @Getter

@@ -6,7 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
+import com.example.short_link.link.destination.domain.DestinationPolicy;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.destination.exception.DestinationException;
@@ -20,64 +22,65 @@ import org.junit.jupiter.api.Test;
 class AddDestinationUseCaseTest {
 
   private final LinkDestinationOwnership ownership = mock(LinkDestinationOwnership.class);
+  private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
   private final LinkDestinationRepository repository = mock(LinkDestinationRepository.class);
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
   private final AddDestinationUseCase useCase =
-      new AddDestinationUseCase(ownership, repository, registry);
+      new AddDestinationUseCase(ownership, repository, registry, linkCacheEviction);
 
   @Test
   void isValidUrlAcceptsHttps() {
-    assertThat(AddDestinationUseCase.isValidUrl("https://example.com")).isTrue();
+    assertThat(DestinationPolicy.isValidUrl("https://example.com")).isTrue();
   }
 
   @Test
   void isValidUrlAcceptsHttp() {
-    assertThat(AddDestinationUseCase.isValidUrl("http://example.com")).isTrue();
+    assertThat(DestinationPolicy.isValidUrl("http://example.com")).isTrue();
   }
 
   @Test
   void isValidUrlRejectsNull() {
-    assertThat(AddDestinationUseCase.isValidUrl(null)).isFalse();
+    assertThat(DestinationPolicy.isValidUrl(null)).isFalse();
   }
 
   @Test
   void isValidUrlRejectsBlank() {
-    assertThat(AddDestinationUseCase.isValidUrl("  ")).isFalse();
+    assertThat(DestinationPolicy.isValidUrl("  ")).isFalse();
   }
 
   @Test
   void isValidUrlRejectsFtp() {
-    assertThat(AddDestinationUseCase.isValidUrl("ftp://example.com")).isFalse();
+    assertThat(DestinationPolicy.isValidUrl("ftp://example.com")).isFalse();
   }
 
   @Test
   void clampWeightDefaultsNullToMin() {
-    assertThat(AddDestinationUseCase.clampWeight(null)).isEqualTo(AddDestinationUseCase.MIN_WEIGHT);
+    assertThat(DestinationPolicy.clampWeight(null)).isEqualTo(AddDestinationUseCase.MIN_WEIGHT);
   }
 
   @Test
   void clampWeightClampsBelowMin() {
-    assertThat(AddDestinationUseCase.clampWeight(0)).isEqualTo(AddDestinationUseCase.MIN_WEIGHT);
+    assertThat(DestinationPolicy.clampWeight(0)).isEqualTo(AddDestinationUseCase.MIN_WEIGHT);
   }
 
   @Test
   void clampWeightClampsAboveMax() {
-    assertThat(AddDestinationUseCase.clampWeight(9999)).isEqualTo(AddDestinationUseCase.MAX_WEIGHT);
+    assertThat(DestinationPolicy.clampWeight(9999)).isEqualTo(AddDestinationUseCase.MAX_WEIGHT);
   }
 
   @Test
   void clampWeightAcceptsInRange() {
-    assertThat(AddDestinationUseCase.clampWeight(50)).isEqualTo(50);
+    assertThat(DestinationPolicy.clampWeight(50)).isEqualTo(50);
   }
 
   @Test
   void sanitizeLabelReturnsNullForBlank() {
-    assertThat(AddDestinationUseCase.sanitizeLabel("  ")).isNull();
+    assertThat(DestinationPolicy.sanitizeLabel("  ")).isNull();
   }
 
   @Test
   void sanitizeLabelTruncatesAbove40Chars() {
-    assertThat(AddDestinationUseCase.sanitizeLabel("a".repeat(50))).hasSize(40);
+    assertThat(DestinationPolicy.sanitizeLabel("a".repeat(50))).hasSize(40);
   }
 
   @Test

@@ -1,6 +1,8 @@
 package com.example.short_link.profile.application;
 
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -27,7 +29,7 @@ class ProfileCacheEvictionTest {
 
     eviction.evictByUsername("  Alice  ");
 
-    verify(cache).evict("alice");
+    verify(cache).evictIfPresent("alice");
   }
 
   @Test
@@ -41,7 +43,25 @@ class ProfileCacheEvictionTest {
   void evictByUsernameNoOpsWhenCacheMissing() {
     when(cacheManager.getCache("public-profile")).thenReturn(null);
     eviction.evictByUsername("alice");
-    // No exception, no eviction.
+  }
+
+  @Test
+  void cacheLookupFailureDoesNotFailTheProfileWrite() {
+    when(cacheManager.getCache("public-profile"))
+        .thenThrow(new IllegalStateException("cache unavailable"));
+
+    assertThatNoException().isThrownBy(() -> eviction.evictByUsername("alice"));
+  }
+
+  @Test
+  void cacheEvictionFailureDoesNotFailTheProfileWrite() {
+    Cache cache = mock(Cache.class);
+    when(cacheManager.getCache("public-profile")).thenReturn(cache);
+    doThrow(new IllegalStateException("cache unavailable")).when(cache).evictIfPresent("alice");
+
+    assertThatNoException().isThrownBy(() -> eviction.evictByUsername("alice"));
+
+    verify(cache).evictIfPresent("alice");
   }
 
   @Test
@@ -54,7 +74,7 @@ class ProfileCacheEvictionTest {
 
     eviction.evictByUserId(42L);
 
-    verify(cache).evict("bob");
+    verify(cache).evictIfPresent("bob");
   }
 
   @Test

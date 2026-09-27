@@ -75,6 +75,26 @@ Update the Google OAuth client (Cloud Console → Credentials):
 - Authorized JavaScript origins: `https://app.kurl.me`
 - Authorized redirect URIs: `https://kurl.me/login/oauth2/code/google`
 
+## Rollback
+
+Deploy ships the commit CI verified, and tags that image `sha-<commit>`. Rolling back is pulling an
+earlier one — no rebuild, no revert commit. The server's `git` checkout still points at the bad
+commit, so `deploy/` config and the running image disagree until the next deploy; only compose
+config (not the app) reads from the checkout, so this is safe for an app-only rollback.
+
+```bash
+cd ~/short-link/deploy
+# Pick a tag from https://github.com/haroya01/short-link/pkgs/container/short-link
+export APP_IMAGE_TAG=sha-<commit>
+echo "$GHCR_TOKEN" | docker login ghcr.io -u haroya01 --password-stdin
+docker compose pull app && docker compose up -d --no-build --pull never app
+docker compose exec -T nginx nginx -s reload   # app IP shifts when the container is recreated
+docker inspect --format '{{.State.Health.Status}}' "$(docker compose ps -q app)"
+```
+
+A rollback past a migration is not safe on its own: Flyway only rolls forward, so an older image
+meets a newer schema. Check whether the bad deploy carried a migration before using this.
+
 ## Operational
 
 ```bash

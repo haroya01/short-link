@@ -64,6 +64,11 @@ public interface JpaClickTotalsReadRepository extends Repository<ClickEventEntit
 
   @Query(
       "SELECT c.linkId AS linkId, COUNT(c) AS count FROM ClickEventEntity c "
+          + "WHERE c.linkId IN :ids AND c.bot = false GROUP BY c.linkId")
+  List<LinkClickCount> humanCountsByLinkIds(@Param("ids") List<Long> ids);
+
+  @Query(
+      "SELECT c.linkId AS linkId, COUNT(c) AS count FROM ClickEventEntity c "
           + "WHERE c.linkId IN :ids AND c.bot = false AND c.clickedAt >= :since "
           + "GROUP BY c.linkId")
   List<LinkClickCount> countsByLinkIdsSince(

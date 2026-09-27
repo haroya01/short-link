@@ -13,10 +13,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * A user's opt-out for one {@link LinkNotificationType}. Absent row = enabled (default on); a row
- * with {@code enabled=false} silences that type. One row per (user, type) — see the unique key.
- */
 @Entity
 @Table(name = "notification_preference")
 @Getter

@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure;
 
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 
 import com.example.short_link.notification.application.push.PushSender;
@@ -35,6 +36,29 @@ class CompositePushSenderTest {
     composite.sendToAll(recipients, message);
 
     verify(apns).sendToAll(recipients, message);
+    verify(web).sendToAll(recipients, message);
+  }
+
+  @Test
+  void aFailedChannelDoesNotSuppressTheOtherChannel() {
+    CompositePushSender composite = new CompositePushSender(apns, web);
+    PushSender.PushMessage message = new PushSender.PushMessage("kurl", null, "새 글");
+    doThrow(new IllegalStateException("executor stopped")).when(apns).send(7L, message);
+
+    composite.send(7L, message);
+
+    verify(web).send(7L, message);
+  }
+
+  @Test
+  void bulkDeliveryAlsoIsolatesChannelFailures() {
+    CompositePushSender composite = new CompositePushSender(apns, web);
+    PushSender.PushMessage message = new PushSender.PushMessage("kurl", null, "새 글");
+    List<Long> recipients = List.of(7L, 8L);
+    doThrow(new IllegalStateException("lookup failed")).when(apns).sendToAll(recipients, message);
+
+    composite.sendToAll(recipients, message);
+
     verify(web).sendToAll(recipients, message);
   }
 }

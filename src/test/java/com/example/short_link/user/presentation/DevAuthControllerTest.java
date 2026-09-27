@@ -13,7 +13,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.write.AuthService;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,7 @@ class DevAuthControllerTest {
   @Test
   void issuesTokensAndRefreshCookie() throws Exception {
     when(authService.loginWithOAuth("dev@local.test", "dev", "dev:dev@local.test"))
-        .thenReturn(new LoginResult.Tokens(new IssuedTokens("access-token", "refresh-token")));
+        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access-token", "refresh-token")));
     doAnswer(
             invocation -> {
               HttpServletResponse response = invocation.getArgument(0);
@@ -59,7 +59,7 @@ class DevAuthControllerTest {
   @Test
   void delegatesToDevOauthIdentity() throws Exception {
     when(authService.loginWithOAuth("dev2@local.test", "dev", "dev:dev2@local.test"))
-        .thenReturn(new LoginResult.Tokens(new IssuedTokens("access-token", "refresh-token")));
+        .thenReturn(new TokenLoginResult.Tokens(new IssuedTokens("access-token", "refresh-token")));
 
     mvc.perform(
             post("/api/v1/auth/dev-login")
@@ -73,7 +73,7 @@ class DevAuthControllerTest {
   @Test
   void twoFactorChallengeReturnsAccepted() throws Exception {
     when(authService.loginWithOAuth("mfa@local.test", "dev", "dev:mfa@local.test"))
-        .thenReturn(new LoginResult.TwoFactorRequired("challenge-token"));
+        .thenReturn(new TokenLoginResult.TwoFactorRequired("challenge-token"));
 
     mvc.perform(
             post("/api/v1/auth/dev-login")

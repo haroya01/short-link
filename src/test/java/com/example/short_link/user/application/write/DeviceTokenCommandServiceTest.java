@@ -31,29 +31,31 @@ class DeviceTokenCommandServiceTest {
   void registerInsertsWhenTokenUnknown() {
     when(deviceTokens.findByToken("tok-1")).thenReturn(Optional.empty());
 
-    service.register(1L, "tok-1", "ios");
+    service.register(1L, "tok-1", "ios", "focustime.kurl.links");
 
     ArgumentCaptor<DeviceTokenEntity> saved = ArgumentCaptor.forClass(DeviceTokenEntity.class);
     verify(deviceTokens).save(saved.capture());
     assertThat(saved.getValue().getUserId()).isEqualTo(1L);
     assertThat(saved.getValue().getToken()).isEqualTo("tok-1");
     assertThat(saved.getValue().getPlatform()).isEqualTo("ios");
+    assertThat(saved.getValue().getTopic()).isEqualTo("focustime.kurl.links");
   }
 
   @Test
   void registerReassignsKnownTokenToNewAccount() {
-    DeviceTokenEntity existing = new DeviceTokenEntity(1L, "tok-1", "ios");
+    DeviceTokenEntity existing = new DeviceTokenEntity(1L, "tok-1", "ios", null);
     when(deviceTokens.findByToken("tok-1")).thenReturn(Optional.of(existing));
 
-    service.register(2L, "tok-1", "ios");
+    service.register(2L, "tok-1", "ios", "focustime.kurl");
 
     assertThat(existing.getUserId()).isEqualTo(2L);
+    assertThat(existing.getTopic()).isEqualTo("focustime.kurl");
     verify(deviceTokens, never()).save(any());
   }
 
   @Test
   void unregisterDeletesWhenCallerOwnsToken() {
-    DeviceTokenEntity existing = new DeviceTokenEntity(1L, "tok-1", "ios");
+    DeviceTokenEntity existing = new DeviceTokenEntity(1L, "tok-1", "ios", null);
     when(deviceTokens.findByToken("tok-1")).thenReturn(Optional.of(existing));
 
     service.unregister(1L, "tok-1");
@@ -63,7 +65,7 @@ class DeviceTokenCommandServiceTest {
 
   @Test
   void unregisterIgnoresTokenOwnedByAnotherUser() {
-    DeviceTokenEntity existing = new DeviceTokenEntity(2L, "tok-1", "ios");
+    DeviceTokenEntity existing = new DeviceTokenEntity(2L, "tok-1", "ios", null);
     when(deviceTokens.findByToken("tok-1")).thenReturn(Optional.of(existing));
 
     service.unregister(1L, "tok-1");

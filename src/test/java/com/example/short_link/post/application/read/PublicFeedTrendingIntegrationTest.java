@@ -17,11 +17,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Trending must rank by recent-window views, not all-time view_count — the whole point of the view
- * event log. Only the real LEFT JOIN + windowed COUNT against MySQL proves it, so this drives the
- * feed end-to-end through the service.
- */
+// Trending must rank by recent-window views, not all-time view_count — the whole point of the view
+// event log. Only the real LEFT JOIN + windowed COUNT against MySQL proves it, so this drives the
+// feed end-to-end through the service.
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -55,7 +53,7 @@ class PublicFeedTrendingIntegrationTest {
   }
 
   private List<String> trendingSlugs() {
-    return service.feed("trending", null, 0, 50).items().stream()
+    return service.feed(PublicFeedQuery.from(null, null, "trending", null, 0, 50)).items().stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -72,17 +70,14 @@ class PublicFeedTrendingIntegrationTest {
     long stale = publish(a, "trend-stale-star", 500);
     for (int i = 0; i < 5; i++) view(stale, outOfWindow);
 
-    // Few lifetime views but 5 inside the window → should top the feed.
     long fresh = publish(a, "trend-fresh-buzz", 3);
     for (int i = 0; i < 5; i++) view(fresh, inWindow);
 
-    // 2 inside the window → between the two.
     long mild = publish(a, "trend-mild-warm", 0);
     for (int i = 0; i < 2; i++) view(mild, inWindow);
 
     List<String> slugs = trendingSlugs();
     assertThat(slugs).contains("trend-fresh-buzz", "trend-mild-warm", "trend-stale-star");
-    // Window-view ordering, independent of any other published posts in the feed.
     assertThat(slugs.indexOf("trend-fresh-buzz")).isLessThan(slugs.indexOf("trend-mild-warm"));
     assertThat(slugs.indexOf("trend-mild-warm")).isLessThan(slugs.indexOf("trend-stale-star"));
   }
@@ -104,13 +99,13 @@ class PublicFeedTrendingIntegrationTest {
     publish(a, "trend-lang-ko", 0, "ko");
     publish(a, "trend-lang-ja", 0, "ja");
 
-    // Native query with :lang bound → only the matching language. Proves the `:lang IS NULL OR
-    // p.language_tag = :lang` filter holds against MySQL, both set and unset.
     List<String> ja =
-        service.feed("trending", "ja", 0, 50).items().stream().map(PublicFeedItem::slug).toList();
+        service.feed(PublicFeedQuery.from(null, null, "trending", "ja", 0, 50)).items().stream()
+            .map(PublicFeedItem::slug)
+            .toList();
     assertThat(ja).contains("trend-lang-ja").doesNotContain("trend-lang-ko");
 
-    List<String> all = trendingSlugs(); // lang null → all languages
+    List<String> all = trendingSlugs();
     assertThat(all).contains("trend-lang-ko", "trend-lang-ja");
   }
 }

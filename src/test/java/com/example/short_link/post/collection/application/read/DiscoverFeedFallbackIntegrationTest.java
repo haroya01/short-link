@@ -21,11 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 발견 피드 콜드스타트 폴백 — 실제 MySQL 로 검증한다. 팔로우가 없거나 팔로우들의 공개 연결이 없어 첫 페이지가 비면 전역 공개 피드로
- * 폴백하고(source=global), 개인화가 차 있으면 그대로(source=following), 1페이지 이후의 빈 결과는 폴백하지 않는다. 공유 DB 오염 대비 이
- * 테스트가 만든 고유 제목으로만 단언한다.
- */
+// 공유 DB가 오염돼 있을 수 있어서 이 테스트가 만든 고유 제목으로만 단언한다.
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -67,7 +63,7 @@ class DiscoverFeedFallbackIntegrationTest {
 
   @Test
   void followerlessViewerFallsBackToGlobal() {
-    Long loner = user("loner-dff", "ldff"); // 아무도 팔로우하지 않는 콜드스타트 뷰어.
+    Long loner = user("loner-dff", "ldff");
     Long stranger = user("stranger-dff", "sdff");
     connectPost(stranger, "DFF-global", post(stranger, "dff-uniq-global"));
 
@@ -80,12 +76,11 @@ class DiscoverFeedFallbackIntegrationTest {
   @Test
   void quietFollowsFallBackOnFirstPageOnly() {
     Long viewer = user("viewer-dfq", "vdfq");
-    Long quiet = user("quiet-dfq", "qdfq"); // 팔로우하지만 공개 연결이 하나도 없다.
+    Long quiet = user("quiet-dfq", "qdfq");
     followRepository.save(new FollowEntity(viewer, quiet));
     Long stranger = user("stranger-dfq", "sdfq");
     connectPost(stranger, "DFQ-global", post(stranger, "dfq-uniq-global"));
 
-    // 첫 페이지: 개인화가 비어 전역으로 폴백 — 팔로우 밖 큐레이터의 연결이 흐른다.
     DiscoverFeedView first = service.feed(viewer, 0, 200, false);
     assertThat(first.source()).isEqualTo("global");
     assertThat(first.items()).anyMatch(i -> "Title dfq-uniq-global".equals(i.title()));
@@ -105,13 +100,11 @@ class DiscoverFeedFallbackIntegrationTest {
     Long stranger = user("stranger-dfa", "sdfa");
     connectPost(stranger, "DFA-global", post(stranger, "dfa-uniq-global"));
 
-    // 팔로우 활동이 있으면 개인화 유지 — 팔로우 밖 연결은 섞이지 않는다.
     DiscoverFeedView personalized = service.feed(viewer, 0, 200, false);
     assertThat(personalized.source()).isEqualTo("following");
     assertThat(personalized.items()).anyMatch(i -> "Title dfa-uniq-followed".equals(i.title()));
     assertThat(personalized.items()).noneMatch(i -> "Title dfa-uniq-global".equals(i.title()));
 
-    // scope=global 고정 — 팔로우 활동이 있어도 전역 피드를 그대로 준다.
     DiscoverFeedView pinned = service.feed(viewer, 0, 200, true);
     assertThat(pinned.source()).isEqualTo("global");
     assertThat(pinned.items()).anyMatch(i -> "Title dfa-uniq-global".equals(i.title()));

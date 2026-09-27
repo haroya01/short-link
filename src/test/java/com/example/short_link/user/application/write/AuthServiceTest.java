@@ -29,7 +29,7 @@ class AuthServiceTest {
   @Test
   void loginWithOAuthCreatesNewUser() {
     IssuedTokens tokens =
-        ((AuthService.LoginResult.Tokens)
+        ((AuthService.TokenLoginResult.Tokens)
                 authService.loginWithOAuth("new@example.com", "google", "g-new"))
             .issued();
 
@@ -47,7 +47,7 @@ class AuthServiceTest {
         userRepository.save(new UserEntity("existing@example.com", "google", "g-ex"));
 
     IssuedTokens tokens =
-        ((AuthService.LoginResult.Tokens)
+        ((AuthService.TokenLoginResult.Tokens)
                 authService.loginWithOAuth("existing@example.com", "google", "g-ex"))
             .issued();
 

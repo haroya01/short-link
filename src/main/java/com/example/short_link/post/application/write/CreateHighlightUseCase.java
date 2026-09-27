@@ -6,7 +6,6 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
-import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
@@ -14,27 +13,18 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Create / delete a reader highlight. Highlights only attach to published posts; the quote is
- * clamped to the column cap. Delete is owner-only. (Author notification is a follow-up step — kept
- * out so this lands without touching the notification subsystem.)
- */
 @Service
 @RequiredArgsConstructor
 public class CreateHighlightUseCase {
 
-  private final PostRepository postRepository;
+  private final PostInteractionAccess access;
   private final PostHighlightRepository highlightRepository;
   private final PostHighlightReplyRepository replyRepository;
   private final CollectionConnectionCleaner connectionCleaner;
 
   @Transactional
   public HighlightRef execute(CreateHighlightCommand cmd) {
-    PostEntity post =
-        postRepository
-            .findById(cmd.postId())
-            .filter(PostEntity::isPublished)
-            .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, cmd.postId()));
+    PostEntity post = access.requireInteractablePost(cmd.userId(), cmd.postId());
 
     String quote =
         cmd.quote().length() > PostHighlightEntity.MAX_QUOTE
@@ -75,11 +65,9 @@ public class CreateHighlightUseCase {
     if (!highlight.getUserId().equals(userId)) {
       throw new PostException(PostErrorCode.HIGHLIGHT_PERMISSION_DENIED);
     }
-    // Take the highlight's reply thread with it. The DB FK cascades too, but purging explicitly
-    // keeps the cleanup visible at the use-case level (and independent of dialect cascade support).
+    // DB의 FK cascade 지원에 의존하지 않고 답글도 명시적으로 삭제한다.
     replyRepository.deleteAllByHighlightId(highlight.getId());
-    // Curator connections pointing at this highlight have no FK to cascade — drop them here or the
-    // owning collection keeps counting a block that no longer renders.
+    // 컬렉션 연결에는 FK가 없으므로 직접 제거해야 한다.
     connectionCleaner.purgeForHighlights(List.of(highlight.getId()));
     highlightRepository.delete(highlight);
   }

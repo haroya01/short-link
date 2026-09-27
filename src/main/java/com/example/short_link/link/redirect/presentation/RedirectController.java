@@ -1,6 +1,7 @@
 package com.example.short_link.link.redirect.presentation;
 
 import com.example.short_link.common.observability.OutcomeResolver;
+import com.example.short_link.common.security.BlockedDomainChecker;
 import com.example.short_link.customdomain.application.read.CustomDomainQueryService;
 import com.example.short_link.link.access.application.TurnstileProperties;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
@@ -11,11 +12,13 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.redirect.application.LinkPreviewCrawlerDetector;
-import com.example.short_link.link.redirect.application.LinkPreviewRenderer;
 import com.example.short_link.link.redirect.application.LinkRedirectFlow;
 import com.example.short_link.link.redirect.application.RedirectOutcome;
-import com.example.short_link.link.redirect.application.helper.LinkHtmlRenderer;
-import com.example.short_link.link.redirect.application.helper.LinkRedirectSupport;
+import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
+import com.example.short_link.link.redirect.presentation.helper.LinkPreviewRenderer;
+import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupport;
+import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
+import com.example.short_link.link.redirect.presentation.helper.VisitorLocale;
 import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -23,6 +26,8 @@ import io.micrometer.core.instrument.Timer;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -34,12 +39,6 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * {@code GET /{shortCode}} entry point. Handles the entry-point-specific bits — preview-crawler
- * branch, custom-domain owner check, password-protected detection — and delegates the post-load
- * check chain to {@link LinkRedirectFlow}. {@link RedirectOutcome} pattern-match then renders the
- * appropriate HTTP shape.
- */
 @RestController
 @RequiredArgsConstructor
 public class RedirectController {
@@ -53,6 +52,10 @@ public class RedirectController {
   private final MeterRegistry meterRegistry;
   private final CustomDomainQueryService customDomainService;
   private final TurnstileProperties turnstile;
+  private final BlockedDomainChecker blockedDomainChecker;
+  private final LinkHtmlRenderer html;
+  private final VisitHandoff handoff;
+  private final Clock clock;
 
   @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
   public ResponseEntity<?> redirect(
@@ -65,9 +68,10 @@ public class RedirectController {
       HttpServletRequest req) {
     Timer.Sample sample = Timer.start(meterRegistry);
     String outcome = "error";
+    Locale locale = VisitorLocale.resolve(acceptLanguage);
     try {
       ResponseEntity<?> response =
-          handleRedirect(shortCode, src, post, referrer, userAgent, acceptLanguage, req);
+          handleRedirect(shortCode, src, post, referrer, userAgent, acceptLanguage, locale, req);
       outcome = LinkRedirectSupport.classifyOutcome(response);
       return response;
     } catch (LinkException e) {
@@ -79,7 +83,7 @@ public class RedirectController {
             default -> "error";
           };
       // 방문자가 연 링크 — 만료·한도초과·없음은 JSON 대신 브랜드 HTML 페이지로 보여준다.
-      ResponseEntity<byte[]> page = LinkHtmlRenderer.visitorErrorPage(e.errorCode());
+      ResponseEntity<byte[]> page = html.visitorErrorPage(locale, e.errorCode());
       if (page != null) {
         return page;
       }
@@ -97,6 +101,7 @@ public class RedirectController {
       String referrer,
       String userAgent,
       String acceptLanguage,
+      Locale locale,
       HttpServletRequest req) {
     CachedLink link;
     try {
@@ -105,40 +110,68 @@ public class RedirectController {
       if (e.errorCode() == LinkErrorCode.LINK_EXPIRED) {
         LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
         if (expired != null && expired.getExpiredMessage() != null) {
-          return LinkHtmlRenderer.expiredPageResponse(expired.getExpiredMessage());
+          return html.expiredPageResponse(locale, expired.getExpiredMessage());
         }
       }
       throw e;
     }
-    // Custom-domain owner check — keep here, not in the flow, because it's a pre-flight check that
-    // depends on the inbound Host header, not on the post-load decision chain.
+    // Match the inbound Host owner before exposing a link on a custom domain.
     Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
     if (customOwner != null && !customOwner.equals(link.userId())) {
       throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
+    // 크롤러는 지오·AB 선택 맥락이 없으므로 활성 목적지 하나라도 차단되면 미리보기도 막는다.
+    if (anyDestinationBlocked(link)) {
+      meterRegistry.counter("redirect.domain_blocked").increment();
+      return html.domainBlockedPageResponse(locale);
+    }
+    // 공개 전에는 비밀번호도 묻지 않고, 미리보기 카드에도 목적지를 싣지 않는다.
+    if (link.visitOptions().opensLaterThan(clock.instant())) {
+      String crawler = crawlerDetector.crawlerName(userAgent);
+      if (crawler != null) {
+        return handlePreview(
+            shortCode, link, referrer, userAgent, acceptLanguage, src, crawler, req, false);
+      }
+      return html.notYetOpenPageResponse(locale, link.visitOptions().opensAt());
+    }
+    // 비밀번호 검사는 크롤러 분기보다 먼저 해야 스푸핑된 UA가 목적지를 노출하지 못한다.
+    if (link.passwordRequired()) {
+      return html.passwordPromptResponse(
+          locale, HttpStatus.OK, shortCode, false, turnstile.siteKey());
+    }
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
     if (crawlerLabel != null) {
       return handlePreview(
-          shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req);
+          shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req, true);
     }
-    if (link.passwordRequired()) {
-      return LinkHtmlRenderer.passwordPromptResponse(
-          HttpStatus.OK, shortCode, false, turnstile.siteKey());
-    }
-    return render(flow.execute(link, null, referrer, userAgent, acceptLanguage, src, post, req));
+    return render(
+        flow.execute(
+            link,
+            null,
+            LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)),
+        userAgent,
+        locale);
   }
 
-  private ResponseEntity<?> render(RedirectOutcome outcome) {
+  private boolean anyDestinationBlocked(CachedLink link) {
+    if (blockedDomainChecker.isBlocked(link.originalUrl())) {
+      return true;
+    }
+    for (CachedLink.Variant variant : link.variants()) {
+      if (variant.enabled() && blockedDomainChecker.isBlocked(variant.url())) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private ResponseEntity<?> render(RedirectOutcome outcome, String userAgent, Locale locale) {
     return switch (outcome) {
-      case RedirectOutcome.Redirect r ->
-          ResponseEntity.status(HttpStatus.FOUND)
-              .location(URI.create(r.picked().url()))
-              .header(HttpHeaders.CACHE_CONTROL, "private, max-age=90")
-              .header("X-Robots-Tag", "noindex, nofollow")
-              .build();
-      case RedirectOutcome.Blocked b -> LinkHtmlRenderer.blockedPageResponse();
-      case RedirectOutcome.ExpiredWithMessage em ->
-          LinkHtmlRenderer.expiredPageResponse(em.message());
+      case RedirectOutcome.Redirect r -> handoff.redirect(r, userAgent, locale);
+      case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
+      case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
+      case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
+      case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException(
               "PasswordRequired decided at controller before flow.execute()");
@@ -153,7 +186,8 @@ public class RedirectController {
       String acceptLanguage,
       String src,
       String crawlerLabel,
-      HttpServletRequest req) {
+      HttpServletRequest req,
+      boolean revealDestination) {
     meterRegistry.counter("short_link.preview").increment();
     clickRecorder.recordPreview(
         ClickContext.of(
@@ -167,6 +201,9 @@ public class RedirectController {
             .withFetchSite(LinkRedirectSupport.fetchSite(req)),
         crawlerLabel);
     LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
+    if (entity == null && !revealDestination) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
     if (entity == null) {
       return ResponseEntity.status(HttpStatus.FOUND)
           .location(URI.create(link.originalUrl()))
@@ -174,7 +211,8 @@ public class RedirectController {
           .build();
     }
     long clicks = lookup.countHumanClicks(link.linkId());
-    String html = previewRenderer.render(entity, urlBuilder.build(shortCode), clicks);
+    String html =
+        previewRenderer.render(entity, urlBuilder.build(shortCode), clicks, revealDestination);
     byte[] body = html.getBytes(StandardCharsets.UTF_8);
     return ResponseEntity.ok()
         .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))

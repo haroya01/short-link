@@ -4,11 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.user.domain.UserEntity.Role;
-import com.example.short_link.user.domain.UserEntity.Tier;
 import com.example.short_link.user.domain.repository.*;
-import java.time.Instant;
 import org.junit.jupiter.api.Test;
-import org.springframework.test.util.ReflectionTestUtils;
 
 class UserEntityTest {
 
@@ -23,10 +20,8 @@ class UserEntityTest {
     assertThat(u.getOauthProvider()).isEqualTo("google");
     assertThat(u.getOauthId()).isEqualTo("g-1");
     assertThat(u.getRole()).isEqualTo(Role.USER);
-    assertThat(u.getTier()).isEqualTo(Tier.FREE);
     assertThat(u.getTimezone()).isEqualTo("Asia/Seoul");
     assertThat(u.isAdmin()).isFalse();
-    assertThat(u.isPro()).isFalse();
     assertThat(u.isDeleted()).isFalse();
     assertThat(u.isStatsPublic()).isFalse();
   }
@@ -36,67 +31,6 @@ class UserEntityTest {
     UserEntity u = newUser();
     u.promoteToAdmin();
     assertThat(u.isAdmin()).isTrue();
-  }
-
-  @Test
-  void upgradeAndDowngradeTier() {
-    UserEntity u = newUser();
-    u.upgradeToPro();
-    assertThat(u.isPro()).isTrue();
-    u.downgradeToFree();
-    assertThat(u.isPro()).isFalse();
-  }
-
-  @Test
-  void linkStripeCustomerAndApplyActiveSubscriptionFlipsToPro() {
-    UserEntity u = newUser();
-    u.linkStripeCustomer("cus_abc");
-    assertThat(u.getStripeCustomerId()).isEqualTo("cus_abc");
-    Instant end = Instant.parse("2030-01-01T00:00:00Z");
-    u.applySubscription("sub_xyz", "active", end);
-    assertThat(u.getStripeSubscriptionId()).isEqualTo("sub_xyz");
-    assertThat(u.getSubscriptionStatus()).isEqualTo("active");
-    assertThat(u.getSubscriptionCurrentPeriodEnd()).isEqualTo(end);
-    assertThat(u.isPro()).isTrue();
-  }
-
-  @Test
-  void trialingAlsoCountsAsPro() {
-    UserEntity u = newUser();
-    u.applySubscription("sub", "trialing", null);
-    assertThat(u.isPro()).isTrue();
-  }
-
-  @Test
-  void canceledSubscriptionRevertsToFree() {
-    UserEntity u = newUser();
-    u.applySubscription("sub", "active", null);
-    u.applySubscription("sub", "canceled", null);
-    assertThat(u.isPro()).isFalse();
-  }
-
-  @Test
-  void stripeRestoredAfterLoadWhenAllColumnsNull() {
-    // Hibernate maps an @Embedded to null when every column under it is null — every
-    // stripe getter would NPE without the lifecycle hook rehydrating the binding.
-    UserEntity u = newUser();
-    ReflectionTestUtils.setField(u, "stripe", null);
-    u.restoreStripeAfterLoad();
-    assertThat(u.getStripeCustomerId()).isNull();
-    assertThat(u.getStripeSubscriptionId()).isNull();
-    assertThat(u.getSubscriptionStatus()).isNull();
-    assertThat(u.getSubscriptionCurrentPeriodEnd()).isNull();
-  }
-
-  @Test
-  void clearSubscriptionWipesFields() {
-    UserEntity u = newUser();
-    u.applySubscription("sub", "active", Instant.now());
-    u.clearSubscription();
-    assertThat(u.getStripeSubscriptionId()).isNull();
-    assertThat(u.getSubscriptionStatus()).isNull();
-    assertThat(u.getSubscriptionCurrentPeriodEnd()).isNull();
-    assertThat(u.isPro()).isFalse();
   }
 
   @Test

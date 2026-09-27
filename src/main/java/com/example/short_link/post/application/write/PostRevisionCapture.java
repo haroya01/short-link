@@ -11,10 +11,6 @@ import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * 발행 시점 스냅샷 캡처. PublishPostUseCase 가 호출. 다음 version_number 는 기존 최대 + 1 (없으면 1). snapshot 은
- * PostEntity 의 mutable 메타데이터 + 본문 블록 JSON.
- */
 @Component
 @RequiredArgsConstructor
 public class PostRevisionCapture {

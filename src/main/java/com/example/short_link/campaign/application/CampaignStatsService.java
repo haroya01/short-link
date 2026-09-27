@@ -27,9 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class CampaignStatsService {
 
-  // 시간대/일별/heatmap aggregation 의 viewer 기준 timezone. 캠페인 도메인에 timezone 필드가
-  // 따로 없어서 한국 서비스 default 로 고정. 후속 PR 에서 campaign 또는 user 의 timezone 필드 추가
-  // 시 여기에 주입하면 됨.
+  // 캠페인별 시간대 설정이 없어 한국 시간으로 날짜 경계를 집계한다.
   private static final String DEFAULT_TIMEZONE = "Asia/Seoul";
 
   private final CampaignQueryService campaignQuery;
@@ -108,10 +106,6 @@ public class CampaignStatsService {
         heatmap);
   }
 
-  /**
-   * 두 캠페인의 stats 를 side-by-side 로 반환. UI 에서 1차 → 2차 비교 또는 같은 사장의 두 캠페인 효율 비교에 사용. 각 캠페인은 owner 검증을
-   * 위해 detail() 을 통과시킨다.
-   */
   @Transactional(readOnly = true)
   public CampaignStatsCompareView compare(List<Long> campaignIds, Long ownerId) {
     List<CampaignStatsCompareView.CampaignWithStats> result = new ArrayList<>(campaignIds.size());

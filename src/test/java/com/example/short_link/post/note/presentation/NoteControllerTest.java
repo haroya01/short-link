@@ -28,7 +28,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** HTTP 매핑·status·인증 게이트만 — 검증/소유권/멱등 규칙은 NoteServiceTest(DB)가 진짜로 돈다. */
 @KurlWebMvcTest(controllers = NoteController.class)
 @Import(PostExceptionHandler.class)
 class NoteControllerTest {

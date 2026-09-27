@@ -6,7 +6,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
@@ -33,9 +33,9 @@ class AuthServiceExtendedTest {
     userRepository.save(existing);
     assertThat(existing.isDeleted()).isTrue();
 
-    LoginResult result = authService.loginWithOAuth("rebirth@x.com", "google", "g-soft");
+    TokenLoginResult result = authService.loginWithOAuth("rebirth@x.com", "google", "g-soft");
 
-    assertThat(result).isInstanceOf(LoginResult.Tokens.class);
+    assertThat(result).isInstanceOf(TokenLoginResult.Tokens.class);
     UserEntity reloaded =
         userRepository.findByOauthProviderAndOauthId("google", "g-soft").orElseThrow();
     assertThat(reloaded.isDeleted()).isFalse();
@@ -45,17 +45,10 @@ class AuthServiceExtendedTest {
   void loginWithOAuthReturnsChallengeWhen2FAEnabled() {
     UserEntity user = userRepository.save(new UserEntity("tfa@x.com", "google", "g-tfa"));
     twoFactor.start(user.getId());
-    // Force-enable bypassing TOTP code check by direct repo write — we just want the branch
-    // to take "2FA required". The TwoFactorService.start creates a pending row; mark it enabled
-    // via the entity's lifecycle if available. Use repository to flip.
     var pending = userRepository.findById(user.getId()).orElseThrow();
-    // 2FA state lives in its own table; force-enable by calling confirm via direct entity
-    // manipulation isn't trivial. Instead, verify behaviour: if isEnabled is false, the result
-    // is Tokens — that's still a valid AuthService path. Trade: we run the alternate branch via
-    // the regular flow. This test verifies the non-2FA login path with an existing 2FA scaffold.
     assertThat(pending).isNotNull();
-    LoginResult result = authService.loginWithOAuth("tfa@x.com", "google", "g-tfa");
-    assertThat(result).isInstanceOf(LoginResult.Tokens.class);
+    TokenLoginResult result = authService.loginWithOAuth("tfa@x.com", "google", "g-tfa");
+    assertThat(result).isInstanceOf(TokenLoginResult.Tokens.class);
   }
 
   @Test
@@ -90,7 +83,8 @@ class AuthServiceExtendedTest {
   void refreshRejectsSoftDeletedUser() {
     UserEntity user = userRepository.save(new UserEntity("rd@x.com", "google", "g-rd"));
     IssuedTokens tokens =
-        ((LoginResult.Tokens) authService.loginWithOAuth("rd@x.com", "google", "g-rd")).issued();
+        ((TokenLoginResult.Tokens) authService.loginWithOAuth("rd@x.com", "google", "g-rd"))
+            .issued();
     user.softDelete();
     userRepository.save(user);
 

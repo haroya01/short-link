@@ -9,10 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Public, attributed replies in a highlight's flat thread — rendered inline for any reader.
- * permitAll 는 GET /api/v1/public/** 가 커버.
- */
 @RestController
 @RequestMapping("/api/v1/public/highlights")
 @RequiredArgsConstructor

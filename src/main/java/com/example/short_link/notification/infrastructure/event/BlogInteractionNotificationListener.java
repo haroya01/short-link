@@ -4,6 +4,7 @@ import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
+import com.example.short_link.notification.application.dto.NotificationTarget;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
 import lombok.RequiredArgsConstructor;
@@ -12,13 +13,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Writes an in-app notification when a reader likes/comments/follows/subscribes. The sibling of
- * {@link com.example.short_link.post.webhook.scheduler.BlogWebhookDispatcher}: it consumes the same
- * {@link BlogInteractionEvent}, fires only after the interaction commits (so a rolled-back like
- * leaves no phantom notification), and runs on the shared {@code webhookExecutor} so the recording
- * insert never stalls the request path.
- */
+// AFTER_COMMIT avoids notifications for rolled-back interactions; async delivery keeps the insert
+// off the request path.
 @Component
 @RequiredArgsConstructor
 public class BlogInteractionNotificationListener {
@@ -38,12 +34,7 @@ public class BlogInteractionNotificationListener {
     recordUseCase.record(event.recipientUserId(), type, event.actorUserId(), payloadOf(event));
   }
 
-  /**
-   * The target ref serialized into the row's payload: a series ref for SERIES_SUBSCRIBE, a post ref
-   * (no author handle — the recipient IS the author for LIKE/COMMENT) when a post is present, else
-   * null (FOLLOW).
-   */
-  private static Object payloadOf(BlogInteractionEvent event) {
+  private static NotificationTarget payloadOf(BlogInteractionEvent event) {
     if (event.type() == BlogInteractionType.SERIES_SUBSCRIBE) {
       return new NotificationSeriesRef(event.seriesId(), event.seriesSlug(), event.seriesTitle());
     }

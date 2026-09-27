@@ -123,8 +123,6 @@ class AdminControllerTest {
     userRepository.save(admin);
     LinkEntity link =
         linkRepository.save(new LinkEntity("https://example.com", "lmcode", admin.getId(), null));
-    // Seed the click event for the lifetime totals + the two request_metrics rows the windowed
-    // outcome breakdown reads from.
     clickRepository.save(
         ClickEventEntity.builder()
             .linkId(link.linkId())
@@ -380,8 +378,6 @@ class AdminControllerTest {
         .andExpect(jsonPath("$.total").isNumber());
   }
 
-  // ─── Full-table browse (users / links) ───────────────────────────────────
-
   @Test
   void anonymousReceives401OnBrowse() throws Exception {
     mvc.perform(get("/api/v1/admin/users")).andExpect(status().isUnauthorized());
@@ -406,7 +402,6 @@ class AdminControllerTest {
     UserEntity admin = userRepository.save(new UserEntity("browse-admin@x.com", "google", "g-bad"));
     admin.promoteToAdmin();
     userRepository.save(admin);
-    // A plain user that owns one link — its email is the search term and its linkCount must be 1.
     UserEntity subject =
         userRepository.save(new UserEntity("subject-abc@x.com", "google", "g-sabc"));
     linkRepository.save(new LinkEntity("https://example.com/a", "brwuser1", subject.getId(), null));
@@ -421,7 +416,6 @@ class AdminControllerTest {
         .andExpect(jsonPath("$.items[?(@.email == 'subject-abc@x.com')].linkCount").value(1))
         .andExpect(jsonPath("$.items[?(@.email == 'subject-abc@x.com')].deleted").value(false));
 
-    // role=ADMIN must exclude the plain user.
     mvc.perform(
             get("/api/v1/admin/users?q=subject-abc&role=ADMIN")
                 .header("Authorization", "Bearer " + token))
@@ -477,7 +471,6 @@ class AdminControllerTest {
             .build());
     String token = jwt.createAccessToken(admin.getId(), "ADMIN");
 
-    // Exact short-code match.
     mvc.perform(get("/api/v1/admin/links?q=brwlink1").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.total").isNumber())
@@ -489,13 +482,11 @@ class AdminControllerTest {
         .andExpect(
             jsonPath("$.items[?(@.shortCode == 'brwlink1')].ownerEmail").value("link-admin@x.com"));
 
-    // Destination-URL substring match.
     mvc.perform(
             get("/api/v1/admin/links?q=browse.example").header("Authorization", "Bearer " + token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items[?(@.shortCode == 'brwlink1')].shortCode").value("brwlink1"));
 
-    // ownerId filter to an unrelated id must drop the link.
     mvc.perform(
             get("/api/v1/admin/links?q=brwlink1&ownerId=999999999")
                 .header("Authorization", "Bearer " + token))
@@ -543,8 +534,6 @@ class AdminControllerTest {
         userRepository.save(new UserEntity("sort-admin@x.com", "google", "g-srtadm"));
     admin.promoteToAdmin();
     userRepository.save(admin);
-    // Two links sharing a unique URL token so a q filter isolates exactly this pair; the "busy" one
-    // gets two clicks, the "quiet" one none. sort=clicks must return busy first.
     LinkEntity busy =
         linkRepository.save(
             new LinkEntity("https://srtst.example.com/busy", "srtsbusy", admin.getId(), null));
@@ -602,7 +591,6 @@ class AdminControllerTest {
         .andExpect(jsonPath("$.stats.dailyClicks").isArray())
         .andExpect(jsonPath("$.stats.deviceClicks").isArray());
 
-    // Well-formed but nonexistent code → 404 with the admin-namespaced code.
     mvc.perform(get("/api/v1/admin/links/nosuch99").header("Authorization", "Bearer " + token))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("LINK_NOT_FOUND"));
@@ -634,7 +622,6 @@ class AdminControllerTest {
         .andExpect(jsonPath("$.trending24h").isArray())
         .andExpect(jsonPath("$.recentLinks[0].shortCode").isString())
         .andExpect(jsonPath("$.recentClicks[0].shortCode").isString())
-        // Click rows are PII-minimal — IP and visitor hash are never serialized.
         .andExpect(jsonPath("$.recentClicks[0].clientIp").doesNotExist())
         .andExpect(jsonPath("$.recentClicks[0].visitorHash").doesNotExist());
   }

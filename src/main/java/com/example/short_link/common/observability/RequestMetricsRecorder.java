@@ -10,16 +10,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Buffered async writer for {@link RequestMetric}. The hot path ({@code RequestMetricsFilter}) does
- * one queue offer per request — no DB hit, no lock contention on the request thread. A {@link
- * Scheduled} tick drains up to {@link #MAX_BATCH_PER_FLUSH} rows per second into a single {@code
- * saveAll} insert.
- *
- * <p>At 100k req/day average the queue effectively never fills; the {@link #QUEUE_HARD_CAP} exists
- * only so a pathological burst (DB outage during a click spike) can't grow unbounded — past the cap
- * we drop with a counter so we have evidence it happened rather than OOMing the JVM.
- */
+// Queues metrics without a database write on the request thread. Overflow is dropped and counted to
+// bound memory during bursts or outages; each flush drains at most MAX_BATCH_PER_FLUSH rows.
 @Slf4j
 @Component
 public class RequestMetricsRecorder {
@@ -60,9 +52,7 @@ public class RequestMetricsRecorder {
           .counter("request_metrics.recorder", "result", "flushed")
           .increment(batch.size());
     } catch (Exception e) {
-      // Recorder is best-effort observability — never let a flush failure break the app. The
-      // dropped rows are gone (we already polled them off the queue), so log enough detail to
-      // diagnose without keeping the data around.
+      // Best-effort telemetry: polled rows are lost on failure and counted rather than retried.
       meterRegistry
           .counter("request_metrics.recorder", "result", "flush_error")
           .increment(batch.size());

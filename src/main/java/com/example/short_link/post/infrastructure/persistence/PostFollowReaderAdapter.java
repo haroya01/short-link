@@ -10,11 +10,6 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Repository;
 
-/**
- * Counts {@code user_follow} rows attributed to a post (source_post_id) or to all of an author's
- * posts. Uses native queries against user_follow so the post module needn't depend on the user
- * module's entity — the cross-product seam is a single, read-only SQL lookup on source_post_id.
- */
 @Repository
 class PostFollowReaderAdapter implements PostFollowReader {
 

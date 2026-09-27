@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.visit.application.SplashCta;
+import com.example.short_link.link.visit.application.SplashCtaCatalog;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -20,7 +23,10 @@ class CachedLinkLoaderTest {
   void loadsRedirectCacheFromNarrowProjectionAndSidecars() {
     LinkRepository repository = mock(LinkRepository.class);
     LinkDestinationRepository destinations = mock(LinkDestinationRepository.class);
-    CachedLinkLoader loader = new CachedLinkLoader(repository, destinations);
+    SplashCtaCatalog ctaCatalog = mock(SplashCtaCatalog.class);
+    CachedLinkLoader loader = new CachedLinkLoader(repository, destinations, ctaCatalog);
+    when(ctaCatalog.findOwned(9L, 42L))
+        .thenReturn(Optional.of(new SplashCta(9L, "Get the app", "https://kurl.me/app1")));
     ShortCode shortCode = new ShortCode("abc1234");
     Instant expiresAt = Instant.parse("2099-01-01T00:00:00Z");
 
@@ -39,7 +45,8 @@ class CachedLinkLoaderTest {
                     "KR,JP",
                     true,
                     10,
-                    "ended")));
+                    "ended",
+                    true)));
     when(destinations.findAllByLinkIdOrderByIdAsc(7L))
         .thenReturn(
             List.of(
@@ -58,6 +65,11 @@ class CachedLinkLoaderTest {
     assertThat(cached.passwordRequired()).isTrue();
     assertThat(cached.maxViews()).isEqualTo(10);
     assertThat(cached.expiredMessage()).isEqualTo("ended");
+    assertThat(cached.visitOptions().openInBrowser()).isTrue();
+    assertThat(cached.visitOptions().opensAt()).isEqualTo(Instant.parse("2026-10-01T01:00:00Z"));
+    assertThat(cached.visitOptions().splash())
+        .isEqualTo(
+            new CachedLink.Splash("coupon SPRING20", 2, "Get the app", "https://kurl.me/app1"));
     assertThat(cached.variants()).hasSize(1);
     assertThat(cached.variants().getFirst().url()).isEqualTo("https://variant.example");
   }
@@ -74,7 +86,8 @@ class CachedLinkLoaderTest {
       String blockedCountries,
       Boolean passwordRequired,
       Integer maxViews,
-      String expiredMessage) {
+      String expiredMessage,
+      Boolean openInBrowser) {
     return new LinkRepository.CachedLinkRow() {
       @Override
       public Long getId() {
@@ -134,6 +147,36 @@ class CachedLinkLoaderTest {
       @Override
       public String getExpiredMessage() {
         return expiredMessage;
+      }
+
+      @Override
+      public Boolean getOpenInBrowser() {
+        return openInBrowser;
+      }
+
+      @Override
+      public Boolean getSplashEnabled() {
+        return true;
+      }
+
+      @Override
+      public String getSplashMessage() {
+        return "coupon SPRING20";
+      }
+
+      @Override
+      public Integer getSplashSeconds() {
+        return 2;
+      }
+
+      @Override
+      public Long getSplashCtaId() {
+        return 9L;
+      }
+
+      @Override
+      public Instant getOpensAt() {
+        return Instant.parse("2026-10-01T01:00:00Z");
       }
     };
   }

@@ -9,6 +9,7 @@ import com.example.short_link.abuse.domain.ModerationAction;
 import com.example.short_link.abuse.presentation.request.ResolveAbuseReportRequest;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,7 +34,7 @@ public class AdminAbuseReportController {
     if (status == null || status.isBlank()) {
       return queryService.listAll();
     }
-    return queryService.listByStatus(AbuseReportStatus.valueOf(status.toUpperCase()));
+    return queryService.listByStatus(AbuseReportStatus.valueOf(status.toUpperCase(Locale.ROOT)));
   }
 
   @PostMapping("/{id}/resolve")
@@ -44,13 +45,14 @@ public class AdminAbuseReportController {
     ModerationAction action =
         request.action() == null || request.action().isBlank()
             ? ModerationAction.NONE
-            : ModerationAction.valueOf(request.action().toUpperCase());
+            : ModerationAction.valueOf(request.action().toUpperCase(Locale.ROOT));
     return queryService.enrich(
         resolveAbuseReport.execute(
             new ResolveAbuseReportCommand(
                 id,
                 adminUserId,
-                ResolveAbuseReportCommand.Resolution.valueOf(request.resolution().toUpperCase()),
+                ResolveAbuseReportCommand.Resolution.valueOf(
+                    request.resolution().toUpperCase(Locale.ROOT)),
                 action,
                 request.suspendUntil(),
                 request.adminNote())));

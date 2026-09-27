@@ -57,7 +57,10 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 @KurlWebMvcTest(controllers = PostController.class)
-@Import(PostExceptionHandler.class)
+@Import({
+  PostExceptionHandler.class,
+  com.example.short_link.post.application.read.PostExportQueryService.class
+})
 class PostControllerTest {
 
   @Autowired private MockMvc mvc;
@@ -91,7 +94,7 @@ class PostControllerTest {
   @Test
   void createsDraftPost() throws Exception {
     PostEntity saved = new PostEntity(USER_ID, "first-post", "First", "ko");
-    when(createPost.execute(any(CreatePostCommand.class))).thenReturn(saved);
+    when(createPost.execute(any(CreatePostCommand.class))).thenReturn(PostView.from(saved));
 
     mvc.perform(
             post("/api/v1/posts")
@@ -180,7 +183,8 @@ class PostControllerTest {
   @Test
   void patchUpdatesTitle() throws Exception {
     PostEntity updated = new PostEntity(USER_ID, "my-post", "Updated Title", "ko");
-    when(updatePostMetadata.execute(any(UpdatePostMetadataCommand.class))).thenReturn(updated);
+    when(updatePostMetadata.execute(any(UpdatePostMetadataCommand.class)))
+        .thenReturn(PostView.from(updated));
 
     mvc.perform(
             patch("/api/v1/posts/42")
@@ -209,7 +213,7 @@ class PostControllerTest {
   void publishReturnsPublishedView() throws Exception {
     PostEntity published = new PostEntity(USER_ID, "my-post", "Title", "ko");
     published.publish();
-    when(publishPost.execute(any(PublishPostCommand.class))).thenReturn(published);
+    when(publishPost.execute(any(PublishPostCommand.class))).thenReturn(PostView.from(published));
 
     mvc.perform(
             post("/api/v1/posts/42/publish")
@@ -234,7 +238,7 @@ class PostControllerTest {
     PostEntity scheduled = new PostEntity(USER_ID, "my-post", "Title", "ko");
     Instant when = Instant.now().plus(2, ChronoUnit.HOURS);
     scheduled.schedule(when);
-    when(schedulePost.execute(any(SchedulePostCommand.class))).thenReturn(scheduled);
+    when(schedulePost.execute(any(SchedulePostCommand.class))).thenReturn(PostView.from(scheduled));
 
     mvc.perform(
             post("/api/v1/posts/42/schedule")
@@ -250,7 +254,8 @@ class PostControllerTest {
     PostEntity unpublished = new PostEntity(USER_ID, "my-post", "Title", "ko");
     unpublished.publish();
     unpublished.unpublish();
-    when(unpublishPost.execute(any(UnpublishPostCommand.class))).thenReturn(unpublished);
+    when(unpublishPost.execute(any(UnpublishPostCommand.class)))
+        .thenReturn(PostView.from(unpublished));
 
     mvc.perform(
             post("/api/v1/posts/42/unpublish")
@@ -274,7 +279,8 @@ class PostControllerTest {
   @Test
   void backToDraftReturnsDraftView() throws Exception {
     PostEntity draft = new PostEntity(USER_ID, "my-post", "Title", "ko");
-    when(backToDraftPost.execute(any(BackToDraftPostCommand.class))).thenReturn(draft);
+    when(backToDraftPost.execute(any(BackToDraftPostCommand.class)))
+        .thenReturn(PostView.from(draft));
 
     mvc.perform(
             post("/api/v1/posts/42/back-to-draft")
@@ -389,7 +395,8 @@ class PostControllerTest {
   @Test
   void restoreRevisionReturnsView() throws Exception {
     PostEntity restored = new PostEntity(USER_ID, "my-post", "Restored Title", "ko");
-    when(restorePostRevision.execute(any(RestorePostRevisionCommand.class))).thenReturn(restored);
+    when(restorePostRevision.execute(any(RestorePostRevisionCommand.class)))
+        .thenReturn(PostView.from(restored));
 
     mvc.perform(
             post("/api/v1/posts/42/revisions/2/restore")

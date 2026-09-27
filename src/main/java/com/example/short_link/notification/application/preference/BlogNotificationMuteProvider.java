@@ -6,12 +6,6 @@ import com.example.short_link.notification.domain.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Notification-side implementation of the neutral {@link BlogNotificationMuteReader} port. Maps the
- * kernel {@link BlogNotificationKind} to this slice's {@link NotificationType} and delegates to
- * {@link BlogNotificationPreferenceService}, so the post slice can gate mention dedup on a mute
- * without a post→notification dependency.
- */
 @Component
 @RequiredArgsConstructor
 class BlogNotificationMuteProvider implements BlogNotificationMuteReader {

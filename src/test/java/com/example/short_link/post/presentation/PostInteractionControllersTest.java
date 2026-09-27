@@ -39,7 +39,6 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** 인증이 필요한 post 상호작용 컨트롤러 + 공개 view beacon 슬라이스. */
 @KurlWebMvcTest(
     controllers = {
       CommentController.class,

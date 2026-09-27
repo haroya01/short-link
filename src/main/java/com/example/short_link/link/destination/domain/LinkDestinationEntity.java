@@ -9,22 +9,11 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.Locale;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * One A/B variant for a link. When a link has any rows here, the redirect handler picks among
- * enabled variants by weight; otherwise it falls back to {@code link.original_url}. The original
- * URL is implicitly the "control" — owners can promote any variant by either bumping its weight or
- * replacing the original.
- *
- * <p>{@code countryCode} (ISO-3166 alpha-2, uppercase) gates the variant on the resolved client
- * country: a non-null value means "only pick this variant for visitors from that country". When at
- * least one country-matched variant exists for a request, the picker prefers them; otherwise it
- * falls back to country-agnostic (null) variants. If all variants are country-tagged and none
- * match, the redirect falls back to the original URL.
- */
 @Entity
 @Table(name = "link_destination")
 @Getter
@@ -57,18 +46,9 @@ public class LinkDestinationEntity extends BaseCreatedEntity {
   @Column(name = "country_code", length = 2)
   private String countryCode;
 
-  /**
-   * Optional broad device bucket — {@code mobile}, {@code tablet}, {@code desktop}. Layered on top
-   * of {@link #countryCode}: a variant tagged both {@code KR} and {@code mobile} only matches a
-   * Korean visitor on a phone. Null = "no device constraint".
-   */
   @Column(name = "device_class", length = 16)
   private String deviceClass;
 
-  /**
-   * Optional fine-grained OS — {@code ios}, {@code android}, {@code windows}, {@code macos}, {@code
-   * linux}. Same layering rule as {@link #deviceClass}; null = "any OS".
-   */
   @Column(length = 16)
   private String os;
 
@@ -124,12 +104,12 @@ public class LinkDestinationEntity extends BaseCreatedEntity {
     if (trimmed.length() != 2) {
       throw new IllegalArgumentException("countryCode must be ISO-3166 alpha-2 (2 chars)");
     }
-    return trimmed.toUpperCase();
+    return trimmed.toUpperCase(Locale.ROOT);
   }
 
   private static String normalizeDeviceClass(String input) {
     if (input == null) return null;
-    String v = input.trim().toLowerCase();
+    String v = input.trim().toLowerCase(Locale.ROOT);
     if (v.isEmpty()) return null;
     return switch (v) {
       case "mobile", "tablet", "desktop" -> v;
@@ -140,7 +120,7 @@ public class LinkDestinationEntity extends BaseCreatedEntity {
 
   private static String normalizeOs(String input) {
     if (input == null) return null;
-    String v = input.trim().toLowerCase();
+    String v = input.trim().toLowerCase(Locale.ROOT);
     if (v.isEmpty()) return null;
     return switch (v) {
       case "ios", "android", "windows", "macos", "linux" -> v;

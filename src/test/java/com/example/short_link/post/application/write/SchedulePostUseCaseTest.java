@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -28,27 +29,29 @@ class SchedulePostUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new SchedulePostUseCase(postOwnership, postRepository);
+    useCase =
+        new SchedulePostUseCase(
+            postOwnership, postRepository, new PostWriteViewAssembler(postRepository));
   }
 
   @Test
   void schedulesDraft() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     Instant when = Instant.now().plus(2, ChronoUnit.HOURS);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity result = useCase.execute(new SchedulePostCommand(7L, 42L, when));
+    PostView result = useCase.execute(new SchedulePostCommand(7L, 42L, when));
 
-    assertThat(result.getStatus()).isEqualTo(PostStatus.SCHEDULED);
-    assertThat(result.getScheduledAt()).isEqualTo(when);
+    assertThat(result.status()).isEqualTo(PostStatus.SCHEDULED.name());
+    assertThat(result.scheduledAt()).isEqualTo(when);
   }
 
   @Test
   void rejectsScheduleInPast() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     Instant past = Instant.now().minus(1, ChronoUnit.MINUTES);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
 
     assertThatThrownBy(() -> useCase.execute(new SchedulePostCommand(7L, 42L, past)))
         .isInstanceOf(PostException.class)
@@ -61,7 +64,7 @@ class SchedulePostUseCaseTest {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     post.publish();
     Instant future = Instant.now().plus(1, ChronoUnit.HOURS);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
 
     assertThatThrownBy(() -> useCase.execute(new SchedulePostCommand(7L, 42L, future)))
         .isInstanceOf(PostException.class)

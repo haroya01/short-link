@@ -13,6 +13,7 @@ import java.net.URISyntaxException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 import lombok.extern.slf4j.Slf4j;
@@ -22,10 +23,6 @@ import org.jsoup.nodes.Element;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-/**
- * Fetches Open Graph metadata. Outbound HTTP goes through {@link HttpFetcher} (DNS-pinned via the
- * adapter). Body capped at {@link #MAX_BODY_BYTES} and parsed with Jsoup as text/html only.
- */
 @Slf4j
 @Service
 public class OgScraper {
@@ -65,7 +62,7 @@ public class OgScraper {
         return OgMetadata.empty();
       }
       String contentType = response.header("Content-Type");
-      if (contentType == null || !contentType.toLowerCase().startsWith("text/html")) {
+      if (contentType == null || !contentType.toLowerCase(Locale.ROOT).startsWith("text/html")) {
         resultTag.set("non_html");
         return OgMetadata.empty();
       }

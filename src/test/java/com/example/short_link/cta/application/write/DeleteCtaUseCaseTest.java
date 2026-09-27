@@ -9,6 +9,7 @@ import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.CtaPurpose;
 import com.example.short_link.cta.domain.CtaStyle;
 import com.example.short_link.cta.domain.repository.CtaRepository;
+import com.example.short_link.link.visit.application.SplashCtaChanges;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -20,12 +21,13 @@ class DeleteCtaUseCaseTest {
 
   @Mock private CtaOwnership ctaOwnership;
   @Mock private CtaRepository ctaRepository;
+  @Mock private SplashCtaChanges splashCtaChanges;
 
   private DeleteCtaUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new DeleteCtaUseCase(ctaOwnership, ctaRepository);
+    useCase = new DeleteCtaUseCase(ctaOwnership, ctaRepository, splashCtaChanges);
   }
 
   @Test
@@ -37,5 +39,6 @@ class DeleteCtaUseCaseTest {
 
     assertThat(cta.isDeleted()).isTrue();
     verify(ctaRepository).save(any(CtaEntity.class));
+    verify(splashCtaChanges).ctaChanged(cta.getId());
   }
 }

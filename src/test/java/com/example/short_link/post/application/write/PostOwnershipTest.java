@@ -55,4 +55,26 @@ class PostOwnershipTest {
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.PERMISSION_DENIED);
   }
+
+  @Test
+  void lifecycleLookupChecksTheOwnerOfTheLockedPost() {
+    PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
+    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.of(post));
+
+    assertThat(postOwnership.requireOwnedForUpdate(7L, 42L)).isSameAs(post);
+    assertThatThrownBy(() -> postOwnership.requireOwnedForUpdate(9L, 42L))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.PERMISSION_DENIED);
+  }
+
+  @Test
+  void missingLockedPostHasTheSameNotFoundContract() {
+    when(postRepository.findByIdForUpdate(42L)).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> postOwnership.requireOwnedForUpdate(7L, 42L))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+  }
 }

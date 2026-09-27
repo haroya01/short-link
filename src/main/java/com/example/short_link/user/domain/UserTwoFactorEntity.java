@@ -7,15 +7,13 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * Per-user TOTP enrolment. Created in a pending state when the user starts setup; only flipped to
- * {@code enabled=true} once they successfully verify a code from their authenticator. Recovery
- * codes are stored as a JSON array of bcrypt hashes — single use, regenerable.
- */
 @Entity
 @Table(name = "user_two_factor")
 @Getter
@@ -38,6 +36,9 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
   @Column(name = "last_used_at")
   private Instant lastUsedAt;
 
+  @Column(name = "last_verified_step")
+  private Long lastVerifiedStep;
+
   public UserTwoFactorEntity(Long userId, String encryptedSecret) {
     this.userId = userId;
     this.secret = encryptedSecret;
@@ -49,25 +50,45 @@ public class UserTwoFactorEntity extends BaseTimeEntity {
     this.enabled = false;
     this.recoveryCodes = null;
     this.lastUsedAt = null;
+    this.lastVerifiedStep = null;
   }
 
-  public void enable(String recoveryCodesJson) {
+  public void enable(List<String> recoveryCodeHashes, Instant enabledAt) {
     this.enabled = true;
-    this.recoveryCodes = recoveryCodesJson;
-    this.lastUsedAt = Instant.now();
+    this.recoveryCodes = String.join("\n", recoveryCodeHashes);
+    this.lastUsedAt = enabledAt;
   }
 
   public void disable() {
     this.enabled = false;
     this.recoveryCodes = null;
     this.lastUsedAt = null;
+    this.lastVerifiedStep = null;
   }
 
-  public void replaceRecoveryCodes(String recoveryCodesJson) {
-    this.recoveryCodes = recoveryCodesJson;
+  public void replaceRecoveryCodes(List<String> recoveryCodeHashes) {
+    this.recoveryCodes = String.join("\n", recoveryCodeHashes);
   }
 
-  public void markUsed() {
-    this.lastUsedAt = Instant.now();
+  public List<String> recoveryCodeHashes() {
+    if (recoveryCodes == null || recoveryCodes.isEmpty()) return List.of();
+    return Arrays.stream(recoveryCodes.split("\n")).filter(line -> !line.isBlank()).toList();
+  }
+
+  public boolean consumeRecoveryCode(String matchedHash, Instant usedAt) {
+    if (!enabled) return false;
+    List<String> remaining = new ArrayList<>(recoveryCodeHashes());
+    if (!remaining.remove(matchedHash)) return false;
+    recoveryCodes = String.join("\n", remaining);
+    lastUsedAt = usedAt;
+    return true;
+  }
+
+  // The repository must lock this enrollment while an authentication consumes its step.
+  public boolean consumeTotpStep(long verifiedStep, Instant usedAt) {
+    if (!enabled || (lastVerifiedStep != null && verifiedStep <= lastVerifiedStep)) return false;
+    lastVerifiedStep = verifiedStep;
+    lastUsedAt = usedAt;
+    return true;
   }
 }

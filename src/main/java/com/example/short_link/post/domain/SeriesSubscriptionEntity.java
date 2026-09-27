@@ -12,9 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * One subscription edge: {@code userId} subscribes to series {@code seriesId}. The pair is unique.
- */
 @Entity
 @Table(
     name = "series_subscription",

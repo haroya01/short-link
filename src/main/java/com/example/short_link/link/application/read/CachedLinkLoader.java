@@ -8,24 +8,23 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.visit.application.SplashCta;
+import com.example.short_link.link.visit.application.SplashCtaCatalog;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Owns the Redis-backed {@code "link"} cache for redirect-path lookups. Lives in a separate bean so
- * the {@link Cacheable} proxy actually intercepts the call — when this method sat next to {@code
- * findActiveLink} on {@link LinkLookupQueryService}, self-invocation bypassed AOP and every
- * redirect hit MySQL.
- */
+// Kept in a separate bean so the Cacheable proxy intercepts redirect lookups; self-invocation would
+// bypass the cache.
 @Component
 @RequiredArgsConstructor
 public class CachedLinkLoader {
 
   private final LinkRepository repository;
   private final LinkDestinationRepository destinationRepository;
+  private final SplashCtaCatalog ctaCatalog;
 
   @Cacheable("link")
   @Transactional(readOnly = true)
@@ -51,7 +50,24 @@ public class CachedLinkLoader {
         Boolean.TRUE.equals(link.getPasswordRequired()),
         link.getMaxViews(),
         link.getExpiredMessage(),
-        variants);
+        variants,
+        new CachedLink.VisitOptions(
+            Boolean.TRUE.equals(link.getOpenInBrowser()), splash(link), link.getOpensAt()));
+  }
+
+  private CachedLink.Splash splash(LinkRepository.CachedLinkRow link) {
+    if (!Boolean.TRUE.equals(link.getSplashEnabled()) || link.getSplashMessage() == null) {
+      return null;
+    }
+    SplashCta cta =
+        link.getSplashCtaId() == null
+            ? null
+            : ctaCatalog.findOwned(link.getSplashCtaId(), link.getUserId()).orElse(null);
+    return new CachedLink.Splash(
+        link.getSplashMessage(),
+        link.getSplashSeconds() == null ? 3 : link.getSplashSeconds(),
+        cta == null ? null : cta.label(),
+        cta == null ? null : cta.url());
   }
 
   private static CachedLink.Variant toVariant(LinkDestinationEntity d) {

@@ -2,6 +2,7 @@ package com.example.short_link.link.webhook.domain.repository;
 
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -21,6 +22,5 @@ public interface LinkWebhookRepository {
 
   long countByLinkId(Long linkId);
 
-  List<LinkWebhookEntity> findAllEnabledByDeliveryMode(
-      WebhookDeliveryMode modeA, WebhookDeliveryMode modeB);
+  List<LinkWebhookEntity> findAllEnabledByDeliveryModes(Collection<WebhookDeliveryMode> modes);
 }

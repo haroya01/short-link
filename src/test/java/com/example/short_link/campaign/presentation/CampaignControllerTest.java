@@ -16,6 +16,8 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -33,8 +35,6 @@ class CampaignControllerTest {
   @Autowired private MockMvc mvc;
   @Autowired private JwtTokenService jwt;
   @Autowired private UserRepository userRepository;
-  // Spring Boot 4 에서 ObjectMapper 가 더 이상 auto-configured bean 이 아님 (Jackson 3 마이그레이션).
-  // 테스트 페이로드는 단순 Map ↔ JSON 이므로 모듈 없이 직접 인스턴스화.
   private final ObjectMapper json = new ObjectMapper();
 
   private String bearer(String suffix) {
@@ -158,6 +158,46 @@ class CampaignControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.name").value("renamed"))
         .andExpect(jsonPath("$.postEndAction").value("REDIRECT"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"", " \t\n"})
+  void patchRejectsBlankNamesAndPreservesThePreviousPolicy(String name) throws Exception {
+    String token = bearer("blank-name");
+    Long id =
+        createCampaign(
+            token, "orig", Instant.now().plusSeconds(3600), CampaignPostEndAction.KEEP, null);
+    String body = json.writeValueAsString(Map.of("name", name, "postEndAction", "EXPIRE"));
+
+    mvc.perform(
+            patch("/api/v1/campaigns/" + id)
+                .header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isBadRequest())
+        .andExpect(jsonPath("$.code").value("INVALID_CAMPAIGN_NAME"));
+
+    mvc.perform(get("/api/v1/campaigns/" + id).header("Authorization", token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("orig"))
+        .andExpect(jsonPath("$.postEndAction").value("KEEP"));
+  }
+
+  @Test
+  void patchNullNameKeepsTheNameWhileUpdatingPolicy() throws Exception {
+    String token = bearer("null-name");
+    Long id =
+        createCampaign(
+            token, "orig", Instant.now().plusSeconds(3600), CampaignPostEndAction.KEEP, null);
+
+    mvc.perform(
+            patch("/api/v1/campaigns/" + id)
+                .header("Authorization", token)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"name\":null,\"postEndAction\":\"EXPIRE\"}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.name").value("orig"))
+        .andExpect(jsonPath("$.postEndAction").value("EXPIRE"));
   }
 
   @Test

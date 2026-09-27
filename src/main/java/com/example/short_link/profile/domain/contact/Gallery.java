@@ -10,14 +10,8 @@ import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * GALLERY block payload — ordered list of image URLs rendered as a horizontal swipe carousel on the
- * public profile. Capped at {@link #MAX_IMAGES} to keep the JSON inside the 2048-char content
- * column with headroom + so a single block doesn't dominate the visitor's scroll.
- */
 public final class Gallery {
 
-  /** Cap chosen so 6 * 256-char URLs + JSON overhead fit comfortably in VARCHAR(2048). */
   public static final int MAX_IMAGES = 6;
 
   private static final int URL_MAX = 256;

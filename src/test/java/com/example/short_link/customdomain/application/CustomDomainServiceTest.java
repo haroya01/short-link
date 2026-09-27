@@ -15,6 +15,7 @@ import com.example.short_link.customdomain.application.read.CustomDomainQuerySer
 import com.example.short_link.customdomain.application.write.AutoVerifyCustomDomainUseCase;
 import com.example.short_link.customdomain.application.write.CustomDomainOwnership;
 import com.example.short_link.customdomain.application.write.DeleteCustomDomainUseCase;
+import com.example.short_link.customdomain.application.write.RecordCustomDomainVerificationUseCase;
 import com.example.short_link.customdomain.application.write.RegisterCustomDomainUseCase;
 import com.example.short_link.customdomain.application.write.VerifyCustomDomainUseCase;
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
@@ -57,8 +58,11 @@ class CustomDomainServiceTest {
     queryService = new CustomDomainQueryService(repository);
     register = new RegisterCustomDomainUseCase(repository, meterRegistry);
     CustomDomainOwnership ownership = new CustomDomainOwnership(repository);
-    verify = new VerifyCustomDomainUseCase(ownership, meterRegistry, txtResolver);
-    autoVerify = new AutoVerifyCustomDomainUseCase(repository, meterRegistry, txtResolver);
+    RecordCustomDomainVerificationUseCase recordVerification =
+        new RecordCustomDomainVerificationUseCase(repository);
+    verify =
+        new VerifyCustomDomainUseCase(ownership, meterRegistry, txtResolver, recordVerification);
+    autoVerify = new AutoVerifyCustomDomainUseCase(meterRegistry, txtResolver, recordVerification);
     delete = new DeleteCustomDomainUseCase(ownership, repository, meterRegistry);
   }
 
@@ -153,6 +157,7 @@ class CustomDomainServiceTest {
   void verifyFailureMarksAndCounts() {
     CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
     when(repository.findById(1L)).thenReturn(Optional.of(d));
+    when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(d));
     assertThatThrownBy(() -> verify.execute(7L, 1L)).isInstanceOf(CustomDomainException.class);
     assertThat(meterRegistry.counter("custom_domain.verify", "result", "failed").count())
         .isEqualTo(1.0);
@@ -163,6 +168,7 @@ class CustomDomainServiceTest {
   void verifySuccessMarksAndCounts() {
     CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
     when(repository.findById(1L)).thenReturn(Optional.of(d));
+    when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(d));
     txtResolver.put("_kurl-verify.go.example.com", "kurl-verify=abc");
     DomainSummary out = verify.execute(7L, 1L);
     assertThat(out.verified()).isTrue();
@@ -174,7 +180,7 @@ class CustomDomainServiceTest {
   @Test
   void autoVerifyOneFailureUpdatesCheckTimestamp() {
     CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
-    when(repository.findById(1L)).thenReturn(Optional.of(d));
+    when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(d));
     boolean out = autoVerify.execute(d);
     assertThat(out).isFalse();
     assertThat(d.isVerified()).isFalse();
@@ -184,7 +190,7 @@ class CustomDomainServiceTest {
   @Test
   void autoVerifyOneSuccessMarksVerified() {
     CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
-    when(repository.findById(1L)).thenReturn(Optional.of(d));
+    when(repository.findByIdForUpdate(1L)).thenReturn(Optional.of(d));
     txtResolver.put("_kurl-verify.go.example.com", "kurl-verify=abc");
     boolean out = autoVerify.execute(d);
     assertThat(out).isTrue();
@@ -196,9 +202,11 @@ class CustomDomainServiceTest {
   @Test
   void autoVerifyOneGoneEntityReturnsFalse() {
     CustomDomainEntity d = domain(1L, 7L, "go.example.com", false);
-    when(repository.findById(1L)).thenReturn(Optional.empty());
+    when(repository.findByIdForUpdate(1L)).thenReturn(Optional.empty());
+    txtResolver.put("_kurl-verify.go.example.com", "kurl-verify=abc");
     boolean out = autoVerify.execute(d);
     assertThat(out).isFalse();
+    assertThat(meterRegistry.counter("custom_domain.verify", "result", "auto_ok").count()).isZero();
   }
 
   @Test

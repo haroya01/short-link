@@ -12,11 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * A user-made folder over their bookmarks ("스마트 셸프"). A bookmark with {@code folder_id = NULL} is
- * unfiled (auto-grouped by tag in the UI); filing it points it at one of these. Folder names are
- * unique per user.
- */
 @Entity
 @Table(
     name = "bookmark_folder",

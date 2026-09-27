@@ -47,7 +47,7 @@ class BookmarkPostUseCaseTest {
   @Test
   void bookmarkIsIdempotent() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(new PostEntity(7L, "s", "T", "ko")));
-    when(postBookmarkRepository.insertIgnore(42L, 9L)).thenReturn(0); // already bookmarked → no-op
+    when(postBookmarkRepository.insertIgnore(42L, 9L)).thenReturn(0);
 
     PostBookmarkStatus status = useCase.bookmark(9L, 42L);
 

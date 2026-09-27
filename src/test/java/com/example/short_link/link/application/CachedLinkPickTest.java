@@ -91,11 +91,9 @@ class CachedLinkPickTest {
             List.of(
                 new CachedLink.Variant(10L, "https://kr", 50, true, "KR"),
                 new CachedLink.Variant(11L, "https://any", 50, true, null)));
-    // Korean visitor must always hit the KR variant.
     for (int i = 0; i < 200; i++) {
       assertThat(link.pick("KR").url()).isEqualTo("https://kr");
     }
-    // Non-matching visitor falls through to agnostic.
     for (int i = 0; i < 200; i++) {
       assertThat(link.pick("US").url()).isEqualTo("https://any");
     }
@@ -179,9 +177,7 @@ class CachedLinkPickTest {
             List.of(
                 new CachedLink.Variant(10L, "https://kr-only", 50, true, "KR"),
                 new CachedLink.Variant(11L, "https://kr-ios", 50, true, "KR", null, "ios")));
-    // KR + iOS visitor matches the more specific (KR+iOS) variant.
     assertThat(link.pick("KR", "ios", null).url()).isEqualTo("https://kr-ios");
-    // KR but android still picks the KR-only variant.
     assertThat(link.pick("KR", "android", null).url()).isEqualTo("https://kr-only");
   }
 

@@ -22,10 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * The owner's "보관함" (스마트 셸프): the caller's bookmarks as full feed cards, plus the folders they
- * organize them into. Every endpoint is scoped to the authenticated caller.
- */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor

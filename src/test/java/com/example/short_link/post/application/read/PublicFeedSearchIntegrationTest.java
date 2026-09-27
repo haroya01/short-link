@@ -27,18 +27,15 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Exercises the FULLTEXT(ngram) search against a real MySQL — the MATCH() clause, the author-handle
- * subquery, relevance ranking and Korean partial matching only show up at query time, so a mock
- * unit test can't catch a malformed clause. search_text is populated the way the write path does it
- * (via {@link PostSearchTextFlattener}) so these posts mirror production rows.
- *
- * <p>★ NOT @Transactional (unlike most integration tests here). InnoDB FULLTEXT is invisible to a
- * MATCH() that runs inside the SAME transaction as the INSERT — the just-inserted document sits in
- * an FTS cache that only becomes searchable on commit. A rollback-per-test model would make every
- * MATCH find nothing. So each write commits (Spring Data save() is its own tx), and {@link
- * #cleanUp} truncates the tables afterward.
- */
+// Exercises the FULLTEXT(ngram) search against a real MySQL — the MATCH() clause, the author-handle
+// subquery, relevance ranking and Korean partial matching only show up at query time, so a mock
+// unit test can't catch a malformed clause. search_text is populated the way the write path does it
+// (via PostSearchTextFlattener) so these posts mirror production rows.
+// ★ NOT @Transactional (unlike most integration tests here). InnoDB FULLTEXT is invisible to a
+// MATCH() that runs inside the SAME transaction as the INSERT — the just-inserted document sits in
+// an FTS cache that only becomes searchable on commit. A rollback-per-test model would make every
+// MATCH find nothing. So each write commits (Spring Data save() is its own tx), and cleanUp
+// truncates the tables afterward.
 @SpringBootTest
 @ActiveProfiles("test")
 class PublicFeedSearchIntegrationTest {
@@ -102,7 +99,7 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> slugs(String query) {
-    return service.search(query, "recent", null, 0, 20).items().stream()
+    return service.feed(PublicFeedQuery.from(query, null, "recent", null, 0, 20)).items().stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -120,10 +117,10 @@ class PublicFeedSearchIntegrationTest {
     publish(bob, "react-hooks", "Learning React", "all about hooks", List.of("react", "frontend"));
     publish(alice, "k8s", "Deploying to Kubernetes", "rollout strategies", List.of("devops"));
 
-    assertThat(slugs("hexagonal")).containsExactly("hexagonal"); // title
-    assertThat(slugs("hooks")).containsExactly("react-hooks"); // excerpt
-    assertThat(slugs("frontend")).containsExactly("react-hooks"); // tag
-    assertThat(slugs("alice")).containsExactlyInAnyOrder("hexagonal", "k8s"); // author handle
+    assertThat(slugs("hexagonal")).containsExactly("hexagonal");
+    assertThat(slugs("hooks")).containsExactly("react-hooks");
+    assertThat(slugs("frontend")).containsExactly("react-hooks");
+    assertThat(slugs("alice")).containsExactlyInAnyOrder("hexagonal", "k8s");
   }
 
   @Test
@@ -141,7 +138,7 @@ class PublicFeedSearchIntegrationTest {
     PostEntity draft = new PostEntity(alice, "draft", "Draft about Kafka", "ko");
     draft.updateExcerpt("wip");
     draft.updateTags(List.of("kafka"));
-    postRepository.save(draft); // never published
+    postRepository.save(draft);
 
     assertThat(slugs("kafka")).isEmpty();
   }
@@ -182,7 +179,7 @@ class PublicFeedSearchIntegrationTest {
   void suggestedAuthorsExcludeAuthorsWithOnlyDrafts() {
     long alice = author("alice");
     PostEntity draft = new PostEntity(alice, "d", "Draft", "ko");
-    postRepository.save(draft); // never published
+    postRepository.save(draft);
 
     assertThat(service.suggestedAuthors(5)).isEmpty();
   }
@@ -203,7 +200,7 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> trendingSlugs(String query) {
-    return service.search(query, "trending", null, 0, 20).items().stream()
+    return service.feed(PublicFeedQuery.from(query, null, "trending", null, 0, 20)).items().stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -215,8 +212,7 @@ class PublicFeedSearchIntegrationTest {
     Instant inWindow = now.minus(2, ChronoUnit.HOURS);
     Instant outOfWindow = now.minus(10, ChronoUnit.DAYS);
 
-    // All three match "kotlin" by title; the trending sort must follow recent-window views, not the
-    // lifetime view_count — the same honesty fix the main feed got, now inside search.
+    // 세 글 모두 제목이 kotlin과 맞으니 trending 정렬은 누적 view_count가 아니라 최근 구간 조회수를 따라야 한다.
     long stale = publishReturningId(a, "kotlin-stale", "Kotlin deep dive", List.of(), 800);
     for (int i = 0; i < 6; i++) view(stale, outOfWindow); // big lifetime count, but all old
 
@@ -231,12 +227,15 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> relevanceSlugs(String query) {
-    return service.search(query, "relevance", null, 0, 20).items().stream()
+    return service
+        .feed(PublicFeedQuery.from(query, null, "relevance", null, 0, 20))
+        .items()
+        .stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
 
-  // H1 회귀 방지의 핵심: 예전 검색은 본문(post_block)을 통째로 놓쳤다. 이제 본문 단어로 글이 잡혀야 한다.
+  // 예전 검색은 본문(post_block)을 통째로 놓쳤다. 본문 단어로도 글이 잡혀야 한다.
   @Test
   void matchesBodyBlockText() {
     long a = author("writer");
@@ -247,12 +246,10 @@ class PublicFeedSearchIntegrationTest {
         "짧은 요약",
         List.of("일반"),
         List.of(paragraph("본문에만 등장하는 리다이렉트 성능 최적화 이야기"), paragraph("두 번째 문단은 캐시 전략을 다룬다")));
-    // 제목·요약·태그 어디에도 없고 오직 본문에만 있는 단어.
     assertThat(relevanceSlugs("리다이렉트")).containsExactly("with-body");
     assertThat(relevanceSlugs("캐시")).containsExactly("with-body");
   }
 
-  // H2 관련성 랭킹: 검색어가 더 많이/무겁게 겹치는 글이 위로.
   @Test
   void relevanceRanksStrongerMatchFirst() {
     long a = author("ranker");
@@ -269,18 +266,15 @@ class PublicFeedSearchIntegrationTest {
     assertThat(ranked).containsExactly("strong", "weak");
   }
 
-  // H3 한글 부분일치(ngram token size 2): 두 글자 부분어로도 잡혀야 한다.
   @Test
   void koreanPartialMatch() {
     long a = author("kwriter");
     publish(
         a, "korean", "데이터베이스 인덱스 설계", null, List.of(), List.of(paragraph("인덱스 선택도와 카디널리티에 대하여")));
-    // "인덱스"의 부분(두 글자 이상)으로도 매칭.
     assertThat(relevanceSlugs("인덱")).containsExactly("korean");
     assertThat(relevanceSlugs("데이터")).containsExactly("korean");
   }
 
-  // 하위호환: sort 미지정(기본=relevance)에서도 예전 title/tag/author 매칭이 그대로 잡힌다.
   @Test
   void defaultRelevanceSortStillMatchesTitleTagAndAuthor() {
     long alice = author("aliceR");
@@ -288,28 +282,23 @@ class PublicFeedSearchIntegrationTest {
     publish(alice, "r-hex", "Hexagonal in Spring", "ports", List.of("spring"));
     publish(bob, "r-react", "Learning React", "hooks", List.of("frontend"));
 
-    assertThat(relevanceSlugs("hexagonal")).containsExactly("r-hex"); // title
-    assertThat(relevanceSlugs("frontend")).containsExactly("r-react"); // tag
-    assertThat(relevanceSlugs("aliceR")).containsExactly("r-hex"); // author handle
+    assertThat(relevanceSlugs("hexagonal")).containsExactly("r-hex");
+    assertThat(relevanceSlugs("frontend")).containsExactly("r-react");
+    assertThat(relevanceSlugs("aliceR")).containsExactly("r-hex");
   }
 
-  // 회귀 방지(create→publish 경로): 제목만 붙이고 본문 블록 편집 없이 그대로 발행한 글도 제목 단어로 검색돼야 한다. 편집
-  // use-case 만 검색 평문을 채우던 시절엔 이런 글이 곁 테이블에 아무 행도 없어 MATCH 0건(구 title LIKE 대비 회귀)이었다.
-  // 실제 use-case(CreatePostUseCase→PublishPostUseCase)를 태워 발행 경로의 refresh 가 회귀를 막는지 증명한다.
+  // 제목만 붙이고 본문 블록을 편집하지 않은 채 발행한 글도 제목 단어로 검색돼야 한다.
+  // 편집 경로만 검색 평문을 채우면 이런 글은 곁 테이블에 행이 없어 검색되지 않는다.
   @Test
   void publishedWithoutBlockEditIsSearchableByTitleWord() {
     long author = author("publisher");
-    PostEntity created =
+    var created =
         createPost.execute(new CreatePostCommand(author, "publish-only", "동시성 제어 깊이 파보기", "ko"));
-    // 블록 교체·메타 수정 없이 곧장 발행 — 예전이라면 search_text 가 NULL 로 남았을 경로.
-    publishPost.execute(new PublishPostCommand(author, created.getId()));
+    publishPost.execute(new PublishPostCommand(author, created.id()));
 
-    // 곁 테이블에 발행 시점 refresh 로 행이 생겼고, 제목 단어(부분어 포함)로 잡힌다.
     Integer rows =
         jdbc.queryForObject(
-            "SELECT COUNT(*) FROM post_search_text WHERE post_id = ?",
-            Integer.class,
-            created.getId());
+            "SELECT COUNT(*) FROM post_search_text WHERE post_id = ?", Integer.class, created.id());
     assertThat(rows).isEqualTo(1);
     assertThat(relevanceSlugs("동시성")).containsExactly("publish-only");
     assertThat(relevanceSlugs("제어")).containsExactly("publish-only");
@@ -325,7 +314,6 @@ class PublicFeedSearchIntegrationTest {
 
     // "C++" 는 스크럽 후 "C"(1자)만 남아 ngram 매칭이 불가능 — 제목 LIKE 폴백으로 잡혀야 한다.
     assertThat(relevanceSlugs("C++")).containsExactly("cpp");
-    // 폴백이 켜져도 매칭 안 되는 글은 딸려 오지 않는다.
     assertThat(relevanceSlugs("C++")).doesNotContain("rust");
   }
 
@@ -337,7 +325,6 @@ class PublicFeedSearchIntegrationTest {
     // 본문·제목·태그 어디에도 "인덱스" 없음. 다만 제목에 "인덱" 이라는 부분 문자열은 없다 — 폴백이 꺼져 있으니 0건이어야 한다.
     publish(a, "db", "데이터 정합성", "트랜잭션 격리", List.of("db"));
 
-    // 두 글자 이상 질의라 폴백 off — 본문/제목 ngram 에 없으면 안 잡힌다(폴백으로 새는지 검증).
     assertThat(relevanceSlugs("존재하지않는단어")).isEmpty();
   }
 }

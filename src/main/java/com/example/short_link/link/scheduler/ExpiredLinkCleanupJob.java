@@ -1,6 +1,7 @@
 package com.example.short_link.link.scheduler;
 
 import com.example.short_link.common.lock.RedisDistributedLock;
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.properties.CleanupProperties;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -11,7 +12,6 @@ import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cache.CacheManager;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +27,7 @@ public class ExpiredLinkCleanupJob {
   private final ClickEventRepository clickEventRepository;
   private final RedisDistributedLock lock;
   private final MeterRegistry meterRegistry;
-  private final CacheManager cacheManager;
+  private final LinkCacheEviction linkCacheEviction;
   private final CleanupProperties cleanup;
 
   @Scheduled(cron = "${short-link.cleanup.cron:0 0 4 * * *}", zone = "Asia/Seoul")
@@ -58,19 +58,11 @@ public class ExpiredLinkCleanupJob {
       totalClicks += clickEventRepository.deleteByLinkIds(ids);
       linkRepository.deleteAll(batch);
       totalLinks += batch.size();
-      evictCaches(batch);
+      linkCacheEviction.evictAllAfterCommit(batch.stream().map(LinkEntity::getShortCode).toList());
       if (batch.size() < 500) break;
     }
     meterRegistry.counter("cleanup.expired_links", "result", "ok").increment(totalLinks);
     meterRegistry.counter("cleanup.expired_clicks", "result", "ok").increment(totalClicks);
     return totalLinks;
-  }
-
-  private void evictCaches(List<LinkEntity> batch) {
-    var cache = cacheManager.getCache("link");
-    if (cache == null) return;
-    for (LinkEntity link : batch) {
-      cache.evict(link.getShortCode());
-    }
   }
 }

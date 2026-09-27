@@ -3,11 +3,8 @@ package com.example.short_link.link.classifier.application.helper;
 import java.util.Locale;
 import java.util.regex.Pattern;
 
-/**
- * Trims and validates the {@code ?src=...} channel hint that the short URL carries. Anything
- * non-alphanumeric (plus {@code . - _}) is rejected so we don't store junk or potential XSS
- * payloads — a URL like {@code /abc?src=<script>} just gets a null channel.
- */
+// Rejects unsafe ?src= values so arbitrary text and potential XSS payloads are not stored; rejected
+// hints become null.
 public final class SourceChannelNormalizer {
 
   public static final int MAX_LENGTH = 40;

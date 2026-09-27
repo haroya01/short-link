@@ -16,6 +16,7 @@ import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -26,7 +27,6 @@ public class UpdateProfileUseCase {
 
   private static final Pattern USERNAME = Pattern.compile("^[a-z0-9][a-z0-9_]{2,15}$");
 
-  /** Squat-protect old usernames for this long after a rename. */
   private static final Duration USERNAME_GRACE = Duration.ofDays(30);
 
   private final UserRepository userRepository;
@@ -56,8 +56,20 @@ public class UpdateProfileUseCase {
             .findById(cmd.userId())
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     String previousUsername = user.getUsername();
-    if (cmd.username() != null) {
-      String normalized = cmd.username().trim().toLowerCase();
+    updateUsername(user, cmd.username(), cmd.userId());
+    updateAppearance(user, cmd);
+    cacheEviction.evictByUsername(previousUsername);
+    String currentUsername = user.getUsername();
+    if (currentUsername != null && !currentUsername.equals(previousUsername)) {
+      cacheEviction.evictByUsername(currentUsername);
+    }
+    meterRegistry.counter("profile.updated").increment();
+    return MyProfileMapper.from(user, publicProfileBaseUrl);
+  }
+
+  private void updateUsername(UserEntity user, String requestedUsername, Long userId) {
+    if (requestedUsername != null) {
+      String normalized = requestedUsername.trim().toLowerCase(Locale.ROOT);
       validateUsername(normalized);
       if (!normalized.equals(user.getUsername())) {
         if (ReservedUsernames.ALL.contains(normalized)) {
@@ -65,14 +77,14 @@ public class UpdateProfileUseCase {
         }
         userRepository
             .findByUsername(normalized)
-            .filter(other -> !other.getId().equals(cmd.userId()))
+            .filter(other -> !other.getId().equals(userId))
             .ifPresent(
                 other -> {
                   throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
                 });
         usernameHistoryRepository
             .findFirstByOldUsernameAndExpiresAtAfter(normalized, Instant.now())
-            .filter(history -> !history.getUserId().equals(cmd.userId()))
+            .filter(history -> !history.getUserId().equals(userId))
             .ifPresent(
                 history -> {
                   throw new ProfileException(ProfileErrorCode.USERNAME_TAKEN, normalized);
@@ -80,12 +92,14 @@ public class UpdateProfileUseCase {
         String previous = user.getUsername();
         if (previous != null && !previous.isBlank()) {
           usernameHistoryRepository.save(
-              new UsernameHistoryEntity(
-                  cmd.userId(), previous, Instant.now().plus(USERNAME_GRACE)));
+              new UsernameHistoryEntity(userId, previous, Instant.now().plus(USERNAME_GRACE)));
         }
         user.claimUsername(normalized);
       }
     }
+  }
+
+  private static void updateAppearance(UserEntity user, UpdateProfileCommand cmd) {
     if (cmd.bio() != null) {
       String trimmed = cmd.bio().trim();
       if (trimmed.length() > 280) {
@@ -102,15 +116,6 @@ public class UpdateProfileUseCase {
     if (cmd.hideFollowerCount() != null) {
       user.updateHideFollowerCount(cmd.hideFollowerCount());
     }
-    // The public-profile cache is keyed by username with a long TTL — without eviction every
-    // bio/theme/socials edit keeps serving the stale entry, and a rename leaves the old key alive.
-    cacheEviction.evictByUsername(previousUsername);
-    String currentUsername = user.getUsername();
-    if (currentUsername != null && !currentUsername.equals(previousUsername)) {
-      cacheEviction.evictByUsername(currentUsername);
-    }
-    meterRegistry.counter("profile.updated").increment();
-    return MyProfileMapper.from(user, publicProfileBaseUrl);
   }
 
   private static void validateUsername(String username) {

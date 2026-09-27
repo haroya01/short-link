@@ -5,6 +5,7 @@ import com.example.short_link.post.note.domain.repository.NoteLikeRepository;
 import java.util.Collection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -14,13 +15,13 @@ public class NoteLikeRepositoryAdapter implements NoteLikeRepository {
   private final JpaNoteLikeRepository jpa;
 
   @Override
-  public boolean exists(Long noteId, Long userId) {
-    return jpa.existsByNoteIdAndUserId(noteId, userId);
-  }
-
-  @Override
-  public void save(NoteLikeEntity like) {
-    jpa.save(like);
+  public void addIfAbsent(Long noteId, Long userId) {
+    if (jpa.existsByNoteIdAndUserId(noteId, userId)) return;
+    try {
+      jpa.save(new NoteLikeEntity(noteId, userId));
+    } catch (DataIntegrityViolationException ignored) {
+      // 동시 요청이 먼저 같은 좋아요를 저장한 경우 중복을 무시한다.
+    }
   }
 
   @Override

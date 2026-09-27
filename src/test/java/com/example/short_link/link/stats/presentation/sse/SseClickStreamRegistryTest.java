@@ -7,6 +7,7 @@ import com.example.short_link.link.domain.LinkId;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.io.IOException;
 import java.time.Instant;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
@@ -23,10 +24,59 @@ class SseClickStreamRegistryTest {
 
     registry.onClickRecorded(
         new ClickRecordedEvent(
-            new LinkId(7L), Instant.now(), "KR", "mobile", "kakao.com", false, null));
+            new LinkId(7L),
+            "abc1234",
+            null,
+            Instant.now(),
+            "KR",
+            "mobile",
+            "kakao.com",
+            false,
+            null));
 
     assertThat(watching.sent).isEqualTo(1);
+    assertThat(watching.payload.get("channel")).isEqualTo("kakao.com");
+    assertThat(watching.payload.containsKey("referrerHost")).isFalse();
     assertThat(otherLink.sent).isZero();
+  }
+
+  @Test
+  void ownerChannelReceivesOwnClicksOnly() {
+    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    CountingEmitter owner = new CountingEmitter();
+    CountingEmitter stranger = new CountingEmitter();
+    assertThat(registry.registerForUser(1L, owner)).isTrue();
+    assertThat(registry.registerForUser(2L, stranger)).isTrue();
+
+    registry.onClickRecorded(
+        new ClickRecordedEvent(
+            new LinkId(7L),
+            "abc1234",
+            1L,
+            Instant.now(),
+            "KR",
+            "mobile",
+            "kakao.com",
+            false,
+            null));
+
+    assertThat(owner.sent).isEqualTo(1);
+    assertThat(owner.payload.get("channel")).isEqualTo("kakao.com");
+    assertThat(owner.payload.containsKey("referrerHost")).isFalse();
+    assertThat(stranger.sent).isZero();
+  }
+
+  @Test
+  void anonymousLinkClickSkipsOwnerChannel() {
+    SseClickStreamRegistry registry = new SseClickStreamRegistry(new SimpleMeterRegistry());
+    CountingEmitter owner = new CountingEmitter();
+    registry.registerForUser(1L, owner);
+
+    registry.onClickRecorded(
+        new ClickRecordedEvent(
+            new LinkId(7L), "abc1234", null, Instant.now(), "KR", "mobile", null, false, null));
+
+    assertThat(owner.sent).isZero();
   }
 
   @Test
@@ -38,7 +88,8 @@ class SseClickStreamRegistryTest {
     registry.register(new LinkId(42L), alive);
 
     registry.onClickRecorded(
-        new ClickRecordedEvent(new LinkId(42L), Instant.now(), "KR", "desktop", null, false, null));
+        new ClickRecordedEvent(
+            new LinkId(42L), "abc1234", null, Instant.now(), "KR", "desktop", null, false, null));
 
     assertThat(alive.sent).isEqualTo(1);
     assertThat(registry.activeStreams(new LinkId(42L))).isEqualTo(1);
@@ -82,9 +133,9 @@ class SseClickStreamRegistryTest {
     assertThat(registry.activeStreams(new LinkId(8L))).isEqualTo(1);
   }
 
-  /** Minimal SseEmitter that lets us count send() calls without Tomcat. */
   private static class CountingEmitter extends SseEmitter {
     int sent = 0;
+    Map<?, ?> payload;
 
     CountingEmitter() {
       super(10_000L);
@@ -93,6 +144,13 @@ class SseClickStreamRegistryTest {
     @Override
     public void send(SseEventBuilder builder) {
       sent++;
+      payload =
+          builder.build().stream()
+              .map(item -> item.getData())
+              .filter(Map.class::isInstance)
+              .map(Map.class::cast)
+              .findFirst()
+              .orElseThrow();
     }
   }
 

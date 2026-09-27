@@ -2,17 +2,17 @@ package com.example.short_link.link.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.MyLink;
+import com.example.short_link.link.application.read.MyLinkReader;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import com.example.short_link.link.og.application.dto.LinkOgFetchRequested;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
 import com.example.short_link.link.og.domain.repository.LinkOgMetadataRepository;
-import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,22 +27,20 @@ public class UpdateLinkUseCase {
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final CreateLinkValidator validator;
+  private final MyLinkReader linkReader;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
-  @CacheEvict(value = "link", key = "#command.shortCode()")
   public MyLink execute(UpdateLinkCommand command) {
     LinkEntity link = ownership.requireOwned(command.userId(), command.shortCode());
     boolean urlChanged = false;
     if (command.originalUrl() != null && !command.originalUrl().equals(link.getOriginalUrl())) {
-      // Same self-reference guard as creation — otherwise an update could repoint a link at the
-      // short-link host itself and reopen the redirect-loop hole. The full validateUrl (Safe
-      // Browsing HTTP round-trip) stays creation-only: this method is @Transactional and must not
-      // hold a JDBC connection across an outbound call.
+      // Safe Browsing HTTP calls stay outside this transaction to avoid holding a JDBC connection.
       validator.rejectSelfReference(command.originalUrl());
       link.changeOriginalUrl(command.originalUrl());
       urlChanged = true;
     }
-    if (command.expiresAt() != null) {
+    if (command.expiresAt() != null || command.clearExpiresAt()) {
       link.changeExpiresAt(command.expiresAt());
     }
     if (command.note() != null) link.updateNote(command.note());
@@ -69,14 +67,12 @@ public class UpdateLinkUseCase {
         "link",
         link.getShortCode().value(),
         command.userId(),
-        Map.of("urlChanged", urlChanged, "expiresAtChanged", command.expiresAt() != null));
-    return new MyLink(
-        link.getShortCode(),
-        link.getOriginalUrl(),
-        link.getCreatedAt(),
-        link.getExpiresAt(),
-        0L,
-        List.of(),
-        List.of(0L, 0L, 0L, 0L, 0L, 0L, 0L));
+        Map.of(
+            "urlChanged",
+            urlChanged,
+            "expiresAtChanged",
+            command.expiresAt() != null || command.clearExpiresAt()));
+    linkCacheEviction.evictAfterCommit(command.shortCode());
+    return linkReader.read(link);
   }
 }

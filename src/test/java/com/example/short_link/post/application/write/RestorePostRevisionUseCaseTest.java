@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostRevisionEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
@@ -49,7 +50,8 @@ class RestorePostRevisionUseCaseTest {
             postRepository,
             postRevisionRepository,
             postBlockRepository,
-            searchTextUpdater);
+            searchTextUpdater,
+            new PostWriteViewAssembler(postRepository));
   }
 
   private PostRevisionEntity revision(int version, String json) {
@@ -68,17 +70,17 @@ class RestorePostRevisionUseCaseTest {
                 "og.png",
                 "ja",
                 List.of(new PostSnapshot.BlockSnapshot("PARAGRAPH", "Old content"))));
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 2))
         .thenReturn(Optional.of(revision(2, json)));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity restored = useCase.execute(new RestorePostRevisionCommand(7L, 42L, 2));
+    PostView restored = useCase.execute(new RestorePostRevisionCommand(7L, 42L, 2));
 
-    assertThat(restored.getTitle()).isEqualTo("Restored");
-    assertThat(restored.getExcerpt()).isEqualTo("Old excerpt");
-    assertThat(restored.getOgImageUrl()).isEqualTo("https://cdn/og.png");
-    assertThat(restored.getLanguageTag()).isEqualTo("ja");
+    assertThat(restored.title()).isEqualTo("Restored");
+    assertThat(restored.excerpt()).isEqualTo("Old excerpt");
+    assertThat(restored.ogImageUrl()).isEqualTo("https://cdn/og.png");
+    assertThat(restored.languageTag()).isEqualTo("ja");
     verify(postBlockRepository).deleteAllByPostId(42L);
     verify(postBlockRepository).insertAll(anyList());
   }
@@ -89,7 +91,7 @@ class RestorePostRevisionUseCaseTest {
     post.updateOgImage("https://cdn/existing.png", "existing.png");
     String json =
         objectMapper.writeValueAsString(new PostSnapshot("T", null, null, null, "ko", List.of()));
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 1))
         .thenReturn(Optional.of(revision(1, json)));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
@@ -104,7 +106,7 @@ class RestorePostRevisionUseCaseTest {
   @Test
   void rejectsRevisionNotFound() {
     PostEntity post = new PostEntity(7L, "my-post", "Current", "ko");
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 99)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> useCase.execute(new RestorePostRevisionCommand(7L, 42L, 99)))

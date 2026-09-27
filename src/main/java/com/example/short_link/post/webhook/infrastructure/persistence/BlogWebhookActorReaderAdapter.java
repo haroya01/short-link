@@ -7,10 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import org.springframework.stereotype.Repository;
 
-/**
- * Resolves an actor's username via a single read against the user module's {@code users} table — a
- * native query so the webhook module needn't depend on the user module's entity.
- */
 @Repository
 class BlogWebhookActorReaderAdapter implements BlogWebhookActorReader {
 

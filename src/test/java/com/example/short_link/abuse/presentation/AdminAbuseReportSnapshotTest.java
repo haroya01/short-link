@@ -53,7 +53,6 @@ class AdminAbuseReportSnapshotTest {
     return userRepository.save(user).getId();
   }
 
-  /** Finds the report pointing at the given subject in the admin list response. */
   private JsonNode report(String token, long subjectId, String subjectType) throws Exception {
     String body =
         mvc.perform(get("/api/v1/admin/abuse-reports").header("Authorization", "Bearer " + token))
@@ -125,7 +124,6 @@ class AdminAbuseReportSnapshotTest {
         new AbuseReportEntity(null, AbuseSubjectType.USER, targetId, AbuseReason.HARASSMENT, "사칭"));
 
     JsonNode r = report(adminToken("g-user-admin"), targetId, "USER");
-    // USER 대상도 이제 핸들 스냅샷을 채운다(제목/URL 은 없음). ACTIVE 유저이므로 removed=false.
     assertThat(r.get("subjectAuthorHandle").asText()).isEqualTo("targethandle");
     assertThat(nullish(r, "subjectTitle")).isTrue();
     assertThat(nullish(r, "subjectUrl")).isTrue();

@@ -16,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** 인증 없이 하이라이트 답글 목록 조회. permitAll 는 GET /api/v1/public/** 가 커버. */
 @KurlWebMvcTest(controllers = PublicHighlightReplyController.class)
 class PublicHighlightReplyControllerTest {
 

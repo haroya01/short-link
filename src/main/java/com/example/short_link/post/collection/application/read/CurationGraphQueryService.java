@@ -25,10 +25,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 큐레이션 그래프 읽기 — 사람이 손으로 엮은 *공개* 컬렉션만으로 두 발견 고리를 연다(쿠키·랭킹 없이). 한 블록과 같은 길에 함께 놓인 블록("이것과 이어진 것"), 같은
- * 것을 엮은 다른 큐레이터("취향이 겹치는 사람"). 블록은 일괄 해석(N+1 없이)하고, 대상이 사라진 행은 조용히 건너뛴다. §0: PUBLIC 만.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -42,7 +38,6 @@ public class CurationGraphQueryService {
   private final NoteRepository noteRepository;
   private final UserRepository userRepository;
 
-  /** 이 블록과 같은 공개 컬렉션에 함께 놓인 블록들(자기 제외) — 함께 놓인 컬렉션 수 큰 순. */
   public List<RelatedBlockView> relatedTo(ConnectionBlockType blockType, Long refId, int limit) {
     List<CooccurrenceRow> rows =
         connectionRepository.findCooccurring(blockType, refId, clamp(limit));
@@ -71,7 +66,6 @@ public class CurationGraphQueryService {
     return out;
   }
 
-  /** 이 큐레이터의 공개 컬렉션 블록을 같이 엮은 다른 큐레이터들 — 겹치는 블록 수 큰 순. 없는 핸들이면 조용히 빈 목록(§0). */
   public List<KindredCuratorView> kindredCurators(String username, int limit) {
     Optional<UserEntity> me = userRepository.findByUsername(username);
     if (me.isEmpty()) return List.of();
@@ -88,7 +82,7 @@ public class CurationGraphQueryService {
     List<KindredCuratorView> out = new ArrayList<>();
     for (CuratorOverlapRow row : rows) {
       UserEntity curator = users.get(row.getCuratorId());
-      if (curator == null || curator.getUsername() == null) continue; // 소실·미공개 핸들은 뺀다.
+      if (curator == null || curator.getUsername() == null) continue;
       int shared = row.getSharedItems() == null ? 0 : row.getSharedItems().intValue();
       out.add(new KindredCuratorView(PublicAuthorView.from(curator), shared));
     }

@@ -53,12 +53,36 @@ jobs:
             [ "$code" = "302" ] && echo "ok  $label (302)" || fails+=("$label: expected 302 got $code ($url)")
           }
 
+          # stored click count of the smoke link — its stats must be public
+          stored() {
+            curl -sS -m 15 -A "$UA" "$BASE/api/v1/links/$CODE/public-stats" 2>/dev/null \
+              | jq -er '.totalClicks'
+          }
+
           check "frontend home"       200 "$BASE/ko"
           check "public feed"         200 "$BASE/api/v1/public/posts?size=1" '"items"'
           check "auth endpoint shape" 401 "$BASE/api/v1/users/me" '"UNAUTHORIZED"'
+          before="$(stored)" || before=""
           redir "redirect bare"       "$BASE/$CODE"
           redir "redirect ?src"       "$BASE/$CODE?src=smoke"
           redir "redirect ?utm"       "$BASE/$CODE?utm_source=smoke&utm_medium=cron"
+
+          # the three redirects above must each become exactly one stored click
+          if [ -z "$before" ]; then
+            fails+=("click storage: public-stats of $CODE unreadable")
+          else
+            want=$((before + 3)); got=""
+            for _ in $(seq 1 20); do
+              got="$(stored)" || got=""
+              [ "$got" = "$want" ] && break
+              sleep 3
+            done
+            if [ "$got" = "$want" ]; then
+              echo "ok  click storage (+3)"
+            else
+              fails+=("click storage: expected $want got ${got:-unreadable} (before $before)")
+            fi
+          fi
 
           if [ "${#fails[@]}" -gt 0 ]; then
             echo "::error::prod smoke failed (${#fails[@]} check(s))"

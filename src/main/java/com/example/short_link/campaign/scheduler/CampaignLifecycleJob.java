@@ -12,10 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * Campaign 상태 자동 전환 스케줄러. 매 분 시작 시각이 도래한 DRAFT 캠페인을 ACTIVE 로 옮긴다. ACTIVE → ENDED 전환 + postEndAction
- * 일괄 적용은 M6 에서 별도 핸들러로 처리한다 (도메인 행동이 더 크고 별 책임).
- */
 @Slf4j
 @Component
 @RequiredArgsConstructor

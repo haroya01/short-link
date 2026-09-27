@@ -1,0 +1,14 @@
+# Exact JDBC execution counts for real HTTP requests; fixtures and DB assertions are outside capture.
+# Review changes with the actual SQL evidence in build/reports/query-audit/http-contracts/.
+# identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
+# Feed: posts page + total count + authors batch + tags batch, at every tested page size.
+@junit | feed-recent-size-1 | 4 | 0 | 0 | 0 | 4
+@junit | feed-recent-size-8 | 4 | 0 | 0 | 0 | 4
+@junit | feed-recent-size-20 | 4 | 0 | 0 | 0 | 4
+# Create: author lookup + slug availability + committed post insert.
+@junit | post-create | 2 | 1 | 0 | 0 | 3
+# Read: ownership lookup + ordered blocks.
+@junit | post-blocks-read | 2 | 0 | 0 | 0 | 2
+# Replace: ownership + ordered blocks + tags; one blocks insert + search-text upsert;
+# post edit timestamp update + old blocks delete. Six body rows still use one block INSERT.
+@junit | post-blocks-replace-six | 3 | 2 | 1 | 1 | 7

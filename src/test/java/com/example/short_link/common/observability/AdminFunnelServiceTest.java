@@ -50,12 +50,9 @@ class AdminFunnelServiceTest {
 
   @Test
   void snapshotCountsThroughFunnel() {
-    // user 1 — no link
     userRepository.save(new UserEntity("a@x.com", "google", "g-fa"));
-    // user 2 — has link, no click
     UserEntity u2 = userRepository.save(new UserEntity("b@x.com", "google", "g-fb"));
     linkRepository.save(new LinkEntity("https://example.com", "fun0001", u2.getId(), null));
-    // user 3 — has link + click
     UserEntity u3 = userRepository.save(new UserEntity("c@x.com", "google", "g-fc"));
     LinkEntity l3 =
         linkRepository.save(new LinkEntity("https://example.com", "fun0002", u3.getId(), null));
@@ -67,7 +64,6 @@ class AdminFunnelServiceTest {
             .deviceClass("desktop")
             .bot(false)
             .build());
-    // user 4 — has link + click + webhook
     UserEntity u4 = userRepository.save(new UserEntity("d@x.com", "google", "g-fd"));
     LinkEntity l4 =
         linkRepository.save(new LinkEntity("https://example.com", "fun0003", u4.getId(), null));

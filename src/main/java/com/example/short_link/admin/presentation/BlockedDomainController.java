@@ -1,9 +1,8 @@
 package com.example.short_link.admin.presentation;
 
 import com.example.short_link.admin.application.read.BlockedDomainQueryService;
-import com.example.short_link.admin.application.write.BlockDomainUseCase;
+import com.example.short_link.admin.application.write.BlockDomainWithWarningsUseCase;
 import com.example.short_link.admin.application.write.UnblockDomainUseCase;
-import com.example.short_link.admin.domain.BlockedDomainEntity;
 import com.example.short_link.admin.presentation.request.BlockDomainRequest;
 import com.example.short_link.admin.presentation.response.BlockedDomainResponse;
 import jakarta.validation.Valid;
@@ -26,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class BlockedDomainController {
 
   private final BlockedDomainQueryService queryService;
-  private final BlockDomainUseCase blockDomain;
+  private final BlockDomainWithWarningsUseCase blockDomain;
   private final UnblockDomainUseCase unblockDomain;
 
   @GetMapping
@@ -37,8 +36,9 @@ public class BlockedDomainController {
   @PostMapping
   public ResponseEntity<BlockedDomainResponse> block(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody BlockDomainRequest request) {
-    BlockedDomainEntity blocked = blockDomain.execute(request.domain(), request.reason(), userId);
-    return ResponseEntity.status(HttpStatus.CREATED).body(BlockedDomainResponse.from(blocked));
+    var result = blockDomain.execute(request.domain(), request.reason(), userId);
+    return ResponseEntity.status(HttpStatus.CREATED)
+        .body(BlockedDomainResponse.from(result.domain(), result.warnedOwners()));
   }
 
   @DeleteMapping("/{domain}")

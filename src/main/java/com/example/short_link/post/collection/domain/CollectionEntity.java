@@ -1,6 +1,8 @@
 package com.example.short_link.post.collection.domain;
 
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.post.exception.PostErrorCode;
+import com.example.short_link.post.exception.PostException;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -13,10 +15,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 컬렉션(Are.na 채널) — 글·하이라이트·노트를 주제로 잇는 큐레이션 단위. §0 "읽기의 연결 그래프"의 그릇. 담긴 블록은 {@link
- * CollectionConnectionEntity} 로 다대다 연결되며(멀티멤버십), 컬렉션 자체는 좋아요·팔로워 수 같은 허영 지표를 들지 않는다(바깥은 조용히).
- */
 @Entity
 @Table(name = "collection")
 @Getter
@@ -43,7 +41,6 @@ public class CollectionEntity extends BaseTimeEntity {
   @Column(nullable = false, length = 16)
   private CollectionVisibility visibility;
 
-  /** COLLECTION(주제 묶음) | PATH(순서로 엮은 reading path, A 척추). 생성 시 고정. */
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private CollectionKind kind;
@@ -55,9 +52,7 @@ public class CollectionEntity extends BaseTimeEntity {
       CollectionVisibility visibility,
       CollectionKind kind) {
     this.ownerId = ownerId;
-    this.title = title;
-    this.description = description;
-    this.visibility = visibility;
+    edit(title, description, visibility);
     this.kind = kind == null ? CollectionKind.COLLECTION : kind;
   }
 
@@ -65,14 +60,30 @@ public class CollectionEntity extends BaseTimeEntity {
     return ownerId.equals(viewerId);
   }
 
-  /** 이 뷰어가 볼 수 있는가 — 주인은 항상, 그 외엔 PRIVATE 만 막힌다. */
   public boolean isVisibleTo(Long viewerId) {
     return isOwnedBy(viewerId) || visibility.isVisibleToOthers();
   }
 
   public void edit(String title, String description, CollectionVisibility visibility) {
-    this.title = title;
-    this.description = description;
+    this.title = normalizeTitle(title);
+    this.description = normalizeDescription(description);
     this.visibility = visibility;
+  }
+
+  private static String normalizeTitle(String raw) {
+    String title = raw == null ? "" : raw.strip();
+    if (title.isEmpty()) {
+      throw new PostException(PostErrorCode.COLLECTION_TITLE_REQUIRED);
+    }
+    return title.length() > MAX_TITLE ? title.substring(0, MAX_TITLE) : title;
+  }
+
+  private static String normalizeDescription(String raw) {
+    if (raw == null) return null;
+    String description = raw.strip();
+    if (description.isEmpty()) return null;
+    return description.length() > MAX_DESCRIPTION
+        ? description.substring(0, MAX_DESCRIPTION)
+        : description;
   }
 }

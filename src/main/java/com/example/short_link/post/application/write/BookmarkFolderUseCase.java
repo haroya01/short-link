@@ -11,12 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Create / rename / delete bookmark folders and file bookmarks into them. Every operation is scoped
- * to the caller: a folder is only ever found via (id, userId), so one user can't touch another's
- * shelf. Deleting a folder unfiles its bookmarks (the FK is ON DELETE SET NULL) rather than
- * dropping them from the reading list.
- */
+// All folder operations are scoped to the caller. Deleting a folder unfiles its bookmarks via ON
+// DELETE SET NULL, preserving the reading list.
 @Service
 @RequiredArgsConstructor
 public class BookmarkFolderUseCase {
@@ -55,7 +51,6 @@ public class BookmarkFolderUseCase {
     bookmarkFolderRepository.delete(require(userId, folderId));
   }
 
-  /** File the caller's bookmark on {@code postId} under {@code folderId} (null = unfile). */
   @Transactional
   public void moveBookmark(Long userId, Long postId, Long folderId) {
     if (folderId != null) {

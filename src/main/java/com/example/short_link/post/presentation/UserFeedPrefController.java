@@ -11,10 +11,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Authenticated per-user feed preferences — the blog-home default tab. PUT returns the full updated
- * prefs so the caller replaces its state in one round-trip (mirrors the tag-pref controller).
- */
 @RestController
 @RequestMapping("/api/v1/users/me/feed-prefs")
 @RequiredArgsConstructor

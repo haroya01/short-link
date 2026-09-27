@@ -47,9 +47,6 @@ out/
 *.p12
 *.keystore
 
-### Local agent state ###
-.claude/
-
 ### GeoIP ###
 *.mmdb
 !**/GeoLite2-City-Fallback.mmdb

@@ -65,8 +65,6 @@ class CollectionCommandServiceTest {
     return c;
   }
 
-  // ---- create ----
-
   @Test
   void createsCollectionWithEchoedFields() {
     when(collectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -77,10 +75,10 @@ class CollectionCommandServiceTest {
                 1L, "  느린 사고  ", "  오래 머문 글  ", CollectionVisibility.PUBLIC, null));
 
     assertThat(saved.getOwnerId()).isEqualTo(1L);
-    assertThat(saved.getTitle()).isEqualTo("느린 사고"); // stripped
+    assertThat(saved.getTitle()).isEqualTo("느린 사고");
     assertThat(saved.getDescription()).isEqualTo("오래 머문 글");
     assertThat(saved.getVisibility()).isEqualTo(CollectionVisibility.PUBLIC);
-    assertThat(saved.getKind()).isEqualTo(CollectionKind.COLLECTION); // null → 기본
+    assertThat(saved.getKind()).isEqualTo(CollectionKind.COLLECTION);
   }
 
   @Test
@@ -131,8 +129,6 @@ class CollectionCommandServiceTest {
     assertThat(saved.getTitle()).hasSize(CollectionEntity.MAX_TITLE);
   }
 
-  // ---- edit ----
-
   @Test
   void editUpdatesFieldsWhenOwner() {
     CollectionEntity c = collection(10L, 1L, CollectionVisibility.PRIVATE);
@@ -142,7 +138,7 @@ class CollectionCommandServiceTest {
         service.edit(
             new EditCollectionCommand(1L, 10L, "  새 이름  ", "새 소개", CollectionVisibility.PUBLIC));
 
-    assertThat(result.getTitle()).isEqualTo("새 이름"); // stripped
+    assertThat(result.getTitle()).isEqualTo("새 이름");
     assertThat(result.getDescription()).isEqualTo("새 소개");
     assertThat(result.getVisibility()).isEqualTo(CollectionVisibility.PUBLIC);
   }
@@ -162,20 +158,18 @@ class CollectionCommandServiceTest {
   }
 
   @Test
-  void editRejectsForeignOwner() {
+  void editChecksOwnershipBeforeValidatingTitle() {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 2L, CollectionVisibility.PRIVATE)));
 
     assertThatThrownBy(
             () ->
                 service.edit(
-                    new EditCollectionCommand(1L, 10L, "x", null, CollectionVisibility.PUBLIC)))
+                    new EditCollectionCommand(1L, 10L, "  ", null, CollectionVisibility.PUBLIC)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_PERMISSION_DENIED);
   }
-
-  // ---- connect ----
 
   private CollectionConnectionEntity connection(
       long refId, ConnectionBlockType type, int position) {
@@ -189,7 +183,6 @@ class CollectionCommandServiceTest {
     PostEntity post = new PostEntity(2L, "slug", "Title", "ko");
     ReflectionTestUtils.setField(post, "id", 5L);
     when(postRepository.findById(5L)).thenReturn(Optional.of(post));
-    // The path already has three blocks; the new block appends after the highest position.
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
         .thenReturn(
             List.of(
@@ -201,9 +194,9 @@ class CollectionCommandServiceTest {
     CollectionConnectionEntity saved =
         service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, "  좋은 글  "));
 
-    assertThat(saved.getPosition()).isEqualTo(4); // max position 3 + 1
+    assertThat(saved.getPosition()).isEqualTo(4);
     assertThat(saved.getBlockType()).isEqualTo(ConnectionBlockType.POST);
-    assertThat(saved.getWhy()).isEqualTo("좋은 글"); // stripped
+    assertThat(saved.getWhy()).isEqualTo("좋은 글");
   }
 
   @Test
@@ -242,7 +235,6 @@ class CollectionCommandServiceTest {
     // 멱등이되 목소리는 갱신 — 새로 쓴 "왜"가 조용히 버려지지 않는다.
     assertThat(result.getWhy()).isEqualTo("new");
     verify(connectionRepository, never()).save(any());
-    // Re-connecting an already-present block is idempotent: no graph notice fires.
     verify(events, never()).publishEvent(any());
   }
 
@@ -265,8 +257,6 @@ class CollectionCommandServiceTest {
     assertThat(result.getWhy()).isEqualTo("old");
     verify(connectionRepository, never()).save(any());
   }
-
-  // ---- connect → graph notification event ----
 
   private PostEntity post(long id, long authorId) {
     PostEntity p = new PostEntity(authorId, "s" + id, "T" + id, "ko");
@@ -291,7 +281,6 @@ class CollectionCommandServiceTest {
   void connectingPostPublishesEventWithAuthorAndDedupedPriorContributors() {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
-    // Curator 1 weaves post 5 (by author 2) into a path already holding posts by authors 3, 4, 3.
     when(postRepository.findById(5L)).thenReturn(Optional.of(post(5L, 2L)));
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
         .thenReturn(
@@ -309,9 +298,8 @@ class CollectionCommandServiceTest {
     assertThat(event.actorUserId()).isEqualTo(1L);
     assertThat(event.collectionId()).isEqualTo(10L);
     assertThat(event.collectionName()).isEqualTo("느린 사고");
-    assertThat(event.connectedPostId()).isEqualTo(5L); // a post occasions itself
+    assertThat(event.connectedPostId()).isEqualTo(5L);
     assertThat(event.connectedAuthorUserId()).isEqualTo(2L);
-    // 3 appears twice among prior blocks → deduped to one; order preserved.
     assertThat(event.priorContributorUserIds()).containsExactly(3L, 4L);
   }
 
@@ -319,7 +307,6 @@ class CollectionCommandServiceTest {
   void priorContributorsExcludeTheWovenAuthorAndTheCurator() {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
-    // Curator 1 weaves post 5 (by author 2); the path already holds work by 2, by 1, and by 9.
     when(postRepository.findById(5L)).thenReturn(Optional.of(post(5L, 2L)));
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
         .thenReturn(
@@ -334,7 +321,6 @@ class CollectionCommandServiceTest {
     service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, null));
 
     CollectionConnectedEvent event = capturePublishedEvent();
-    // 2 (woven author) and 1 (curator) drop out; only 9 remains.
     assertThat(event.priorContributorUserIds()).containsExactly(9L);
   }
 
@@ -342,7 +328,6 @@ class CollectionCommandServiceTest {
   void connectingHighlightUsesHighlighterAsAuthorAndItsPostAsOccasion() {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
-    // Highlight 5 was made by reader 8 on post 77 — the highlighter is the author to notify.
     when(highlightRepository.findById(5L)).thenReturn(Optional.of(highlight(5L, 8L, 77L)));
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L)).thenReturn(List.of());
     when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -351,7 +336,7 @@ class CollectionCommandServiceTest {
 
     CollectionConnectedEvent event = capturePublishedEvent();
     assertThat(event.connectedAuthorUserId()).isEqualTo(8L);
-    assertThat(event.connectedPostId()).isEqualTo(77L); // the post the highlight sits on
+    assertThat(event.connectedPostId()).isEqualTo(77L);
     assertThat(event.priorContributorUserIds()).isEmpty();
   }
 
@@ -360,7 +345,6 @@ class CollectionCommandServiceTest {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
     when(postRepository.findById(5L)).thenReturn(Optional.of(post(5L, 2L)));
-    // The path already holds a post (by 3) and two highlights (by 4 and 4).
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
         .thenReturn(
             List.of(
@@ -375,7 +359,6 @@ class CollectionCommandServiceTest {
     service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.POST, 5L, null));
 
     CollectionConnectedEvent event = capturePublishedEvent();
-    // Post author 3 + highlight author 4 (deduped across the two highlights).
     assertThat(event.priorContributorUserIds()).containsExactly(3L, 4L);
   }
 
@@ -386,7 +369,6 @@ class CollectionCommandServiceTest {
     NoteEntity note = new NoteEntity(1L, "생각");
     ReflectionTestUtils.setField(note, "id", 5L);
     when(noteRepository.findById(5L)).thenReturn(Optional.of(note));
-    // The path already holds a post (by 3) and a note — the note must not become a contributor.
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
         .thenReturn(
             List.of(
@@ -398,9 +380,9 @@ class CollectionCommandServiceTest {
     service.connect(new ConnectBlockCommand(1L, 10L, ConnectionBlockType.NOTE, 5L, null));
 
     CollectionConnectedEvent event = capturePublishedEvent();
-    assertThat(event.connectedAuthorUserId()).isNull(); // a note's author is its curator
-    assertThat(event.connectedPostId()).isNull(); // a note has no post
-    assertThat(event.priorContributorUserIds()).containsExactly(3L); // note 302 excluded
+    assertThat(event.connectedAuthorUserId()).isNull();
+    assertThat(event.connectedPostId()).isNull();
+    assertThat(event.priorContributorUserIds()).containsExactly(3L);
   }
 
   @Test
@@ -446,8 +428,6 @@ class CollectionCommandServiceTest {
         .isEqualTo(PostErrorCode.COLLECTION_NOT_FOUND);
   }
 
-  // ---- disconnect ----
-
   @Test
   void disconnectRemovesOwnConnection() {
     when(collectionRepository.findById(10L))
@@ -478,8 +458,6 @@ class CollectionCommandServiceTest {
     verify(connectionRepository, never()).delete(any());
   }
 
-  // ---- delete ----
-
   @Test
   void deleteCollectionRemovesWhenOwner() {
     CollectionEntity c = collection(10L, 1L, CollectionVisibility.PRIVATE);
@@ -501,8 +479,6 @@ class CollectionCommandServiceTest {
         .isEqualTo(PostErrorCode.COLLECTION_PERMISSION_DENIED);
     verify(collectionRepository, never()).delete(any());
   }
-
-  // ---- reorder ----
 
   private CollectionConnectionEntity conn(long id, int position) {
     CollectionConnectionEntity c =

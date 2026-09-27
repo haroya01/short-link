@@ -13,6 +13,7 @@ import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.TreeMap;
 import lombok.RequiredArgsConstructor;
@@ -75,7 +76,7 @@ public class AdminAnalyticsService {
   @Cacheable(value = "admin-overview", key = "'active:' + #period")
   @Transactional(readOnly = true)
   public AdminActiveUsers activeUsers(String period) {
-    String p = period == null ? "day" : period.toLowerCase();
+    String p = period == null ? "day" : period.toLowerCase(Locale.ROOT);
     return switch (p) {
       case "day", "dau" -> dailyActive();
       case "week", "wau" -> weeklyActive();
@@ -122,7 +123,8 @@ public class AdminAnalyticsService {
   static int addWeeks(int yearweek, int weeks) {
     int year = yearweek / 100;
     int week = yearweek % 100;
-    LocalDate base = LocalDate.now().withYear(year);
+    // January 4 always belongs to the requested ISO week-based year, including year boundaries.
+    LocalDate base = LocalDate.of(year, 1, 4);
     base =
         base.with(WeekFields.ISO.weekOfWeekBasedYear(), week)
             .with(WeekFields.ISO.dayOfWeek(), 1)

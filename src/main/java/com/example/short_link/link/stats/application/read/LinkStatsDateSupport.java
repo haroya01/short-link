@@ -21,7 +21,11 @@ final class LinkStatsDateSupport {
   }
 
   static String currentOffset(ZoneId zone) {
-    ZoneOffset offset = zone.getRules().getOffset(Instant.now());
+    return offsetAt(zone, Instant.now());
+  }
+
+  static String offsetAt(ZoneId zone, Instant instant) {
+    ZoneOffset offset = zone.getRules().getOffset(instant);
     return offset.getId().equals("Z") ? "+00:00" : offset.getId();
   }
 }

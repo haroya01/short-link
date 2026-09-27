@@ -31,11 +31,6 @@ public class ProfileBlockEntity extends BaseTimeEntity {
   @Column(name = "block_type", nullable = false, length = 16)
   private ProfileBlockType type;
 
-  /**
-   * Type-specific payload. TEXT: section header text. IMAGE/EMBED: URL. EMAIL_FORM / CONTACT_CARD /
-   * GALLERY / PRODUCT_CARD: JSON config. DIVIDER: null. Stored as TEXT to fit PRODUCT_CARD's
-   * multi-item JSON (up to 8 items with image URLs + descriptions).
-   */
   @Column(name = "content", columnDefinition = "TEXT")
   private String content;
 

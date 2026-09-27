@@ -26,16 +26,16 @@ class BlogNotificationPreferenceRepositoryAdapterTest {
   }
 
   @Test
-  void delegatesLookupsAndSave() {
+  void delegatesLookupsAndAtomicPreferenceWrite() {
     BlogNotificationPreferenceEntity row =
         new BlogNotificationPreferenceEntity(1L, NotificationType.LIKE, false);
     when(jpa.findByUserIdAndType(1L, NotificationType.LIKE)).thenReturn(Optional.of(row));
     when(jpa.findByUserId(1L)).thenReturn(List.of(row));
-    when(jpa.save(row)).thenReturn(row);
 
     assertThat(adapter().findByUserIdAndType(1L, NotificationType.LIKE)).contains(row);
     assertThat(adapter().findByUserId(1L)).containsExactly(row);
-    assertThat(adapter().save(row)).isSameAs(row);
+    adapter().setEnabled(1L, NotificationType.LIKE, false);
+    verify(jpa).setEnabled(1L, "LIKE", false);
   }
 
   @Test

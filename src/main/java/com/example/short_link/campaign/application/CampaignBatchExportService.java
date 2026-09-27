@@ -13,7 +13,6 @@ import java.util.zip.ZipOutputStream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-/** Batch 묶음 export — CSV (인쇄소 발주 + 사후 정산) + QR PNG ZIP (인쇄 자산). */
 @Service
 @RequiredArgsConstructor
 public class CampaignBatchExportService {

@@ -1,7 +1,7 @@
 package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.write.AuthService;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.request.DevLoginRequest;
 import com.example.short_link.user.presentation.response.TokenResponse;
@@ -35,19 +35,16 @@ public class DevAuthController {
       @Valid @RequestBody DevLoginRequest request, HttpServletResponse res) {
     log.warn(
         "dev-login endpoint invoked for email={} — never enable in production", request.email());
-    LoginResult result =
+    TokenLoginResult result =
         authService.loginWithOAuth(request.email(), DEV_PROVIDER, "dev:" + request.email());
     return switch (result) {
-      case LoginResult.TwoFactorRequired c ->
+      case TokenLoginResult.TwoFactorRequired c ->
           ResponseEntity.status(HttpStatus.ACCEPTED)
               .body(new TwoFactorChallengeResponse(c.challengeToken()));
-      case LoginResult.Tokens t -> {
+      case TokenLoginResult.Tokens t -> {
         refreshCookieWriter.set(res, t.issued().refreshToken());
         yield ResponseEntity.ok(TokenResponse.from(t.issued()));
       }
-        // Web-only entry point — loginWithOAuth never yields a mobile exchange code.
-      case LoginResult.MobileExchangeCode c ->
-          ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     };
   }
 }

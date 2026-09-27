@@ -117,7 +117,6 @@ class PlaceTest {
 
   @Test
   void ignoresUnknownFields() {
-    // Forward compat — frontend may send v2 fields (hoursJson, mapStyle) before backend knows.
     String out =
         Place.normalize(
             "{\"name\":\"x\",\"address\":\"서울\",\"lat\":37,\"lng\":127,"

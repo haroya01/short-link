@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -135,7 +136,7 @@ public class CampaignBatchController {
 
   private static QrPngEncoder.Ec parseEc(String raw) {
     try {
-      return QrPngEncoder.Ec.valueOf(raw.toUpperCase());
+      return QrPngEncoder.Ec.valueOf(raw.toUpperCase(Locale.ROOT));
     } catch (IllegalArgumentException e) {
       return QrPngEncoder.Ec.M;
     }

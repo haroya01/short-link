@@ -76,7 +76,7 @@ class CampaignBatchExportServiceTest {
 
     assertThat(csv).startsWith("batch_id,batch_name,distributor,area,quantity,short_url");
     String[] lines = csv.split("\n");
-    assertThat(lines).hasSize(3); // header + 2 rows
+    assertThat(lines).hasSize(3);
     assertThat(lines[1]).contains("east").contains("500");
     assertThat(lines[2]).contains("west").contains("https://example.com/special");
   }

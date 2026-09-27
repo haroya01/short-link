@@ -4,6 +4,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkId;
@@ -13,9 +14,10 @@ import org.junit.jupiter.api.Test;
 class DeleteDestinationUseCaseTest {
 
   private final LinkDestinationOwnership ownership = mock(LinkDestinationOwnership.class);
+  private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
   private final LinkDestinationRepository repository = mock(LinkDestinationRepository.class);
   private final DeleteDestinationUseCase useCase =
-      new DeleteDestinationUseCase(ownership, repository);
+      new DeleteDestinationUseCase(ownership, repository, linkCacheEviction);
 
   @Test
   void executeDeletesOwnedDestination() {

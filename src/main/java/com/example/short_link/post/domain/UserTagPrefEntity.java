@@ -14,7 +14,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One user's preference toward a tag. (user_id, tag) is unique — FOLLOW and HIDE are exclusive. */
 @Entity
 @Table(
     name = "user_tag_pref",

@@ -11,6 +11,7 @@ import com.example.short_link.analytics.domain.BehaviorEventEntity;
 import com.example.short_link.analytics.domain.repository.BehaviorEventRepository;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.BotHeuristic;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -47,7 +48,7 @@ class RecordBehaviorEventsUseCaseTest {
             repository,
             userAgentClassifier,
             asnResolver,
-            botHeuristic,
+            new BotClassifier(botHeuristic),
             new SimpleMeterRegistry(),
             Clock.fixed(NOW, ZoneOffset.UTC));
   }

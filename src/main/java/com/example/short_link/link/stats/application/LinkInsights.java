@@ -1,12 +1,18 @@
 package com.example.short_link.link.stats.application;
 
 import com.example.short_link.link.application.dto.LinkStats;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HostFirstSeenRow;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Supplier;
+import lombok.Builder;
 import org.springframework.context.MessageSource;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Component;
@@ -20,13 +26,11 @@ public class LinkInsights {
   private static final double BOT_RATIO_THRESHOLD = 0.3;
   private static final double FAST_DECAY_THRESHOLD = 0.2;
 
-  /** 인앱 브라우저 비중이 이 정도는 돼야 "어디서 열렸는지"가 행동을 바꿀 만한 사실이 된다. */
   private static final double IN_APP_SHARE_THRESHOLD = 0.2;
 
-  /** 채널 재방문율은 이 위여야 눈에 띈다 — 링크 전체 평균 재방문율은 보통 이보다 한참 낮다. */
   private static final double CHANNEL_LOYALTY_THRESHOLD = 0.3;
 
-  /** 방문자 표본이 이보다 적으면 재방문율 한두 명에 비율이 요동쳐 신호가 아니라 잡음이다. */
+  // 적은 표본에서 비율이 크게 흔들리는 것을 막는다.
   private static final long CHANNEL_LOYALTY_MIN_VISITORS = 5;
 
   private final MessageSource messages;
@@ -35,40 +39,76 @@ public class LinkInsights {
     this.messages = messages;
   }
 
-  public List<LinkStats.Insight> compute(
+  @Builder
+  public record ReportFacts(
+      LocalDate reportDate,
       long total,
+      long human,
       long bot,
       List<LinkStats.HeatmapCell> heatmap,
       List<LinkStats.ChannelClick> channels,
       List<LinkStats.CountryClick> countries,
       LinkStats.ReturnRate returnRate,
       LinkStats.Lifecycle lifecycle,
-      List<LinkStats.DailyClick> dailyClicks) {
-    List<LinkStats.Insight> insights = new ArrayList<>();
-    if (total < MIN_TOTAL_FOR_INSIGHTS) {
-      return insights;
+      List<LinkStats.DailyClick> dailyClicks,
+      List<LinkStats.ClientAppClick> clientApps,
+      List<LinkStats.ChannelDepth> channelDepth) {
+    public ReportFacts {
+      Objects.requireNonNull(reportDate, "reportDate");
     }
+  }
 
-    peakHour(heatmap, total).ifPresent(insights::add);
-    topChannel(channels, total).ifPresent(insights::add);
-    countryConcentration(countries, total).ifPresent(insights::add);
-    visitorMix(returnRate).ifPresent(insights::add);
-    botRatio(bot, total).ifPresent(insights::add);
-    decayShape(lifecycle).ifPresent(insights::add);
-    weekOverWeek(dailyClicks).ifPresent(insights::add);
-    darkSocial(channels, total).ifPresent(insights::add);
-    secondWind(dailyClicks).ifPresent(insights::add);
-    dormancy(dailyClicks).ifPresent(insights::add);
+  public List<LinkStats.Insight> computeReport(
+      ReportFacts facts, Supplier<List<HostFirstSeenRow>> channelFirstSeen) {
+    List<LinkStats.Insight> insights = generalInsights(facts);
+    if (facts.total() >= MIN_TOTAL_FOR_INSIGHTS) {
+      channelJump(channelFirstSeen.get()).ifPresent(insights::add);
+    }
+    inAppBrowser(facts.clientApps(), facts.human()).ifPresent(insights::add);
+    channelLoyalty(facts.channelDepth()).ifPresent(insights::add);
     return insights;
   }
 
-  /**
-   * 인앱 브라우저 비중 — "카카오톡에서 열린 게 N%". 링크가 어디에 붙어 있는지가 아니라 어디에서 *열렸는지*라, 랜딩을 앱 웹뷰에서도 멀쩡히 돌게 만들지 말지를
-   * 가른다(로그인 리다이렉트·폰트·다운로드가 인앱에서 곧잘 깨진다).
-   *
-   * <p>{@link #compute} 밖에 있는 건 {@code channelJump} 와 같은 이유다 — 조립기가 이미 들고 있는 데이터로 만드는 규칙이라 기존 호출자
-   * 계약을 건드리지 않는다.
-   */
+  public Optional<LinkStats.Insight> channelJump(List<HostFirstSeenRow> rows) {
+    if (rows.size() < 2) return Optional.empty();
+    HostFirstSeenRow origin = rows.get(0);
+    if (origin.getHost() == null || origin.getFirstSeenEpoch() == null) return Optional.empty();
+    long originEpoch = origin.getFirstSeenEpoch();
+    for (int i = 1; i < rows.size(); i++) {
+      HostFirstSeenRow row = rows.get(i);
+      if (row.getHost() == null || row.getFirstSeenEpoch() == null) continue;
+      long gapSeconds = row.getFirstSeenEpoch() - originEpoch;
+      if (gapSeconds >= 3600) {
+        String message = msg("insight.CHANNEL_JUMP", origin.getHost(), row.getHost());
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("origin", origin.getHost());
+        data.put("jumpedTo", row.getHost());
+        data.put("gapHours", gapSeconds / 3600);
+        return Optional.of(new LinkStats.Insight("CHANNEL_JUMP", "info", message, data));
+      }
+    }
+    return Optional.empty();
+  }
+
+  private List<LinkStats.Insight> generalInsights(ReportFacts facts) {
+    List<LinkStats.Insight> insights = new ArrayList<>();
+    if (facts.total() < MIN_TOTAL_FOR_INSIGHTS) {
+      return insights;
+    }
+
+    peakHour(facts.heatmap(), facts.total()).ifPresent(insights::add);
+    topChannel(facts.channels(), facts.total()).ifPresent(insights::add);
+    countryConcentration(facts.countries(), facts.total()).ifPresent(insights::add);
+    visitorMix(facts.returnRate()).ifPresent(insights::add);
+    botRatio(facts.bot(), facts.total()).ifPresent(insights::add);
+    decayShape(facts.lifecycle()).ifPresent(insights::add);
+    weekOverWeek(facts.dailyClicks()).ifPresent(insights::add);
+    darkSocial(facts.channels(), facts.total()).ifPresent(insights::add);
+    secondWind(facts.dailyClicks()).ifPresent(insights::add);
+    dormancy(facts.dailyClicks(), facts.reportDate()).ifPresent(insights::add);
+    return insights;
+  }
+
   public Optional<LinkStats.Insight> inAppBrowser(
       List<LinkStats.ClientAppClick> clientApps, long humanClicks) {
     if (clientApps == null || clientApps.isEmpty() || humanClicks < MIN_TOTAL_FOR_INSIGHTS) {
@@ -91,10 +131,6 @@ public class LinkInsights {
     return Optional.of(new LinkStats.Insight("IN_APP_BROWSER", "info", message, data));
   }
 
-  /**
-   * 채널 충성도 — "○○에서 온 사람의 N%가 다시 왔어요". 클릭 수 1등이 아니라 *재방문율* 1등을 집는다. 한 번 터지고 끝난 채널과 사람을 남긴 채널은 다른
-   * 이야기고, 다음에 어디에 글을 올릴지를 정하는 건 후자다.
-   */
   public Optional<LinkStats.Insight> channelLoyalty(List<LinkStats.ChannelDepth> channelDepth) {
     if (channelDepth == null || channelDepth.isEmpty()) return Optional.empty();
     LinkStats.ChannelDepth best = null;
@@ -113,27 +149,24 @@ public class LinkInsights {
     return Optional.of(new LinkStats.Insight("CHANNEL_LOYALTY", "info", message, data));
   }
 
-  /// 인앱 브라우저 표시 이름 — 없으면 저장된 값 그대로(요일 폴백과 같은 방식).
   private String appName(String app) {
     return messages.getMessage("clientApp." + app, null, app, LocaleContextHolder.getLocale());
   }
 
-  /// 메시지는 요청 로케일(Accept-Language)로 — messages_xx.properties 에서 코드로 룩업.
   private String msg(String code, Object... args) {
     return messages.getMessage(code, args, LocaleContextHolder.getLocale());
   }
 
-  /// 퍼센트 숫자를 미리 문자열로(로케일 무관). 템플릿의 % 는 리터럴이라 여기선 숫자만.
+  // 템플릿이 %를 붙이므로 로케일과 무관한 숫자 문자열만 만든다.
   private static String pct(double ratio) {
     return String.format(Locale.ROOT, "%.1f", ratio * 100);
   }
 
-  /// 알 수 없는 요일 enum 이면 그 값 그대로(예외 없이) — 기존 dayOfWeekKo 폴백과 동일.
   private String dayName(String dow) {
     return messages.getMessage("dayOfWeek." + dow, null, dow, LocaleContextHolder.getLocale());
   }
 
-  /// 직접 공유(다크 소셜) — referrer 없는 사람 클릭 비율 = DM·복붙으로 퍼진 입소문 신호.
+  // referrer 없는 사람 클릭 비율이며, 실제 공유 경로는 알 수 없다.
   private Optional<LinkStats.Insight> darkSocial(
       List<LinkStats.ChannelClick> channels, long total) {
     if (total == 0) return Optional.empty();
@@ -150,7 +183,6 @@ public class LinkInsights {
     return Optional.of(new LinkStats.Insight("DARK_SOCIAL", "info", message, data));
   }
 
-  /// 재점화(second wind) — 잠잠하던 링크가 최근 며칠 확 뜀(휴면 후 부활).
   private Optional<LinkStats.Insight> secondWind(List<LinkStats.DailyClick> dailyClicks) {
     int n = dailyClicks.size();
     if (n < 10) return Optional.empty();
@@ -171,15 +203,14 @@ public class LinkInsights {
     return Optional.empty();
   }
 
-  /// 휴면(dormancy) — 마지막 사람 클릭 이후 N일 조용. 콜드 링크 재공유 넛지의 단일 진실원.
-  private Optional<LinkStats.Insight> dormancy(List<LinkStats.DailyClick> dailyClicks) {
-    java.time.LocalDate lastActive = null;
+  private Optional<LinkStats.Insight> dormancy(
+      List<LinkStats.DailyClick> dailyClicks, LocalDate reportDate) {
+    LocalDate lastActive = null;
     for (LinkStats.DailyClick dc : dailyClicks) {
       if (dc.count() > 0) lastActive = dc.date();
     }
     if (lastActive == null) return Optional.empty();
-    long daysIdle =
-        java.time.temporal.ChronoUnit.DAYS.between(lastActive, java.time.LocalDate.now());
+    long daysIdle = ChronoUnit.DAYS.between(lastActive, reportDate);
     if (daysIdle < 7) return Optional.empty();
     String message = msg("insight.DORMANT", String.valueOf(daysIdle));
     Map<String, Object> data = new LinkedHashMap<>();

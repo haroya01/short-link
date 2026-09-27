@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 링크 알림 읽음 처리 — 소유자 일치(recipientUserId)로만 갱신한다. */
 @Service
 @RequiredArgsConstructor
 public class MarkLinkNotificationReadUseCase {

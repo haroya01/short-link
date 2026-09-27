@@ -41,9 +41,7 @@ public class MyEmailLeadController {
       @AuthenticationPrincipal Long userId,
       @RequestParam(name = "includeOptedOut", defaultValue = "false") boolean includeOptedOut) {
     StringBuilder csv = new StringBuilder("email,block_id,submitted_at,opted_out\n");
-    // Default export skips opted-out so a campaign send from the CSV doesn't reach unsubscribed
-    // contacts. `includeOptedOut=true` is for the owner who wants a full archive (e.g. GDPR
-    // request) — the column is included regardless so the difference is auditable.
+    // Exclude opted-out contacts by default; includeOptedOut includes them for archival exports.
     List<EmailLeadEntity> rows =
         includeOptedOut ? service.list(userId, 0, 500) : service.listActive(userId, 0, 500);
     for (EmailLeadEntity l : rows) {

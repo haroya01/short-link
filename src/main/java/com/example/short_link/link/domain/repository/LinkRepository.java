@@ -11,6 +11,8 @@ public interface LinkRepository {
 
   Optional<LinkEntity> findById(Long id);
 
+  List<LinkEntity> findAllById(Collection<Long> ids);
+
   LinkEntity save(LinkEntity link);
 
   void delete(LinkEntity link);
@@ -24,6 +26,9 @@ public interface LinkRepository {
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(ShortCode shortCode);
 
   List<LinkEntity> findAllByShortCodeInAndUserId(Collection<ShortCode> shortCodes, Long userId);
+
+  List<LinkEntity> findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(
+      Long userId);
 
   List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
@@ -44,10 +49,12 @@ public interface LinkRepository {
 
   List<LinkEntity> findTop500ByExpiresAtBeforeOrderByExpiresAtAsc(Instant when);
 
-  /** Distinct owners of any link — drives the per-user notification digest. */
   List<Long> findDistinctUserIds();
 
-  /** Links whose expiry falls in [from, to) — drives the expiry-imminent notification. */
+  // Coarse LIKE scan for links whose destination mentions fragment — the domain-block warning
+  // fan-out narrows the result by parsed host, so false positives here are fine.
+  List<LinkEntity> findByOriginalUrlContaining(String fragment);
+
   List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to);
 
   List<LinkEntity> findOgRetryCandidates(int maxAttempts, Instant before, int limit);
@@ -65,6 +72,11 @@ public interface LinkRepository {
   List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(Collection<String> claimTokens);
 
   int incrementViewCountIfBelowLimit(Long linkId);
+
+  void recordOgFetched(
+      Long linkId, String title, String description, String image, Instant fetchedAt);
+
+  void recordOgFetchFailed(Long linkId, Instant fetchedAt, boolean willRetry);
 
   int deleteByUserId(Long userId);
 
@@ -93,5 +105,17 @@ public interface LinkRepository {
     Integer getMaxViews();
 
     String getExpiredMessage();
+
+    Boolean getOpenInBrowser();
+
+    Boolean getSplashEnabled();
+
+    String getSplashMessage();
+
+    Integer getSplashSeconds();
+
+    Long getSplashCtaId();
+
+    Instant getOpensAt();
   }
 }

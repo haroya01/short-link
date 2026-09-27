@@ -1,31 +1,23 @@
 package com.example.short_link.link.webhook.scheduler;
 
+import com.example.short_link.common.counter.RedisWindowCounter;
 import com.example.short_link.link.application.dto.ClickRecordedEvent;
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
-import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ThreadLocalRandom;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.core.script.DefaultRedisScript;
-import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 class WebhookDeliveryGate {
 
-  private static final RedisScript<Long> QUOTA_INCR =
-      new DefaultRedisScript<>(
-          "local c = redis.call('INCR', KEYS[1]) "
-              + "if c == 1 then redis.call('EXPIRE', KEYS[1], ARGV[1]) end "
-              + "return c",
-          Long.class);
-
   private final MeterRegistry meterRegistry;
-  private final StringRedisTemplate redis;
+  private final RedisWindowCounter counter;
 
   boolean shouldDeliver(LinkWebhookEntity hook, ClickRecordedEvent event) {
     if (!hook.isIncludeBots() && event.bot()) {
@@ -33,16 +25,17 @@ class WebhookDeliveryGate {
       return false;
     }
     if (hook.getReferrerHostFilter() != null && !hook.getReferrerHostFilter().isBlank()) {
-      String filter = hook.getReferrerHostFilter().toLowerCase();
-      String channel = event.channel() == null ? "" : event.channel().toLowerCase();
-      if (!channel.contains(filter)) {
+      String filter = hook.getReferrerHostFilter().toLowerCase(Locale.ROOT);
+      String referrerHost =
+          event.referrerHost() == null ? "" : event.referrerHost().toLowerCase(Locale.ROOT);
+      if (!referrerHost.contains(filter)) {
         meterRegistry.counter("webhook.delivery", "result", "skipped_filter").increment();
         return false;
       }
     }
     if (hook.getUtmSourceFilter() != null && !hook.getUtmSourceFilter().isBlank()) {
-      String filter = hook.getUtmSourceFilter().toLowerCase();
-      String src = event.utmSource() == null ? "" : event.utmSource().toLowerCase();
+      String filter = hook.getUtmSourceFilter().toLowerCase(Locale.ROOT);
+      String src = event.utmSource() == null ? "" : event.utmSource().toLowerCase(Locale.ROOT);
       if (!src.contains(filter)) {
         meterRegistry.counter("webhook.delivery", "result", "skipped_filter").increment();
         return false;
@@ -55,8 +48,8 @@ class WebhookDeliveryGate {
     }
     if (hook.getDailyQuota() != null && hook.getDailyQuota() > 0) {
       String key = "webhook:quota:" + hook.getId() + ":" + LocalDate.now(ZoneOffset.UTC);
-      Long used = redis.execute(QUOTA_INCR, List.of(key), "86400");
-      if (used != null && used > hook.getDailyQuota()) {
+      long used = counter.increment(key, Duration.ofDays(1));
+      if (used > hook.getDailyQuota()) {
         meterRegistry.counter("webhook.delivery", "result", "skipped_quota").increment();
         return false;
       }

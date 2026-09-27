@@ -16,12 +16,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-/**
- * Records the post-derived notifications that aren't plain BlogInteractionEvents: a REPLY to the
- * parent comment's author, and a NEW_POST fan-out to every follower of a newly-publishing author.
- * Like its sibling {@link BlogInteractionNotificationListener}, it fires only after the source
- * action commits and runs on the shared {@code webhookExecutor}.
- */
 @Component
 @RequiredArgsConstructor
 public class PostNotificationListener {
@@ -88,8 +82,7 @@ public class PostNotificationListener {
     if (followers.isEmpty()) {
       return;
     }
-    // The author is the actor; the follower's bell resolves the author handle at read time, so no
-    // author username is snapshotted here (post link uses the resolved actor username).
+    // NEW_POST links use the actor username resolved at read time, so no handle is snapshotted.
     NotificationPostRef post =
         new NotificationPostRef(event.postId(), event.postSlug(), event.postTitle(), null);
     recordUseCase.recordForEach(followers, NotificationType.NEW_POST, event.authorUserId(), post);

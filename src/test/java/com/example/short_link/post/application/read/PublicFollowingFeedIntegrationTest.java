@@ -21,11 +21,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The following feed merges followed authors' posts with subscribed series' posts. Only the real
- * union query (with the no-match sentinel when a side is empty) against MySQL proves the OR + IN
- * behavior, so this drives feedFollowing end-to-end.
- */
+// The following feed merges followed authors' posts with subscribed series' posts. Only the real
+// union query (with the no-match sentinel when a side is empty) against MySQL proves the OR + IN
+// behavior, so this drives feedFollowing end-to-end.
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -65,21 +63,19 @@ class PublicFollowingFeedIntegrationTest {
     long followed = user("followee");
     long stranger = user("stranger");
 
-    // I follow `followed`; I subscribe to `stranger`'s series (but don't follow them).
     followRepository.save(new FollowEntity(me, followed));
     long series = seriesRepository.save(new SeriesEntity(stranger, "guide", "Guide")).getId();
     subscriptionRepository.insertIgnore(me, series);
 
     publish(followed, "from-followed", null);
     publish(stranger, "series-episode", series);
-    publish(stranger, "stranger-standalone", null); // not followed, not in a subscribed series
+    publish(stranger, "stranger-standalone", null);
 
     List<PublicFeedItem> items = service.feedFollowing(me, 0, 20).items();
     List<String> slugs = items.stream().map(PublicFeedItem::slug).toList();
 
     assertThat(slugs).contains("from-followed", "series-episode");
     assertThat(slugs).doesNotContain("stranger-standalone");
-    // followReason explains each card: followed author → AUTHOR, subscribed series → SERIES.
     assertThat(reasonOf(items, "from-followed").kind()).isEqualTo(FollowReason.AUTHOR);
     assertThat(reasonOf(items, "series-episode").kind()).isEqualTo(FollowReason.SERIES);
   }
@@ -97,18 +93,16 @@ class PublicFollowingFeedIntegrationTest {
     long me = user("topicreader");
     long author = user("writer");
 
-    // I follow the topic "Spring" (mixed case) — but not the author.
     tagPrefRepository.save(new UserTagPrefEntity(me, "Spring", TagPrefKind.FOLLOW));
 
-    publish(author, "spring-post", null, List.of("spring", "java")); // matches by tag (case-insens)
-    publish(author, "react-post", null, List.of("react")); // unrelated topic, author not followed
+    publish(author, "spring-post", null, List.of("spring", "java"));
+    publish(author, "react-post", null, List.of("react"));
 
     List<PublicFeedItem> items = service.feedFollowing(me, 0, 20).items();
     List<String> slugs = items.stream().map(PublicFeedItem::slug).toList();
 
     assertThat(slugs).contains("spring-post");
     assertThat(slugs).doesNotContain("react-post");
-    // Surfaced by the topic, so followReason names the matched (lower-cased) tag.
     FollowReason reason = reasonOf(items, "spring-post");
     assertThat(reason.kind()).isEqualTo(FollowReason.TOPIC);
     assertThat(reason.tag()).isEqualTo("spring");

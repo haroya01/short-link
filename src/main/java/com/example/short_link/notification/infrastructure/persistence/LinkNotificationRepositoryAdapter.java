@@ -7,10 +7,6 @@ import java.util.List;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 
-/**
- * {@link LinkNotificationRepository} 포트를 Spring Data 로 잇는다 — 블로그 NotificationRepositoryAdapter 와 동일
- * 결.
- */
 @Component
 public class LinkNotificationRepositoryAdapter implements LinkNotificationRepository {
   private final JpaLinkNotificationRepository jpa;

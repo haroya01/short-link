@@ -29,10 +29,6 @@ public class PostBookmarkQueryService {
     return new PostBookmarkStatus(bookmarked);
   }
 
-  /**
-   * The caller's reading list, newest-bookmarked first. Stale entries (post deleted/unpublished or
-   * author gone) are skipped. Posts and authors are batch-loaded to avoid an N+1 over the list.
-   */
   public List<BookmarkView> list(Long userId) {
     List<PostBookmarkEntity> bookmarks =
         postBookmarkRepository.findAllByUserIdOrderByCreatedAtDesc(userId);

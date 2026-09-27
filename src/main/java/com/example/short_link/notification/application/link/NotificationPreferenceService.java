@@ -9,7 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Read + toggle link-notification opt-outs. Absent preference = enabled (default on). */
 @Service
 @RequiredArgsConstructor
 public class NotificationPreferenceService {
@@ -24,14 +23,20 @@ public class NotificationPreferenceService {
         .orElse(true);
   }
 
-  /** Full map for the settings screen — every type, defaulting absent rows to enabled. */
+  // 운영자 WARNING은 수신 거부 대상이 아니므로 설정 목록에서 제외한다.
   @Transactional(readOnly = true)
   public Map<LinkNotificationType, Boolean> all(Long userId) {
     Map<LinkNotificationType, Boolean> result = new EnumMap<>(LinkNotificationType.class);
     for (LinkNotificationType type : LinkNotificationType.values()) {
+      if (type == LinkNotificationType.WARNING) {
+        continue;
+      }
       result.put(type, true);
     }
     for (NotificationPreferenceEntity row : repository.findByUserId(userId)) {
+      if (row.getType() == LinkNotificationType.WARNING) {
+        continue;
+      }
       result.put(row.getType(), row.isEnabled());
     }
     return result;
@@ -39,10 +44,6 @@ public class NotificationPreferenceService {
 
   @Transactional
   public void setEnabled(Long userId, LinkNotificationType type, boolean enabled) {
-    repository
-        .findByUserIdAndType(userId, type)
-        .ifPresentOrElse(
-            row -> row.setEnabled(enabled),
-            () -> repository.save(new NotificationPreferenceEntity(userId, type, enabled)));
+    repository.setEnabled(userId, type, enabled);
   }
 }

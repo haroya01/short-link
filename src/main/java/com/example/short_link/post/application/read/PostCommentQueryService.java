@@ -15,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Public, unauthenticated comment listing for a post. Authors batch-hydrated. */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -27,7 +26,7 @@ public class PostCommentQueryService {
   private final PostRepository postRepository;
 
   public List<CommentView> listForPost(Long postId) {
-    // 다른 공개 read 와 일관되게, 발행 안 된 글 (초안/비공개) 의 댓글은 노출하지 않는다.
+    // 미발행 글의 댓글은 공개 목록에 노출하지 않는다.
     if (postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
       return List.of();
     }
@@ -53,7 +52,6 @@ public class PostCommentQueryService {
         .toList();
   }
 
-  /** The viewer's own comments across all posts — the "my comments" library. */
   public List<MyCommentView> listMyComments(Long userId) {
     List<CommentEntity> comments = commentRepository.findAllByUserIdOrderByCreatedAtDesc(userId);
     List<Long> postIds = comments.stream().map(CommentEntity::getPostId).distinct().toList();
@@ -88,7 +86,6 @@ public class PostCommentQueryService {
         .toList();
   }
 
-  /** Of the post's comments, the ids the viewer liked — likedByMe for the authed reader. */
   public List<Long> likedCommentIds(Long userId, Long postId) {
     List<Long> ids =
         commentRepository.findAllByPostIdOrderByCreatedAtAsc(postId).stream()

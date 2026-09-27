@@ -28,7 +28,6 @@ public class DeleteCommentUseCase {
           .with("commentId", cmd.commentId());
     }
 
-    // Cascade replies of a top-level comment.
     if (!comment.isReply()) {
       for (CommentEntity reply : commentRepository.findAllByParentId(comment.getId())) {
         commentRepository.delete(reply);

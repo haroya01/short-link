@@ -11,10 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * 짧은 글(노트) — 제목·슬러그·블록 없이 본문 한 덩이만 있는 마이크로 포스트. 글(post)과 달리 발행 상태 기계가 없다: 쓰는 즉시 공개, 지우면 끝(hard
- * delete).
- */
 @Entity
 @Table(name = "note")
 @Getter

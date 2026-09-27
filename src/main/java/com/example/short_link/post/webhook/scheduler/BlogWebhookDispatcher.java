@@ -15,18 +15,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Notifies an author's blog webhooks when a reader likes/comments/follows/subscribes. Fires only
- * after the interaction commits (so a rolled-back like never sends a phantom notification) and runs
- * on the shared {@code webhookExecutor} so a slow receiver can't stall the request path. The
- * actor's name is resolved here, lazily, only once a matching enabled hook is confirmed to exist.
- */
+// Dispatches after commit on webhookExecutor, so rollbacks send nothing and slow receivers do not
+// block requests. No transaction is held across HTTP; each outcome is recorded in its own short
+// transaction. Actor lookup runs only after a matching enabled hook is found.
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -38,10 +34,10 @@ public class BlogWebhookDispatcher {
   private final HttpFetcher httpFetcher;
   private final MeterRegistry meterRegistry;
   private final SecretCipher cipher;
+  private final TransactionTemplate transaction;
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
-  @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onBlogInteraction(BlogInteractionEvent event) {
     if (event.isSelfAction() || event.recipientUserId() == null) {
       return;
@@ -71,15 +67,22 @@ public class BlogWebhookDispatcher {
             hook.signed(),
             body,
             eventType);
-    if (result.ok()) {
-      hook.recordSuccess(result.statusCode());
-    } else {
-      hook.recordFailure(result.statusCode(), result.error());
+    transaction.executeWithoutResult(
+        status -> repository.findById(hook.getId()).ifPresent(current -> record(current, result)));
+    if (!result.ok()) {
       log.warn(
           "blog webhook delivery failed: hookId={} outcome={} reason={}",
           hook.getId(),
           result.outcome(),
           result.error());
+    }
+  }
+
+  private static void record(BlogWebhookEntity hook, WebhookSender.Result result) {
+    if (result.ok()) {
+      hook.recordSuccess(result.statusCode());
+    } else {
+      hook.recordFailure(result.statusCode(), result.error());
     }
   }
 }

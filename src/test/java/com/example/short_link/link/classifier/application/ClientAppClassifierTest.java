@@ -40,7 +40,6 @@ class ClientAppClassifierTest {
     assertThat(classifier.classify(userAgent)).isEqualTo(expected);
   }
 
-  /** 일반 브라우저는 "인앱이 아님"이라 null — 별도 'browser' 라벨을 만들지 않는다. */
   @ParameterizedTest
   @ValueSource(
       strings = {
@@ -63,10 +62,8 @@ class ClientAppClassifierTest {
     assertThat(classifier.classify("   ")).isNull();
   }
 
-  /**
-   * 페이스북 인앱 UA 는 브라우저 스택을 공유해 Instagram 토큰을 함께 싣기도 한다. 두 규칙이 다 걸리면 인스타그램이 이긴다 — V117 백필의 UPDATE 순서와
-   * 같은 결정이라, 백필한 과거 행과 쓰기 시점 분류가 같은 답을 낸다.
-   */
+  // 페이스북 인앱 UA 는 브라우저 스택을 공유해 Instagram 토큰을 함께 싣기도 한다. 두 규칙이 다 걸리면 인스타그램이 이긴다 — V117 백필의 UPDATE 순서와
+  // 같은 결정이라, 백필한 과거 행과 쓰기 시점 분류가 같은 답을 낸다.
   @Test
   void instagramWinsWhenTheUserAgentCarriesBothTokens() {
     String both =
@@ -76,7 +73,6 @@ class ClientAppClassifierTest {
     assertThat(classifier.classify(both)).isEqualTo("instagram");
   }
 
-  /** "Line/" 은 슬래시까지 봐야 한다 — 그러지 않으면 Streamline·Headless 같은 무관한 토큰이 라인으로 잡힌다. */
   @Test
   void bareLineSubstringIsNotLineApp() {
     String headless =
@@ -86,7 +82,7 @@ class ClientAppClassifierTest {
     assertThat(classifier.classify(headless)).isNull();
   }
 
-  /** 분류 결과는 client_app 컬럼(VARCHAR(32))에 그대로 들어간다 — 잘려서 저장되면 집계가 갈라진다. */
+  // 분류 결과는 client_app 컬럼(VARCHAR(32))에 그대로 들어간다 — 잘려서 저장되면 집계가 갈라진다.
   @Test
   void everyAppNameFitsTheColumn() {
     String[] uas = {

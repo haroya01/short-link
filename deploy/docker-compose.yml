@@ -44,12 +44,14 @@ services:
     networks: [internal]
 
   app:
-    # Image is built and pushed by .github/workflows/deploy.yml on every main push.
-    # `docker compose pull` here just fetches the latest tag — no Gradle build on this
-    # tiny EC2, which keeps RAM headroom comfortable.
+    # The image is built in CI, so this small EC2 never runs a Gradle build.
     image: ghcr.io/haroya01/short-link:${APP_IMAGE_TAG:-latest}
     pull_policy: always
     restart: unless-stopped
+    # 단일 박스에서 MySQL 과 동거 — 상한이 없으면 ENTRYPOINT 의 MaxRAMPercentage=75 가
+    # 호스트 전체 RAM 의 75% 를 힙 상한으로 계산해, 힙이 자라며 mysqld 를 스왑으로 밀어낸다.
+    # 1100m 이면 힙 상한 = 그 75% 인 825m — mysqld 상주분이 RAM 에 남는다.
+    mem_limit: 1100m
     depends_on:
       mysql:
         condition: service_healthy
@@ -73,6 +75,10 @@ services:
       JWT_PUBLIC_KEY: ${JWT_PUBLIC_KEY}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET}
+      # Sign in with Apple audiences — 두 iOS 앱 번들 id(코드 기본값과 동일). 웹 Services ID 를
+      # 붙일 때 .env 에 전체 목록으로 넣는다(재빌드 불필요). 빈 값이면 yml 플레이스홀더가
+      # 기본값 대신 빈 문자열을 물기 때문에 여기서 완전한 기본 목록을 명시한다.
+      APPLE_SIGNIN_CLIENT_IDS: ${APPLE_SIGNIN_CLIENT_IDS:-focustime.kurl,focustime.kurl.links,me.kurl.signin}
       TWOFA_AES_KEY: ${TWOFA_AES_KEY}
       POW_ENFORCE: ${POW_ENFORCE:-true}
       POW_DIFFICULTY: ${POW_DIFFICULTY:-3}
@@ -81,6 +87,7 @@ services:
       SAFE_BROWSING_ENABLED: ${SAFE_BROWSING_ENABLED:-true}
       SAFE_BROWSING_API_KEY: ${SAFE_BROWSING_API_KEY:-}
       SHORT_LINK_BOOTSTRAP_ADMIN_EMAIL: ${SHORT_LINK_BOOTSTRAP_ADMIN_EMAIL:-}
+      SMOKE_USER_ID: ${SMOKE_USER_ID:--1}
       AVATAR_S3_BUCKET: ${AVATAR_S3_BUCKET:-}
       AVATAR_S3_REGION: ${AVATAR_S3_REGION:-ap-northeast-2}
       AVATAR_S3_PUBLIC_BASE_URL: ${AVATAR_S3_PUBLIC_BASE_URL:-}
@@ -103,9 +110,14 @@ services:
       - "80:80"
       - "443:443"
     volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - certbot_etc:/etc/letsencrypt:ro
       - certbot_www:/var/www/certbot:ro
+    ulimits:
+      nofile:
+        soft: 32768
+        hard: 32768
     depends_on:
       - app
     networks: [internal]

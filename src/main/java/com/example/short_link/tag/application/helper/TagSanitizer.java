@@ -1,5 +1,7 @@
 package com.example.short_link.tag.application.helper;
 
+import java.util.Locale;
+
 public final class TagSanitizer {
 
   public static final int MAX_NAME_LENGTH = 50;
@@ -24,6 +26,6 @@ public final class TagSanitizer {
     if (!trimmed.matches("^#[0-9a-fA-F]{6}$")) {
       throw new IllegalArgumentException("color must be #RRGGBB");
     }
-    return trimmed.toLowerCase();
+    return trimmed.toLowerCase(Locale.ROOT);
   }
 }

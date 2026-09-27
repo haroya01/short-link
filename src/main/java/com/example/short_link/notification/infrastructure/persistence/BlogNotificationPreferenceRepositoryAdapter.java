@@ -28,8 +28,8 @@ public class BlogNotificationPreferenceRepositoryAdapter
   }
 
   @Override
-  public BlogNotificationPreferenceEntity save(BlogNotificationPreferenceEntity preference) {
-    return jpa.save(preference);
+  public void setEnabled(Long userId, NotificationType type, boolean enabled) {
+    jpa.setEnabled(userId, type.name(), enabled);
   }
 
   @Override

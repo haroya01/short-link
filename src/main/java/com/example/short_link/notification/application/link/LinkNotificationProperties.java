@@ -2,10 +2,6 @@ package com.example.short_link.notification.application.link;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-/**
- * Tuning for owner link notifications. Cron jobs are toggleable + the velocity heuristic is
- * configurable. Sensible defaults; all overridable by env.
- */
 @ConfigurationProperties(prefix = "short-link.link-notification")
 public record LinkNotificationProperties(
     boolean digestEnabled,

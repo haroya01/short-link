@@ -4,10 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-/**
- * {@link PostRepositoryAdapter#booleanMatch(String)} 가 원시 검색어를 FULLTEXT BOOLEAN 모드용 AGAINST 문자열로
- * 안전하게 다듬는지. 연산자 제거·공백 정규화·빈 결과가 핵심.
- */
 class PostRepositoryAdapterBooleanMatchTest {
 
   @Test
@@ -68,7 +64,6 @@ class PostRepositoryAdapterBooleanMatchTest {
 
   @Test
   void titleLikeFallbackNullForOperatorOnlyQuery() {
-    // 스크럽 후 잡을 자연어가 없으면 폴백해도 소용없으니 끈다.
     assertThat(PostRepositoryAdapter.titleLikeFallback("+++")).isNull();
     assertThat(PostRepositoryAdapter.titleLikeFallback("   ")).isNull();
   }

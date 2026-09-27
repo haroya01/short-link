@@ -1,11 +1,12 @@
 package com.example.short_link.link.stats.infrastructure.persistence;
 
 import com.example.short_link.link.stats.domain.repository.ClickTimeReadRepository;
+import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickBucketRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClickRow;
-import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DailyClicksByLinkRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.DayOfWeekClickRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HeatmapRow;
 import com.example.short_link.link.stats.domain.repository.projection.ClickProjections.HourClickRow;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -18,23 +19,41 @@ class ClickTimeReadRepositoryAdapter implements ClickTimeReadRepository {
   private final JpaClickTimeReadRepository jpa;
 
   @Override
-  public List<DailyClickRow> findDailyClicks(Long linkId, Instant from, String timezone) {
-    return jpa.findDailyClicks(linkId, from, timezone);
+  public List<DailyClickBucketRow> findDailyClickBucketsByLinkIds(
+      List<Long> ids, List<Instant> dayStarts, Instant until) {
+    if (ids.isEmpty()) return List.of();
+    if (dayStarts.size() != 7) throw new IllegalArgumentException("seven day starts required");
+    List<BigDecimal> b = dayStarts.stream().map(ClickTimeReadRepositoryAdapter::epoch).toList();
+    return jpa.findDailyClickBucketsByLinkIds(
+        ids, b.get(0), b.get(1), b.get(2), b.get(3), b.get(4), b.get(5), b.get(6), epoch(until));
+  }
+
+  private static BigDecimal epoch(Instant instant) {
+    return BigDecimal.valueOf(instant.getEpochSecond())
+        .add(BigDecimal.valueOf(instant.getNano(), 9));
   }
 
   @Override
-  public List<HourClickRow> findHourlyClicks(Long linkId, String timezone) {
-    return jpa.findHourlyClicks(linkId, timezone);
+  public List<DailyClickRow> findDailyClicks(
+      Long linkId, Instant from, Instant until, String timezone) {
+    return jpa.findDailyClicks(linkId, from, until, timezone);
   }
 
   @Override
-  public List<DayOfWeekClickRow> findDayOfWeekClicks(Long linkId, String timezone) {
-    return jpa.findDayOfWeekClicks(linkId, timezone);
+  public List<HourClickRow> findHourlyClicks(
+      Long linkId, Instant from, Instant until, String timezone) {
+    return jpa.findHourlyClicks(linkId, from, until, timezone);
   }
 
   @Override
-  public List<HeatmapRow> findHeatmap(Long linkId, String timezone) {
-    return jpa.findHeatmap(linkId, timezone);
+  public List<DayOfWeekClickRow> findDayOfWeekClicks(
+      Long linkId, Instant from, Instant until, String timezone) {
+    return jpa.findDayOfWeekClicks(linkId, from, until, timezone);
+  }
+
+  @Override
+  public List<HeatmapRow> findHeatmap(Long linkId, Instant from, Instant until, String timezone) {
+    return jpa.findHeatmap(linkId, from, until, timezone);
   }
 
   @Override
@@ -53,10 +72,5 @@ class ClickTimeReadRepositoryAdapter implements ClickTimeReadRepository {
   public List<HeatmapRow> findHeatmapByLinkIdsSince(
       List<Long> linkIds, Instant since, String timezone) {
     return jpa.findHeatmapByLinkIdsSince(linkIds, since, timezone);
-  }
-
-  @Override
-  public List<DailyClicksByLinkRow> findDailyClicksByLinkIdsSince(List<Long> ids, Instant from) {
-    return jpa.findDailyClicksByLinkIdsSince(ids, from);
   }
 }

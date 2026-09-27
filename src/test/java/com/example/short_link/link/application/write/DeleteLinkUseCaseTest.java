@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -21,8 +22,9 @@ class DeleteLinkUseCaseTest {
   private final LinkOwnership ownership = mock(LinkOwnership.class);
   private final LinkRepository repository = mock(LinkRepository.class);
   private final AuditLogService auditLogService = mock(AuditLogService.class);
+  private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
   private final DeleteLinkUseCase useCase =
-      new DeleteLinkUseCase(ownership, repository, auditLogService);
+      new DeleteLinkUseCase(ownership, repository, auditLogService, linkCacheEviction);
 
   @Test
   void executeDeletesLinkOwnedByUser() {
@@ -32,6 +34,7 @@ class DeleteLinkUseCaseTest {
     useCase.execute(new DeleteLinkCommand(42L, new ShortCode("abc1234")));
 
     verify(repository).delete(link);
+    verify(linkCacheEviction).evictAfterCommit(new ShortCode("abc1234"));
   }
 
   @Test
@@ -52,5 +55,6 @@ class DeleteLinkUseCaseTest {
     assertThatThrownBy(() -> useCase.execute(new DeleteLinkCommand(42L, new ShortCode("nope0001"))))
         .isInstanceOf(LinkException.class);
     verify(repository, never()).delete(any(LinkEntity.class));
+    verify(linkCacheEviction, never()).evictAfterCommit(any());
   }
 }

@@ -12,12 +12,10 @@ public interface NoteRepository {
 
   Optional<NoteEntity> findById(Long id);
 
-  /** Bulk fetch by ids — resolving notes connected to a collection. */
   List<NoteEntity> findAllByIdIn(Collection<Long> ids);
 
   void delete(NoteEntity note);
 
-  /** 최신순 한 페이지 — hasNext 판정은 호출측이 {@link #countAll()} 과 조합한다. */
   List<NoteRow> feed(int page, int size);
 
   long countAll();

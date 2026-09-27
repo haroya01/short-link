@@ -1,5 +1,7 @@
 package com.example.short_link.admin.application.read;
 
+import static com.example.short_link.common.observability.LatencyPercentiles.percentile;
+
 import com.example.short_link.admin.application.dto.AdminLinkMetric;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository;
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.LinkMetricRow;
@@ -17,7 +19,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,14 +30,7 @@ public class AdminLinkMetricsQueryService {
   private final AdminMetricsRepository metricsRepository;
   private final Clock clock;
 
-  @Autowired
   public AdminLinkMetricsQueryService(
-      RequestMetricJpaRepository requestMetricRepository,
-      AdminMetricsRepository metricsRepository) {
-    this(requestMetricRepository, metricsRepository, Clock.systemUTC());
-  }
-
-  AdminLinkMetricsQueryService(
       RequestMetricJpaRepository requestMetricRepository,
       AdminMetricsRepository metricsRepository,
       Clock clock) {
@@ -122,16 +116,6 @@ public class AdminLinkMetricsQueryService {
 
   private static long roundToMillis(double v) {
     return Math.round(v);
-  }
-
-  private static double percentile(long[] sorted, double p) {
-    if (sorted.length == 0) return 0.0;
-    if (sorted.length == 1) return sorted[0];
-    double rank = (sorted.length - 1) * p;
-    int lo = (int) Math.floor(rank);
-    int hi = (int) Math.ceil(rank);
-    if (lo == hi) return sorted[lo];
-    return sorted[lo] + (rank - lo) * (sorted[hi] - sorted[lo]);
   }
 
   private static long nullToZero(Long v) {

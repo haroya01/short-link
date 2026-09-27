@@ -10,7 +10,8 @@ public interface UserRepository {
 
   Optional<UserEntity> findById(Long id);
 
-  /** Batch lookup for feed author hydration (avoids per-post N+1). */
+  Optional<UserEntity> findByIdForUpdate(Long id);
+
   List<UserEntity> findAllByIdIn(Collection<Long> ids);
 
   UserEntity save(UserEntity user);
@@ -24,8 +25,6 @@ public interface UserRepository {
   Optional<UserEntity> findByOauthProviderAndOauthId(String oauthProvider, String oauthId);
 
   Optional<UserEntity> findByEmail(String email);
-
-  Optional<UserEntity> findByStripeCustomerId(String stripeCustomerId);
 
   Optional<UserEntity> findByUsername(String username);
 

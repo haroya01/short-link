@@ -48,6 +48,9 @@ class AdminLinkMetricsQueryServiceTest {
     AdminLinkMetric abc =
         metrics.stream().filter(m -> m.shortCode().equals("abc1234")).findFirst().orElseThrow();
     assertThat(abc.windowedRedirects()).isEqualTo(3);
+    assertThat(abc.p50Millis()).isEqualTo(30);
+    assertThat(abc.p95Millis()).isEqualTo(93);
+    assertThat(abc.p99Millis()).isEqualTo(99);
     assertThat(abc.outcomeCounts()).containsEntry("redirect", 2L).containsEntry("not_found", 1L);
     assertThat(abc.totalRedirects()).isEqualTo(99L);
     assertThat(abc.originalUrl()).isEqualTo("https://example.com/a");

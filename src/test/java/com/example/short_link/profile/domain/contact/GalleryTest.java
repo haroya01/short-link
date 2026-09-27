@@ -90,8 +90,7 @@ class GalleryTest {
 
   @Test
   void ignoresUnknownFields() {
-    // Forward compat — same class of bug as ContactCard logoFocalX/Y hotfix (PR #256). A frontend
-    // sending v2 fields (captions[], aspectRatio) before backend deploy shouldn't 400 the save.
+    // 프론트가 백엔드보다 먼저 새 필드를 보내도 저장이 400으로 막히면 안 된다.
     String out =
         Gallery.normalize(
             "{\"images\":[\"https://a.example/1.jpg\"],"

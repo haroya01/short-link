@@ -108,7 +108,7 @@ class PostNotificationListenerTest {
         .recordForEach(
             eq(List.of(1L, 2L, 3L)), eq(NotificationType.NEW_POST), eq(7L), post.capture());
     assertThat(post.getValue().slug()).isEqualTo("the-post");
-    assertThat(post.getValue().authorUsername()).isNull(); // resolved from actor at read time
+    assertThat(post.getValue().authorUsername()).isNull();
   }
 
   @Test

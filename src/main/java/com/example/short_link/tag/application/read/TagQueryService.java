@@ -3,7 +3,6 @@ package com.example.short_link.tag.application.read;
 import com.example.short_link.tag.application.dto.TagSummary;
 import com.example.short_link.tag.domain.TagEntity;
 import com.example.short_link.tag.domain.repository.TagRepository;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
@@ -34,11 +33,7 @@ public class TagQueryService {
   }
 
   public Map<Long, Long> countMap(List<Long> tagIds) {
-    Map<Long, Long> counts = new HashMap<>();
-    if (tagIds.isEmpty()) return counts;
-    for (Object[] row : tagRepository.countLinksByTagIds(tagIds)) {
-      counts.put((Long) row[0], (Long) row[1]);
-    }
-    return counts;
+    if (tagIds.isEmpty()) return Map.of();
+    return tagRepository.countLinksByTagIds(tagIds);
   }
 }

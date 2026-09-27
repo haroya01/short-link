@@ -9,10 +9,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Ported from the web editor's markdown-to-blocks.test.ts — the two converters must stay
- * behaviorally identical, so this mirrors that spec case-for-case.
- */
+// Ported from the web editor's markdown-to-blocks.test.ts — the two converters must stay
+// behaviorally identical, so this mirrors that spec case-for-case.
 class MarkdownBlocksConverterTest {
 
   private final MarkdownBlocksConverter converter =
@@ -129,14 +127,12 @@ class MarkdownBlocksConverterTest {
     assertThat(blocks.get(0).content())
         .isEqualTo(
             "{\"url\":\"https://cdn/x.png\",\"alt\":\"p\",\"caption\":\"she said \\\"hi\\\"\"}");
-    // 왕복: 블록 캡션이 같은 markdown 으로 재이스케이프되고, 다시 같은 블록으로 파싱된다.
     assertThat(roundTrip(blocks)).isEqualTo(md);
     assertThat(toBlocks(roundTrip(blocks))).isEqualTo(blocks);
   }
 
   @Test
   void roundTripsCaptionWithBackslash() {
-    // 백슬래시도 title 이스케이프 대상(`\\`) — 따옴표와 섞여도 원문 그대로 왕복한다.
     String content =
         "{\"url\":\"https://cdn/x.png\",\"alt\":\"\",\"caption\":\"C:\\\\temp \\\"raw\\\"\"}";
     String md = roundTrip(List.of(new BlockInput(PostBlockType.IMAGE, content)));
@@ -156,7 +152,6 @@ class MarkdownBlocksConverterTest {
     List<BlockInput> blocks = toBlocks("- one\n- two\n- three");
     assertThat(blocks).hasSize(1);
     assertThat(blocks.get(0).type()).isEqualTo(PostBlockType.LIST_BULLET);
-    // New format = raw markdown (nesting-capable), not a JSON array.
     assertThat(blocks.get(0).content()).isEqualTo("- one\n- two\n- three");
   }
 
@@ -381,5 +376,48 @@ class MarkdownBlocksConverterTest {
   void codeFenceGrowsPastBackticksInCode() {
     assertThat(MarkdownBlocksConverter.fenceFor("plain")).isEqualTo("```");
     assertThat(MarkdownBlocksConverter.fenceFor("a ````raw```` b")).isEqualTo("`````");
+  }
+
+  @Test
+  void codeAndSubListsAfterABlankLineStayInTheListItem() {
+    List<BlockInput> blocks = toBlocks("- 自動変換です\n\n  ```java\n  int a = 10;\n  ```\n- 強制変換\n\nあと");
+    assertThat(blocks)
+        .extracting(BlockInput::type)
+        .containsExactly(PostBlockType.LIST_BULLET, PostBlockType.PARAGRAPH);
+    assertThat(blocks.get(0).content()).contains("int a = 10;");
+  }
+
+  @Test
+  void codeFenceOnlyClosesOnAFenceAsLongAsTheOpener() {
+    List<BlockInput> blocks = toBlocks("````markdown\n```bash\nls\n```\n````");
+    assertThat(blocks).extracting(BlockInput::type).containsExactly(PostBlockType.CODE);
+    assertThat(blocks.get(0).content()).contains("```bash");
+    assertThat(toBlocks("```\nfirst\n```java\nsecond\n```")).hasSize(1);
+  }
+
+  @Test
+  void qiitaAndZennBoxesBecomeAlertQuotes() {
+    List<BlockInput> blocks =
+        toBlocks(
+            "前\n\n:::note warn\n**なぜ？**\n説明\n:::\n\n:::message alert\n危険\n:::\n\n:::details 開く\n中身\n:::");
+    assertThat(blocks.get(1))
+        .isEqualTo(new BlockInput(PostBlockType.QUOTE, "[!WARNING]\n**なぜ？**\n説明"));
+    assertThat(blocks.get(2)).isEqualTo(new BlockInput(PostBlockType.QUOTE, "[!CAUTION]\n危険"));
+    assertThat(blocks.get(3).content()).startsWith(":::details");
+  }
+
+  @Test
+  void boxesInsideCodeAreLeftAlone() {
+    String code = ":::note warn\n例\n:::";
+    List<BlockInput> blocks = toBlocks("```markdown\n" + code + "\n```");
+    assertThat(blocks).hasSize(1);
+    assertThat(blocks.get(0).content()).contains(":::note warn");
+  }
+
+  @Test
+  void alertQuotesRoundTripUnchanged() {
+    List<BlockInput> blocks = toBlocks("> [!TIP]\n> 使えます");
+    assertThat(blocks).containsExactly(new BlockInput(PostBlockType.QUOTE, "[!TIP]\n使えます"));
+    assertThat(roundTrip(blocks)).isEqualTo("> [!TIP]\n> 使えます");
   }
 }

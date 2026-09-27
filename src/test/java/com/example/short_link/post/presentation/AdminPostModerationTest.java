@@ -20,11 +20,6 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Admin moderation of any author's post — metadata edit (title/tags) and permanent delete. Mirrors
- * {@link AdminPostTakedownTest}: the {@code /api/v1/admin/**} prefix is ADMIN-gated at the security
- * layer, so the tests pin the role gate plus the use-case behavior.
- */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -56,8 +51,6 @@ class AdminPostModerationTest {
     post.publish();
     return postRepository.save(post);
   }
-
-  // MARK: 편집 (제목·태그)
 
   @Test
   void plainUserCannotEditOthersPost() throws Exception {
@@ -106,8 +99,6 @@ class AdminPostModerationTest {
                 .content("{\"title\":\"x\"}"))
         .andExpect(status().isNotFound());
   }
-
-  // MARK: 삭제
 
   @Test
   void plainUserCannotDeleteOthersPost() throws Exception {

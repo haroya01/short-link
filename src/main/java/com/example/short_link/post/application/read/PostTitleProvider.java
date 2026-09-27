@@ -9,10 +9,6 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
-/**
- * Post-side implementation of the neutral {@link PostTitleReader} port. One batched {@code IN (…)}
- * read, so labelling N attributed posts costs one query rather than N.
- */
 @Component
 @RequiredArgsConstructor
 class PostTitleProvider implements PostTitleReader {

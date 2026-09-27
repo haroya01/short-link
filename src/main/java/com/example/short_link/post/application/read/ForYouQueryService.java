@@ -17,31 +17,19 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * The "For You" feed — a personalized discovery feed ranked by tag affinity. Interest tags come
- * from what the reader explicitly follows plus the tags of posts they've actually read and liked;
- * candidates are recent published posts in those tags that they haven't read yet (and aren't their
- * own). A reader with no signal yet falls back to trending until we know them. Each card is
- * annotated with the interest tag it matched (왜 추천).
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ForYouQueryService {
 
-  /** Recent reads kept out of the feed (so it doesn't re-surface what you just read). */
   private static final int EXCLUDE_CAP = 200;
 
-  /** Recent reads/likes mined for interest tags. */
   private static final int SIGNAL_CAP = 40;
 
   private static final int MAX_INTEREST_TAGS = 12;
 
-  /** An explicit tag follow outweighs an incidental read. */
+  // An explicit tag follow outweighs an incidental read.
   private static final int FOLLOWED_WEIGHT = 3;
-
-  /** No-match sentinel so the `not in` stays valid before the reader has read anything. */
-  private static final List<Long> NO_EXCLUDE = List.of(-1L);
 
   private final PostRepository postRepository;
   private final PostReadRepository postReadRepository;
@@ -66,16 +54,15 @@ public class ForYouQueryService {
 
     List<String> interest = deriveInterestTags(prefs.followed(), recentReadIds, likedIds, hidden);
     if (interest.isEmpty()) {
-      // Cold start — no signal yet. Trending is the honest default until we know the reader.
+      // No interest signal yet; use trending for the cold start.
       List<PostEntity> trending = postRepository.findPublishedTrending(null, page, size);
       boolean hasNext = (long) (page + 1) * size < postRepository.countPublished(null);
       return new PublicFeedView(feedItemAssembler.assemble(trending), page, size, hasNext);
     }
 
-    List<Long> exclude = recentReadIds.isEmpty() ? NO_EXCLUDE : recentReadIds;
     List<PostEntity> posts =
-        postRepository.findForYouCandidates(userId, interest, exclude, page, size);
-    long total = postRepository.countForYouCandidates(userId, interest, exclude);
+        postRepository.findForYouCandidates(userId, interest, recentReadIds, page, size);
+    long total = postRepository.countForYouCandidates(userId, interest, recentReadIds);
     boolean hasNext = (long) (page + 1) * size < total;
 
     Set<String> interestSet = Set.copyOf(interest);
@@ -93,7 +80,6 @@ public class ForYouQueryService {
     return new PublicFeedView(items, page, size, hasNext);
   }
 
-  /** followed tags (weighted) ∪ frequent tags from recent reads/likes, minus hidden — top N. */
   private List<String> deriveInterestTags(
       List<String> followed, List<Long> readIds, List<Long> likedIds, Set<String> hidden) {
     Map<String, Integer> freq = new HashMap<>();

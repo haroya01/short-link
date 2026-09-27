@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Authed highlight-reply surface — reply into a highlight's flat thread, or delete a reply. */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor

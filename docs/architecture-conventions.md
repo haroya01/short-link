@@ -9,7 +9,7 @@ name and package.
 - `presentation`: HTTP controllers, request records, response records, exception advice.
 - `application`: use cases, query services, application views, ports to other capabilities.
 - `domain`: entities, value objects, domain repository ports.
-- `infrastructure`: adapters for JPA, Redis, HTTP clients, S3, Stripe, and other SDKs.
+- `infrastructure`: adapters for JPA, Redis, HTTP clients, S3, and other SDKs.
 
 `domain` never imports `application` or `presentation`. `application` never imports
 `presentation`. SDK-specific types stay behind infrastructure or common infrastructure wrappers.

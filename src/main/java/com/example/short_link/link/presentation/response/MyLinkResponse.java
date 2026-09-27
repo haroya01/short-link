@@ -14,7 +14,32 @@ public record MyLinkResponse(
     Instant expiresAt,
     long clickCount,
     List<String> tags,
-    List<Long> clicksLast7d) {
+    List<Long> clicksLast7d,
+    String note,
+    String timezone,
+    Long humanClickCount) {
+  public MyLinkResponse(
+      ShortCode shortCode,
+      String shortUrl,
+      String originalUrl,
+      Instant createdAt,
+      Instant expiresAt,
+      long clickCount,
+      List<String> tags,
+      List<Long> clicksLast7d) {
+    this(
+        shortCode,
+        shortUrl,
+        originalUrl,
+        createdAt,
+        expiresAt,
+        clickCount,
+        tags,
+        clicksLast7d,
+        null,
+        "UTC",
+        null);
+  }
 
   public static MyLinkResponse from(MyLink my, ShortLinkUrlBuilder urlBuilder) {
     return new MyLinkResponse(
@@ -25,6 +50,9 @@ public record MyLinkResponse(
         my.expiresAt(),
         my.clickCount(),
         my.tags(),
-        my.clicksLast7d());
+        my.clicksLast7d(),
+        my.note(),
+        my.timezone(),
+        my.humanClickCount());
   }
 }

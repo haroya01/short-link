@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 링크 알림 인박스 — 첫 클릭·마일스톤·급증·곧 만료. 블로그 알림({@code /api/v1/notifications})과 별개 도메인이라 별도 경로를 쓴다. {@code
- * anyRequest().authenticated()} 가 인증을 강제(permitAll 목록에 없음).
- */
 @RestController
 @RequestMapping("/api/v1/links/notifications")
 public class LinkNotificationController {

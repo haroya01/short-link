@@ -3,15 +3,20 @@ package com.example.short_link.notification.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
+import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
+import com.example.short_link.notification.application.push.NotificationPushDelivery;
+import com.example.short_link.notification.application.push.PushApp;
+import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
+import com.example.short_link.notification.domain.NotificationUser;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
-import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.UserRepository;
+import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -33,7 +38,7 @@ class RecordBlogNotificationUseCaseTest {
   private PushSender pushSender;
 
   @Mock(strictness = Mock.Strictness.LENIENT)
-  private UserRepository userRepository;
+  private NotificationUserReader userRepository;
 
   @Mock(strictness = Mock.Strictness.LENIENT)
   private BlogNotificationPreferenceService preferenceService;
@@ -44,7 +49,6 @@ class RecordBlogNotificationUseCaseTest {
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final MessageSource messageSource = pushMessages();
 
-  /** 실제 messages_*.properties 를 로드해 로컬라이즈를 실측한다. */
   private static MessageSource pushMessages() {
     ResourceBundleMessageSource ms = new ResourceBundleMessageSource();
     ms.setBasename("messages");
@@ -52,14 +56,10 @@ class RecordBlogNotificationUseCaseTest {
     return ms;
   }
 
-  private static UserEntity userWith(long id, String locale) {
-    UserEntity u = org.mockito.Mockito.mock(UserEntity.class);
-    when(u.getId()).thenReturn(id);
-    when(u.getLocale()).thenReturn(locale);
-    return u;
+  private static NotificationUser userWith(long id, String locale) {
+    return new NotificationUser(id, null, locale);
   }
 
-  /** Default: every type enabled for every recipient — existing behavior is preference-free. */
   @org.junit.jupiter.api.BeforeEach
   void defaultsToEveryTypeEnabled() {
     when(preferenceService.isEnabled(
@@ -75,8 +75,8 @@ class RecordBlogNotificationUseCaseTest {
   private RecordBlogNotificationUseCase useCase() {
     return new RecordBlogNotificationUseCase(
         repository,
-        jsonMapper,
-        pushSender,
+        new NotificationTargetCodec(jsonMapper),
+        new NotificationPushDelivery(pushSender),
         userRepository,
         messageSource,
         preferenceService,
@@ -116,8 +116,8 @@ class RecordBlogNotificationUseCaseTest {
   void pushMirrorsEveryTypeWithActorName() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    UserEntity actor = org.mockito.Mockito.mock(UserEntity.class);
-    when(actor.getUsername()).thenReturn("yuki");
+    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
+    when(actor.username()).thenReturn("yuki");
     when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
 
     Map<NotificationType, String> expected =
@@ -153,14 +153,85 @@ class RecordBlogNotificationUseCaseTest {
   }
 
   @Test
+  void pushCarriesTypeAndRouteOfTheTarget() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L))
+        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
+
+    useCase()
+        .record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "my-post", "Hi", null));
+    useCase()
+        .record(
+            9L,
+            NotificationType.MENTION,
+            2L,
+            new NotificationPostRef(11L, "their-post", "Yo", "mika"));
+    useCase()
+        .record(
+            9L,
+            NotificationType.SERIES_SUBSCRIBE,
+            2L,
+            new NotificationSeriesRef(5L, "tokyo-walks", "도쿄 산책"));
+    useCase()
+        .record(
+            9L, NotificationType.CONNECTED, 2L, new NotificationCollectionRef(42L, "산책 모음", 10L));
+    useCase().record(9L, NotificationType.FOLLOW, 2L, null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(5))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::type, PushSender.PushMessage::app)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("LIKE", PushApp.BLOG),
+            org.assertj.core.groups.Tuple.tuple("MENTION", PushApp.BLOG),
+            org.assertj.core.groups.Tuple.tuple("SERIES_SUBSCRIBE", PushApp.BLOG),
+            org.assertj.core.groups.Tuple.tuple("CONNECTED", PushApp.BLOG),
+            org.assertj.core.groups.Tuple.tuple("FOLLOW", PushApp.BLOG));
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::route)
+        .containsExactly(
+            new PushRoute("yuki", "me", "my-post", null, null),
+            new PushRoute("yuki", "mika", "their-post", null, null),
+            new PushRoute("yuki", "me", null, "tokyo-walks", null),
+            new PushRoute("yuki", null, null, null, 42L),
+            new PushRoute("yuki", null, null, null, null));
+  }
+
+  @Test
+  void fannedOutNewPostRoutesToTheActorsPost() {
+    when(userRepository.findById(2L))
+        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    when(userRepository.findAllByIdIn(List.of(7L, 8L)))
+        .thenReturn(List.of(userWith(7L, "ko"), userWith(8L, "ko")));
+
+    useCase()
+        .recordForEach(
+            List.of(7L, 8L),
+            NotificationType.NEW_POST,
+            2L,
+            new NotificationPostRef(10L, "fresh", "새 글", null));
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 8L)), pushed.capture());
+    assertThat(pushed.getValue().route())
+        .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null));
+  }
+
+  @Test
   void pushIsLocalizedToRecipientLocale() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    UserEntity actor = org.mockito.Mockito.mock(UserEntity.class);
-    when(actor.getUsername()).thenReturn("yuki");
+    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
+    when(actor.username()).thenReturn("yuki");
     when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
-    UserEntity recipient = org.mockito.Mockito.mock(UserEntity.class);
-    when(recipient.getLocale()).thenReturn("ja");
+    NotificationUser recipient = org.mockito.Mockito.mock(NotificationUser.class);
+    when(recipient.locale()).thenReturn("ja");
     when(userRepository.findById(9L)).thenReturn(Optional.of(recipient));
 
     useCase().record(9L, NotificationType.LIKE, 2L, null);
@@ -180,8 +251,8 @@ class RecordBlogNotificationUseCaseTest {
 
     useCase().record(9L, NotificationType.FOLLOW, 2L, null);
 
-    UserEntity nameless = org.mockito.Mockito.mock(UserEntity.class);
-    when(nameless.getUsername()).thenReturn(null);
+    NotificationUser nameless = org.mockito.Mockito.mock(NotificationUser.class);
+    when(nameless.username()).thenReturn(null);
     when(userRepository.findById(3L)).thenReturn(Optional.of(nameless));
 
     useCase().record(9L, NotificationType.FOLLOW, 3L, null);
@@ -199,9 +270,9 @@ class RecordBlogNotificationUseCaseTest {
   @Test
   void fanOutChunksToWriterAndPushesOnce() {
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
-    UserEntity r7 = userWith(7L, "ko");
-    UserEntity r8 = userWith(8L, "ko");
-    UserEntity r9 = userWith(9L, "ko");
+    NotificationUser r7 = userWith(7L, "ko");
+    NotificationUser r8 = userWith(8L, "ko");
+    NotificationUser r9 = userWith(9L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7, r8, r9));
 
@@ -236,7 +307,7 @@ class RecordBlogNotificationUseCaseTest {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
-    UserEntity r7 = userWith(7L, "ko");
+    NotificationUser r7 = userWith(7L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7));
 
@@ -286,11 +357,10 @@ class RecordBlogNotificationUseCaseTest {
   @Test
   void fanOutSkipsFollowersWhoMutedNewPost() {
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
-    UserEntity r7 = userWith(7L, "ko");
-    UserEntity r9 = userWith(9L, "ko");
+    NotificationUser r7 = userWith(7L, "ko");
+    NotificationUser r9 = userWith(9L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7, r9));
-    // 8 muted NEW_POST; the filtered list keeps 7 and 9 in order — only those reach the writer.
     when(preferenceService.filterEnabled(List.of(7L, 8L, 9L), NotificationType.NEW_POST))
         .thenReturn(List.of(7L, 9L));
 
@@ -323,8 +393,8 @@ class RecordBlogNotificationUseCaseTest {
   void connectedSerializesCollectionRefAndSubtitlesWithCollectionName() {
     when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
         .thenAnswer(inv -> inv.getArgument(0));
-    UserEntity actor = org.mockito.Mockito.mock(UserEntity.class);
-    when(actor.getUsername()).thenReturn("yuki");
+    NotificationUser actor = org.mockito.Mockito.mock(NotificationUser.class);
+    when(actor.username()).thenReturn("yuki");
     when(userRepository.findById(2L)).thenReturn(Optional.of(actor));
 
     useCase()
@@ -353,8 +423,8 @@ class RecordBlogNotificationUseCaseTest {
   @Test
   void pathGrewFanOutSerializesCollectionRefAndSubtitlesWithCollectionName() {
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
-    UserEntity r7 = userWith(7L, "ko");
-    UserEntity r9 = userWith(9L, "ko");
+    NotificationUser r7 = userWith(7L, "ko");
+    NotificationUser r9 = userWith(9L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7, r9));
 
@@ -396,10 +466,9 @@ class RecordBlogNotificationUseCaseTest {
   @Test
   void pathGrewFanOutSkipsContributorsWhoMutedIt() {
     when(userRepository.findById(2L)).thenReturn(Optional.empty());
-    UserEntity r7 = userWith(7L, "ko");
+    NotificationUser r7 = userWith(7L, "ko");
     when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
         .thenReturn(List.of(r7));
-    // 9 muted PATH_GREW; the filtered list keeps 7 — only that survivor reaches the writer.
     when(preferenceService.filterEnabled(List.of(7L, 9L), NotificationType.PATH_GREW))
         .thenReturn(List.of(7L));
 

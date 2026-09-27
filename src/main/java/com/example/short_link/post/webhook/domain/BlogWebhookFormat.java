@@ -3,12 +3,6 @@ package com.example.short_link.post.webhook.domain;
 import java.net.URI;
 import java.util.Locale;
 
-/**
- * How a blog webhook's body is shaped for its receiver. GENERIC sends signed raw JSON (self-hosted
- * endpoints verify the HMAC); DISCORD/SLACK send the chat-native shapes those hosts expect (and
- * skip the signature, which they don't support). Auto-detected once at registration from the URL
- * host.
- */
 public enum BlogWebhookFormat {
   GENERIC,
   DISCORD,

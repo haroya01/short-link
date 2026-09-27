@@ -24,7 +24,7 @@ public class RegisterCustomDomainUseCase {
   @Transactional
   public DomainSummary execute(Long userId, String rawDomain) {
     String domain = CustomDomainPolicy.normalize(rawDomain);
-    CustomDomainPolicy.validate(domain);
+    CustomDomainEntity.validateDomain(domain);
     if (repository.existsByDomain(domain)) {
       throw new IllegalArgumentException("domain already registered");
     }

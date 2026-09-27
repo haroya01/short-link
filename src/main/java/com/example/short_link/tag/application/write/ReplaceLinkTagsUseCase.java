@@ -1,5 +1,6 @@
 package com.example.short_link.tag.application.write;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -17,14 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
-import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Full replace — missing tags are auto-created so the UI can let users type a new tag inline
- * without a separate "create tag" step.
- */
 @Service
 @RequiredArgsConstructor
 public class ReplaceLinkTagsUseCase {
@@ -32,9 +28,9 @@ public class ReplaceLinkTagsUseCase {
   private final LinkRepository linkRepository;
   private final TagRepository tagRepository;
   private final LinkTagRepository linkTagRepository;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
-  @CacheEvict(value = "link", key = "#shortCode")
   public List<String> execute(Long userId, ShortCode shortCode, List<String> rawNames) {
     LinkEntity link =
         linkRepository
@@ -49,6 +45,7 @@ public class ReplaceLinkTagsUseCase {
     }
 
     linkTagRepository.deleteByLinkId(link.linkId().value());
+    linkCacheEviction.evictAfterCommit(shortCode);
     if (normalized.isEmpty()) return List.of();
 
     Map<String, TagEntity> existing = new HashMap<>();

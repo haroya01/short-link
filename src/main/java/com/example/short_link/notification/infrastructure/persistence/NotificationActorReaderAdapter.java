@@ -10,10 +10,7 @@ import java.util.List;
 import java.util.Map;
 import org.springframework.stereotype.Repository;
 
-/**
- * Resolves notification actors via one native batch read against the user module's {@code users}
- * table — a native query so the notification module needn't depend on the user module's entity.
- */
+// Uses a native batch query to avoid an entity dependency on the user module and per-actor lookups.
 @Repository
 class NotificationActorReaderAdapter implements NotificationActorReader {
 
@@ -25,7 +22,8 @@ class NotificationActorReaderAdapter implements NotificationActorReader {
       return Map.of();
     }
     List<?> rows =
-        em.createNativeQuery("SELECT id, username, avatar_url FROM users WHERE id IN (:ids)")
+        em.createNativeQuery(
+                "SELECT id, username, avatar_url FROM users WHERE id IN (:ids) AND deleted_at IS NULL")
             .setParameter("ids", userIds)
             .getResultList();
     Map<Long, NotificationActor> resolved = new HashMap<>();

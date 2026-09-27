@@ -9,11 +9,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Live activity feed for the admin console — newest links, newest clicks, and the links trending in
- * the last 24h. Meant to be polled, so every read is a bounded, index-friendly query. Click rows
- * carry only coarse dimensions; IP and visitor hash never leave the persistence layer.
- */
 @Service
 @RequiredArgsConstructor
 public class AdminActivityService {

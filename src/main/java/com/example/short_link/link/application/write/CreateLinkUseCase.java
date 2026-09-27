@@ -16,9 +16,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -36,7 +38,8 @@ public class CreateLinkUseCase {
   private final ApplicationEventPublisher events;
   private final AuditLogService auditLogService;
   private final CreateLinkValidator validator;
-  private final LinkSidecarPersister sidecarPersister;
+  private final LinkDefaultsWriter defaultsWriter;
+  private final PasswordEncoder passwordEncoder;
   private final TransactionTemplate tx;
   private final long quotaPerUser;
 
@@ -47,7 +50,8 @@ public class CreateLinkUseCase {
       ApplicationEventPublisher events,
       AuditLogService auditLogService,
       CreateLinkValidator validator,
-      LinkSidecarPersister sidecarPersister,
+      LinkDefaultsWriter defaultsWriter,
+      @Qualifier("linkPasswordEncoder") PasswordEncoder passwordEncoder,
       PlatformTransactionManager transactionManager,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
     this.repository = repository;
@@ -56,24 +60,37 @@ public class CreateLinkUseCase {
     this.events = events;
     this.auditLogService = auditLogService;
     this.validator = validator;
-    this.sidecarPersister = sidecarPersister;
+    this.defaultsWriter = defaultsWriter;
+    this.passwordEncoder = passwordEncoder;
     this.tx = new TransactionTemplate(transactionManager);
     this.quotaPerUser = quotaPerUser;
   }
 
   public LinkCreated execute(CreateLinkCommand command) {
     String url = command.url();
-    validator.validateUrl(url);
+    validator.validateUrl(url, command.allowSelfHost());
 
     boolean authenticated = command.userId() != null;
     String code = authenticated ? command.customCode() : null;
     Instant expiresAt = authenticated ? command.expiresAt() : Instant.now().plus(ANONYMOUS_TTL);
 
     validator.rejectIfReserved(code);
+    // bcrypt 는 수십 ms 가 걸려서 커넥션을 잡기 전에 끝낸다.
+    String passwordHash =
+        authenticated && command.password() != null && !command.password().isBlank()
+            ? passwordEncoder.encode(command.password())
+            : null;
 
     return tx.execute(
         status ->
-            persist(url, command.userId(), code, expiresAt, command.deduplicate(), authenticated));
+            persist(
+                url,
+                command.userId(),
+                code,
+                expiresAt,
+                command.deduplicate(),
+                authenticated,
+                passwordHash));
   }
 
   private LinkCreated persist(
@@ -82,14 +99,16 @@ public class CreateLinkUseCase {
       String code,
       Instant expiresAt,
       boolean deduplicate,
-      boolean authenticated) {
-    if (deduplicate && authenticated && code == null) {
+      boolean authenticated,
+      String passwordHash) {
+    // 비밀번호를 건 요청이 이미 공유된 기존 링크를 돌려받으면 안 된다.
+    if (deduplicate && authenticated && code == null && passwordHash == null) {
       Optional<LinkEntity> existing = repository.findFirstByUserIdAndOriginalUrl(userId, url);
       if (existing.isPresent()) {
         LinkEntity link = existing.get();
         if (!link.isExpired(Instant.now())) {
           recordCreated(true, false, "deduplicated");
-          return new LinkCreated(link.getShortCode());
+          return new LinkCreated(link.getShortCode(), null, link.hasPassword());
         }
       }
     }
@@ -104,10 +123,10 @@ public class CreateLinkUseCase {
 
     if (code != null) {
       try {
-        LinkEntity saved = saveWithCode(url, code, userId, expiresAt, authenticated);
+        LinkEntity saved = saveWithCode(url, code, userId, expiresAt, authenticated, passwordHash);
         recordCreated(true, true, "ok");
         publishCreated(saved, userId, true);
-        return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
+        return new LinkCreated(saved.getShortCode(), saved.getClaimToken(), saved.hasPassword());
       } catch (DataIntegrityViolationException e) {
         throw new LinkException(LinkErrorCode.DUPLICATE_SHORT_CODE, code);
       }
@@ -119,10 +138,11 @@ public class CreateLinkUseCase {
         continue;
       }
       try {
-        LinkEntity saved = saveWithCode(url, generated, userId, expiresAt, authenticated);
+        LinkEntity saved =
+            saveWithCode(url, generated, userId, expiresAt, authenticated, passwordHash);
         recordCreated(authenticated, false, "ok");
         publishCreated(saved, userId, false);
-        return new LinkCreated(saved.getShortCode(), saved.getClaimToken());
+        return new LinkCreated(saved.getShortCode(), saved.getClaimToken(), saved.hasPassword());
       } catch (DataIntegrityViolationException ignored) {
       }
     }
@@ -130,11 +150,17 @@ public class CreateLinkUseCase {
   }
 
   private LinkEntity saveWithCode(
-      String url, String code, Long userId, Instant expiresAt, boolean authenticated) {
+      String url,
+      String code,
+      Long userId,
+      Instant expiresAt,
+      boolean authenticated,
+      String passwordHash) {
     LinkEntity entity = new LinkEntity(url, code, userId, expiresAt);
     attachClaimTokenIfAnonymous(entity, authenticated);
+    entity.setPasswordHash(passwordHash);
     LinkEntity saved = repository.save(entity);
-    sidecarPersister.persistAll(saved);
+    defaultsWriter.initialize(saved.linkId(), passwordHash);
     return saved;
   }
 

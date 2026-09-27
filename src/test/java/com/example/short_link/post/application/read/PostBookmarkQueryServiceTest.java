@@ -67,7 +67,7 @@ class PostBookmarkQueryServiceTest {
                 new PostBookmarkEntity(3L, 9L)));
     PostEntity p1 = publishedPost(1L, 100L, "a");
     PostEntity p3 = publishedPost(3L, 100L, "c");
-    PostEntity p2 = new PostEntity(100L, "b", "B", "ko"); // DRAFT → filtered
+    PostEntity p2 = new PostEntity(100L, "b", "B", "ko");
     ReflectionTestUtils.setField(p2, "id", 2L);
     when(postRepository.findAllByIdIn(List.of(1L, 2L, 3L))).thenReturn(List.of(p1, p2, p3));
     when(userRepository.findAllByIdIn(List.of(100L))).thenReturn(List.of(author(100L, "alice")));

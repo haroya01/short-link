@@ -12,10 +12,6 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Authenticated per-user tag preferences (account-synced "follow / hide topics"). Each mutation
- * returns the full updated prefs so the caller can replace its state in one round-trip.
- */
 @RestController
 @RequestMapping("/api/v1/users/me/tag-prefs")
 @RequiredArgsConstructor

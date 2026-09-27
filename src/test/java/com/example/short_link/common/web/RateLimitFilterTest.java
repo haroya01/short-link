@@ -96,8 +96,6 @@ class RateLimitFilterTest {
         .andExpect(status().isOk());
   }
 
-  // Per-endpoint rule (POST /api/v1/auth/2fa/verify, 5/min) trips on the 6th attempt regardless
-  // of the global anonymous bucket which is far higher.
   @Test
   void blocksTwoFactorVerifyAfterPerEndpointLimit() throws Exception {
     redis
@@ -112,7 +110,6 @@ class RateLimitFilterTest {
         .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
   }
 
-  // Per-endpoint rule for refresh is looser (10/min). Verify the 11th attempt trips, not the 6th.
   @Test
   void blocksRefreshAfterTenAttempts() throws Exception {
     redis

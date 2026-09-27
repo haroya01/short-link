@@ -22,13 +22,10 @@ public interface AdminMetricsRepository {
 
   List<LinkMetricRow> linkMetricRowsByShortCodes(Collection<ShortCode> shortCodes);
 
-  /** The {@code limit} newest links across all users, for the admin activity feed. */
   List<RecentLinkRow> recentLinks(int limit);
 
-  /** The {@code limit} newest clicks across all links — coarse dimensions only, never IP/hash. */
   List<RecentClickRow> recentClicks(int limit);
 
-  /** Top {@code limit} links by human clicks since {@code since} — the 24h "trending" signal. */
   List<LinkStatRow> topLinksByClicksSince(Instant since, int limit);
 
   record StatPage<T>(List<T> items, long total) {}

@@ -8,10 +8,6 @@ import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ProblemDetail;
 
-/**
- * ProblemDetail 빌드 공통 util. 각 feature 의 ExceptionHandler 가 공유 — common 이 feature exception 을 import
- * 하지 않고 각 feature 가 자기 exception 만 처리하도록.
- */
 public final class ProblemDetails {
 
   private ProblemDetails() {}

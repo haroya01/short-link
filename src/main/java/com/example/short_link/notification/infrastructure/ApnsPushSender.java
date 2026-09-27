@@ -1,122 +1,162 @@
 package com.example.short_link.notification.infrastructure;
 
 import com.example.short_link.notification.application.push.ApnsProperties;
+import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
-import java.security.KeyFactory;
-import java.security.PrivateKey;
-import java.security.Signature;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.time.Duration;
-import java.time.Instant;
-import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
-import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * APNs HTTP/2 직발송(외부 SDK 없음). 인증은 .p8 키로 서명한 ES256 JWT — 50분 캐시(애플 권장 20~60분 창). 발송은 작은 전용 풀에서
- * fire-and-forget: 알림 저장 트랜잭션을 절대 붙잡지 않고, 실패는 로그로만 남긴다(인앱 벨이 진실의 원천, 푸시는 보조 채널).
- * 410(Unregistered)·BadDeviceToken 은 그 자리에서 토큰 폐기.
- */
+// 전송은 전용 풀에서 실행하며 실패는 로그로 남긴다. 기기 조회·직렬화 실패는 호출자에게 전파된다. 410(Unregistered)과 BadDeviceToken은 기기 토큰을
+// 폐기한다. 메시지의 대상 앱 topic 으로만 보내며, topic 을 모르는 기존 토큰은 성공하면 그 topic 으로, DeviceTokenNotForTopic 이면 다른 앱
+// topic 으로 기록해 다음부터 고른다.
 @Component
 @Slf4j
 public class ApnsPushSender implements PushSender {
 
-  /** 앱이 이 category 에 "통계 보기" 액션 버튼을 묶어 뒀다(UNNotificationCategory) — shortCode 있는 알림에만 단다. */
+  // 앱이 이 category 에 "통계 보기" 액션 버튼을 묶어 뒀다(UNNotificationCategory) — shortCode 있는 알림에만 단다.
   private static final String LINK_STATS_CATEGORY = "LINK_STATS";
 
   private final ApnsProperties props;
   private final DeviceTokenRepository deviceTokens;
   private final JsonMapper jsonMapper;
   private final HttpClient http;
-  private final ExecutorService executor;
-  private final PrivateKey signingKey;
+  private final Executor executor;
+  private final ApnsTokenProvider tokenProvider;
 
-  private volatile String cachedJwt;
-  private volatile Instant jwtIssuedAt = Instant.EPOCH;
-
+  @Autowired
   public ApnsPushSender(
-      ApnsProperties props, DeviceTokenRepository deviceTokens, JsonMapper jsonMapper) {
-    this.props = props;
-    this.deviceTokens = deviceTokens;
-    this.jsonMapper = jsonMapper;
-    this.http =
+      ApnsProperties props,
+      DeviceTokenRepository deviceTokens,
+      JsonMapper jsonMapper,
+      ApnsTokenProvider tokenProvider) {
+    this(
+        props,
+        deviceTokens,
+        jsonMapper,
+        tokenProvider,
         HttpClient.newBuilder()
             .version(HttpClient.Version.HTTP_2)
             .connectTimeout(Duration.ofSeconds(5))
-            .build();
-    this.executor =
+            .build(),
         Executors.newFixedThreadPool(
             2,
             runnable -> {
               Thread thread = new Thread(runnable, "apns-push");
               thread.setDaemon(true);
               return thread;
-            });
-    this.signingKey = props.configured() ? parseKey(props.privateKey()) : null;
-    if (signingKey == null) {
+            }));
+  }
+
+  ApnsPushSender(
+      ApnsProperties props,
+      DeviceTokenRepository deviceTokens,
+      JsonMapper jsonMapper,
+      ApnsTokenProvider tokenProvider,
+      HttpClient http,
+      Executor executor) {
+    this.props = props;
+    this.deviceTokens = deviceTokens;
+    this.jsonMapper = jsonMapper;
+    this.tokenProvider = tokenProvider;
+    this.http = http;
+    this.executor = executor;
+    if (!tokenProvider.configured()) {
       log.info("APNs not configured (short-link.apns.*) — push sender is a no-op");
     }
   }
 
   @Override
   public void send(Long recipientUserId, PushMessage message) {
-    if (signingKey == null) return;
-    dispatch(deviceTokens.tokensForUser(recipientUserId), message);
+    if (!tokenProvider.configured()) return;
+    dispatch(deviceTokens.targetsForUser(recipientUserId), message);
   }
 
   @Override
   public void sendToAll(Collection<Long> recipientUserIds, PushMessage message) {
-    if (signingKey == null || recipientUserIds.isEmpty()) return;
-    dispatch(deviceTokens.tokensForUsers(recipientUserIds), message);
+    if (!tokenProvider.configured() || recipientUserIds.isEmpty()) return;
+    dispatch(deviceTokens.targetsForUsers(recipientUserIds), message);
   }
 
-  private void dispatch(List<String> tokens, PushMessage message) {
-    if (tokens.isEmpty()) return;
+  private void dispatch(List<DeviceTarget> targets, PushMessage message) {
+    String topic = props.topicFor(message.app());
+    List<DeviceTarget> reachable =
+        targets.stream().filter(t -> t.topic() == null || t.topic().equals(topic)).toList();
+    if (reachable.isEmpty()) {
+      log.info(
+          "push apns app={} type={} outcome=no_device devices={}",
+          message.app(),
+          message.type(),
+          targets.size());
+      return;
+    }
     String payload = payloadJson(message);
-    for (String token : tokens) {
-      executor.execute(() -> post(token, payload));
+    for (DeviceTarget target : reachable) {
+      executor.execute(() -> post(target.token(), topic, target.topic() == null, payload, message));
     }
   }
 
-  private void post(String token, String payload) {
+  private void post(
+      String token, String topic, boolean learnTopic, String payload, PushMessage message) {
     try {
       HttpRequest request =
           HttpRequest.newBuilder(URI.create(props.host() + "/3/device/" + token))
-              .header("authorization", "bearer " + jwt())
-              .header("apns-topic", props.bundleId())
+              .header("authorization", "bearer " + tokenProvider.token())
+              .header("apns-topic", topic)
               .header("apns-push-type", "alert")
               .timeout(Duration.ofSeconds(10))
               .POST(HttpRequest.BodyPublishers.ofString(payload, StandardCharsets.UTF_8))
               .build();
       HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
-      if (response.statusCode() == 410
-          || (response.statusCode() == 400 && response.body().contains("BadDeviceToken"))) {
+      int status = response.statusCode();
+      String outcome;
+      if (status == 410 || (status == 400 && response.body().contains("BadDeviceToken"))) {
         deviceTokens.deleteByToken(token);
-      } else if (response.statusCode() >= 400) {
-        log.debug("APNs {} for token …{}: {}", response.statusCode(), tail(token), response.body());
+        outcome = "gone";
+      } else if (status < 300) {
+        if (learnTopic) deviceTokens.updateTopic(token, topic);
+        outcome = "sent";
+      } else if (status == 400 && response.body().contains("DeviceTokenNotForTopic")) {
+        if (learnTopic) deviceTokens.updateTopic(token, props.otherTopic(topic));
+        outcome = "wrong_topic";
+      } else {
+        outcome = "rejected";
       }
+      log.info(
+          "push apns app={} type={} outcome={} status={} token=…{}{}",
+          message.app(),
+          message.type(),
+          outcome,
+          status,
+          tail(token),
+          status < 300 ? "" : " reason=" + response.body());
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
     } catch (Exception e) {
-      log.debug("APNs send failed for token …{}: {}", tail(token), e.toString());
+      log.warn(
+          "push apns app={} type={} outcome=error token=…{}: {}",
+          message.app(),
+          message.type(),
+          tail(token),
+          e.toString());
     }
   }
 
-  /**
-   * aps.alert/sound 는 그대로 두고(구버전 앱 호환) 라우팅 힌트만 얹는다: type·shortCode 는 aps 형제 최상위 키로, shortCode 가 있는
-   * 알림만 category="LINK_STATS" 를 달아 앱이 "통계 보기" 액션을 붙인다. 값이 없는 키는 통째로 생략한다.
-   */
+  // 구버전 앱 호환을 위해 aps.alert/sound는 유지한다. type·shortCode는 최상위 키이며 값이 없으면 생략한다. shortCode가 있는 알림에만
+  // LINK_STATS category를 붙인다.
   String payloadJson(PushMessage message) {
     var alert = new java.util.LinkedHashMap<String, Object>();
     alert.put("title", message.title());
@@ -132,70 +172,15 @@ public class ApnsPushSender implements PushSender {
     root.put("aps", aps);
     if (message.type() != null) root.put("type", message.type());
     if (message.shortCode() != null) root.put("shortCode", message.shortCode());
+    PushRoute route = message.route();
+    if (route != null) {
+      if (route.actorUsername() != null) root.put("actorUsername", route.actorUsername());
+      if (route.ownerUsername() != null) root.put("ownerUsername", route.ownerUsername());
+      if (route.postSlug() != null) root.put("postSlug", route.postSlug());
+      if (route.seriesSlug() != null) root.put("seriesSlug", route.seriesSlug());
+      if (route.collectionId() != null) root.put("collectionId", route.collectionId());
+    }
     return jsonMapper.writeValueAsString(root);
-  }
-
-  synchronized String jwt() {
-    if (cachedJwt != null && jwtIssuedAt.isAfter(Instant.now().minus(Duration.ofMinutes(50)))) {
-      return cachedJwt;
-    }
-    Instant now = Instant.now();
-    String header = b64url("{\"alg\":\"ES256\",\"kid\":\"" + props.keyId() + "\"}");
-    String claims =
-        b64url("{\"iss\":\"" + props.teamId() + "\",\"iat\":" + now.getEpochSecond() + "}");
-    String signingInput = header + "." + claims;
-    cachedJwt = signingInput + "." + sign(signingInput);
-    jwtIssuedAt = now;
-    return cachedJwt;
-  }
-
-  private String sign(String input) {
-    try {
-      Signature signature = Signature.getInstance("SHA256withECDSA");
-      signature.initSign(signingKey);
-      signature.update(input.getBytes(StandardCharsets.UTF_8));
-      return Base64.getUrlEncoder().withoutPadding().encodeToString(derToJose(signature.sign()));
-    } catch (Exception e) {
-      throw new IllegalStateException("APNs JWT signing failed", e);
-    }
-  }
-
-  /** SHA256withECDSA 는 DER 시퀀스를 내놓는다 — JOSE 는 r·s 각 32바이트 원시 연결을 원한다. */
-  static byte[] derToJose(byte[] der) {
-    int rLength = der[3];
-    int rOffset = 4;
-    int sLength = der[rOffset + rLength + 1];
-    int sOffset = rOffset + rLength + 2;
-    byte[] jose = new byte[64];
-    copyTrimmed(der, rOffset, rLength, jose, 0);
-    copyTrimmed(der, sOffset, sLength, jose, 32);
-    return jose;
-  }
-
-  private static void copyTrimmed(byte[] src, int offset, int length, byte[] dst, int dstStart) {
-    // DER 정수는 부호 패딩(앞 0x00)이 붙거나 32바이트보다 짧을 수 있다 — 우측 정렬로 복사.
-    int skip = Math.max(0, length - 32);
-    int copy = Math.min(length, 32);
-    System.arraycopy(src, offset + skip, dst, dstStart + (32 - copy), copy);
-  }
-
-  private static PrivateKey parseKey(String pem) {
-    try {
-      String base64 =
-          pem.replace("-----BEGIN PRIVATE KEY-----", "")
-              .replace("-----END PRIVATE KEY-----", "")
-              .replaceAll("\\s", "");
-      byte[] der = Base64.getDecoder().decode(base64);
-      return KeyFactory.getInstance("EC").generatePrivate(new PKCS8EncodedKeySpec(der));
-    } catch (Exception e) {
-      throw new IllegalStateException("APNs private key (.p8 PEM) is malformed", e);
-    }
-  }
-
-  private static String b64url(String value) {
-    return Base64.getUrlEncoder()
-        .withoutPadding()
-        .encodeToString(value.getBytes(StandardCharsets.UTF_8));
   }
 
   private static String tail(String token) {

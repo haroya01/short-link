@@ -14,11 +14,7 @@ public interface BlockRepository {
 
   void delete(UserBlockEntity block);
 
-  /**
-   * Ids this user has blocked, newest edge first — drives the block list + client-side filtering.
-   */
   List<Long> findBlockedIds(Long blockerId);
 
-  /** Removes every edge the user appears on (either side) — account hard-delete path. */
   int deleteAllInvolving(Long userId);
 }

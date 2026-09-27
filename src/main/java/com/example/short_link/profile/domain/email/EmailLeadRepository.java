@@ -9,6 +9,8 @@ public interface EmailLeadRepository {
 
   EmailLeadEntity save(EmailLeadEntity lead);
 
+  void addIfAbsent(EmailLeadEntity lead);
+
   void delete(EmailLeadEntity lead);
 
   long countByUserId(Long userId);

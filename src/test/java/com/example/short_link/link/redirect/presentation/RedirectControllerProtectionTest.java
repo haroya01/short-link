@@ -42,6 +42,39 @@ class RedirectControllerProtectionTest {
         .andExpect(content().string(Matchers.containsString("password")));
   }
 
+  // 미리보기 분기가 비밀번호 검사보다 먼저 돌면 스푸핑된 크롤러 UA로 목적지가 OG 카드에 노출된다. 크롤러도 비밀번호 화면만 받아야 한다.
+  @Test
+  void passwordPromptSpeaksTheVisitorsLanguage() throws Exception {
+    repository.save(new LinkEntity("https://example.com", "pwdja01"));
+    LinkEntity stored = repository.findByShortCode(new ShortCode("pwdja01")).orElseThrow();
+    stored.setPasswordHash("$2a$10$nKaXIa.8E2GfzG6dF2lzYOXa0lI6w0aiK8q5BWlBgEd9j3KMRPj7m");
+    repository.save(stored);
+
+    mvc.perform(get("/pwdja01").header("Accept-Language", "ja-JP,ja;q=0.9"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(Matchers.containsString("パスワードが必要なリンク")));
+    mvc.perform(
+            post("/pwdja01")
+                .header("Accept-Language", "ja-JP,ja;q=0.9")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .content("password=wrong"))
+        .andExpect(status().isUnauthorized())
+        .andExpect(content().string(Matchers.containsString("パスワードが正しくありません")));
+  }
+
+  @Test
+  void crawlerCannotBypassPasswordToLeakDestination() throws Exception {
+    repository.save(new LinkEntity("https://secret-destination.example.com/private", "pwd0009"));
+    LinkEntity stored = repository.findByShortCode(new ShortCode("pwd0009")).orElseThrow();
+    stored.setPasswordHash("$2a$10$dummyhashvalueforbcrypt000000000000000000000000000000");
+    repository.save(stored);
+
+    mvc.perform(get("/pwd0009").header("User-Agent", "Twitterbot/1.0"))
+        .andExpect(status().isOk())
+        .andExpect(content().string(Matchers.containsString("password")))
+        .andExpect(content().string(Matchers.not(Matchers.containsString("secret-destination"))));
+  }
+
   @Test
   void unlockWithWrongPasswordReprompts() throws Exception {
     repository.save(new LinkEntity("https://example.com", "pwd0002"));
@@ -72,7 +105,6 @@ class RedirectControllerProtectionTest {
             .getResponse()
             .getContentAsString();
 
-    // HTML escape — script tag should be encoded, not raw
     assertThat(body).doesNotContain("<script>");
     assertThat(body).contains("&lt;script&gt;");
   }

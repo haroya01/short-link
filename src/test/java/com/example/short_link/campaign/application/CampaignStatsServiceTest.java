@@ -66,7 +66,7 @@ class CampaignStatsServiceTest {
 
     recordClick(batch.link().linkId(), start.plusSeconds(60), false);
     recordClick(batch.link().linkId(), start.plusSeconds(120), false);
-    recordClick(batch.link().linkId(), start.plusSeconds(180), true); // bot — 제외
+    recordClick(batch.link().linkId(), start.plusSeconds(180), true);
 
     CampaignStatsView stats = statsService.statsFor(campaign.getId(), owner);
 

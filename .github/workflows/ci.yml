@@ -61,7 +61,7 @@ jobs:
 
       # CI tests run against the bundled GeoLite2-City-Fallback.mmdb so we don't burn
       # MaxMind's daily download quota on every PR. Production downloads use the key.
-      - run: ./gradlew test
+      - run: ./gradlew test verifyHttpEndpointCoverage
 
       - name: Upload test reports
         if: failure()
@@ -77,6 +77,14 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: build/reports/jacoco/test/jacocoTestReport.xml
           fail_ci_if_error: false
+
+      - name: Upload HTTP query contract evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: http-query-contracts
+          path: build/reports/query-audit/http-contracts/
+          if-no-files-found: warn
 
       - run: ./gradlew build -x test -x spotlessCheck
 

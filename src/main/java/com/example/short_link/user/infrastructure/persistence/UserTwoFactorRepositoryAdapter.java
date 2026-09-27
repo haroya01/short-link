@@ -18,6 +18,11 @@ class UserTwoFactorRepositoryAdapter implements UserTwoFactorRepository {
   }
 
   @Override
+  public Optional<UserTwoFactorEntity> findByIdForUpdate(Long id) {
+    return jpa.findByIdForUpdate(id);
+  }
+
+  @Override
   public UserTwoFactorEntity save(UserTwoFactorEntity twoFactor) {
     return jpa.save(twoFactor);
   }

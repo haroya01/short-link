@@ -5,7 +5,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.user.application.write.AuthService;
-import com.example.short_link.user.application.write.AuthService.LoginResult;
+import com.example.short_link.user.application.write.AuthService.MobileLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
 import com.example.short_link.user.presentation.security.MobileLoginFlag;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
@@ -48,7 +48,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
   @Test
   void mobileLoginRedirectsToCustomSchemeWithExchangeCode() throws Exception {
     when(authService.loginWithOAuthMobile("u@x.com", "google", "g-1"))
-        .thenReturn(new LoginResult.MobileExchangeCode("code-123"));
+        .thenReturn(new MobileLoginResult.ExchangeCode("code-123"));
 
     handler.onAuthenticationSuccess(req, res, auth);
 
@@ -60,7 +60,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
   @Test
   void mobileTwoFactorRedirectsWithChallenge() throws Exception {
     when(authService.loginWithOAuthMobile("u@x.com", "google", "g-1"))
-        .thenReturn(new LoginResult.TwoFactorRequired("challenge-jwt"));
+        .thenReturn(new MobileLoginResult.TwoFactorRequired("challenge-jwt"));
 
     handler.onAuthenticationSuccess(req, res, auth);
 
@@ -71,7 +71,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
   @Test
   void flagIsConsumedSoNextLoginFallsBackToWeb() throws Exception {
     when(authService.loginWithOAuthMobile("u@x.com", "google", "g-1"))
-        .thenReturn(new LoginResult.MobileExchangeCode("code-123"));
+        .thenReturn(new MobileLoginResult.ExchangeCode("code-123"));
 
     handler.onAuthenticationSuccess(req, res, auth);
 

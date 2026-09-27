@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One follow edge: {@code followerId} follows {@code followingId}. The pair is unique. */
 @Entity
 @Table(
     name = "user_follow",
@@ -34,10 +33,6 @@ public class FollowEntity extends BaseCreatedEntity {
   @Column(name = "following_id", nullable = false)
   private Long followingId;
 
-  /**
-   * The post the follower was reading when they followed, if any — null for a direct profile
-   * follow. Drives the per-post "이 글로 늘어난 팔로우" metric (net: removed when this edge is unfollowed).
-   */
   @Column(name = "source_post_id")
   private Long sourcePostId;
 

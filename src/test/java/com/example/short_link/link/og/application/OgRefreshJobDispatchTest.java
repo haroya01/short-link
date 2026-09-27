@@ -25,14 +25,14 @@ import org.mockito.Mockito;
 class OgRefreshJobDispatchTest {
 
   private LinkRepository linkRepository;
-  private LinkOgFetchListener listener;
+  private LinkOgFetchService listener;
   private RedisDistributedLock lock;
   private OgRefreshJob job;
 
   @BeforeEach
   void setUp() {
     linkRepository = Mockito.mock(LinkRepository.class);
-    listener = Mockito.mock(LinkOgFetchListener.class);
+    listener = Mockito.mock(LinkOgFetchService.class);
     lock = Mockito.mock(RedisDistributedLock.class);
     job =
         new OgRefreshJob(
@@ -76,8 +76,8 @@ class OgRefreshJobDispatchTest {
 
     job.runWeekly();
 
-    verify(listener).fetchAndStore(new ShortCode("a000001"), "https://a.example");
-    verify(listener).fetchAndStore(new ShortCode("b000001"), "https://b.example");
+    verify(listener).refresh(new ShortCode("a000001"), "https://a.example");
+    verify(listener).refresh(new ShortCode("b000001"), "https://b.example");
     verify(lock).release("kurl:og-fetch:refresh");
   }
 
@@ -93,11 +93,11 @@ class OgRefreshJobDispatchTest {
     when(linkRepository.findStaleOgCandidates(any(), anyInt())).thenReturn(List.of(a, b));
     Mockito.doThrow(new RuntimeException("boom"))
         .when(listener)
-        .fetchAndStore(eq(new ShortCode("a000001")), anyString());
+        .refresh(eq(new ShortCode("a000001")), anyString());
 
     job.runWeekly();
 
-    verify(listener, times(1)).fetchAndStore(new ShortCode("b000001"), "https://b.example");
+    verify(listener, times(1)).refresh(new ShortCode("b000001"), "https://b.example");
     verify(lock).release("kurl:og-fetch:refresh");
   }
 }

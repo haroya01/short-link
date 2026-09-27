@@ -38,7 +38,7 @@ class LinkClickNotificationListenerTest {
 
   private ClickRecordedEvent event(boolean bot) {
     return new ClickRecordedEvent(
-        LinkId.of(1L), Instant.now(), "KR", "mobile", "direct", bot, null);
+        LinkId.of(1L), "abc1234", 1L, Instant.now(), "KR", "mobile", "direct", bot, null);
   }
 
   private LinkEntity link() {

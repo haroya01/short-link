@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationListResult;
 import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
@@ -35,7 +36,8 @@ class NotificationQueryServiceTest {
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
 
   private NotificationQueryService service() {
-    return new NotificationQueryService(repository, actorReader, jsonMapper);
+    return new NotificationQueryService(
+        repository, actorReader, new NotificationTargetCodec(jsonMapper));
   }
 
   private static NotificationEntity entity(
@@ -148,7 +150,7 @@ class NotificationQueryServiceTest {
     NotificationEntity like = entity(5L, NotificationType.LIKE, 2L, "{\"postId\":1}");
     when(repository.findPageForRecipient(eq(RECIPIENT), isNull(), anyInt()))
         .thenReturn(List.of(like));
-    when(actorReader.resolve(Set.of(2L))).thenReturn(Map.of()); // actor since deleted
+    when(actorReader.resolve(Set.of(2L))).thenReturn(Map.of());
 
     NotificationListResult result = service().list(RECIPIENT, null, 20);
 

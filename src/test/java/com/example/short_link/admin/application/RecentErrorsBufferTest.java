@@ -3,6 +3,7 @@ package com.example.short_link.admin.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.admin.application.dto.RecentError;
+import com.example.short_link.admin.infrastructure.logging.RecentErrorsLogAppender;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -12,16 +13,18 @@ class RecentErrorsBufferTest {
 
   private final Logger log = LoggerFactory.getLogger(RecentErrorsBufferTest.class);
   private RecentErrorsBuffer buffer;
+  private RecentErrorsLogAppender appender;
 
   @AfterEach
   void teardown() {
-    if (buffer != null) buffer.uninstall();
+    if (appender != null) appender.uninstall();
   }
 
   @Test
   void capturesErrorsInReverseChronologicalOrder() {
     buffer = new RecentErrorsBuffer(100);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     log.error("first error");
     log.error("second error");
@@ -37,7 +40,8 @@ class RecentErrorsBufferTest {
   @Test
   void ignoresBelowWarnLevel() {
     buffer = new RecentErrorsBuffer(100);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     log.info("info message");
     log.debug("debug message");
@@ -54,7 +58,8 @@ class RecentErrorsBufferTest {
   @Test
   void evictsOldestWhenCapacityReached() {
     buffer = new RecentErrorsBuffer(10);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     for (int i = 0; i < 5; i++) log.error("err {}", i);
 
@@ -65,7 +70,8 @@ class RecentErrorsBufferTest {
   @Test
   void capturesExceptionStack() {
     buffer = new RecentErrorsBuffer(50);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     log.error("boom", new RuntimeException("bang"));
 
@@ -81,7 +87,8 @@ class RecentErrorsBufferTest {
   @Test
   void capturesCauseChain() {
     buffer = new RecentErrorsBuffer(50);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     RuntimeException root = new RuntimeException("root cause");
     IllegalStateException middle = new IllegalStateException("middle wrap", root);
@@ -97,7 +104,8 @@ class RecentErrorsBufferTest {
   @Test
   void capturesWarnLevelToo() {
     buffer = new RecentErrorsBuffer(50);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     log.warn("slow query");
     log.error("hard error");
@@ -110,7 +118,8 @@ class RecentErrorsBufferTest {
   @Test
   void capturesThreadName() {
     buffer = new RecentErrorsBuffer(20);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     log.error("from main thread");
 
@@ -121,7 +130,8 @@ class RecentErrorsBufferTest {
   @Test
   void minimumCapacityIs10() {
     buffer = new RecentErrorsBuffer(1);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     for (int i = 0; i < 15; i++) log.error("e{}", i);
 
@@ -132,7 +142,8 @@ class RecentErrorsBufferTest {
   @Test
   void truncatesVeryLongMessage() {
     buffer = new RecentErrorsBuffer(20);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     String big = "X".repeat(8000);
     log.error(big);
@@ -144,7 +155,8 @@ class RecentErrorsBufferTest {
   @Test
   void limitClampsTwoCapacityWhenLargerRequested() {
     buffer = new RecentErrorsBuffer(20);
-    buffer.install();
+    appender = new RecentErrorsLogAppender(buffer);
+    appender.install();
 
     for (int i = 0; i < 5; i++) log.error("e{}", i);
 

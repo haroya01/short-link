@@ -65,7 +65,7 @@ class DeletePostUseCaseTest {
   void deletesInCascadeOrder() {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     ReflectionTestUtils.setField(post, "id", 42L);
-    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postHighlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(42L))
         .thenReturn(List.of(highlight(100L), highlight(101L)));
 
@@ -104,7 +104,7 @@ class DeletePostUseCaseTest {
 
   @Test
   void rejectsForeignOwner() {
-    when(postOwnership.requireOwned(7L, 42L))
+    when(postOwnership.requireOwnedForUpdate(7L, 42L))
         .thenThrow(new PostException(PostErrorCode.PERMISSION_DENIED));
 
     assertThatThrownBy(() -> useCase.execute(new DeletePostCommand(7L, 42L)))

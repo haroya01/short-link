@@ -11,40 +11,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 다음 배포 시 각 batch 의 quantity 를 어떻게 조정할지 추천.
- *
- * <p>알고리즘 — Proportional reallocation + threshold-based prune:
- *
- * <ol>
- *   <li>평균 100장당 클릭 (avgRate) 계산
- *   <li>각 batch 의 ratePerHundred / avgRate 비율 (ratio) 계산
- *   <li>ratio < PRUNE_THRESHOLD (0.3) → 폐기 (recommended = 0)
- *   <li>그 외 → quantity × min(ratio, MAX_BOOST(3.0)) 로 raw 산출
- *   <li>총 quantity 유지하도록 normalize (sum(raw) → totalQuantity)
- *   <li>0 < final < MIN_QUANTITY (50) → MIN_QUANTITY 로 올림 (운영 효율 — 너무 작은 batch 비효율)
- * </ol>
- *
- * <p>Insufficient guards — 총 클릭 < 10 또는 batch 수 < 2 면 추천 안 함 (insufficient = true). 데이터 부족 시 추천이
- * statistical noise 라 사용자 손해.
- */
+// 배포 수량 차이를 보정한 클릭률로 수량을 재배분한다. 표본이 적으면 우연한 차이를 추천하지 않도록 결과를 보류한다.
 @Service
 @RequiredArgsConstructor
 public class CampaignRecommendationService {
 
-  /** 평균의 X% 미만 batch 는 다음 배포에서 폐기. */
+  // 평균의 30% 미만인 묶음은 다음 배포에서 뺀다.
   private static final double PRUNE_THRESHOLD = 0.3;
 
-  /** 한 batch 가 최대 3배까지 증가 가능 (특정 batch 가 전체를 독점하지 못하게). */
+  // 한 묶음으로 배분이 과도하게 쏠리지 않도록 가중치 증가를 제한한다.
   private static final double MAX_BOOST = 3.0;
 
-  /** Non-zero batch 의 최소 quantity — 운영 비효율 회피. */
+  // 지나치게 작은 묶음의 인쇄·배포 비효율을 줄이기 위한 최소 수량이다.
   private static final int MIN_QUANTITY = 50;
 
-  /** 추천 신뢰 임계 — 총 클릭 미만이면 추천 안 함. */
   private static final int MIN_TOTAL_CLICKS = 10;
 
-  /** 추천 신뢰 임계 — batch 1개면 재할당 의미 없음. */
   private static final int MIN_BATCH_COUNT = 2;
 
   private final CampaignStatsService statsService;
@@ -78,78 +60,82 @@ public class CampaignRecommendationService {
 
     double avgRate = totalQuantity > 0 ? (totalClicks * 100.0) / totalQuantity : 0.0;
 
-    // Step 1: 각 batch 의 raw quantity 계산
-    double[] raw = new double[batches.size()];
-    RecommendationVerdict[] verdicts = new RecommendationVerdict[batches.size()];
-    for (int i = 0; i < batches.size(); i++) {
-      BatchStats b = batches.get(i);
-      double rate = b.quantity() > 0 ? (b.clicks() * 100.0) / b.quantity() : 0.0;
-      double ratio = avgRate > 0 ? rate / avgRate : 0.0;
-
-      if (ratio < PRUNE_THRESHOLD) {
-        raw[i] = 0;
-        verdicts[i] = RecommendationVerdict.PRUNE;
-      } else {
-        double boost = Math.min(ratio, MAX_BOOST);
-        raw[i] = b.quantity() * boost;
-        if (ratio >= 1.2) verdicts[i] = RecommendationVerdict.BOOST;
-        else if (ratio >= 0.8) verdicts[i] = RecommendationVerdict.KEEP;
-        else verdicts[i] = RecommendationVerdict.REDUCE;
-      }
-    }
-
-    // Step 2: 총 quantity 유지하도록 normalize
-    double rawSum = 0;
-    for (double r : raw) rawSum += r;
-    double scale = rawSum > 0 ? totalQuantity / rawSum : 0.0;
-
-    int[] finalQty = new int[batches.size()];
-    for (int i = 0; i < batches.size(); i++) {
-      if (raw[i] == 0) {
-        finalQty[i] = 0;
-      } else {
-        int scaled = (int) Math.round(raw[i] * scale);
-        finalQty[i] = Math.max(scaled, MIN_QUANTITY);
-      }
-    }
-
-    // Step 3: rounding 으로 sum 이 totalQuantity 와 살짝 어긋날 수 있음 — 가장 큰 boost batch 에서 보정.
-    int sumFinal = 0;
-    for (int q : finalQty) sumFinal += q;
-    int diff = totalQuantity - sumFinal;
-    if (diff != 0) {
-      int maxIdx = -1;
-      int maxQty = -1;
-      for (int i = 0; i < finalQty.length; i++) {
-        if (finalQty[i] > maxQty) {
-          maxQty = finalQty[i];
-          maxIdx = i;
-        }
-      }
-      if (maxIdx >= 0) {
-        finalQty[maxIdx] = Math.max(0, finalQty[maxIdx] + diff);
-      }
-    }
-
-    // Step 4: BatchRecommendation list 만듦
-    List<BatchRecommendation> recs = new ArrayList<>(batches.size());
-    for (int i = 0; i < batches.size(); i++) {
-      BatchStats b = batches.get(i);
-      double rate = b.quantity() > 0 ? (b.clicks() * 100.0) / b.quantity() : 0.0;
-      recs.add(
-          new BatchRecommendation(
-              b.batchId(),
-              b.batchName(),
-              b.distributor(),
-              b.area(),
-              b.quantity(),
-              b.clicks(),
-              rate,
-              finalQty[i],
-              finalQty[i] - b.quantity(),
-              verdicts[i]));
-    }
+    List<WeightedBatch> weighted = batches.stream().map(b -> weigh(b, avgRate)).toList();
+    List<Allocation> allocations = allocate(weighted, totalQuantity);
+    correctRounding(allocations, totalQuantity);
+    List<BatchRecommendation> recs = allocations.stream().map(Allocation::toView).toList();
 
     return new CampaignRecommendationView(false, null, totalQuantity, totalClicks, avgRate, recs);
+  }
+
+  private static WeightedBatch weigh(BatchStats batch, double avgRate) {
+    double rate = batch.quantity() > 0 ? (batch.clicks() * 100.0) / batch.quantity() : 0.0;
+    double ratio = avgRate > 0 ? rate / avgRate : 0.0;
+    if (ratio < PRUNE_THRESHOLD) {
+      return new WeightedBatch(batch, rate, 0, RecommendationVerdict.PRUNE);
+    }
+    RecommendationVerdict verdict;
+    if (ratio >= 1.2) verdict = RecommendationVerdict.BOOST;
+    else if (ratio >= 0.8) verdict = RecommendationVerdict.KEEP;
+    else verdict = RecommendationVerdict.REDUCE;
+    return new WeightedBatch(batch, rate, batch.quantity() * Math.min(ratio, MAX_BOOST), verdict);
+  }
+
+  private static List<Allocation> allocate(List<WeightedBatch> batches, int totalQuantity) {
+    double rawSum = 0;
+    for (WeightedBatch batch : batches) rawSum += batch.rawQuantity();
+    double scale = rawSum > 0 ? totalQuantity / rawSum : 0.0;
+    List<Allocation> allocations = new ArrayList<>(batches.size());
+    for (WeightedBatch batch : batches) {
+      int quantity =
+          batch.rawQuantity() == 0
+              ? 0
+              : Math.max((int) Math.round(batch.rawQuantity() * scale), MIN_QUANTITY);
+      allocations.add(new Allocation(batch, quantity));
+    }
+    return allocations;
+  }
+
+  // 반올림과 최소 수량 적용으로 생긴 차이는 최대 배분 묶음 하나에서 보정한다. 동률이면 첫 묶음이다.
+  private static void correctRounding(List<Allocation> allocations, int totalQuantity) {
+    int allocated = 0;
+    int largestIndex = -1;
+    int largestQuantity = -1;
+    for (int i = 0; i < allocations.size(); i++) {
+      int quantity = allocations.get(i).quantity();
+      allocated += quantity;
+      if (quantity > largestQuantity) {
+        largestQuantity = quantity;
+        largestIndex = i;
+      }
+    }
+    int difference = totalQuantity - allocated;
+    if (difference != 0 && largestIndex >= 0) {
+      Allocation largest = allocations.get(largestIndex);
+      allocations.set(
+          largestIndex,
+          new Allocation(largest.batch(), Math.max(0, largest.quantity() + difference)));
+    }
+  }
+
+  private record WeightedBatch(
+      BatchStats stats, double rate, double rawQuantity, RecommendationVerdict verdict) {}
+
+  private record Allocation(WeightedBatch batch, int quantity) {
+
+    BatchRecommendation toView() {
+      BatchStats stats = batch.stats();
+      return new BatchRecommendation(
+          stats.batchId(),
+          stats.batchName(),
+          stats.distributor(),
+          stats.area(),
+          stats.quantity(),
+          stats.clicks(),
+          batch.rate(),
+          quantity,
+          quantity - stats.quantity(),
+          batch.verdict());
+    }
   }
 }

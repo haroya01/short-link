@@ -48,7 +48,6 @@ class MyLinksCursorTest {
 
   @Test
   void decodeNullOrBlankReturnsNull() {
-    // null/blank means "first page" — caller treats null cursor as no narrowing.
     assertThat(MyLinksCursor.decode(null)).isNull();
     assertThat(MyLinksCursor.decode("")).isNull();
     assertThat(MyLinksCursor.decode("   ")).isNull();
@@ -63,7 +62,6 @@ class MyLinksCursorTest {
 
   @Test
   void decodeBase64WithoutColonThrows() {
-    // Wire shape is "<micros>:<id>" — base64 of something without the separator is malformed.
     String noColon = Base64.getUrlEncoder().withoutPadding().encodeToString("123".getBytes());
     assertThatThrownBy(() -> MyLinksCursor.decode(noColon))
         .isInstanceOf(IllegalArgumentException.class)

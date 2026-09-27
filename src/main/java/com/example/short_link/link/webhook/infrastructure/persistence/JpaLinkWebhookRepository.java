@@ -2,6 +2,7 @@ package com.example.short_link.link.webhook.infrastructure.persistence;
 
 import com.example.short_link.link.webhook.domain.LinkWebhookEntity;
 import com.example.short_link.link.webhook.domain.WebhookDeliveryMode;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -22,7 +23,7 @@ public interface JpaLinkWebhookRepository extends JpaRepository<LinkWebhookEntit
   @Query(
       "SELECT h FROM LinkWebhookEntity h "
           + "WHERE h.enabled = true "
-          + "AND (h.deliveryMode = :modeA OR h.deliveryMode = :modeB)")
-  List<LinkWebhookEntity> findAllEnabledByDeliveryMode(
-      @Param("modeA") WebhookDeliveryMode modeA, @Param("modeB") WebhookDeliveryMode modeB);
+          + "AND h.deliveryMode IN :modes")
+  List<LinkWebhookEntity> findAllEnabledByDeliveryModes(
+      @Param("modes") Collection<WebhookDeliveryMode> modes);
 }

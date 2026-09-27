@@ -10,8 +10,10 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
-import com.example.short_link.common.storage.s3.AvatarProperties;
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
+import com.example.short_link.common.storage.s3.S3StorageProperties;
 import com.example.short_link.user.exception.UserException;
 import java.time.Duration;
 import java.util.Optional;
@@ -21,17 +23,21 @@ import org.junit.jupiter.api.Test;
 class ProfileImageServiceTest {
 
   private static final long MAX_BYTES = 5L * 1024 * 1024;
+  private static final ImageUploadPolicy UPLOAD_POLICY = new ImageUploadPolicy(300, MAX_BYTES);
 
-  private AvatarProperties props;
+  private S3StorageProperties storageProperties;
   private ObjectStorage objectStorage;
   private ProfileImageService service;
 
   @BeforeEach
   void setUp() {
-    props =
-        new AvatarProperties("test-bucket", "ap-northeast-2", "https://cdn.test", 300, MAX_BYTES);
+    storageProperties =
+        new S3StorageProperties("test-bucket", "ap-northeast-2", "https://cdn.test");
     objectStorage = mock(ObjectStorage.class);
-    service = new ProfileImageService(props, objectStorage);
+    when(objectStorage.isConfigured()).thenReturn(true);
+    service =
+        new ProfileImageService(
+            UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(storageProperties));
     when(objectStorage.presignPut(any(), any(), any(Duration.class))).thenReturn("https://signed");
   }
 
@@ -68,8 +74,11 @@ class ProfileImageServiceTest {
 
   @Test
   void presignFailsWhenBucketUnconfigured() {
-    AvatarProperties unconfigured = new AvatarProperties("", "", null, 300, MAX_BYTES);
-    ProfileImageService unconfiguredService = new ProfileImageService(unconfigured, objectStorage);
+    when(objectStorage.isConfigured()).thenReturn(false);
+    S3StorageProperties unconfigured = new S3StorageProperties("", "", null);
+    ProfileImageService unconfiguredService =
+        new ProfileImageService(
+            UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(unconfigured));
     assertThatThrownBy(() -> unconfiguredService.presignUpload(1L, "image/jpeg"))
         .isInstanceOf(UserException.class);
   }
@@ -125,9 +134,10 @@ class ProfileImageServiceTest {
 
   @Test
   void commitFallsBackToVirtualHostUrlWhenNoCdn() {
-    AvatarProperties noBaseUrl =
-        new AvatarProperties("test-bucket", "ap-northeast-2", null, 300, MAX_BYTES);
-    ProfileImageService noCdnService = new ProfileImageService(noBaseUrl, objectStorage);
+    S3StorageProperties noBaseUrl = new S3StorageProperties("test-bucket", "ap-northeast-2", null);
+    ProfileImageService noCdnService =
+        new ProfileImageService(
+            UPLOAD_POLICY, objectStorage, new ObjectStoragePublicUrls(noBaseUrl));
     when(objectStorage.objectSize("profile-images/1/x.jpg")).thenReturn(Optional.of(1024L));
     ProfileImageService.CommitResult out = noCdnService.commitUpload(1L, "profile-images/1/x.jpg");
     assertThat(out.imageUrl())

@@ -13,10 +13,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * The signed-in user's in-app notifications. Every endpoint is scoped to the authenticated
- * principal — there's no cross-user access — so no path carries a user id.
- */
 @RestController
 @RequestMapping("/api/v1/notifications")
 public class NotificationController {

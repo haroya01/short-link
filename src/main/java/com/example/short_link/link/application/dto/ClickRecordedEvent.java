@@ -3,17 +3,16 @@ package com.example.short_link.link.application.dto;
 import com.example.short_link.link.domain.LinkId;
 import java.time.Instant;
 
-/**
- * Fired right after a click is persisted. Carries only the lightweight slice the live-stream
- * handler needs — no IP, no UA — so it can be safely fanned out to multiple subscribers without
- * leaking PII. {@code channel} is the referrer host (kept under that name for backwards-compat with
- * existing SSE/webhook consumers).
- */
+// Published after persistence; excludes IP and UA to keep subscriber fan-out free of PII.
+// referrerHost is serialized as channel at SSE/webhook boundaries for compatibility. A null
+// ownerUserId denotes an anonymous link and excludes it from account streams.
 public record ClickRecordedEvent(
     LinkId linkId,
+    String shortCode,
+    Long ownerUserId,
     Instant occurredAt,
     String countryCode,
     String deviceClass,
-    String channel,
+    String referrerHost,
     boolean bot,
     String utmSource) {}

@@ -32,8 +32,14 @@ class LinkProtectionServiceTest {
 
     LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("pw00001")).orElseThrow();
     assertThat(reloaded.hasPassword()).isTrue();
+    assertThat(reloaded.getPasswordHash()).startsWith("$2a$10$");
     assertThat(service.checkPassword(reloaded, "secret123")).isTrue();
     assertThat(service.checkPassword(reloaded, "wrong")).isFalse();
+    assertThat(service.checkPassword(reloaded, null)).isFalse();
+
+    service.update(user.getId(), new ShortCode("pw00001"), null, 5);
+    assertThat(service.checkPassword(reloaded, "secret123")).isTrue();
+    assertThat(reloaded.getMaxViews()).isEqualTo(5);
   }
 
   @Test
@@ -45,6 +51,7 @@ class LinkProtectionServiceTest {
     service.update(user.getId(), new ShortCode("pw00002"), "", null);
     LinkEntity reloaded = linkRepository.findByShortCode(new ShortCode("pw00002")).orElseThrow();
     assertThat(reloaded.hasPassword()).isFalse();
+    assertThat(service.checkPassword(reloaded, null)).isTrue();
   }
 
   @Test

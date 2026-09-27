@@ -16,6 +16,7 @@ import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
+import com.example.short_link.link.infrastructure.persistence.LinkSidecarPersister;
 import com.example.short_link.link.safety.application.UrlSafetyChecker;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -24,6 +25,7 @@ import java.lang.reflect.Field;
 import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 
@@ -51,6 +53,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 
@@ -84,6 +87,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 
@@ -117,6 +121,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 
@@ -147,6 +152,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 
@@ -189,6 +195,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
 

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
@@ -16,10 +17,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * VAPID 미설정이면 발송기는 조용한 no-op(키 없는 개발/CI 환경에서 앱이 평소처럼 돌도록). 설정돼 있고 구독이 없으면 저장소만 한 번 조회하고 끝(실제 네트워크
- * 발송은 외부 세계라 단위 테스트에서 다루지 않는다). 키는 테스트 전용 VAPID 페어 — 운영 키 아님.
- */
+// 키는 테스트 전용 VAPID 페어이고 운영 키가 아니다. 실제 네트워크 발송은 단위 테스트에서 다루지 않는다.
 @ExtendWith(MockitoExtension.class)
 class WebPushSenderTest {
 
@@ -77,17 +75,28 @@ class WebPushSenderTest {
   }
 
   @Test
+  void linkAppMessagesNeverReachWebSubscriptions() {
+    PushSender.PushMessage links =
+        new PushSender.PushMessage(
+            "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring", PushApp.LINKS);
+
+    configured().send(1L, links);
+    configured().sendToAll(List.of(1L, 2L), links);
+
+    verifyNoInteractions(subscriptions);
+  }
+
+  @Test
   void payloadCarriesRoutingHintsForLinkNotification() {
     JsonNode root =
         jsonMapper.readTree(
             configured()
                 .payload(
                     new PushSender.PushMessage(
-                        "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring")));
+                        "kurl", "/spring", "첫 클릭", "FIRST_CLICK", "spring", PushApp.LINKS)));
 
     assertThat(root.get("type").asString()).isEqualTo("FIRST_CLICK");
     assertThat(root.get("shortCode").asString()).isEqualTo("spring");
-    // 제목=행위(body), 본문=부제(subtitle) 매핑은 그대로.
     assertThat(root.get("title").asString()).isEqualTo("첫 클릭");
     assertThat(root.get("body").asString()).isEqualTo("/spring");
   }

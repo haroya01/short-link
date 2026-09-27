@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One user's feed preference — which blog-home tab opens by default. One row per user. */
 @Entity
 @Table(
     name = "user_feed_pref",

@@ -8,12 +8,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-/**
- * Native cross-table aggregates for the blog admin metrics. Rooted at {@link PostEntity} only for
- * Spring Data plumbing — every query below is native SQL and joins the {@code posts} / {@code
- * users} / {@code post_view_event} / {@code abuse_report} tables directly, the same approach {@code
- * JpaAdminAnalyticsRepository} takes for the links metrics.
- */
 public interface JpaAdminBlogMetricsRepository extends JpaRepository<PostEntity, Long> {
 
   @Query(value = "SELECT COUNT(*) FROM posts WHERE status = 'PUBLISHED'", nativeQuery = true)

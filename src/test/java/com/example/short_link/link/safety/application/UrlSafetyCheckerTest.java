@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.config.SafeBrowsingProperties;
@@ -13,7 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.web.client.HttpClientErrorException;
 
 @ExtendWith(MockitoExtension.class)
 class UrlSafetyCheckerTest {
@@ -34,6 +34,7 @@ class UrlSafetyCheckerTest {
     UrlSafetyChecker c = checker(false, "key");
 
     assertThat(c.isSafe("https://anything.example")).isTrue();
+    verifyNoInteractions(client);
   }
 
   @Test
@@ -41,6 +42,7 @@ class UrlSafetyCheckerTest {
     UrlSafetyChecker c = checker(true, "");
 
     assertThat(c.isSafe("https://anything.example")).isTrue();
+    verifyNoInteractions(client);
   }
 
   @Test
@@ -49,6 +51,7 @@ class UrlSafetyCheckerTest {
 
     assertThat(c.isSafe(null)).isTrue();
     assertThat(c.isSafe("   ")).isTrue();
+    verifyNoInteractions(client);
   }
 
   @Test
@@ -56,6 +59,7 @@ class UrlSafetyCheckerTest {
     UrlSafetyChecker c = checker(true, "key");
 
     assertThat(c.isSafe("not a url")).isTrue();
+    verifyNoInteractions(client);
   }
 
   @Test
@@ -95,10 +99,22 @@ class UrlSafetyCheckerTest {
   @Test
   void failsOpenWithDistinctMetricOnAuthError() {
     UrlSafetyChecker c = checker(true, "key");
-    when(client.isSafeForKey(any(), any())).thenThrow(HttpClientErrorException.Unauthorized.class);
+    when(client.isSafeForKey(any(), any()))
+        .thenThrow(UrlThreatLookupException.authenticationFailure(new RuntimeException("bad key")));
 
     assertThat(c.isSafe("https://anywhere.example")).isTrue();
     assertThat(registry.counter("safe_browsing.check", "result", "auth_error").count())
         .isEqualTo(1.0);
+  }
+
+  @Test
+  void unavailableProviderKeepsErrorClassificationAndAllowsUrl() {
+    UrlSafetyChecker c = checker(true, "key");
+    when(client.isSafeForKey(any(), any()))
+        .thenThrow(UrlThreatLookupException.unavailable(new RuntimeException("timeout")));
+
+    assertThat(c.isSafe("https://anywhere.example")).isTrue();
+    assertThat(registry.counter("safe_browsing.check", "result", "error").count()).isEqualTo(1.0);
+    assertThat(registry.find("safe_browsing.check").tag("result", "safe").counter()).isNull();
   }
 }

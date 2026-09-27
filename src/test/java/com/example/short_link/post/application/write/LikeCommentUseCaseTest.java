@@ -3,10 +3,15 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.CommentLikeStatus;
 import com.example.short_link.post.domain.CommentEntity;
+import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostHighlightRepository;
+import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostException;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -21,12 +26,22 @@ class LikeCommentUseCaseTest {
 
   @Mock private CommentRepository commentRepository;
   @Mock private CommentLikeRepository commentLikeRepository;
+  @Mock private PostRepository postRepository;
 
   private LikeCommentUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new LikeCommentUseCase(commentRepository, commentLikeRepository);
+    useCase =
+        new LikeCommentUseCase(
+            commentRepository,
+            commentLikeRepository,
+            new PostInteractionAccess(
+                postRepository,
+                commentRepository,
+                Mockito.mock(PostHighlightRepository.class),
+                Mockito.mock(UserModerationGuard.class),
+                Mockito.mock(UserBlockChecker.class)));
   }
 
   private CommentEntity comment() {
@@ -35,6 +50,9 @@ class LikeCommentUseCaseTest {
 
   @Test
   void likeIsIdempotentAndReturnsAuthoritativeCount() {
+    var post = new PostEntity(5L, "post", "Title", "ko");
+    post.publish();
+    Mockito.when(postRepository.findById(3L)).thenReturn(Optional.of(post));
     Mockito.when(commentRepository.findById(10L)).thenReturn(Optional.of(comment()));
     Mockito.when(commentLikeRepository.insertIgnore(10L, 9L)).thenReturn(1);
     Mockito.when(commentLikeRepository.countByCommentId(10L)).thenReturn(4L);
@@ -47,6 +65,9 @@ class LikeCommentUseCaseTest {
 
   @Test
   void duplicateLikeStillReturnsLikedWithCurrentCount() {
+    var post = new PostEntity(5L, "post", "Title", "ko");
+    post.publish();
+    Mockito.when(postRepository.findById(3L)).thenReturn(Optional.of(post));
     Mockito.when(commentRepository.findById(10L)).thenReturn(Optional.of(comment()));
     Mockito.when(commentLikeRepository.insertIgnore(10L, 9L)).thenReturn(0);
     Mockito.when(commentLikeRepository.countByCommentId(10L)).thenReturn(4L);

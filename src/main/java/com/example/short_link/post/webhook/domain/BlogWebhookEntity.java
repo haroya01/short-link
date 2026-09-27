@@ -19,12 +19,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * One blog notification webhook owned by an author. Fires when a reader likes/comments/follows/
- * subscribes — scoped to the author (all their posts), not to a single post. The interaction set
- * the hook cares about is stored as a CSV of {@link BlogInteractionType} names so the row stays a
- * flat column without a join table. Self-disables after repeated failures, like the link webhook.
- */
 @Entity
 @Table(name = "blog_webhook")
 @Getter
@@ -53,7 +47,6 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = 16)
   private BlogWebhookFormat format = BlogWebhookFormat.GENERIC;
 
-  /** CSV of {@link BlogInteractionType} names this hook fires on (e.g. "LIKE,COMMENT,FOLLOW"). */
   @Column(name = "events", nullable = false, length = 255)
   private String events;
 
@@ -90,7 +83,6 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
     this.events = encode(events);
   }
 
-  /** The interactions this hook subscribes to, decoded from the stored CSV. */
   public EnumSet<BlogInteractionType> events() {
     EnumSet<BlogInteractionType> set = EnumSet.noneOf(BlogInteractionType.class);
     if (events == null || events.isBlank()) {
@@ -114,19 +106,17 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
     return enabled && events().contains(type);
   }
 
-  /** GENERIC hooks carry an HMAC signature; chat formats don't support one. */
   public boolean signed() {
     return format == BlogWebhookFormat.GENERIC;
   }
 
   public void update(String name, Set<BlogInteractionType> events, Boolean enabled) {
+    String updatedEvents = events != null && !events.isEmpty() ? encode(events) : this.events;
     if (name != null) {
       String trimmed = name.trim();
       this.name = trimmed.isEmpty() ? null : trimmed;
     }
-    if (events != null && !events.isEmpty()) {
-      this.events = encode(events);
-    }
+    this.events = updatedEvents;
     if (enabled != null) {
       if (enabled) {
         enable();
@@ -171,6 +161,9 @@ public class BlogWebhookEntity extends BaseCreatedEntity {
       return Arrays.stream(BlogInteractionType.values())
           .map(Enum::name)
           .collect(Collectors.joining(","));
+    }
+    if (events.stream().anyMatch(java.util.Objects::isNull)) {
+      throw new IllegalArgumentException("events must not contain null");
     }
     return events.stream().map(Enum::name).collect(Collectors.joining(","));
   }

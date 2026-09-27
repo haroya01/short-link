@@ -11,12 +11,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/**
- * A reply in the flat thread under a reader highlight. The highlight's {@code note} is the opener;
- * anyone may read, only authenticated users create. Deletion is the reply author or the highlight's
- * post owner. The highlight FK cascades, so highlight (and post / account) removal takes the
- * thread.
- */
 @Entity
 @Table(name = "highlight_reply")
 @Getter

@@ -8,38 +8,42 @@ import com.example.short_link.user.domain.repository.UserTwoFactorRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.security.SecureRandom;
+import java.time.Clock;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import java.util.OptionalLong;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Setup is two-step: {@code start} writes a pending row with a fresh secret + provisioning URI,
- * then {@code confirm(code)} flips it to enabled and returns 10 single-use recovery codes (only
- * shown once). Login verification accepts either a current TOTP code or one of the recovery codes —
- * recovery consumption rewrites the stored hash list.
- */
-@Slf4j
 @Service
-@RequiredArgsConstructor
 public class TwoFactorService {
 
-  public static final int RECOVERY_CODE_COUNT = 10;
-  private static final int RECOVERY_CODE_LENGTH = 10;
-  private static final char[] RECOVERY_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789".toCharArray();
-  private static final SecureRandom RANDOM = new SecureRandom();
+  public static final int RECOVERY_CODE_COUNT = RecoveryCodes.COUNT;
 
   private final UserRepository userRepository;
   private final UserTwoFactorRepository repository;
   private final SecretCipher cipher;
   private final MeterRegistry meterRegistry;
   private final TwoFactorProperties twofa;
-  private final BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
+  private final RecoveryCodes recoveryCodes;
+  private final Clock clock;
+
+  TwoFactorService(
+      UserRepository userRepository,
+      UserTwoFactorRepository repository,
+      SecretCipher cipher,
+      MeterRegistry meterRegistry,
+      TwoFactorProperties twofa,
+      RecoveryCodes recoveryCodes,
+      Clock clock) {
+    this.userRepository = userRepository;
+    this.repository = repository;
+    this.cipher = cipher;
+    this.meterRegistry = meterRegistry;
+    this.twofa = twofa;
+    this.recoveryCodes = recoveryCodes;
+    this.clock = clock;
+  }
 
   @Transactional(readOnly = true)
   public Status status(Long userId) {
@@ -54,11 +58,6 @@ public class TwoFactorService {
     return repository.findById(userId).map(UserTwoFactorEntity::isEnabled).orElse(false);
   }
 
-  /**
-   * Begin enrolment. Writes a pending row (or rotates an existing pending one) and returns the
-   * shared secret + otpauth provisioning URI. The user scans the URI in their authenticator and
-   * then calls {@link #confirm}.
-   */
   @Transactional
   public SetupChallenge start(Long userId) {
     UserEntity user =
@@ -67,7 +66,7 @@ public class TwoFactorService {
             .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (user.isDeleted()) throw new UserException(UserErrorCode.USER_NOT_FOUND);
 
-    UserTwoFactorEntity row = repository.findById(userId).orElse(null);
+    UserTwoFactorEntity row = repository.findByIdForUpdate(userId).orElse(null);
     if (row != null && row.isEnabled()) {
       throw new UserException(
           UserErrorCode.TWO_FACTOR_STATE, "2FA is already enabled — disable first to re-enrol");
@@ -88,68 +87,59 @@ public class TwoFactorService {
   public List<String> confirm(Long userId, String code) {
     UserTwoFactorEntity row =
         repository
-            .findById(userId)
+            .findByIdForUpdate(userId)
             .orElseThrow(
                 () -> new UserException(UserErrorCode.TWO_FACTOR_STATE, "setup not started"));
     if (row.isEnabled()) throw new UserException(UserErrorCode.TWO_FACTOR_STATE, "already enabled");
+    Instant now = clock.instant();
     String secret = cipher.decrypt(row.getSecret());
-    if (!TotpCodec.verify(secret, code, Instant.now().getEpochSecond())) {
+    if (!TotpCodec.verify(secret, code, now.getEpochSecond())) {
       throw new UserException(UserErrorCode.INVALID_TOTP);
     }
-    List<String> plainCodes = generateRecoveryCodes();
-    row.enable(joinHashes(hashAll(plainCodes)));
+    List<String> plainCodes = recoveryCodes.generate();
+    // Enrollment proves possession; only later authentications consume a time step.
+    row.enable(recoveryCodes.hashAll(plainCodes), now);
     meterRegistry.counter("twofa.enrolled").increment();
     return plainCodes;
   }
 
-  /**
-   * Verify a TOTP code during login. Returns true on success and stamps {@code last_used_at}.
-   * Returns false on invalid code; caller decides response behaviour (rate limit, audit, etc).
-   */
   @Transactional
   public boolean verify(Long userId, String code) {
-    UserTwoFactorEntity row = repository.findById(userId).orElse(null);
-    if (row == null || !row.isEnabled()) return false;
+    UserTwoFactorEntity row = repository.findByIdForUpdate(userId).orElse(null);
+    return row != null && verify(row, code);
+  }
+
+  private boolean verify(UserTwoFactorEntity row, String code) {
+    if (!row.isEnabled()) return false;
+    Instant now = clock.instant();
     String secret = cipher.decrypt(row.getSecret());
-    if (!TotpCodec.verify(secret, code, Instant.now().getEpochSecond())) return false;
-    row.markUsed();
+    OptionalLong step = TotpCodec.matchingStep(secret, code, now.getEpochSecond());
+    if (step.isEmpty() || !row.consumeTotpStep(step.getAsLong(), now)) return false;
     meterRegistry.counter("twofa.verify", "result", "code_ok").increment();
     return true;
   }
 
-  /**
-   * Consume a single-use recovery code. On success, rewrites the stored list with the matched hash
-   * removed so the same code cannot be reused.
-   */
   @Transactional
   public boolean verifyRecovery(Long userId, String recoveryCode) {
-    UserTwoFactorEntity row = repository.findById(userId).orElse(null);
-    if (row == null || !row.isEnabled() || row.getRecoveryCodes() == null) return false;
-    List<String> hashes = readHashes(row.getRecoveryCodes());
-    String trimmed = recoveryCode == null ? "" : recoveryCode.trim().toUpperCase();
-    if (trimmed.isEmpty()) return false;
-    int matchIdx = -1;
-    for (int i = 0; i < hashes.size(); i++) {
-      if (bcrypt.matches(trimmed, hashes.get(i))) {
-        matchIdx = i;
-        break;
-      }
-    }
-    if (matchIdx < 0) return false;
-    hashes.remove(matchIdx);
-    row.replaceRecoveryCodes(joinHashes(hashes));
-    row.markUsed();
+    UserTwoFactorEntity row = repository.findByIdForUpdate(userId).orElse(null);
+    return row != null && verifyRecovery(row, recoveryCode);
+  }
+
+  private boolean verifyRecovery(UserTwoFactorEntity row, String code) {
+    if (!row.isEnabled()) return false;
+    String matchedHash = recoveryCodes.matchingHash(row.recoveryCodeHashes(), code).orElse(null);
+    if (matchedHash == null || !row.consumeRecoveryCode(matchedHash, clock.instant())) return false;
     meterRegistry.counter("twofa.verify", "result", "recovery_ok").increment();
     return true;
   }
 
   @Transactional
   public void disable(Long userId, String code) {
-    UserTwoFactorEntity row = repository.findById(userId).orElse(null);
+    UserTwoFactorEntity row = repository.findByIdForUpdate(userId).orElse(null);
     if (row == null || !row.isEnabled()) {
       throw new UserException(UserErrorCode.TWO_FACTOR_STATE, "not enabled");
     }
-    if (!verify(userId, code) && !verifyRecovery(userId, code)) {
+    if (!verify(row, code) && !verifyRecovery(row, code)) {
       throw new UserException(UserErrorCode.INVALID_TOTP);
     }
     row.disable();
@@ -158,49 +148,17 @@ public class TwoFactorService {
 
   @Transactional
   public List<String> regenerateRecoveryCodes(Long userId, String code) {
-    UserTwoFactorEntity row = repository.findById(userId).orElse(null);
+    UserTwoFactorEntity row = repository.findByIdForUpdate(userId).orElse(null);
     if (row == null || !row.isEnabled()) {
       throw new UserException(UserErrorCode.TWO_FACTOR_STATE, "not enabled");
     }
-    if (!verify(userId, code)) {
+    if (!verify(row, code)) {
       throw new UserException(UserErrorCode.INVALID_TOTP);
     }
-    List<String> plain = generateRecoveryCodes();
-    row.replaceRecoveryCodes(joinHashes(hashAll(plain)));
+    List<String> plain = recoveryCodes.generate();
+    row.replaceRecoveryCodes(recoveryCodes.hashAll(plain));
     meterRegistry.counter("twofa.recovery_codes_regenerated").increment();
     return plain;
-  }
-
-  private List<String> generateRecoveryCodes() {
-    List<String> out = new ArrayList<>(RECOVERY_CODE_COUNT);
-    for (int i = 0; i < RECOVERY_CODE_COUNT; i++) {
-      StringBuilder sb = new StringBuilder(RECOVERY_CODE_LENGTH + 1);
-      for (int j = 0; j < RECOVERY_CODE_LENGTH; j++) {
-        if (j == RECOVERY_CODE_LENGTH / 2) sb.append('-');
-        sb.append(RECOVERY_ALPHABET[RANDOM.nextInt(RECOVERY_ALPHABET.length)]);
-      }
-      out.add(sb.toString());
-    }
-    return out;
-  }
-
-  private List<String> hashAll(List<String> plain) {
-    List<String> out = new ArrayList<>(plain.size());
-    for (String p : plain) out.add(bcrypt.encode(p));
-    return out;
-  }
-
-  private List<String> readHashes(String stored) {
-    if (stored == null || stored.isEmpty()) return new ArrayList<>();
-    List<String> out = new ArrayList<>();
-    for (String line : stored.split("\n")) {
-      if (!line.isBlank()) out.add(line);
-    }
-    return out;
-  }
-
-  private String joinHashes(List<String> hashes) {
-    return String.join("\n", hashes);
   }
 
   public record SetupChallenge(String secret, String provisioningUri) {}

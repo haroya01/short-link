@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** 인증 없이 글의 댓글 목록 조회. permitAll 는 GET /api/v1/public/** 가 커버. */
 @RestController
 @RequestMapping("/api/v1/public/posts")
 @RequiredArgsConstructor

@@ -52,8 +52,6 @@ class PublicPostCollectionsControllerTest {
                     2,
                     null)));
 
-    // 미로그인(헤더 없음)에도 200 — GET /api/v1/public/** 은 permitAll. 글 타입으로 조회된다.
-    // "@큐레이터의 길 · N편 중 M번째"로 읽히도록 curatorUsername·position·count(=분모)가 함께 실린다.
     mvc.perform(get("/api/v1/public/posts/5/collections"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(10))
@@ -97,7 +95,6 @@ class PublicPostCollectionsControllerTest {
             ConnectionBlockType.POST, List.of(5L, 6L, 7L)))
         .thenReturn(Map.of(5L, List.of(view), 6L, List.of(), 7L, List.of()));
 
-    // 미로그인(헤더 없음)에도 200 — GET /api/v1/public/** 은 permitAll. 요청 순서대로 세 글이 다 온다.
     mvc.perform(get("/api/v1/public/posts/collections").param("ids", "5", "6", "7"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(3))
@@ -123,7 +120,6 @@ class PublicPostCollectionsControllerTest {
     when(queryService.publicCollectionsContainingBatch(ConnectionBlockType.POST, List.of(5L, 6L)))
         .thenReturn(Map.of(5L, List.of(), 6L, List.of()));
 
-    // ids=5,6 (콤마 한 파라미터) 도 받아들인다.
     mvc.perform(get("/api/v1/public/posts/collections").param("ids", "5,6"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.length()").value(2))
@@ -133,7 +129,6 @@ class PublicPostCollectionsControllerTest {
 
   @Test
   void batchDeduplicatesAndCapsIds() throws Exception {
-    // 51개 중복 없는 id + 중복 → distinct 후 상한 50개만 서비스로 넘어간다.
     String ids =
         IntStream.rangeClosed(1, 51).mapToObj(Integer::toString).collect(Collectors.joining(","));
     List<Long> firstFifty = LongStream.rangeClosed(1, 50).boxed().toList();
@@ -142,7 +137,7 @@ class PublicPostCollectionsControllerTest {
 
     mvc.perform(get("/api/v1/public/posts/collections").param("ids", ids))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.length()").value(50)); // 51번째는 잘림
+        .andExpect(jsonPath("$.length()").value(50));
 
     verify(queryService).publicCollectionsContainingBatch(ConnectionBlockType.POST, firstFifty);
   }

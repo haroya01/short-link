@@ -3,9 +3,11 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -27,7 +29,9 @@ class CreatePostUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new CreatePostUseCase(postRepository, moderationGuard);
+    useCase =
+        new CreatePostUseCase(
+            postRepository, moderationGuard, new PostWriteViewAssembler(postRepository));
   }
 
   @Test
@@ -35,14 +39,14 @@ class CreatePostUseCaseTest {
     when(postRepository.existsByUserIdAndSlug(7L, "first-post")).thenReturn(false);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity created =
-        useCase.execute(new CreatePostCommand(7L, "first-post", "First Post", "ko"));
+    PostView created = useCase.execute(new CreatePostCommand(7L, "first-post", "First Post", "ko"));
 
-    assertThat(created.getUserId()).isEqualTo(7L);
-    assertThat(created.getSlug()).isEqualTo("first-post");
-    assertThat(created.getTitle()).isEqualTo("First Post");
-    assertThat(created.getStatus()).isEqualTo(PostStatus.DRAFT);
-    assertThat(created.getLanguageTag()).isEqualTo("ko");
+    verify(postRepository)
+        .save(org.mockito.ArgumentMatchers.argThat(post -> post.getUserId().equals(7L)));
+    assertThat(created.slug()).isEqualTo("first-post");
+    assertThat(created.title()).isEqualTo("First Post");
+    assertThat(created.status()).isEqualTo(PostStatus.DRAFT.name());
+    assertThat(created.languageTag()).isEqualTo("ko");
   }
 
   @Test
@@ -67,10 +71,10 @@ class CreatePostUseCaseTest {
     when(postRepository.existsByUserIdAndSlug(7L, "valid-slug")).thenReturn(false);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity created = useCase.execute(new CreatePostCommand(7L, "valid-slug", "", "ko"));
+    PostView created = useCase.execute(new CreatePostCommand(7L, "valid-slug", "", "ko"));
 
-    assertThat(created.getTitle()).isEmpty();
-    assertThat(created.getStatus()).isEqualTo(PostStatus.DRAFT);
+    assertThat(created.title()).isEmpty();
+    assertThat(created.status()).isEqualTo(PostStatus.DRAFT.name());
   }
 
   @Test
@@ -85,7 +89,7 @@ class CreatePostUseCaseTest {
     when(postRepository.existsByUserIdAndSlug(7L, "default-lang")).thenReturn(false);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    PostEntity created = useCase.execute(new CreatePostCommand(7L, "default-lang", "Title", null));
-    assertThat(created.getLanguageTag()).isEqualTo("ko");
+    PostView created = useCase.execute(new CreatePostCommand(7L, "default-lang", "Title", null));
+    assertThat(created.languageTag()).isEqualTo("ko");
   }
 }

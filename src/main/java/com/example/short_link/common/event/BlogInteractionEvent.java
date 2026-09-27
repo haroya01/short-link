@@ -2,27 +2,8 @@ package com.example.short_link.common.event;
 
 import java.time.Instant;
 
-/**
- * Published after a blog interaction commits, so the webhook consumer can notify the recipient
- * author out of band. A shared-kernel record (not a feature event) because it's produced in the
- * post and user modules and consumed in the post.webhook module — keeping it here avoids a
- * cross-feature compile edge.
- *
- * <p>The actor's username is intentionally NOT carried: it's resolved lazily by the consumer only
- * when the recipient actually has a matching webhook, so the hot interaction path stays a single
- * insert.
- *
- * @param type interaction kind (drives which hooks fire)
- * @param recipientUserId the author who gets notified (post owner / followed user / series owner)
- * @param actorUserId who performed the action — used to skip self-notifications and resolve a name
- * @param postId the post, when relevant (LIKE/COMMENT); null for FOLLOW
- * @param postSlug post slug snapshot for the payload; null when no post
- * @param postTitle post title snapshot for the payload; null when no post
- * @param seriesId the series, for SERIES_SUBSCRIBE; null otherwise
- * @param seriesSlug series slug snapshot (builds the series link); null otherwise
- * @param seriesTitle series title snapshot; null otherwise
- * @param occurredAt when the interaction happened
- */
+// Published after the interaction commits. Actor names are resolved only when a matching webhook
+// exists, avoiding a lookup on the interaction path. Self-actions do not notify.
 public record BlogInteractionEvent(
     BlogInteractionType type,
     Long recipientUserId,
@@ -35,7 +16,6 @@ public record BlogInteractionEvent(
     String seriesTitle,
     Instant occurredAt) {
 
-  /** A self-action (liking your own post) shouldn't notify you. */
   public boolean isSelfAction() {
     return recipientUserId != null && recipientUserId.equals(actorUserId);
   }

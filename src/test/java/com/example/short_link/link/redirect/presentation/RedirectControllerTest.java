@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.stats.application.ClickFlusher;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import java.time.Instant;
@@ -37,6 +38,7 @@ class RedirectControllerTest {
   @Autowired private ClickEventRepository clickEventRepository;
   @Autowired private ClickTotalsReadRepository clickRepository;
   @Autowired private CacheManager cacheManager;
+  @Autowired private ClickFlusher clickFlusher;
 
   @BeforeEach
   void clearLinkCache() {
@@ -82,16 +84,30 @@ class RedirectControllerTest {
                 .header("User-Agent", "Mozilla/5.0 (iPhone)"))
         .andExpect(status().isFound());
 
+    assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isZero();
+
+    clickFlusher.flush();
+
     assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isEqualTo(1);
   }
 
   @Test
   void returns404HtmlForUnknownCode() throws Exception {
-    // 방문자가 연 링크라 JSON 대신 브랜드 HTML 404 페이지를 준다(상태코드는 유지).
-    mvc.perform(get("/zzzzzzz"))
+    mvc.perform(get("/zzzzzzz").header("Accept-Language", "ko-KR,ko;q=0.9"))
         .andExpect(status().isNotFound())
         .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
         .andExpect(content().string(Matchers.containsString("찾을 수 없는 링크")));
+  }
+
+  @Test
+  void visitorPagesFollowTheBrowserLanguage() throws Exception {
+    mvc.perform(get("/zzzzzzz").header("Accept-Language", "ja-JP,ja;q=0.9,en;q=0.8"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().string(Matchers.containsString("<html lang=\"ja\">")))
+        .andExpect(content().string(Matchers.containsString("リンクが見つかりません")));
+    mvc.perform(get("/zzzzzzz"))
+        .andExpect(status().isNotFound())
+        .andExpect(content().string(Matchers.containsString("Link not found")));
   }
 
   @Test
@@ -121,6 +137,8 @@ class RedirectControllerTest {
         .andExpect(content().string(Matchers.containsString("Article title")))
         .andExpect(content().string(Matchers.containsString("og:image")));
 
+    clickFlusher.flush();
+
     // Preview hits now persist as bot click_event rows so per-link stats can split \"social
     // preview\" out of generic bot traffic. They must NOT count toward human clicks.
     assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isEqualTo(1);
@@ -148,7 +166,7 @@ class RedirectControllerTest {
             null,
             Instant.now().minus(1, ChronoUnit.MINUTES)));
 
-    mvc.perform(get("/exp1234"))
+    mvc.perform(get("/exp1234").header("Accept-Language", "ko-KR"))
         .andExpect(status().isGone())
         .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
         .andExpect(content().string(Matchers.containsString("더 이상 열 수 없")));

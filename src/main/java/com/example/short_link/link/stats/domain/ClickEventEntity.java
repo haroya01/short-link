@@ -10,10 +10,13 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "click_event")
@@ -33,6 +36,10 @@ public class ClickEventEntity {
   }
 
   @Column(name = "clicked_at", nullable = false, updatable = false)
+  // MySQL TIMESTAMP uses the connection time zone; forcing a UTC calendar would shift the epoch.
+  // The column holds whole seconds and MySQL rounds fractions, so a click at x.5s or later would be
+  // stored in the next second: after a read in that same second, or in the next hour or day.
+  @JdbcTypeCode(SqlTypes.TIMESTAMP)
   private Instant clickedAt;
 
   @Column(columnDefinition = "TEXT")
@@ -92,45 +99,24 @@ public class ClickEventEntity {
   @Column(name = "visitor_hash", length = 64)
   private String visitorHash;
 
-  /**
-   * Channel hint passed by the short URL itself (e.g., {@code /abc?src=qr}). Lets owners attribute
-   * traffic from places where the referrer header is missing — KakaoTalk, QR codes, offline
-   * posters, etc.
-   */
   @Column(name = "source_channel", length = 40)
   private String sourceChannel;
 
-  /** Which A/B variant ({@link LinkDestinationEntity}) served this click — null if no variants. */
   @Column(name = "destination_id")
   private Long destinationId;
 
-  /**
-   * Blog post that embedded this link, when the click came from a post (the redirect carried {@code
-   * ?post=}). Powers "이 글이 만든 클릭" in author analytics; null for clicks from anywhere else.
-   */
   @Column(name = "post_id")
   private Long postId;
 
-  /** Autonomous System Number for the visitor's IP — null when ASN db is unavailable. */
   @Column(name = "asn")
   private Integer asn;
 
   @Column(name = "asn_org", length = 200)
   private String asnOrg;
 
-  /**
-   * In-app browser this click was opened in (kakaotalk, instagram, …), derived from the user agent
-   * at write time. Null for an ordinary browser. Independent of {@link #bot} — an in-app browser is
-   * a person.
-   */
   @Column(name = "client_app", length = 32)
   private String clientApp;
 
-  /**
-   * The browser's {@code Sec-Fetch-Site} value — {@code none} when the visitor opened the URL
-   * themselves (typed, bookmark, QR), {@code cross-site} when they followed a link. Splits apart
-   * referrer-less clicks that otherwise all look the same. Null when the browser doesn't send it.
-   */
   @Column(name = "fetch_site", length = 16)
   private String fetchSite;
 
@@ -165,7 +151,7 @@ public class ClickEventEntity {
       String clientApp,
       String fetchSite) {
     this.linkId = linkId == null ? null : linkId.value();
-    this.clickedAt = clickedAt;
+    this.clickedAt = clickedAt == null ? null : clickedAt.truncatedTo(ChronoUnit.SECONDS);
     this.referrer = referrer;
     this.referrerHost = referrerHost;
     this.userAgent = userAgent;
@@ -197,7 +183,7 @@ public class ClickEventEntity {
   @PrePersist
   void prePersist() {
     if (this.clickedAt == null) {
-      this.clickedAt = Instant.now();
+      this.clickedAt = Instant.now().truncatedTo(ChronoUnit.SECONDS);
     }
   }
 }

@@ -2,12 +2,7 @@ package com.example.short_link.link.exception;
 
 import org.springframework.http.HttpStatus;
 
-/**
- * Catalog of every link-feature error. Each entry: HTTP status + message template ({@link
- * String#formatted}) + ordered metadata keys. Constructor args zip with metadata keys so {@code
- * throw new LinkException(LINK_QUOTA_EXCEEDED, 200L)} auto-populates {@code properties.put(
- * "limit", 200L)} — no separate {@code .with(...)} call at the throw site.
- */
+// Message arguments also populate the ordered metadata keys; their positions must match.
 public enum LinkErrorCode {
   LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "link not found: %s"),
   LINK_EXPIRED(HttpStatus.GONE, "link expired: %s"),
@@ -23,8 +18,12 @@ public enum LinkErrorCode {
   SELF_REFERENCING_URL(HttpStatus.BAD_REQUEST, "url points back at the short link service: %s"),
   BULK_IMPORT_TOO_LARGE(
       HttpStatus.PAYLOAD_TOO_LARGE, "bulk import too large: %d rows (limit %d)", "rows", "limit"),
+  INVALID_FAVORITE_ORDER(
+      HttpStatus.BAD_REQUEST, "favorite order must contain every current favorite exactly once"),
   INVALID_CURSOR(HttpStatus.BAD_REQUEST, "Invalid cursor"),
-  INVALID_EXPORT_DIMENSION(HttpStatus.BAD_REQUEST, "Invalid export dimension: %s");
+  INVALID_EXPORT_DIMENSION(HttpStatus.BAD_REQUEST, "Invalid export dimension: %s"),
+  SPLASH_CTA_NOT_FOUND(HttpStatus.BAD_REQUEST, "cta not available for a splash: %s"),
+  OPENS_AFTER_EXPIRY(HttpStatus.BAD_REQUEST, "link would open after it expires: %s");
 
   private final HttpStatus status;
   private final String template;

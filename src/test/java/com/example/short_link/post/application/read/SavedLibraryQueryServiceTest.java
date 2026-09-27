@@ -11,6 +11,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.BookmarkFolderRepository;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -28,6 +29,7 @@ class SavedLibraryQueryServiceTest {
   @Mock private BookmarkFolderRepository folderRepository;
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
+  @Mock private SeriesRepository seriesRepository;
 
   private SavedLibraryQueryService service;
 
@@ -38,7 +40,7 @@ class SavedLibraryQueryServiceTest {
             bookmarkRepository,
             folderRepository,
             postRepository,
-            new PostFeedItemAssembler(userRepository));
+            new PostFeedItemAssembler(userRepository, seriesRepository));
   }
 
   private PostEntity publishedPost(long id, long authorId, String slug) {
@@ -67,7 +69,7 @@ class SavedLibraryQueryServiceTest {
         .thenReturn(List.of(bookmark(1L, 100L), bookmark(2L, null), bookmark(3L, null)));
     PostEntity p1 = publishedPost(1L, 500L, "a");
     PostEntity p3 = publishedPost(3L, 500L, "c");
-    PostEntity p2 = new PostEntity(500L, "b", "B", "ko"); // DRAFT → filtered out
+    PostEntity p2 = new PostEntity(500L, "b", "B", "ko");
     ReflectionTestUtils.setField(p2, "id", 2L);
     when(postRepository.findAllByIdIn(List.of(1L, 2L, 3L))).thenReturn(List.of(p1, p2, p3));
     when(userRepository.findAllByIdIn(List.of(500L))).thenReturn(List.of(author(500L, "alice")));

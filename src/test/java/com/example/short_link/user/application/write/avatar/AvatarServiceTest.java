@@ -10,9 +10,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
-import com.example.short_link.common.storage.s3.AvatarProperties;
+import com.example.short_link.common.storage.ObjectStoragePublicUrls;
+import com.example.short_link.common.storage.s3.S3StorageProperties;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
@@ -28,26 +30,39 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class AvatarServiceTest {
 
+  private static final ImageUploadPolicy UPLOAD_POLICY = new ImageUploadPolicy(300, 1024);
+
   @Mock private UserRepository userRepository;
   @Mock private ObjectStorage objectStorage;
 
-  private AvatarProperties props;
+  private S3StorageProperties storageProperties;
   private AvatarService service;
 
   @BeforeEach
   void setUp() {
-    props = new AvatarProperties("bucket", "ap-northeast-2", "https://cdn.example.com", 300, 1024);
+    org.mockito.Mockito.lenient().when(objectStorage.isConfigured()).thenReturn(true);
+    storageProperties =
+        new S3StorageProperties("bucket", "ap-northeast-2", "https://cdn.example.com");
     service =
         new AvatarService(
-            userRepository, props, objectStorage, mock(ProfileCacheInvalidator.class));
+            userRepository,
+            UPLOAD_POLICY,
+            objectStorage,
+            new ObjectStoragePublicUrls(storageProperties),
+            mock(ProfileCacheInvalidator.class));
   }
 
   @Test
   void presignFailsWhenNotConfigured() {
-    AvatarProperties noBucket = new AvatarProperties("", "", null, 300, 1024);
+    when(objectStorage.isConfigured()).thenReturn(false);
+    S3StorageProperties noBucket = new S3StorageProperties("", "", null);
     AvatarService svc =
         new AvatarService(
-            userRepository, noBucket, objectStorage, mock(ProfileCacheInvalidator.class));
+            userRepository,
+            UPLOAD_POLICY,
+            objectStorage,
+            new ObjectStoragePublicUrls(noBucket),
+            mock(ProfileCacheInvalidator.class));
     assertThatThrownBy(() -> svc.presignUpload(1L, "image/jpeg")).isInstanceOf(UserException.class);
   }
 
@@ -172,10 +187,14 @@ class AvatarServiceTest {
 
   @Test
   void publicUrlFallsBackToStandardS3HostWhenCdnBlank() {
-    AvatarProperties noCdn = new AvatarProperties("bucket", "ap-northeast-2", null, 300, 1024);
+    S3StorageProperties noCdn = new S3StorageProperties("bucket", "ap-northeast-2", null);
     AvatarService svc =
         new AvatarService(
-            userRepository, noCdn, objectStorage, mock(ProfileCacheInvalidator.class));
+            userRepository,
+            UPLOAD_POLICY,
+            objectStorage,
+            new ObjectStoragePublicUrls(noCdn),
+            mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/png"), any(Duration.class)))
         .thenReturn("https://s3/put");
     AvatarService.PresignResult r = svc.presignUpload(1L, "image/png");
@@ -184,11 +203,15 @@ class AvatarServiceTest {
 
   @Test
   void publicUrlStripsTrailingSlashOnBase() {
-    AvatarProperties slashed =
-        new AvatarProperties("bucket", "ap-northeast-2", "https://cdn.example.com/", 300, 1024);
+    S3StorageProperties slashed =
+        new S3StorageProperties("bucket", "ap-northeast-2", "https://cdn.example.com/");
     AvatarService svc =
         new AvatarService(
-            userRepository, slashed, objectStorage, mock(ProfileCacheInvalidator.class));
+            userRepository,
+            UPLOAD_POLICY,
+            objectStorage,
+            new ObjectStoragePublicUrls(slashed),
+            mock(ProfileCacheInvalidator.class));
     when(objectStorage.presignPut(any(), eq("image/webp"), any(Duration.class)))
         .thenReturn("https://s3/put");
     AvatarService.PresignResult r = svc.presignUpload(1L, "image/webp");

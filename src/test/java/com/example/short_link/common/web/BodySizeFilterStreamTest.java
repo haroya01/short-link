@@ -9,18 +9,14 @@ import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
 import tools.jackson.databind.json.JsonMapper;
 
-/**
- * Exercises the request-body stream wrapper directly (the {@code Content-Length} fast-path is
- * covered by {@link BodySizeFilterTest}). A request that hides its size — chunked transfer, so
- * {@code getContentLengthLong()} is -1 — must still be capped when the body is actually read.
- */
+// Exercises the request-body stream wrapper directly (the Content-Length fast-path is covered by
+// BodySizeFilterTest). A request that hides its size — chunked transfer, so getContentLengthLong()
+// is -1 — must still be capped when the body is actually read.
 class BodySizeFilterStreamTest {
 
   private final BodySizeFilter filter = new BodySizeFilter(JsonMapper.builder().build());
 
-  /**
-   * MockHttpServletRequest reports its content length from setContent; force -1 to mimic chunked.
-   */
+  // MockHttpServletRequest reports its content length from setContent; force -1 to mimic chunked.
   private static MockHttpServletRequest lengthlessRequest(String uri, byte[] body) {
     MockHttpServletRequest req =
         new MockHttpServletRequest("POST", uri) {
@@ -44,9 +40,7 @@ class BodySizeFilterStreamTest {
                     (request, response) -> {
                       ServletInputStream in = request.getInputStream();
                       byte[] buf = new byte[4096];
-                      while (in.read(buf) != -1) {
-                        // drain — the wrapper must abort before the whole body is read
-                      }
+                      while (in.read(buf) != -1) {}
                     }))
         .isInstanceOf(PayloadTooLargeException.class);
   }
@@ -61,9 +55,7 @@ class BodySizeFilterStreamTest {
                     new MockHttpServletResponse(),
                     (request, response) -> {
                       ServletInputStream in = request.getInputStream();
-                      while (in.read() != -1) {
-                        // drain byte-by-byte
-                      }
+                      while (in.read() != -1) {}
                     }))
         .isInstanceOf(PayloadTooLargeException.class);
   }

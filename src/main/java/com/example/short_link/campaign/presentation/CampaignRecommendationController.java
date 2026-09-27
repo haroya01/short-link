@@ -9,7 +9,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/** GET /api/v1/campaigns/{id}/recommendations — 다음 배포 시 batch quantity 재할당 추천. */
 @RestController
 @RequestMapping("/api/v1/campaigns/{campaignId}/recommendations")
 @RequiredArgsConstructor

@@ -5,9 +5,10 @@ import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.AbuseReportStatus;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
-import com.example.short_link.abuse.domain.repository.AbuseReportRepository.CommentSubjectSnapshot;
-import com.example.short_link.abuse.domain.repository.AbuseReportRepository.PostSubjectSnapshot;
-import com.example.short_link.abuse.domain.repository.AbuseReportRepository.UserSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.CommentSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.PostSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.UserSubjectSnapshot;
 import com.example.short_link.common.web.PostPublicUrlBuilder;
 import java.util.List;
 import java.util.Map;
@@ -17,10 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 관리자 모더레이션 큐 조회 + 대상 하이드레이션. subjectType 별로 한 번의 배치 쿼리(POST/COMMENT/USER)로 스냅샷을 모아 N+1 없이 뷰를 채운다 —
- * 관리자가 "무엇이 신고됐는지" 보고 바로 이동할 수 있게.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -29,6 +26,7 @@ public class AbuseReportQueryService {
   private static final String POST_UNPUBLISHED = "UNPUBLISHED";
 
   private final AbuseReportRepository abuseReportRepository;
+  private final AbuseSubjectReader subjects;
   private final PostPublicUrlBuilder postPublicUrlBuilder;
 
   public List<AbuseReportView> listAll() {
@@ -39,7 +37,6 @@ public class AbuseReportQueryService {
     return enrichAll(abuseReportRepository.findAllByStatusOrderByCreatedAtDesc(status));
   }
 
-  /** Enrich a single report — used by the resolve endpoint so its response keeps the snapshot. */
   public AbuseReportView enrich(AbuseReportEntity report) {
     return enrichAll(List.of(report)).get(0);
   }
@@ -57,7 +54,7 @@ public class AbuseReportQueryService {
     List<Long> ids = subjectIds(reports, AbuseSubjectType.POST);
     return ids.isEmpty()
         ? Map.of()
-        : abuseReportRepository.findPostSubjectSnapshots(ids).stream()
+        : subjects.findPostSubjectSnapshots(ids).stream()
             .collect(Collectors.toMap(PostSubjectSnapshot::getSubjectId, Function.identity()));
   }
 
@@ -65,7 +62,7 @@ public class AbuseReportQueryService {
     List<Long> ids = subjectIds(reports, AbuseSubjectType.COMMENT);
     return ids.isEmpty()
         ? Map.of()
-        : abuseReportRepository.findCommentSubjectSnapshots(ids).stream()
+        : subjects.findCommentSubjectSnapshots(ids).stream()
             .collect(Collectors.toMap(CommentSubjectSnapshot::getSubjectId, Function.identity()));
   }
 
@@ -73,7 +70,7 @@ public class AbuseReportQueryService {
     List<Long> ids = subjectIds(reports, AbuseSubjectType.USER);
     return ids.isEmpty()
         ? Map.of()
-        : abuseReportRepository.findUserSubjectSnapshots(ids).stream()
+        : subjects.findUserSubjectSnapshots(ids).stream()
             .collect(Collectors.toMap(UserSubjectSnapshot::getSubjectId, Function.identity()));
   }
 
@@ -120,7 +117,7 @@ public class AbuseReportQueryService {
     if (snapshot == null) {
       return SubjectSnapshot.EMPTY;
     }
-    // 유저 대상: 이미 정지/차단(BANNED/SUSPENDED)됐으면 removed 로 표시해 관리자가 조치 여부를 한눈에 본다.
+    // 사용자 제재 상태도 대상 삭제 여부와 같은 removed 필드로 표현한다.
     boolean removed = !"ACTIVE".equals(snapshot.getModerationStatus());
     return new SubjectSnapshot(null, snapshot.getHandle(), null, null, removed);
   }

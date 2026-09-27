@@ -29,10 +29,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * 컬렉션 표면 — 만들기·내 목록·상세·연결·연결끊기·삭제. "연결"이 §0의 핵심 동사라 글 인게이지와 같은 인증 컨텍스트에서 그 자리 연결을 받는다. 상세는 PRIVATE
- * 가시성을 쿼리 서비스가 가른다.
- */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -53,19 +49,7 @@ public class CollectionController {
                 request.description(),
                 request.visibility(),
                 request.kind()));
-    return new CollectionSummaryView(
-        saved.getId(),
-        saved.getTitle(),
-        saved.getDescription(),
-        saved.getVisibility().name(),
-        saved.getKind().name(),
-        0,
-        saved.getUpdatedAt(),
-        List.of(),
-        null, // 방금 만든 내 컬렉션 에코 — 큐레이터/위치는 "이 글이 속한 길" 조회에서만 채운다.
-        null,
-        null,
-        null);
+    return CollectionSummaryView.afterCreation(saved);
   }
 
   @PutMapping("/collections/{id}")
@@ -77,19 +61,7 @@ public class CollectionController {
         commandService.edit(
             new EditCollectionCommand(
                 userId, id, request.title(), request.description(), request.visibility()));
-    return new CollectionSummaryView(
-        saved.getId(),
-        saved.getTitle(),
-        saved.getDescription(),
-        saved.getVisibility().name(),
-        saved.getKind().name(),
-        (int) queryService.connectionCount(saved.getId()),
-        saved.getUpdatedAt(),
-        List.of(),
-        null, // 방금 수정한 내 컬렉션 에코 — 큐레이터/위치는 "이 글이 속한 길" 조회에서만 채운다.
-        null,
-        null,
-        null);
+    return queryService.editedSummary(saved);
   }
 
   @GetMapping("/users/me/collections")
@@ -124,7 +96,6 @@ public class CollectionController {
     commandService.disconnect(userId, id, connectionId);
   }
 
-  /** 연결 순서 재배치 — PATH(reading path)의 흐름을 짠다. 이 컬렉션의 모든 연결 id 를 순서대로 나열. */
   @PutMapping("/collections/{id}/connections/order")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void reorderConnections(

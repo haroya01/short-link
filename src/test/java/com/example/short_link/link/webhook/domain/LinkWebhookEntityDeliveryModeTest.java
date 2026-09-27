@@ -181,4 +181,38 @@ class LinkWebhookEntityDeliveryModeTest {
   void sendsSpikeAlertTrueForBothMode() {
     assertThat(WebhookDeliveryMode.BOTH.sendsSpikeAlert()).isTrue();
   }
+
+  @Test
+  void rejectedModeChangePreservesTheModeAndDeliveryHistory() {
+    LinkWebhookEntity h = hook();
+    LocalDate sentDate = LocalDate.of(2026, 5, 26);
+    Instant firedAt = Instant.parse("2026-05-26T12:00:00Z");
+    h.changeDeliveryMode(WebhookDeliveryMode.BOTH, 9, 50, 10);
+    h.markSummarySent(sentDate);
+    h.markSpikeFired(firedAt);
+
+    assertThatThrownBy(
+            () -> h.changeDeliveryMode(WebhookDeliveryMode.THRESHOLD_SPIKE, null, 100, null))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    assertThat(h.getDeliveryMode()).isEqualTo(WebhookDeliveryMode.BOTH);
+    assertThat(h.getSummaryHourOfDay()).isEqualTo(9);
+    assertThat(h.getSummaryLastSentDate()).isEqualTo(sentDate);
+    assertThat(h.getSpikeThreshold()).isEqualTo(50);
+    assertThat(h.getSpikeWindowMinutes()).isEqualTo(10);
+    assertThat(h.getSpikeLastFiredAt()).isEqualTo(firedAt);
+  }
+
+  @Test
+  void invalidSpikeSettingsDoNotApplyTheValidSummaryPart() {
+    LinkWebhookEntity h = hook();
+    h.changeDeliveryMode(WebhookDeliveryMode.DAILY_SUMMARY, 9, null, null);
+
+    assertThatThrownBy(() -> h.changeDeliveryMode(WebhookDeliveryMode.BOTH, 18, 0, 10))
+        .isInstanceOf(IllegalArgumentException.class);
+
+    assertThat(h.getDeliveryMode()).isEqualTo(WebhookDeliveryMode.DAILY_SUMMARY);
+    assertThat(h.getSummaryHourOfDay()).isEqualTo(9);
+    assertThat(h.getSpikeThreshold()).isNull();
+  }
 }

@@ -3,19 +3,27 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -32,6 +40,8 @@ class CreateHighlightUseCaseTest {
   @Mock private PostHighlightRepository highlightRepository;
   @Mock private PostHighlightReplyRepository replyRepository;
   @Mock private CollectionConnectionCleaner connectionCleaner;
+  @Mock private UserModerationGuard moderation;
+  @Mock private UserBlockChecker blocks;
 
   private CreateHighlightUseCase useCase;
 
@@ -39,7 +49,15 @@ class CreateHighlightUseCaseTest {
   void setUp() {
     useCase =
         new CreateHighlightUseCase(
-            postRepository, highlightRepository, replyRepository, connectionCleaner);
+            new PostInteractionAccess(
+                postRepository,
+                mock(CommentRepository.class),
+                highlightRepository,
+                moderation,
+                blocks),
+            highlightRepository,
+            replyRepository,
+            connectionCleaner);
   }
 
   private PostEntity publishedPost(long id, long authorId) {
@@ -71,9 +89,9 @@ class CreateHighlightUseCaseTest {
 
     assertThat(ref.id()).isEqualTo(99L);
     assertThat(ref.blockOrder()).isEqualTo(2);
-    assertThat(ref.endBlockOrder()).isEqualTo(2); // 단일 블록: endBlockOrder 가 blockOrder 로 채워진다
+    assertThat(ref.endBlockOrder()).isEqualTo(2);
     assertThat(ref.quote()).isEqualTo("hello");
-    assertThat(ref.note()).isEqualTo("메모"); // 양끝 공백 정규화
+    assertThat(ref.note()).isEqualTo("메모");
   }
 
   @Test
@@ -87,7 +105,6 @@ class CreateHighlightUseCaseTest {
               return e;
             });
 
-    // 블록 2 의 offset 3 에서 시작해 블록 5 의 offset 1 까지 — 여러 블록에 걸친 하이라이트
     HighlightRef ref =
         useCase.execute(new CreateHighlightCommand(1L, 5L, 2, 5, 3, 1, "hello", null));
 
@@ -145,7 +162,7 @@ class CreateHighlightUseCaseTest {
 
   @Test
   void rejectsUnpublishedPost() {
-    PostEntity draft = new PostEntity(1L, "draft", "Draft", "ko"); // not published
+    PostEntity draft = new PostEntity(1L, "draft", "Draft", "ko");
     ReflectionTestUtils.setField(draft, "id", 5L);
     when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
 
@@ -154,6 +171,32 @@ class CreateHighlightUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+  }
+
+  @Test
+  void blockedReaderCannotCreateAHighlightOrPublicNote() {
+    when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 7L)));
+    when(blocks.isBlocked(7L, 1L)).thenReturn(true);
+
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
+                    new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "quote", "public note")))
+        .isInstanceOf(PostException.class)
+        .extracting(error -> ((PostException) error).errorCode())
+        .isEqualTo(PostErrorCode.POST_INTERACTION_BLOCKED);
+    verifyNoInteractions(highlightRepository, replyRepository, connectionCleaner);
+  }
+
+  @Test
+  void moderatedReaderCannotCreateAHighlight() {
+    UserException denied = new UserException(UserErrorCode.ACCOUNT_SUSPENDED);
+    doThrow(denied).when(moderation).requireCanWrite(1L);
+
+    assertThatThrownBy(
+            () -> useCase.execute(new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "quote", null)))
+        .isSameAs(denied);
+    verifyNoInteractions(postRepository, highlightRepository, replyRepository, connectionCleaner);
   }
 
   @Test

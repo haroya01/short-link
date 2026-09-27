@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import com.example.short_link.link.access.domain.LinkAccessControlEntity;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.expiration.domain.LinkExpirationPolicyEntity;
+import com.example.short_link.link.infrastructure.persistence.LinkSidecarPersister;
 import com.example.short_link.link.og.domain.LinkOgMetadataEntity;
 import com.example.short_link.link.profilebinding.domain.LinkProfileBindingEntity;
 import jakarta.persistence.EntityManager;
@@ -23,7 +24,7 @@ class LinkSidecarPersisterTest {
     LinkSidecarPersister persister = new LinkSidecarPersister(entityManager);
     LinkEntity link = withId(new LinkEntity("https://example.com", "abc1234"), 123L);
 
-    persister.persistAll(link);
+    persister.initialize(link.linkId(), null);
 
     ArgumentCaptor<Object> sidecars = ArgumentCaptor.forClass(Object.class);
     verify(entityManager, times(4)).persist(sidecars.capture());
@@ -37,6 +38,27 @@ class LinkSidecarPersisterTest {
     assertThat(sidecars.getAllValues())
         .extracting(LinkSidecarPersisterTest::linkId)
         .containsOnly(123L);
+  }
+
+  @Test
+  void passwordHashGoesIntoTheAccessControlSidecar() {
+    EntityManager entityManager = mock(EntityManager.class);
+    LinkSidecarPersister persister = new LinkSidecarPersister(entityManager);
+    LinkEntity link = withId(new LinkEntity("https://example.com", "abc1234"), 124L);
+
+    persister.initialize(link.linkId(), "$2a$04$hash");
+
+    ArgumentCaptor<Object> sidecars = ArgumentCaptor.forClass(Object.class);
+    verify(entityManager, times(4)).persist(sidecars.capture());
+    assertThat(sidecars.getAllValues())
+        .filteredOn(LinkAccessControlEntity.class::isInstance)
+        .singleElement()
+        .satisfies(
+            access -> {
+              assertThat(((LinkAccessControlEntity) access).hasPassword()).isTrue();
+              assertThat(((LinkAccessControlEntity) access).getPasswordHash())
+                  .isEqualTo("$2a$04$hash");
+            });
   }
 
   private static Long linkId(Object sidecar) {

@@ -2,7 +2,6 @@ package com.example.short_link.profile.application;
 
 import java.util.Set;
 
-/** Usernames the public profile route would collide with or that should never be claimable. */
 public final class ReservedUsernames {
 
   public static final Set<String> ALL =

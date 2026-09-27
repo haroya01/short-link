@@ -13,6 +13,7 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 public interface JpaLinkRepository
     extends JpaRepository<LinkEntity, Long>, JpaSpecificationExecutor<LinkEntity> {
@@ -38,14 +39,24 @@ public interface JpaLinkRepository
           ELSE true
         END AS passwordRequired,
         COALESCE(acl.maxViews, l.maxViews) AS maxViews,
-        COALESCE(policy.expiredMessage, l.expiredMessage) AS expiredMessage
+        COALESCE(policy.expiredMessage, l.expiredMessage) AS expiredMessage,
+        visit.openInBrowser AS openInBrowser,
+        visit.splashEnabled AS splashEnabled,
+        visit.splashMessage AS splashMessage,
+        visit.splashSeconds AS splashSeconds,
+        visit.splashCtaId AS splashCtaId,
+        visit.opensAt AS opensAt
       FROM LinkEntity l
       LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
       LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
+      LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
       WHERE l.shortCode = :shortCode
       """)
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);
+
+  List<LinkEntity> findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(
+      Long userId);
 
   List<LinkEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
@@ -59,6 +70,8 @@ public interface JpaLinkRepository
 
   @Query("select distinct l.userId from LinkEntity l")
   List<Long> findDistinctUserIds();
+
+  List<LinkEntity> findByOriginalUrlContaining(String fragment);
 
   List<LinkEntity> findByExpiresAtBetween(Instant from, Instant to);
 
@@ -92,6 +105,30 @@ public interface JpaLinkRepository
       "UPDATE LinkEntity l SET l.viewCount = l.viewCount + 1 "
           + "WHERE l.id = :linkId AND (l.maxViews IS NULL OR l.viewCount < l.maxViews)")
   int incrementViewCountIfBelowLimit(@Param("linkId") Long linkId);
+
+  @Transactional
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      "UPDATE LinkEntity l SET l.ogTitle = :title, l.ogDescription = :description, "
+          + "l.ogImage = :image, l.ogFetchedAt = :fetchedAt, l.ogFetchStatus = :status, "
+          + "l.ogFetchAttempts = l.ogFetchAttempts + 1 WHERE l.id = :linkId")
+  int recordOgFetched(
+      @Param("linkId") Long linkId,
+      @Param("title") String title,
+      @Param("description") String description,
+      @Param("image") String image,
+      @Param("fetchedAt") Instant fetchedAt,
+      @Param("status") String status);
+
+  @Transactional
+  @Modifying(clearAutomatically = true, flushAutomatically = true)
+  @Query(
+      "UPDATE LinkEntity l SET l.ogFetchedAt = :fetchedAt, l.ogFetchStatus = :status, "
+          + "l.ogFetchAttempts = l.ogFetchAttempts + 1 WHERE l.id = :linkId")
+  int recordOgFetchFailed(
+      @Param("linkId") Long linkId,
+      @Param("fetchedAt") Instant fetchedAt,
+      @Param("status") String status);
 
   @Modifying(clearAutomatically = true, flushAutomatically = true)
   @Query("DELETE FROM LinkEntity l WHERE l.userId = :userId")

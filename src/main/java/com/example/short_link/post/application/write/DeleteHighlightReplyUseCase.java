@@ -10,7 +10,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Delete a highlight reply — permitted to the reply's author or the highlight's post owner. */
 @Service
 @RequiredArgsConstructor
 public class DeleteHighlightReplyUseCase {

@@ -1,72 +1,74 @@
 package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.common.cache.ProfileCacheInvalidator;
-import com.example.short_link.common.event.PostPublishedEvent;
-import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PublishScheduledPostsUseCaseTest {
+  private static final Instant NOW = Instant.parse("2026-09-18T00:00:00Z");
 
-  @Mock private PostRepository postRepository;
-  @Mock private PostRevisionCapture postRevisionCapture;
-  @Mock private PostSearchTextUpdater searchTextUpdater;
-  @Mock private ProfileCacheInvalidator cacheEviction;
-  @Mock private ApplicationEventPublisher events;
+  @Mock private PostRepository posts;
+  @Mock private PublishScheduledPostUseCase publishPost;
+  private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
 
   private PublishScheduledPostsUseCase useCase() {
     return new PublishScheduledPostsUseCase(
-        postRepository, postRevisionCapture, searchTextUpdater, cacheEviction, events);
-  }
-
-  private static PostEntity scheduledPost(String slug) {
-    PostEntity p = new PostEntity(1L, slug, "Title " + slug, "ko");
-    p.schedule(Instant.now().plusSeconds(3600)); // requires a future time to enter SCHEDULED
-    return p;
+        posts, publishPost, new ScheduledPublicationBackoff(), meters);
   }
 
   @Test
-  void publishesDuePostsAndCapturesRevisions() {
-    PostEntity a = scheduledPost("a");
-    PostEntity b = scheduledPost("b");
-    when(postRepository.findScheduledDue(any())).thenReturn(List.of(a, b));
+  void countsOnlyCommittedPublicationsAndContinuesAfterAFailedPost() {
+    when(posts.findScheduledDueIds(NOW)).thenReturn(List.of(1L, 2L, 3L));
+    when(publishPost.execute(1L, NOW)).thenThrow(new IllegalStateException("commit failed"));
+    when(publishPost.execute(2L, NOW)).thenReturn(false);
+    when(publishPost.execute(3L, NOW)).thenReturn(true);
 
-    int published = useCase().execute(Instant.now());
+    assertThat(useCase().execute(NOW)).isEqualTo(1);
 
-    assertThat(published).isEqualTo(2);
-    assertThat(a.getStatus()).isEqualTo(PostStatus.PUBLISHED);
-    assertThat(b.getStatus()).isEqualTo(PostStatus.PUBLISHED);
-    verify(postRepository, times(2)).save(any(PostEntity.class));
-    verify(postRevisionCapture, times(2)).capture(any(PostEntity.class));
-    // 예약만 걸고 블록 편집 없이 자동 발행되는 글도 검색 평문이 채워지도록 발행마다 refresh 한다.
-    verify(searchTextUpdater, times(2)).refresh(any(PostEntity.class));
-    // Each scheduled post is going public for the first time → one fan-out event apiece.
-    verify(events, times(2)).publishEvent(any(PostPublishedEvent.class));
+    verify(publishPost).execute(3L, NOW);
+    assertThat(meters.counter("short_link.post.scheduled_publish.failed").count()).isEqualTo(1);
   }
 
   @Test
-  void noDuePostsIsNoOp() {
-    when(postRepository.findScheduledDue(any())).thenReturn(List.of());
+  void emptyWorkListDoesNotOpenPublicationTransactions() {
+    when(posts.findScheduledDueIds(NOW)).thenReturn(List.of());
 
-    int published = useCase().execute(Instant.now());
+    assertThat(useCase().execute(NOW)).isZero();
 
-    assertThat(published).isZero();
-    verify(postRepository, never()).save(any());
-    verify(postRevisionCapture, never()).capture(any());
+    verifyNoInteractions(publishPost);
+  }
+
+  @Test
+  void aFailingPostWaitsForItsRetryWhileOtherPostsKeepPublishing() {
+    PublishScheduledPostsUseCase useCase = useCase();
+    Instant nextTick = NOW.plus(Duration.ofMinutes(1));
+    Instant thirdTick = NOW.plus(Duration.ofMinutes(2));
+    when(posts.findScheduledDueIds(NOW)).thenReturn(List.of(1L));
+    when(posts.findScheduledDueIds(nextTick)).thenReturn(List.of(1L, 2L));
+    when(posts.findScheduledDueIds(thirdTick)).thenReturn(List.of(1L));
+    when(publishPost.execute(1L, NOW)).thenThrow(new IllegalStateException("search down"));
+    when(publishPost.execute(1L, nextTick)).thenThrow(new IllegalStateException("search down"));
+    when(publishPost.execute(2L, nextTick)).thenReturn(true);
+
+    useCase.execute(NOW);
+    assertThat(useCase.execute(nextTick)).isEqualTo(1);
+    useCase.execute(thirdTick);
+
+    verify(publishPost, times(1)).execute(1L, nextTick);
+    verify(publishPost, never()).execute(1L, thirdTick);
   }
 }

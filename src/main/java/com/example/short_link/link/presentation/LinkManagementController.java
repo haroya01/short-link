@@ -48,7 +48,8 @@ public class LinkManagementController {
                 request.originalUrl(),
                 request.expiresAt(),
                 request.note(),
-                request.expiredMessage()));
+                request.expiredMessage(),
+                request.clearExpiresAt()));
     return MyLinkResponse.from(updated, urlBuilder);
   }
 

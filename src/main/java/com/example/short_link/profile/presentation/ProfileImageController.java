@@ -12,12 +12,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-/**
- * Endpoints for uploading profile-block images (gallery, product card, etc.) directly to S3 via
- * presigned PUT URLs. The returned {@code imageUrl} is meant to be embedded into a block's JSON
- * content through the existing block update endpoint — this controller does not write any block
- * itself.
- */
 @RestController
 @RequestMapping("/api/v1/users/me/profile/images")
 @RequiredArgsConstructor

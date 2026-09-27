@@ -13,12 +13,8 @@ import java.util.Locale;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-/**
- * Pre-transaction validation for link creation — self-reference, blocked-domain lookup, Safe
- * Browsing, reserved short codes. Lives outside the @Transactional boundary so the outbound
- * Safe-Browsing HTTP call doesn't hold a JDBC connection for the round-trip (pool starvation under
- * load).
- */
+// Validation runs outside the creation transaction so Safe Browsing HTTP calls do not hold a JDBC
+// connection.
 @Component
 class CreateLinkValidator {
 
@@ -39,7 +35,15 @@ class CreateLinkValidator {
   }
 
   void validateUrl(String url) {
-    rejectSelfReference(url);
+    validateUrl(url, false);
+  }
+
+  // allowSelfHost=true 는 우리 자신이 목적지인 1st-party 링크(이벤트 공개 페이지 등)용 — 단축 코드가 아닌 콘텐츠 경로라 리다이렉트 루프가 아니다.
+  // 차단 도메인/안전성 검사는 그대로 통과해야 한다.
+  void validateUrl(String url, boolean allowSelfHost) {
+    if (!allowSelfHost) {
+      rejectSelfReference(url);
+    }
     if (blockedDomainChecker.isBlocked(url)) {
       meterRegistry.counter("short_link.created", "result", "blocked_domain").increment();
       throw new LinkException(LinkErrorCode.MALICIOUS_URL, LinkUrlHasher.sha256Prefix(url));
@@ -49,11 +53,9 @@ class CreateLinkValidator {
     }
   }
 
-  /**
-   * Rejects URLs that point back at the short-link host itself (apex and its www variant) —
-   * re-shortening our own short links invites redirect loops/chains. Subdomains (blog.kurl.me,
-   * author blogs) are real content and stay allowed.
-   */
+  // Rejects URLs that point back at the short-link host itself (apex and its www variant) —
+  // re-shortening our own short links invites redirect loops/chains. Subdomains (blog.kurl.me,
+  // author blogs) are real content and stay allowed.
   void rejectSelfReference(String url) {
     String host = canonicalHost(url);
     if (host != null && host.equals(shortLinkHost)) {
@@ -68,7 +70,6 @@ class CreateLinkValidator {
     }
   }
 
-  /** Lower-cased host with any leading {@code www.} stripped, or {@code null} if unparseable. */
   private static String canonicalHost(String url) {
     if (url == null) {
       return null;

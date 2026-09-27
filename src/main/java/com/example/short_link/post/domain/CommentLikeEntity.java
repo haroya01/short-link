@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One user's like on a comment. (comment_id, user_id) is unique — a user likes a comment once. */
 @Entity
 @Table(
     name = "comment_like",

@@ -18,11 +18,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-/**
- * One calm daily digest per active owner — yesterday's human clicks + top link. Skips owners with
- * no clicks (no empty pings). Each user is read via per-repo transactions (no loop-held
- * connection).
- */
+// Skips owners with no human clicks. Repository-scoped transactions release the connection between
+// owners.
 @Slf4j
 @Component
 @RequiredArgsConstructor

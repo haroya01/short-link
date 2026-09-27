@@ -46,11 +46,9 @@ class AsnResolverTest {
     assertThat(info.relay()).isFalse();
   }
 
-  /**
-   * iCloud Private Relay exits through Cloudflare. Marking that as datacenter deleted every iPhone
-   * reader on Private Relay from the human numbers — the reported "someone opened my link and the
-   * stats didn't move". Relay egress is a person whose network is hidden, not cloud traffic.
-   */
+  // iCloud Private Relay exits through Cloudflare. Marking that as datacenter deleted every iPhone
+  // reader on Private Relay from the human numbers — the reported "someone opened my link and the
+  // stats didn't move". Relay egress is a person whose network is hidden, not cloud traffic.
   @Test
   void resolveMarksCloudflareAsRelayNotDatacenter() {
     GeoLookup lookup = mock(GeoLookup.class);
@@ -73,9 +71,7 @@ class AsnResolverTest {
     assertThat(info.datacenter()).isFalse();
   }
 
-  /**
-   * The two sets must stay disjoint — an ASN in both would make the click verdict order-dependent.
-   */
+  // The two sets must stay disjoint — an ASN in both would make the click verdict order-dependent.
   @Test
   void datacenterAndRelaySetsAreDisjoint() {
     assertThat(AsnResolver.DATACENTER_ASN).doesNotContainAnyElementsOf(AsnResolver.RELAY_ASN);

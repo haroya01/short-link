@@ -34,7 +34,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.test.web.servlet.MockMvc;
 
-/** HTTP 매핑·status·인증 게이트만 — 검증/소유권/멱등 규칙은 서비스 단위 테스트가 진짜로 돈다. */
 @KurlWebMvcTest(controllers = CollectionController.class)
 @Import(PostExceptionHandler.class)
 class CollectionControllerTest {
@@ -68,7 +67,12 @@ class CollectionControllerTest {
         .andExpect(jsonPath("$.id").value(10))
         .andExpect(jsonPath("$.title").value("느린 사고"))
         .andExpect(jsonPath("$.visibility").value("PUBLIC"))
-        .andExpect(jsonPath("$.count").value(0));
+        .andExpect(jsonPath("$.count").value(0))
+        .andExpect(jsonPath("$.preview").isEmpty())
+        .andExpect(jsonPath("$.curatorUsername").doesNotExist())
+        .andExpect(jsonPath("$.curatorAvatarUrl").doesNotExist())
+        .andExpect(jsonPath("$.position").doesNotExist())
+        .andExpect(jsonPath("$.connectionId").doesNotExist());
   }
 
   @Test
@@ -92,8 +96,9 @@ class CollectionControllerTest {
 
   @Test
   void editReturnsUpdatedSummary() throws Exception {
-    when(command.edit(any())).thenReturn(collection(10L));
-    when(query.connectionCount(10L)).thenReturn(2L);
+    CollectionEntity saved = collection(10L);
+    when(command.edit(any())).thenReturn(saved);
+    when(query.editedSummary(saved)).thenReturn(CollectionSummaryView.afterWrite(saved, 2L));
 
     mvc.perform(
             put("/api/v1/collections/10")
@@ -162,7 +167,6 @@ class CollectionControllerTest {
                     null,
                     501L)));
 
-    // 연결 시트가 "이미 담김"을 그리도록 — 블록 기준 조회에 그 연결의 PK 가 실린다.
     mvc.perform(
             get("/api/v1/users/me/collections")
                 .param("blockType", "POST")

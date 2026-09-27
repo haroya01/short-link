@@ -19,11 +19,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-/**
- * Resolves API keys passed as {@code Authorization: Bearer kurl_...} or {@code X-API-Key:
- * kurl_...}. Runs after the JWT filter so JWT tokens still take precedence; only kicks in when no
- * authentication has been set yet.
- */
 @Component
 @RequiredArgsConstructor
 public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {

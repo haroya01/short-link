@@ -10,12 +10,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * Trims {@code request_metrics} to a sliding retention window. These rows are operational telemetry
- * (route/status/latency, plus an admin-dashboard user link) — we keep a bounded window instead of
- * an unbounded behavioral log of every API call. Mirrors {@link
- * com.example.short_link.common.audit.scheduler.AuditLogCleanupJob}.
- */
 @Slf4j
 @Component
 public class RequestMetricsCleanupJob {

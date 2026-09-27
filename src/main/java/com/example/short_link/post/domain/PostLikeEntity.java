@@ -12,7 +12,6 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-/** One user's like on a post. (post_id, user_id) is unique — a user likes a post at most once. */
 @Entity
 @Table(
     name = "post_like",

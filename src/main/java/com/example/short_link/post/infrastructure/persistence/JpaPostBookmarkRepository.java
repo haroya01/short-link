@@ -24,10 +24,8 @@ public interface JpaPostBookmarkRepository extends JpaRepository<PostBookmarkEnt
           + "group by b.folderId")
   List<FolderBookmarkCount> countByFolder(@Param("userId") Long userId);
 
-  // MySQL INSERT IGNORE: the (post_id, user_id) unique key turns a duplicate bookmark into a no-op
-  // (0 rows) instead of a constraint violation, so the bookmark flow stays idempotent without
-  // catching an exception inside the transaction. folder_id defaults to NULL (unfiled); created_at
-  // is set here because the native insert bypasses the @CreationTimestamp callback.
+  // INSERT IGNORE avoids duplicate exceptions. Set created_at here because native inserts bypass
+  // the @CreationTimestamp callback; folder_id defaults to NULL (unfiled).
   @Modifying
   @Query(
       value =

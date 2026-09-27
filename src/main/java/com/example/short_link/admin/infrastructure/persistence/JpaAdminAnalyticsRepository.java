@@ -50,11 +50,11 @@ public interface JpaAdminAnalyticsRepository extends JpaRepository<ClickEventEnt
 
   @Query(
       value =
-          "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) AS bucket, "
+          "SELECT FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) AS bucket, "
               + "COUNT(DISTINCT l.userId) AS active "
               + "FROM ClickEventEntity c JOIN LinkEntity l ON l.id = c.linkId "
               + "WHERE c.bot = false AND l.userId IS NOT NULL AND c.clickedAt >= :since "
-              + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', c.clickedAt, '+00:00', :tz)) "
+              + "GROUP BY FUNCTION('DATE', FUNCTION('CONVERT_TZ', timestampadd(second, floor(FUNCTION('UNIX_TIMESTAMP', c.clickedAt)), datetime 1970-01-01 00:00:00), '+00:00', :tz)) "
               + "ORDER BY bucket")
   List<ActivePerDayRow> dailyActiveUsers(
       @Param("since") Instant since, @Param("tz") String timezone);

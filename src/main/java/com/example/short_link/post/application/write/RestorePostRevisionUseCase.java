@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -17,10 +18,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/**
- * 이전 발행 스냅샷으로 본문 + 메타데이터 복원. slug / status / publishedAt 등 상태 메타는 건드리지 않음 — 본문 (블록) 과 가벼운 메타
- * (title, excerpt, ogImage, languageTag) 만 되돌림.
- */
 @Service
 @RequiredArgsConstructor
 public class RestorePostRevisionUseCase {
@@ -32,10 +29,11 @@ public class RestorePostRevisionUseCase {
   private final PostRevisionRepository postRevisionRepository;
   private final PostBlockRepository postBlockRepository;
   private final PostSearchTextUpdater searchTextUpdater;
+  private final PostWriteViewAssembler writeViews;
 
   @Transactional
-  public PostEntity execute(RestorePostRevisionCommand cmd) {
-    PostEntity post = postOwnership.requireOwned(cmd.userId(), cmd.postId());
+  public PostView execute(RestorePostRevisionCommand cmd) {
+    PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     PostRevisionEntity revision =
         postRevisionRepository
             .findByPostIdAndVersionNumber(cmd.postId(), cmd.versionNumber())
@@ -68,9 +66,8 @@ public class RestorePostRevisionUseCase {
     }
 
     post.markEdited();
-    // 제목·요약과 본문이 스냅샷 상태로 되돌았으니 파생 검색 컬럼도 그에 맞춰 다시 채운다(저장된 블록 재조회).
     searchTextUpdater.refresh(post);
-    return postRepository.save(post);
+    return writeViews.fromSaved(postRepository.save(post));
   }
 
   private PostSnapshot readJson(String json) {

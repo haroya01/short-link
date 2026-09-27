@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.geoip.GeoLocation;
 import com.example.short_link.link.application.dto.UserAgentInfo;
 import com.example.short_link.link.classifier.application.AsnResolver;
+import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.BotHeuristic;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
@@ -54,7 +55,7 @@ class RecordPostViewUseCaseTest {
             userAgentClassifier,
             geoIpResolver,
             asnResolver,
-            botHeuristic,
+            new BotClassifier(botHeuristic),
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -70,7 +71,8 @@ class RecordPostViewUseCaseTest {
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
+        .thenReturn(Optional.of(post));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
@@ -88,7 +90,8 @@ class RecordPostViewUseCaseTest {
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
+        .thenReturn(Optional.of(post));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
     useCase.execute(new RecordPostViewCommand("  JOHN  ", "p"), ViewContext.empty());
@@ -122,9 +125,9 @@ class RecordPostViewUseCaseTest {
   void noopForDraftPost() {
     UserEntity author = author("john");
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
-    // status DRAFT
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
+        .thenReturn(Optional.of(post));
 
     useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
 
@@ -140,7 +143,8 @@ class RecordPostViewUseCaseTest {
     post.publish();
     post.unpublish();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
+        .thenReturn(Optional.of(post));
 
     useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
 
@@ -154,7 +158,8 @@ class RecordPostViewUseCaseTest {
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
+        .thenReturn(Optional.of(post));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userAgentClassifier.classify(any()))
         .thenReturn(new UserAgentInfo("mobile", "iOS", "Safari", false, null));
@@ -195,7 +200,8 @@ class RecordPostViewUseCaseTest {
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
+        .thenReturn(Optional.of(post));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
   }
 
@@ -273,7 +279,6 @@ class RecordPostViewUseCaseTest {
     when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
-    // Sec-GPC 옵트아웃 → 재방문 식별 해시를 만들지 않는다(§0, 측정 아닌 존중).
     useCase.execute(
         new RecordPostViewCommand("john", "p"),
         new ViewContext(
