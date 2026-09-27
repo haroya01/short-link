@@ -155,14 +155,14 @@ public class LinkHtmlRenderer {
     return htmlResponse(HttpStatus.OK, unlockedPage(locale, destinationUrl));
   }
 
-  public ResponseEntity<byte[]> splashPageResponse(
+  public VisitPage splashPageResponse(
       Locale locale, CachedLink.Splash splash, String nextUrl, String stayUrl) {
-    return htmlResponse(HttpStatus.OK, splashPage(locale, splash, nextUrl, stayUrl));
+    return visitPage(splashPage(locale, splash, nextUrl, stayUrl));
   }
 
-  public ResponseEntity<byte[]> inAppHandoffPageResponse(
+  public VisitPage inAppHandoffPageResponse(
       Locale locale, String handoffUrl, String destinationUrl) {
-    return htmlResponse(HttpStatus.OK, inAppHandoffPage(locale, handoffUrl, destinationUrl));
+    return visitPage(inAppHandoffPage(locale, handoffUrl, destinationUrl));
   }
 
   /**
@@ -357,11 +357,20 @@ public class LinkHtmlRenderer {
 
   private static ResponseEntity<byte[]> htmlResponse(HttpStatus status, String html) {
     byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
-    return ResponseEntity.status(status)
-        .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))
-        .contentLength(bytes.length)
-        .header("X-Robots-Tag", "noindex, nofollow")
-        .header(HttpHeaders.VARY, "Accept-Language")
-        .body(bytes);
+    return ResponseEntity.status(status).headers(htmlHeaders(bytes.length)).body(bytes);
+  }
+
+  private static VisitPage visitPage(String html) {
+    byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
+    return new VisitPage(bytes, htmlHeaders(bytes.length));
+  }
+
+  private static HttpHeaders htmlHeaders(int length) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setContentType(MediaType.parseMediaType("text/html; charset=utf-8"));
+    headers.setContentLength(length);
+    headers.set("X-Robots-Tag", "noindex, nofollow");
+    headers.set(HttpHeaders.VARY, "Accept-Language");
+    return headers;
   }
 }

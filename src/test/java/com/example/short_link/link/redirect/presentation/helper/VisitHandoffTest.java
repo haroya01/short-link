@@ -95,6 +95,21 @@ class VisitHandoffTest {
   }
 
   @Test
+  void pagesOnTheWayCountAsRedirects() {
+    assertThat(
+            LinkRedirectSupport.classifyOutcome(
+                handoff.redirect(
+                    withSplash("https://dest.example.com/", false), null, Locale.KOREAN)))
+        .isEqualTo("redirect");
+    assertThat(
+            LinkRedirectSupport.classifyOutcome(
+                handoff.redirect(to("https://dest.example.com/", true), KAKAOTALK, Locale.KOREAN)))
+        .isEqualTo("redirect");
+    assertThat(LinkRedirectSupport.classifyOutcome(renderer().notFoundPageResponse(Locale.KOREAN)))
+        .isEqualTo("other");
+  }
+
+  @Test
   void unlockingALinkWithASplashShowsTheSplash() {
     String body =
         new String(
