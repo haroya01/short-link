@@ -6,8 +6,15 @@ import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import java.time.Instant;
 
-public record LinkVisitOptionsRequest(Boolean openInBrowser, @Valid Splash splash) {
+public record LinkVisitOptionsRequest(
+    Boolean openInBrowser, @Valid Splash splash, Instant opensAt, Boolean clearOpensAt) {
+
+  @AssertTrue(message = "opensAt and clearOpensAt cannot be set together")
+  public boolean isOpeningChangeConsistent() {
+    return !Boolean.TRUE.equals(clearOpensAt) || opensAt == null;
+  }
 
   public record Splash(
       boolean enabled,

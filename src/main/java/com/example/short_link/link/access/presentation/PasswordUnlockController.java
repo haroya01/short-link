@@ -69,10 +69,13 @@ public class PasswordUnlockController {
       RedirectOutcome result = ((PasswordUnlockResult.Completed) unlocked).redirect();
       ResponseEntity<?> response = renderUnlock(result, userAgent, locale);
       outcome =
-          (result instanceof RedirectOutcome.Blocked
-                  || result instanceof RedirectOutcome.DomainBlocked)
-              ? "blocked"
-              : (result instanceof RedirectOutcome.ExpiredWithMessage) ? "expired" : "redirect";
+          switch (result) {
+            case RedirectOutcome.Blocked b -> "blocked";
+            case RedirectOutcome.DomainBlocked db -> "blocked";
+            case RedirectOutcome.ExpiredWithMessage em -> "expired";
+            case RedirectOutcome.NotYetOpen n -> "not_open";
+            default -> "redirect";
+          };
       return response;
     } catch (LinkException e) {
       outcome =
@@ -99,6 +102,7 @@ public class PasswordUnlockController {
       case RedirectOutcome.Blocked b -> html.blockedPageResponse(locale);
       case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
+      case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException("PasswordRequired not reachable from unlock flow");
     };

@@ -66,6 +66,7 @@ class CachedLinkLoaderTest {
     assertThat(cached.maxViews()).isEqualTo(10);
     assertThat(cached.expiredMessage()).isEqualTo("ended");
     assertThat(cached.visitOptions().openInBrowser()).isTrue();
+    assertThat(cached.visitOptions().opensAt()).isEqualTo(Instant.parse("2026-10-01T01:00:00Z"));
     assertThat(cached.visitOptions().splash())
         .isEqualTo(
             new CachedLink.Splash("coupon SPRING20", 2, "Get the app", "https://kurl.me/app1"));
@@ -171,6 +172,11 @@ class CachedLinkLoaderTest {
       @Override
       public Long getSplashCtaId() {
         return 9L;
+      }
+
+      @Override
+      public Instant getOpensAt() {
+        return Instant.parse("2026-10-01T01:00:00Z");
       }
     };
   }

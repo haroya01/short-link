@@ -115,5 +115,7 @@ public interface LinkRepository {
     Integer getSplashSeconds();
 
     Long getSplashCtaId();
+
+    Instant getOpensAt();
   }
 }

@@ -4,6 +4,9 @@ import com.example.short_link.link.application.dto.CachedLink;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.exception.LinkErrorCode;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
@@ -72,8 +75,12 @@ public class LinkHtmlRenderer {
       .splash .bar{width:100%;margin:18px 0 0}
       .splash .bar span{animation-delay:0s}
       .splash .count{font-size:12px;margin-top:8px}
+      .count{font-size:12px;margin-top:10px}
       .splash .stay{margin-top:10px;font-size:13px;font-weight:500;color:var(--muted)}
       """;
+
+  private static final DateTimeFormatter UTC_TIME =
+      DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm 'UTC'").withZone(ZoneOffset.UTC);
 
   private final MessageSource messages;
 
@@ -158,6 +165,10 @@ public class LinkHtmlRenderer {
   public VisitPage splashPageResponse(
       Locale locale, CachedLink.Splash splash, String nextUrl, String stayUrl) {
     return visitPage(splashPage(locale, splash, nextUrl, stayUrl));
+  }
+
+  public VisitPage notYetOpenPageResponse(Locale locale, Instant opensAt) {
+    return visitPage(notYetOpenPage(locale, opensAt), HttpStatus.FORBIDDEN, "not_open");
   }
 
   public VisitPage inAppHandoffPageResponse(
@@ -311,6 +322,30 @@ public class LinkHtmlRenderer {
     return page(locale, text(locale, "visitor.splash.pageTitle"), inner, " splash", "");
   }
 
+  String notYetOpenPage(Locale locale, Instant opensAt) {
+    String title = text(locale, "visitor.notOpen.title");
+    String when =
+        "<time id=\"t\" datetime=\""
+            + opensAt
+            + "\">"
+            + escape(UTC_TIME.format(opensAt))
+            + "</time>";
+    String inner =
+        "<h1>"
+            + escape(title)
+            + "</h1><p>"
+            + withMarker(locale, "visitor.notOpen.body", when)
+            + "</p><p class=\"count\">"
+            + escape(text(locale, "visitor.notOpen.wait"))
+            + "</p>"
+            + "<script>(function(){var t=document.getElementById('t'),at=Date.parse(t.dateTime);"
+            + "try{t.textContent=new Date(at).toLocaleString(document.documentElement.lang,"
+            + "{dateStyle:'long',timeStyle:'short'})}catch(e){}"
+            + "var ms=at-Date.now();if(ms>0&&ms<2147483647){setTimeout(function(){location.reload()},ms+1000)}"
+            + "})()</script>";
+    return page(locale, title, inner);
+  }
+
   String inAppHandoffPage(Locale locale, String handoffUrl, String destinationUrl) {
     String title = text(locale, "visitor.handoff.title");
     String inner =
@@ -361,8 +396,12 @@ public class LinkHtmlRenderer {
   }
 
   private static VisitPage visitPage(String html) {
+    return visitPage(html, HttpStatus.OK, "redirect");
+  }
+
+  private static VisitPage visitPage(String html, HttpStatus status, String outcome) {
     byte[] bytes = html.getBytes(StandardCharsets.UTF_8);
-    return new VisitPage(bytes, htmlHeaders(bytes.length));
+    return new VisitPage(bytes, htmlHeaders(bytes.length), status, outcome);
   }
 
   private static HttpHeaders htmlHeaders(int length) {

@@ -70,7 +70,8 @@ class LinkReadAndClaimControllersTest {
             null,
             null,
             false,
-            LinkDetailView.Splash.OFF);
+            LinkDetailView.Splash.OFF,
+            null);
     when(linkDetailQueryService.detail(eq(USER_ID), any(ShortCode.class))).thenReturn(view);
 
     mvc.perform(

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.geoip.GeoLocation;
@@ -25,6 +26,9 @@ import com.example.short_link.link.redirect.presentation.helper.LinkRedirectSupp
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.servlet.http.HttpServletRequest;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -39,6 +43,7 @@ class LinkRedirectFlowTest {
   private final UserAgentClassifier uaClassifier = mock(UserAgentClassifier.class);
   private final SimpleMeterRegistry meterRegistry = new SimpleMeterRegistry();
   private final BlockedDomainChecker blockedDomainChecker = mock(BlockedDomainChecker.class);
+  private static final Instant NOW = Instant.parse("2026-10-01T00:00:00Z");
 
   private final LinkRedirectFlow flow =
       new LinkRedirectFlow(
@@ -47,7 +52,8 @@ class LinkRedirectFlowTest {
           geoIpResolver,
           uaClassifier,
           meterRegistry,
-          blockedDomainChecker);
+          blockedDomainChecker,
+          Clock.fixed(NOW, ZoneOffset.UTC));
 
   private CachedLink basicLink(String url) {
     return new CachedLink(new LinkId(7L), url, null, null, null, null);
@@ -359,5 +365,60 @@ class LinkRedirectFlowTest {
         flow.execute(link, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
 
     assertThat(((RedirectOutcome.Redirect) outcome).picked().url()).isEqualTo("https://android");
+  }
+
+  @Test
+  void aLinkThatOpensLaterNeitherCountsNorSpendsAView() {
+    CachedLink scheduled =
+        new CachedLink(
+            new LinkId(7L),
+            null,
+            null,
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            5,
+            null,
+            List.of(),
+            new CachedLink.VisitOptions(false, null, NOW.plusSeconds(60)));
+
+    RedirectOutcome outcome =
+        flow.execute(
+            scheduled, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
+
+    assertThat(outcome).isEqualTo(new RedirectOutcome.NotYetOpen(NOW.plusSeconds(60)));
+    verifyNoInteractions(incrementViewCount, clickRecorder);
+  }
+
+  @Test
+  void theOpeningTimeItselfIsOpen() {
+    when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation(null, null, null));
+    when(uaClassifier.classify(any()))
+        .thenReturn(new UserAgentInfo("mobile", "iOS 17", "Safari", false, null));
+    CachedLink opening =
+        new CachedLink(
+            new LinkId(7L),
+            null,
+            null,
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            null,
+            List.of(),
+            new CachedLink.VisitOptions(false, null, NOW));
+
+    RedirectOutcome outcome =
+        flow.execute(opening, null, LinkRedirectSupport.visit(null, "ua", null, null, null, req()));
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
   }
 }

@@ -1,6 +1,7 @@
 package com.example.short_link.link.redirect.application;
 
 import com.example.short_link.link.application.dto.CachedLink;
+import java.time.Instant;
 
 public sealed interface RedirectOutcome {
 
@@ -23,4 +24,6 @@ public sealed interface RedirectOutcome {
   record DomainBlocked() implements RedirectOutcome {}
 
   record ExpiredWithMessage(String message) implements RedirectOutcome {}
+
+  record NotYetOpen(Instant opensAt) implements RedirectOutcome {}
 }

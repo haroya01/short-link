@@ -44,7 +44,8 @@ public interface JpaLinkRepository
         visit.splashEnabled AS splashEnabled,
         visit.splashMessage AS splashMessage,
         visit.splashSeconds AS splashSeconds,
-        visit.splashCtaId AS splashCtaId
+        visit.splashCtaId AS splashCtaId,
+        visit.opensAt AS opensAt
       FROM LinkEntity l
       LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id

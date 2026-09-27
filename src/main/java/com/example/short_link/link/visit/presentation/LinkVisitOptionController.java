@@ -31,6 +31,8 @@ public class LinkVisitOptionController {
             userId,
             shortCode,
             request.openInBrowser(),
-            request.splash() == null ? null : request.splash().toChange()));
+            request.splash() == null ? null : request.splash().toChange(),
+            request.opensAt(),
+            Boolean.TRUE.equals(request.clearOpensAt())));
   }
 }

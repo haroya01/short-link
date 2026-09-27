@@ -13,6 +13,7 @@ import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.stats.application.ClickContext;
 import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.time.Clock;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -27,8 +28,12 @@ public class LinkRedirectFlow {
   private final UserAgentClassifier userAgentClassifier;
   private final MeterRegistry meterRegistry;
   private final BlockedDomainChecker blockedDomainChecker;
+  private final Clock clock;
 
   public RedirectOutcome execute(CachedLink link, LinkEntity entity, RedirectVisit visit) {
+    if (link.visitOptions().opensLaterThan(clock.instant())) {
+      return new RedirectOutcome.NotYetOpen(link.visitOptions().opensAt());
+    }
     try {
       enforceViewLimit(link, entity);
     } catch (LinkException e) {
