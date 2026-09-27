@@ -24,7 +24,7 @@ class LinkSidecarPersisterTest {
     LinkSidecarPersister persister = new LinkSidecarPersister(entityManager);
     LinkEntity link = withId(new LinkEntity("https://example.com", "abc1234"), 123L);
 
-    persister.initialize(link.linkId());
+    persister.initialize(link.linkId(), null);
 
     ArgumentCaptor<Object> sidecars = ArgumentCaptor.forClass(Object.class);
     verify(entityManager, times(4)).persist(sidecars.capture());
@@ -38,6 +38,27 @@ class LinkSidecarPersisterTest {
     assertThat(sidecars.getAllValues())
         .extracting(LinkSidecarPersisterTest::linkId)
         .containsOnly(123L);
+  }
+
+  @Test
+  void passwordHashGoesIntoTheAccessControlSidecar() {
+    EntityManager entityManager = mock(EntityManager.class);
+    LinkSidecarPersister persister = new LinkSidecarPersister(entityManager);
+    LinkEntity link = withId(new LinkEntity("https://example.com", "abc1234"), 124L);
+
+    persister.initialize(link.linkId(), "$2a$04$hash");
+
+    ArgumentCaptor<Object> sidecars = ArgumentCaptor.forClass(Object.class);
+    verify(entityManager, times(4)).persist(sidecars.capture());
+    assertThat(sidecars.getAllValues())
+        .filteredOn(LinkAccessControlEntity.class::isInstance)
+        .singleElement()
+        .satisfies(
+            access -> {
+              assertThat(((LinkAccessControlEntity) access).hasPassword()).isTrue();
+              assertThat(((LinkAccessControlEntity) access).getPasswordHash())
+                  .isEqualTo("$2a$04$hash");
+            });
   }
 
   private static Long linkId(Object sidecar) {

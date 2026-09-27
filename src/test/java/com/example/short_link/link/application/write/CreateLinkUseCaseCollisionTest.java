@@ -21,6 +21,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
 
@@ -51,6 +52,7 @@ class LinkCreationServiceCollisionTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            new BCryptPasswordEncoder(4),
             noopTransactionManager(),
             200L);
 
