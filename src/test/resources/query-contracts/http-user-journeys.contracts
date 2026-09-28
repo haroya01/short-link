@@ -525,4 +525,4 @@
 @junit | workspace-favorite-order | 2 | 0 | 2 | 0 | 4
 @junit | workspace-favorite-remove | 2 | 0 | 1 | 0 | 3
 @junit | workspace-selected-links | 6 | 0 | 0 | 0 | 6
-@junit | workspace-overview | 7 | 0 | 0 | 0 | 7
+@junit | workspace-overview | 9 | 0 | 0 | 0 | 9
