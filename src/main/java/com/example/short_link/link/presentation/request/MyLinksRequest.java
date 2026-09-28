@@ -60,7 +60,10 @@ public record MyLinksRequest(
     return switch (normalized.toLowerCase(Locale.ROOT)) {
       case "createdat", "created_at" -> SortKey.CREATED_AT;
       case "clickcount", "click_count" -> SortKey.CLICK_COUNT;
-      default -> throw new IllegalArgumentException("sort must be one of: createdAt / clickCount");
+      case "humanclickcount", "human_click_count" -> SortKey.HUMAN_CLICK_COUNT;
+      default ->
+          throw new IllegalArgumentException(
+              "sort must be one of: createdAt / clickCount / humanClickCount");
     };
   }
 

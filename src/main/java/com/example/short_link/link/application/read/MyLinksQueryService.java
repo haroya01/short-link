@@ -27,7 +27,7 @@ public class MyLinksQueryService {
 
   @Transactional(readOnly = true)
   public MyLinksResult myLinks(Long userId, MyLinksQuery query) {
-    if (query.sort() == SortKey.CLICK_COUNT) {
+    if (query.sort() == SortKey.CLICK_COUNT || query.sort() == SortKey.HUMAN_CLICK_COUNT) {
       return myLinksSortedByClickCount(userId, query);
     }
     return myLinksSortedByCreatedAt(userId, query);
@@ -65,13 +65,17 @@ public class MyLinksQueryService {
       return new MyLinksResult(List.of(), null, false);
     }
 
-    Map<Long, Long> counts = linkReader.clickCountsByLinkIds(linkIds(candidates));
+    boolean humansOnly = query.sort() == SortKey.HUMAN_CLICK_COUNT;
+    Map<Long, Long> sortCounts =
+        humansOnly
+            ? linkReader.humanClickCountsByLinkIds(linkIds(candidates))
+            : linkReader.clickCountsByLinkIds(linkIds(candidates));
     Comparator<ClickPosition> order = clickOrder(query.dir());
     List<LinkEntity> sorted =
         candidates.stream()
-            .sorted(Comparator.comparing(link -> clickPosition(link, counts), order))
+            .sorted(Comparator.comparing(link -> clickPosition(link, sortCounts), order))
             .toList();
-    int start = pageStartAfterClickCursor(sorted, query.after(), counts, order);
+    int start = pageStartAfterClickCursor(sorted, query.after(), sortCounts, order);
     if (start >= sorted.size()) {
       return new MyLinksResult(List.of(), null, false);
     }
@@ -79,6 +83,8 @@ public class MyLinksQueryService {
     int end = Math.min(start + query.size(), sorted.size());
     boolean hasMore = end < sorted.size();
     List<LinkEntity> links = sorted.subList(start, end);
+    Map<Long, Long> counts =
+        humansOnly ? linkReader.clickCountsByLinkIds(linkIds(links)) : sortCounts;
     List<MyLink> items = linkReader.assemble(links, counts);
 
     String nextCursor = null;
@@ -86,7 +92,7 @@ public class MyLinksQueryService {
       LinkEntity last = links.get(links.size() - 1);
       nextCursor =
           new MyLinksCursor(
-                  last.getCreatedAt(), last.getId(), counts.getOrDefault(last.getId(), 0L))
+                  last.getCreatedAt(), last.getId(), sortCounts.getOrDefault(last.getId(), 0L))
               .encode();
     }
     return new MyLinksResult(items, nextCursor, hasMore);

@@ -77,7 +77,7 @@ public class MyLinksWorkspaceQueryService {
         humans.values().stream().mapToLong(Long::longValue).sum(),
         days.stream().mapToLong(DayClick::count).sum(),
         dayCounts[6],
-        all.stream().filter(link -> counts.getOrDefault(link.getId(), 0L) == 0).count(),
+        all.stream().filter(link -> humans.getOrDefault(link.getId(), 0L) == 0).count(),
         all.stream()
             .filter(
                 link ->
