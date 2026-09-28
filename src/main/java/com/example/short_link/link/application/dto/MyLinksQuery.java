@@ -32,7 +32,8 @@ public record MyLinksQuery(
 
   public enum SortKey {
     CREATED_AT,
-    CLICK_COUNT
+    CLICK_COUNT,
+    HUMAN_CLICK_COUNT
   }
 
   public enum SortDir {

@@ -175,6 +175,65 @@ class MyLinksControllerTest {
   }
 
   @Test
+  void sortsByHumanClickCountWhileTheResponseKeepsTotals() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("human@x.com", "google", "g-human"));
+    LinkEntity crawled =
+        linkRepository.save(
+            new LinkEntity("https://example.com/crawled", "hum0001", owner.getId(), null));
+    LinkEntity read =
+        linkRepository.save(
+            new LinkEntity("https://example.com/read", "hum0002", owner.getId(), null));
+    linkRepository.save(
+        new LinkEntity("https://example.com/quiet", "hum0003", owner.getId(), null));
+    click(crawled, 1);
+    click(crawled, 5, true);
+    click(read, 3);
+    String token = jwt.createAccessToken(owner.getId(), "USER");
+
+    String firstResponse =
+        mvc.perform(
+                get("/api/v1/links/me")
+                    .header("Authorization", "Bearer " + token)
+                    .param("sort", "humanClickCount")
+                    .param("dir", "desc")
+                    .param("size", "2"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.items.length()").value(2))
+            .andExpect(jsonPath("$.items[0].shortCode").value("hum0002"))
+            .andExpect(jsonPath("$.items[0].clickCount").value(3))
+            .andExpect(jsonPath("$.items[0].humanClickCount").value(3))
+            .andExpect(jsonPath("$.items[1].shortCode").value("hum0001"))
+            .andExpect(jsonPath("$.items[1].clickCount").value(6))
+            .andExpect(jsonPath("$.items[1].humanClickCount").value(1))
+            .andExpect(jsonPath("$.hasMore").value(true))
+            .andReturn()
+            .getResponse()
+            .getContentAsString();
+    String cursor = JsonPath.read(firstResponse, "$.nextCursor").toString();
+
+    mvc.perform(
+            get("/api/v1/links/me")
+                .header("Authorization", "Bearer " + token)
+                .param("sort", "humanClickCount")
+                .param("dir", "desc")
+                .param("size", "2")
+                .param("after", cursor))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items.length()").value(1))
+        .andExpect(jsonPath("$.items[0].shortCode").value("hum0003"))
+        .andExpect(jsonPath("$.hasMore").value(false));
+
+    mvc.perform(
+            get("/api/v1/links/me")
+                .header("Authorization", "Bearer " + token)
+                .param("sort", "clickCount")
+                .param("dir", "desc"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].shortCode").value("hum0001"))
+        .andExpect(jsonPath("$.items[1].shortCode").value("hum0002"));
+  }
+
+  @Test
   void unauthorizedWithoutToken() throws Exception {
     mvc.perform(get("/api/v1/links/me")).andExpect(status().isUnauthorized());
   }
@@ -242,12 +301,16 @@ class MyLinksControllerTest {
   }
 
   private void click(LinkEntity link, int count) {
+    click(link, count, false);
+  }
+
+  private void click(LinkEntity link, int count, boolean bot) {
     for (int i = 0; i < count; i++) {
       clickRepository.save(
           ClickEventEntity.builder()
               .linkId(link.linkId())
               .clickedAt(Instant.parse("2026-01-01T00:00:00Z").plusSeconds(i))
-              .bot(false)
+              .bot(bot)
               .build());
     }
   }

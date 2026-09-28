@@ -153,7 +153,8 @@ class MyLinksWorkspaceIntegrationTest extends com.example.short_link.testsupport
     click(first, NOW.minusSeconds(60), false);
     click(first, NOW.minusSeconds(30), true);
     click(many.getLast(), weekStart.plusSeconds(86400 * 3), false);
-    // A bot-heavy link must not displace the strongest human-performing link.
+    // A bot-heavy link must not displace the strongest human-performing link, and bot-only
+    // traffic leaves it among the links nobody has clicked yet.
     for (int i = 0; i < 20; i++) click(many.get(2), NOW.minusSeconds(120 + i), true);
     LinkEntity foreign =
         links.save(new LinkEntity("https://other.org", "foreign1", other.getId(), null));
@@ -167,7 +168,7 @@ class MyLinksWorkspaceIntegrationTest extends com.example.short_link.testsupport
             .andExpect(jsonPath("$.humanClicks").value(6))
             .andExpect(jsonPath("$.clicks7d").value(5))
             .andExpect(jsonPath("$.clicksToday").value(2))
-            .andExpect(jsonPath("$.zeroClickLinks").value(82))
+            .andExpect(jsonPath("$.zeroClickLinks").value(83))
             .andExpect(jsonPath("$.expiringLinks").value(2))
             .andExpect(jsonPath("$.timezone").value("Asia/Kathmandu"))
             .andExpect(jsonPath("$.dailyClicks[0].date").value("2026-09-07"))

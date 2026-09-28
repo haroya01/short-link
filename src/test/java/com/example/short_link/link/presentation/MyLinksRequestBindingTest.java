@@ -168,6 +168,18 @@ class MyLinksRequestBindingTest {
     assertThat(query.dir()).isEqualTo(SortDir.ASC);
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"humanClickCount", "human_click_count", "  HUMAN_CLICK_COUNT  "})
+  void bindsTheHumanClickSort(String value) throws Exception {
+    mvc.perform(
+            get("/api/v1/links/me")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .param("sort", value))
+        .andExpect(status().isOk());
+
+    assertThat(submittedQuery().sort()).isEqualTo(SortKey.HUMAN_CLICK_COUNT);
+  }
+
   @Test
   void emptyNamedParametersTakePriorityOverTheirArrayAliases() throws Exception {
     mvc.perform(
