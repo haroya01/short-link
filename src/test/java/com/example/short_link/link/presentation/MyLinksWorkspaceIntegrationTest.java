@@ -18,6 +18,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -174,6 +175,9 @@ class MyLinksWorkspaceIntegrationTest extends com.example.short_link.testsupport
             .andExpect(jsonPath("$.dailyClicks[0].date").value("2026-09-07"))
             .andExpect(jsonPath("$.dailyClicks[6].date").value("2026-09-13"))
             .andExpect(jsonPath("$.topLinks[0].shortCode").value("work000"))
+            .andExpect(jsonPath("$.weekTopLinks.length()").value(2))
+            .andExpect(jsonPath("$.weekTopLinks[0].shortCode").value("work000"))
+            .andExpect(jsonPath("$.weekTopLinks[1].shortCode").value("work084"))
             .andReturn()
             .getResponse()
             .getContentAsString();
@@ -193,13 +197,50 @@ class MyLinksWorkspaceIntegrationTest extends com.example.short_link.testsupport
   }
 
   @Test
+  void overviewComparesTheSameSpanLastWeekAndRanksLinksByThisWeek() throws Exception {
+    List<LinkEntity> three = makeLinks(3);
+    ZoneId zone = ZoneId.of(owner.getTimezone());
+    ZonedDateTime localNow = NOW.atZone(zone);
+    LocalDate today = localNow.toLocalDate();
+    Instant weekStart = today.minusDays(6).atStartOfDay(zone).toInstant();
+    Instant lastWeekStart = today.minusDays(13).atStartOfDay(zone).toInstant();
+    Instant lastWeekCut = localNow.minusWeeks(1).toInstant();
+    click(three.get(0), lastWeekStart, false);
+    click(three.get(0), lastWeekCut.minusSeconds(1), false);
+    click(three.get(0), lastWeekCut.minusSeconds(2), true);
+    click(three.get(0), lastWeekCut, false);
+    click(three.get(0), weekStart.minusSeconds(1), false);
+    click(three.get(1), weekStart.plusSeconds(20 * 3600), false);
+    click(three.get(1), weekStart.plusSeconds(20 * 3600 + 60), false);
+    click(three.get(1), weekStart.plusSeconds(86400 + 20 * 3600), false);
+    click(three.get(2), NOW.minusSeconds(60), false);
+    for (int i = 0; i < 5; i++) click(three.get(2), NOW.minusSeconds(120 + i), true);
+    em.flush();
+
+    mvc.perform(get("/api/v1/links/me/overview").header("Authorization", token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.clicks7d").value(4))
+        .andExpect(jsonPath("$.previousClicks7d").value(2))
+        .andExpect(jsonPath("$.peak.dayOfWeek").value(2))
+        .andExpect(jsonPath("$.peak.hour").value(20))
+        .andExpect(jsonPath("$.peak.clicks").value(2))
+        .andExpect(jsonPath("$.weekTopLinks.length()").value(2))
+        .andExpect(jsonPath("$.weekTopLinks[0].shortCode").value("work001"))
+        .andExpect(jsonPath("$.weekTopLinks[1].shortCode").value("work002"))
+        .andExpect(jsonPath("$.topLinks[0].shortCode").value("work000"));
+  }
+
+  @Test
   void emptyOverviewIsSevenDatedZerosAndPrivateEndpointsRequireAuthentication() throws Exception {
     mvc.perform(get("/api/v1/links/me/overview").header("Authorization", token))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.totalLinks").value(0))
         .andExpect(jsonPath("$.dailyClicks.length()").value(7))
         .andExpect(jsonPath("$.clicksToday").value(0))
-        .andExpect(jsonPath("$.topLinks.length()").value(0));
+        .andExpect(jsonPath("$.previousClicks7d").value(0))
+        .andExpect(jsonPath("$.peak").doesNotExist())
+        .andExpect(jsonPath("$.topLinks.length()").value(0))
+        .andExpect(jsonPath("$.weekTopLinks.length()").value(0));
     mvc.perform(get("/api/v1/links/me/overview")).andExpect(status().isUnauthorized());
     mvc.perform(get("/api/v1/links/me/favorites")).andExpect(status().isUnauthorized());
   }
