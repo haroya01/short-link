@@ -40,11 +40,41 @@ class PostRepositoryAdapterBooleanMatchTest {
   }
 
   @Test
-  void titleLikeFallbackOffWhenAnyTermLongEnough() {
-    // 두 글자 이상 토큰이 하나라도 있으면 ngram 이 잡을 수 있으니 폴백은 꺼둔다(null = 쿼리 가지 off).
+  void titleLikeFallbackEngagesForStopwordDeadTerms() {
+    // 모든 바이그램이 기본 스톱워드('a'·'i' 포함)에 걸리는 항은 ngram 색인에 남지 않는다.
+    assertThat(PostRepositoryAdapter.titleLikeFallback("java")).isEqualTo("%java%");
+    assertThat(PostRepositoryAdapter.titleLikeFallback("Java")).isEqualTo("%java%");
+    assertThat(PostRepositoryAdapter.titleLikeFallback("data")).isEqualTo("%data%");
+    // "ab" 도 유일 바이그램 "ab" 가 'a' 포함이라 인덱스 불가시.
+    assertThat(PostRepositoryAdapter.titleLikeFallback("ab")).isEqualTo("%ab%");
+  }
+
+  @Test
+  void titleWordFallbackGuardsAsciiEdgesOfTheFallbackPhrase() {
+    // 영문·숫자로 시작·끝나는 폴백은 앞뒤가 영문·숫자가 아닐 때만 맞춘다(email 의 ai 제외).
+    assertThat(PostRepositoryAdapter.titleWordFallback("AI"))
+        .isEqualTo("(^|[^a-z0-9])ai([^a-z0-9]|$)");
+    assertThat(PostRepositoryAdapter.titleWordFallback("java"))
+        .isEqualTo("(^|[^a-z0-9])java([^a-z0-9]|$)");
+    // 정규식 특수문자는 글자로, 영문·숫자가 아닌 끝에는 경계를 두지 않는다.
+    assertThat(PostRepositoryAdapter.titleWordFallback("C++")).isEqualTo("(^|[^a-z0-9])c\\+\\+");
+  }
+
+  @Test
+  void titleWordFallbackOffWithoutAsciiEdgesOrFallback() {
+    assertThat(PostRepositoryAdapter.titleWordFallback("가")).isNull();
+    assertThat(PostRepositoryAdapter.titleWordFallback("docker")).isNull();
+  }
+
+  @Test
+  void titleLikeFallbackOffWhenAnyTermVisibleToNgram() {
+    // 색인에 남는 바이그램이 있는 항이 하나라도 있으면 MATCH가 맡는다(jpa의 jp, docker의 do).
     assertThat(PostRepositoryAdapter.titleLikeFallback("리다이렉트")).isNull();
     assertThat(PostRepositoryAdapter.titleLikeFallback("C++ 성능")).isNull();
-    assertThat(PostRepositoryAdapter.titleLikeFallback("ab")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("jpa")).isNull();
+    assertThat(PostRepositoryAdapter.titleLikeFallback("docker")).isNull();
+    // 죽은 토큰(java)과 산 토큰(성능)이 섞이면 산 쪽을 MATCH 에 맡긴다.
+    assertThat(PostRepositoryAdapter.titleLikeFallback("java 성능")).isNull();
   }
 
   @Test

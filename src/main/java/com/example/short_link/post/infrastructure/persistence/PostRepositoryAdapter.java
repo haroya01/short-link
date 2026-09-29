@@ -13,6 +13,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -193,6 +194,7 @@ class PostRepositoryAdapter implements PostRepository {
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
+        titleWordFallback(query),
         normLang(lang),
         PageRequest.of(page, size));
   }
@@ -203,6 +205,7 @@ class PostRepositoryAdapter implements PostRepository {
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
+        titleWordFallback(query),
         normLang(lang),
         PageRequest.of(page, size));
   }
@@ -214,6 +217,7 @@ class PostRepositoryAdapter implements PostRepository {
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
+        titleWordFallback(query),
         since,
         normLang(lang),
         PageRequest.of(page, size));
@@ -222,7 +226,11 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public long countSearchPublished(String query, String lang) {
     return jpa.countSearchPublished(
-        booleanMatch(query), likePattern(query), titleLikeFallback(query), normLang(lang));
+        booleanMatch(query),
+        likePattern(query),
+        titleLikeFallback(query),
+        titleWordFallback(query),
+        normLang(lang));
   }
 
   private static String normLang(String lang) {
@@ -242,21 +250,70 @@ class PostRepositoryAdapter implements PostRepository {
     return query.replaceAll("[+\\-><()~*\"@]", " ").replaceAll("\\s+", " ").trim();
   }
 
-  // 2글자 ngram이 처리하지 못하는 짧은 질의만 제목·요약 LIKE 폴백을 사용한다.
+  // ngram 파서는 기본 스톱워드를 포함한 토큰을 색인하지 않고 토큰보다 긴 스톱워드는 무시한다.
+  // 한 글자 스톱워드 'a'·'i'는 포함 여부로, 두 글자 스톱워드는 이 목록과의 일치로 판정한다.
+  private static final Set<String> NGRAM_FATAL_BIGRAMS =
+      Set.of(
+          "an", "as", "at", "be", "by", "de", "en", "in", "is", "it", "la", "of", "on", "or", "to");
+
+  private static boolean visibleToNgram(String term) {
+    if (term.length() < 2) return false;
+    String lower = term.toLowerCase(Locale.ROOT);
+    for (int i = 0; i + 2 <= lower.length(); i++) {
+      String bigram = lower.substring(i, i + 2);
+      boolean contaminated =
+          bigram.indexOf('a') >= 0
+              || bigram.indexOf('i') >= 0
+              || NGRAM_FATAL_BIGRAMS.contains(bigram);
+      if (!contaminated) return true;
+    }
+    return false;
+  }
+
+  // 두 글자 미만이거나 모든 바이그램이 스톱워드에 걸려 ngram 색인에 남지 않는 항만으로 된 질의만
+  // 제목·요약 LIKE 폴백을 사용한다.
   static String titleLikeFallback(String query) {
     String scrubbed = booleanMatch(query);
     if (scrubbed.isEmpty()) {
       return null;
     }
-    boolean allTermsTooShort = true;
     for (String term : scrubbed.split(" ")) {
-      if (term.length() >= 2) {
-        allTermsTooShort = false;
-        break;
+      if (visibleToNgram(term)) {
+        return null;
       }
     }
     // C++ 같은 원문을 그대로 찾도록 연산자 제거 전 검색어를 이스케이프한다.
-    return allTermsTooShort ? likePattern(query) : null;
+    return likePattern(query);
+  }
+
+  // 영문·숫자로 시작하거나 끝나는 폴백 질의는 낱말 속(email·domain의 ai, javascript의 java)에
+  // 걸리지 않게 앞뒤가 영문·숫자가 아닐 때만 맞춘다. 한글 조사가 붙은 'AI가'·'Java로'는 걸린다.
+  static String titleWordFallback(String query) {
+    if (titleLikeFallback(query) == null) {
+      return null;
+    }
+    String phrase = query.toLowerCase(Locale.ROOT);
+    boolean head = isAsciiAlnum(phrase.charAt(0));
+    boolean tail = isAsciiAlnum(phrase.charAt(phrase.length() - 1));
+    if (!head && !tail) {
+      return null;
+    }
+    return (head ? "(^|[^a-z0-9])" : "") + regexLiteral(phrase) + (tail ? "([^a-z0-9]|$)" : "");
+  }
+
+  private static boolean isAsciiAlnum(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+  }
+
+  private static String regexLiteral(String text) {
+    StringBuilder out = new StringBuilder(text.length() * 2);
+    for (char c : text.toCharArray()) {
+      if ("\\^$.|?*+()[]{}".indexOf(c) >= 0) {
+        out.append('\\');
+      }
+      out.append(c);
+    }
+    return out.toString();
   }
 
   @Override
