@@ -1,7 +1,7 @@
 plugins {
 	id 'java'
 	id 'jacoco'
-	id 'org.springframework.boot' version '4.0.6'
+	id 'org.springframework.boot' version '4.1.0'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'com.diffplug.spotless' version '6.25.0'
 }
@@ -39,17 +39,17 @@ dependencies {
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.7.0'
 	implementation 'nl.basjes.parse.useragent:yauaa:7.30.0'
 	implementation 'com.maxmind.geoip2:geoip2:4.2.1'
-	implementation 'org.apache.commons:commons-compress:1.27.1'
+	implementation 'org.apache.commons:commons-compress:1.28.0'
 	implementation 'org.jsoup:jsoup:1.18.1'
 	implementation 'com.google.zxing:core:3.5.4'
 	implementation 'com.google.zxing:javase:3.5.4'
 	implementation 'nl.martijndwars:web-push:5.1.1'
 	// web-push 5.1.1 declares BouncyCastle as provided — pull it explicitly (VAPID key parsing / ECDH).
-	implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
-	implementation 'org.bouncycastle:bcpkix-jdk18on:1.78.1'
+	implementation 'org.bouncycastle:bcprov-jdk18on:1.85'
+	implementation 'org.bouncycastle:bcpkix-jdk18on:1.85'
 	implementation 'io.github.resilience4j:resilience4j-circuitbreaker:2.2.0'
 	implementation 'io.github.resilience4j:resilience4j-micrometer:2.2.0'
-	implementation platform('software.amazon.awssdk:bom:2.47.5')
+	implementation platform('software.amazon.awssdk:bom:2.51.2')
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:auth'
 	implementation 'org.apache.httpcomponents.client5:httpclient5:5.4'
@@ -60,7 +60,7 @@ dependencies {
 	developmentOnly 'org.springframework.boot:spring-boot-devtools'
 	runtimeOnly 'org.flywaydb:flyway-mysql'
 	runtimeOnly 'com.mysql:mysql-connector-j'
-	runtimeOnly 'net.logstash.logback:logstash-logback-encoder:8.0'
+	runtimeOnly 'net.logstash.logback:logstash-logback-encoder:9.0'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.boot:spring-boot-webmvc-test'
 	testImplementation 'io.github.haroya01:query-audit-spring-boot-starter:0.6.0'
