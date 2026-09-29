@@ -50,6 +50,23 @@ class PostRepositoryAdapterBooleanMatchTest {
   }
 
   @Test
+  void titleWordFallbackGuardsAsciiEdgesOfTheFallbackPhrase() {
+    // 영문·숫자로 시작·끝나는 폴백은 앞뒤가 영문·숫자가 아닐 때만 맞춘다(email 의 ai 제외).
+    assertThat(PostRepositoryAdapter.titleWordFallback("AI"))
+        .isEqualTo("(^|[^a-z0-9])ai([^a-z0-9]|$)");
+    assertThat(PostRepositoryAdapter.titleWordFallback("java"))
+        .isEqualTo("(^|[^a-z0-9])java([^a-z0-9]|$)");
+    // 정규식 특수문자는 글자로, 영문·숫자가 아닌 끝에는 경계를 두지 않는다.
+    assertThat(PostRepositoryAdapter.titleWordFallback("C++")).isEqualTo("(^|[^a-z0-9])c\\+\\+");
+  }
+
+  @Test
+  void titleWordFallbackOffWithoutAsciiEdgesOrFallback() {
+    assertThat(PostRepositoryAdapter.titleWordFallback("가")).isNull();
+    assertThat(PostRepositoryAdapter.titleWordFallback("docker")).isNull();
+  }
+
+  @Test
   void titleLikeFallbackOffWhenAnyTermVisibleToNgram() {
     // 색인에 남는 바이그램이 있는 항이 하나라도 있으면 MATCH가 맡는다(jpa의 jp, docker의 do).
     assertThat(PostRepositoryAdapter.titleLikeFallback("리다이렉트")).isNull();

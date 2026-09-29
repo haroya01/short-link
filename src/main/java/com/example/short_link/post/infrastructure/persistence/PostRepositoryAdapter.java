@@ -194,6 +194,7 @@ class PostRepositoryAdapter implements PostRepository {
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
+        titleWordFallback(query),
         normLang(lang),
         PageRequest.of(page, size));
   }
@@ -204,6 +205,7 @@ class PostRepositoryAdapter implements PostRepository {
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
+        titleWordFallback(query),
         normLang(lang),
         PageRequest.of(page, size));
   }
@@ -215,6 +217,7 @@ class PostRepositoryAdapter implements PostRepository {
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
+        titleWordFallback(query),
         since,
         normLang(lang),
         PageRequest.of(page, size));
@@ -223,7 +226,11 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public long countSearchPublished(String query, String lang) {
     return jpa.countSearchPublished(
-        booleanMatch(query), likePattern(query), titleLikeFallback(query), normLang(lang));
+        booleanMatch(query),
+        likePattern(query),
+        titleLikeFallback(query),
+        titleWordFallback(query),
+        normLang(lang));
   }
 
   private static String normLang(String lang) {
@@ -277,6 +284,36 @@ class PostRepositoryAdapter implements PostRepository {
     }
     // C++ 같은 원문을 그대로 찾도록 연산자 제거 전 검색어를 이스케이프한다.
     return likePattern(query);
+  }
+
+  // 영문·숫자로 시작하거나 끝나는 폴백 질의는 낱말 속(email·domain의 ai, javascript의 java)에
+  // 걸리지 않게 앞뒤가 영문·숫자가 아닐 때만 맞춘다. 한글 조사가 붙은 'AI가'·'Java로'는 걸린다.
+  static String titleWordFallback(String query) {
+    if (titleLikeFallback(query) == null) {
+      return null;
+    }
+    String phrase = query.toLowerCase(Locale.ROOT);
+    boolean head = isAsciiAlnum(phrase.charAt(0));
+    boolean tail = isAsciiAlnum(phrase.charAt(phrase.length() - 1));
+    if (!head && !tail) {
+      return null;
+    }
+    return (head ? "(^|[^a-z0-9])" : "") + regexLiteral(phrase) + (tail ? "([^a-z0-9]|$)" : "");
+  }
+
+  private static boolean isAsciiAlnum(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+  }
+
+  private static String regexLiteral(String text) {
+    StringBuilder out = new StringBuilder(text.length() * 2);
+    for (char c : text.toCharArray()) {
+      if ("\\^$.|?*+()[]{}".indexOf(c) >= 0) {
+        out.append('\\');
+      }
+      out.append(c);
+    }
+    return out.toString();
   }
 
   @Override

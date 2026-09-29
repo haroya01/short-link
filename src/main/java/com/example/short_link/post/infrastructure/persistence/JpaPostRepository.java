@@ -184,6 +184,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   // 검색 평문이 없는 글도 작성자 핸들로 찾을 수 있도록 LEFT JOIN한다.
   // :match는 연산자를 제거한 BOOLEAN 검색어, :like는 이스케이프한 핸들 검색어다.
   // :titleLike는 ngram 색인에 남는 항이 없는 질의(두 글자 미만·스톱워드)의 제목·요약 폴백에만 사용한다.
+  // :titleWord는 그 폴백이 영문·숫자 낱말 속(email의 ai)에 걸리지 않게 하는 경계 정규식이다.
   // ngram에서 접두·구문 연산자는 한글 다중 바이그램을 깨뜨리고 NATURAL MODE는 일부 바이그램만
   // 겹쳐도 매칭되므로, 연산자 없는 BOOLEAN 항을 유지한다.
   String SEARCH_PREDICATE =
@@ -192,7 +193,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "OR p.user_id IN (SELECT u.id FROM users u "
           + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
           + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
-          + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!'))) "
+          + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!') "
+          + "AND (:titleWord IS NULL "
+          + "OR REGEXP_LIKE(LOWER(CONCAT(p.title, ' ', COALESCE(p.excerpt, ''))), :titleWord)))) "
           + "AND (:lang IS NULL OR p.language_tag = :lang) ";
 
   @Query(
@@ -206,6 +209,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("match") String match,
       @Param("like") String like,
       @Param("titleLike") String titleLike,
+      @Param("titleWord") String titleWord,
       @Param("lang") String lang,
       Pageable pageable);
 
@@ -222,6 +226,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("match") String match,
       @Param("like") String like,
       @Param("titleLike") String titleLike,
+      @Param("titleWord") String titleWord,
       @Param("lang") String lang,
       Pageable pageable);
 
@@ -238,6 +243,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("match") String match,
       @Param("like") String like,
       @Param("titleLike") String titleLike,
+      @Param("titleWord") String titleWord,
       @Param("since") Instant since,
       @Param("lang") String lang,
       Pageable pageable);
@@ -252,6 +258,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("match") String match,
       @Param("like") String like,
       @Param("titleLike") String titleLike,
+      @Param("titleWord") String titleWord,
       @Param("lang") String lang);
 
   @Query(
