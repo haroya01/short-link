@@ -25,7 +25,10 @@ class PersonalDiscoveryHttpQueryContractTest extends ContentHttpJourneySupport {
         "PUT",
         postPath(korean) + "/markdown",
         author,
-        Map.of("markdown", "Readable architecture makes a database journey explicit."),
+        Map.of(
+            "markdown",
+            "Readable architecture makes a database journey explicit. The schema, the queries and"
+                + " the indexes tell one story, so a newcomer can trace why every table exists."),
         200);
     publish("discovery-korean-publish", korean);
     long english =
@@ -37,6 +40,16 @@ class PersonalDiscoveryHttpQueryContractTest extends ContentHttpJourneySupport {
         postPath(english),
         author,
         Map.of("tags", List.of("programming"), "languageTag", "en"),
+        200);
+    step(
+        "discovery-english-body",
+        "PUT",
+        postPath(english) + "/markdown",
+        author,
+        Map.of(
+            "markdown",
+            "Readable programs keep names honest. A function says what it does, a module says"
+                + " what it owns, and a reader can change one without fearing the rest."),
         200);
     publish("discovery-english-publish", english);
     browseAndSearch(korean, english);

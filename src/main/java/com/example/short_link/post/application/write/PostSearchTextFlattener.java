@@ -40,6 +40,17 @@ public final class PostSearchTextFlattener {
     return flattened;
   }
 
+  // 제목·요약·태그를 뺀 본문만. 발견 품질 하한선이 이 글의 글자 수를 잰다.
+  public String bodyText(List<PostBlockEntity> blocks) {
+    StringBuilder sb = new StringBuilder();
+    if (blocks != null) {
+      for (PostBlockEntity block : blocks) {
+        append(sb, blockText(block.getType(), block.getContent()));
+      }
+    }
+    return sb.toString();
+  }
+
   private String blockText(PostBlockType type, String content) {
     if (content == null || content.isBlank()) {
       return "";

@@ -106,6 +106,10 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "pin_order")
   private Integer pinOrder;
 
+  // 본문의 글자·숫자 수. 쓸 때 재 두어 발견 피드가 본문을 읽지 않고 거른다.
+  @Column(name = "body_text_length", nullable = false)
+  private int bodyTextLength = 0;
+
   public PostEntity(Long userId, String slug, String title, String languageTag) {
     this.userId = userId;
     this.slug = slug;
@@ -170,6 +174,14 @@ public class PostEntity extends BaseTimeEntity {
 
   public void markEdited() {
     this.lastEditedAt = Instant.now();
+  }
+
+  public void measureBody(String bodyText) {
+    this.bodyTextLength = DiscoveryQuality.meaningfulLength(bodyText);
+  }
+
+  public boolean isDiscoverable() {
+    return bodyTextLength >= DiscoveryQuality.MIN_BODY_TEXT_LENGTH;
   }
 
   private void requireTitleToGoPublic() {

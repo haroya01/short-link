@@ -19,6 +19,7 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
     prepareAndPreviewDraft(first);
     scheduleAndPublish(first);
     long second = createPost("author-second-draft-create", "second-story", "Second story");
+    writeSecondDraft(second);
     publish("author-second-publish", second);
     long series = organizeSeries(first, second);
     readAndMeasure(first, series);
@@ -60,7 +61,8 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
         author,
         Map.of(
             "markdown",
-            "# Clear responsibilities\n\nReadable architecture starts with explicit rules."),
+            "# Clear responsibilities\n\nReadable architecture starts with explicit rules."
+                + " Each module names what it owns and what it may never touch."),
         200);
     assertThat(
             get("author-draft-markdown-read", postPath(postId) + "/markdown", author)
@@ -96,6 +98,21 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
         null,
         null,
         404);
+  }
+
+  private void writeSecondDraft(long postId) throws Exception {
+    step(
+        "author-second-draft-markdown-write",
+        "PUT",
+        postPath(postId) + "/markdown",
+        author,
+        Map.of(
+            "markdown",
+            "# Small modules\n\nA module earns its boundary when a reader can predict what it"
+                + " does from its name alone. When the name needs a paragraph of explanation,"
+                + " the boundary is in the wrong place."),
+        200);
+    assertThat(count("post_block", "post_id = ?", postId)).isEqualTo(2);
   }
 
   private void scheduleAndPublish(long postId) throws Exception {

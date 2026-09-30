@@ -18,6 +18,18 @@ class PostSearchTextFlattenerTest {
   }
 
   @Test
+  void bodyTextLeavesOutTitleExcerptAndTagsButKeepsCaptionsAndCode() {
+    String body =
+        flattener.bodyText(
+            List.of(
+                block(PostBlockType.PARAGRAPH, "본문 문단"),
+                block(PostBlockType.IMAGE, "{\"url\":\"https://x/y.png\",\"caption\":\"그림 설명\"}"),
+                block(PostBlockType.CODE, "{\"code\":\"int answer = 42;\"}"),
+                block(PostBlockType.EMBED, "https://youtu.be/x")));
+    assertThat(body).isEqualTo("본문 문단 그림 설명 int answer = 42;");
+  }
+
+  @Test
   void composesTitleExcerptAndTags() {
     String text = flattener.flatten("헥사고날 아키텍처", "포트와 어댑터", List.of("spring", "설계"), List.of());
     assertThat(text).isEqualTo("헥사고날 아키텍처 포트와 어댑터 spring 설계");

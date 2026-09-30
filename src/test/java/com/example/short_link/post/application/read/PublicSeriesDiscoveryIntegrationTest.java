@@ -6,6 +6,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -42,6 +43,7 @@ class PublicSeriesDiscoveryIntegrationTest {
   private void publishInSeries(long userId, String slug, long seriesId, int order) {
     PostEntity p = new PostEntity(userId, slug, slug, "ko");
     p.assignToSeries(seriesId, order);
+    DiscoverableBodies.discoverable(p);
     p.publish();
     postRepository.save(p);
   }

@@ -8,7 +8,7 @@ import java.util.List;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
-// 제목·요약·태그·본문을 바꾸는 쓰기 경로에서 검색 평문을 갱신한다. 피드와 상세 조회가 큰 평문까지 로드하지 않도록 별도 테이블에 저장한다.
+// 제목·요약·태그·본문을 바꾸는 쓰기 경로에서 검색 평문과 본문 글자 수를 갱신한다. 피드와 상세 조회가 큰 평문까지 로드하지 않도록 별도 테이블에 저장한다.
 @Component
 public class PostSearchTextUpdater {
 
@@ -29,6 +29,7 @@ public class PostSearchTextUpdater {
     String flattened =
         flattener.flatten(post.getTitle(), post.getExcerpt(), post.getTags(), blocks);
     postSearchTextRepository.upsert(post.getId(), flattened);
+    post.measureBody(flattener.bodyText(blocks));
   }
 
   public void refresh(PostEntity post) {

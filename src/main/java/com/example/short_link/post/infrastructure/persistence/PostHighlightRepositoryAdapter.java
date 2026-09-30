@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import java.util.Collection;
@@ -56,7 +57,8 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
 
   @Override
   public List<PostHighlightEntity> findRecentOnPublishedPosts(int page, int size) {
-    return jpa.findRecentOnPublishedPosts(PageRequest.of(page, size));
+    return jpa.findRecentOnPublishedPosts(
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(page, size));
   }
 
   @Override

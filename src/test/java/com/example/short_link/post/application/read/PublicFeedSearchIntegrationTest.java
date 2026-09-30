@@ -14,6 +14,7 @@ import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostSearchTextRepository;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
+import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
@@ -90,6 +91,7 @@ class PublicFeedSearchIntegrationTest {
     p.updateExcerpt(excerpt);
     p.updateTags(tags);
     p.publish();
+    DiscoverableBodies.discoverable(p);
     PostEntity saved = postRepository.save(p);
     postSearchTextRepository.upsert(saved.getId(), flattener.flatten(title, excerpt, tags, blocks));
   }

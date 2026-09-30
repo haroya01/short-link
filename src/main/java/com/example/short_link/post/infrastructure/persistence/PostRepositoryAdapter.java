@@ -1,6 +1,7 @@
 package com.example.short_link.post.infrastructure.persistence;
 
 import com.example.short_link.post.domain.AuthorPostStats;
+import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostPerformanceSort;
 import com.example.short_link.post.domain.PostStatus;
@@ -158,18 +159,23 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public List<PostEntity> findPublishedRecent(String lang, int page, int size) {
     return jpa.findPublishedRecent(
-        PostStatus.PUBLISHED, normLang(lang), PageRequest.of(page, size));
+        PostStatus.PUBLISHED,
+        normLang(lang),
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        PageRequest.of(page, size));
   }
 
   @Override
   public List<PostEntity> findPublishedTrending(String lang, int page, int size) {
     Instant since = Instant.now().minus(TRENDING_WINDOW);
-    return jpa.findPublishedTrendingSince(since, normLang(lang), PageRequest.of(page, size));
+    return jpa.findPublishedTrendingSince(
+        since, normLang(lang), DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(page, size));
   }
 
   @Override
   public long countPublished(String lang) {
-    return jpa.countPublishedByLang(PostStatus.PUBLISHED, normLang(lang));
+    return jpa.countPublishedByLang(
+        PostStatus.PUBLISHED, normLang(lang), DiscoveryQuality.MIN_BODY_TEXT_LENGTH);
   }
 
   @Override
@@ -179,12 +185,17 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> findPublishedByTag(String tag, int page, int size) {
-    return jpa.findPublishedByTag(tag, PostStatus.PUBLISHED, PageRequest.of(page, size));
+    return jpa.findPublishedByTag(
+        tag,
+        PostStatus.PUBLISHED,
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        PageRequest.of(page, size));
   }
 
   @Override
   public long countPublishedByTag(String tag) {
-    return jpa.countPublishedByTag(tag, PostStatus.PUBLISHED);
+    return jpa.countPublishedByTag(
+        tag, PostStatus.PUBLISHED, DiscoveryQuality.MIN_BODY_TEXT_LENGTH);
   }
 
   @Override
@@ -346,6 +357,7 @@ class PostRepositoryAdapter implements PostRepository {
         tagsForIn(tags),
         idsForIn(excludeIds),
         PostStatus.PUBLISHED,
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
         PageRequest.of(page, size));
   }
 
@@ -353,19 +365,29 @@ class PostRepositoryAdapter implements PostRepository {
   public long countForYouCandidates(
       Long userId, Collection<String> tags, Collection<Long> excludeIds) {
     return jpa.countForYouCandidates(
-        userId, tagsForIn(tags), idsForIn(excludeIds), PostStatus.PUBLISHED);
+        userId,
+        tagsForIn(tags),
+        idsForIn(excludeIds),
+        PostStatus.PUBLISHED,
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH);
   }
 
   @Override
   public List<TagCount> findPopularTags(int limit) {
-    return jpa.findPopularTags(PostStatus.PUBLISHED, PageRequest.of(0, limit)).stream()
+    return jpa
+        .findPopularTags(
+            PostStatus.PUBLISHED, DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(0, limit))
+        .stream()
         .map(row -> new TagCount((String) row[0], ((Number) row[1]).longValue()))
         .toList();
   }
 
   @Override
   public List<AuthorPostStats> findTopAuthorStats(int limit) {
-    return jpa.findTopAuthorIds(PostStatus.PUBLISHED, PageRequest.of(0, limit)).stream()
+    return jpa
+        .findTopAuthorIds(
+            PostStatus.PUBLISHED, DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(0, limit))
+        .stream()
         .map(
             row ->
                 new AuthorPostStats(
@@ -377,7 +399,13 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<SeriesActivity> findActiveSeries(int minPosts, int limit) {
-    return jpa.findActiveSeries(PostStatus.PUBLISHED, minPosts, PageRequest.of(0, limit)).stream()
+    return jpa
+        .findActiveSeries(
+            PostStatus.PUBLISHED,
+            minPosts,
+            DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+            PageRequest.of(0, limit))
+        .stream()
         .map(
             row ->
                 new SeriesActivity(
