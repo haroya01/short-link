@@ -119,9 +119,13 @@ class RegisterBlogWebhookUseCaseTest {
       guard.when(() -> PublicHttpUrlGuard.isPublic("https://example.com/h")).thenReturn(true);
 
       assertThatThrownBy(() -> useCase().execute(7L, "https://example.com/h", null, Set.of()))
-          .isInstanceOf(PostException.class)
-          .extracting(e -> ((PostException) e).errorCode())
-          .isEqualTo(PostErrorCode.TOO_MANY_WEBHOOKS);
+          .isInstanceOfSatisfying(
+              PostException.class,
+              e -> {
+                assertThat(e.errorCode()).isEqualTo(PostErrorCode.TOO_MANY_WEBHOOKS);
+                assertThat(e.properties())
+                    .containsEntry("limit", RegisterBlogWebhookUseCase.MAX_PER_USER);
+              });
     }
   }
 }
