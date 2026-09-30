@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.MobileLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
+import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import com.example.short_link.user.presentation.security.MobileLoginFlag;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
 import java.util.Map;
@@ -26,6 +27,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
 
   @Mock private AuthService authService;
   @Mock private RefreshCookieWriter refreshCookieWriter;
+  @Mock private TwoFactorChallengeCookieWriter challengeCookieWriter;
 
   private OAuth2LoginSuccessHandler handler;
   private MockHttpServletRequest req;
@@ -36,7 +38,11 @@ class OAuth2LoginSuccessHandlerMobileTest {
   void setUp() {
     handler =
         new OAuth2LoginSuccessHandler(
-            authService, refreshCookieWriter, "http://localhost:3001", "kurl://auth");
+            authService,
+            refreshCookieWriter,
+            challengeCookieWriter,
+            "http://localhost:3001",
+            "kurl://auth");
     req = new MockHttpServletRequest();
     MobileLoginFlag.mark(req);
     res = new MockHttpServletResponse();
@@ -65,7 +71,7 @@ class OAuth2LoginSuccessHandlerMobileTest {
     handler.onAuthenticationSuccess(req, res, auth);
 
     assertThat(res.getRedirectedUrl()).isEqualTo("kurl://auth?challenge=challenge-jwt");
-    verifyNoInteractions(refreshCookieWriter);
+    verifyNoInteractions(refreshCookieWriter, challengeCookieWriter);
   }
 
   @Test

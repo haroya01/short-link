@@ -28,13 +28,14 @@ import org.springframework.stereotype.Service;
 @Slf4j
 public class JwtTokenService {
 
+  public static final Duration CHALLENGE_TTL = Duration.ofMinutes(5);
+
   private static final String CLAIM_TYPE = "type";
   private static final String TYPE_ACCESS = "access";
   private static final String TYPE_REFRESH = "refresh";
   private static final String TYPE_TWOFA_CHALLENGE = "twofa_challenge";
   private static final String TYPE_STREAM = "stream";
   private static final String CLAIM_SHORT_CODE = "shortCode";
-  private static final Duration CHALLENGE_TTL = Duration.ofMinutes(5);
   private static final Duration STREAM_TTL = Duration.ofMinutes(2);
 
   private final PrivateKey privateKey;
