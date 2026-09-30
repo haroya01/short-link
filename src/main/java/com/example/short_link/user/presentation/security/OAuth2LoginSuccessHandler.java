@@ -4,6 +4,7 @@ import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.MobileLoginResult;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
+import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -21,16 +22,19 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
 
   private final AuthService authService;
   private final RefreshCookieWriter refreshCookieWriter;
+  private final TwoFactorChallengeCookieWriter challengeCookieWriter;
   private final String frontendBaseUrl;
   private final String mobileRedirectUri;
 
   public OAuth2LoginSuccessHandler(
       AuthService authService,
       RefreshCookieWriter refreshCookieWriter,
+      TwoFactorChallengeCookieWriter challengeCookieWriter,
       @Value("${short-link.frontend-base-url}") String frontendBaseUrl,
       @Value("${short-link.mobile.redirect-uri}") String mobileRedirectUri) {
     this.authService = authService;
     this.refreshCookieWriter = refreshCookieWriter;
+    this.challengeCookieWriter = challengeCookieWriter;
     this.frontendBaseUrl = frontendBaseUrl;
     this.mobileRedirectUri = mobileRedirectUri;
   }
@@ -50,18 +54,17 @@ public class OAuth2LoginSuccessHandler extends SimpleUrlAuthenticationSuccessHan
       return;
     }
 
+    // Browser URLs end up in history, sync, and screenshots, so the web flow sends no token in
+    // them: the callback page trades the refresh cookie for an access token, and the 2FA page
+    // verifies against the challenge cookie.
     switch (authService.loginWithOAuth(email, provider, oauthId)) {
-      case TokenLoginResult.TwoFactorRequired challenge ->
-          res.sendRedirect(
-              frontendBaseUrl
-                  + "/auth/2fa#challenge="
-                  + URLEncoder.encode(challenge.challengeToken(), StandardCharsets.UTF_8));
+      case TokenLoginResult.TwoFactorRequired challenge -> {
+        challengeCookieWriter.set(res, challenge.challengeToken());
+        res.sendRedirect(frontendBaseUrl + "/auth/2fa");
+      }
       case TokenLoginResult.Tokens tokens -> {
         refreshCookieWriter.set(res, tokens.issued().refreshToken());
-        res.sendRedirect(
-            frontendBaseUrl
-                + "/auth/callback#access_token="
-                + URLEncoder.encode(tokens.issued().accessToken(), StandardCharsets.UTF_8));
+        res.sendRedirect(frontendBaseUrl + "/auth/callback");
       }
     }
   }

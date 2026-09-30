@@ -10,6 +10,7 @@ import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
+import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,6 +31,7 @@ class OAuth2LoginSuccessHandlerTest {
 
   @Mock private AuthService authService;
   @Mock private RefreshCookieWriter refreshCookieWriter;
+  @Mock private TwoFactorChallengeCookieWriter challengeCookieWriter;
   @Mock private HttpServletRequest req;
   @Mock private HttpServletResponse res;
 
@@ -39,11 +41,15 @@ class OAuth2LoginSuccessHandlerTest {
   void setUp() {
     handler =
         new OAuth2LoginSuccessHandler(
-            authService, refreshCookieWriter, "http://localhost:3001", "kurl://auth");
+            authService,
+            refreshCookieWriter,
+            challengeCookieWriter,
+            "http://localhost:3001",
+            "kurl://auth");
   }
 
   @Test
-  void redirectsToFrontendCallbackWithTokenInHash() throws Exception {
+  void redirectsToFrontendCallbackWithNoTokenInTheUrl() throws Exception {
     DefaultOAuth2User principal =
         new DefaultOAuth2User(Set.of(), Map.of("email", "u@x.com", "sub", "g-1"), "sub");
     OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(principal, Set.of(), "google");
@@ -56,9 +62,7 @@ class OAuth2LoginSuccessHandlerTest {
     verify(refreshCookieWriter).set(eq(res), eq("refresh-jwt-value"));
     ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
     verify(res).sendRedirect(redirectCaptor.capture());
-    String target = redirectCaptor.getValue();
-    assertThat(target).startsWith("http://localhost:3001/auth/callback#access_token=");
-    assertThat(target).contains("access-jwt-value");
+    assertThat(redirectCaptor.getValue()).isEqualTo("http://localhost:3001/auth/callback");
   }
 
   @Test

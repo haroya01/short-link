@@ -8,14 +8,16 @@ import com.example.short_link.user.application.write.AuthService.TokenLoginResul
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
+import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import com.example.short_link.user.presentation.request.AppleLoginRequest;
-import com.example.short_link.user.presentation.request.TwoFactorVerifyRequest;
+import com.example.short_link.user.presentation.request.WebTwoFactorVerifyRequest;
 import com.example.short_link.user.presentation.response.AppleWebLoginResponse;
 import com.example.short_link.user.presentation.response.TokenResponse;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -30,6 +32,7 @@ public class AuthController {
   private final AuthService authService;
   private final AppleIdentityVerifier appleVerifier;
   private final RefreshCookieWriter refreshCookieWriter;
+  private final TwoFactorChallengeCookieWriter challengeCookieWriter;
 
   @PostMapping("/refresh")
   public TokenResponse refresh(
@@ -68,12 +71,25 @@ public class AuthController {
     };
   }
 
+  // A body challenge (Apple web login) wins over a cookie an abandoned OAuth login left behind.
   @PostMapping("/2fa/verify")
   public TokenResponse verifyTwoFactor(
-      @Valid @RequestBody TwoFactorVerifyRequest request, HttpServletResponse res) {
-    return issueAndSetCookie(
-        authService.completeTwoFactor(request.challenge(), request.code(), request.recovery()),
-        res);
+      @Valid @RequestBody WebTwoFactorVerifyRequest request,
+      @CookieValue(name = TwoFactorChallengeCookieWriter.COOKIE_NAME, required = false)
+          String challengeCookie,
+      HttpServletResponse res) {
+    String challenge =
+        StringUtils.hasText(request.challenge()) ? request.challenge() : challengeCookie;
+    if (!StringUtils.hasText(challenge)) {
+      throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
+    }
+    TokenResponse response =
+        issueAndSetCookie(
+            authService.completeTwoFactor(challenge, request.code(), request.recovery()), res);
+    if (challengeCookie != null) {
+      challengeCookieWriter.clear(res);
+    }
+    return response;
   }
 
   private TokenResponse issueAndSetCookie(IssuedTokens tokens, HttpServletResponse res) {

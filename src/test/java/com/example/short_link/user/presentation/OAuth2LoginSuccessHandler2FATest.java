@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.user.application.write.AuthService;
 import com.example.short_link.user.application.write.AuthService.TokenLoginResult;
 import com.example.short_link.user.presentation.helper.RefreshCookieWriter;
+import com.example.short_link.user.presentation.helper.TwoFactorChallengeCookieWriter;
 import com.example.short_link.user.presentation.security.OAuth2LoginSuccessHandler;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -28,6 +29,7 @@ class OAuth2LoginSuccessHandler2FATest {
 
   @Mock private AuthService authService;
   @Mock private RefreshCookieWriter refreshCookieWriter;
+  @Mock private TwoFactorChallengeCookieWriter challengeCookieWriter;
   @Mock private HttpServletRequest req;
   @Mock private HttpServletResponse res;
 
@@ -37,11 +39,15 @@ class OAuth2LoginSuccessHandler2FATest {
   void setUp() {
     handler =
         new OAuth2LoginSuccessHandler(
-            authService, refreshCookieWriter, "http://localhost:3001", "kurl://auth");
+            authService,
+            refreshCookieWriter,
+            challengeCookieWriter,
+            "http://localhost:3001",
+            "kurl://auth");
   }
 
   @Test
-  void redirectsTo2FAChallengeWhen2FARequired() throws Exception {
+  void keepsTheChallengeInACookieAndOutOfTheUrl() throws Exception {
     DefaultOAuth2User principal =
         new DefaultOAuth2User(Set.of(), Map.of("email", "u@x.com", "sub", "g-2fa"), "sub");
     OAuth2AuthenticationToken auth = new OAuth2AuthenticationToken(principal, Set.of(), "google");
@@ -53,10 +59,9 @@ class OAuth2LoginSuccessHandler2FATest {
     // Refresh cookie 는 2FA 통과 후에만 세팅 — challenge 단계에선 절대 안 됨
     verify(refreshCookieWriter, never()).set(ArgumentMatchers.any(), ArgumentMatchers.any());
 
+    verify(challengeCookieWriter).set(res, "challenge-token-value");
     ArgumentCaptor<String> redirectCaptor = ArgumentCaptor.forClass(String.class);
     verify(res).sendRedirect(redirectCaptor.capture());
-    String target = redirectCaptor.getValue();
-    assertThat(target).startsWith("http://localhost:3001/auth/2fa#challenge=");
-    assertThat(target).contains("challenge-token-value");
+    assertThat(redirectCaptor.getValue()).isEqualTo("http://localhost:3001/auth/2fa");
   }
 }
