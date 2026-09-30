@@ -6,6 +6,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostViewEventRepository;
+import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
@@ -44,6 +45,7 @@ class PublicFeedTrendingIntegrationTest {
   private long publish(long userId, String slug, int lifetimeViews, String lang) {
     PostEntity p = new PostEntity(userId, slug, slug, lang);
     for (int i = 0; i < lifetimeViews; i++) p.incrementViewCount();
+    DiscoverableBodies.discoverable(p);
     p.publish();
     return postRepository.save(p).getId();
   }

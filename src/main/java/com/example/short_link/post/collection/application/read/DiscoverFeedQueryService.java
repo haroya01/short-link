@@ -3,6 +3,7 @@ package com.example.short_link.post.collection.application.read;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
+import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
@@ -72,10 +73,11 @@ public class DiscoverFeedQueryService {
 
     Set<Long> postIds = new HashSet<>(refIds(rows, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
-    // 원문이 미발행이면 글과 그 하이라이트 인용을 모두 제외한다. 소유자에게도 같은 규칙을 적용한다.
+    // 원문이 미발행이거나 발견 품질 하한선 아래면 글과 그 하이라이트 인용을 모두 제외한다. 소유자에게도 같은 규칙이다.
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
             .filter(PostEntity::isPublished)
+            .filter(PostEntity::isDiscoverable)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 
     Set<Long> userIds =
@@ -87,6 +89,7 @@ public class DiscoverFeedQueryService {
     for (DiscoverConnectionRow row : rows) {
       UserEntity curator = users.get(row.ownerId());
       if (curator == null) continue;
+      if (!DiscoveryQuality.isMeaningfulLabel(row.collectionTitle())) continue;
       DiscoverConnectionView view = resolve(row, curator, posts, highlights, notes, users);
       if (view != null) items.add(view);
     }
@@ -137,7 +140,7 @@ public class DiscoverFeedQueryService {
       }
       case NOTE -> {
         NoteEntity note = notes.get(row.refId());
-        if (note == null) yield null;
+        if (note == null || !DiscoveryQuality.isMeaningfulLabel(note.getBody())) yield null;
         yield view(row, curatorView, "NOTE", null, null, null, null, null, note.getBody());
       }
     };
@@ -159,7 +162,7 @@ public class DiscoverFeedQueryService {
         row.collectionId(),
         row.collectionTitle(),
         row.kind() == null ? "COLLECTION" : row.kind().name(),
-        row.why(),
+        DiscoveryQuality.isMeaningfulLabel(row.why()) ? row.why() : null,
         row.connectedAt(),
         blockType,
         title,

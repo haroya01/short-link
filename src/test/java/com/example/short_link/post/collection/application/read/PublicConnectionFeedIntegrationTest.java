@@ -13,6 +13,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.note.domain.NoteEntity;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
+import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
@@ -43,6 +44,7 @@ class PublicConnectionFeedIntegrationTest {
 
   private Long post(Long authorId, String slug) {
     PostEntity p = new PostEntity(authorId, slug, "Title " + slug, "ko");
+    DiscoverableBodies.discoverable(p);
     p.publish();
     return postRepository.save(p).getId();
   }

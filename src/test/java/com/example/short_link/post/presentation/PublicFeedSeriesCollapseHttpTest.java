@@ -9,6 +9,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
+import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.testsupport.DockerHttpTest;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -89,6 +90,7 @@ class PublicFeedSeriesCollapseHttpTest extends DockerHttpTest {
   private static PostEntity published(UserEntity author, String slug, String title, int day) {
     PostEntity post = new PostEntity(author.getId(), slug, title, "ko");
     post.publish();
+    DiscoverableBodies.discoverable(post);
     ReflectionTestUtils.setField(post, "publishedAt", BASE.plus(Duration.ofDays(day)));
     return post;
   }

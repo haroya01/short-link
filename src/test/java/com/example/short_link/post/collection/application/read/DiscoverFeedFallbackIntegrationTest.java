@@ -11,6 +11,7 @@ import com.example.short_link.post.collection.domain.repository.CollectionConnec
 import com.example.short_link.post.collection.domain.repository.CollectionRepository;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -42,6 +43,7 @@ class DiscoverFeedFallbackIntegrationTest {
 
   private Long post(Long authorId, String slug) {
     PostEntity p = new PostEntity(authorId, slug, "Title " + slug, "ko");
+    DiscoverableBodies.discoverable(p);
     p.publish();
     return postRepository.save(p).getId();
   }

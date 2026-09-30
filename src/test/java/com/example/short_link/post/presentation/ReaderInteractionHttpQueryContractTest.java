@@ -15,7 +15,10 @@ class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
         "PUT",
         postPath(postId) + "/markdown",
         author,
-        Map.of("markdown", "A clear sentence worth remembering."),
+        Map.of(
+            "markdown",
+            "A clear sentence worth remembering. It keeps one idea per line, names the thing it"
+                + " talks about and leaves out every word that does not carry weight."),
         200);
     publish("interaction-post-publish", postId);
     followAuthor(postId);

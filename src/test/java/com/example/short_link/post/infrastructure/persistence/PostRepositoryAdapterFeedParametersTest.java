@@ -3,6 +3,7 @@ package com.example.short_link.post.infrastructure.persistence;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.PostStatus;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -35,7 +36,18 @@ class PostRepositoryAdapterFeedParametersTest {
     adapter.countForYouCandidates(7L, List.of("java"), List.of());
     verify(jpa)
         .findForYouCandidates(
-            7L, List.of("java"), List.of(-1L), PostStatus.PUBLISHED, PageRequest.of(0, 20));
-    verify(jpa).countForYouCandidates(7L, List.of("java"), List.of(-1L), PostStatus.PUBLISHED);
+            7L,
+            List.of("java"),
+            List.of(-1L),
+            PostStatus.PUBLISHED,
+            DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+            PageRequest.of(0, 20));
+    verify(jpa)
+        .countForYouCandidates(
+            7L,
+            List.of("java"),
+            List.of(-1L),
+            PostStatus.PUBLISHED,
+            DiscoveryQuality.MIN_BODY_TEXT_LENGTH);
   }
 }

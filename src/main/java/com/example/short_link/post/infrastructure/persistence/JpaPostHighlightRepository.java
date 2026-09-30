@@ -26,9 +26,11 @@ public interface JpaPostHighlightRepository extends JpaRepository<PostHighlightE
       from PostHighlightEntity h, PostEntity p
       where p.id = h.postId
         and p.status = com.example.short_link.post.domain.PostStatus.PUBLISHED
+        and p.bodyTextLength >= :minBody
       order by h.createdAt desc
       """)
-  List<PostHighlightEntity> findRecentOnPublishedPosts(Pageable pageable);
+  List<PostHighlightEntity> findRecentOnPublishedPosts(
+      @Param("minBody") int minBody, Pageable pageable);
 
   @Modifying
   @Query("delete from PostHighlightEntity h where h.postId = :postId")

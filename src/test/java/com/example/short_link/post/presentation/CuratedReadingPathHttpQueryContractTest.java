@@ -16,7 +16,11 @@ class CuratedReadingPathHttpQueryContractTest extends ContentHttpJourneySupport 
         "PUT",
         postPath(postId) + "/markdown",
         author,
-        Map.of("markdown", "Readable systems make every responsibility visible."),
+        Map.of(
+            "markdown",
+            "Readable systems make every responsibility visible. Each module states what it owns,"
+                + " what it reads and what it never touches, so a reader can follow one request"
+                + " from end to end."),
         200);
     publish("curation-source-post-publish", postId);
     long highlight =

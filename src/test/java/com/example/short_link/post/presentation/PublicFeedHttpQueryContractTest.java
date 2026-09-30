@@ -6,6 +6,7 @@ import com.example.short_link.post.application.read.PublicFeedItem;
 import com.example.short_link.post.application.read.PublicFeedView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.testsupport.DockerHttpTest;
 import com.example.short_link.testsupport.HttpQueryContracts;
 import com.example.short_link.user.domain.UserEntity;
@@ -70,6 +71,7 @@ class PublicFeedHttpQueryContractTest extends DockerHttpTest {
                         new PostEntity(author.getId(), "feed-post-" + i, "Feed post " + i, "ko");
                     post.updateTags(tags);
                     post.publish();
+                    DiscoverableBodies.discoverable(post);
                     posts.save(post);
                     created.add(new FeedPost(post.getId(), author.getId(), username, tags));
                   }

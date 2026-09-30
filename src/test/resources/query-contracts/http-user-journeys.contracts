@@ -86,6 +86,7 @@
 @junit | author-revision-restore-first | 4 | 2 | 1 | 1 | 8
 @junit | author-schedule-cancel | 2 | 0 | 1 | 0 | 3
 @junit | author-second-draft-create | 2 | 1 | 0 | 0 | 3
+@junit | author-second-draft-markdown-write | 3 | 2 | 1 | 1 | 7
 @junit | author-second-post-delete | 3 | 0 | 0 | 10 | 13
 @junit | author-second-publish | 7 | 2 | 1 | 0 | 10
 @junit | author-series-analytics-detail | 7 | 0 | 0 | 0 | 7
@@ -180,6 +181,7 @@
 # DNS result persistence reloads the domain in its own transaction, including failed checks.
 @junit | custom-domain-verification-missing | 2 | 0 | 1 | 0 | 3
 @junit | custom-domain-verify | 2 | 0 | 1 | 0 | 3
+@junit | discovery-english-body | 3 | 2 | 1 | 1 | 7
 @junit | discovery-english-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | discovery-english-metadata | 3 | 2 | 1 | 0 | 6
 @junit | discovery-english-publish | 7 | 2 | 1 | 0 | 10

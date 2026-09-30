@@ -17,6 +17,7 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.note.domain.NoteEntity;
 import com.example.short_link.post.note.domain.repository.NoteRepository;
+import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -70,6 +71,7 @@ class DiscoverFeedQueryServiceTest {
   private PostEntity post(long id, long authorId) {
     PostEntity p = new PostEntity(authorId, "slug-" + id, "Title " + id, "ko");
     p.publish();
+    DiscoverableBodies.discoverable(p);
     ReflectionTestUtils.setField(p, "id", id);
     return p;
   }
@@ -264,6 +266,50 @@ class DiscoverFeedQueryServiceTest {
 
     assertThat(feed.items()).hasSize(1);
     assertThat(feed.items().get(0).title()).isEqualTo("Title 5");
+  }
+
+  @Test
+  void publicFeedLeavesOutThinPostsAndGibberishCollectionsButKeepsTheRowWithoutGibberishWhy() {
+    Instant at = Instant.parse("2026-06-12T00:00:00Z");
+    DiscoverConnectionRow gibberishCollection =
+        new DiscoverConnectionRow(
+            102L,
+            ConnectionBlockType.POST,
+            5L,
+            "다시 읽을 글",
+            at,
+            51L,
+            "ㅇㅇㅇ",
+            com.example.short_link.post.collection.domain.CollectionKind.COLLECTION,
+            2L);
+    DiscoverConnectionRow gibberishWhy =
+        new DiscoverConnectionRow(
+            103L,
+            ConnectionBlockType.POST,
+            5L,
+            "ㅁㅇㄹㄹㅇㄴㅁㄹㅁ",
+            at,
+            50L,
+            "느린 사고",
+            com.example.short_link.post.collection.domain.CollectionKind.COLLECTION,
+            2L);
+    DiscoverConnectionRow thinPost = row(104L, ConnectionBlockType.POST, 7L, 2L);
+    when(connectionRepository.findRecentPublicConnections(0, 20))
+        .thenReturn(List.of(gibberishCollection, gibberishWhy, thinPost));
+    when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    PostEntity thin = new PostEntity(4L, "thin", "거거거구ㅜㅅ", "ko");
+    thin.publish();
+    thin.measureBody("ㅎㅎㅎ");
+    ReflectionTestUtils.setField(thin, "id", 7L);
+    when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(post(5L, 4L), thin));
+    when(userRepository.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(user(2L, "minji"), user(4L, "author")));
+
+    DiscoverFeedView feed = service.publicFeed(0, 20);
+
+    assertThat(feed.items()).extracting(DiscoverConnectionView::id).containsExactly(103L);
+    assertThat(feed.items().get(0).why()).isNull();
   }
 
   @Test
