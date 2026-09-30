@@ -157,10 +157,9 @@ public class AuthService {
     } catch (Exception e) {
       throw new UserException(UserErrorCode.INVALID_REFRESH_TOKEN);
     }
-    if (refreshStore.exists(parsed.userId(), parsed.jti())) {
-      // Keep a brief rotation marker so a shared-cookie race is not mistaken for theft.
-      refreshStore.delete(parsed.userId(), parsed.jti());
-      refreshStore.markRotated(parsed.userId(), parsed.jti(), jwtProperties.refreshRotationGrace());
+    // Only the request that consumed the token rotates it. The marker left behind keeps a
+    // shared-cookie race from being mistaken for theft.
+    if (refreshStore.consume(parsed.userId(), parsed.jti(), jwtProperties.refreshRotationGrace())) {
       return issue(loadActiveUser(parsed.userId()));
     }
     if (refreshStore.wasRecentlyRotated(parsed.userId(), parsed.jti())) {

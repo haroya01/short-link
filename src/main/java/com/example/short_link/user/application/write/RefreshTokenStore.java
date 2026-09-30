@@ -7,11 +7,13 @@ public interface RefreshTokenStore {
 
   boolean exists(Long userId, String jti);
 
+  // Removes the live token and leaves its rotation-grace marker as one atomic step. Only the caller
+  // that removed the token gets true, and by then every other caller can already see the marker.
+  boolean consume(Long userId, String jti, Duration graceTtl);
+
   void delete(Long userId, String jti);
 
   void deleteAllForUser(Long userId);
-
-  void markRotated(Long userId, String jti, Duration graceTtl);
 
   boolean wasRecentlyRotated(Long userId, String jti);
 }

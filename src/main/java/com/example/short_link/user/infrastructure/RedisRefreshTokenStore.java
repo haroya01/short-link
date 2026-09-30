@@ -3,11 +3,14 @@ package com.example.short_link.user.infrastructure;
 import com.example.short_link.user.application.write.RefreshTokenStore;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
+import org.springframework.data.redis.core.script.RedisScript;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,6 +18,17 @@ import org.springframework.stereotype.Component;
 public class RedisRefreshTokenStore implements RefreshTokenStore {
 
   private static final long SCAN_BATCH = 100;
+
+  // Sent as separate commands, two refreshes of one token can both pass the check and both rotate,
+  // or the loser can look for the marker before the winner has written it. The marker is written
+  // before the delete so a rejected SET leaves the token usable.
+  private static final RedisScript<Long> CONSUME =
+      new DefaultRedisScript<>(
+          "if redis.call('EXISTS', KEYS[1]) == 0 then return 0 end "
+              + "redis.call('SET', KEYS[2], '1', 'PX', ARGV[1]) "
+              + "redis.call('DEL', KEYS[1]) "
+              + "return 1",
+          Long.class);
 
   private final StringRedisTemplate redis;
 
@@ -29,13 +43,18 @@ public class RedisRefreshTokenStore implements RefreshTokenStore {
   }
 
   @Override
-  public void delete(Long userId, String jti) {
-    redis.delete(key(userId, jti));
+  public boolean consume(Long userId, String jti, Duration graceTtl) {
+    Long consumed =
+        redis.execute(
+            CONSUME,
+            List.of(key(userId, jti), rotatedKey(userId, jti)),
+            String.valueOf(graceTtl.toMillis()));
+    return Long.valueOf(1L).equals(consumed);
   }
 
   @Override
-  public void markRotated(Long userId, String jti, Duration graceTtl) {
-    redis.opsForValue().set(rotatedKey(userId, jti), "1", graceTtl);
+  public void delete(Long userId, String jti) {
+    redis.delete(key(userId, jti));
   }
 
   @Override
