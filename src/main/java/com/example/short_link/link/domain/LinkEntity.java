@@ -204,8 +204,12 @@ public class LinkEntity extends BaseCreatedEntity {
     return profileOrder != null;
   }
 
-  public void setProfileHighlighted(boolean highlighted) {
-    this.profileHighlighted = highlighted;
+  public void featureOnProfile() {
+    this.profileHighlighted = true;
+  }
+
+  public void unfeatureOnProfile() {
+    this.profileHighlighted = false;
   }
 
   public void updateNote(String note) {

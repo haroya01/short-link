@@ -9,4 +9,6 @@ public interface JpaProfileBlockRepository extends JpaRepository<ProfileBlockEnt
   List<ProfileBlockEntity> findAllByUserIdOrderByProfileOrderAsc(Long userId);
 
   long countByUserId(Long userId);
+
+  List<ProfileBlockEntity> findAllByUserIdAndProfileHighlightedIsTrue(Long userId);
 }

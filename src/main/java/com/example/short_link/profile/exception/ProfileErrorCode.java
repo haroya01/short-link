@@ -8,7 +8,9 @@ public enum ProfileErrorCode {
   INVALID_EMAIL(HttpStatus.BAD_REQUEST, "%s"),
   USERNAME_TAKEN(HttpStatus.CONFLICT, "username taken: %s"),
   OEMBED_NOT_APPLICABLE(HttpStatus.UNPROCESSABLE_ENTITY, "oembed not applicable"),
-  EMAIL_LEAD_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "%s");
+  EMAIL_LEAD_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "%s"),
+  BLOCK_NOT_HIGHLIGHTABLE(
+      HttpStatus.BAD_REQUEST, "only event and product blocks can be featured: %s");
 
   private final HttpStatus status;
   private final String template;

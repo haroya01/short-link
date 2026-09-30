@@ -11,6 +11,9 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.profilebinding.domain.repository.LinkProfileBindingRepository;
 import com.example.short_link.profile.application.ProfileCacheEviction;
+import com.example.short_link.profile.domain.ProfileBlockEntity;
+import com.example.short_link.profile.domain.ProfileBlockType;
+import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
 import com.example.short_link.support.TestEntities;
 import java.util.List;
 import java.util.Optional;
@@ -24,6 +27,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class SetLinkHighlightUseCaseTest {
 
   @Mock private LinkRepository linkRepository;
+  @Mock private ProfileBlockRepository profileBlockRepository;
 
   private SetLinkHighlightUseCase useCase;
 
@@ -32,7 +36,8 @@ class SetLinkHighlightUseCaseTest {
     useCase =
         new SetLinkHighlightUseCase(
             linkRepository,
-            mock(LinkProfileBindingRepository.class),
+            new ProfileFeaturedSlot(
+                linkRepository, mock(LinkProfileBindingRepository.class), profileBlockRepository),
             mock(ProfileCacheEviction.class));
   }
 
@@ -59,7 +64,7 @@ class SetLinkHighlightUseCaseTest {
     TestEntities.withId(target, 1L);
     LinkEntity existing = new LinkEntity("https://e", "xyz", 7L, null);
     TestEntities.withId(existing, 2L);
-    existing.setProfileHighlighted(true);
+    existing.featureOnProfile();
     when(linkRepository.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(target));
     when(linkRepository.findAllByUserIdAndProfileHighlightedIsTrue(7L))
         .thenReturn(List.of(existing));
@@ -69,10 +74,27 @@ class SetLinkHighlightUseCaseTest {
   }
 
   @Test
+  void featuringALinkTakesTheSlotFromAFeaturedBlock() {
+    LinkEntity target = new LinkEntity("https://t", "abc", 7L, null);
+    TestEntities.withId(target, 1L);
+    ProfileBlockEntity event = new ProfileBlockEntity(7L, ProfileBlockType.EVENT, "{}", 0);
+    TestEntities.withId(event, 5L);
+    event.feature();
+    when(linkRepository.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(target));
+    when(profileBlockRepository.findAllByUserIdAndProfileHighlightedIsTrue(7L))
+        .thenReturn(List.of(event));
+
+    useCase.execute(new SetLinkHighlightCommand(7L, new ShortCode("abc"), true));
+
+    assertThat(target.isProfileHighlighted()).isTrue();
+    assertThat(event.isProfileHighlighted()).isFalse();
+  }
+
+  @Test
   void disable() {
     LinkEntity target = new LinkEntity("https://t", "abc", 7L, null);
     TestEntities.withId(target, 1L);
-    target.setProfileHighlighted(true);
+    target.featureOnProfile();
     when(linkRepository.findByShortCode(new ShortCode("abc"))).thenReturn(Optional.of(target));
     useCase.execute(new SetLinkHighlightCommand(7L, new ShortCode("abc"), false));
     assertThat(target.isProfileHighlighted()).isFalse();

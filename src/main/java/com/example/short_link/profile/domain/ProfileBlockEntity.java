@@ -37,6 +37,9 @@ public class ProfileBlockEntity extends BaseTimeEntity {
   @Column(name = "profile_order", nullable = false)
   private Integer profileOrder;
 
+  @Column(name = "profile_highlighted", nullable = false)
+  private boolean profileHighlighted;
+
   public ProfileBlockEntity(Long userId, ProfileBlockType type, String content, int profileOrder) {
     this.userId = userId;
     this.type = type;
@@ -54,5 +57,18 @@ public class ProfileBlockEntity extends BaseTimeEntity {
 
   public void setProfileOrder(int profileOrder) {
     this.profileOrder = profileOrder;
+  }
+
+  /** 대표로 올릴 수 있는 블록 — 방문자가 바로 행동할 수 있는 모집·상품만. */
+  public boolean isHighlightable() {
+    return type == ProfileBlockType.EVENT || type == ProfileBlockType.PRODUCT_CARD;
+  }
+
+  public void feature() {
+    this.profileHighlighted = true;
+  }
+
+  public void unfeature() {
+    this.profileHighlighted = false;
   }
 }
