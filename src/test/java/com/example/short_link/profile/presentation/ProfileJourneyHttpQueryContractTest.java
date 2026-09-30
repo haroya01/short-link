@@ -211,6 +211,96 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void ownerFeaturesAProductBlockAndItTakesTheSlotFromTheFeaturedLink() throws Exception {
+    LinkEntity link =
+        transactions.execute(
+            status ->
+                links.save(
+                    new LinkEntity(
+                        "https://example.com/featured",
+                        "fb" + owner.getId(),
+                        owner.getId(),
+                        null)));
+    String linkPath = "/api/v1/links/" + link.getShortCode().value() + "/profile";
+    call("profile-featured-link-show", "PUT", linkPath, Map.of("show", true), token, 200);
+    call(
+        "profile-featured-link-highlight",
+        "PUT",
+        linkPath + "/highlight",
+        Map.of("highlighted", true),
+        token,
+        200);
+    long product =
+        body(call(
+                "profile-product-block-create",
+                "POST",
+                MY_PROFILE + "/blocks",
+                Map.of("type", "PRODUCT_CARD", "content", "{\"items\":[{\"name\":\"Bread\"}]}"),
+                token,
+                200))
+            .path("id")
+            .asLong();
+    String highlight = MY_PROFILE + "/blocks/" + product + "/highlight";
+
+    call("profile-block-highlight", "PUT", highlight, Map.of("highlighted", true), token, 200);
+    assertThat(
+            count(
+                "select count(*) from profile_block where id=? and profile_highlighted=true",
+                product))
+        .isEqualTo(1);
+    assertThat(
+            count(
+                "select count(*) from link_profile_binding where link_id=? and profile_highlighted=true",
+                link.getId()))
+        .isZero();
+
+    call(
+        "profile-block-cross-user-highlight-rejected",
+        "PUT",
+        highlight,
+        Map.of("highlighted", false),
+        strangerToken,
+        404);
+    long text =
+        body(call(
+                "profile-text-block-create",
+                "POST",
+                MY_PROFILE + "/blocks",
+                Map.of("type", "TEXT", "content", "Not a featured thing"),
+                token,
+                200))
+            .path("id")
+            .asLong();
+    call(
+        "profile-text-block-highlight-rejected",
+        "PUT",
+        MY_PROFILE + "/blocks/" + text + "/highlight",
+        Map.of("highlighted", true),
+        token,
+        400);
+
+    var entries =
+        body(call(
+                "profile-public-with-featured-block",
+                "GET",
+                "/api/v1/public/profiles/" + owner.getUsername(),
+                null,
+                null,
+                200))
+            .path("entries");
+    boolean productFeatured = false;
+    boolean linkFeatured = false;
+    for (var entry : entries) {
+      if ("PRODUCT_CARD".equals(entry.path("kind").asText()))
+        productFeatured = entry.path("highlighted").asBoolean();
+      if ("LINK".equals(entry.path("kind").asText()))
+        linkFeatured = entry.path("highlighted").asBoolean();
+    }
+    assertThat(productFeatured).isTrue();
+    assertThat(linkFeatured).isFalse();
+  }
+
+  @Test
   void visitorSubmitsLeadAndOwnerExportsOptsOutAndDeletesIt() throws Exception {
     long block =
         body(call(

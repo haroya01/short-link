@@ -37,4 +37,9 @@ class ProfileBlockRepositoryAdapter implements ProfileBlockRepository {
   public long countByUserId(Long userId) {
     return jpa.countByUserId(userId);
   }
+
+  @Override
+  public List<ProfileBlockEntity> findAllByUserIdAndProfileHighlightedIsTrue(Long userId) {
+    return jpa.findAllByUserIdAndProfileHighlightedIsTrue(userId);
+  }
 }

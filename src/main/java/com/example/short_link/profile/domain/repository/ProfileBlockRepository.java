@@ -15,4 +15,6 @@ public interface ProfileBlockRepository {
   List<ProfileBlockEntity> findAllByUserIdOrderByProfileOrderAsc(Long userId);
 
   long countByUserId(Long userId);
+
+  List<ProfileBlockEntity> findAllByUserIdAndProfileHighlightedIsTrue(Long userId);
 }

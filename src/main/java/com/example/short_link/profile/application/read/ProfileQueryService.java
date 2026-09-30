@@ -159,9 +159,12 @@ public class ProfileQueryService {
           PublicProfile.ProfileEntry.contactCard(block.getId(), block.getContent());
       case GALLERY -> PublicProfile.ProfileEntry.gallery(block.getId(), block.getContent());
       case PRODUCT_CARD ->
-          PublicProfile.ProfileEntry.productCard(block.getId(), block.getContent());
+          PublicProfile.ProfileEntry.productCard(
+              block.getId(), block.getContent(), block.isProfileHighlighted());
       case BOOKING -> PublicProfile.ProfileEntry.booking(block.getId(), block.getContent());
-      case EVENT -> PublicProfile.ProfileEntry.event(block.getId(), block.getContent());
+      case EVENT ->
+          PublicProfile.ProfileEntry.event(
+              block.getId(), block.getContent(), block.isProfileHighlighted());
       case PLACE -> PublicProfile.ProfileEntry.place(block.getId(), block.getContent());
       case DIVIDER -> PublicProfile.ProfileEntry.divider(block.getId());
     };

@@ -76,16 +76,17 @@ public record PublicProfile(
       return new ProfileEntry("GALLERY", id, null, null, null, null, null, null, null, config);
     }
 
-    public static ProfileEntry productCard(Long id, String config) {
-      return new ProfileEntry("PRODUCT_CARD", id, null, null, null, null, null, null, null, config);
+    public static ProfileEntry productCard(Long id, String config, boolean highlighted) {
+      return new ProfileEntry(
+          "PRODUCT_CARD", id, null, null, null, null, null, null, highlighted, config);
     }
 
     public static ProfileEntry booking(Long id, String config) {
       return new ProfileEntry("BOOKING", id, null, null, null, null, null, null, null, config);
     }
 
-    public static ProfileEntry event(Long id, String config) {
-      return new ProfileEntry("EVENT", id, null, null, null, null, null, null, null, config);
+    public static ProfileEntry event(Long id, String config, boolean highlighted) {
+      return new ProfileEntry("EVENT", id, null, null, null, null, null, null, highlighted, config);
     }
 
     public static ProfileEntry place(Long id, String config) {

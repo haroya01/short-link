@@ -109,8 +109,10 @@ class LinkEntityTest {
     assertThat(link.isOnProfile()).isTrue();
     link.setProfileOrder(null);
     assertThat(link.isOnProfile()).isFalse();
-    link.setProfileHighlighted(true);
+    link.featureOnProfile();
     assertThat(link.isProfileHighlighted()).isTrue();
+    link.unfeatureOnProfile();
+    assertThat(link.isProfileHighlighted()).isFalse();
   }
 
   @Test

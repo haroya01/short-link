@@ -4,12 +4,16 @@ import com.example.short_link.profile.application.write.CreateBlockCommand;
 import com.example.short_link.profile.application.write.CreateBlockUseCase;
 import com.example.short_link.profile.application.write.DeleteBlockCommand;
 import com.example.short_link.profile.application.write.DeleteBlockUseCase;
+import com.example.short_link.profile.application.write.SetBlockHighlightCommand;
+import com.example.short_link.profile.application.write.SetBlockHighlightUseCase;
 import com.example.short_link.profile.application.write.UpdateBlockCommand;
 import com.example.short_link.profile.application.write.UpdateBlockUseCase;
 import com.example.short_link.profile.domain.ProfileBlockEntity;
 import com.example.short_link.profile.domain.ProfileBlockType;
 import com.example.short_link.profile.presentation.request.ProfileBlockCreateRequest;
+import com.example.short_link.profile.presentation.request.ProfileBlockHighlightRequest;
 import com.example.short_link.profile.presentation.request.ProfileBlockUpdateRequest;
+import com.example.short_link.profile.presentation.response.ProfileBlockHighlightResponse;
 import com.example.short_link.profile.presentation.response.ProfileBlockResponse;
 import jakarta.validation.Valid;
 import java.util.Locale;
@@ -19,6 +23,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -31,6 +36,7 @@ public class ProfileBlockController {
   private final CreateBlockUseCase createBlock;
   private final UpdateBlockUseCase updateBlock;
   private final DeleteBlockUseCase deleteBlock;
+  private final SetBlockHighlightUseCase setBlockHighlight;
 
   @PostMapping
   public ProfileBlockResponse create(
@@ -54,5 +60,14 @@ public class ProfileBlockController {
   @DeleteMapping("/{id}")
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     deleteBlock.execute(new DeleteBlockCommand(userId, id));
+  }
+
+  @PutMapping("/{id}/highlight")
+  public ProfileBlockHighlightResponse setHighlight(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @Valid @RequestBody ProfileBlockHighlightRequest request) {
+    setBlockHighlight.execute(new SetBlockHighlightCommand(userId, id, request.highlighted()));
+    return new ProfileBlockHighlightResponse(request.highlighted());
   }
 }

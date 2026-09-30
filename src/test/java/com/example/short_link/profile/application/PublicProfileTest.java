@@ -80,9 +80,10 @@ class PublicProfileTest {
 
   @Test
   void productCardEntryCarriesConfig() {
-    ProfileEntry e = ProfileEntry.productCard(1L, "{\"items\":[]}");
+    ProfileEntry e = ProfileEntry.productCard(1L, "{\"items\":[]}", true);
     assertThat(e.kind()).isEqualTo("PRODUCT_CARD");
     assertThat(e.content()).isEqualTo("{\"items\":[]}");
+    assertThat(e.highlighted()).isTrue();
   }
 
   @Test
@@ -94,9 +95,10 @@ class PublicProfileTest {
 
   @Test
   void eventEntryCarriesConfig() {
-    ProfileEntry e = ProfileEntry.event(1L, "{\"title\":\"x\"}");
+    ProfileEntry e = ProfileEntry.event(1L, "{\"title\":\"x\"}", false);
     assertThat(e.kind()).isEqualTo("EVENT");
     assertThat(e.content()).isEqualTo("{\"title\":\"x\"}");
+    assertThat(e.highlighted()).isFalse();
   }
 
   @Test
