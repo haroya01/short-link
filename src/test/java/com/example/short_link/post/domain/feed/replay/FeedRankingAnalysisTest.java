@@ -9,7 +9,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -43,7 +47,14 @@ class FeedRankingAnalysisTest {
         "- author mixing",
         weights(b.topic(), b.language(), b.freshness(), b.popularity(), true, false));
     out.append("## Ablations (evaluation seed ").append(EVALUATION_SEED).append(")\n\n");
-    table(out, EVALUATION_SEED, ablations, List.of(matchesOnly(b)));
+    table(
+        out,
+        EVALUATION_SEED,
+        ablations,
+        List.of(
+            matchesOnly(b),
+            mixing("mix 3 per 10", b, 3, 0),
+            mixing("mix, exempt authors read 3+ times", b, 2, 3)));
 
     out.append("## Sensitivity (tuning seed ").append(TUNING_SEED).append(")\n\n");
     Map<String, Weights> sweep = new LinkedHashMap<>();
@@ -129,6 +140,82 @@ class FeedRankingAnalysisTest {
                           .anyMatch(interest::contains))
               .toList();
         });
+  }
+
+  // v1 with a different author cap: `slots` per block of ten, and authors the reader has read at
+  // least `exemptAfterReads` times among their last forty reads left uncapped (0 = no exemption).
+  private static Ranker mixing(String name, Weights base, int slots, int exemptAfterReads) {
+    Ranker unmixed =
+        ReplayRankers.forYouV1(
+            name,
+            weights(
+                base.topic(), base.language(), base.freshness(), base.popularity(), true, false));
+    return new Ranker(
+        name,
+        context -> {
+          ReplayEvaluator.Viewer viewer = context.viewer();
+          Set<String> interest =
+              ForYouRanking.Reader.of(
+                      viewer.id(),
+                      viewer.locale(),
+                      viewer.followedTags(),
+                      viewer.hiddenTags(),
+                      viewer.readsNewestFirst(),
+                      viewer.likesNewestFirst(),
+                      context.catalog())
+                  .interest()
+                  .keySet();
+          Map<Long, Integer> authorReads = new HashMap<>();
+          viewer.readsNewestFirst().stream()
+              .limit(40)
+              .forEach(
+                  id -> authorReads.merge(context.catalog().get(id).authorId(), 1, Integer::sum));
+          Set<Long> exempt = new HashSet<>();
+          if (exemptAfterReads > 0) {
+            authorReads.forEach(
+                (author, reads) -> {
+                  if (reads >= exemptAfterReads) exempt.add(author);
+                });
+          }
+          List<Long> matching = new ArrayList<>();
+          List<Long> rest = new ArrayList<>();
+          for (Long id : unmixed.rank().apply(context)) {
+            boolean shares =
+                context.catalog().get(id).normalizedTags().stream().anyMatch(interest::contains);
+            (shares ? matching : rest).add(id);
+          }
+          List<Long> feed = new ArrayList<>(mix(matching, context, slots, exempt));
+          feed.addAll(mix(rest, context, slots, exempt));
+          return feed;
+        });
+  }
+
+  private static List<Long> mix(
+      List<Long> ranked, ReplayEvaluator.Context context, int slots, Set<Long> exempt) {
+    LinkedList<Long> remaining = new LinkedList<>(ranked);
+    List<Long> mixed = new ArrayList<>(ranked.size());
+    while (!remaining.isEmpty()) {
+      Map<Long, Integer> inBlock = new HashMap<>();
+      int blockEnd = Math.min(mixed.size() + 10, ranked.size());
+      while (mixed.size() < blockEnd) {
+        Long pick = null;
+        for (Iterator<Long> it = remaining.iterator(); it.hasNext(); ) {
+          Long id = it.next();
+          long author = context.catalog().get(id).authorId();
+          if (exempt.contains(author) || inBlock.getOrDefault(author, 0) < slots) {
+            pick = id;
+            it.remove();
+            break;
+          }
+        }
+        if (pick == null) {
+          pick = remaining.removeFirst();
+        }
+        mixed.add(pick);
+        inBlock.merge(context.catalog().get(pick).authorId(), 1, Integer::sum);
+      }
+    }
+    return mixed;
   }
 
   private static Weights weights(
