@@ -80,6 +80,14 @@ public interface LinkRepository {
 
   int deleteByUserId(Long userId);
 
+  List<SafetyRescanRow> findSafetyRescanBatch(Long afterId, Instant now, int limit);
+
+  interface SafetyRescanRow {
+    Long getLinkId();
+
+    String getOriginalUrl();
+  }
+
   interface CachedLinkRow {
 
     Long getId();

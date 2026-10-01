@@ -3,6 +3,7 @@ package com.example.short_link.link.infrastructure.persistence;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository.CachedLinkRow;
+import com.example.short_link.link.domain.repository.LinkRepository.SafetyRescanRow;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -56,6 +57,19 @@ public interface JpaLinkRepository
       WHERE l.shortCode = :shortCode
       """)
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);
+
+  @Query(
+      """
+      SELECT l.id AS linkId, l.originalUrl AS originalUrl
+      FROM LinkEntity l
+      LEFT JOIN LinkModerationEntity moderation ON moderation.linkId = l.id
+      WHERE l.id > :afterId
+        AND moderation.linkId IS NULL
+        AND (l.expiresAt IS NULL OR l.expiresAt > :now)
+      ORDER BY l.id ASC
+      """)
+  List<SafetyRescanRow> findSafetyRescanBatch(
+      @Param("afterId") Long afterId, @Param("now") Instant now, Pageable page);
 
   List<LinkEntity> findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(
       Long userId);

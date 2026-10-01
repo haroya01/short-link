@@ -34,6 +34,9 @@ public class ProdConfigGuard implements ApplicationRunner {
   @Value("${short-link.safe-browsing.enabled:true}")
   private boolean safeBrowsingEnabled;
 
+  @Value("${short-link.safe-browsing.api-key:}")
+  private String safeBrowsingApiKey;
+
   @Value("${spring.security.oauth2.client.registration.google.client-secret:}")
   private String googleClientSecret;
 
@@ -58,6 +61,10 @@ public class ProdConfigGuard implements ApplicationRunner {
     }
     if (!safeBrowsingEnabled) {
       log.warn("SAFE_BROWSING_ENABLED is false in prod — shortened destinations are not screened.");
+    } else if (safeBrowsingApiKey == null || safeBrowsingApiKey.isBlank()) {
+      log.warn(
+          "SAFE_BROWSING_API_KEY is blank in prod — destinations are neither screened at creation"
+              + " nor rescanned.");
     }
     if (googleClientSecret.isBlank() || "placeholder".equals(googleClientSecret)) {
       log.warn("GOOGLE_CLIENT_SECRET is unset/placeholder in prod — Google sign-in will fail.");
