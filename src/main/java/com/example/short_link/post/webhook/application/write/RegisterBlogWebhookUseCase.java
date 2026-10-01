@@ -39,7 +39,8 @@ public class RegisterBlogWebhookUseCase {
       throw new PostException(PostErrorCode.INVALID_WEBHOOK_URL);
     }
     if (repository.countByUserId(userId) >= MAX_PER_USER) {
-      throw new PostException(PostErrorCode.TOO_MANY_WEBHOOKS, MAX_PER_USER);
+      throw new PostException(PostErrorCode.TOO_MANY_WEBHOOKS, MAX_PER_USER)
+          .with("limit", MAX_PER_USER);
     }
     String secret = generateSecret();
     BlogWebhookFormat format = BlogWebhookFormat.detect(url);
