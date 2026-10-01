@@ -45,12 +45,14 @@ public interface JpaLinkRepository
         visit.splashMessage AS splashMessage,
         visit.splashSeconds AS splashSeconds,
         visit.splashCtaId AS splashCtaId,
-        visit.opensAt AS opensAt
+        visit.opensAt AS opensAt,
+        CASE WHEN moderation.linkId IS NULL THEN false ELSE true END AS disabled
       FROM LinkEntity l
       LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
       LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
       LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
+      LEFT JOIN LinkModerationEntity moderation ON moderation.linkId = l.id
       WHERE l.shortCode = :shortCode
       """)
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);

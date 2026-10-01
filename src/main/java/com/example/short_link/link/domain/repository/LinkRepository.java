@@ -117,5 +117,7 @@ public interface LinkRepository {
     Long getSplashCtaId();
 
     Instant getOpensAt();
+
+    Boolean getDisabled();
   }
 }

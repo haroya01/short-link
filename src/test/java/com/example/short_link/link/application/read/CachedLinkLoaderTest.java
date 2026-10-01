@@ -46,6 +46,7 @@ class CachedLinkLoaderTest {
                     true,
                     10,
                     "ended",
+                    true,
                     true)));
     when(destinations.findAllByLinkIdOrderByIdAsc(7L))
         .thenReturn(
@@ -72,6 +73,7 @@ class CachedLinkLoaderTest {
             new CachedLink.Splash("coupon SPRING20", 2, "Get the app", "https://kurl.me/app1"));
     assertThat(cached.variants()).hasSize(1);
     assertThat(cached.variants().getFirst().url()).isEqualTo("https://variant.example");
+    assertThat(cached.disabled()).isTrue();
   }
 
   private static LinkRepository.CachedLinkRow row(
@@ -87,7 +89,8 @@ class CachedLinkLoaderTest {
       Boolean passwordRequired,
       Integer maxViews,
       String expiredMessage,
-      Boolean openInBrowser) {
+      Boolean openInBrowser,
+      Boolean disabled) {
     return new LinkRepository.CachedLinkRow() {
       @Override
       public Long getId() {
@@ -177,6 +180,11 @@ class CachedLinkLoaderTest {
       @Override
       public Instant getOpensAt() {
         return Instant.parse("2026-10-01T01:00:00Z");
+      }
+
+      @Override
+      public Boolean getDisabled() {
+        return disabled;
       }
     };
   }

@@ -4,6 +4,7 @@ import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -28,6 +29,16 @@ class AbuseSubjectReaderAdapter implements AbuseSubjectReader {
   }
 
   @Override
+  public List<LinkSubjectSnapshot> findLinkSubjectSnapshots(Collection<Long> linkIds) {
+    return jpa.findLinkSubjectSnapshots(linkIds);
+  }
+
+  @Override
+  public Optional<Long> findLinkIdByShortCode(String shortCode) {
+    return jpa.findLinkIdByShortCode(shortCode);
+  }
+
+  @Override
   public boolean subjectExists(AbuseSubjectType subjectType, Long subjectId) {
     if (subjectId == null) {
       return false;
@@ -36,6 +47,7 @@ class AbuseSubjectReaderAdapter implements AbuseSubjectReader {
       case POST -> jpa.countPostById(subjectId) > 0;
       case COMMENT -> jpa.countCommentById(subjectId) > 0;
       case USER -> jpa.countUserById(subjectId) > 0;
+      case LINK -> jpa.countLinkById(subjectId) > 0;
     };
   }
 }

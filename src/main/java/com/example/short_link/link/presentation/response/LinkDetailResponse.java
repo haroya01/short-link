@@ -25,7 +25,8 @@ public record LinkDetailResponse(
     boolean openInBrowser,
     LinkDetailView.Splash splash,
     Instant opensAt,
-    LinkDetailView.DestinationHealth destinationHealth) {
+    LinkDetailView.DestinationHealth destinationHealth,
+    LinkDetailView.Moderation moderation) {
 
   public static LinkDetailResponse from(LinkDetailView view) {
     return new LinkDetailResponse(
@@ -48,6 +49,7 @@ public record LinkDetailResponse(
         view.openInBrowser(),
         view.splash(),
         view.opensAt(),
-        view.destinationHealth());
+        view.destinationHealth(),
+        view.moderation());
   }
 }

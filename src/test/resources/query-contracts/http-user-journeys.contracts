@@ -256,7 +256,7 @@
 @junit | link-destination-delete | 2 | 0 | 0 | 1 | 3
 @junit | link-destination-list | 2 | 0 | 0 | 0 | 2
 @junit | link-destination-update | 2 | 0 | 1 | 0 | 3
-@junit | link-detail-owned | 5 | 0 | 0 | 0 | 5
+@junit | link-detail-owned | 6 | 0 | 0 | 0 | 6
 @junit | link-events | 2 | 0 | 0 | 0 | 2
 @junit | link-events-csv | 2 | 0 | 0 | 0 | 2
 @junit | link-list-filter-tag | 9 | 0 | 0 | 0 | 9
@@ -327,7 +327,10 @@
 @junit | ops-delete-post | 3 | 0 | 0 | 10 | 13
 @junit | ops-denies-author-moderation | 0 | 0 | 0 | 0 | 0
 @junit | ops-denies-member | 0 | 0 | 0 | 0 | 0
+@junit | ops-denies-member-link-enable | 0 | 0 | 0 | 0 | 0
+@junit | ops-disable-link | 2 | 1 | 0 | 0 | 3
 @junit | ops-edit-post | 3 | 2 | 1 | 0 | 6
+@junit | ops-enable-link | 2 | 0 | 0 | 1 | 3
 @junit | ops-funnel | 4 | 0 | 0 | 0 | 4
 @junit | ops-health-metrics | 0 | 0 | 0 | 0 | 0
 @junit | ops-lifecycle | 1 | 0 | 0 | 0 | 1
@@ -346,10 +349,12 @@
 @junit | ops-recent-errors | 0 | 0 | 0 | 0 | 0
 @junit | ops-repair-webhook-formats | 1 | 0 | 0 | 0 | 1
 @junit | ops-resolve-abuse | 2 | 0 | 1 | 0 | 3
+@junit | ops-resolve-link-abuse | 4 | 1 | 1 | 0 | 6
 @junit | ops-route-metrics | 1 | 0 | 0 | 0 | 1
 @junit | ops-search-links | 1 | 0 | 0 | 0 | 1
 @junit | ops-search-users | 1 | 0 | 0 | 0 | 1
 @junit | ops-submit-abuse | 2 | 1 | 0 | 0 | 3
+@junit | ops-submit-link-abuse | 2 | 1 | 0 | 0 | 3
 @junit | ops-top-links-by-clicks | 1 | 0 | 0 | 0 | 1
 @junit | ops-top-users-by-clicks | 1 | 0 | 0 | 0 | 1
 @junit | ops-top-users-by-links | 1 | 0 | 0 | 0 | 1

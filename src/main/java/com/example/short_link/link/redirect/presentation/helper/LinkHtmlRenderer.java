@@ -137,6 +137,10 @@ public class LinkHtmlRenderer {
     return htmlResponse(HttpStatus.FORBIDDEN, notice(locale, "visitor.blocked"));
   }
 
+  public ResponseEntity<byte[]> disabledPageResponse(Locale locale) {
+    return htmlResponse(HttpStatus.GONE, notice(locale, "visitor.disabled"));
+  }
+
   public ResponseEntity<byte[]> domainBlockedPageResponse(Locale locale) {
     return htmlResponse(HttpStatus.FORBIDDEN, notice(locale, "visitor.domainBlocked"));
   }
@@ -185,6 +189,7 @@ public class LinkHtmlRenderer {
       case LINK_NOT_FOUND -> notFoundPageResponse(locale);
       case LINK_EXPIRED -> expiredPageResponse(locale, null);
       case LINK_VIEW_LIMIT_EXCEEDED -> viewLimitPageResponse(locale);
+      case LINK_DISABLED -> disabledPageResponse(locale);
       default -> null;
     };
   }

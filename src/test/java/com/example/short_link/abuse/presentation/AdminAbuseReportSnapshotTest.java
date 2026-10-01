@@ -8,6 +8,8 @@ import com.example.short_link.abuse.domain.AbuseReason;
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
@@ -40,6 +42,7 @@ class AdminAbuseReportSnapshotTest {
   @Autowired private PostRepository postRepository;
   @Autowired private CommentRepository commentRepository;
   @Autowired private AbuseReportRepository abuseReportRepository;
+  @Autowired private LinkRepository linkRepository;
 
   private String adminToken(String seed) {
     UserEntity admin = userRepository.save(new UserEntity(seed + "@x.com", "google", seed));
@@ -126,6 +129,24 @@ class AdminAbuseReportSnapshotTest {
     JsonNode r = report(adminToken("g-user-admin"), targetId, "USER");
     assertThat(r.get("subjectAuthorHandle").asText()).isEqualTo("targethandle");
     assertThat(nullish(r, "subjectTitle")).isTrue();
+    assertThat(nullish(r, "subjectUrl")).isTrue();
+    assertThat(r.get("subjectRemoved").asBoolean()).isFalse();
+  }
+
+  @Test
+  void reportOnLinkCarriesCodeOwnerAndDestinationButNoClickableUrl() throws Exception {
+    Long ownerId = author("g-link-owner", "linkowner");
+    LinkEntity link =
+        linkRepository.save(
+            new LinkEntity("https://phish.example/login", "rep0rt1", ownerId, null));
+    abuseReportRepository.save(
+        new AbuseReportEntity(
+            null, AbuseSubjectType.LINK, link.getId(), AbuseReason.PHISHING, "은행 사칭"));
+
+    JsonNode r = report(adminToken("g-link-admin"), link.getId(), "LINK");
+    assertThat(r.get("subjectTitle").asText()).isEqualTo("rep0rt1");
+    assertThat(r.get("subjectAuthorHandle").asText()).isEqualTo("linkowner");
+    assertThat(r.get("subjectExcerpt").asText()).isEqualTo("https://phish.example/login");
     assertThat(nullish(r, "subjectUrl")).isTrue();
     assertThat(r.get("subjectRemoved").asBoolean()).isFalse();
   }

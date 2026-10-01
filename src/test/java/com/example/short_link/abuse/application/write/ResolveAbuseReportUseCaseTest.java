@@ -17,6 +17,7 @@ import com.example.short_link.abuse.domain.ModerationAction;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
 import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
+import com.example.short_link.common.link.LinkModerationPort;
 import com.example.short_link.common.post.CommentModerationPort;
 import com.example.short_link.common.post.PostModerationPort;
 import com.example.short_link.common.user.UserModerationPort;
@@ -36,6 +37,7 @@ class ResolveAbuseReportUseCaseTest {
   @Mock private PostModerationPort postModerationPort;
   @Mock private CommentModerationPort commentModerationPort;
   @Mock private UserModerationPort userModerationPort;
+  @Mock private LinkModerationPort linkModerationPort;
 
   private ResolveAbuseReportUseCase useCase;
 
@@ -43,7 +45,11 @@ class ResolveAbuseReportUseCaseTest {
   void setUp() {
     useCase =
         new ResolveAbuseReportUseCase(
-            abuseReportRepository, postModerationPort, commentModerationPort, userModerationPort);
+            abuseReportRepository,
+            postModerationPort,
+            commentModerationPort,
+            userModerationPort,
+            linkModerationPort);
   }
 
   private AbuseReportEntity postReport() {
@@ -94,6 +100,41 @@ class ResolveAbuseReportUseCaseTest {
             null));
 
     verify(postModerationPort).unpublish(1L, 42L);
+  }
+
+  @Test
+  void disableLinkActionSwitchesTheReportedLinkOff() {
+    AbuseReportEntity r =
+        new AbuseReportEntity(7L, AbuseSubjectType.LINK, 55L, AbuseReason.PHISHING, "가짜 로그인");
+    when(abuseReportRepository.findById(1L)).thenReturn(Optional.of(r));
+    when(abuseReportRepository.save(any(AbuseReportEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        cmd(
+            1L,
+            ResolveAbuseReportCommand.Resolution.RESOLVED,
+            ModerationAction.DISABLE_LINK,
+            null));
+
+    verify(linkModerationPort).disable(1L, 55L);
+    verifyNoInteractions(postModerationPort, commentModerationPort, userModerationPort);
+  }
+
+  @Test
+  void disableLinkCannotTargetAPost() {
+    when(abuseReportRepository.findById(1L)).thenReturn(Optional.of(postReport()));
+
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
+                    cmd(
+                        1L,
+                        ResolveAbuseReportCommand.Resolution.RESOLVED,
+                        ModerationAction.DISABLE_LINK,
+                        null)))
+        .isInstanceOf(AbuseException.class);
+    verifyNoInteractions(linkModerationPort);
   }
 
   @Test

@@ -9,6 +9,7 @@ public enum LinkErrorCode {
   LINK_NOT_OWNED(HttpStatus.FORBIDDEN, "link not owned by current user: %s"),
   LINK_QUOTA_EXCEEDED(HttpStatus.CONFLICT, "link quota exceeded (limit=%d)", "limit"),
   LINK_VIEW_LIMIT_EXCEEDED(HttpStatus.GONE, "link view limit exceeded: %s"),
+  LINK_DISABLED(HttpStatus.GONE, "link disabled: %s"),
   DUPLICATE_SHORT_CODE(HttpStatus.CONFLICT, "short code already exists: %s"),
   RESERVED_SHORT_CODE(HttpStatus.BAD_REQUEST, "short code is reserved: %s"),
   SHORT_CODE_EXHAUSTED(
