@@ -16,6 +16,7 @@ import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -592,6 +593,45 @@ class AdminControllerTest {
         .andExpect(jsonPath("$.stats.deviceClicks").isArray());
 
     mvc.perform(get("/api/v1/admin/links/nosuch99").header("Authorization", "Bearer " + token))
+        .andExpect(status().isNotFound())
+        .andExpect(jsonPath("$.code").value("LINK_NOT_FOUND"));
+  }
+
+  @Test
+  void adminSeesWhyALinkWasSwitchedOffAndCanSwitchItBackOn() throws Exception {
+    UserEntity admin = userRepository.save(new UserEntity("off-admin@x.com", "google", "g-offadm"));
+    admin.promoteToAdmin();
+    userRepository.save(admin);
+    linkRepository.save(
+        new LinkEntity("https://phish.example.com/login", "offcode1", admin.getId(), null));
+    String token = jwt.createAccessToken(admin.getId(), "ADMIN");
+
+    mvc.perform(
+            post("/api/v1/admin/links/offcode1/disable").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.shortCode").value("offcode1"))
+        .andExpect(jsonPath("$.disabled").value(true))
+        .andExpect(jsonPath("$.changed").value(true));
+    mvc.perform(get("/api/v1/admin/links/offcode1").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.meta.disabledReason").value("ADMIN"))
+        .andExpect(jsonPath("$.meta.disabledAt").isNotEmpty());
+    mvc.perform(get("/api/v1/admin/links?q=offcode1").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].disabledReason").value("ADMIN"));
+
+    mvc.perform(
+            post("/api/v1/admin/links/offcode1/enable").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.disabled").value(false))
+        .andExpect(jsonPath("$.changed").value(true));
+    mvc.perform(get("/api/v1/admin/links/offcode1").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.meta.disabledReason", Matchers.nullValue()))
+        .andExpect(jsonPath("$.meta.disabledAt", Matchers.nullValue()));
+
+    mvc.perform(
+            post("/api/v1/admin/links/nosuch99/disable").header("Authorization", "Bearer " + token))
         .andExpect(status().isNotFound())
         .andExpect(jsonPath("$.code").value("LINK_NOT_FOUND"));
   }

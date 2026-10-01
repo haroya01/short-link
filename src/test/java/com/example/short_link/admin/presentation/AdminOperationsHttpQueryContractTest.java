@@ -287,6 +287,74 @@ class AdminOperationsHttpQueryContractTest extends OperationalHttpJourneySupport
   }
 
   @Test
+  void takesDownAReportedShortLinkAndBringsItBack() throws Exception {
+    Actor admin = actor("link-moderator", true);
+    Actor owner = actor("link-owner", false);
+    Actor reader = actor("link-reporter", false);
+    long linkId =
+        transactions.execute(
+            transaction ->
+                links
+                    .save(
+                        new LinkEntity(
+                            "https://phish.example/login", "takedown1", owner.id(), null))
+                    .getId());
+    step(
+        "ops-submit-link-abuse",
+        "POST",
+        "/api/v1/public/abuse-reports/links",
+        reader,
+        Map.of(
+            "link",
+            "https://kurl.me/takedown1?src=sms",
+            "reasonCode",
+            "PHISHING",
+            "detail",
+            "Fake bank login sent by text message"),
+        202);
+    long reportId =
+        jdbc.queryForObject(
+            "SELECT id FROM abuse_report WHERE subject_id = ? AND subject_type = 'LINK'",
+            Long.class,
+            linkId);
+    step(
+        "ops-resolve-link-abuse",
+        "POST",
+        "/api/v1/admin/abuse-reports/" + reportId + "/resolve",
+        admin,
+        Map.of("resolution", "RESOLVED", "action", "DISABLE_LINK", "adminNote", "Phishing"),
+        200);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT reason FROM link_moderation WHERE link_id = ?", String.class, linkId))
+        .isEqualTo("ABUSE_REPORT");
+    step(
+        "ops-denies-member-link-enable",
+        "POST",
+        "/api/v1/admin/links/takedown1/enable",
+        owner,
+        null,
+        403);
+    assertThat(
+            step(
+                    "ops-enable-link",
+                    "POST",
+                    "/api/v1/admin/links/takedown1/enable",
+                    admin,
+                    null,
+                    200)
+                .path("changed")
+                .asBoolean())
+        .isTrue();
+    assertThat(count("link_moderation", "link_id = ?", linkId)).isZero();
+    step("ops-disable-link", "POST", "/api/v1/admin/links/takedown1/disable", admin, null, 200);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT reason FROM link_moderation WHERE link_id = ?", String.class, linkId))
+        .isEqualTo("ADMIN");
+  }
+
+  @Test
   void blocksAndUnblocksADestinationDomain() throws Exception {
     Actor admin = actor("domain-moderator", true);
     step(

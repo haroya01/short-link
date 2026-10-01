@@ -7,6 +7,7 @@ import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.CommentSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.LinkSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.PostSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.UserSubjectSnapshot;
 import com.example.short_link.common.web.PostPublicUrlBuilder;
@@ -45,8 +46,9 @@ public class AbuseReportQueryService {
     Map<Long, PostSubjectSnapshot> posts = byPostId(reports);
     Map<Long, CommentSubjectSnapshot> comments = byCommentId(reports);
     Map<Long, UserSubjectSnapshot> users = byUserId(reports);
+    Map<Long, LinkSubjectSnapshot> links = byLinkId(reports);
     return reports.stream()
-        .map(r -> AbuseReportView.of(r, snapshotFor(r, posts, comments, users)))
+        .map(r -> AbuseReportView.of(r, snapshotFor(r, posts, comments, users, links)))
         .toList();
   }
 
@@ -74,6 +76,14 @@ public class AbuseReportQueryService {
             .collect(Collectors.toMap(UserSubjectSnapshot::getSubjectId, Function.identity()));
   }
 
+  private Map<Long, LinkSubjectSnapshot> byLinkId(List<AbuseReportEntity> reports) {
+    List<Long> ids = subjectIds(reports, AbuseSubjectType.LINK);
+    return ids.isEmpty()
+        ? Map.of()
+        : subjects.findLinkSubjectSnapshots(ids).stream()
+            .collect(Collectors.toMap(LinkSubjectSnapshot::getSubjectId, Function.identity()));
+  }
+
   private static List<Long> subjectIds(List<AbuseReportEntity> reports, AbuseSubjectType type) {
     return reports.stream()
         .filter(r -> r.getSubjectType() == type)
@@ -86,13 +96,29 @@ public class AbuseReportQueryService {
       AbuseReportEntity report,
       Map<Long, PostSubjectSnapshot> posts,
       Map<Long, CommentSubjectSnapshot> comments,
-      Map<Long, UserSubjectSnapshot> users) {
+      Map<Long, UserSubjectSnapshot> users,
+      Map<Long, LinkSubjectSnapshot> links) {
     Long subjectId = report.getSubjectId();
     return switch (report.getSubjectType()) {
       case POST -> fromPost(posts.get(subjectId));
       case COMMENT -> fromComment(comments.get(subjectId));
       case USER -> fromUser(users.get(subjectId));
+      case LINK -> fromLink(links.get(subjectId));
     };
+  }
+
+  // The destination goes in the excerpt, not url, so the admin screen never links to it.
+  private SubjectSnapshot fromLink(LinkSubjectSnapshot snapshot) {
+    if (snapshot == null) {
+      return SubjectSnapshot.EMPTY;
+    }
+    boolean disabled = snapshot.getDisabled() != null && snapshot.getDisabled() != 0L;
+    return new SubjectSnapshot(
+        snapshot.getShortCode(),
+        snapshot.getOwnerHandle(),
+        null,
+        snapshot.getOriginalUrl(),
+        disabled);
   }
 
   private SubjectSnapshot fromPost(PostSubjectSnapshot snapshot) {

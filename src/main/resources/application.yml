@@ -166,6 +166,10 @@ short-link:
     expiry-threshold-days: ${LINK_NOTIFICATION_EXPIRY_THRESHOLD_DAYS:7}
     velocity-min-clicks: ${LINK_NOTIFICATION_VELOCITY_MIN_CLICKS:10}
     velocity-ratio: ${LINK_NOTIFICATION_VELOCITY_RATIO:3.0}
+  safety-rescan:
+    enabled: ${SAFETY_RESCAN_ENABLED:true}
+    cron: ${SAFETY_RESCAN_CRON:0 41 */6 * * *}
+    batch-size: ${SAFETY_RESCAN_BATCH_SIZE:2000}
   destination-health:
     enabled: ${DESTINATION_HEALTH_ENABLED:true}
     cron: ${DESTINATION_HEALTH_CRON:0 17 * * * *}

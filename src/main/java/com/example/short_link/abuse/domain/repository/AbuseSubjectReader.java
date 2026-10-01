@@ -3,6 +3,7 @@ package com.example.short_link.abuse.domain.repository;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface AbuseSubjectReader {
   List<PostSubjectSnapshot> findPostSubjectSnapshots(Collection<Long> postIds);
@@ -11,6 +12,10 @@ public interface AbuseSubjectReader {
   List<CommentSubjectSnapshot> findCommentSubjectSnapshots(Collection<Long> commentIds);
 
   List<UserSubjectSnapshot> findUserSubjectSnapshots(Collection<Long> userIds);
+
+  List<LinkSubjectSnapshot> findLinkSubjectSnapshots(Collection<Long> linkIds);
+
+  Optional<Long> findLinkIdByShortCode(String shortCode);
 
   boolean subjectExists(AbuseSubjectType subjectType, Long subjectId);
 
@@ -34,6 +39,18 @@ public interface AbuseSubjectReader {
     String getAuthorHandle();
 
     Long getDeleted();
+  }
+
+  interface LinkSubjectSnapshot {
+    Long getSubjectId();
+
+    String getShortCode();
+
+    String getOriginalUrl();
+
+    String getOwnerHandle();
+
+    Long getDisabled();
   }
 
   interface UserSubjectSnapshot {

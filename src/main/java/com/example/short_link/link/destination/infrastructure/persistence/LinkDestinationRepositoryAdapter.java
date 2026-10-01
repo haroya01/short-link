@@ -2,6 +2,7 @@ package com.example.short_link.link.destination.infrastructure.persistence;
 
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
 import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +32,11 @@ class LinkDestinationRepositoryAdapter implements LinkDestinationRepository {
   @Override
   public List<LinkDestinationEntity> findAllByLinkIdOrderByIdAsc(Long linkId) {
     return jpa.findAllByLinkIdOrderByIdAsc(linkId);
+  }
+
+  @Override
+  public List<LinkDestinationEntity> findAllByLinkIdIn(Collection<Long> linkIds) {
+    return linkIds.isEmpty() ? List.of() : jpa.findAllByLinkIdIn(linkIds);
   }
 
   @Override

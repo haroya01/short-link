@@ -72,8 +72,16 @@ class ProdConfigGuardTest {
   }
 
   @Test
+  void prodWithSafeBrowsingOnButNoApiKeyOnlyWarns() {
+    ProdConfigGuard g = guard(true, "priv", "pub", "key", true, true, "real-secret");
+    ReflectionTestUtils.setField(g, "safeBrowsingApiKey", " ");
+    assertThatCode(() -> g.run(null)).doesNotThrowAnyException();
+  }
+
+  @Test
   void prodFullyConfiguredPasses() {
     ProdConfigGuard g = guard(true, "priv", "pub", "key", true, true, "real-secret");
+    ReflectionTestUtils.setField(g, "safeBrowsingApiKey", "sb-key");
     assertThatCode(() -> g.run(null)).doesNotThrowAnyException();
   }
 }

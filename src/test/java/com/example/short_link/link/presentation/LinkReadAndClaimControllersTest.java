@@ -72,6 +72,7 @@ class LinkReadAndClaimControllersTest {
             false,
             LinkDetailView.Splash.OFF,
             null,
+            null,
             null);
     when(linkDetailQueryService.detail(eq(USER_ID), any(ShortCode.class))).thenReturn(view);
 

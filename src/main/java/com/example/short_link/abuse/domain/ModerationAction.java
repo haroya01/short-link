@@ -6,7 +6,8 @@ public enum ModerationAction {
   UNPUBLISH_POST,
   DELETE_COMMENT,
   SUSPEND_USER,
-  BAN_USER;
+  BAN_USER,
+  DISABLE_LINK;
 
   public boolean appliesTo(AbuseSubjectType subjectType) {
     return switch (this) {
@@ -14,6 +15,7 @@ public enum ModerationAction {
       case UNPUBLISH_POST -> subjectType == AbuseSubjectType.POST;
       case DELETE_COMMENT -> subjectType == AbuseSubjectType.COMMENT;
       case SUSPEND_USER, BAN_USER -> subjectType == AbuseSubjectType.USER;
+      case DISABLE_LINK -> subjectType == AbuseSubjectType.LINK;
     };
   }
 }

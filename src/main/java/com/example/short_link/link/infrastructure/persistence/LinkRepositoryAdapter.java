@@ -67,6 +67,11 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<SafetyRescanRow> findSafetyRescanBatch(Long afterId, Instant now, int limit) {
+    return jpa.findSafetyRescanBatch(afterId, now, PageRequest.of(0, limit));
+  }
+
+  @Override
   public List<LinkEntity> findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(
       Long userId) {
     return jpa.findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(userId);

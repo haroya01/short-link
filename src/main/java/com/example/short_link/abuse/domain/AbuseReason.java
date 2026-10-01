@@ -7,5 +7,7 @@ public enum AbuseReason {
   VIOLENCE,
   SEXUAL,
   COPYRIGHT,
+  PHISHING,
+  MALWARE,
   OTHER
 }
