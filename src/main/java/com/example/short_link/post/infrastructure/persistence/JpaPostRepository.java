@@ -174,32 +174,16 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("tags") Collection<String> tags,
       @Param("status") PostStatus status);
 
-  // DISTINCT로 다중 태그의 중복을 제거한다. 빈 NOT IN 인수는 어댑터가 변환한다.
   @Query(
-      "select distinct p from PostEntity p join p.tags t "
-          + "where p.status = :status and p.userId <> :userId "
-          + "and lower(t) in :tags and p.id not in :excludeIds "
-          + "and p.bodyTextLength >= :minBody "
-          + "order by p.publishedAt desc")
-  List<PostEntity> findForYouCandidates(
-      @Param("userId") Long userId,
-      @Param("tags") Collection<String> tags,
-      @Param("excludeIds") Collection<Long> excludeIds,
-      @Param("status") PostStatus status,
-      @Param("minBody") int minBody,
-      Pageable pageable);
+      "select p.id, p.userId, p.languageTag, p.publishedAt, p.seriesId from PostEntity p "
+          + "where p.status = :status and p.bodyTextLength >= :minBody "
+          + "order by p.publishedAt desc, p.id desc")
+  List<Object[]> findFeedCandidateRows(
+      @Param("status") PostStatus status, @Param("minBody") int minBody, Pageable pageable);
 
   @Query(
-      "select count(distinct p) from PostEntity p join p.tags t "
-          + "where p.status = :status and p.userId <> :userId "
-          + "and lower(t) in :tags and p.id not in :excludeIds "
-          + "and p.bodyTextLength >= :minBody")
-  long countForYouCandidates(
-      @Param("userId") Long userId,
-      @Param("tags") Collection<String> tags,
-      @Param("excludeIds") Collection<Long> excludeIds,
-      @Param("status") PostStatus status,
-      @Param("minBody") int minBody);
+      "select p.id, t from PostEntity p join p.tags t where p.id in :ids order by p.id, index(t)")
+  List<Object[]> findTagRowsByPostIdIn(@Param("ids") Collection<Long> ids);
 
   @Query(
       "select t, count(p) from PostEntity p join p.tags t "
