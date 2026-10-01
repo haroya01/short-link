@@ -79,6 +79,15 @@ describe("routeFor", () => {
       expect(routeFor("/monitoring/envelope")).toBe("frontend");
     });
 
+    it("/report → frontend (link report form, reachable without the app)", () => {
+      expect(routeFor("/report")).toBe("frontend");
+      expect(routeFor("/en/report")).toBe("frontend");
+    });
+
+    it("/.well-known/security.txt → frontend (served from the web app's public files)", () => {
+      expect(routeFor("/.well-known/security.txt")).toBe("frontend");
+    });
+
     it("/learn → frontend (SEO FAQ page)", () => {
       expect(routeFor("/learn")).toBe("frontend");
       expect(routeFor("/ko/learn")).toBe("frontend");
