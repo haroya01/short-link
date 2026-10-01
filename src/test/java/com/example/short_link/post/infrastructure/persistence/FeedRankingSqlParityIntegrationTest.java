@@ -120,6 +120,16 @@ class FeedRankingSqlParityIntegrationTest {
       for (int v = 0; v < random.nextInt(4); v++) {
         view(id, now.minus(Duration.ofDays(8 + random.nextInt(20))));
       }
+      if (random.nextInt(5) == 0) {
+        for (int v = 0; v < 10; v++) {
+          postViewEventRepository.save(
+              PostViewEventEntity.builder()
+                  .postId(id)
+                  .viewedAt(now.minus(Duration.ofHours(1 + random.nextInt(140))))
+                  .bot(true)
+                  .build());
+        }
+      }
     }
     return ids;
   }
@@ -128,7 +138,7 @@ class FeedRankingSqlParityIntegrationTest {
     Map<Long, Long> views = new HashMap<>();
     em.createQuery(
             "select e.postId, count(e) from PostViewEventEntity e "
-                + "where e.viewedAt >= :since group by e.postId",
+                + "where e.viewedAt >= :since and e.bot = false group by e.postId",
             Object[].class)
         .setParameter("since", since)
         .getResultList()
