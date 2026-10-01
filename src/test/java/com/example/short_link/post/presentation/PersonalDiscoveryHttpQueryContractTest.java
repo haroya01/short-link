@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
 class PersonalDiscoveryHttpQueryContractTest extends ContentHttpJourneySupport {
 
@@ -53,7 +54,7 @@ class PersonalDiscoveryHttpQueryContractTest extends ContentHttpJourneySupport {
         200);
     publish("discovery-english-publish", english);
     browseAndSearch(korean, english);
-    chooseInterestsAndRead(korean);
+    chooseInterestsAndRead(korean, english);
     publishAndReactToNote();
     verifyContracts();
   }
@@ -117,7 +118,7 @@ class PersonalDiscoveryHttpQueryContractTest extends ContentHttpJourneySupport {
         .isEqualTo(2);
   }
 
-  private void chooseInterestsAndRead(long korean) throws Exception {
+  private void chooseInterestsAndRead(long korean, long english) throws Exception {
     assertThat(
             get("reader-tag-preferences-initial", "/api/v1/users/me/tag-prefs", reader)
                 .path("followed")
@@ -146,11 +147,9 @@ class PersonalDiscoveryHttpQueryContractTest extends ContentHttpJourneySupport {
         .isEqualTo(korean);
     step("discovery-read-recommended-post", "POST", postPath(korean) + "/read", reader, null, 204);
     assertThat(count("post_read", "post_id = ? AND user_id = ?", korean, reader.id())).isEqualTo(1);
-    assertThat(
-            get("discovery-for-you-excludes-read", "/api/v1/feed/for-you", reader)
-                .path("items")
-                .size())
-        .isZero();
+    JsonNode afterRead = get("discovery-for-you-excludes-read", "/api/v1/feed/for-you", reader);
+    assertThat(afterRead.path("items").size()).isEqualTo(1);
+    assertThat(afterRead.path("items").get(0).path("id").asLong()).isEqualTo(english);
     step(
         "reader-tag-hide-replaces-follow",
         "PUT",

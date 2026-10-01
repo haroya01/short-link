@@ -6,8 +6,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class FeedRanking {
@@ -18,7 +16,7 @@ public final class FeedRanking {
 
   public static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
-  private static final Comparator<FeedCandidate> NEWEST_FIRST =
+  static final Comparator<FeedCandidate> NEWEST_FIRST =
       Comparator.comparing(FeedCandidate::publishedAt)
           .thenComparingLong(FeedCandidate::postId)
           .reversed();
@@ -35,23 +33,6 @@ public final class FeedRanking {
         Comparator.comparingLong((FeedCandidate c) -> recentViews.getOrDefault(c.postId(), 0L))
             .reversed();
     return newestPerSeries(pool).sorted(mostViewed.thenComparing(NEWEST_FIRST)).toList();
-  }
-
-  public static List<FeedCandidate> forYou(
-      Collection<FeedCandidate> pool,
-      long viewerId,
-      Collection<String> interestTags,
-      List<Long> readsNewestFirst) {
-    Set<String> interest = Set.copyOf(interestTags);
-    Set<Long> excluded =
-        readsNewestFirst.stream().limit(EXCLUDED_READS).collect(Collectors.toSet());
-    return pool.stream()
-        .sorted(NEWEST_FIRST)
-        .limit(CANDIDATE_POOL_SIZE)
-        .filter(c -> c.authorId() != viewerId)
-        .filter(c -> !excluded.contains(c.postId()))
-        .filter(c -> c.normalizedTags().stream().anyMatch(interest::contains))
-        .toList();
   }
 
   private static Stream<FeedCandidate> newestPerSeries(Collection<FeedCandidate> pool) {

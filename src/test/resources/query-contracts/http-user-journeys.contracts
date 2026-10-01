@@ -185,9 +185,9 @@
 @junit | discovery-english-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | discovery-english-metadata | 3 | 2 | 1 | 0 | 6
 @junit | discovery-english-publish | 7 | 2 | 1 | 0 | 10
-@junit | discovery-for-you-cold-start | 7 | 0 | 0 | 0 | 7
-@junit | discovery-for-you-excludes-read | 7 | 0 | 0 | 0 | 7
-@junit | discovery-for-you-followed-interest | 8 | 0 | 0 | 0 | 8
+@junit | discovery-for-you-cold-start | 10 | 0 | 0 | 0 | 10
+@junit | discovery-for-you-excludes-read | 12 | 0 | 0 | 0 | 12
+@junit | discovery-for-you-followed-interest | 10 | 0 | 0 | 0 | 10
 @junit | discovery-korean-body | 3 | 2 | 1 | 1 | 7
 @junit | discovery-korean-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | discovery-korean-metadata | 3 | 2 | 1 | 0 | 6

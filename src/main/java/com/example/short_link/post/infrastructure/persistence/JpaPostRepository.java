@@ -77,13 +77,14 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 
-  // LEFT JOIN으로 최근 조회가 없는 글도 포함한다. 누적 view_count는 순위에 사용하지 않는다.
+  // LEFT JOIN으로 최근 조회가 없는 글도 포함한다. 누적 view_count와 봇 조회는 순위에 사용하지 않는다.
   // MySQL에서는 기본키로 GROUP BY하면 p.*를 선택할 수 있다.
   @Query(
       nativeQuery = true,
       value =
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
+              + "AND e.is_bot = FALSE "
               + "WHERE p.status = 'PUBLISHED' AND (:lang IS NULL OR p.language_tag = :lang) "
               + "AND p.body_text_length >= :minBody "
               + "AND (p.series_id IS NULL OR NOT EXISTS (SELECT 1 FROM posts q "
@@ -247,6 +248,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_search_text s ON s.post_id = p.id "
               + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
+              + "AND e.is_bot = FALSE "
               + SEARCH_PREDICATE
               + "GROUP BY p.id "
               + "ORDER BY COUNT(DISTINCT e.id) DESC, p.published_at DESC")

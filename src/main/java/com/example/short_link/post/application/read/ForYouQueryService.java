@@ -5,16 +5,21 @@ import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.feed.FeedCandidate;
 import com.example.short_link.post.domain.feed.FeedRanking;
+import com.example.short_link.post.domain.feed.ForYouRanking;
 import com.example.short_link.post.domain.feed.InterestProfile;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostReadRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.PostViewEventRepository;
+import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
@@ -29,12 +34,15 @@ public class ForYouQueryService {
   private final PostRepository postRepository;
   private final PostReadRepository postReadRepository;
   private final PostLikeRepository postLikeRepository;
+  private final PostViewEventRepository postViewEventRepository;
   private final TagPrefQueryService tagPrefQueryService;
+  private final UserRepository userRepository;
   private final PostFeedItemAssembler feedItemAssembler;
+  private final Clock clock;
 
   public PublicFeedView feedForYou(Long userId, int page, int size) {
     TagPrefsView prefs = tagPrefQueryService.get(userId);
-    List<Long> recentReadIds =
+    List<Long> readIds =
         postReadRepository
             .findByUserIdOrderByReadAtDesc(userId, 0, FeedRanking.EXCLUDED_READS)
             .stream()
@@ -44,35 +52,34 @@ public class ForYouQueryService {
         postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
             .map(PostLikeEntity::getPostId)
             .toList();
-
-    List<String> interest =
-        InterestProfile.topTags(
-            prefs.followed(),
-            tagsOf(InterestProfile.signalPostIds(recentReadIds, likedIds)),
-            prefs.hidden());
-    if (interest.isEmpty()) {
-      // No interest signal yet; use trending for the cold start.
-      List<PostEntity> trending = postRepository.findPublishedTrending(null, page, size);
-      boolean hasNext = (long) (page + 1) * size < postRepository.countPublished(null);
-      return new PublicFeedView(feedItemAssembler.assemble(trending), page, size, hasNext);
-    }
-
-    List<FeedCandidate> ranked =
-        FeedRanking.forYou(
-            postRepository.findFeedCandidates(FeedRanking.CANDIDATE_POOL_SIZE),
+    String locale = userRepository.findById(userId).map(UserEntity::getLocale).orElse(null);
+    ForYouRanking.Reader reader =
+        ForYouRanking.Reader.of(
             userId,
-            interest,
-            recentReadIds);
+            locale,
+            prefs.followed(),
+            prefs.hidden(),
+            readIds,
+            likedIds,
+            candidatesById(InterestProfile.signalPostIds(readIds, likedIds)));
+
+    Instant now = clock.instant();
+    List<FeedCandidate> pool = postRepository.findFeedCandidates(FeedRanking.CANDIDATE_POOL_SIZE);
+    Map<Long, Long> views =
+        postViewEventRepository.countHumanViewsSince(
+            pool.stream().map(FeedCandidate::postId).toList(),
+            now.minus(FeedRanking.TRENDING_WINDOW));
+    List<FeedCandidate> ranked = ForYouRanking.rank(pool, reader, views, now);
+
     List<Long> pageIds =
         ranked.stream().skip((long) page * size).limit(size).map(FeedCandidate::postId).toList();
     boolean hasNext = ranked.size() > (long) (page + 1) * size;
     List<PostEntity> posts = loadInOrder(pageIds);
 
-    Set<String> interestSet = Set.copyOf(interest);
     Map<Long, FollowReason> reasonById = new HashMap<>();
     for (PostEntity p : posts) {
       p.getTags().stream()
-          .filter(t -> interestSet.contains(t.toLowerCase(Locale.ROOT)))
+          .filter(t -> reader.interest().containsKey(t.toLowerCase(Locale.ROOT)))
           .findFirst()
           .ifPresent(t -> reasonById.put(p.getId(), FollowReason.topic(t)));
     }
@@ -83,11 +90,22 @@ public class ForYouQueryService {
     return new PublicFeedView(items, page, size, hasNext);
   }
 
-  private List<List<String>> tagsOf(List<Long> postIds) {
+  private Map<Long, FeedCandidate> candidatesById(List<Long> postIds) {
     if (postIds.isEmpty()) {
-      return List.of();
+      return Map.of();
     }
-    return postRepository.findAllByIdIn(postIds).stream().map(PostEntity::getTags).toList();
+    return postRepository.findAllByIdIn(postIds).stream()
+        .collect(
+            Collectors.toMap(
+                PostEntity::getId,
+                p ->
+                    new FeedCandidate(
+                        p.getId(),
+                        p.getUserId(),
+                        p.getTags(),
+                        p.getLanguageTag(),
+                        p.getPublishedAt(),
+                        p.getSeriesId())));
   }
 
   private List<PostEntity> loadInOrder(List<Long> ids) {

@@ -19,5 +19,7 @@ public interface PostViewEventRepository {
 
   List<ReferrerViewCount> topReferrerHostsByUserSince(Long userId, Instant since, int limit);
 
+  Map<Long, Long> countHumanViewsSince(Collection<Long> postIds, Instant since);
+
   Map<Long, Set<String>> readersByPostId(Collection<Long> postIds);
 }

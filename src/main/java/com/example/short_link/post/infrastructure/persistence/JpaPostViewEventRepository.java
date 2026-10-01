@@ -23,6 +23,13 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
     String getVisitorHash();
   }
 
+  @Query(
+      "select e.postId, count(e) from PostViewEventEntity e "
+          + "where e.postId in :postIds and e.viewedAt >= :since and e.bot = false "
+          + "group by e.postId")
+  List<Object[]> countHumanViewsSince(
+      @Param("postIds") Collection<Long> postIds, @Param("since") Instant since);
+
   // Bots and hashless rows cannot contribute to the series reader-overlap funnel.
   @Query(
       nativeQuery = true,

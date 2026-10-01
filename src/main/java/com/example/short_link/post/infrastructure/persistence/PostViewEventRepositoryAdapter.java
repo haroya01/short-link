@@ -48,6 +48,18 @@ class PostViewEventRepositoryAdapter implements PostViewEventRepository {
   }
 
   @Override
+  public Map<Long, Long> countHumanViewsSince(Collection<Long> postIds, Instant since) {
+    if (postIds.isEmpty()) {
+      return Map.of();
+    }
+    Map<Long, Long> views = new HashMap<>();
+    for (Object[] row : jpa.countHumanViewsSince(postIds, since)) {
+      views.put((Long) row[0], (Long) row[1]);
+    }
+    return views;
+  }
+
+  @Override
   public Map<Long, Set<String>> readersByPostId(Collection<Long> postIds) {
     if (postIds.isEmpty()) {
       return Map.of();
