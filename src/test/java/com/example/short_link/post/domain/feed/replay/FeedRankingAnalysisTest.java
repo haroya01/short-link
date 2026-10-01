@@ -53,8 +53,8 @@ class FeedRankingAnalysisTest {
         ablations,
         List.of(
             matchesOnly(b),
-            mixing("mix 3 per 10", b, 3, 0),
-            mixing("mix, exempt authors read 3+ times", b, 2, 3)));
+            mixing("mix 2 per 10, no exemption", b, 2, 0),
+            mixing("mix 3 per 10, no exemption", b, 3, 0)));
 
     out.append("## Sensitivity (tuning seed ").append(TUNING_SEED).append(")\n\n");
     Map<String, Weights> sweep = new LinkedHashMap<>();

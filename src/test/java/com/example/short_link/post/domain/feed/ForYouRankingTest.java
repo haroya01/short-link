@@ -25,7 +25,7 @@ class ForYouRankingTest {
   }
 
   private static Reader reader(Map<String, Integer> interest, String... hidden) {
-    return new Reader(VIEWER, interest, Set.of(hidden), Set.of("ko"), List.of());
+    return new Reader(VIEWER, interest, Set.of(hidden), Set.of("ko"), List.of(), Set.of());
   }
 
   private static List<Long> ids(List<FeedCandidate> ranked) {
@@ -41,7 +41,8 @@ class ForYouRankingTest {
             post(3, 2, "ko", 3, "java", "crypto"),
             post(4, 2, "ko", 4, "java"));
     Reader reader =
-        new Reader(VIEWER, Map.of("java", 1), Set.of("crypto"), Set.of("ko"), List.of(2L));
+        new Reader(
+            VIEWER, Map.of("java", 1), Set.of("crypto"), Set.of("ko"), List.of(2L), Set.of());
 
     assertThat(ids(ForYouRanking.rank(pool, reader, Map.of(), NOW))).containsExactly(4L);
   }
@@ -105,6 +106,36 @@ class ForYouRankingTest {
   }
 
   @Test
+  void anAuthorTheReaderKeepsReadingIsNotCapped() {
+    List<FeedCandidate> pool = new ArrayList<>();
+    LongStream.rangeClosed(1, 6).forEach(id -> pool.add(post(id, 2, "ko", id, "java")));
+    LongStream.rangeClosed(7, 10)
+        .forEach(id -> pool.add(post(id, id + 100, "ko", 40 + id, "java")));
+    Reader reader =
+        new Reader(VIEWER, Map.of("java", 1), Set.of(), Set.of("ko"), List.of(), Set.of(2L));
+
+    assertThat(ids(ForYouRanking.rank(pool, reader, Map.of(), NOW)))
+        .containsExactly(1L, 2L, 3L, 4L, 5L, 6L, 7L, 8L, 9L, 10L);
+  }
+
+  @Test
+  void readersBecomeFamiliarWithAnAuthorAfterThreeOfTheirLastFortyReads() {
+    Map<Long, FeedCandidate> read =
+        Map.of(
+            11L, post(11, 2, "ko", 100, "java"),
+            12L, post(12, 2, "ko", 101, "java"),
+            13L, post(13, 2, "ko", 102, "java"),
+            14L, post(14, 3, "ko", 103, "java"),
+            15L, post(15, 3, "ko", 104, "java"));
+
+    Reader reader =
+        Reader.of(
+            VIEWER, "ko", List.of(), List.of(), List.of(11L, 12L, 13L, 14L, 15L), List.of(), read);
+
+    assertThat(reader.familiarAuthors()).containsExactly(2L);
+  }
+
+  @Test
   void postsSharingAnInterestComeBeforeTheRestHoweverTheRestScores() {
     List<FeedCandidate> pool =
         List.of(post(1, 2, "ja", 24 * 20, "java"), post(2, 3, "ko", 0, "go"));
@@ -130,7 +161,8 @@ class ForYouRankingTest {
             .toList();
     List<Long> readsNewestFirst =
         LongStream.rangeClosed(2, FeedRanking.EXCLUDED_READS + 2).boxed().toList().reversed();
-    Reader reader = new Reader(VIEWER, Map.of("java", 1), Set.of(), Set.of("ko"), readsNewestFirst);
+    Reader reader =
+        new Reader(VIEWER, Map.of("java", 1), Set.of(), Set.of("ko"), readsNewestFirst, Set.of());
 
     List<Long> ranked = ids(ForYouRanking.rank(pool, reader, Map.of(), NOW));
 

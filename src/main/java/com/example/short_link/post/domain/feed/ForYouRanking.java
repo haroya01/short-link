@@ -23,6 +23,8 @@ public final class ForYouRanking {
 
   public static final int AUTHOR_SLOTS = 2;
 
+  public static final int FAMILIAR_AUTHOR_READS = 3;
+
   public record Weights(
       double topic,
       double language,
@@ -39,7 +41,8 @@ public final class ForYouRanking {
       Map<String, Integer> interest,
       Set<String> hiddenTags,
       Set<String> languages,
-      List<Long> readsNewestFirst) {
+      List<Long> readsNewestFirst,
+      Set<Long> familiarAuthors) {
 
     public static Reader of(
         long id,
@@ -55,19 +58,26 @@ public final class ForYouRanking {
               .filter(Objects::nonNull)
               .map(FeedCandidate::tags)
               .toList();
-      List<String> readLanguages =
+      List<FeedCandidate> recentReads =
           readsNewestFirst.stream()
               .limit(InterestProfile.SIGNAL_POSTS)
               .map(signalPosts::get)
               .filter(Objects::nonNull)
-              .map(FeedCandidate::languageTag)
               .toList();
+      Map<Long, Long> readsByAuthor =
+          recentReads.stream()
+              .collect(Collectors.groupingBy(FeedCandidate::authorId, Collectors.counting()));
       return new Reader(
           id,
           InterestProfile.weights(followedTags, signalTags, hiddenTags),
           hiddenTags.stream().map(InterestProfile::normalize).collect(Collectors.toSet()),
-          InterestProfile.languages(locale, readLanguages),
-          readsNewestFirst);
+          InterestProfile.languages(
+              locale, recentReads.stream().map(FeedCandidate::languageTag).toList()),
+          readsNewestFirst,
+          readsByAuthor.entrySet().stream()
+              .filter(e -> e.getValue() >= FAMILIAR_AUTHOR_READS)
+              .map(Map.Entry::getKey)
+              .collect(Collectors.toSet()));
     }
   }
 
@@ -135,16 +145,18 @@ public final class ForYouRanking {
             .collect(
                 Collectors.partitioningBy(
                     c -> c.normalizedTags().stream().anyMatch(reader.interest()::containsKey)));
-    List<FeedCandidate> feed = new ArrayList<>(mix(sharesInterest.get(true), weights));
-    feed.addAll(mix(sharesInterest.get(false), weights));
+    List<FeedCandidate> feed =
+        new ArrayList<>(mix(sharesInterest.get(true), reader.familiarAuthors(), weights));
+    feed.addAll(mix(sharesInterest.get(false), reader.familiarAuthors(), weights));
     return feed;
   }
 
-  private static List<FeedCandidate> mix(List<FeedCandidate> ranked, Weights weights) {
-    return weights.mixAuthors() ? mixAuthors(ranked) : ranked;
+  private static List<FeedCandidate> mix(
+      List<FeedCandidate> ranked, Set<Long> familiarAuthors, Weights weights) {
+    return weights.mixAuthors() ? mixAuthors(ranked, familiarAuthors) : ranked;
   }
 
-  static List<FeedCandidate> mixAuthors(List<FeedCandidate> ranked) {
+  static List<FeedCandidate> mixAuthors(List<FeedCandidate> ranked, Set<Long> familiarAuthors) {
     LinkedList<FeedCandidate> remaining = new LinkedList<>(ranked);
     List<FeedCandidate> mixed = new ArrayList<>(ranked.size());
     while (!remaining.isEmpty()) {
@@ -154,7 +166,8 @@ public final class ForYouRanking {
         FeedCandidate pick = null;
         for (Iterator<FeedCandidate> it = remaining.iterator(); it.hasNext(); ) {
           FeedCandidate c = it.next();
-          if (inBlock.getOrDefault(c.authorId(), 0) < AUTHOR_SLOTS) {
+          if (familiarAuthors.contains(c.authorId())
+              || inBlock.getOrDefault(c.authorId(), 0) < AUTHOR_SLOTS) {
             pick = c;
             it.remove();
             break;
