@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 
 class InterestProfileTest {
@@ -46,6 +47,16 @@ class InterestProfileTest {
         .hasSize(InterestProfile.MAX_TAGS)
         .containsExactly(
             "t00", "t01", "t02", "t03", "t04", "t05", "t06", "t07", "t08", "t09", "t10", "t11");
+  }
+
+  @Test
+  void signalsAreTheNewestFortyReadsAndFortyLikesWithoutRepeats() {
+    List<Long> reads = LongStream.rangeClosed(1, 50).boxed().toList();
+    List<Long> likes = LongStream.of(3, 100, 101).boxed().toList();
+
+    List<Long> signals = InterestProfile.signalPostIds(reads, likes);
+
+    assertThat(signals).hasSize(42).startsWith(1L, 2L, 3L).endsWith(40L, 100L, 101L);
   }
 
   @Test

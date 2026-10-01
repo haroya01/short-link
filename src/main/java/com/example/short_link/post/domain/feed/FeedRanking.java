@@ -7,11 +7,14 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public final class FeedRanking {
 
   public static final int CANDIDATE_POOL_SIZE = 500;
+
+  public static final int EXCLUDED_READS = 200;
 
   public static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
@@ -38,14 +41,16 @@ public final class FeedRanking {
       Collection<FeedCandidate> pool,
       long viewerId,
       Collection<String> interestTags,
-      Collection<Long> excludedPostIds) {
+      List<Long> readsNewestFirst) {
     Set<String> interest = Set.copyOf(interestTags);
-    Set<Long> excluded = Set.copyOf(excludedPostIds);
+    Set<Long> excluded =
+        readsNewestFirst.stream().limit(EXCLUDED_READS).collect(Collectors.toSet());
     return pool.stream()
+        .sorted(NEWEST_FIRST)
+        .limit(CANDIDATE_POOL_SIZE)
         .filter(c -> c.authorId() != viewerId)
         .filter(c -> !excluded.contains(c.postId()))
         .filter(c -> c.normalizedTags().stream().anyMatch(interest::contains))
-        .sorted(NEWEST_FIRST)
         .toList();
   }
 

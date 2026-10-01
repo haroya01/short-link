@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.stream.Stream;
 
 public final class InterestProfile {
 
@@ -13,7 +14,17 @@ public final class InterestProfile {
   // An explicit tag follow outweighs an incidental read.
   public static final int FOLLOWED_WEIGHT = 3;
 
+  public static final int SIGNAL_POSTS = 40;
+
   private InterestProfile() {}
+
+  public static List<Long> signalPostIds(List<Long> readsNewestFirst, List<Long> likesNewestFirst) {
+    return Stream.concat(
+            readsNewestFirst.stream().limit(SIGNAL_POSTS),
+            likesNewestFirst.stream().limit(SIGNAL_POSTS))
+        .distinct()
+        .toList();
+  }
 
   public static List<String> topTags(
       Collection<String> followedTags,

@@ -17,7 +17,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,10 +25,6 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class ForYouQueryService {
-
-  private static final int EXCLUDE_CAP = 200;
-
-  private static final int SIGNAL_CAP = 40;
 
   private final PostRepository postRepository;
   private final PostReadRepository postReadRepository;
@@ -40,18 +35,21 @@ public class ForYouQueryService {
   public PublicFeedView feedForYou(Long userId, int page, int size) {
     TagPrefsView prefs = tagPrefQueryService.get(userId);
     List<Long> recentReadIds =
-        postReadRepository.findByUserIdOrderByReadAtDesc(userId, 0, EXCLUDE_CAP).stream()
+        postReadRepository
+            .findByUserIdOrderByReadAtDesc(userId, 0, FeedRanking.EXCLUDED_READS)
+            .stream()
             .map(PostReadEntity::getPostId)
             .toList();
     List<Long> likedIds =
         postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
             .map(PostLikeEntity::getPostId)
-            .limit(SIGNAL_CAP)
             .toList();
 
     List<String> interest =
         InterestProfile.topTags(
-            prefs.followed(), signalPostTags(recentReadIds, likedIds), prefs.hidden());
+            prefs.followed(),
+            tagsOf(InterestProfile.signalPostIds(recentReadIds, likedIds)),
+            prefs.hidden());
     if (interest.isEmpty()) {
       // No interest signal yet; use trending for the cold start.
       List<PostEntity> trending = postRepository.findPublishedTrending(null, page, size);
@@ -85,13 +83,11 @@ public class ForYouQueryService {
     return new PublicFeedView(items, page, size, hasNext);
   }
 
-  private List<List<String>> signalPostTags(List<Long> readIds, List<Long> likedIds) {
-    List<Long> signalIds =
-        Stream.concat(readIds.stream().limit(SIGNAL_CAP), likedIds.stream()).distinct().toList();
-    if (signalIds.isEmpty()) {
+  private List<List<String>> tagsOf(List<Long> postIds) {
+    if (postIds.isEmpty()) {
       return List.of();
     }
-    return postRepository.findAllByIdIn(signalIds).stream().map(PostEntity::getTags).toList();
+    return postRepository.findAllByIdIn(postIds).stream().map(PostEntity::getTags).toList();
   }
 
   private List<PostEntity> loadInOrder(List<Long> ids) {
