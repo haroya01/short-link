@@ -29,7 +29,7 @@ class FeedRankingReplayTest {
     for (WorldSpec spec : WorldSpec.ALL) {
       SyntheticWorld world = SyntheticWorld.generate(spec, SEED);
       worlds.put(spec.name(), world);
-      runs.put(spec.name(), ReplayEvaluator.evaluate(world, ReplayRankers.BASELINE));
+      runs.put(spec.name(), ReplayEvaluator.evaluate(world, ReplayRankers.PRODUCTION));
     }
     Files.createDirectories(REPORT.getParent());
     Files.writeString(REPORT, ReplayReport.markdown(SEED, worlds, runs));
@@ -71,11 +71,11 @@ class FeedRankingReplayTest {
     Instant cut = SyntheticWorld.START.plus(Duration.ofDays(80));
 
     List<ReplayEvaluator.Trace> full =
-        ReplayEvaluator.evaluate(world, ReplayRankers.BASELINE, 40).traces().stream()
+        ReplayEvaluator.evaluate(world, ReplayRankers.PRODUCTION, 40).traces().stream()
             .filter(t -> t.now().isBefore(cut))
             .toList();
     List<ReplayEvaluator.Trace> past =
-        ReplayEvaluator.evaluate(world.truncatedAt(cut), ReplayRankers.BASELINE, 40).traces();
+        ReplayEvaluator.evaluate(world.truncatedAt(cut), ReplayRankers.PRODUCTION, 40).traces();
 
     assertThat(full).hasSizeGreaterThan(100);
     assertThat(past).isEqualTo(full);

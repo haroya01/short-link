@@ -2,19 +2,23 @@ package com.example.short_link.post.domain.feed;
 
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Stream;
 
 public final class InterestProfile {
-
-  public static final int MAX_TAGS = 12;
 
   // An explicit tag follow outweighs an incidental read.
   public static final int FOLLOWED_WEIGHT = 3;
 
   public static final int SIGNAL_POSTS = 40;
+
+  public static final double LANGUAGE_SHARE = 0.25;
+
+  public static final int LANGUAGE_MIN_READS = 2;
 
   private InterestProfile() {}
 
@@ -26,7 +30,7 @@ public final class InterestProfile {
         .toList();
   }
 
-  public static List<String> topTags(
+  public static Map<String, Integer> weights(
       Collection<String> followedTags,
       Collection<? extends Collection<String>> signalPostTags,
       Collection<String> hiddenTags) {
@@ -42,14 +46,23 @@ public final class InterestProfile {
     for (String tag : hiddenTags) {
       weight.remove(normalize(tag));
     }
-    return weight.entrySet().stream()
-        .sorted(
-            Map.Entry.<String, Integer>comparingByValue()
-                .reversed()
-                .thenComparing(Map.Entry.comparingByKey()))
-        .limit(MAX_TAGS)
-        .map(Map.Entry::getKey)
-        .toList();
+    return weight;
+  }
+
+  public static Set<String> languages(String locale, Collection<String> readLanguages) {
+    Set<String> languages = new HashSet<>();
+    if (locale != null) {
+      languages.add(locale);
+    }
+    Map<String, Integer> reads = new HashMap<>();
+    readLanguages.forEach(lang -> reads.merge(lang, 1, Integer::sum));
+    reads.forEach(
+        (lang, count) -> {
+          if (count >= LANGUAGE_MIN_READS && count >= LANGUAGE_SHARE * readLanguages.size()) {
+            languages.add(lang);
+          }
+        });
+    return Set.copyOf(languages);
   }
 
   static String normalize(String tag) {

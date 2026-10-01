@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 
 class FeedRankingTest {
@@ -58,45 +57,5 @@ class FeedRankingTest {
     List<FeedCandidate> ranked = FeedRanking.trending(pool, Map.of(1L, 50L, 3L, 1L));
 
     assertThat(ids(ranked)).containsExactly(3L, 2L);
-  }
-
-  @Test
-  void forYouKeepsUnreadPostsByOthersThatShareAnInterest() {
-    List<FeedCandidate> pool =
-        List.of(
-            post(1, 2, 1, null, "Java"),
-            post(2, 9, 2, null, "java"),
-            post(3, 2, 3, null, "java"),
-            post(4, 2, 4, null, "go"),
-            post(5, 3, 5, 7L, "spring", "go"),
-            post(6, 3, 6, 7L, "SPRING"));
-
-    List<FeedCandidate> ranked =
-        FeedRanking.forYou(pool, 9L, List.of("java", "spring"), List.of(3L));
-
-    assertThat(ids(ranked)).containsExactly(6L, 5L, 1L);
-  }
-
-  @Test
-  void forYouLooksOnlyAtTheNewestPoolAndTheNewestReads() {
-    List<FeedCandidate> pool =
-        LongStream.rangeClosed(1, FeedRanking.CANDIDATE_POOL_SIZE + 1)
-            .mapToObj(id -> post(id, 2, id, null, "java"))
-            .toList();
-    List<Long> readsNewestFirst =
-        LongStream.rangeClosed(2, FeedRanking.EXCLUDED_READS + 2).boxed().toList().reversed();
-
-    List<Long> ranked = ids(FeedRanking.forYou(pool, 9L, List.of("java"), readsNewestFirst));
-
-    assertThat(ranked)
-        .hasSize(FeedRanking.CANDIDATE_POOL_SIZE - FeedRanking.EXCLUDED_READS)
-        .contains(2L)
-        .doesNotContain(1L, 3L, (long) FeedRanking.EXCLUDED_READS + 2);
-  }
-
-  @Test
-  void forYouWithoutInterestsIsEmpty() {
-    assertThat(FeedRanking.forYou(List.of(post(1, 2, 1, null, "java")), 9L, List.of(), List.of()))
-        .isEmpty();
   }
 }

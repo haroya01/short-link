@@ -37,7 +37,7 @@ final class ReplayEvaluator {
       List<FeedCandidate> poolNewestFirst,
       Map<Long, Long> recentViews,
       Map<Long, Long> recentHumanViews,
-      Map<Long, List<String>> tagsByPostId,
+      Map<Long, FeedCandidate> catalog,
       long evaluation) {}
 
   record Ranker(String name, Function<Context, List<Long>> rank) {}
@@ -59,8 +59,8 @@ final class ReplayEvaluator {
     Instant warmupEnd = warmupEnd();
     Map<Long, SyntheticWorld.Reader> readers = new HashMap<>();
     world.readers.forEach(r -> readers.put(r.id(), r));
-    Map<Long, List<String>> tagsByPostId = new HashMap<>();
-    world.posts.forEach(p -> tagsByPostId.put(p.id(), p.candidate().tags()));
+    Map<Long, FeedCandidate> catalog = new HashMap<>();
+    world.posts.forEach(p -> catalog.put(p.id(), p.candidate()));
 
     Map<String, Tally> tallies = new LinkedHashMap<>();
     rankers.forEach(r -> tallies.put(r.name(), new Tally()));
@@ -121,7 +121,7 @@ final class ReplayEvaluator {
                 poolNewestFirst,
                 Map.copyOf(recentViews),
                 Map.copyOf(recentHumanViews),
-                tagsByPostId,
+                catalog,
                 evaluation);
         Set<Long> seen = new HashSet<>(readIds);
         Map<String, List<Long>> ranked = new LinkedHashMap<>();
