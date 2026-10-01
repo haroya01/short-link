@@ -2,6 +2,7 @@ package com.example.short_link.abuse.domain;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -37,7 +38,7 @@ class LinkReferenceTest {
     assertThat(LinkReference.shortCodeOf(input)).isEmpty();
   }
 
-  @org.junit.jupiter.api.Test
+  @Test
   void nullIsNotACode() {
     assertThat(LinkReference.shortCodeOf(null)).isEmpty();
   }
