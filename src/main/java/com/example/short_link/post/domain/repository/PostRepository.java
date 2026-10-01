@@ -6,6 +6,7 @@ import com.example.short_link.post.domain.PostPerformanceSort;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.TagCount;
+import com.example.short_link.post.domain.feed.FeedCandidate;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -95,10 +96,7 @@ public interface PostRepository {
   long countPublishedByAuthorsSeriesOrTags(
       Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags);
 
-  List<PostEntity> findForYouCandidates(
-      Long userId, Collection<String> tags, Collection<Long> excludeIds, int page, int size);
-
-  long countForYouCandidates(Long userId, Collection<String> tags, Collection<Long> excludeIds);
+  List<FeedCandidate> findFeedCandidates(int limit);
 
   List<TagCount> findPopularTags(int limit);
 

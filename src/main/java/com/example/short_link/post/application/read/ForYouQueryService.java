@@ -3,6 +3,9 @@ package com.example.short_link.post.application.read;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.PostReadEntity;
+import com.example.short_link.post.domain.feed.FeedCandidate;
+import com.example.short_link.post.domain.feed.FeedRanking;
+import com.example.short_link.post.domain.feed.InterestProfile;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostReadRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -10,9 +13,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,15 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class ForYouQueryService {
 
-  private static final int EXCLUDE_CAP = 200;
-
-  private static final int SIGNAL_CAP = 40;
-
-  private static final int MAX_INTEREST_TAGS = 12;
-
-  // An explicit tag follow outweighs an incidental read.
-  private static final int FOLLOWED_WEIGHT = 3;
-
   private final PostRepository postRepository;
   private final PostReadRepository postReadRepository;
   private final PostLikeRepository postLikeRepository;
@@ -39,20 +34,22 @@ public class ForYouQueryService {
 
   public PublicFeedView feedForYou(Long userId, int page, int size) {
     TagPrefsView prefs = tagPrefQueryService.get(userId);
-    Set<String> hidden =
-        prefs.hidden().stream().map(t -> t.toLowerCase(Locale.ROOT)).collect(Collectors.toSet());
-
     List<Long> recentReadIds =
-        postReadRepository.findByUserIdOrderByReadAtDesc(userId, 0, EXCLUDE_CAP).stream()
+        postReadRepository
+            .findByUserIdOrderByReadAtDesc(userId, 0, FeedRanking.EXCLUDED_READS)
+            .stream()
             .map(PostReadEntity::getPostId)
             .toList();
     List<Long> likedIds =
         postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(userId).stream()
             .map(PostLikeEntity::getPostId)
-            .limit(SIGNAL_CAP)
             .toList();
 
-    List<String> interest = deriveInterestTags(prefs.followed(), recentReadIds, likedIds, hidden);
+    List<String> interest =
+        InterestProfile.topTags(
+            prefs.followed(),
+            tagsOf(InterestProfile.signalPostIds(recentReadIds, likedIds)),
+            prefs.hidden());
     if (interest.isEmpty()) {
       // No interest signal yet; use trending for the cold start.
       List<PostEntity> trending = postRepository.findPublishedTrending(null, page, size);
@@ -60,10 +57,16 @@ public class ForYouQueryService {
       return new PublicFeedView(feedItemAssembler.assemble(trending), page, size, hasNext);
     }
 
-    List<PostEntity> posts =
-        postRepository.findForYouCandidates(userId, interest, recentReadIds, page, size);
-    long total = postRepository.countForYouCandidates(userId, interest, recentReadIds);
-    boolean hasNext = (long) (page + 1) * size < total;
+    List<FeedCandidate> ranked =
+        FeedRanking.forYou(
+            postRepository.findFeedCandidates(FeedRanking.CANDIDATE_POOL_SIZE),
+            userId,
+            interest,
+            recentReadIds);
+    List<Long> pageIds =
+        ranked.stream().skip((long) page * size).limit(size).map(FeedCandidate::postId).toList();
+    boolean hasNext = ranked.size() > (long) (page + 1) * size;
+    List<PostEntity> posts = loadInOrder(pageIds);
 
     Set<String> interestSet = Set.copyOf(interest);
     Map<Long, FollowReason> reasonById = new HashMap<>();
@@ -80,26 +83,20 @@ public class ForYouQueryService {
     return new PublicFeedView(items, page, size, hasNext);
   }
 
-  private List<String> deriveInterestTags(
-      List<String> followed, List<Long> readIds, List<Long> likedIds, Set<String> hidden) {
-    Map<String, Integer> freq = new HashMap<>();
-    for (String t : followed) {
-      freq.merge(t.toLowerCase(Locale.ROOT), FOLLOWED_WEIGHT, Integer::sum);
+  private List<List<String>> tagsOf(List<Long> postIds) {
+    if (postIds.isEmpty()) {
+      return List.of();
     }
-    List<Long> signalIds =
-        Stream.concat(readIds.stream().limit(SIGNAL_CAP), likedIds.stream()).distinct().toList();
-    if (!signalIds.isEmpty()) {
-      for (PostEntity p : postRepository.findAllByIdIn(signalIds)) {
-        for (String t : p.getTags()) {
-          freq.merge(t.toLowerCase(Locale.ROOT), 1, Integer::sum);
-        }
-      }
+    return postRepository.findAllByIdIn(postIds).stream().map(PostEntity::getTags).toList();
+  }
+
+  private List<PostEntity> loadInOrder(List<Long> ids) {
+    if (ids.isEmpty()) {
+      return List.of();
     }
-    hidden.forEach(freq::remove);
-    return freq.entrySet().stream()
-        .sorted((a, b) -> b.getValue() - a.getValue())
-        .limit(MAX_INTEREST_TAGS)
-        .map(Map.Entry::getKey)
-        .toList();
+    Map<Long, PostEntity> byId =
+        postRepository.findAllByIdIn(ids).stream()
+            .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
+    return ids.stream().map(byId::get).filter(Objects::nonNull).toList();
   }
 }
