@@ -331,7 +331,7 @@ class AdminOperationsHttpQueryContractTest extends OperationalHttpJourneySupport
     step(
         "ops-denies-member-link-enable",
         "POST",
-        "/api/v1/admin/links/" + linkId + "/enable",
+        "/api/v1/admin/links/takedown1/enable",
         owner,
         null,
         403);
@@ -339,7 +339,7 @@ class AdminOperationsHttpQueryContractTest extends OperationalHttpJourneySupport
             step(
                     "ops-enable-link",
                     "POST",
-                    "/api/v1/admin/links/" + linkId + "/enable",
+                    "/api/v1/admin/links/takedown1/enable",
                     admin,
                     null,
                     200)
@@ -347,8 +347,7 @@ class AdminOperationsHttpQueryContractTest extends OperationalHttpJourneySupport
                 .asBoolean())
         .isTrue();
     assertThat(count("link_moderation", "link_id = ?", linkId)).isZero();
-    step(
-        "ops-disable-link", "POST", "/api/v1/admin/links/" + linkId + "/disable", admin, null, 200);
+    step("ops-disable-link", "POST", "/api/v1/admin/links/takedown1/disable", admin, null, 200);
     assertThat(
             jdbc.queryForObject(
                 "SELECT reason FROM link_moderation WHERE link_id = ?", String.class, linkId))

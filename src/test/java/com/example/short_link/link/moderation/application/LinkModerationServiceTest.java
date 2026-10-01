@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -25,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class LinkModerationServiceTest {
@@ -44,6 +46,7 @@ class LinkModerationServiceTest {
         new LinkModerationService(
             links, moderations, linkCacheEviction, Clock.fixed(NOW, ZoneOffset.UTC));
     link = new LinkEntity("https://phish.example", "abc123", 7L, null);
+    ReflectionTestUtils.setField(link, "id", 5L);
   }
 
   @Test
@@ -77,13 +80,27 @@ class LinkModerationServiceTest {
   }
 
   @Test
+  void anAdminSwitchesALinkOffByItsShortCode() {
+    when(links.findByShortCode(ShortCode.of("abc123"))).thenReturn(Optional.of(link));
+    when(moderations.findByLinkId(5L)).thenReturn(Optional.empty());
+
+    assertThat(service.disable(ShortCode.of("abc123"), LinkDisableReason.ADMIN, 1L)).isTrue();
+
+    ArgumentCaptor<LinkModerationEntity> saved =
+        ArgumentCaptor.forClass(LinkModerationEntity.class);
+    verify(moderations).insert(saved.capture());
+    assertThat(saved.getValue().getLinkId()).isEqualTo(5L);
+    assertThat(saved.getValue().getReason()).isEqualTo(LinkDisableReason.ADMIN);
+  }
+
+  @Test
   void enablingRemovesTheModerationAndDropsTheCachedPage() {
     LinkModerationEntity moderation =
         new LinkModerationEntity(5L, LinkDisableReason.ADMIN, 1L, NOW);
-    when(links.findById(5L)).thenReturn(Optional.of(link));
+    when(links.findByShortCode(ShortCode.of("abc123"))).thenReturn(Optional.of(link));
     when(moderations.findByLinkId(5L)).thenReturn(Optional.of(moderation));
 
-    assertThat(service.enable(5L)).isTrue();
+    assertThat(service.enable(ShortCode.of("abc123"))).isTrue();
 
     verify(moderations).delete(moderation);
     verify(linkCacheEviction).evictAfterCommit(link.getShortCode());
@@ -91,10 +108,10 @@ class LinkModerationServiceTest {
 
   @Test
   void enablingALiveLinkChangesNothing() {
-    when(links.findById(5L)).thenReturn(Optional.of(link));
+    when(links.findByShortCode(ShortCode.of("abc123"))).thenReturn(Optional.of(link));
     when(moderations.findByLinkId(5L)).thenReturn(Optional.empty());
 
-    assertThat(service.enable(5L)).isFalse();
+    assertThat(service.enable(ShortCode.of("abc123"))).isFalse();
 
     verify(moderations, never()).delete(any());
   }
@@ -104,6 +121,18 @@ class LinkModerationServiceTest {
     when(links.findById(9L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(() -> service.disable(9L, LinkDisableReason.ADMIN, 1L))
+        .isInstanceOf(LinkException.class)
+        .satisfies(
+            e ->
+                assertThat(((LinkException) e).errorCode())
+                    .isEqualTo(LinkErrorCode.LINK_NOT_FOUND));
+  }
+
+  @Test
+  void anUnknownShortCodeIsNotFound() {
+    when(links.findByShortCode(ShortCode.of("gone99"))).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> service.enable(ShortCode.of("gone99")))
         .isInstanceOf(LinkException.class)
         .satisfies(
             e ->

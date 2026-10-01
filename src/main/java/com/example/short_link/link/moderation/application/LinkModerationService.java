@@ -2,6 +2,7 @@ package com.example.short_link.link.moderation.application;
 
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
@@ -24,20 +25,24 @@ public class LinkModerationService {
 
   @Transactional
   public boolean disable(Long linkId, LinkDisableReason reason, Long adminUserId) {
-    LinkEntity link = load(linkId);
-    if (moderations.findByLinkId(linkId).isPresent()) {
-      return false;
-    }
-    moderations.insert(new LinkModerationEntity(linkId, reason, adminUserId, clock.instant()));
-    linkCacheEviction.evictAfterCommit(link.getShortCode());
-    return true;
+    return switchOff(
+        links
+            .findById(linkId)
+            .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, linkId)),
+        reason,
+        adminUserId);
   }
 
   @Transactional
-  public boolean enable(Long linkId) {
-    LinkEntity link = load(linkId);
+  public boolean disable(ShortCode shortCode, LinkDisableReason reason, Long adminUserId) {
+    return switchOff(load(shortCode), reason, adminUserId);
+  }
+
+  @Transactional
+  public boolean enable(ShortCode shortCode) {
+    LinkEntity link = load(shortCode);
     return moderations
-        .findByLinkId(linkId)
+        .findByLinkId(link.getId())
         .map(
             moderation -> {
               moderations.delete(moderation);
@@ -47,9 +52,19 @@ public class LinkModerationService {
         .orElse(false);
   }
 
-  private LinkEntity load(Long linkId) {
+  private boolean switchOff(LinkEntity link, LinkDisableReason reason, Long adminUserId) {
+    if (moderations.findByLinkId(link.getId()).isPresent()) {
+      return false;
+    }
+    moderations.insert(
+        new LinkModerationEntity(link.getId(), reason, adminUserId, clock.instant()));
+    linkCacheEviction.evictAfterCommit(link.getShortCode());
+    return true;
+  }
+
+  private LinkEntity load(ShortCode shortCode) {
     return links
-        .findById(linkId)
-        .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, linkId));
+        .findByShortCode(shortCode)
+        .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode.value()));
   }
 }

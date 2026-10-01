@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -74,7 +75,7 @@ class LinkSafetyRescannerTest {
         .thenReturn(List.of(badVariant, disabledVariant));
     when(lookup.unsafeAmong(anyList()))
         .thenReturn(Set.of("https://turned-bad.example/", "https://bad-variant.example/"));
-    when(moderation.disable(any(), any(), any())).thenReturn(true);
+    when(moderation.disable(anyLong(), any(), any())).thenReturn(true);
 
     LinkSafetyRescanner.Result result = rescanner.rescan(0L, 10, NOW);
 
@@ -119,6 +120,6 @@ class LinkSafetyRescannerTest {
 
     assertThatThrownBy(() -> rescanner.rescan(0L, 10, NOW))
         .isInstanceOf(UrlThreatLookupException.class);
-    verify(moderation, never()).disable(any(), any(), any());
+    verify(moderation, never()).disable(anyLong(), any(), any());
   }
 }
