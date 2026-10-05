@@ -7,12 +7,16 @@ import com.example.short_link.post.domain.PostPerformanceSort;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.TagCount;
+import com.example.short_link.post.domain.feed.FeedCandidate;
+import com.example.short_link.post.domain.feed.FeedRanking;
 import com.example.short_link.post.domain.repository.PostRepository;
-import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import lombok.RequiredArgsConstructor;
@@ -23,8 +27,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 class PostRepositoryAdapter implements PostRepository {
-
-  private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaPostRepository jpa;
 
@@ -167,7 +169,7 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> findPublishedTrending(String lang, int page, int size) {
-    Instant since = Instant.now().minus(TRENDING_WINDOW);
+    Instant since = Instant.now().minus(FeedRanking.TRENDING_WINDOW);
     return jpa.findPublishedTrendingSince(
         since, normLang(lang), DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(page, size));
   }
@@ -223,7 +225,7 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> searchPublishedTrending(String query, String lang, int page, int size) {
-    Instant since = Instant.now().minus(TRENDING_WINDOW);
+    Instant since = Instant.now().minus(FeedRanking.TRENDING_WINDOW);
     return jpa.searchPublishedTrendingSince(
         booleanMatch(query),
         likePattern(query),
@@ -350,26 +352,28 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findForYouCandidates(
-      Long userId, Collection<String> tags, Collection<Long> excludeIds, int page, int size) {
-    return jpa.findForYouCandidates(
-        userId,
-        tagsForIn(tags),
-        idsForIn(excludeIds),
-        PostStatus.PUBLISHED,
-        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-        PageRequest.of(page, size));
-  }
-
-  @Override
-  public long countForYouCandidates(
-      Long userId, Collection<String> tags, Collection<Long> excludeIds) {
-    return jpa.countForYouCandidates(
-        userId,
-        tagsForIn(tags),
-        idsForIn(excludeIds),
-        PostStatus.PUBLISHED,
-        DiscoveryQuality.MIN_BODY_TEXT_LENGTH);
+  public List<FeedCandidate> findFeedCandidates(int limit) {
+    List<Object[]> rows =
+        jpa.findFeedCandidateRows(
+            PostStatus.PUBLISHED, DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(0, limit));
+    if (rows.isEmpty()) {
+      return List.of();
+    }
+    Map<Long, List<String>> tagsById = new HashMap<>();
+    for (Object[] row : jpa.findTagRowsByPostIdIn(rows.stream().map(r -> (Long) r[0]).toList())) {
+      tagsById.computeIfAbsent((Long) row[0], id -> new ArrayList<>()).add((String) row[1]);
+    }
+    return rows.stream()
+        .map(
+            row ->
+                new FeedCandidate(
+                    (Long) row[0],
+                    (Long) row[1],
+                    tagsById.getOrDefault((Long) row[0], List.of()),
+                    (String) row[2],
+                    (Instant) row[3],
+                    (Long) row[4]))
+        .toList();
   }
 
   @Override
