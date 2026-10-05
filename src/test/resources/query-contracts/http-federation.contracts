@@ -19,3 +19,6 @@
 @junit | federation-account-delete | 2 | 1 | 1 | 0 | 4
 @junit | federation-webfinger-after-delete | 1 | 0 | 0 | 0 | 1
 @junit | federation-actor-after-delete | 2 | 0 | 0 | 0 | 2
+# The instance actor (signs fetches): first request creates its key, later ones only read it.
+@junit | federation-instance-first | 2 | 1 | 0 | 0 | 3
+@junit | federation-instance-known | 1 | 0 | 0 | 0 | 1
