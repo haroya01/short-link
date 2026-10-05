@@ -41,7 +41,8 @@ public class BlogInteractionNotificationListener {
     if (event.postId() == null) {
       return null;
     }
-    return new NotificationPostRef(event.postId(), event.postSlug(), event.postTitle(), null);
+    return new NotificationPostRef(
+        event.postId(), event.postSlug(), event.postTitle(), null, event.commentId(), null);
   }
 
   private static NotificationType mapType(BlogInteractionType type) {

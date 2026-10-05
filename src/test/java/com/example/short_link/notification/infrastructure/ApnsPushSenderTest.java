@@ -224,7 +224,7 @@ class ApnsPushSenderTest {
                     "LIKE",
                     null,
                     PushApp.BLOG,
-                    new PushRoute("yuki", null, "my-post", null, null)));
+                    new PushRoute("yuki", null, "my-post", null, null, null, null)));
 
     JsonNode root = jsonMapper.readTree(payload);
     assertThat(root.get("type").asString()).isEqualTo("LIKE");
@@ -233,7 +233,43 @@ class ApnsPushSenderTest {
     assertThat(root.has("ownerUsername")).isFalse();
     assertThat(root.has("seriesSlug")).isFalse();
     assertThat(root.has("collectionId")).isFalse();
+    assertThat(root.has("commentId")).isFalse();
+    assertThat(root.has("highlightId")).isFalse();
     assertThat(root.get("aps").has("category")).isFalse();
+  }
+
+  @Test
+  void payloadCarriesCommentAndHighlightIdsAsNumbers() {
+    String comment =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "글 제목",
+                    "yuki님이 댓글을 남겼습니다",
+                    "COMMENT",
+                    null,
+                    PushApp.BLOG,
+                    new PushRoute("yuki", "me", "my-post", null, null, 77L, null)));
+    String highlight =
+        sender()
+            .payloadJson(
+                new PushSender.PushMessage(
+                    "kurl",
+                    "글 제목",
+                    "yuki님이 답글을 남겼습니다",
+                    "REPLY",
+                    null,
+                    PushApp.BLOG,
+                    new PushRoute("yuki", "me", "my-post", null, null, null, 41L)));
+
+    JsonNode commentRoot = jsonMapper.readTree(comment);
+    assertThat(commentRoot.get("commentId").isNumber()).isTrue();
+    assertThat(commentRoot.get("commentId").asLong()).isEqualTo(77L);
+    assertThat(commentRoot.has("highlightId")).isFalse();
+    JsonNode highlightRoot = jsonMapper.readTree(highlight);
+    assertThat(highlightRoot.get("highlightId").asLong()).isEqualTo(41L);
+    assertThat(highlightRoot.has("commentId")).isFalse();
   }
 
   @Test
@@ -248,7 +284,7 @@ class ApnsPushSenderTest {
                     "CONNECTED",
                     null,
                     PushApp.BLOG,
-                    new PushRoute("yuki", null, null, null, 42L)));
+                    new PushRoute("yuki", null, null, null, 42L, null, null)));
 
     assertThat(jsonMapper.readTree(payload).get("collectionId").asLong()).isEqualTo(42L);
   }

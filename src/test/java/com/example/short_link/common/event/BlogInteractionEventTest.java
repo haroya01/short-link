@@ -24,7 +24,7 @@ class BlogInteractionEventTest {
   void factoriesSetTheRightType() {
     assertThat(BlogInteractionEvent.like(1L, 2L, 3L, "s", "t", AT).type())
         .isEqualTo(BlogInteractionType.LIKE);
-    assertThat(BlogInteractionEvent.comment(1L, 2L, 3L, "s", "t", AT).type())
+    assertThat(BlogInteractionEvent.comment(1L, 2L, 3L, "s", "t", 4L, AT).type())
         .isEqualTo(BlogInteractionType.COMMENT);
     assertThat(BlogInteractionEvent.follow(1L, 2L, AT).type())
         .isEqualTo(BlogInteractionType.FOLLOW);

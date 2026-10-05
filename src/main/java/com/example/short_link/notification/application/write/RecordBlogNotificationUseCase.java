@@ -127,12 +127,14 @@ public class RecordBlogNotificationUseCase {
                   : type == NotificationType.NEW_POST ? actorUsername : recipientUsername,
               post.slug(),
               null,
-              null);
+              null,
+              post.commentId(),
+              post.highlightId());
       case NotificationSeriesRef series ->
-          new PushRoute(actorUsername, recipientUsername, null, series.slug(), null);
+          new PushRoute(actorUsername, recipientUsername, null, series.slug(), null, null, null);
       case NotificationCollectionRef collection ->
-          new PushRoute(actorUsername, null, null, null, collection.collectionId());
-      case null -> new PushRoute(actorUsername, null, null, null, null);
+          new PushRoute(actorUsername, null, null, null, collection.collectionId(), null, null);
+      case null -> new PushRoute(actorUsername, null, null, null, null, null, null);
     };
   }
 }

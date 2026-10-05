@@ -5,4 +5,6 @@ public record PushRoute(
     String ownerUsername,
     String postSlug,
     String seriesSlug,
-    Long collectionId) {}
+    Long collectionId,
+    Long commentId,
+    Long highlightId) {}

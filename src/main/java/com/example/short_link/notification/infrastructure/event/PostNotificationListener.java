@@ -31,7 +31,12 @@ public class PostNotificationListener {
     }
     NotificationPostRef post =
         new NotificationPostRef(
-            event.postId(), event.postSlug(), event.postTitle(), event.postAuthorUsername());
+            event.postId(),
+            event.postSlug(),
+            event.postTitle(),
+            event.postAuthorUsername(),
+            event.commentId(),
+            null);
     recordUseCase.record(
         event.recipientUserId(), NotificationType.REPLY, event.actorUserId(), post);
   }
@@ -44,7 +49,12 @@ public class PostNotificationListener {
     }
     NotificationPostRef post =
         new NotificationPostRef(
-            event.postId(), event.postSlug(), event.postTitle(), event.postAuthorUsername());
+            event.postId(),
+            event.postSlug(),
+            event.postTitle(),
+            event.postAuthorUsername(),
+            event.commentId(),
+            null);
     recordUseCase.record(
         event.recipientUserId(), NotificationType.MENTION, event.actorUserId(), post);
   }
@@ -57,7 +67,12 @@ public class PostNotificationListener {
     }
     NotificationPostRef post =
         new NotificationPostRef(
-            event.postId(), event.postSlug(), event.postTitle(), event.postAuthorUsername());
+            event.postId(),
+            event.postSlug(),
+            event.postTitle(),
+            event.postAuthorUsername(),
+            null,
+            event.highlightId());
     recordUseCase.record(
         event.recipientUserId(), NotificationType.REPLY, event.actorUserId(), post);
   }
@@ -70,7 +85,12 @@ public class PostNotificationListener {
     }
     NotificationPostRef post =
         new NotificationPostRef(
-            event.postId(), event.postSlug(), event.postTitle(), event.postAuthorUsername());
+            event.postId(),
+            event.postSlug(),
+            event.postTitle(),
+            event.postAuthorUsername(),
+            null,
+            event.highlightId());
     recordUseCase.record(
         event.recipientUserId(), NotificationType.MENTION, event.actorUserId(), post);
   }

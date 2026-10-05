@@ -167,7 +167,7 @@ class RecordBlogNotificationUseCaseTest {
             9L,
             NotificationType.MENTION,
             2L,
-            new NotificationPostRef(11L, "their-post", "Yo", "mika"));
+            new NotificationPostRef(11L, "their-post", "Yo", "mika", 77L, null));
     useCase()
         .record(
             9L,
@@ -194,11 +194,34 @@ class RecordBlogNotificationUseCaseTest {
     assertThat(pushed.getAllValues())
         .extracting(PushSender.PushMessage::route)
         .containsExactly(
-            new PushRoute("yuki", "me", "my-post", null, null),
-            new PushRoute("yuki", "mika", "their-post", null, null),
-            new PushRoute("yuki", "me", null, "tokyo-walks", null),
-            new PushRoute("yuki", null, null, null, 42L),
-            new PushRoute("yuki", null, null, null, null));
+            new PushRoute("yuki", "me", "my-post", null, null, null, null),
+            new PushRoute("yuki", "mika", "their-post", null, null, 77L, null),
+            new PushRoute("yuki", "me", null, "tokyo-walks", null, null, null),
+            new PushRoute("yuki", null, null, null, 42L, null, null),
+            new PushRoute("yuki", null, null, null, null, null, null));
+  }
+
+  @Test
+  void highlightReplyPushPointsAtTheHighlight() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L))
+        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.REPLY,
+            2L,
+            new NotificationPostRef(11L, "their-post", "Yo", "mika", null, 41L));
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().route())
+        .isEqualTo(new PushRoute("yuki", "mika", "their-post", null, null, null, 41L));
   }
 
   @Test
@@ -220,7 +243,7 @@ class RecordBlogNotificationUseCaseTest {
     org.mockito.Mockito.verify(pushSender)
         .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 8L)), pushed.capture());
     assertThat(pushed.getValue().route())
-        .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null));
+        .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null, null, null));
   }
 
   @Test
