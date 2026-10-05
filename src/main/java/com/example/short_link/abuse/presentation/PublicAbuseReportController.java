@@ -4,6 +4,7 @@ import com.example.short_link.abuse.application.write.SubmitAbuseReportCommand;
 import com.example.short_link.abuse.application.write.SubmitAbuseReportUseCase;
 import com.example.short_link.abuse.domain.AbuseSubjectType;
 import com.example.short_link.abuse.presentation.request.SubmitAbuseReportRequest;
+import com.example.short_link.abuse.presentation.request.SubmitLinkAbuseReportRequest;
 import jakarta.validation.Valid;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
@@ -33,5 +34,14 @@ public class PublicAbuseReportController {
             request.subjectId(),
             request.resolvedReasonCode(),
             request.resolvedDetail()));
+  }
+
+  @PostMapping("/links")
+  @ResponseStatus(HttpStatus.ACCEPTED)
+  public void submitLink(
+      @AuthenticationPrincipal Long userId,
+      @Valid @RequestBody SubmitLinkAbuseReportRequest request) {
+    submitAbuseReport.executeForLink(
+        userId, request.link(), request.resolvedReasonCode(), request.detail());
   }
 }

@@ -121,6 +121,23 @@ class RateLimitFilterTest {
         .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
   }
 
+  @Test
+  void blocksLinkReportsAfterTenFromOneAddress() throws Exception {
+    redis
+        .opsForValue()
+        .set(
+            "rate:ep:POST:/api/v1/public/abuse-reports/links:ip:127.0.0.1",
+            "10",
+            Duration.ofMinutes(1));
+
+    mvc.perform(
+            post("/api/v1/public/abuse-reports/links")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"link\":\"kurl.me/abc123\",\"reasonCode\":\"PHISHING\"}"))
+        .andExpect(status().isTooManyRequests())
+        .andExpect(jsonPath("$.code").value("RATE_LIMITED"));
+  }
+
   // Sanity: per-endpoint bucket below limit does not block (the endpoint will reject for its own
   // reasons — empty body, bad token — but not with 429).
   @Test

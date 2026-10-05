@@ -2,10 +2,12 @@ package com.example.short_link.abuse.infrastructure.persistence;
 
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.CommentSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.LinkSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.PostSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.UserSubjectSnapshot;
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.Repository;
 import org.springframework.data.repository.query.Param;
@@ -38,6 +40,23 @@ public interface JpaAbuseSubjectQueries extends Repository<AbuseReportEntity, Lo
               + "FROM users u WHERE u.id IN (:userIds)",
       nativeQuery = true)
   List<UserSubjectSnapshot> findUserSubjectSnapshots(@Param("userIds") Collection<Long> userIds);
+
+  @Query(
+      value =
+          "SELECT l.id AS subjectId, l.short_code AS shortCode, l.original_url AS originalUrl, "
+              + "u.username AS ownerHandle, "
+              + "CASE WHEN m.link_id IS NULL THEN 0 ELSE 1 END AS disabled "
+              + "FROM link l LEFT JOIN users u ON u.id = l.user_id "
+              + "LEFT JOIN link_moderation m ON m.link_id = l.id "
+              + "WHERE l.id IN (:linkIds)",
+      nativeQuery = true)
+  List<LinkSubjectSnapshot> findLinkSubjectSnapshots(@Param("linkIds") Collection<Long> linkIds);
+
+  @Query(value = "SELECT id FROM link WHERE short_code = :shortCode", nativeQuery = true)
+  Optional<Long> findLinkIdByShortCode(@Param("shortCode") String shortCode);
+
+  @Query(value = "SELECT COUNT(*) FROM link WHERE id = :id", nativeQuery = true)
+  long countLinkById(@Param("id") Long id);
 
   @Query(value = "SELECT COUNT(*) FROM posts WHERE id = :id", nativeQuery = true)
   long countPostById(@Param("id") Long id);

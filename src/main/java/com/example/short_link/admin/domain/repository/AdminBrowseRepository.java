@@ -2,6 +2,7 @@ package com.example.short_link.admin.domain.repository;
 
 import com.example.short_link.admin.domain.repository.AdminMetricsRepository.StatPage;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.moderation.domain.LinkDisableReason;
 import com.example.short_link.user.domain.UserEntity;
 import java.time.Instant;
 import java.util.Optional;
@@ -57,5 +58,9 @@ public interface AdminBrowseRepository {
     Integer getViewCount();
 
     Integer getPasswordProtected();
+
+    LinkDisableReason getDisabledReason();
+
+    Instant getDisabledAt();
   }
 }

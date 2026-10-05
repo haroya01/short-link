@@ -109,6 +109,15 @@ class LinkHtmlRendererTest {
   }
 
   @Test
+  void disabledLink_isGone_andPointsToTheReportPage() {
+    ResponseEntity<byte[]> r = renderer.visitorErrorPage(KO, LinkErrorCode.LINK_DISABLED);
+    assertThat(r.getStatusCode()).isEqualTo(HttpStatus.GONE);
+    assertThat(new String(r.getBody(), StandardCharsets.UTF_8))
+        .contains("꺼진 링크")
+        .contains("kurl.me/ko/report");
+  }
+
+  @Test
   void notFoundPage_is404() {
     assertThat(renderer.notFoundPageResponse(KO).getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
   }
