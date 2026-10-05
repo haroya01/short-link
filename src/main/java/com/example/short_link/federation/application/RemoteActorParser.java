@@ -114,7 +114,7 @@ public final class RemoteActorParser {
     return value.isEmpty() ? null : value;
   }
 
-  static String host(String url) {
+  public static String host(String url) {
     try {
       return host(URI.create(url));
     } catch (IllegalArgumentException e) {

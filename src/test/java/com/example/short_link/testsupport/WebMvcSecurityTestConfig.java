@@ -85,7 +85,9 @@ public class WebMvcSecurityTestConfig {
               && (uri.equals("/.well-known/webfinger")
                   || uri.equals("/.well-known/host-meta")
                   || uri.equals("/.well-known/nodeinfo")
-                  || uri.startsWith("/ap/")));
+                  || uri.startsWith("/ap/")))
+          || ("POST".equals(method)
+              && (uri.equals("/ap/inbox") || uri.matches("/ap/actors/[^/]+/inbox")));
     }
   }
 }

@@ -1,6 +1,8 @@
 package com.example.short_link.federation.application;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.web.util.UriUtils;
@@ -13,6 +15,8 @@ public class FederationUrls {
 
   public static final String ACTOR_PATH = "/ap/actors/";
 
+  private static final Pattern PUBLIC_ID = Pattern.compile("[a-z0-9]{1,32}");
+
   private final FederationProperties props;
 
   public String domain() {
@@ -21,6 +25,15 @@ public class FederationUrls {
 
   public String actor(String publicId) {
     return props.baseUrl() + ACTOR_PATH + publicId;
+  }
+
+  public Optional<String> publicIdOf(String actorUri) {
+    String prefix = props.baseUrl() + ACTOR_PATH;
+    if (actorUri == null || !actorUri.startsWith(prefix)) {
+      return Optional.empty();
+    }
+    String publicId = actorUri.substring(prefix.length());
+    return PUBLIC_ID.matcher(publicId).matches() ? Optional.of(publicId) : Optional.empty();
   }
 
   public String key(String publicId) {
