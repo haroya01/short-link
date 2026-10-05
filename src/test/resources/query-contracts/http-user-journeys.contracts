@@ -428,7 +428,7 @@
 @junit | reader-bookmark-list | 3 | 0 | 0 | 0 | 3
 @junit | reader-bookmark-post | 1 | 1 | 0 | 0 | 2
 @junit | reader-bookmark-status | 1 | 0 | 0 | 0 | 1
-@junit | reader-collection-after-source-post-deletion | 6 | 0 | 0 | 0 | 6
+@junit | reader-collection-after-source-post-deletion | 5 | 0 | 0 | 0 | 5
 @junit | reader-comment-create | 8 | 2 | 0 | 0 | 10
 @junit | reader-comment-delete-with-replies | 2 | 0 | 0 | 2 | 4
 @junit | reader-deleted-note-absent | 1 | 0 | 0 | 0 | 1
