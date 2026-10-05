@@ -176,6 +176,9 @@ short-link:
     batch-size: ${DESTINATION_HEALTH_BATCH_SIZE:60}
     recheck-hours: ${DESTINATION_HEALTH_RECHECK_HOURS:20}
     confirm-after: ${DESTINATION_HEALTH_CONFIRM_AFTER:2}
+  federation:
+    base-url: ${FEDERATION_BASE_URL:${SHORT_LINK_BASE_URL:http://localhost:8080}}
+    profile-base-url: ${SHORT_LINK_BLOG_BASE_URL:https://blog.kurl.me}
   # Derived from the frontend base by default — public profile pages live on the SPA host
   # (app.kurl.me), not the redirect host (kurl.me).
   public-profile-base-url: ${PUBLIC_PROFILE_BASE_URL:${SHORT_LINK_FRONTEND_BASE_URL:http://localhost:3001}/u/}

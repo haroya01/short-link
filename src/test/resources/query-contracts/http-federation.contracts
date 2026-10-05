@@ -1,0 +1,21 @@
+# ActivityPub discovery, measured against Docker MySQL 2026-10-06.
+# Never automatically update on test failure.
+# identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
+#
+# First WebFinger creates the actor: active user, actor lookup, the assigned-id merge check, insert.
+@junit | federation-webfinger-first | 3 | 1 | 0 | 0 | 4
+@junit | federation-webfinger-known | 2 | 0 | 0 | 0 | 2
+@junit | federation-webfinger-before-delete | 3 | 1 | 0 | 0 | 4
+# Actor documents and collections: actor by public id, then the live user.
+@junit | federation-actor | 2 | 0 | 0 | 0 | 2
+@junit | federation-actor-html | 2 | 0 | 0 | 0 | 2
+@junit | federation-actor-followers | 2 | 0 | 0 | 0 | 2
+@junit | federation-actor-following | 2 | 0 | 0 | 0 | 2
+@junit | federation-actor-outbox | 2 | 0 | 0 | 0 | 2
+@junit | federation-host-meta | 0 | 0 | 0 | 0 | 0
+@junit | federation-nodeinfo-discovery | 0 | 0 | 0 | 0 | 0
+@junit | federation-nodeinfo | 0 | 0 | 0 | 0 | 0
+# A soft-deleted account stops resolving without touching the actor row.
+@junit | federation-account-delete | 2 | 1 | 1 | 0 | 4
+@junit | federation-webfinger-after-delete | 1 | 0 | 0 | 0 | 1
+@junit | federation-actor-after-delete | 2 | 0 | 0 | 0 | 2
