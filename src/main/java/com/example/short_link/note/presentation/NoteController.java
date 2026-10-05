@@ -36,8 +36,10 @@ public class NoteController {
 
   @GetMapping("/api/v1/public/notes")
   public NoteFeedView everyone(
-      @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-    return query.everyone(page, size);
+      @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.everyone(page, size, viewerId);
   }
 
   @GetMapping("/api/v1/public/notes/{id}")

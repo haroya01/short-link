@@ -26,13 +26,15 @@ public class NoteQueryService {
   private final NotePeopleReader people;
   private final NoteViews views;
 
-  // The original public feed: anonymous, so like counts are hidden as 0 for clients that require
-  // the field.
+  // Everyone's notes, the original public feed. Older clients require likeCount, so a hidden count
+  // is sent as 0; a signed-in reader also gets their own likes and their own notes' counts.
   @Transactional(readOnly = true)
-  public NoteFeedView everyone(int page, int size) {
-    NoteFeedView feed = page(page, size, null, notes::topLevel);
+  public NoteFeedView everyone(int page, int size, Long viewerId) {
+    NoteFeedView feed = page(page, size, viewerId, notes::topLevel);
     return new NoteFeedView(
-        feed.items().stream().map(view -> view.withLikeCount(0L)).toList(),
+        feed.items().stream()
+            .map(view -> view.likeCount() == null ? view.withLikeCount(0L) : view)
+            .toList(),
         feed.page(),
         feed.hasNext());
   }

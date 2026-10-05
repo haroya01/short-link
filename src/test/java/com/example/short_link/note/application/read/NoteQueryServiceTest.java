@@ -48,14 +48,14 @@ class NoteQueryServiceTest {
   void pagesFetchOneExtraRowToKnowIfMoreFollow() {
     List<NoteEntity> three = LongStream.of(3, 2, 1).mapToObj(id -> note(id, null)).toList();
     when(notes.topLevel(2, 3)).thenReturn(three);
-    when(views.of(three.subList(0, 2), null))
-        .thenReturn(List.of(view(3L, null, null), view(2L, null, null)));
+    when(views.of(three.subList(0, 2), 7L))
+        .thenReturn(List.of(view(3L, null, 4L), view(2L, null, null)));
 
-    NoteFeedView feed = service.everyone(1, 2);
+    NoteFeedView feed = service.everyone(1, 2, 7L);
 
     assertThat(feed.hasNext()).isTrue();
     assertThat(feed.page()).isEqualTo(1);
-    assertThat(feed.items()).extracting(NoteView::likeCount).containsExactly(0L, 0L);
+    assertThat(feed.items()).extracting(NoteView::likeCount).containsExactly(4L, 0L);
   }
 
   @Test
@@ -63,7 +63,7 @@ class NoteQueryServiceTest {
     when(notes.topLevel(0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
     when(views.of(List.of(), null)).thenReturn(List.of());
 
-    NoteFeedView feed = service.everyone(-3, 10_000);
+    NoteFeedView feed = service.everyone(-3, 10_000, null);
 
     assertThat(feed.page()).isZero();
     assertThat(feed.hasNext()).isFalse();
