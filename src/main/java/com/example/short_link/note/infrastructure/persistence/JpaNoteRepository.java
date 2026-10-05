@@ -11,6 +11,8 @@ public interface JpaNoteRepository extends JpaRepository<NoteEntity, Long> {
 
   List<NoteEntity> findAllByIdIn(Collection<Long> ids);
 
+  long countByUserId(Long userId);
+
   @Query(
       "select n.inReplyToId, count(n) from NoteEntity n where n.inReplyToId in :ids"
           + " group by n.inReplyToId")

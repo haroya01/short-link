@@ -86,4 +86,9 @@ class NoteRepositoryAdapter implements NoteRepository {
     }
     return counts;
   }
+
+  @Override
+  public long countByAuthor(Long userId) {
+    return jpa.countByUserId(userId);
+  }
 }

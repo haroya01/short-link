@@ -59,7 +59,7 @@
 @junit | link-utc-day-fixture-create | 5 | 6 | 2 | 0 | 13
 
 # A real like creates a notification; account deletion preserves it but removes actor display data.
-@junit | notification-actor-account-delete | 2 | 1 | 1 | 0 | 4
+@junit | notification-actor-account-delete | 3 | 1 | 1 | 0 | 5
 @junit | notification-actor-anonymous | 2 | 0 | 0 | 0 | 2
 @junit | notification-actor-like | 8 | 2 | 1 | 0 | 11
 @junit | notification-actor-post-create | 2 | 1 | 0 | 0 | 3

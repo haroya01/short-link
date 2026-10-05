@@ -23,4 +23,6 @@ public interface NoteRepository {
   List<NoteEntity> replies(Long noteId, int limit);
 
   Map<Long, Long> replyCounts(Collection<Long> noteIds);
+
+  long countByAuthor(Long userId);
 }

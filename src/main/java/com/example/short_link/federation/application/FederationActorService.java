@@ -2,8 +2,10 @@ package com.example.short_link.federation.application;
 
 import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.federation.domain.FederationActorEntity;
+import com.example.short_link.federation.domain.FederationPreferenceEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
+import com.example.short_link.federation.domain.repository.FederationPreferenceRepository;
 import com.example.short_link.federation.domain.repository.FederationUserReader;
 import java.security.SecureRandom;
 import java.util.Optional;
@@ -11,8 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
-// Actors are created on first lookup. Two concurrent first lookups race on the user_id key; the
-// loser re-reads the winner's row instead of failing.
+// Actors are created on first lookup and hidden while the user has federation turned off. Two
+// concurrent first lookups race on the user_id key; the loser re-reads the winner's row.
 @Service
 @RequiredArgsConstructor
 public class FederationActorService {
@@ -23,11 +25,12 @@ public class FederationActorService {
 
   private final FederationUserReader users;
   private final FederationActorRepository actors;
+  private final FederationPreferenceRepository preferences;
   private final ActorKeys keys;
   private final SecretCipher cipher;
 
   public Optional<LocalActor> byUsername(String username) {
-    return users.findActiveByUsername(username).map(this::withActor);
+    return users.findActiveByUsername(username).filter(this::federates).map(this::withActor);
   }
 
   public Optional<LocalActor> byPublicId(String publicId) {
@@ -37,9 +40,14 @@ public class FederationActorService {
             actor ->
                 users
                     .findActiveById(actor.getUserId())
+                    .filter(this::federates)
                     .map(
                         user ->
                             new LocalActor(user, actor.getPublicId(), actor.getPublicKeyPem())));
+  }
+
+  private boolean federates(FederationUser user) {
+    return preferences.find(user.id()).map(FederationPreferenceEntity::isEnabled).orElse(true);
   }
 
   private LocalActor withActor(FederationUser user) {

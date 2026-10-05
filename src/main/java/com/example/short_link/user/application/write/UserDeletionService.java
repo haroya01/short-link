@@ -2,6 +2,7 @@ package com.example.short_link.user.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.user.UserDataEraser;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,6 +38,7 @@ public class UserDeletionService {
   private final RefreshTokenStore refreshTokenStore;
   private final MeterRegistry meterRegistry;
   private final AuditLogService auditLogService;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public void deleteAccount(Long userId) {
@@ -48,6 +51,7 @@ public class UserDeletionService {
     }
     user.softDelete();
     refreshTokenStore.deleteAllForUser(userId);
+    events.publishEvent(new AccountDeletedEvent(userId));
 
     long ownedLinks = linkRepository.countByUserId(userId);
     meterRegistry.counter("user.soft_deleted").increment();

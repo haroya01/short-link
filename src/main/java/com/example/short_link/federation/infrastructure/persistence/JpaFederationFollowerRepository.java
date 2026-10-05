@@ -1,6 +1,7 @@
 package com.example.short_link.federation.infrastructure.persistence;
 
 import com.example.short_link.federation.domain.FederationFollowerEntity;
+import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
@@ -25,4 +26,13 @@ public interface JpaFederationFollowerRepository
   int deleteFollowActivity(
       @Param("remoteActorId") Long remoteActorId,
       @Param("followActivityId") String followActivityId);
+
+  @Query(
+      "select distinct coalesce(r.sharedInbox, r.inbox) from FederationFollowerEntity f,"
+          + " RemoteActorEntity r where r.id = f.remoteActorId and f.userId = :userId")
+  List<String> deliveryInboxes(@Param("userId") Long userId);
+
+  @Modifying
+  @Query("delete from FederationFollowerEntity f where f.userId = :userId")
+  int deleteAllForUser(@Param("userId") Long userId);
 }
