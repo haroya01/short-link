@@ -42,6 +42,10 @@ public class LinkLookupQueryService {
       meterRegistry.counter("short_link.lookup", "result", "not_found").increment();
       throw e;
     }
+    if (cached.disabled()) {
+      meterRegistry.counter("short_link.lookup", "result", "disabled").increment();
+      throw new LinkException(LinkErrorCode.LINK_DISABLED, shortCode);
+    }
     if (cached.isExpired(Instant.now())) {
       meterRegistry.counter("short_link.lookup", "result", "expired").increment();
       throw new LinkException(LinkErrorCode.LINK_EXPIRED, shortCode);

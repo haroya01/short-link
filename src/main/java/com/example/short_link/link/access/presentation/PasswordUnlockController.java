@@ -83,6 +83,7 @@ public class PasswordUnlockController {
             case LINK_NOT_FOUND -> "not_found";
             case LINK_EXPIRED -> "expired";
             case LINK_VIEW_LIMIT_EXCEEDED -> "view_limit";
+            case LINK_DISABLED -> "disabled";
             default -> "error";
           };
       // 비밀번호를 맞춰도 한도초과·만료면 JSON 대신 브랜드 HTML 페이지로.

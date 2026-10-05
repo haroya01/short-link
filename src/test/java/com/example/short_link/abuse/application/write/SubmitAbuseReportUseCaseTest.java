@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.abuse.domain.AbuseReason;
@@ -15,6 +16,7 @@ import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
 import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
+import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,6 +51,42 @@ class SubmitAbuseReportUseCaseTest {
     assertThat(saved.getSubjectId()).isEqualTo(42L);
     assertThat(saved.getReasonCode()).isEqualTo(AbuseReason.SPAM);
     assertThat(saved.getDetail()).isEqualTo("도배");
+  }
+
+  @Test
+  void aPastedShortLinkBecomesALinkReport() {
+    when(subjects.findLinkIdByShortCode("abc123")).thenReturn(Optional.of(55L));
+    when(abuseReportRepository.save(any(AbuseReportEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    AbuseReportEntity saved =
+        useCase.executeForLink(
+            null, "https://kurl.me/abc123?src=sms", AbuseReason.PHISHING, "은행 사칭");
+
+    assertThat(saved.getReporterUserId()).isNull();
+    assertThat(saved.getSubjectType()).isEqualTo(AbuseSubjectType.LINK);
+    assertThat(saved.getSubjectId()).isEqualTo(55L);
+    assertThat(saved.getReasonCode()).isEqualTo(AbuseReason.PHISHING);
+  }
+
+  @Test
+  void aLinkThatDoesNotExistCannotBeReported() {
+    when(subjects.findLinkIdByShortCode("zzz999")).thenReturn(Optional.empty());
+
+    assertThatThrownBy(() -> useCase.executeForLink(null, "kurl.me/zzz999", AbuseReason.SPAM, null))
+        .isInstanceOf(AbuseException.class)
+        .satisfies(
+            e ->
+                assertThat(((AbuseException) e).errorCode())
+                    .isEqualTo(AbuseErrorCode.SUBJECT_NOT_FOUND));
+    verifyNoInteractions(abuseReportRepository);
+  }
+
+  @Test
+  void textThatIsNotAShortLinkIsNotLookedUp() {
+    assertThatThrownBy(() -> useCase.executeForLink(null, "kurl.me", AbuseReason.SPAM, null))
+        .isInstanceOf(AbuseException.class);
+    verifyNoInteractions(subjects, abuseReportRepository);
   }
 
   @Test

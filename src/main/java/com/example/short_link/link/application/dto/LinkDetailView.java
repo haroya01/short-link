@@ -24,7 +24,10 @@ public record LinkDetailView(
     boolean openInBrowser,
     Splash splash,
     Instant opensAt,
-    DestinationHealth destinationHealth) {
+    DestinationHealth destinationHealth,
+    Moderation moderation) {
+
+  public record Moderation(String reason, Instant disabledAt) {}
 
   public record DestinationHealth(
       boolean broken, String failure, Integer httpStatus, Instant brokenSince, Instant checkedAt) {}

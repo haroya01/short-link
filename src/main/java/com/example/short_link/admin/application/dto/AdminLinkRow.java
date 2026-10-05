@@ -13,4 +13,6 @@ public record AdminLinkRow(
     int viewCount,
     Instant createdAt,
     Instant expiresAt,
-    String status) {}
+    String status,
+    String disabledReason,
+    Instant disabledAt) {}

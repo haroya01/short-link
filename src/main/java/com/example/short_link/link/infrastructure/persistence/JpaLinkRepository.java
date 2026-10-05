@@ -3,6 +3,7 @@ package com.example.short_link.link.infrastructure.persistence;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository.CachedLinkRow;
+import com.example.short_link.link.domain.repository.LinkRepository.SafetyRescanRow;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -45,15 +46,30 @@ public interface JpaLinkRepository
         visit.splashMessage AS splashMessage,
         visit.splashSeconds AS splashSeconds,
         visit.splashCtaId AS splashCtaId,
-        visit.opensAt AS opensAt
+        visit.opensAt AS opensAt,
+        CASE WHEN moderation.linkId IS NULL THEN false ELSE true END AS disabled
       FROM LinkEntity l
       LEFT JOIN LinkOgMetadataEntity og ON og.linkId = l.id
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
       LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
       LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
+      LEFT JOIN LinkModerationEntity moderation ON moderation.linkId = l.id
       WHERE l.shortCode = :shortCode
       """)
   Optional<CachedLinkRow> findCachedLinkRowByShortCode(@Param("shortCode") ShortCode shortCode);
+
+  @Query(
+      """
+      SELECT l.id AS linkId, l.originalUrl AS originalUrl
+      FROM LinkEntity l
+      LEFT JOIN LinkModerationEntity moderation ON moderation.linkId = l.id
+      WHERE l.id > :afterId
+        AND moderation.linkId IS NULL
+        AND (l.expiresAt IS NULL OR l.expiresAt > :now)
+      ORDER BY l.id ASC
+      """)
+  List<SafetyRescanRow> findSafetyRescanBatch(
+      @Param("afterId") Long afterId, @Param("now") Instant now, Pageable page);
 
   List<LinkEntity> findAllByUserIdAndFavoriteOrderIsNotNullOrderByFavoriteOrderAscIdAsc(
       Long userId);

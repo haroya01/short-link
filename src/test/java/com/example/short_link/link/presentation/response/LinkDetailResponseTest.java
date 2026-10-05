@@ -39,7 +39,8 @@ class LinkDetailResponseTest {
                 "NOT_FOUND",
                 404,
                 Instant.parse("2026-09-27T01:00:00Z"),
-                Instant.parse("2026-09-27T02:00:00Z")));
+                Instant.parse("2026-09-27T02:00:00Z")),
+            null);
 
     LinkDetailResponse response = LinkDetailResponse.from(view);
 
@@ -83,6 +84,7 @@ class LinkDetailResponseTest {
             null,
             false,
             LinkDetailView.Splash.OFF,
+            null,
             null,
             null);
 

@@ -8,6 +8,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.link.health.domain.repository.LinkDestinationHealthRepository;
+import com.example.short_link.link.moderation.domain.repository.LinkModerationRepository;
 import com.example.short_link.link.visit.domain.LinkVisitOptionEntity;
 import com.example.short_link.link.visit.domain.repository.LinkVisitOptionRepository;
 import java.util.Optional;
@@ -24,6 +25,7 @@ public class LinkDetailQueryService {
   private final LinkAccessGuard accessGuard;
   private final LinkVisitOptionRepository visitOptions;
   private final LinkDestinationHealthRepository healths;
+  private final LinkModerationRepository moderations;
 
   @Transactional(readOnly = true)
   public LinkDetailView detail(Long userId, ShortCode shortCode) {
@@ -71,6 +73,10 @@ public class LinkDetailQueryService {
                         h.getHttpStatus(),
                         h.getBrokenSince(),
                         h.getCheckedAt()))
+            .orElse(null),
+        moderations
+            .findByLinkId(link.getId())
+            .map(m -> new LinkDetailView.Moderation(m.getReason().name(), m.getDisabledAt()))
             .orElse(null));
   }
 }

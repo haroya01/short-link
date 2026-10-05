@@ -22,11 +22,45 @@ public record CachedLink(
     Integer maxViews,
     String expiredMessage,
     List<Variant> variants,
-    VisitOptions visitOptions) {
+    VisitOptions visitOptions,
+    boolean disabled) {
 
   public CachedLink {
     variants = variants == null ? List.of() : List.copyOf(variants);
     visitOptions = visitOptions == null ? VisitOptions.NONE : visitOptions;
+  }
+
+  public CachedLink(
+      LinkId linkId,
+      ShortCode shortCode,
+      Long userId,
+      String originalUrl,
+      Instant expiresAt,
+      String ogTitle,
+      String ogDescription,
+      String ogImage,
+      String blockedCountries,
+      boolean passwordRequired,
+      Integer maxViews,
+      String expiredMessage,
+      List<Variant> variants,
+      VisitOptions visitOptions) {
+    this(
+        linkId,
+        shortCode,
+        userId,
+        originalUrl,
+        expiresAt,
+        ogTitle,
+        ogDescription,
+        ogImage,
+        blockedCountries,
+        passwordRequired,
+        maxViews,
+        expiredMessage,
+        variants,
+        visitOptions,
+        false);
   }
 
   public CachedLink(

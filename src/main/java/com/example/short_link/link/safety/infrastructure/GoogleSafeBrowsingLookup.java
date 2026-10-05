@@ -8,8 +8,10 @@ import com.example.short_link.link.safety.application.UrlThreatLookupException;
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.HttpClientErrorException;
@@ -51,7 +53,42 @@ public class GoogleSafeBrowsingLookup implements UrlThreatLookup {
     }
   }
 
+  @Override
+  public Set<String> unsafeAmong(List<String> urls) {
+    if (urls.isEmpty()) {
+      return Set.of();
+    }
+    try {
+      return circuitBreaker.executeSupplier(() -> matchedUrls(urls));
+    } catch (HttpClientErrorException.Unauthorized | HttpClientErrorException.Forbidden failure) {
+      throw UrlThreatLookupException.authenticationFailure(failure);
+    } catch (Exception failure) {
+      throw UrlThreatLookupException.unavailable(failure);
+    }
+  }
+
   private boolean requestVerdict(String fullUrl) {
+    Map<String, Object> response = request(List.of(fullUrl));
+    return response == null || response.isEmpty() || response.get("matches") == null;
+  }
+
+  private Set<String> matchedUrls(List<String> urls) {
+    Map<String, Object> response = request(urls);
+    if (response == null || !(response.get("matches") instanceof List<?> matches)) {
+      return Set.of();
+    }
+    Set<String> unsafe = new HashSet<>();
+    for (Object match : matches) {
+      if (match instanceof Map<?, ?> m
+          && m.get("threat") instanceof Map<?, ?> threat
+          && threat.get("url") instanceof String url) {
+        unsafe.add(url);
+      }
+    }
+    return unsafe;
+  }
+
+  private Map<String, Object> request(List<String> urls) {
     Map<String, Object> body =
         Map.of(
             "client", Map.of("clientId", "short-link", "clientVersion", "1.0"),
@@ -60,21 +97,18 @@ public class GoogleSafeBrowsingLookup implements UrlThreatLookup {
                     "threatTypes", THREAT_TYPES,
                     "platformTypes", List.of("ANY_PLATFORM"),
                     "threatEntryTypes", List.of("URL"),
-                    "threatEntries", List.of(Map.of("url", fullUrl))));
+                    "threatEntries", urls.stream().map(url -> Map.of("url", url)).toList()));
 
-    Map<String, Object> response =
-        restClient
-            .post()
-            .uri(
-                uriBuilder ->
-                    uriBuilder
-                        .path("/v4/threatMatches:find")
-                        .queryParam("key", properties.apiKey())
-                        .build())
-            .body(body)
-            .retrieve()
-            .body(RESPONSE_TYPE);
-
-    return response == null || response.isEmpty() || response.get("matches") == null;
+    return restClient
+        .post()
+        .uri(
+            uriBuilder ->
+                uriBuilder
+                    .path("/v4/threatMatches:find")
+                    .queryParam("key", properties.apiKey())
+                    .build())
+        .body(body)
+        .retrieve()
+        .body(RESPONSE_TYPE);
   }
 }

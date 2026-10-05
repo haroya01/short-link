@@ -38,6 +38,13 @@ class ReservedShortCodesTest {
   }
 
   @Test
+  void blocksTheAbuseReportRoute() {
+    assertThat(ReservedShortCodes.isReserved("report")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("abuse")).isTrue();
+    assertThat(ReservedShortCodes.isReserved("security")).isTrue();
+  }
+
+  @Test
   void caseInsensitive() {
     assertThat(ReservedShortCodes.isReserved("LOGIN")).isTrue();
     assertThat(ReservedShortCodes.isReserved("Admin")).isTrue();

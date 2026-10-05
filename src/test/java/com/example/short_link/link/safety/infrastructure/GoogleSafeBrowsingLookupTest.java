@@ -15,6 +15,7 @@ import com.example.short_link.link.safety.application.UrlThreatLookupException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 import java.time.Duration;
+import java.util.List;
 import org.hamcrest.CoreMatchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -136,5 +137,66 @@ class GoogleSafeBrowsingLookupTest {
     assertThat(registry.circuitBreaker(SAFE_BROWSING_CB).getMetrics().getNumberOfFailedCalls())
         .isEqualTo(1);
     server.verify();
+  }
+
+  @Test
+  void batchLookupReturnsOnlyTheUrlsThatMatched() {
+    RestClient.Builder builder =
+        RestClient.builder().baseUrl("https://safebrowsing.googleapis.com");
+    MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+    server
+        .expect(method(HttpMethod.POST))
+        .andExpect(
+            content()
+                .json(
+                    """
+                    {"threatInfo": {"threatEntries": [
+                      {"url":"https://ok.example/"},
+                      {"url":"https://phish.example/login"}
+                    ]}}
+                    """))
+        .andRespond(
+            withSuccess(
+                """
+                {"matches":[{"threatType":"SOCIAL_ENGINEERING",
+                  "threat":{"url":"https://phish.example/login"}}]}
+                """,
+                MediaType.APPLICATION_JSON));
+    var lookup = new GoogleSafeBrowsingLookup(builder.build(), properties, registry());
+
+    assertThat(lookup.unsafeAmong(List.of("https://ok.example/", "https://phish.example/login")))
+        .containsExactly("https://phish.example/login");
+    server.verify();
+  }
+
+  @Test
+  void batchLookupWithNoMatchesFindsNothingAndAnEmptyBatchAsksNothing() {
+    RestClient.Builder builder =
+        RestClient.builder().baseUrl("https://safebrowsing.googleapis.com");
+    MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
+    server
+        .expect(method(HttpMethod.POST))
+        .andRespond(withSuccess("{}", MediaType.APPLICATION_JSON));
+    var lookup = new GoogleSafeBrowsingLookup(builder.build(), properties, registry());
+
+    assertThat(lookup.unsafeAmong(List.of("https://ok.example/"))).isEmpty();
+    assertThat(lookup.unsafeAmong(List.of())).isEmpty();
+    server.verify();
+  }
+
+  @Test
+  void batchLookupTreatsAnOpenCircuitAsAFailureNotAsSafe() {
+    RestClient.Builder builder =
+        RestClient.builder().baseUrl("https://safebrowsing.googleapis.com");
+    CircuitBreakerRegistry registry = registry();
+    var lookup = new GoogleSafeBrowsingLookup(builder.build(), properties, registry);
+    registry.circuitBreaker(SAFE_BROWSING_CB).transitionToOpenState();
+
+    assertThatThrownBy(() -> lookup.unsafeAmong(List.of("https://any.example/")))
+        .isInstanceOf(UrlThreatLookupException.class)
+        .satisfies(
+            e ->
+                assertThat(((UrlThreatLookupException) e).kind())
+                    .isEqualTo(UrlThreatLookupException.Kind.UNAVAILABLE));
   }
 }

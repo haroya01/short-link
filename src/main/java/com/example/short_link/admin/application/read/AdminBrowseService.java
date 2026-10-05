@@ -88,7 +88,9 @@ public class AdminBrowseService {
         r.getViewCount(),
         r.getCreatedAt(),
         r.getExpiresAt(),
-        status(r, now));
+        status(r, now),
+        r.getDisabledReason() == null ? null : r.getDisabledReason().name(),
+        r.getDisabledAt());
   }
 
   private static String status(LinkRow r, Instant now) {
