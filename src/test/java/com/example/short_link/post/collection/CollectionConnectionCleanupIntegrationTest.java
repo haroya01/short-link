@@ -2,6 +2,9 @@ package com.example.short_link.post.collection;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.post.application.write.CreateHighlightUseCase;
 import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
@@ -16,9 +19,6 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.post.note.application.write.NoteCommandService;
-import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -116,7 +116,7 @@ class CollectionConnectionCleanupIntegrationTest {
   }
 
   private Long note(Long userId, String body) {
-    return noteRepository.save(new NoteEntity(userId, body)).getId();
+    return noteRepository.save(new NoteEntity(userId, body, null, null)).getId();
   }
 
   private Long collection(Long ownerId, String title) {

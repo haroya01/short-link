@@ -1,0 +1,63 @@
+package com.example.short_link.note.infrastructure.persistence;
+
+import com.example.short_link.note.domain.NoteAuthor;
+import com.example.short_link.note.domain.repository.NotePeopleReader;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.springframework.stereotype.Repository;
+
+@Repository
+class NotePeopleReaderAdapter implements NotePeopleReader {
+
+  private static final String AUTHOR =
+      "SELECT id, username, avatar_url FROM users"
+          + " WHERE deleted_at IS NULL AND username IS NOT NULL AND ";
+
+  @PersistenceContext private EntityManager em;
+
+  @Override
+  public Map<Long, NoteAuthor> activeAuthors(Collection<Long> userIds) {
+    Map<Long, NoteAuthor> authors = new HashMap<>();
+    if (userIds.isEmpty()) {
+      return authors;
+    }
+    for (Object row :
+        em.createNativeQuery(AUTHOR + "id IN (:ids)")
+            .setParameter("ids", userIds)
+            .getResultList()) {
+      NoteAuthor author = author((Object[]) row);
+      authors.put(author.id(), author);
+    }
+    return authors;
+  }
+
+  @Override
+  public Optional<NoteAuthor> activeByUsername(String username) {
+    List<?> rows =
+        em.createNativeQuery(AUTHOR + "username = :username")
+            .setParameter("username", username)
+            .getResultList();
+    return rows.stream().findFirst().map(row -> author((Object[]) row));
+  }
+
+  @Override
+  public List<Long> followingIds(Long userId) {
+    return em
+        .createNativeQuery("SELECT following_id FROM user_follow WHERE follower_id = :userId")
+        .setParameter("userId", userId)
+        .getResultList()
+        .stream()
+        .map(id -> ((Number) id).longValue())
+        .toList();
+  }
+
+  private static NoteAuthor author(Object[] columns) {
+    return new NoteAuthor(
+        ((Number) columns[0]).longValue(), (String) columns[1], (String) columns[2]);
+  }
+}

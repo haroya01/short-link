@@ -8,6 +8,7 @@ import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionConnectionRank;
@@ -23,8 +24,6 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
@@ -48,7 +47,7 @@ class CollectionQueryServiceTest {
   @Mock private CollectionConnectionRepository connectionRepository;
   @Mock private PostRepository postRepository;
   @Mock private PostHighlightRepository highlightRepository;
-  @Mock private NoteRepository noteRepository;
+  @Mock private NoteBodyReader noteBodies;
   @Mock private UserRepository userRepository;
 
   private CollectionQueryService service;
@@ -63,7 +62,7 @@ class CollectionQueryServiceTest {
                 connectionRepository,
                 postRepository,
                 highlightRepository,
-                noteRepository,
+                noteBodies,
                 userRepository),
             userRepository);
   }
@@ -94,7 +93,7 @@ class CollectionQueryServiceTest {
     assertThat(summary.position()).isNull();
     assertThat(summary.connectionId()).isNull();
     verifyNoInteractions(
-        collectionRepository, postRepository, highlightRepository, noteRepository, userRepository);
+        collectionRepository, postRepository, highlightRepository, noteBodies, userRepository);
   }
 
   @Test
@@ -324,9 +323,7 @@ class CollectionQueryServiceTest {
                 conn(101L, ConnectionBlockType.NOTE, 7L, 1),
                 conn(102L, ConnectionBlockType.POST, 6L, 0)));
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(post(5L, 2L)));
-    NoteEntity note = new NoteEntity(1L, "더 나은 질문을 기다리는 일");
-    ReflectionTestUtils.setField(note, "id", 7L);
-    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(note));
+    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of(7L, "더 나은 질문을 기다리는 일"));
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
 
     List<CollectionSummaryView> views = service.listMine(1L, null, null);
@@ -354,7 +351,7 @@ class CollectionQueryServiceTest {
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
-    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of());
 
     List<CollectionSummaryView> views = service.listMine(1L, null, null);
 
@@ -399,9 +396,7 @@ class CollectionQueryServiceTest {
         new PostHighlightEntity(6L, 3L, 0, 0, 0, 3, "좋은 추상은 더 지울 게 없을 때", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
-    NoteEntity note = new NoteEntity(1L, "더 나은 질문을 기다리는 일");
-    ReflectionTestUtils.setField(note, "id", 7L);
-    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(note));
+    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of(7L, "더 나은 질문을 기다리는 일"));
     when(postRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(post(5L, 2L), post(6L, 3L)));
     when(userRepository.findAllByIdIn(anyCollection()))
@@ -440,7 +435,7 @@ class CollectionQueryServiceTest {
     PostHighlightEntity hl = new PostHighlightEntity(8L, 3L, 0, 0, 0, 3, "차단된 글의 인용", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
-    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of());
     when(postRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(post(5L, 2L), draftPost(6L, 2L), draftPost(8L, 3L)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(2L, "alice")));
@@ -467,7 +462,7 @@ class CollectionQueryServiceTest {
     when(postRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(post(5L, 1L), draftPost(6L, 1L)));
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
-    when(noteRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
+    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of());
 
     List<CollectionSummaryView> result = service.listPublicByUsername("curator");
 

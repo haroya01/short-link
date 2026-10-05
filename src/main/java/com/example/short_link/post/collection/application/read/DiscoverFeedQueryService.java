@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.application.read;
 
+import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -8,8 +9,6 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -33,7 +32,7 @@ public class DiscoverFeedQueryService {
   private final FollowRepository followRepository;
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
-  private final NoteRepository noteRepository;
+  private final NoteBodyReader noteBodies;
   private final UserRepository userRepository;
 
   public DiscoverFeedView feed(Long viewerId, int page, int size, boolean forceGlobal) {
@@ -68,8 +67,7 @@ public class DiscoverFeedQueryService {
         bulk(
             highlightRepository.findAllByIdIn(refIds(rows, "HIGHLIGHT")),
             PostHighlightEntity::getId);
-    Map<Long, NoteEntity> notes =
-        bulk(noteRepository.findAllByIdIn(refIds(rows, "NOTE")), NoteEntity::getId);
+    Map<Long, String> notes = noteBodies.bodiesByIds(refIds(rows, "NOTE"));
 
     Set<Long> postIds = new HashSet<>(refIds(rows, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
@@ -102,7 +100,7 @@ public class DiscoverFeedQueryService {
       UserEntity curator,
       Map<Long, PostEntity> posts,
       Map<Long, PostHighlightEntity> highlights,
-      Map<Long, NoteEntity> notes,
+      Map<Long, String> notes,
       Map<Long, UserEntity> users) {
     PublicAuthorView curatorView = PublicAuthorView.from(curator);
     return switch (row.blockType()) {
@@ -139,9 +137,9 @@ public class DiscoverFeedQueryService {
             null);
       }
       case NOTE -> {
-        NoteEntity note = notes.get(row.refId());
-        if (note == null || !DiscoveryQuality.isMeaningfulLabel(note.getBody())) yield null;
-        yield view(row, curatorView, "NOTE", null, null, null, null, null, note.getBody());
+        String body = notes.get(row.refId());
+        if (body == null || !DiscoveryQuality.isMeaningfulLabel(body)) yield null;
+        yield view(row, curatorView, "NOTE", null, null, null, null, null, body);
       }
     };
   }

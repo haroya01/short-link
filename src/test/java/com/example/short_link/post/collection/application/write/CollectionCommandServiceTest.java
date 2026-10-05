@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.CollectionConnectedEvent;
+import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionKind;
@@ -21,8 +22,6 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -41,7 +40,7 @@ class CollectionCommandServiceTest {
   @Mock private CollectionConnectionRepository connectionRepository;
   @Mock private PostRepository postRepository;
   @Mock private PostHighlightRepository highlightRepository;
-  @Mock private NoteRepository noteRepository;
+  @Mock private NoteBodyReader noteBodies;
   @Mock private ApplicationEventPublisher events;
 
   private CollectionCommandService service;
@@ -54,7 +53,7 @@ class CollectionCommandServiceTest {
             connectionRepository,
             postRepository,
             highlightRepository,
-            noteRepository,
+            noteBodies,
             events);
   }
 
@@ -203,9 +202,7 @@ class CollectionCommandServiceTest {
   void connectStartsAtPositionZeroWhenEmpty() {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PRIVATE)));
-    NoteEntity note = new NoteEntity(1L, "생각");
-    ReflectionTestUtils.setField(note, "id", 7L);
-    when(noteRepository.findById(7L)).thenReturn(Optional.of(note));
+    when(noteBodies.exists(7L)).thenReturn(true);
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L)).thenReturn(List.of());
     when(connectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -366,9 +363,7 @@ class CollectionCommandServiceTest {
   void connectingNoteHasNoConnectedAuthorAndNotesDoNotContributeToPathGrew() {
     when(collectionRepository.findById(10L))
         .thenReturn(Optional.of(collection(10L, 1L, CollectionVisibility.PUBLIC)));
-    NoteEntity note = new NoteEntity(1L, "생각");
-    ReflectionTestUtils.setField(note, "id", 5L);
-    when(noteRepository.findById(5L)).thenReturn(Optional.of(note));
+    when(noteBodies.exists(5L)).thenReturn(true);
     when(connectionRepository.findAllByCollectionIdOrderByPositionAsc(10L))
         .thenReturn(
             List.of(
