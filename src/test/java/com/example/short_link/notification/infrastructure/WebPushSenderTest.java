@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.push.PushApp;
+import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
 import com.example.short_link.notification.application.push.VapidProperties;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
@@ -26,6 +27,8 @@ class WebPushSenderTest {
       "BDRYNSI6ZzbVloG_D7sPTu3lU2N21O9HYNpbOZcRE_ucL9jmRGQfka41izKHNatl4Ylm2A3FVD8BHUO_9dku_e0";
   private static final String VAPID_PRIV = "Xd6nNWdkpLd9nGreYejIzx95GTdWnMXOtaphVqvMVoA";
 
+  private static final String BLOG = "https://blog.kurl.me";
+
   @Mock private WebPushSubscriptionRepository subscriptions;
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
@@ -34,13 +37,14 @@ class WebPushSenderTest {
     return new WebPushSender(
         new VapidProperties(VAPID_PUB, VAPID_PRIV, "mailto:test@kurl.me"),
         subscriptions,
-        jsonMapper);
+        jsonMapper,
+        BLOG);
   }
 
   @Test
   void noOpWhenVapidUnconfigured() {
     WebPushSender sender =
-        new WebPushSender(new VapidProperties(null, null, null), subscriptions, jsonMapper);
+        new WebPushSender(new VapidProperties(null, null, null), subscriptions, jsonMapper, BLOG);
     PushSender.PushMessage message = new PushSender.PushMessage("kurl", "글 제목", "새 글");
 
     sender.send(1L, message);
@@ -110,5 +114,49 @@ class WebPushSenderTest {
     assertThat(root.has("type")).isFalse();
     assertThat(root.has("shortCode")).isFalse();
     assertThat(root.get("title").asString()).isEqualTo("새 글");
+  }
+
+  @Test
+  void blogPushOpensTheSpotItPointsAt() {
+    assertThat(urlOf(new PushRoute("yuki", "me", "my-post", null, null, 77L, null)))
+        .isEqualTo("https://blog.kurl.me/@me/my-post#comment-77");
+    assertThat(urlOf(new PushRoute("yuki", "mika", "their-post", null, null, null, 41L)))
+        .isEqualTo("https://blog.kurl.me/@mika/their-post?highlightId=41&thread=1");
+    assertThat(urlOf(new PushRoute("yuki", "yuki", "fresh", null, null, null, null)))
+        .isEqualTo("https://blog.kurl.me/@yuki/fresh");
+  }
+
+  @Test
+  void blogPushOpensSeriesCollectionAndProfile() {
+    assertThat(urlOf(new PushRoute("yuki", "me", null, "tokyo-walks", null, null, null)))
+        .isEqualTo("https://blog.kurl.me/@me/series/tokyo-walks");
+    assertThat(urlOf(new PushRoute("yuki", null, null, null, 42L, null, null)))
+        .isEqualTo("https://blog.kurl.me/collections/42");
+    assertThat(urlOf(new PushRoute("stranger99", null, null, null, null, null, null)))
+        .isEqualTo("https://blog.kurl.me/@stranger99");
+  }
+
+  @Test
+  void blogPushEncodesPathSegmentsAndFallsBackHomeWithoutRoute() {
+    assertThat(urlOf(new PushRoute("yuki", "me", "도쿄 산책", null, null, null, null)))
+        .isEqualTo("https://blog.kurl.me/@me/%EB%8F%84%EC%BF%84%20%EC%82%B0%EC%B1%85");
+    assertThat(urlOf(new PushRoute(null, null, null, null, null, null, null))).isEqualTo("/");
+    assertThat(
+            jsonMapper
+                .readTree(configured().payload(new PushSender.PushMessage("kurl", "글", "새 글")))
+                .get("url")
+                .asString())
+        .isEqualTo("/");
+  }
+
+  private String urlOf(PushRoute route) {
+    return jsonMapper
+        .readTree(
+            configured()
+                .payload(
+                    new PushSender.PushMessage(
+                        "kurl", "글 제목", "본문", "COMMENT", null, PushApp.BLOG, route)))
+        .get("url")
+        .asString();
   }
 }

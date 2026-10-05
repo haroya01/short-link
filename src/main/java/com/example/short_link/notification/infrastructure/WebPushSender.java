@@ -18,6 +18,7 @@ import nl.martijndwars.webpush.Notification;
 import nl.martijndwars.webpush.PushService;
 import org.apache.http.HttpResponse;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -30,11 +31,16 @@ public class WebPushSender implements PushSender {
   private final JsonMapper jsonMapper;
   private final ExecutorService executor;
   private final PushService pushService;
+  private final String blogBaseUrl;
 
   public WebPushSender(
-      VapidProperties props, WebPushSubscriptionRepository subscriptions, JsonMapper jsonMapper) {
+      VapidProperties props,
+      WebPushSubscriptionRepository subscriptions,
+      JsonMapper jsonMapper,
+      @Value("${short-link.blog-base-url}") String blogBaseUrl) {
     this.subscriptions = subscriptions;
     this.jsonMapper = jsonMapper;
+    this.blogBaseUrl = blogBaseUrl;
     this.executor = Executors.newFixedThreadPool(2);
     // web-push does not register the BouncyCastle provider required for VAPID parsing and ECDH.
     PushService service = null;
@@ -118,7 +124,12 @@ public class WebPushSender implements PushSender {
     String title = message.body();
     String body = message.subtitle() == null ? "" : message.subtitle();
     return jsonMapper.writeValueAsBytes(
-        new WebPushPayload(title, body, "/", message.type(), message.shortCode()));
+        new WebPushPayload(
+            title,
+            body,
+            BlogPushUrl.of(blogBaseUrl, message.route()),
+            message.type(),
+            message.shortCode()));
   }
 
   @JsonInclude(JsonInclude.Include.NON_NULL)
