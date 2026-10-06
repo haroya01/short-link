@@ -12,4 +12,5 @@ public record HighlightMentionEvent(
     String postSlug,
     String postTitle,
     String postAuthorUsername,
+    Long highlightId,
     Instant occurredAt) {}

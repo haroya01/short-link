@@ -12,6 +12,7 @@ public record CommentReplyEvent(
     String postSlug,
     String postTitle,
     String postAuthorUsername,
+    Long commentId,
     Instant occurredAt) {
 
   public boolean isSelfReply() {

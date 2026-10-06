@@ -11,6 +11,7 @@ public record BlogInteractionEvent(
     Long postId,
     String postSlug,
     String postTitle,
+    Long commentId,
     Long seriesId,
     String seriesSlug,
     String seriesTitle,
@@ -32,11 +33,18 @@ public record BlogInteractionEvent(
         null,
         null,
         null,
+        null,
         at);
   }
 
   public static BlogInteractionEvent comment(
-      Long recipientUserId, Long actorUserId, Long postId, String slug, String title, Instant at) {
+      Long recipientUserId,
+      Long actorUserId,
+      Long postId,
+      String slug,
+      String title,
+      Long commentId,
+      Instant at) {
     return new BlogInteractionEvent(
         BlogInteractionType.COMMENT,
         recipientUserId,
@@ -44,6 +52,7 @@ public record BlogInteractionEvent(
         postId,
         slug,
         title,
+        commentId,
         null,
         null,
         null,
@@ -55,6 +64,7 @@ public record BlogInteractionEvent(
         BlogInteractionType.FOLLOW,
         recipientUserId,
         actorUserId,
+        null,
         null,
         null,
         null,
@@ -75,6 +85,7 @@ public record BlogInteractionEvent(
         BlogInteractionType.SERIES_SUBSCRIBE,
         recipientUserId,
         actorUserId,
+        null,
         null,
         null,
         null,
