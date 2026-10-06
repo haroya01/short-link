@@ -8,6 +8,10 @@ export type Target = "backend" | "frontend";
 // reach the backend or the login round-trip fails with a 404 on Vercel.
 const BACKEND_PATH = /^\/(api|actuator|oauth2|login\/oauth2)(\/|$)/;
 
+// ActivityPub: WebFinger and NodeInfo discovery plus every /ap/* document and inbox. Other
+// /.well-known/* entries (app links, security.txt) stay on the frontend.
+const FEDERATION_PATH = /^\/(ap\/|\.well-known\/(webfinger|nodeinfo|host-meta)$)/;
+
 // Reserved frontend prefixes. Order doesn't matter — any match wins. Keep this list in sync
 // with the Next.js app/[locale] routes so a new top-level page (e.g. /pricing) doesn't get
 // mistaken for a short code when the slug happens to be 3-16 chars alnum.
@@ -26,6 +30,7 @@ const SHORT_CODE = /^\/[0-9A-Za-z]{3,16}\/?$/;
 // Unknown paths go to the frontend so the Next.js 404 page renders instead of a plaintext one.
 export function routeFor(path: string): Target {
   if (BACKEND_PATH.test(path)) return "backend";
+  if (FEDERATION_PATH.test(path)) return "backend";
   if (FRONTEND_PATHS.some((re) => re.test(path))) return "frontend";
   if (SHORT_CODE.test(path)) return "backend";
   return "frontend";

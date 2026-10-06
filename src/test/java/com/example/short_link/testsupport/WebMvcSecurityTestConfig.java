@@ -79,7 +79,13 @@ public class WebMvcSecurityTestConfig {
           || ("POST".equals(method) && uri.matches("/api/v1/public/events/[^/]+/registrations"))
           || ("POST".equals(method) && "/api/v1/public/events/registrations/cancel".equals(uri))
           || ("GET".equals(method) && "/actuator/health".equals(uri))
-          || ("GET".equals(method) && uri.startsWith("/api/v1/public/"));
+          || ("GET".equals(method) && uri.startsWith("/api/v1/public/"))
+          // ActivityPub 조회 — 프로드 SecurityConfig 와 같은 익명 GET 표면.
+          || ("GET".equals(method)
+              && (uri.equals("/.well-known/webfinger")
+                  || uri.equals("/.well-known/host-meta")
+                  || uri.equals("/.well-known/nodeinfo")
+                  || uri.startsWith("/ap/")));
     }
   }
 }

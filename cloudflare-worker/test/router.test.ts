@@ -37,6 +37,27 @@ describe("routeFor", () => {
     it("short code with trailing slash → backend", () => {
       expect(routeFor("/abc1234/")).toBe("backend");
     });
+
+    it("ActivityPub discovery and documents → backend", () => {
+      expect(routeFor("/.well-known/webfinger")).toBe("backend");
+      expect(routeFor("/.well-known/nodeinfo")).toBe("backend");
+      expect(routeFor("/.well-known/host-meta")).toBe("backend");
+      expect(routeFor("/ap/nodeinfo/2.1")).toBe("backend");
+      expect(routeFor("/ap/actors/abc123")).toBe("backend");
+      expect(routeFor("/ap/actors/abc123/inbox")).toBe("backend");
+      expect(routeFor("/ap/inbox")).toBe("backend");
+    });
+
+    it("other well-known entries stay on the frontend", () => {
+      expect(routeFor("/.well-known/apple-app-site-association")).toBe("frontend");
+      expect(routeFor("/.well-known/security.txt")).toBe("frontend");
+      expect(routeFor("/.well-known/webfinger-extra")).toBe("frontend");
+    });
+
+    it("a short code named ap is still a short code", () => {
+      expect(routeFor("/ap")).toBe("frontend");
+      expect(routeFor("/apx")).toBe("backend");
+    });
   });
 
   describe("frontend paths", () => {

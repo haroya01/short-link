@@ -146,6 +146,15 @@ public class SecurityConfig {
                     .permitAll()
                     .requestMatchers(GET, "/api/v1/public/**")
                     .permitAll()
+                    // ActivityPub discovery and documents are fetched by remote servers
+                    // anonymously.
+                    .requestMatchers(
+                        GET,
+                        "/.well-known/webfinger",
+                        "/.well-known/host-meta",
+                        "/.well-known/nodeinfo",
+                        "/ap/**")
+                    .permitAll()
                     .requestMatchers(
                         POST,
                         "/api/v1/public/email-leads",
