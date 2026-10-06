@@ -2,15 +2,18 @@ package com.example.short_link.note.application.read;
 
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
+import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -33,6 +36,7 @@ public class NoteViews {
   private final NotePeopleReader people;
   private final QuotedPostReader quotedPosts;
   private final NoteRepostRepository reposts;
+  private final NoteLinkPreviewRepository linkPreviews;
 
   public List<NoteView> of(List<NoteEntity> page, Long viewerId) {
     if (page.isEmpty()) {
@@ -81,6 +85,7 @@ public class NoteViews {
         viewerId == null ? Set.of() : new HashSet<>(likes.likedNoteIds(viewerId, ids));
     Set<Long> reposted =
         viewerId == null ? Set.of() : new HashSet<>(reposts.repostedNoteIds(viewerId, ids));
+    Map<Long, NoteView.LinkPreview> cards = linkCards(visible);
 
     List<NoteView> views = new ArrayList<>(visible.size());
     for (NoteEntity note : visible) {
@@ -100,9 +105,30 @@ public class NoteViews {
               replies.getOrDefault(note.getId(), 0L),
               mine ? repostCounts.getOrDefault(note.getId(), 0L) : null,
               viewerId == null ? null : reposted.contains(note.getId()),
-              quotedNote(quotedById.get(note.getQuotedNoteId()), authors, images)));
+              quotedNote(quotedById.get(note.getQuotedNoteId()), authors, images),
+              cards.get(note.getId())));
     }
     return views;
+  }
+
+  // Only notes whose body has an address can carry a card, so a page without one costs no query.
+  private Map<Long, NoteView.LinkPreview> linkCards(List<NoteEntity> visible) {
+    List<Long> linked =
+        visible.stream()
+            .filter(note -> NoteLinks.mayHavePreview(note.getBody()))
+            .map(NoteEntity::getId)
+            .toList();
+    Map<Long, NoteView.LinkPreview> cards = new HashMap<>();
+    if (linked.isEmpty()) {
+      return cards;
+    }
+    for (var row : linkPreviews.findByNoteIds(linked)) {
+      cards.put(
+          row.getNoteId(),
+          new NoteView.LinkPreview(
+              row.getUrl(), row.getTitle(), row.getDescription(), row.getImageUrl()));
+    }
+    return cards;
   }
 
   private static NoteView.QuotedNote quotedNote(

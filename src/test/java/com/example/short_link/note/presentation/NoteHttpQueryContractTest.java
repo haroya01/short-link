@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.testsupport.OperationalHttpJourneySupport;
 import java.util.List;
 import java.util.Map;
@@ -162,5 +163,26 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(count("note", "id = ? AND in_reply_to_id IS NULL", replyId)).isEqualTo(1);
     assertThat(count("note", "id = ? AND quoted_note_id IS NULL", quoteId)).isEqualTo(1);
     step("note-thread-gone", "GET", "/api/v1/public/notes/" + noteId, null, null, 404);
+
+    when(externalMetadata.fetch("https://example.com/essay"))
+        .thenReturn(new OgMetadata("An essay", "Why links break", "https://example.com/cover.png"));
+    long linkedId =
+        step(
+                "note-create-link",
+                "POST",
+                "/api/v1/notes",
+                writer,
+                Map.of("body", "읽어 볼 글 https://example.com/essay."),
+                201)
+            .path("id")
+            .asLong();
+    var linked =
+        step("note-thread-link", "GET", "/api/v1/public/notes/" + linkedId, null, null, 200);
+    assertThat(linked.path("note").path("linkPreview").path("url").asText())
+        .isEqualTo("https://example.com/essay");
+    assertThat(linked.path("note").path("linkPreview").path("title").asText())
+        .isEqualTo("An essay");
+    assertThat(linked.path("note").path("linkPreview").path("image").asText())
+        .isEqualTo("https://example.com/cover.png");
   }
 }

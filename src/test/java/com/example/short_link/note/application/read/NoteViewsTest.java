@@ -9,9 +9,11 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteLinkPreviewEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
+import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -36,6 +38,7 @@ class NoteViewsTest {
   @Mock private NotePeopleReader people;
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NoteRepostRepository reposts;
+  @Mock private NoteLinkPreviewRepository linkPreviews;
   @InjectMocks private NoteViews views;
 
   private static NoteEntity note(Long id, Long userId, Long quotedPostId) {
@@ -116,6 +119,30 @@ class NoteViewsTest {
     assertThat(asOther.get(0).repostCount()).isNull();
     assertThat(asOther.get(0).repostedByMe()).isFalse();
     assertThat(asOther.get(1).repostedByMe()).isTrue();
+  }
+
+  @Test
+  void onlyNotesWithAnAddressAreLookedUpForACard() {
+    NoteEntity linked = new NoteEntity(8L, "see https://a.example", null, null);
+    ReflectionTestUtils.setField(linked, "id", 1L);
+    NoteEntity plain = note(2L, 8L, null);
+    when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "them", null)));
+    NoteLinkPreviewEntity card = org.mockito.Mockito.mock(NoteLinkPreviewEntity.class);
+    when(card.getNoteId()).thenReturn(1L);
+    when(card.getUrl()).thenReturn("https://a.example");
+    when(card.getTitle()).thenReturn("A");
+    when(card.getImageUrl()).thenReturn("https://a.example/i.png");
+    when(linkPreviews.findByNoteIds(List.of(1L))).thenReturn(List.of(card));
+
+    List<NoteView> page = views.of(List.of(linked, plain), null);
+
+    assertThat(page.get(0).linkPreview())
+        .isEqualTo(
+            new NoteView.LinkPreview("https://a.example", "A", null, "https://a.example/i.png"));
+    assertThat(page.get(1).linkPreview()).isNull();
+
+    views.of(List.of(plain), null);
+    verify(linkPreviews, org.mockito.Mockito.times(1)).findByNoteIds(anyCollection());
   }
 
   @Test
