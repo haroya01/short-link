@@ -1,6 +1,7 @@
 package com.example.short_link.notification.application;
 
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
+import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.dto.NotificationTarget;
@@ -24,8 +25,10 @@ public class NotificationTargetCodec {
     return switch (type) {
       case SERIES_SUBSCRIBE -> jsonMapper.readValue(payload, NotificationSeriesRef.class);
       case CONNECTED, PATH_GREW -> jsonMapper.readValue(payload, NotificationCollectionRef.class);
-      case LIKE, COMMENT, FOLLOW, REPLY, NEW_POST, MENTION ->
+      case LIKE, COMMENT, FOLLOW, REPLY, NEW_POST, MENTION, REMOTE_FOLLOW ->
           jsonMapper.readValue(payload, NotificationPostRef.class);
+      case NOTE_LIKE, NOTE_REPOST, NOTE_REPLY, NOTE_QUOTE ->
+          jsonMapper.readValue(payload, NotificationNoteRef.class);
     };
   }
 }

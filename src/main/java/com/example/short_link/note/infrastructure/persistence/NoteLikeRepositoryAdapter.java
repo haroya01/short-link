@@ -17,14 +17,15 @@ class NoteLikeRepositoryAdapter implements NoteLikeRepository {
   private final JpaNoteLikeRepository jpa;
 
   @Override
-  public void addIfAbsent(Long noteId, Long userId) {
+  public boolean addIfAbsent(Long noteId, Long userId) {
     if (jpa.existsByNoteIdAndUserId(noteId, userId)) {
-      return;
+      return false;
     }
     try {
       jpa.saveAndFlush(new NoteLikeEntity(noteId, userId));
+      return true;
     } catch (DataIntegrityViolationException alreadyLiked) {
-      // a concurrent request stored the same like first
+      return false;
     }
   }
 

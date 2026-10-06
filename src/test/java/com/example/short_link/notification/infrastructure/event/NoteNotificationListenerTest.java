@@ -1,0 +1,110 @@
+package com.example.short_link.notification.infrastructure.event;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+
+import com.example.short_link.common.event.NoteInteractionEvent;
+import com.example.short_link.common.event.RemoteFollowedEvent;
+import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.notification.application.dto.NotificationNoteRef;
+import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
+import com.example.short_link.notification.domain.NotificationType;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+@ExtendWith(MockitoExtension.class)
+class NoteNotificationListenerTest {
+
+  @Mock private RecordBlogNotificationUseCase recordUseCase;
+  @Mock private UserBlockChecker blocks;
+
+  private NoteNotificationListener listener() {
+    return new NoteNotificationListener(recordUseCase, blocks);
+  }
+
+  private static NoteInteractionEvent event(
+      NoteInteractionEvent.Type type, Long actorUserId, Long actorRemoteId) {
+    return new NoteInteractionEvent(
+        type,
+        9L,
+        actorUserId,
+        actorRemoteId,
+        5L,
+        "hi",
+        type == NoteInteractionEvent.Type.REPLY ? 12L : null,
+        type == NoteInteractionEvent.Type.REPLY ? "me too" : null);
+  }
+
+  @Test
+  void likesAndRepostsGroupByNoteAndDayWhileRepliesStandAlone() {
+    String today = LocalDate.now(ZoneOffset.UTC).toString();
+
+    listener().onNoteInteraction(event(NoteInteractionEvent.Type.LIKE, null, 7L));
+    listener().onNoteInteraction(event(NoteInteractionEvent.Type.REPOST, 2L, null));
+    listener().onNoteInteraction(event(NoteInteractionEvent.Type.REPLY, 2L, null));
+
+    verify(recordUseCase)
+        .record(
+            9L,
+            NotificationType.NOTE_LIKE,
+            null,
+            7L,
+            new NotificationNoteRef(5L, "hi", null, null),
+            "NOTE_LIKE:5:" + today);
+    verify(recordUseCase)
+        .record(
+            9L,
+            NotificationType.NOTE_REPOST,
+            2L,
+            null,
+            new NotificationNoteRef(5L, "hi", null, null),
+            "NOTE_REPOST:5:" + today);
+    verify(recordUseCase)
+        .record(
+            9L,
+            NotificationType.NOTE_REPLY,
+            2L,
+            null,
+            new NotificationNoteRef(5L, "hi", 12L, "me too"),
+            null);
+  }
+
+  @Test
+  void yourOwnActionsAndPeopleYouBlockedNeverNotify() {
+    when(blocks.isBlocked(9L, 3L)).thenReturn(true);
+
+    listener()
+        .onNoteInteraction(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.LIKE, 9L, 9L, null, 5L, "hi", null, null));
+    listener().onNoteInteraction(event(NoteInteractionEvent.Type.QUOTE, 3L, null));
+
+    verifyNoInteractions(recordUseCase);
+  }
+
+  @Test
+  void aFollowFromAnotherServerIsItsOwnNotice() {
+    listener().onRemoteFollowed(new RemoteFollowedEvent(9L, 7L));
+
+    ArgumentCaptor<String> group = ArgumentCaptor.forClass(String.class);
+    verify(recordUseCase)
+        .record(
+            eq(9L),
+            eq(NotificationType.REMOTE_FOLLOW),
+            isNull(),
+            eq(7L),
+            isNull(),
+            group.capture());
+    assertThat(group.getValue()).isNull();
+    verifyNoInteractions(blocks);
+  }
+}

@@ -20,6 +20,7 @@ public class NoteEntity extends BaseCreatedEntity {
 
   // MySQL VARCHAR(500) counts code points, so length checks use codePointCount, not length().
   public static final int MAX_BODY_LENGTH = 500;
+  private static final int EXCERPT_LENGTH = 80;
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -58,6 +59,14 @@ public class NoteEntity extends BaseCreatedEntity {
 
   public boolean isOwnedBy(Long viewerId) {
     return userId.equals(viewerId);
+  }
+
+  public String excerpt() {
+    String flat = body == null ? "" : body.strip().replaceAll("\\s+", " ");
+    if (flat.codePointCount(0, flat.length()) <= EXCERPT_LENGTH) {
+      return flat;
+    }
+    return flat.substring(0, flat.offsetByCodePoints(0, EXCERPT_LENGTH)) + "…";
   }
 
   public void edit(String body, Instant at) {

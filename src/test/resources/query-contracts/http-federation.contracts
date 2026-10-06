@@ -29,9 +29,10 @@
 @junit | federation-webfinger-instance | 0 | 0 | 0 | 0 | 0
 # Inbox POSTs signed by a seeded remote actor whose key is cached, so nothing is fetched remotely.
 # Follow to the personal inbox: inbox owner (actor, user), key, follower lookup and insert, Accept
-# dedupe check and insert.
-@junit | federation-inbox-follow | 6 | 2 | 0 | 0 | 8
-@junit | federation-inbox-follow-before-leave | 6 | 2 | 0 | 0 | 8
+# dedupe check and insert. A new follower notifies the user (preference, insert, recipient name,
+# remote actor); a refollow does not.
+@junit | federation-inbox-follow | 9 | 3 | 0 | 0 | 12
+@junit | federation-inbox-follow-before-leave | 9 | 3 | 0 | 0 | 12
 # The shared inbox resolves the target (actor, user, preference); the existing row takes the new
 # follow id.
 @junit | federation-inbox-refollow | 6 | 1 | 1 | 0 | 8
@@ -45,12 +46,22 @@
 @junit | federation-inbox-unknown | 1 | 0 | 0 | 0 | 1
 # Likes and boosts from a remote account. The target is checked before the signature with the rule
 # that serves the note document (note, author, images, then the author's user, preference, actor);
-# a personal inbox reuses its owner when the owner wrote the note. Then the key and one upsert, so a
-# re-sent Like keeps one row.
-@junit | federation-inbox-like | 7 | 1 | 0 | 0 | 8
-@junit | federation-inbox-like-again | 7 | 1 | 0 | 0 | 8
-@junit | federation-inbox-announce | 7 | 1 | 0 | 0 | 8
-@junit | federation-inbox-like-before-delete | 7 | 1 | 0 | 0 | 8
+# a personal inbox reuses its owner when the owner wrote the note. Then the key and INSERT IGNORE.
+# A new reaction re-reads the note for its author and notifies them (preference, group check,
+# insert, recipient name, remote actor); a re-sent one only refreshes its activity id; a Like again
+# after an Undo on the same day finds the actor already in the group and writes no notification.
+@junit | federation-inbox-like | 12 | 2 | 0 | 0 | 14
+@junit | federation-inbox-like-again | 7 | 1 | 1 | 0 | 9
+@junit | federation-inbox-announce | 12 | 2 | 0 | 0 | 14
+@junit | federation-inbox-like-before-delete | 10 | 1 | 0 | 0 | 11
+# A member likes the same note: the like and the author's notice joining today's group.
+@junit | federation-note-member-like | 7 | 2 | 0 | 0 | 9
+# The author's inbox reads groups, not rows: each group's newest row with its size and unread sum
+# in one query, the newest three actors of groups larger than one (window function), then members
+# and remote accounts by id. Unread counts groups; reading a group's newest row reads the group.
+@junit | notification-note-groups | 4 | 0 | 0 | 0 | 4
+@junit | notification-note-unread | 1 | 0 | 0 | 0 | 1
+@junit | notification-note-group-read | 0 | 0 | 1 | 0 | 1
 # The author's view adds one grouped count of remote reactions; anyone else gets no counts at all.
 @junit | federation-note-remote-counts | 10 | 0 | 0 | 0 | 10
 @junit | federation-note-remote-counts-stranger | 7 | 0 | 0 | 0 | 7

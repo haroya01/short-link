@@ -13,5 +13,14 @@ public enum NotificationType {
   NEW_POST,
   MENTION,
   CONNECTED,
-  PATH_GREW
+  PATH_GREW,
+  NOTE_LIKE,
+  NOTE_REPOST,
+  NOTE_REPLY,
+  NOTE_QUOTE,
+  REMOTE_FOLLOW;
+
+  public boolean grouped() {
+    return this == NOTE_LIKE || this == NOTE_REPOST;
+  }
 }

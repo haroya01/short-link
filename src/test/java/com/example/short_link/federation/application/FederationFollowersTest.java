@@ -6,8 +6,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationFollowerEntity;
 import com.example.short_link.federation.domain.FederationUser;
@@ -23,6 +25,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -38,6 +41,7 @@ class FederationFollowersTest {
   @Mock private FederationFollowerRepository followers;
   @Mock private RemoteActorRepository remoteActors;
   @Mock private DeliveryQueue deliveries;
+  @Mock private ApplicationEventPublisher events;
 
   private FederationFollowers service() {
     return new FederationFollowers(
@@ -45,7 +49,8 @@ class FederationFollowersTest {
         remoteActors,
         deliveries,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
-        JSON);
+        JSON,
+        events);
   }
 
   private static RemoteActorEntity alice() {
@@ -93,6 +98,7 @@ class FederationFollowersTest {
     assertThat(saved.getValue().getUserId()).isEqualTo(7L);
     assertThat(saved.getValue().getRemoteActorId()).isEqualTo(42L);
     assertThat(saved.getValue().getFollowActivityId()).isEqualTo("https://mastodon.example/f/1");
+    verify(events).publishEvent(new RemoteFollowedEvent(7L, 42L));
 
     JsonNode accept = enqueuedAccept();
     assertThat(accept.path("@context").asString())
@@ -117,6 +123,7 @@ class FederationFollowersTest {
     service().follow(TARGET, alice(), "https://mastodon.example/f/2");
 
     verify(followers).save(existing);
+    verifyNoInteractions(events);
     assertThat(existing.getFollowActivityId()).isEqualTo("https://mastodon.example/f/2");
     assertThat(enqueuedAccept().path("object").path("id").asString())
         .isEqualTo("https://mastodon.example/f/2");

@@ -7,4 +7,6 @@ import java.util.Map;
 public interface NotificationActorReader {
 
   Map<Long, NotificationActor> resolve(Collection<Long> userIds);
+
+  Map<Long, NotificationActor> resolveRemote(Collection<Long> remoteActorIds);
 }

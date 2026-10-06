@@ -36,4 +36,13 @@ class BlogPushUrlTest {
                 new PushRoute("yuki", null, null, "walks", null, null, null)))
         .isEqualTo("https://blog.kurl.me/@yuki");
   }
+
+  @Test
+  void aNoteOpensUnderItsWriter() {
+    assertThat(
+            BlogPushUrl.of(
+                "https://blog.kurl.me",
+                new PushRoute("yuki", "me", null, null, null, null, null, 5L)))
+        .isEqualTo("https://blog.kurl.me/@me/notes/5");
+  }
 }

@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationFollowerEntity;
 import com.example.short_link.federation.domain.RemoteActorEntity;
@@ -8,8 +9,10 @@ import com.example.short_link.federation.domain.repository.RemoteActorRepository
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -25,16 +28,19 @@ public class FederationFollowers {
   private final DeliveryQueue deliveries;
   private final FederationUrls urls;
   private final JsonMapper json;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public void follow(LocalActor target, RemoteActorEntity follower, String followId) {
     Long userId = target.user().id();
+    Optional<FederationFollowerEntity> existing = followers.find(userId, follower.getId());
     FederationFollowerEntity row =
-        followers
-            .find(userId, follower.getId())
-            .orElseGet(() -> new FederationFollowerEntity(userId, follower.getId(), followId));
+        existing.orElseGet(() -> new FederationFollowerEntity(userId, follower.getId(), followId));
     row.refollow(followId);
     followers.save(row);
+    if (existing.isEmpty()) {
+      events.publishEvent(new RemoteFollowedEvent(userId, follower.getId()));
+    }
 
     String actor = urls.actor(target.publicId());
     String acceptId = actor + "#accepts/follows/" + UUID.randomUUID();

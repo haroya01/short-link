@@ -13,7 +13,9 @@ import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -179,6 +181,56 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
                 noteId))
         .isEqualTo(alice + "#likes/2");
 
+    call(
+        "federation-note-member-like",
+        "PUT",
+        "/api/v1/notes/" + noteId + "/like",
+        null,
+        strangerToken,
+        200);
+    var inbox =
+        body(call("notification-note-groups", "GET", "/api/v1/notifications", null, token, 200));
+    var likes = inbox.path("items").get(0);
+    String handle = "alice@" + URI.create(remote).getHost();
+    assertThat(likes.path("type").asString()).isEqualTo("NOTE_LIKE");
+    assertThat(likes.path("count").asLong()).isEqualTo(2);
+    assertThat(likes.path("noteId").asLong()).isEqualTo(noteId);
+    assertThat(likes.path("noteExcerpt").asString()).isEqualTo("hello fediverse");
+    List<String> likers = new ArrayList<>();
+    likes.path("actors").forEach(actor -> likers.add(actor.path("username").asString()));
+    assertThat(likers).containsExactly(stranger.getUsername(), handle);
+    var boosts = inbox.path("items").get(1);
+    assertThat(boosts.path("type").asString()).isEqualTo("NOTE_REPOST");
+    assertThat(boosts.path("count").asLong()).isEqualTo(1);
+    assertThat(boosts.path("actorUsername").asString()).isEqualTo(handle);
+    assertThat(boosts.path("actorProfileUrl").asString()).isEqualTo(alice);
+    assertThat(
+            count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
+        .isEqualTo(3);
+    assertThat(
+            body(call(
+                    "notification-note-unread",
+                    "GET",
+                    "/api/v1/notifications/unread-count",
+                    null,
+                    token,
+                    200))
+                .path("count")
+                .asLong())
+        .isEqualTo(2);
+    call(
+        "notification-note-group-read",
+        "POST",
+        "/api/v1/notifications/" + likes.path("id").asLong() + "/read",
+        null,
+        token,
+        204);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? AND read_at IS NULL",
+                owner.getId()))
+        .isEqualTo(1);
+
     var mine =
         body(
             call(
@@ -188,7 +240,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
                 null,
                 token,
                 200));
-    assertThat(mine.path("note").path("likeCount").asLong()).isEqualTo(1);
+    assertThat(mine.path("note").path("likeCount").asLong()).isEqualTo(2);
     assertThat(mine.path("note").path("repostCount").asLong()).isEqualTo(1);
     var theirs =
         body(
