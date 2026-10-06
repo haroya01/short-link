@@ -1,0 +1,18 @@
+package com.example.short_link.note.domain.repository;
+
+import com.example.short_link.note.domain.NoteAuthor;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+// Reads the user slice's tables natively; soft-deleted accounts never resolve, so their notes drop
+// out of every listing at once.
+public interface NotePeopleReader {
+
+  Map<Long, NoteAuthor> activeAuthors(Collection<Long> userIds);
+
+  Optional<NoteAuthor> activeByUsername(String username);
+
+  List<Long> followingIds(Long userId);
+}

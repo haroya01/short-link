@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.application.read;
 
+import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -7,8 +8,6 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
@@ -29,7 +28,7 @@ public class CollectionContentReader {
   private final CollectionConnectionRepository connectionRepository;
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
-  private final NoteRepository noteRepository;
+  private final NoteBodyReader noteBodies;
   private final UserRepository userRepository;
 
   public Map<Long, List<String>> previewByCollection(
@@ -68,10 +67,7 @@ public class CollectionContentReader {
             highlightRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.HIGHLIGHT)),
             PostHighlightEntity::getId);
     if (publishedOnly && !highlights.isEmpty()) keepHighlightsOfPublishedPosts(highlights);
-    var notes =
-        indexedBy(
-            noteRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.NOTE)),
-            NoteEntity::getId);
+    var notes = noteBodies.bodiesByIds(refIds(connections, ConnectionBlockType.NOTE));
     return new CollectionContentSnapshot(posts, highlights, notes, Map.of());
   }
 
@@ -94,10 +90,7 @@ public class CollectionContentReader {
         indexedBy(
             highlightRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.HIGHLIGHT)),
             PostHighlightEntity::getId);
-    var notes =
-        indexedBy(
-            noteRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.NOTE)),
-            NoteEntity::getId);
+    var notes = noteBodies.bodiesByIds(refIds(connections, ConnectionBlockType.NOTE));
 
     Set<Long> postIds = new HashSet<>(refIds(connections, ConnectionBlockType.POST));
     highlights.values().forEach(highlight -> postIds.add(highlight.getPostId()));

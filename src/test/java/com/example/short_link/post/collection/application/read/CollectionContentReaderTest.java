@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -14,10 +15,9 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -31,13 +31,13 @@ class CollectionContentReaderTest {
   @Mock private CollectionConnectionRepository connections;
   @Mock private PostRepository posts;
   @Mock private PostHighlightRepository highlights;
-  @Mock private NoteRepository notes;
+  @Mock private NoteBodyReader noteBodies;
   @Mock private UserRepository users;
   private CollectionContentReader reader;
 
   @BeforeEach
   void setUp() {
-    reader = new CollectionContentReader(connections, posts, highlights, notes, users);
+    reader = new CollectionContentReader(connections, posts, highlights, noteBodies, users);
   }
 
   @Test
@@ -70,9 +70,7 @@ class CollectionContentReaderTest {
             connection(5L, ConnectionBlockType.POST, 404L));
     when(highlights.findAllByIdIn(List.of(20L, 21L)))
         .thenReturn(List.of(highlight(20L, 10L), highlight(21L, 30L)));
-    NoteEntity note = new NoteEntity(7L, "A note remains visible");
-    ReflectionTestUtils.setField(note, "id", 40L);
-    when(notes.findAllByIdIn(List.of(40L))).thenReturn(List.of(note));
+    when(noteBodies.bodiesByIds(List.of(40L))).thenReturn(Map.of(40L, "A note remains visible"));
     when(posts.findAllByIdIn(Set.of(10L, 30L, 404L)))
         .thenReturn(List.of(post(10L, true), post(30L, false)));
     when(users.findAllByIdIn(anyCollection())).thenReturn(List.of());

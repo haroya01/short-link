@@ -2,6 +2,8 @@ package com.example.short_link.post.collection.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.CollectionKind;
@@ -11,8 +13,6 @@ import com.example.short_link.post.collection.domain.repository.CollectionConnec
 import com.example.short_link.post.collection.domain.repository.CollectionRepository;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -50,7 +50,7 @@ class PublicConnectionFeedIntegrationTest {
   }
 
   private Long note(Long userId, String body) {
-    return noteRepository.save(new NoteEntity(userId, body)).getId();
+    return noteRepository.save(new NoteEntity(userId, body, null, null)).getId();
   }
 
   private Long collection(Long ownerId, String title, CollectionVisibility vis) {

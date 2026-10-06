@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.application.read;
 
+import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -9,8 +10,6 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
-import com.example.short_link.post.note.domain.NoteEntity;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.util.ArrayList;
@@ -35,7 +34,7 @@ public class CurationGraphQueryService {
   private final CollectionConnectionRepository connectionRepository;
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
-  private final NoteRepository noteRepository;
+  private final NoteBodyReader noteBodies;
   private final UserRepository userRepository;
 
   public List<RelatedBlockView> relatedTo(ConnectionBlockType blockType, Long refId, int limit) {
@@ -47,8 +46,7 @@ public class CurationGraphQueryService {
         bulk(
             highlightRepository.findAllByIdIn(refIds(rows, "HIGHLIGHT")),
             PostHighlightEntity::getId);
-    Map<Long, NoteEntity> notes =
-        bulk(noteRepository.findAllByIdIn(refIds(rows, "NOTE")), NoteEntity::getId);
+    Map<Long, String> notes = noteBodies.bodiesByIds(refIds(rows, "NOTE"));
 
     Set<Long> postIds = new HashSet<>(refIds(rows, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
@@ -93,7 +91,7 @@ public class CurationGraphQueryService {
       CooccurrenceRow row,
       Map<Long, PostEntity> posts,
       Map<Long, PostHighlightEntity> highlights,
-      Map<Long, NoteEntity> notes,
+      Map<Long, String> notes,
       Map<Long, UserEntity> users) {
     int shared = row.getSharedCount() == null ? 0 : row.getSharedCount().intValue();
     Long refId = row.getRefId();
@@ -130,10 +128,9 @@ public class CurationGraphQueryService {
             shared);
       }
       case NOTE -> {
-        NoteEntity note = notes.get(refId);
-        if (note == null) yield null;
-        yield new RelatedBlockView(
-            "NOTE", refId, null, null, null, null, null, note.getBody(), shared);
+        String body = notes.get(refId);
+        if (body == null) yield null;
+        yield new RelatedBlockView("NOTE", refId, null, null, null, null, null, body, shared);
       }
     };
   }

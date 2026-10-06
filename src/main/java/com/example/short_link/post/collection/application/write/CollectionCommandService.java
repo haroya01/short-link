@@ -1,6 +1,7 @@
 package com.example.short_link.post.collection.application.write;
 
 import com.example.short_link.common.event.CollectionConnectedEvent;
+import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
@@ -12,7 +13,6 @@ import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
-import com.example.short_link.post.note.domain.repository.NoteRepository;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,7 +33,7 @@ public class CollectionCommandService {
   private final CollectionConnectionRepository connectionRepository;
   private final PostRepository postRepository;
   private final PostHighlightRepository highlightRepository;
-  private final NoteRepository noteRepository;
+  private final NoteBodyReader noteBodies;
   private final ApplicationEventPublisher events;
 
   @Transactional
@@ -207,7 +207,7 @@ public class CollectionCommandService {
         switch (blockType) {
           case POST -> postRepository.findById(refId).isPresent();
           case HIGHLIGHT -> highlightRepository.findById(refId).isPresent();
-          case NOTE -> noteRepository.findById(refId).isPresent();
+          case NOTE -> noteBodies.exists(refId);
         };
     if (!exists) {
       throw new PostException(PostErrorCode.CONNECTION_TARGET_NOT_FOUND, refId);

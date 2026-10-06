@@ -1,0 +1,127 @@
+package com.example.short_link.note.presentation;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import com.example.short_link.common.storage.ObjectStorage;
+import com.example.short_link.testsupport.OperationalHttpJourneySupport;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import org.junit.jupiter.api.Test;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+
+class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
+
+  @MockitoBean private ObjectStorage objectStorage;
+
+  @Test
+  void aWriterPostsRepliesQuotesEditsAndDeletesNotes() throws Exception {
+    Actor writer = actor("note-writer", false);
+    Actor reader = actor("note-reader", false);
+    when(objectStorage.isConfigured()).thenReturn(true);
+    when(objectStorage.presignPut(anyString(), anyString(), any()))
+        .thenReturn("https://storage.example.test/upload");
+    when(objectStorage.objectSize(anyString())).thenReturn(Optional.of(4L));
+    jdbc.update(
+        "INSERT INTO posts (user_id, slug, title, status, published_at, created_at, updated_at)"
+            + " VALUES (?, 'quoted', 'Quoted essay', 'PUBLISHED', NOW(6), NOW(6), NOW(6))",
+        writer.id());
+    long postId =
+        jdbc.queryForObject(
+            "SELECT id FROM posts WHERE user_id = ? AND slug = 'quoted'", Long.class, writer.id());
+    jdbc.update(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        reader.id(),
+        writer.id());
+
+    String key =
+        step(
+                "note-image-presign",
+                "POST",
+                "/api/v1/notes/images/presign",
+                writer,
+                Map.of("contentType", "image/png"),
+                200)
+            .path("key")
+            .asText();
+    assertThat(key).startsWith("note-images/" + writer.id() + "/").endsWith(".png");
+
+    var note =
+        step(
+            "note-create",
+            "POST",
+            "/api/v1/notes",
+            writer,
+            Map.of(
+                "body",
+                "첫 노트",
+                "images",
+                List.of(Map.of("key", key, "altText", "창밖 풍경")),
+                "quotedPostId",
+                postId),
+            201);
+    long noteId = note.path("id").asLong();
+    assertThat(note.path("media").get(0).path("altText").asText()).isEqualTo("창밖 풍경");
+    assertThat(note.path("quotedPost").path("slug").asText()).isEqualTo("quoted");
+    assertThat(note.path("likeCount").asLong()).isZero();
+    verify(objectStorage).applyImmutableCacheControl(key);
+
+    long replyId =
+        step(
+                "note-reply",
+                "POST",
+                "/api/v1/notes",
+                reader,
+                Map.of("body", "답글", "inReplyToId", noteId),
+                201)
+            .path("id")
+            .asLong();
+
+    step("note-like", "PUT", "/api/v1/notes/" + noteId + "/like", reader, null, 200);
+
+    var thread = step("note-thread", "GET", "/api/v1/public/notes/" + noteId, reader, null, 200);
+    assertThat(thread.path("note").path("replyCount").asLong()).isEqualTo(1);
+    assertThat(thread.path("note").path("likedByMe").asBoolean()).isTrue();
+    assertThat(thread.path("note").path("likeCount").isNull()).isTrue();
+    assertThat(thread.path("replies").get(0).path("id").asLong()).isEqualTo(replyId);
+
+    var mine =
+        step(
+            "note-profile",
+            "GET",
+            "/api/v1/public/profiles/" + writer.username() + "/notes",
+            writer,
+            null,
+            200);
+    assertThat(mine.path("items").get(0).path("likeCount").asLong()).isEqualTo(1);
+
+    var following = step("note-following", "GET", "/api/v1/notes/following", reader, null, 200);
+    assertThat(following.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
+
+    var everyone = step("note-everyone", "GET", "/api/v1/public/notes", null, null, 200);
+    assertThat(everyone.path("items").get(0).path("likeCount").asLong()).isZero();
+
+    var edited =
+        step("note-edit", "PATCH", "/api/v1/notes/" + noteId, writer, Map.of("body", "고친 노트"), 200);
+    assertThat(edited.path("body").asText()).isEqualTo("고친 노트");
+    assertThat(edited.path("editedAt").isNull()).isFalse();
+    step(
+        "note-edit-denied",
+        "PATCH",
+        "/api/v1/notes/" + noteId,
+        reader,
+        Map.of("body", "남의 노트"),
+        403);
+
+    step("note-delete", "DELETE", "/api/v1/notes/" + noteId, writer, null, 204);
+    verify(objectStorage, timeout(5_000)).delete(key);
+    assertThat(count("note_media", "note_id = ?", noteId)).isZero();
+    assertThat(count("note", "id = ? AND in_reply_to_id IS NULL", replyId)).isEqualTo(1);
+    step("note-thread-gone", "GET", "/api/v1/public/notes/" + noteId, null, null, 404);
+  }
+}
