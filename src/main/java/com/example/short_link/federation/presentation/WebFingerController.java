@@ -29,21 +29,24 @@ public class WebFingerController {
 
   @GetMapping("/.well-known/webfinger")
   public ResponseEntity<WebFingerResponse> webFinger(@RequestParam String resource) {
-    Optional<LocalActor> actor =
-        WebFingerResource.parse(resource, urls.domain(), urls.actor(""))
+    Optional<WebFingerResponse> document =
+        WebFingerResource.parse(resource, urls.domain(), urls.actor(""), urls.instance())
             .flatMap(
                 parsed ->
                     switch (parsed) {
-                      case WebFingerResource.Username name -> actors.byUsername(name.value());
-                      case WebFingerResource.ActorId id -> actors.byPublicId(id.publicId());
+                      case WebFingerResource.Username name ->
+                          actors.byUsername(name.value()).map(this::document);
+                      case WebFingerResource.ActorId id ->
+                          actors.byPublicId(id.publicId()).map(this::document);
+                      case WebFingerResource.Instance instance -> Optional.of(instanceDocument());
                     });
-    return actor
+    return document
         .map(
             found ->
                 ResponseEntity.ok()
                     .contentType(JRD)
                     .cacheControl(CacheControl.maxAge(Duration.ofMinutes(5)).cachePublic())
-                    .body(document(found)))
+                    .body(found))
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
@@ -60,6 +63,14 @@ public class WebFingerController {
                 + HtmlUtils.htmlEscape(template)
                 + "\"/>\n"
                 + "</XRD>\n");
+  }
+
+  private WebFingerResponse instanceDocument() {
+    String actorId = urls.instance();
+    return new WebFingerResponse(
+        "acct:" + urls.domain() + "@" + urls.domain(),
+        List.of(actorId),
+        List.of(new WebFingerResponse.Link("self", ActivityPubMedia.ACTIVITY_JSON_VALUE, actorId)));
   }
 
   private WebFingerResponse document(LocalActor actor) {

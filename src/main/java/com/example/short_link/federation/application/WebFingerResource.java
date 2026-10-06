@@ -10,11 +10,17 @@ public sealed interface WebFingerResource {
 
   record ActorId(String publicId) implements WebFingerResource {}
 
-  static Optional<WebFingerResource> parse(String resource, String domain, String actorPrefix) {
+  record Instance() implements WebFingerResource {}
+
+  static Optional<WebFingerResource> parse(
+      String resource, String domain, String actorPrefix, String instanceId) {
     if (resource == null || resource.isBlank()) {
       return Optional.empty();
     }
     String value = resource.trim();
+    if (value.equals(instanceId)) {
+      return Optional.of(new Instance());
+    }
     if (value.startsWith(actorPrefix)) {
       String publicId = value.substring(actorPrefix.length());
       return publicId.isEmpty() || publicId.contains("/")
@@ -35,6 +41,9 @@ public sealed interface WebFingerResource {
     if (!host.toLowerCase(Locale.ROOT).equals(domain.toLowerCase(Locale.ROOT))) {
       return Optional.empty();
     }
-    return Optional.of(new Username(value.substring(0, at)));
+    String name = value.substring(0, at);
+    return name.equalsIgnoreCase(domain)
+        ? Optional.of(new Instance())
+        : Optional.of(new Username(name));
   }
 }

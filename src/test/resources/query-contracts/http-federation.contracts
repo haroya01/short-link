@@ -25,6 +25,8 @@
 # The instance actor (signs fetches): first request creates its key, later ones only read it.
 @junit | federation-instance-first | 2 | 1 | 0 | 0 | 3
 @junit | federation-instance-known | 1 | 0 | 0 | 0 | 1
+# Mastodon resolves the instance actor's acct back to its id before trusting its key; answered from config.
+@junit | federation-webfinger-instance | 0 | 0 | 0 | 0 | 0
 # Inbox POSTs signed by a seeded remote actor whose key is cached, so nothing is fetched remotely.
 # Follow to the personal inbox: inbox owner (actor, user), key, follower lookup and insert, Accept
 # dedupe check and insert.

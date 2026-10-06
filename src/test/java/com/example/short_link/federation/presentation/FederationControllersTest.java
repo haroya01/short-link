@@ -76,6 +76,19 @@ class FederationControllersTest {
   }
 
   @Test
+  void webFingerAnswersForTheInstanceActorSoItsSignaturesVerify() throws Exception {
+    mvc.perform(get("/.well-known/webfinger").param("resource", "acct:kurl.me@kurl.me"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.subject").value("acct:kurl.me@kurl.me"))
+        .andExpect(jsonPath("$.links[0].rel").value("self"))
+        .andExpect(jsonPath("$.links[0].type").value("application/activity+json"))
+        .andExpect(jsonPath("$.links[0].href").value("https://kurl.me/ap/instance"));
+    mvc.perform(get("/.well-known/webfinger").param("resource", "https://kurl.me/ap/instance"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.subject").value("acct:kurl.me@kurl.me"));
+  }
+
+  @Test
   void actorDocumentCarriesWhatMastodonNeeds() throws Exception {
     when(actors.byPublicId("pid123")).thenReturn(Optional.of(YUKI));
 
