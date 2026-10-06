@@ -177,6 +177,20 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(thread.path("note").path("likedByMe").asBoolean()).isTrue();
     assertThat(thread.path("note").path("likeCount").asLong()).isEqualTo(1);
     assertThat(thread.path("replies").get(0).path("id").asLong()).isEqualTo(replyId);
+    assertThat(thread.path("note").path("quoteCount").asLong()).isEqualTo(1);
+
+    var quotes =
+        step("note-quotes", "GET", "/api/v1/public/notes/" + noteId + "/quotes", null, null, 200);
+    assertThat(quotes.path("items").get(0).path("id").asLong()).isEqualTo(quoteId);
+
+    var bookmark =
+        step("note-bookmark", "PUT", "/api/v1/notes/" + noteId + "/bookmark", reader, null, 200);
+    assertThat(bookmark.path("bookmarked").asBoolean()).isTrue();
+    var saved = step("note-bookmarks", "GET", "/api/v1/notes/bookmarks", reader, null, 200);
+    assertThat(saved.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
+    assertThat(saved.path("items").get(0).path("bookmarkedByMe").asBoolean()).isTrue();
+    step("note-unbookmark", "DELETE", "/api/v1/notes/" + noteId + "/bookmark", reader, null, 200);
+    assertThat(count("note_bookmark", "note_id = ?", noteId)).isZero();
 
     var mine =
         step(

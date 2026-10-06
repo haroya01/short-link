@@ -5,8 +5,8 @@ import com.example.short_link.note.domain.QuotedPost;
 import java.time.Instant;
 import java.util.List;
 
-// Counts are public and include likes and boosts from other servers. likedByMe and repostedByMe
-// are null for anonymous readers.
+// Counts are public and include likes and boosts from other servers. likedByMe, repostedByMe and
+// bookmarkedByMe are null for anonymous readers; a bookmark is seen by no one else.
 public record NoteView(
     Long id,
     String body,
@@ -23,7 +23,9 @@ public record NoteView(
     Boolean repostedByMe,
     QuotedNote quotedNote,
     LinkPreview linkPreview,
-    NoteAuthor repostedBy) {
+    NoteAuthor repostedBy,
+    long quoteCount,
+    Boolean bookmarkedByMe) {
 
   public NoteView(
       Long id,
@@ -57,6 +59,8 @@ public record NoteView(
         repostedByMe,
         quotedNote,
         linkPreview,
+        null,
+        0,
         null);
   }
 
@@ -84,6 +88,8 @@ public record NoteView(
         repostedByMe,
         quotedNote,
         linkPreview,
-        reposter);
+        reposter,
+        quoteCount,
+        bookmarkedByMe);
   }
 }

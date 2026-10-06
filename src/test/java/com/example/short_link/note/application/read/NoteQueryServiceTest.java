@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
+import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -34,6 +35,7 @@ class NoteQueryServiceTest {
   @Mock private NoteRepository notes;
   @Mock private NoteLikeRepository likes;
   @Mock private NoteRepostRepository reposts;
+  @Mock private NoteBookmarkRepository bookmarks;
   @Mock private NotePeopleReader people;
   @Mock private NoteViews views;
   @InjectMocks private NoteQueryService service;
@@ -190,5 +192,25 @@ class NoteQueryServiceTest {
     when(likes.likedNoteIds(7L, List.of(1L))).thenReturn(List.of(1L));
 
     assertThat(service.likedNoteIds(7L, List.of(1L))).containsExactly(1L);
+  }
+
+  @Test
+  void bookmarksComeNewestFirstAndQuotesListTheNotesThatQuoteOne() {
+    NoteEntity two = note(2L, null);
+    NoteEntity five = note(5L, null);
+    when(bookmarks.recentNoteIdsByUser(9L, 0, 21)).thenReturn(List.of(5L, 2L));
+    when(notes.findAllByIdIn(List.of(5L, 2L))).thenReturn(List.of(two, five));
+    when(views.of(List.of(five, two), 9L))
+        .thenReturn(List.of(view(5L, null, 0L), view(2L, null, 0L)));
+
+    assertThat(service.bookmarks(9L, 0, 20).items())
+        .extracting(NoteView::id)
+        .containsExactly(5L, 2L);
+
+    when(notes.quotesOf(7L, 0, 21)).thenReturn(List.of(two));
+    when(views.of(List.of(two), null)).thenReturn(List.of(view(2L, null, 0L)));
+    assertThat(service.quotes(7L, 0, 20, null).items())
+        .extracting(NoteView::id)
+        .containsExactly(2L);
   }
 }

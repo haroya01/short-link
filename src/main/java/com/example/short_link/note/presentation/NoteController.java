@@ -121,6 +121,35 @@ public class NoteController {
     return command.setRepost(userId, id, false);
   }
 
+  @PutMapping("/api/v1/notes/{id}/bookmark")
+  public NoteCommandService.BookmarkStatus bookmark(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setBookmark(userId, id, true);
+  }
+
+  @DeleteMapping("/api/v1/notes/{id}/bookmark")
+  public NoteCommandService.BookmarkStatus unbookmark(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setBookmark(userId, id, false);
+  }
+
+  @GetMapping("/api/v1/notes/bookmarks")
+  public NoteFeedView bookmarks(
+      @AuthenticationPrincipal Long userId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.bookmarks(userId, page, size);
+  }
+
+  @GetMapping("/api/v1/public/notes/{id}/quotes")
+  public NoteFeedView quotes(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable Long id,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.quotes(id, page, size, viewerId);
+  }
+
   @GetMapping("/api/v1/notes/like-status")
   public LikedIdsResponse likeStatus(
       @AuthenticationPrincipal Long userId, @RequestParam List<Long> ids) {

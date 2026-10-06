@@ -4,7 +4,6 @@ import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -37,11 +36,6 @@ class NoteRepostRepositoryAdapter implements NoteRepostRepository {
     Optional<NoteRepostEntity> found = jpa.findByNoteIdAndUserId(noteId, userId);
     found.ifPresent(jpa::delete);
     return found;
-  }
-
-  @Override
-  public List<Long> repostedNoteIds(Long userId, Collection<Long> noteIds) {
-    return userId == null || noteIds.isEmpty() ? List.of() : jpa.repostedNoteIds(userId, noteIds);
   }
 
   @Override

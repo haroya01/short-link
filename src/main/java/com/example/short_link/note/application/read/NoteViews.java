@@ -5,17 +5,15 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteStats;
+import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.QuotedPost;
-import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
-import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -32,11 +30,9 @@ import org.springframework.stereotype.Component;
 public class NoteViews {
 
   private final NoteRepository notes;
-  private final NoteLikeRepository likes;
   private final NoteMediaRepository media;
   private final NotePeopleReader people;
   private final QuotedPostReader quotedPosts;
-  private final NoteRepostRepository reposts;
   private final NoteLinkPreviewRepository linkPreviews;
 
   public List<NoteView> of(List<NoteEntity> page, Long viewerId) {
@@ -73,10 +69,7 @@ public class NoteViews {
             .collect(Collectors.toSet());
     Map<Long, QuotedPost> posts = quoted.isEmpty() ? Map.of() : quotedPosts.publishedByIds(quoted);
     Map<Long, NoteStats> stats = notes.stats(ids);
-    Set<Long> liked =
-        viewerId == null ? Set.of() : new HashSet<>(likes.likedNoteIds(viewerId, ids));
-    Set<Long> reposted =
-        viewerId == null ? Set.of() : new HashSet<>(reposts.repostedNoteIds(viewerId, ids));
+    NoteViewerMarks marks = notes.viewerMarks(viewerId, ids);
     Map<Long, NoteView.LinkPreview> cards = linkCards(visible);
 
     List<NoteView> views = new ArrayList<>(visible.size());
@@ -89,16 +82,19 @@ public class NoteViews {
               note.getCreatedAt(),
               note.getEditedAt(),
               counts.likes(),
-              viewerId == null ? null : liked.contains(note.getId()),
+              viewerId == null ? null : marks.liked().contains(note.getId()),
               authors.get(note.getUserId()),
               images.getOrDefault(note.getId(), List.of()),
               note.getQuotedPostId() == null ? null : posts.get(note.getQuotedPostId()),
               note.getInReplyToId(),
               counts.replies(),
               counts.reposts(),
-              viewerId == null ? null : reposted.contains(note.getId()),
+              viewerId == null ? null : marks.reposted().contains(note.getId()),
               quotedNote(quotedById.get(note.getQuotedNoteId()), authors, images),
-              cards.get(note.getId())));
+              cards.get(note.getId()),
+              null,
+              counts.quotes(),
+              viewerId == null ? null : marks.bookmarked().contains(note.getId())));
     }
     return views;
   }

@@ -3,6 +3,7 @@ package com.example.short_link.note.application.read;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
+import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -31,6 +32,7 @@ public class NoteQueryService {
   private final NoteRepository notes;
   private final NoteLikeRepository likes;
   private final NoteRepostRepository reposts;
+  private final NoteBookmarkRepository bookmarks;
   private final NotePeopleReader people;
   private final NoteViews views;
 
@@ -67,17 +69,32 @@ public class NoteQueryService {
         page,
         size,
         viewerId,
-        (offset, limit) -> {
-          List<Long> ids = reposts.recentNoteIdsByUser(author.id(), offset, limit);
-          Map<Long, NoteEntity> found =
-              notes.findAllByIdIn(ids).stream()
-                  .collect(Collectors.toMap(NoteEntity::getId, Function.identity()));
-          return ids.stream().map(found::get).filter(Objects::nonNull).toList();
-        });
+        (offset, limit) -> inOrder(reposts.recentNoteIdsByUser(author.id(), offset, limit)));
   }
 
   // A repost shows under its reposter; if the reposter's account is gone the note leaves the feed
   // with it, since it only came in through them.
+  @Transactional(readOnly = true)
+  public NoteFeedView bookmarks(Long userId, int page, int size) {
+    return page(
+        page,
+        size,
+        userId,
+        (offset, limit) -> inOrder(bookmarks.recentNoteIdsByUser(userId, offset, limit)));
+  }
+
+  @Transactional(readOnly = true)
+  public NoteFeedView quotes(Long noteId, int page, int size, Long viewerId) {
+    return page(page, size, viewerId, (offset, limit) -> notes.quotesOf(noteId, offset, limit));
+  }
+
+  private List<NoteEntity> inOrder(List<Long> ids) {
+    Map<Long, NoteEntity> found =
+        notes.findAllByIdIn(ids).stream()
+            .collect(Collectors.toMap(NoteEntity::getId, Function.identity()));
+    return ids.stream().map(found::get).filter(Objects::nonNull).toList();
+  }
+
   @Transactional(readOnly = true)
   public NoteFeedView following(Long viewerId, int page, int size) {
     List<Long> authors = new ArrayList<>(people.followingIds(viewerId));
