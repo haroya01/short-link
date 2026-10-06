@@ -23,4 +23,16 @@ class FederationUrlsTest {
     assertThat(urls.publicIdOf("https://kurl.me/ap/actors/abc123#main-key")).isEmpty();
     assertThat(urls.publicIdOf(null)).isEqualTo(Optional.empty());
   }
+
+  @Test
+  void onlyOurOwnNoteUrlsNameALocalNote() {
+    assertThat(urls.noteIdOf(urls.note(42L))).contains(42L);
+
+    assertThat(urls.noteIdOf("https://evil.example/ap/notes/42")).isEmpty();
+    assertThat(urls.noteIdOf("https://kurl.me/ap/notes/42/replies")).isEmpty();
+    assertThat(urls.noteIdOf("https://kurl.me/ap/notes/042")).isEmpty();
+    assertThat(urls.noteIdOf("https://kurl.me/ap/notes/99999999999999999999")).isEmpty();
+    assertThat(urls.noteIdOf("https://kurl.me/ap/reposts/42")).isEmpty();
+    assertThat(urls.noteIdOf(null)).isEmpty();
+  }
 }

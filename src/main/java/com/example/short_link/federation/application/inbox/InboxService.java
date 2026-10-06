@@ -3,6 +3,9 @@ package com.example.short_link.federation.application.inbox;
 import static com.example.short_link.federation.application.ActivityStreams.idOf;
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
+import com.example.short_link.common.note.NoteSnapshotReader;
+import com.example.short_link.common.note.RemoteNoteReactions;
+import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationFollowers;
 import com.example.short_link.federation.application.FederationUrls;
@@ -33,6 +36,8 @@ public class InboxService {
   private final FederationActorService localActors;
   private final FederationActorRepository actorRows;
   private final FederationFollowers followers;
+  private final NoteSnapshotReader notes;
+  private final RemoteNoteReactions reactions;
   private final FederationUrls urls;
   private final JsonMapper json;
   private final MeterRegistry meters;
@@ -41,6 +46,12 @@ public class InboxService {
     record Follow(LocalActor target) implements Intent {}
 
     record Unfollow(String targetPublicId, String followId) implements Intent {}
+
+    record React(Long noteId, Kind kind) implements Intent {}
+
+    record Unreact(Long noteId, Kind kind, String activityId) implements Intent {}
+
+    record UndoById(String activityId) implements Intent {}
 
     record Forget() implements Intent {}
   }
@@ -95,23 +106,39 @@ public class InboxService {
         }
         intent = new Intent.Follow(target.get());
       }
+      case "Like", "Announce" -> {
+        Optional<Long> noteId = urls.noteIdOf(idOf(activity.get("object")));
+        if (noteId.isEmpty() || !federated(noteId.get(), owner)) {
+          return InboxOutcome.ignored("unknown-target");
+        }
+        intent = new Intent.React(noteId.get(), reactionKind(type));
+      }
       case "Undo" -> {
         JsonNode object = activity.get("object");
+        String undoneId = idOf(object);
         if (object != null && object.isObject()) {
-          if (!"Follow".equals(text(object.get("type")))) {
+          String undoneType = text(object.get("type"));
+          Kind kind = reactionKind(undoneType);
+          if (kind == null && !"Follow".equals(undoneType)) {
             return InboxOutcome.ignored("unsupported");
           }
           if (!actorUri.equals(idOf(object.get("actor")))) {
             return InboxOutcome.ignored("actor-mismatch");
           }
+          if (undoneId == null) {
+            return InboxOutcome.malformed("fields");
+          }
+          String target = idOf(object.get("object"));
+          intent =
+              kind == null
+                  ? new Intent.Unfollow(urls.publicIdOf(target).orElse(null), undoneId)
+                  : new Intent.Unreact(urls.noteIdOf(target).orElse(null), kind, undoneId);
+        } else {
+          if (undoneId == null) {
+            return InboxOutcome.malformed("fields");
+          }
+          intent = new Intent.UndoById(undoneId);
         }
-        String followId = idOf(object);
-        if (followId == null) {
-          return InboxOutcome.malformed("fields");
-        }
-        String target =
-            object.isObject() ? urls.publicIdOf(idOf(object.get("object"))).orElse(null) : null;
-        intent = new Intent.Unfollow(target, followId);
       }
       case "Delete" -> {
         if (!actorUri.equals(idOf(activity.get("object")))) {
@@ -158,11 +185,47 @@ public class InboxService {
         }
         yield InboxOutcome.accepted("undo-follow");
       }
+      case Intent.React react -> {
+        reactions.add(react.noteId(), actor.getId(), react.kind(), id);
+        yield InboxOutcome.accepted(react.kind() == Kind.LIKE ? "like" : "announce");
+      }
+      case Intent.Unreact unreact -> {
+        if (unreact.noteId() != null) {
+          reactions.remove(unreact.noteId(), actor.getId(), unreact.kind());
+        } else {
+          reactions.removeByActivity(actor.getId(), unreact.activityId());
+        }
+        yield InboxOutcome.accepted(unreact.kind() == Kind.LIKE ? "undo-like" : "undo-announce");
+      }
+      case Intent.UndoById undo -> {
+        followers.unfollow(actor, undo.activityId());
+        reactions.removeByActivity(actor.getId(), undo.activityId());
+        yield InboxOutcome.accepted("undo");
+      }
       case Intent.Forget gone -> {
         followers.forget(actor);
         yield InboxOutcome.accepted("delete-actor");
       }
     };
+  }
+
+  // The same rule that serves the note document: it exists and its author federates. A personal
+  // inbox already resolved its owner, who is usually the author.
+  private boolean federated(Long noteId, Optional<LocalActor> owner) {
+    return notes
+        .find(noteId)
+        .filter(
+            note ->
+                owner.filter(actor -> actor.user().id().equals(note.authorId())).isPresent()
+                    || localActors.byUsername(note.authorUsername()).isPresent())
+        .isPresent();
+  }
+
+  private static Kind reactionKind(String type) {
+    if ("Like".equals(type)) {
+      return Kind.LIKE;
+    }
+    return "Announce".equals(type) ? Kind.ANNOUNCE : null;
   }
 
   private Optional<LocalActor> followTarget(JsonNode object, Optional<LocalActor> owner) {

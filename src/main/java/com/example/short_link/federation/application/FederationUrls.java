@@ -14,8 +14,10 @@ import org.springframework.web.util.UriUtils;
 public class FederationUrls {
 
   public static final String ACTOR_PATH = "/ap/actors/";
+  private static final String NOTE_PATH = "/ap/notes/";
 
   private static final Pattern PUBLIC_ID = Pattern.compile("[a-z0-9]{1,32}");
+  private static final Pattern NOTE_ID = Pattern.compile("[1-9][0-9]{0,17}");
 
   private final FederationProperties props;
 
@@ -69,7 +71,16 @@ public class FederationUrls {
   }
 
   public String note(Long noteId) {
-    return props.baseUrl() + "/ap/notes/" + noteId;
+    return props.baseUrl() + NOTE_PATH + noteId;
+  }
+
+  public Optional<Long> noteIdOf(String noteUri) {
+    String prefix = props.baseUrl() + NOTE_PATH;
+    if (noteUri == null || !noteUri.startsWith(prefix)) {
+      return Optional.empty();
+    }
+    String noteId = noteUri.substring(prefix.length());
+    return NOTE_ID.matcher(noteId).matches() ? Optional.of(Long.valueOf(noteId)) : Optional.empty();
   }
 
   public String repost(Long repostId) {

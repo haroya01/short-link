@@ -15,6 +15,7 @@ import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
+import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
@@ -27,6 +28,7 @@ import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
+import com.example.short_link.note.domain.repository.NoteRemoteReactionRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
@@ -56,6 +58,7 @@ class NoteCommandServiceTest {
   @Mock private NoteRepository notes;
   @Mock private NoteLikeRepository likes;
   @Mock private NoteRepostRepository reposts;
+  @Mock private NoteRemoteReactionRepository remoteReactions;
   @Mock private NoteMediaRepository media;
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NotePeopleReader people;
@@ -71,6 +74,7 @@ class NoteCommandServiceTest {
         notes,
         likes,
         reposts,
+        remoteReactions,
         media,
         quotedPosts,
         people,
@@ -293,8 +297,9 @@ class NoteCommandServiceTest {
     verify(events, times(1)).publishEvent(new NoteUnrepostedEvent(900L, 1L, 8L));
 
     when(reposts.addIfAbsent(1L, 7L)).thenReturn(Optional.empty());
+    when(remoteReactions.count(1L, Kind.ANNOUNCE)).thenReturn(1L);
     assertThat(service().setRepost(7L, 1L, true))
-        .isEqualTo(new NoteCommandService.RepostStatus(true, 2L));
+        .isEqualTo(new NoteCommandService.RepostStatus(true, 3L));
   }
 
   @Test
@@ -400,9 +405,10 @@ class NoteCommandServiceTest {
   void likeCountsAreReturnedOnlyToTheAuthor() {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
     when(likes.countByNoteId(1L)).thenReturn(3L);
+    when(remoteReactions.count(1L, Kind.LIKE)).thenReturn(2L);
 
     assertThat(service().setLike(7L, 1L, true))
-        .isEqualTo(new NoteCommandService.LikeStatus(true, 3L));
+        .isEqualTo(new NoteCommandService.LikeStatus(true, 5L));
     assertThat(service().setLike(8L, 1L, true))
         .isEqualTo(new NoteCommandService.LikeStatus(true, 0L));
     assertThat(service().setLike(8L, 1L, false))

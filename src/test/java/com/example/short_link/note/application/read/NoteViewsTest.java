@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinkPreviewEntity;
@@ -16,6 +17,7 @@ import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
+import com.example.short_link.note.domain.repository.NoteRemoteReactionRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
@@ -39,6 +41,7 @@ class NoteViewsTest {
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NoteRepostRepository reposts;
   @Mock private NoteLinkPreviewRepository linkPreviews;
+  @Mock private NoteRemoteReactionRepository remoteReactions;
   @InjectMocks private NoteViews views;
 
   private static NoteEntity note(Long id, Long userId, Long quotedPostId) {
@@ -74,11 +77,14 @@ class NoteViewsTest {
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "me")));
     when(notes.replyCounts(List.of(1L, 2L))).thenReturn(Map.of(2L, 4L));
     when(likes.counts(List.of(1L))).thenReturn(Map.of(1L, 3L));
+    when(remoteReactions.counts(List.of(1L)))
+        .thenReturn(Map.of(Kind.LIKE, Map.of(1L, 2L), Kind.ANNOUNCE, Map.of(1L, 1L)));
     when(likes.likedNoteIds(7L, List.of(1L, 2L))).thenReturn(List.of(2L));
 
     List<NoteView> page = views.of(List.of(mine, theirs), 7L);
 
-    assertThat(page.get(0).likeCount()).isEqualTo(3L);
+    assertThat(page.get(0).likeCount()).isEqualTo(5L);
+    assertThat(page.get(0).repostCount()).isEqualTo(1L);
     assertThat(page.get(0).likedByMe()).isFalse();
     assertThat(page.get(0).quotedPost().slug()).isEqualTo("essay");
     assertThat(page.get(1).likeCount()).isNull();
@@ -157,6 +163,7 @@ class NoteViewsTest {
     assertThat(view.repostedByMe()).isNull();
     verify(likes, never()).counts(anyCollection());
     verify(reposts, never()).counts(anyCollection());
+    verify(remoteReactions, never()).counts(anyCollection());
     verify(quotedPosts, never()).publishedByIds(anyCollection());
   }
 }
