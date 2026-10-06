@@ -45,8 +45,8 @@
 # work: actor, follower inboxes, preference, then the note (note, author, images) and the queue.
 @junit | federation-settings-get | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
-@junit | federation-note-create | 9 | 2 | 0 | 0 | 11
-@junit | federation-note-edit | 16 | 1 | 1 | 0 | 18
+@junit | federation-note-create | 9 | 3 | 0 | 0 | 12
+@junit | federation-note-edit | 16 | 1 | 1 | 1 | 19
 @junit | federation-note-delete | 6 | 1 | 0 | 3 | 10
 # The note document: note, author, images, then the author's actor (user, preference, actor).
 @junit | federation-note-document | 6 | 0 | 0 | 0 | 6

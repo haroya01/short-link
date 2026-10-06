@@ -30,3 +30,7 @@
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 3 | 6
 @junit | note-thread-gone | 1 | 0 | 0 | 0 | 1
+# A note with an address: the card is fetched after commit off the request thread and stored with
+# one upsert. Reading it back adds one card query, and only for pages that have an address at all.
+@junit | note-create-link | 3 | 2 | 0 | 0 | 5
+@junit | note-thread-link | 6 | 0 | 0 | 0 | 6

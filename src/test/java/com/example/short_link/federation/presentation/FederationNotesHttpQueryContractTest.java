@@ -1,10 +1,13 @@
 package com.example.short_link.federation.presentation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.when;
 
 import com.example.short_link.federation.application.ActorKeys;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationUrls;
+import com.example.short_link.link.application.dto.OgMetadata;
+import com.example.short_link.link.og.application.OgScraper;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import com.example.short_link.user.domain.UserEntity;
 import java.util.List;
@@ -12,6 +15,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.JsonNode;
 
 class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
@@ -20,6 +24,7 @@ class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
   private static final Map<String, String> ACTIVITY_JSON =
       Map.of("Accept", "application/activity+json");
 
+  @MockitoBean private OgScraper pages;
   @Autowired private FederationActorService actors;
   @Autowired private FederationUrls urls;
 
@@ -65,6 +70,8 @@ class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
   @Test
   void aWritersNotesReachTheirRemoteFollowersUntilTheyTurnFederationOff() throws Exception {
     String sharedInbox = followedByRemote(owner);
+    when(pages.fetch("https://example.com"))
+        .thenReturn(new OgMetadata("Example Domain", null, null));
 
     var settings =
         body(

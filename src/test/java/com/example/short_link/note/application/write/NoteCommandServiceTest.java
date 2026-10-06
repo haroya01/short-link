@@ -310,13 +310,51 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aNoteWithAnAddressAsksForItsCardButPhotosAndQuotesAlreadyCarryOne() {
+    saving();
+    service().create(7L, new NoteDraft("see https://example.com/a.", null, null, null));
+    verify(events).publishEvent(new NoteLinkPreviewRequested(100L, "https://example.com/a"));
+
+    when(images.verify(any(), any()))
+        .thenReturn(new NoteImages.StoredImage("k", "u", "image/png", null));
+    service()
+        .create(
+            7L,
+            new NoteDraft(
+                "photo https://example.com/b",
+                List.of(new NoteDraft.Image("k", null)),
+                null,
+                null));
+    verify(events, never())
+        .publishEvent(new NoteLinkPreviewRequested(100L, "https://example.com/b"));
+  }
+
+  @Test
+  void editingAsksAgainOnlyWhenTheAddressChanges() {
+    NoteEntity mine = note(1L, 7L, "old https://example.com/a");
+    when(notes.findById(1L)).thenReturn(Optional.of(mine));
+    when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
+    when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
+
+    service().edit(7L, 1L, "typo fixed https://example.com/a");
+    verify(events, never()).publishEvent(any(NoteLinkPreviewRequested.class));
+
+    service().edit(7L, 1L, "now https://example.com/b");
+    verify(events).publishEvent(new NoteLinkPreviewRequested(1L, "https://example.com/b"));
+
+    service().edit(7L, 1L, "no address any more");
+    verify(events).publishEvent(new NoteLinkPreviewRequested(1L, null));
+  }
+
+  @Test
   void onlyTheAuthorEditsAndTheEditIsStampedToMicroseconds() {
     NoteEntity mine = note(1L, 7L, "old");
     when(notes.findById(1L)).thenReturn(Optional.of(mine));
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
     NoteView edited =
         new NoteView(
-            1L, "new", null, null, 0L, false, WRITER, List.of(), null, null, 0, null, null, null);
+            1L, "new", null, null, 0L, false, WRITER, List.of(), null, null, 0, null, null, null,
+            null);
     when(views.of(List.of(mine), 7L)).thenReturn(List.of(edited));
 
     assertThat(service().edit(7L, 1L, " new ")).isEqualTo(edited);

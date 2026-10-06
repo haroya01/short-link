@@ -12,6 +12,7 @@ import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViews;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -28,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -173,6 +175,11 @@ public class NoteCommandService {
     }
     media.saveAll(rows);
     events.publishEvent(new NotePublishedEvent(note.getId(), userId));
+    String previewUrl =
+        NoteLinks.previewUrl(body, !stored.isEmpty(), quoted != null || quotedNote != null);
+    if (previewUrl != null) {
+      events.publishEvent(new NoteLinkPreviewRequested(note.getId(), previewUrl));
+    }
     return new NoteView(
         note.getId(),
         note.getBody(),
@@ -189,7 +196,8 @@ public class NoteCommandService {
         0L,
         0L,
         false,
-        quotedNote == null ? null : quotedView(quotedNote, authors.get(quotedNote.getUserId())));
+        quotedNote == null ? null : quotedView(quotedNote, authors.get(quotedNote.getUserId())),
+        null);
   }
 
   private NoteView.QuotedNote quotedView(NoteEntity quoted, NoteAuthor author) {
@@ -209,9 +217,16 @@ public class NoteCommandService {
   public NoteView edit(Long userId, Long noteId, String rawBody) {
     NoteEntity note = owned(userId, noteId);
     String body = normalize(rawBody);
-    requireContent(body, !media.findByNoteIds(List.of(noteId)).isEmpty());
+    boolean hasMedia = !media.findByNoteIds(List.of(noteId)).isEmpty();
+    requireContent(body, hasMedia);
+    boolean hasQuote = note.getQuotedPostId() != null || note.getQuotedNoteId() != null;
+    String before = NoteLinks.previewUrl(note.getBody(), hasMedia, hasQuote);
     note.edit(body, clock.instant().truncatedTo(ChronoUnit.MICROS));
     events.publishEvent(new NoteEditedEvent(noteId, userId));
+    String after = NoteLinks.previewUrl(body, hasMedia, hasQuote);
+    if (!Objects.equals(before, after)) {
+      events.publishEvent(new NoteLinkPreviewRequested(noteId, after));
+    }
     return views.of(List.of(note), userId).getFirst();
   }
 

@@ -21,9 +21,12 @@ public record NoteView(
     long replyCount,
     Long repostCount,
     Boolean repostedByMe,
-    QuotedNote quotedNote) {
+    QuotedNote quotedNote,
+    LinkPreview linkPreview) {
 
   public record Media(String url, String altText, String contentType) {}
+
+  public record LinkPreview(String url, String title, String description, String image) {}
 
   public record QuotedNote(
       Long id, String body, Instant createdAt, NoteAuthor author, List<Media> media) {}
@@ -43,6 +46,7 @@ public record NoteView(
         replyCount,
         repostCount,
         repostedByMe,
-        quotedNote);
+        quotedNote,
+        linkPreview);
   }
 }
