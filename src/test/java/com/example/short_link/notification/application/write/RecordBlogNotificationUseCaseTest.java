@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
+import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.preference.BlogNotificationPreferenceService;
@@ -12,9 +13,11 @@ import com.example.short_link.notification.application.push.NotificationPushDeli
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.NotificationUser;
+import com.example.short_link.notification.domain.repository.NotificationActorReader;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.util.List;
@@ -45,6 +48,9 @@ class RecordBlogNotificationUseCaseTest {
 
   @Mock(strictness = Mock.Strictness.LENIENT)
   private NotificationFanoutWriter fanoutWriter;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private NotificationActorReader actorReader;
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final MessageSource messageSource = pushMessages();
@@ -80,7 +86,93 @@ class RecordBlogNotificationUseCaseTest {
         userRepository,
         messageSource,
         preferenceService,
-        fanoutWriter);
+        fanoutWriter,
+        actorReader);
+  }
+
+  @Test
+  void aSecondLikeFromTheSameActorInAGroupWritesNothing() {
+    when(repository.existsInGroup(9L, "NOTE_LIKE:5:2026-10-07", 2L, null)).thenReturn(true);
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_LIKE,
+            2L,
+            null,
+            new NotificationNoteRef(5L, "hi", null, null),
+            "NOTE_LIKE:5:2026-10-07");
+
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.never())
+        .save(org.mockito.ArgumentMatchers.any(NotificationEntity.class));
+    org.mockito.Mockito.verifyNoInteractions(pushSender);
+  }
+
+  @Test
+  void aRemoteLikeIsStoredWithItsGroupAndPushedUnderTheRemoteHandle() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
+    when(actorReader.resolveRemote(java.util.Set.of(7L)))
+        .thenReturn(
+            Map.of(
+                7L,
+                new NotificationActor(
+                    null, "alice@mastodon.social", null, "https://mastodon.social/@alice")));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_LIKE,
+            null,
+            7L,
+            new NotificationNoteRef(5L, "hi", null, null),
+            "NOTE_LIKE:5:2026-10-07");
+
+    ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
+    org.mockito.Mockito.verify(repository).save(saved.capture());
+    assertThat(saved.getValue().getActorRemoteId()).isEqualTo(7L);
+    assertThat(saved.getValue().getGroupKey()).isEqualTo("NOTE_LIKE:5:2026-10-07");
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().body()).isEqualTo("alice@mastodon.social님이 노트를 좋아합니다");
+    assertThat(pushed.getValue().subtitle()).isEqualTo("hi");
+    assertThat(pushed.getValue().route())
+        .isEqualTo(new PushRoute(null, "me", null, null, null, null, null, 5L));
+  }
+
+  @Test
+  void aReplyPushOpensTheReplyUnderItsWriter() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L))
+        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_REPLY,
+            2L,
+            null,
+            new NotificationNoteRef(5L, "hi", 12L, "me too"),
+            null);
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().subtitle()).isEqualTo("me too");
+    assertThat(pushed.getValue().route())
+        .isEqualTo(new PushRoute("yuki", "yuki", null, null, null, null, null, 12L));
+    org.mockito.Mockito.verify(repository, org.mockito.Mockito.never())
+        .existsInGroup(
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any());
   }
 
   @Test
@@ -130,7 +222,12 @@ class RecordBlogNotificationUseCaseTest {
             Map.entry(NotificationType.NEW_POST, "yuki님이 새 글을 발행했습니다"),
             Map.entry(NotificationType.MENTION, "yuki님이 회원님을 언급했습니다"),
             Map.entry(NotificationType.CONNECTED, "yuki님이 회원님의 글을 컬렉션에 엮었습니다"),
-            Map.entry(NotificationType.PATH_GREW, "yuki님이 회원님이 속한 컬렉션에 새로 엮었습니다"));
+            Map.entry(NotificationType.PATH_GREW, "yuki님이 회원님이 속한 컬렉션에 새로 엮었습니다"),
+            Map.entry(NotificationType.NOTE_LIKE, "yuki님이 노트를 좋아합니다"),
+            Map.entry(NotificationType.NOTE_REPOST, "yuki님이 노트를 리포스트했습니다"),
+            Map.entry(NotificationType.NOTE_REPLY, "yuki님이 노트에 답글을 남겼습니다"),
+            Map.entry(NotificationType.NOTE_QUOTE, "yuki님이 노트를 인용했습니다"),
+            Map.entry(NotificationType.REMOTE_FOLLOW, "yuki님이 다른 서버에서 팔로우하기 시작했습니다"));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "my-post", "글 제목", null);
     for (NotificationType type : NotificationType.values()) {

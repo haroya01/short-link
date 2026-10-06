@@ -6,7 +6,7 @@ import java.util.Map;
 
 public interface NoteLikeRepository {
 
-  void addIfAbsent(Long noteId, Long userId);
+  boolean addIfAbsent(Long noteId, Long userId);
 
   void delete(Long noteId, Long userId);
 

@@ -2,6 +2,7 @@ package com.example.short_link.notification.application.write;
 
 import com.example.short_link.notification.application.NotificationTargetCodec;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
+import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.dto.NotificationTarget;
@@ -10,15 +11,18 @@ import com.example.short_link.notification.application.push.NotificationPushDeli
 import com.example.short_link.notification.application.push.PushApp;
 import com.example.short_link.notification.application.push.PushRoute;
 import com.example.short_link.notification.application.push.PushSender;
+import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.NotificationUser;
+import com.example.short_link.notification.domain.repository.NotificationActorReader;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.MessageSource;
@@ -40,21 +44,51 @@ public class RecordBlogNotificationUseCase {
   private final MessageSource messageSource;
   private final BlogNotificationPreferenceService preferenceService;
   private final NotificationFanoutWriter fanoutWriter;
+  private final NotificationActorReader actorReader;
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
       Long recipientUserId, NotificationType type, Long actorUserId, NotificationTarget payload) {
+    write(recipientUserId, type, actorUserId, null, payload, null);
+  }
+
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void record(
+      Long recipientUserId,
+      NotificationType type,
+      Long actorUserId,
+      Long actorRemoteId,
+      NotificationTarget payload,
+      String groupKey) {
+    write(recipientUserId, type, actorUserId, actorRemoteId, payload, groupKey);
+  }
+
+  // A grouped notification is written once per actor: liking, unliking and liking again adds no
+  // second row or push to the same group.
+  private void write(
+      Long recipientUserId,
+      NotificationType type,
+      Long actorUserId,
+      Long actorRemoteId,
+      NotificationTarget payload,
+      String groupKey) {
     if (!preferenceService.isEnabled(recipientUserId, type)) {
       return;
     }
+    if (groupKey != null
+        && repository.existsInGroup(recipientUserId, groupKey, actorUserId, actorRemoteId)) {
+      return;
+    }
     String json = targetCodec.encode(payload);
-    repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
+    repository.save(
+        new NotificationEntity(recipientUserId, type, actorUserId, actorRemoteId, json, groupKey));
     Optional<NotificationUser> recipient = userReader.findById(recipientUserId);
     pushDelivery.send(
         recipientUserId,
         pushMessage(
             type,
             actorUserId,
+            actorRemoteId,
             payload,
             Locale.forLanguageTag(recipient.map(NotificationUser::locale).orElse("ko")),
             recipient.map(NotificationUser::username).orElse(null)));
@@ -88,18 +122,30 @@ public class RecordBlogNotificationUseCase {
     byLocale.forEach(
         (tag, ids) ->
             pushDelivery.sendToAll(
-                ids, pushMessage(type, actorUserId, payload, Locale.forLanguageTag(tag), null)));
+                ids,
+                pushMessage(type, actorUserId, null, payload, Locale.forLanguageTag(tag), null)));
   }
 
   private PushSender.PushMessage pushMessage(
       NotificationType type,
       Long actorUserId,
+      Long actorRemoteId,
       NotificationTarget payload,
       Locale locale,
       String recipientUsername) {
     String actorUsername =
-        userReader.findById(actorUserId).map(NotificationUser::username).orElse(null);
-    String actor = actorUsername == null ? "kurl" : actorUsername;
+        actorUserId == null
+            ? null
+            : userReader.findById(actorUserId).map(NotificationUser::username).orElse(null);
+    String remoteHandle =
+        actorRemoteId == null
+            ? null
+            : Optional.ofNullable(
+                    actorReader.resolveRemote(Set.of(actorRemoteId)).get(actorRemoteId))
+                .map(NotificationActor::username)
+                .orElse(null);
+    String actor =
+        actorUsername != null ? actorUsername : remoteHandle != null ? remoteHandle : "kurl";
     String subtitle = payload == null ? null : payload.pushSubtitle();
     String body =
         messageSource.getMessage("notification.push." + type.name(), new Object[] {actor}, locale);
@@ -134,6 +180,12 @@ public class RecordBlogNotificationUseCase {
           new PushRoute(actorUsername, recipientUsername, null, series.slug(), null, null, null);
       case NotificationCollectionRef collection ->
           new PushRoute(actorUsername, null, null, null, collection.collectionId(), null, null);
+      case NotificationNoteRef note ->
+          note.sourceNoteId() != null
+              ? new PushRoute(
+                  actorUsername, actorUsername, null, null, null, null, null, note.sourceNoteId())
+              : new PushRoute(
+                  actorUsername, recipientUsername, null, null, null, null, null, note.noteId());
       case null -> new PushRoute(actorUsername, null, null, null, null, null, null);
     };
   }

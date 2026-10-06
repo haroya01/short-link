@@ -20,21 +20,34 @@ class NoteRemoteReactionRepositoryAdapter implements NoteRemoteReactionRepositor
 
   @PersistenceContext private EntityManager em;
 
-  // A re-sent reaction keeps its one row and takes the newest activity id, the one a later Undo
-  // names.
+  // True only for a new row. A re-sent reaction keeps its one row and takes the newest activity id,
+  // the one a later Undo names. ON DUPLICATE KEY UPDATE cannot tell a new row from an unchanged one
+  // under the driver's found-rows count, so the insert and the refresh are separate statements.
   @Override
   @Transactional
-  public void put(Long noteId, Long remoteActorId, Kind kind, String activityId) {
+  public boolean add(Long noteId, Long remoteActorId, Kind kind, String activityId) {
+    int inserted =
+        em.createNativeQuery(
+                "INSERT IGNORE INTO note_remote_reaction"
+                    + " (note_id, remote_actor_id, kind, activity_id, created_at)"
+                    + " VALUES (:noteId, :actorId, :kind, :activityId, NOW(6))")
+            .setParameter("noteId", noteId)
+            .setParameter("actorId", remoteActorId)
+            .setParameter("kind", kind.name())
+            .setParameter("activityId", activityId)
+            .executeUpdate();
+    if (inserted == 1) {
+      return true;
+    }
     em.createNativeQuery(
-            "INSERT INTO note_remote_reaction"
-                + " (note_id, remote_actor_id, kind, activity_id, created_at)"
-                + " VALUES (:noteId, :actorId, :kind, :activityId, NOW(6)) AS fresh"
-                + " ON DUPLICATE KEY UPDATE activity_id = fresh.activity_id")
+            "UPDATE note_remote_reaction SET activity_id = :activityId"
+                + " WHERE note_id = :noteId AND remote_actor_id = :actorId AND kind = :kind")
         .setParameter("noteId", noteId)
         .setParameter("actorId", remoteActorId)
         .setParameter("kind", kind.name())
         .setParameter("activityId", activityId)
         .executeUpdate();
+    return false;
   }
 
   @Override

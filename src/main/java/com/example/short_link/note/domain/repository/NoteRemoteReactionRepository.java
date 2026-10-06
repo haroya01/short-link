@@ -6,7 +6,7 @@ import java.util.Map;
 
 public interface NoteRemoteReactionRepository {
 
-  void put(Long noteId, Long remoteActorId, Kind kind, String activityId);
+  boolean add(Long noteId, Long remoteActorId, Kind kind, String activityId);
 
   void delete(Long noteId, Long remoteActorId, Kind kind);
 

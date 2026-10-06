@@ -181,6 +181,7 @@ public class ApnsPushSender implements PushSender {
       if (route.collectionId() != null) root.put("collectionId", route.collectionId());
       if (route.commentId() != null) root.put("commentId", route.commentId());
       if (route.highlightId() != null) root.put("highlightId", route.highlightId());
+      if (route.noteId() != null) root.put("noteId", route.noteId());
     }
     return jsonMapper.writeValueAsString(root);
   }

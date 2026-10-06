@@ -7,16 +7,19 @@
 # Create: moderation check (user), quoted post, note and image inserts, then the author for the
 # response. Reply/like counts of a new note are known to be zero and are not queried.
 @junit | note-create | 4 | 2 | 0 | 0 | 6
+# Replies, likes, reposts and quotes also notify the note's author after commit: whether the author
+# blocked the actor, their preference for the type, for likes and reposts whether this actor is
+# already in today's group, the insert, then the recipient's and the actor's names for the push.
 # Reply: moderation, parent note, a block check each way, insert, author.
-@junit | note-reply | 6 | 1 | 0 | 0 | 7
-@junit | note-like | 2 | 1 | 0 | 0 | 3
+@junit | note-reply | 10 | 2 | 0 | 0 | 12
+@junit | note-like | 7 | 2 | 0 | 0 | 9
 # Repost: note, moderation, a block check each way, the existing row, insert, then the after-commit
 # federation check. Undoing it reads the row it deletes so the Undo can name the Announce.
-@junit | note-repost | 6 | 1 | 0 | 0 | 7
+@junit | note-repost | 11 | 2 | 0 | 0 | 13
 @junit | note-unrepost | 3 | 0 | 0 | 1 | 4
 # Quote: moderation, quoted note, a block check each way, both authors in one read, insert, the
 # quoted note's images.
-@junit | note-quote | 7 | 1 | 0 | 0 | 8
+@junit | note-quote | 11 | 2 | 0 | 0 | 13
 # A page of notes costs one query per kind of data: notes, quoted notes (only when one quotes),
 # authors, images, quoted posts, reply counts, the viewer's own like and repost counts plus one
 # grouped count of likes and boosts from other servers (only when they wrote one) and the viewer's

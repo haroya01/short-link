@@ -3,6 +3,7 @@ package com.example.short_link.note.application.write;
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
+import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
@@ -128,15 +129,15 @@ public class NoteCommandService {
     if (attached.size() > NoteMediaEntity.MAX_PER_NOTE) {
       throw new NoteException(NoteErrorCode.NOTE_TOO_MANY_IMAGES, NoteMediaEntity.MAX_PER_NOTE);
     }
-    Long parentId = null;
+    NoteEntity parent = null;
     if (draft.inReplyToId() != null) {
-      NoteEntity parent = find(draft.inReplyToId());
+      parent = find(draft.inReplyToId());
       if (blocks.isBlocked(parent.getUserId(), userId)
           || blocks.isBlocked(userId, parent.getUserId())) {
         throw new NoteException(NoteErrorCode.NOTE_REPLY_BLOCKED);
       }
-      parentId = parent.getId();
     }
+    Long parentId = parent == null ? null : parent.getId();
     if (draft.quotedPostId() != null && draft.quotedNoteId() != null) {
       throw new NoteException(NoteErrorCode.NOTE_QUOTE_CONFLICT);
     }
@@ -182,6 +183,12 @@ public class NoteCommandService {
     }
     media.saveAll(rows);
     events.publishEvent(new NotePublishedEvent(note.getId(), userId));
+    if (parent != null) {
+      events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
+    }
+    if (quotedNote != null) {
+      events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));
+    }
     String previewUrl =
         NoteLinks.previewUrl(body, !stored.isEmpty(), quoted != null || quotedNote != null);
     if (previewUrl != null) {
@@ -252,7 +259,9 @@ public class NoteCommandService {
   public LikeStatus setLike(Long userId, Long noteId, boolean on) {
     NoteEntity note = find(noteId);
     if (on) {
-      likes.addIfAbsent(noteId, userId);
+      if (likes.addIfAbsent(noteId, userId)) {
+        events.publishEvent(interaction(NoteInteractionEvent.Type.LIKE, note, userId, null));
+      }
     } else {
       likes.delete(noteId, userId);
     }
@@ -272,7 +281,11 @@ public class NoteCommandService {
       reposts
           .addIfAbsent(noteId, userId)
           .ifPresent(
-              repost -> events.publishEvent(new NoteRepostedEvent(repost.getId(), noteId, userId)));
+              repost -> {
+                events.publishEvent(new NoteRepostedEvent(repost.getId(), noteId, userId));
+                events.publishEvent(
+                    interaction(NoteInteractionEvent.Type.REPOST, note, userId, null));
+              });
     } else {
       reposts
           .delete(noteId, userId)
@@ -285,6 +298,19 @@ public class NoteCommandService {
         note.isOwnedBy(userId)
             ? reposts.countByNoteId(noteId) + remoteReactions.count(noteId, Kind.ANNOUNCE)
             : 0L);
+  }
+
+  private static NoteInteractionEvent interaction(
+      NoteInteractionEvent.Type type, NoteEntity target, Long actorId, NoteEntity source) {
+    return new NoteInteractionEvent(
+        type,
+        target.getUserId(),
+        actorId,
+        null,
+        target.getId(),
+        target.excerpt(),
+        source == null ? null : source.getId(),
+        source == null ? null : source.excerpt());
   }
 
   private void requireNotBlocked(Long userId, NoteEntity note) {

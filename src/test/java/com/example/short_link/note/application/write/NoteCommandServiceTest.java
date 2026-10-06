@@ -12,6 +12,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
+import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
@@ -202,6 +203,10 @@ class NoteCommandServiceTest {
     when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "parent")));
     NoteView reply = service().create(7L, new NoteDraft("re", null, null, 50L));
     assertThat(reply.inReplyToId()).isEqualTo(50L);
+    verify(events)
+        .publishEvent(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.REPLY, 8L, 7L, null, 50L, "parent", 100L, "re"));
 
     when(blocks.isBlocked(8L, 7L)).thenReturn(true);
     assertThatThrownBy(() -> service().create(7L, new NoteDraft("re", null, null, 50L)))
@@ -242,6 +247,10 @@ class NoteCommandServiceTest {
     assertThat(view.repostCount()).isZero();
     assertThat(view.repostedByMe()).isFalse();
     verify(events).publishEvent(new NotePublishedEvent(100L, 7L));
+    verify(events)
+        .publishEvent(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.QUOTE, 8L, 7L, null, 50L, "original", 100L, "so true"));
   }
 
   @Test
@@ -406,6 +415,8 @@ class NoteCommandServiceTest {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
     when(likes.countByNoteId(1L)).thenReturn(3L);
     when(remoteReactions.count(1L, Kind.LIKE)).thenReturn(2L);
+    when(likes.addIfAbsent(1L, 7L)).thenReturn(false);
+    when(likes.addIfAbsent(1L, 8L)).thenReturn(true, false);
 
     assertThat(service().setLike(7L, 1L, true))
         .isEqualTo(new NoteCommandService.LikeStatus(true, 5L));
@@ -413,6 +424,11 @@ class NoteCommandServiceTest {
         .isEqualTo(new NoteCommandService.LikeStatus(true, 0L));
     assertThat(service().setLike(8L, 1L, false))
         .isEqualTo(new NoteCommandService.LikeStatus(false, 0L));
+    service().setLike(8L, 1L, true);
     verify(likes).delete(1L, 8L);
+    verify(events, times(1))
+        .publishEvent(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.LIKE, 7L, 8L, null, 1L, "x", null, null));
   }
 }

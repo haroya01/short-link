@@ -36,4 +36,28 @@ class NotificationActorReaderAdapter implements NotificationActorReader {
     }
     return resolved;
   }
+
+  @Override
+  public Map<Long, NotificationActor> resolveRemote(Collection<Long> remoteActorIds) {
+    if (remoteActorIds == null || remoteActorIds.isEmpty()) {
+      return Map.of();
+    }
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT id, username, domain, avatar_url, profile_url, actor_uri"
+                    + " FROM federation_remote_actor WHERE id IN (:ids)")
+            .setParameter("ids", remoteActorIds)
+            .getResultList();
+    Map<Long, NotificationActor> resolved = new HashMap<>();
+    for (Object raw : rows) {
+      Object[] cols = (Object[]) raw;
+      Long id = ((Number) cols[0]).longValue();
+      String domain = cols[2].toString();
+      String handle = cols[1] == null ? domain : cols[1] + "@" + domain;
+      String avatarUrl = cols[3] == null ? null : cols[3].toString();
+      String profileUrl = cols[4] == null ? cols[5].toString() : cols[4].toString();
+      resolved.put(id, new NotificationActor(null, handle, avatarUrl, profileUrl));
+    }
+    return resolved;
+  }
 }

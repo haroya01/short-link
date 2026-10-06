@@ -47,6 +47,9 @@ class NotificationControllerTest {
             new NotificationPostRef(10L, "my-post", "Hi", null),
             null,
             null,
+            null,
+            1,
+            List.of(),
             false,
             Instant.parse("2026-06-07T00:00:00Z"));
     when(queryService.list(eq(USER_ID), isNull(), eq(20)))
@@ -73,6 +76,9 @@ class NotificationControllerTest {
             new NotificationPostRef(10L, "my-post", "Hi", null, 77L, null),
             null,
             null,
+            null,
+            1,
+            List.of(),
             false,
             Instant.parse("2026-06-07T00:00:00Z"));
     NotificationView reply =
@@ -83,6 +89,9 @@ class NotificationControllerTest {
             new NotificationPostRef(10L, "my-post", "Hi", "owner", null, 41L),
             null,
             null,
+            null,
+            1,
+            List.of(),
             false,
             Instant.parse("2026-06-07T00:00:00Z"));
     when(queryService.list(eq(USER_ID), isNull(), eq(20)))
@@ -107,6 +116,9 @@ class NotificationControllerTest {
             null,
             null,
             new NotificationCollectionRef(42L, "긴 여름의 독서", 10L),
+            null,
+            1,
+            List.of(),
             false,
             Instant.parse("2026-07-10T00:00:00Z"));
     when(queryService.list(eq(USER_ID), isNull(), eq(20)))
