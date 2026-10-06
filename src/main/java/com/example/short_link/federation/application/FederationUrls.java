@@ -68,6 +68,18 @@ public class FederationUrls {
     return props.baseUrl() + "/ap/inbox";
   }
 
+  public String note(Long noteId) {
+    return props.baseUrl() + "/ap/notes/" + noteId;
+  }
+
+  public String notePage(String username, Long noteId) {
+    return profile(username) + "/notes/" + noteId;
+  }
+
+  public String blogPost(String username, String slug) {
+    return profile(username) + "/" + UriUtils.encodePathSegment(slug, StandardCharsets.UTF_8);
+  }
+
   public String webFingerTemplate() {
     return props.baseUrl() + "/.well-known/webfinger?resource={uri}";
   }

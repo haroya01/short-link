@@ -5,6 +5,7 @@ import tools.jackson.databind.JsonNode;
 public final class ActivityStreams {
 
   public static final String CONTEXT = "https://www.w3.org/ns/activitystreams";
+  public static final String PUBLIC = CONTEXT + "#Public";
 
   private ActivityStreams() {}
 

@@ -2,21 +2,24 @@
 # Never automatically update on test failure.
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 #
-# First WebFinger creates the actor: active user, actor lookup, the assigned-id merge check, insert.
-@junit | federation-webfinger-first | 3 | 1 | 0 | 0 | 4
-@junit | federation-webfinger-known | 2 | 0 | 0 | 0 | 2
-@junit | federation-webfinger-before-delete | 3 | 1 | 0 | 0 | 4
-# Actor documents and collections: actor by public id, then the live user.
-@junit | federation-actor | 2 | 0 | 0 | 0 | 2
-@junit | federation-actor-html | 2 | 0 | 0 | 0 | 2
-@junit | federation-actor-followers | 2 | 0 | 0 | 0 | 2
-@junit | federation-actor-following | 2 | 0 | 0 | 0 | 2
-@junit | federation-actor-outbox | 2 | 0 | 0 | 0 | 2
+# First WebFinger creates the actor: active user, federation preference, actor lookup, the
+# assigned-id merge check, insert.
+@junit | federation-webfinger-first | 4 | 1 | 0 | 0 | 5
+@junit | federation-webfinger-known | 3 | 0 | 0 | 0 | 3
+@junit | federation-webfinger-before-delete | 4 | 1 | 0 | 0 | 5
+# Actor documents and collections: actor by public id, the live user, their federation preference.
+@junit | federation-actor | 3 | 0 | 0 | 0 | 3
+@junit | federation-actor-html | 3 | 0 | 0 | 0 | 3
+@junit | federation-actor-followers | 3 | 0 | 0 | 0 | 3
+@junit | federation-actor-following | 3 | 0 | 0 | 0 | 3
+# The outbox also counts the author's notes.
+@junit | federation-actor-outbox | 4 | 0 | 0 | 0 | 4
 @junit | federation-host-meta | 0 | 0 | 0 | 0 | 0
 @junit | federation-nodeinfo-discovery | 0 | 0 | 0 | 0 | 0
 @junit | federation-nodeinfo | 0 | 0 | 0 | 0 | 0
-# A soft-deleted account stops resolving without touching the actor row.
-@junit | federation-account-delete | 2 | 1 | 1 | 0 | 4
+# A soft-deleted account stops resolving. After commit it leaves: actor, follower inboxes (none
+# here), then the follower rows are cleared.
+@junit | federation-account-delete | 4 | 1 | 1 | 1 | 7
 @junit | federation-webfinger-after-delete | 1 | 0 | 0 | 0 | 1
 @junit | federation-actor-after-delete | 2 | 0 | 0 | 0 | 2
 # The instance actor (signs fetches): first request creates its key, later ones only read it.
@@ -25,15 +28,31 @@
 # Inbox POSTs signed by a seeded remote actor whose key is cached, so nothing is fetched remotely.
 # Follow to the personal inbox: inbox owner (actor, user), key, follower lookup and insert, Accept
 # dedupe check and insert.
-@junit | federation-inbox-follow | 5 | 2 | 0 | 0 | 7
-@junit | federation-inbox-follow-before-leave | 5 | 2 | 0 | 0 | 7
-# The shared inbox resolves the target (actor, user); the existing row takes the new follow id.
-@junit | federation-inbox-refollow | 5 | 1 | 1 | 0 | 7
+@junit | federation-inbox-follow | 6 | 2 | 0 | 0 | 8
+@junit | federation-inbox-follow-before-leave | 6 | 2 | 0 | 0 | 8
+# The shared inbox resolves the target (actor, user, preference); the existing row takes the new
+# follow id.
+@junit | federation-inbox-refollow | 6 | 1 | 1 | 0 | 8
 # The target is resolved before the signature is checked; an unsigned request writes nothing.
-@junit | federation-inbox-unsigned | 2 | 0 | 0 | 0 | 2
+@junit | federation-inbox-unsigned | 3 | 0 | 0 | 0 | 3
 @junit | federation-inbox-undo | 2 | 0 | 0 | 1 | 3
 @junit | federation-inbox-ignored | 0 | 0 | 0 | 0 | 0
 # Key, then the actor row by id and its delete; followers go with it by ON DELETE CASCADE.
 @junit | federation-inbox-delete-actor | 2 | 0 | 0 | 1 | 3
 @junit | federation-inbox-delete-unknown-actor | 1 | 0 | 0 | 0 | 1
 @junit | federation-inbox-unknown | 1 | 0 | 0 | 0 | 1
+# Notes and settings, with one seeded remote follower. Note steps include the after-commit delivery
+# work: actor, follower inboxes, preference, then the note (note, author, images) and the queue.
+@junit | federation-settings-get | 2 | 0 | 0 | 0 | 2
+@junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
+@junit | federation-note-create | 9 | 2 | 0 | 0 | 11
+@junit | federation-note-edit | 14 | 1 | 1 | 0 | 16
+@junit | federation-note-delete | 6 | 1 | 0 | 3 | 10
+# The note document: note, author, images, then the author's actor (user, preference, actor).
+@junit | federation-note-document | 6 | 0 | 0 | 0 | 6
+@junit | federation-note-page | 6 | 0 | 0 | 0 | 6
+# Turning federation off sends Delete(Person) to follower servers and clears the followers.
+@junit | federation-settings-off | 5 | 1 | 1 | 1 | 8
+@junit | federation-webfinger-opted-out | 2 | 0 | 0 | 0 | 2
+@junit | federation-settings-on | 2 | 0 | 1 | 0 | 3
+@junit | federation-account-delete-leaves | 5 | 2 | 1 | 1 | 9

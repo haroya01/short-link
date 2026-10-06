@@ -9,8 +9,10 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.crypto.SecretCipher;
 import com.example.short_link.federation.domain.FederationActorEntity;
+import com.example.short_link.federation.domain.FederationPreferenceEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
+import com.example.short_link.federation.domain.repository.FederationPreferenceRepository;
 import com.example.short_link.federation.domain.repository.FederationUserReader;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -29,9 +31,25 @@ class FederationActorServiceTest {
   @Mock private FederationActorRepository actors;
   @Mock private ActorKeys keys;
   @Mock private SecretCipher cipher;
+  @Mock private FederationPreferenceRepository preferences;
 
   private FederationActorService service() {
-    return new FederationActorService(users, actors, keys, cipher);
+    return new FederationActorService(users, actors, preferences, keys, cipher);
+  }
+
+  @Test
+  void anAccountWithFederationOffDoesNotResolve() {
+    FederationPreferenceEntity off = new FederationPreferenceEntity(7L);
+    off.turnOff();
+    when(users.findActiveByUsername("yuki")).thenReturn(Optional.of(YUKI));
+    when(preferences.find(7L)).thenReturn(Optional.of(off));
+    when(actors.findByPublicId("pid"))
+        .thenReturn(Optional.of(new FederationActorEntity(7L, "pid", "PUB", "enc")));
+    when(users.findActiveById(7L)).thenReturn(Optional.of(YUKI));
+
+    assertThat(service().byUsername("yuki")).isEmpty();
+    assertThat(service().byPublicId("pid")).isEmpty();
+    verify(actors, never()).findByUserId(7L);
   }
 
   @Test

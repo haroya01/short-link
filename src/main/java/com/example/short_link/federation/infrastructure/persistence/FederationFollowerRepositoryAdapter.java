@@ -2,6 +2,7 @@ package com.example.short_link.federation.infrastructure.persistence;
 
 import com.example.short_link.federation.domain.FederationFollowerEntity;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -30,5 +31,15 @@ class FederationFollowerRepositoryAdapter implements FederationFollowerRepositor
   @Override
   public int deleteByFollowActivity(Long remoteActorId, String followActivityId) {
     return jpa.deleteFollowActivity(remoteActorId, followActivityId);
+  }
+
+  @Override
+  public List<String> deliveryInboxes(Long userId) {
+    return jpa.deliveryInboxes(userId);
+  }
+
+  @Override
+  public int deleteAllForUser(Long userId) {
+    return jpa.deleteAllForUser(userId);
   }
 }

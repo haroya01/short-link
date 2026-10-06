@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
@@ -43,6 +44,7 @@ class FederationControllersTest {
 
   @Autowired private MockMvc mvc;
   @MockitoBean private FederationActorService actors;
+  @MockitoBean private NoteSnapshotReader notes;
 
   @Test
   void webFingerAnswersAcctWithActorAndProfileLinks() throws Exception {
@@ -126,9 +128,10 @@ class FederationControllersTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id").value("https://kurl.me/ap/actors/pid123/following"))
         .andExpect(jsonPath("$.totalItems").doesNotExist());
+    when(notes.countByAuthor(7L)).thenReturn(3L);
     mvc.perform(get("/ap/actors/pid123/outbox"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.totalItems").value(0));
+        .andExpect(jsonPath("$.totalItems").value(3));
     mvc.perform(get("/ap/actors/nope")).andExpect(status().isNotFound());
     mvc.perform(get("/ap/actors/nope/followers")).andExpect(status().isNotFound());
     mvc.perform(get("/ap/actors/nope/outbox")).andExpect(status().isNotFound());

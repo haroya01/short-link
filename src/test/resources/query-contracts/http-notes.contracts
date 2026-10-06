@@ -1,13 +1,14 @@
 # Notes, measured against Docker MySQL 2026-10-06. Never automatically update on test failure.
 # identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
 #
-# Presign signs a storage URL only; nothing touches the database.
+# Presign signs a storage URL only; nothing touches the database. Writes include the after-commit
+# federation check, which stops at the actor lookup for an author nobody follows remotely.
 @junit | note-image-presign | 0 | 0 | 0 | 0 | 0
 # Create: moderation check (user), quoted post, note and image inserts, then the author for the
 # response. Reply/like counts of a new note are known to be zero and are not queried.
-@junit | note-create | 3 | 2 | 0 | 0 | 5
+@junit | note-create | 4 | 2 | 0 | 0 | 6
 # Reply: moderation, parent note, a block check each way, insert, author.
-@junit | note-reply | 5 | 1 | 0 | 0 | 6
+@junit | note-reply | 6 | 1 | 0 | 0 | 7
 @junit | note-like | 2 | 1 | 0 | 0 | 3
 # A page of notes costs one query per kind of data: notes, authors, images, quoted posts, reply
 # counts, the viewer's own like counts (only when they wrote one) and the viewer's likes.
@@ -15,8 +16,8 @@
 @junit | note-profile | 8 | 0 | 0 | 0 | 8
 @junit | note-following | 7 | 0 | 0 | 0 | 7
 @junit | note-everyone | 5 | 0 | 0 | 0 | 5
-@junit | note-edit | 8 | 0 | 1 | 0 | 9
+@junit | note-edit | 9 | 0 | 1 | 0 | 10
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
-@junit | note-delete | 2 | 0 | 0 | 3 | 5
+@junit | note-delete | 3 | 0 | 0 | 3 | 6
 @junit | note-thread-gone | 1 | 0 | 0 | 0 | 1

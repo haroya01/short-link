@@ -1,5 +1,6 @@
 package com.example.short_link.federation.presentation;
 
+import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
@@ -36,6 +37,7 @@ public class ActorController {
 
   private final FederationActorService actors;
   private final FederationUrls urls;
+  private final NoteSnapshotReader notes;
 
   @GetMapping
   public ResponseEntity<ActorResponse> actor(
@@ -77,7 +79,7 @@ public class ActorController {
                         ActivityPubMedia.CONTEXT,
                         urls.outbox(publicId),
                         "OrderedCollection",
-                        0,
+                        Math.toIntExact(notes.countByAuthor(actor.user().id())),
                         List.of())))
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
