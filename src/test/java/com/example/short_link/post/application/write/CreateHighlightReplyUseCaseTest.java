@@ -106,6 +106,7 @@ class CreateHighlightReplyUseCaseTest {
     assertThat(reply.actorUserId()).isEqualTo(9L);
     // Carries the post owner's handle (not the recipient's) so the post link resolves.
     assertThat(reply.postAuthorUsername()).isEqualTo("olivia");
+    assertThat(reply.highlightId()).isEqualTo(50L);
   }
 
   @Test
@@ -154,6 +155,7 @@ class CreateHighlightReplyUseCaseTest {
     assertThat(mention.recipientUserId()).isEqualTo(5L);
     assertThat(mention.actorUserId()).isEqualTo(9L);
     assertThat(mention.postAuthorUsername()).isEqualTo("olivia");
+    assertThat(mention.highlightId()).isEqualTo(50L);
   }
 
   @Test

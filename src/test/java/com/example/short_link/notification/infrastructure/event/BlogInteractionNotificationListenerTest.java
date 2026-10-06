@@ -40,10 +40,14 @@ class BlogInteractionNotificationListenerTest {
   }
 
   @Test
-  void commentRecordsNotification() {
-    listener().onBlogInteraction(BlogInteractionEvent.comment(9L, 2L, 10L, "my-post", "Hi", AT));
+  void commentRecordsNotificationPointingAtTheComment() {
+    listener()
+        .onBlogInteraction(BlogInteractionEvent.comment(9L, 2L, 10L, "my-post", "Hi", 55L, AT));
 
-    verify(recordUseCase).record(eq(9L), eq(NotificationType.COMMENT), eq(2L), any());
+    ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
+    verify(recordUseCase).record(eq(9L), eq(NotificationType.COMMENT), eq(2L), post.capture());
+    org.assertj.core.api.Assertions.assertThat(post.getValue().commentId()).isEqualTo(55L);
+    org.assertj.core.api.Assertions.assertThat(post.getValue().slug()).isEqualTo("my-post");
   }
 
   @Test
@@ -77,7 +81,7 @@ class BlogInteractionNotificationListenerTest {
   void nullRecipientIsSkipped() {
     BlogInteractionEvent event =
         new BlogInteractionEvent(
-            BlogInteractionType.LIKE, null, 2L, 10L, "s", "t", null, null, null, AT);
+            BlogInteractionType.LIKE, null, 2L, 10L, "s", "t", null, null, null, null, AT);
 
     listener().onBlogInteraction(event);
 

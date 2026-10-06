@@ -94,7 +94,7 @@ class BlogWebhookPayloadAdapterTest {
             (String)
                 BlogWebhookPayloadAdapter.build(
                         BlogWebhookFormat.SLACK,
-                        BlogInteractionEvent.comment(1L, 2L, 42L, "s", "T", AT),
+                        BlogInteractionEvent.comment(1L, 2L, 42L, "s", "T", 7L, AT),
                         "a")
                     .get("text"))
         .contains("commented");
@@ -122,7 +122,7 @@ class BlogWebhookPayloadAdapterTest {
     List<Case> cases =
         List.of(
             new Case(like(), "New like"),
-            new Case(BlogInteractionEvent.comment(1L, 2L, 42L, "s", "T", AT), "New comment"),
+            new Case(BlogInteractionEvent.comment(1L, 2L, 42L, "s", "T", 7L, AT), "New comment"),
             new Case(follow(), "New follower"),
             new Case(seriesSubscribe(), "New series subscriber"));
     for (Case c : cases) {
