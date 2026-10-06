@@ -101,7 +101,8 @@ class NoteRepositoryAdapter implements NoteRepository {
 
   // Top-level notes by the authors and their reposts, one row per note at its newest activity; the
   // original wins a tie with a repost. A repost of someone the viewer blocked, or who blocked the
-  // viewer, is left out.
+  // viewer, is left out, as are reposts by people whose reposts the viewer hid and every repost
+  // when the viewer turned reposts off.
   @Override
   public List<NoteFeedRow> following(
       Collection<Long> authorIds, Long viewerId, int offset, int limit) {
@@ -124,6 +125,10 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + "SELECT 1 FROM user_block b"
                     + " WHERE (b.blocker_id = :viewer AND b.blocked_id = s.user_id)"
                     + " OR (b.blocker_id = s.user_id AND b.blocked_id = :viewer))"
+                    + " AND NOT EXISTS (SELECT 1 FROM note_repost_mute m"
+                    + " WHERE m.user_id = :viewer AND m.muted_user_id = r.user_id)"
+                    + " AND NOT EXISTS (SELECT 1 FROM note_feed_preference p"
+                    + " WHERE p.user_id = :viewer AND p.show_reposts = FALSE)"
                     + ") t) y WHERE y.position = 1"
                     + ") x JOIN note n ON n.id = x.note_id"
                     + " ORDER BY x.at DESC, x.note_id DESC LIMIT :limit OFFSET :offset",

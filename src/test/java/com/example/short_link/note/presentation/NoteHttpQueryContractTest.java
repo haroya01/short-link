@@ -16,6 +16,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import tools.jackson.databind.JsonNode;
 
 class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
 
@@ -54,6 +55,85 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
         .isEqualTo(friend.username());
     assertThat(feed.path("items").get(1).path("author").path("username").asText())
         .isEqualTo(stranger.username());
+  }
+
+  @Test
+  void aReaderHidesOnePersonsRepostsThenEveryRepostInTheFollowingFeed() throws Exception {
+    Actor reader = actor("hide-reader", false);
+    Actor loud = actor("hide-loud", false);
+    Actor quiet = actor("hide-quiet", false);
+    Actor stranger = actor("hide-stranger", false);
+    for (Actor followed : List.of(loud, quiet)) {
+      jdbc.update(
+          "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+          reader.id(),
+          followed.id());
+    }
+    long loudNote = noteAt(loud, "시끄러운 사람의 노트", 10);
+    long boostedByLoud = noteAt(stranger, "시끄러운 사람이 퍼간 노트", 9);
+    long boostedByQuiet = noteAt(stranger, "조용한 사람이 퍼간 노트", 8);
+    repostAt(loud, boostedByLoud, 2);
+    repostAt(quiet, boostedByQuiet, 1);
+
+    var hidden =
+        step(
+            "note-hide-reposts",
+            "PUT",
+            "/api/v1/notes/repost-visibility/" + loud.username(),
+            reader,
+            null,
+            200);
+    assertThat(hidden.path("hidden").asBoolean()).isTrue();
+    assertThat(count("note_repost_mute", "user_id = ?", reader.id())).isEqualTo(1);
+
+    var visibility =
+        step(
+            "note-repost-visibility",
+            "GET",
+            "/api/v1/notes/repost-visibility/" + loud.username(),
+            reader,
+            null,
+            200);
+    assertThat(visibility.path("hidden").asBoolean()).isTrue();
+
+    var withoutLoud =
+        step("note-following-hidden-reposts", "GET", "/api/v1/notes/following", reader, null, 200);
+    assertThat(ids(withoutLoud)).containsExactly(boostedByQuiet, loudNote);
+
+    var off =
+        step(
+            "note-feed-preferences-update",
+            "PUT",
+            "/api/v1/notes/feed-preferences",
+            reader,
+            Map.of("showReposts", false),
+            200);
+    assertThat(off.path("showReposts").asBoolean()).isFalse();
+
+    var preferences =
+        step("note-feed-preferences", "GET", "/api/v1/notes/feed-preferences", reader, null, 200);
+    assertThat(preferences.path("showReposts").asBoolean()).isFalse();
+
+    var originalsOnly =
+        step("note-following-no-reposts", "GET", "/api/v1/notes/following", reader, null, 200);
+    assertThat(ids(originalsOnly)).containsExactly(loudNote);
+
+    var shown =
+        step(
+            "note-show-reposts",
+            "DELETE",
+            "/api/v1/notes/repost-visibility/" + loud.username(),
+            reader,
+            null,
+            200);
+    assertThat(shown.path("hidden").asBoolean()).isFalse();
+    assertThat(count("note_repost_mute", "user_id = ?", reader.id())).isZero();
+  }
+
+  private static List<Long> ids(JsonNode feed) {
+    List<Long> ids = new ArrayList<>();
+    feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));
+    return ids;
   }
 
   private long noteAt(Actor author, String body, int minutesAgo) {
