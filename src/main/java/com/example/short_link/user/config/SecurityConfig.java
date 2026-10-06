@@ -155,6 +155,9 @@ public class SecurityConfig {
                         "/.well-known/nodeinfo",
                         "/ap/**")
                     .permitAll()
+                    // Remote servers deliver anonymously; the inbox verifies their HTTP signature.
+                    .requestMatchers(POST, "/ap/inbox", "/ap/actors/*/inbox")
+                    .permitAll()
                     .requestMatchers(
                         POST,
                         "/api/v1/public/email-leads",

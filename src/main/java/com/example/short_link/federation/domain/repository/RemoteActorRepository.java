@@ -10,4 +10,6 @@ public interface RemoteActorRepository {
   Optional<RemoteActorEntity> findByKeyId(String keyId);
 
   RemoteActorEntity saveAndFlush(RemoteActorEntity actor);
+
+  void delete(RemoteActorEntity actor);
 }

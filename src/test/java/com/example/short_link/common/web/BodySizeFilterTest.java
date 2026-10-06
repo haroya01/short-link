@@ -63,6 +63,20 @@ class BodySizeFilterTest {
   }
 
   @Test
+  void activityPubInboxAcceptsActivitiesAboveTheDefaultCap() throws Exception {
+    BodySizeFilter filter = new BodySizeFilter(JsonMapper.builder().build());
+    MockHttpServletRequest req = new MockHttpServletRequest("POST", "/ap/inbox");
+    req.setContent(new byte[64 * 1024]);
+    MockHttpServletResponse res = new MockHttpServletResponse();
+    MockFilterChain chain = new MockFilterChain();
+
+    filter.doFilter(req, res, chain);
+
+    assertThat(chain.getRequest()).isNotNull();
+    assertThat(res.getStatus()).isNotEqualTo(413);
+  }
+
+  @Test
   void blockEditorRouteRejectsBodyAboveItsOwnCap() throws Exception {
     BodySizeFilter filter = new BodySizeFilter(JsonMapper.builder().build());
     MockHttpServletRequest req = new MockHttpServletRequest("PUT", "/api/v1/posts/1/blocks");

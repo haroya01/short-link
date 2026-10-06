@@ -1,5 +1,6 @@
 package com.example.short_link.federation.presentation;
 
+import com.example.short_link.federation.application.ActivityStreams;
 import java.util.List;
 import org.springframework.http.InvalidMediaTypeException;
 import org.springframework.http.MediaType;
@@ -8,7 +9,7 @@ final class ActivityPubMedia {
 
   static final String ACTIVITY_JSON_VALUE = "application/activity+json";
   static final MediaType ACTIVITY_JSON = MediaType.parseMediaType(ACTIVITY_JSON_VALUE);
-  static final String CONTEXT = "https://www.w3.org/ns/activitystreams";
+  static final String CONTEXT = ActivityStreams.CONTEXT;
 
   private ActivityPubMedia() {}
 

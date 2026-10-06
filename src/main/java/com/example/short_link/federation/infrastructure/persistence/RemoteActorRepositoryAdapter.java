@@ -26,4 +26,9 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
   public RemoteActorEntity saveAndFlush(RemoteActorEntity actor) {
     return jpa.saveAndFlush(actor);
   }
+
+  @Override
+  public void delete(RemoteActorEntity actor) {
+    jpa.delete(actor);
+  }
 }
