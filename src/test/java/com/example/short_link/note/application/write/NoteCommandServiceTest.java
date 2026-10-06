@@ -380,6 +380,64 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void mentionedMembersAreToldOnceAndTheRepliedToAuthorOnlyThroughTheReply() {
+    saving();
+    when(notes.findById(5L)).thenReturn(Optional.of(note(5L, 9L, "parent")));
+    NoteAuthor mina = new NoteAuthor(9L, "mina", null);
+    NoteAuthor yuki = new NoteAuthor(11L, "yuki", null);
+    when(people.activeAuthors(Set.of(7L), List.of("mina", "yuki", "writer", "ghost")))
+        .thenReturn(Map.of(7L, WRITER, 9L, mina, 11L, yuki));
+
+    NoteView view =
+        service().create(7L, new NoteDraft("@mina @Yuki @writer @ghost 안녕", List.of(), null, 5L));
+
+    assertThat(view.mentions()).containsExactly("mina", "yuki", "writer");
+    verify(events)
+        .publishEvent(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.MENTION,
+                11L,
+                7L,
+                null,
+                100L,
+                "@mina @Yuki @writer @ghost 안녕",
+                null,
+                null));
+    ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
+    verify(events, org.mockito.Mockito.atLeastOnce()).publishEvent(published.capture());
+    assertThat(published.getAllValues())
+        .filteredOn(NoteInteractionEvent.class::isInstance)
+        .map(NoteInteractionEvent.class::cast)
+        .filteredOn(event -> event.type() == NoteInteractionEvent.Type.MENTION)
+        .extracting(NoteInteractionEvent::recipientUserId)
+        .containsExactly(11L);
+  }
+
+  @Test
+  void anEditTellsOnlyMembersItNewlyMentions() {
+    NoteEntity mine = note(1L, 7L, "@mina hi");
+    when(notes.findById(1L)).thenReturn(Optional.of(mine));
+    when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
+    when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
+    when(people.activeAuthors(List.of(), List.of("yuki")))
+        .thenReturn(Map.of(11L, new NoteAuthor(11L, "yuki", null)));
+
+    service().edit(7L, 1L, "@mina and @yuki hi");
+
+    verify(events)
+        .publishEvent(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.MENTION,
+                11L,
+                7L,
+                null,
+                1L,
+                "@mina and @yuki hi",
+                null,
+                null));
+  }
+
+  @Test
   void onlyTheAuthorEditsAndTheEditIsStampedToMicroseconds() {
     NoteEntity mine = note(1L, 7L, "old");
     when(notes.findById(1L)).thenReturn(Optional.of(mine));

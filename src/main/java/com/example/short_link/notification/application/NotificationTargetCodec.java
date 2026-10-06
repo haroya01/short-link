@@ -27,7 +27,7 @@ public class NotificationTargetCodec {
       case CONNECTED, PATH_GREW -> jsonMapper.readValue(payload, NotificationCollectionRef.class);
       case LIKE, COMMENT, FOLLOW, REPLY, NEW_POST, MENTION, REMOTE_FOLLOW ->
           jsonMapper.readValue(payload, NotificationPostRef.class);
-      case NOTE_LIKE, NOTE_REPOST, NOTE_REPLY, NOTE_QUOTE ->
+      case NOTE_LIKE, NOTE_REPOST, NOTE_REPLY, NOTE_QUOTE, NOTE_MENTION ->
           jsonMapper.readValue(payload, NotificationNoteRef.class);
     };
   }

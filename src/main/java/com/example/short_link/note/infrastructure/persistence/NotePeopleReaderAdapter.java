@@ -37,6 +37,25 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
   }
 
   @Override
+  public Map<Long, NoteAuthor> activeAuthors(
+      Collection<Long> userIds, Collection<String> usernames) {
+    if (usernames.isEmpty()) {
+      return activeAuthors(userIds);
+    }
+    var query =
+        userIds.isEmpty()
+            ? em.createNativeQuery(AUTHOR + "username IN (:names)")
+            : em.createNativeQuery(AUTHOR + "(id IN (:ids) OR username IN (:names))")
+                .setParameter("ids", userIds);
+    Map<Long, NoteAuthor> authors = new HashMap<>();
+    for (Object row : query.setParameter("names", usernames).getResultList()) {
+      NoteAuthor author = author((Object[]) row);
+      authors.put(author.id(), author);
+    }
+    return authors;
+  }
+
+  @Override
   public Optional<NoteAuthor> activeByUsername(String username) {
     List<?> rows =
         em.createNativeQuery(AUTHOR + "username = :username")

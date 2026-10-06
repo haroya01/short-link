@@ -227,7 +227,8 @@ class RecordBlogNotificationUseCaseTest {
             Map.entry(NotificationType.NOTE_REPOST, "yuki님이 노트를 리포스트했습니다"),
             Map.entry(NotificationType.NOTE_REPLY, "yuki님이 노트에 답글을 남겼습니다"),
             Map.entry(NotificationType.NOTE_QUOTE, "yuki님이 노트를 인용했습니다"),
-            Map.entry(NotificationType.REMOTE_FOLLOW, "yuki님이 다른 서버에서 팔로우하기 시작했습니다"));
+            Map.entry(NotificationType.REMOTE_FOLLOW, "yuki님이 다른 서버에서 팔로우하기 시작했습니다"),
+            Map.entry(NotificationType.NOTE_MENTION, "yuki님이 노트에서 회원님을 언급했습니다"));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "my-post", "글 제목", null);
     for (NotificationType type : NotificationType.values()) {

@@ -181,6 +181,33 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
         .containsExactly("Kotlin");
   }
 
+  @Test
+  void aMentionedMemberIsToldAndTheMentionLinksOnlyToMembersWhoExist() throws Exception {
+    Actor writer = actor("mention-writer", false);
+    Actor reader = actor("mention-reader", false);
+    String handle = "mr" + reader.id();
+    jdbc.update("UPDATE users SET username = ? WHERE id = ?", handle, reader.id());
+
+    var created =
+        step(
+            "note-create-mention",
+            "POST",
+            "/api/v1/notes",
+            writer,
+            Map.of("body", "@" + handle + " 이거 봐요, @nobody_here 는 없는 사람"),
+            201);
+    long noteId = created.path("id").asLong();
+    assertThat(created.path("mentions").get(0).asText()).isEqualTo(handle);
+    assertThat(created.path("mentions")).hasSize(1);
+
+    var thread =
+        step("note-thread-mention", "GET", "/api/v1/public/notes/" + noteId, null, null, 200);
+    assertThat(thread.path("note").path("mentions").get(0).asText()).isEqualTo(handle);
+    assertThat(
+            count("notification", "recipient_user_id = ? AND type = 'NOTE_MENTION'", reader.id()))
+        .isEqualTo(1);
+  }
+
   private static List<Long> ids(JsonNode feed) {
     List<Long> ids = new ArrayList<>();
     feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));
