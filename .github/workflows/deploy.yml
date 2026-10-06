@@ -128,12 +128,15 @@ jobs:
             # GHCR package is private; auth before pull, then drop the token from the EC2's
             # docker config so the credential isn't sitting on disk after we're done.
             echo "$GHCR_TOKEN" | docker login ghcr.io -u haroya01 --password-stdin
+            # 배포마다 받는 sha 태그 이미지는 dangling 이 아니라서 -f 만으로는 지워지지 않고 쌓인다.
+            # -a 로 돌고 있지 않은 이미지를 받기 전과 뒤에 비운다(되돌리기는 GHCR 에서 다시 받는다).
+            docker image prune -af
+            df -h /
             docker compose pull app
             docker compose up -d --no-build --pull never
             # Now safe to drop the credential — no more pulls until next deploy.
             docker logout ghcr.io
-            # Cleanup stale images so disk doesn't fill up over time.
-            docker image prune -f
+            docker image prune -af
             # Wait for healthy so a crash-looping container is not reported as a green deploy.
             # 'unhealthy' 안에 'healthy' 가 들어 있어서, 문자열 매칭은 크래시 루프를 초록으로
             # 읽는다 — 이 대기가 막으려던 바로 그 상황이다. 상태를 정확히 비교한다.
