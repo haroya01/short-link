@@ -47,6 +47,15 @@ public class NoteController {
         : query.everyone(page, size, viewerId);
   }
 
+  @GetMapping("/api/v1/public/notes/tags/{tag}")
+  public NoteFeedView tagged(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String tag,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.tagged(tag, page, size, viewerId);
+  }
+
   @GetMapping("/api/v1/public/notes/{id}")
   public NoteThreadView thread(@AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
     return query.thread(id, viewerId);

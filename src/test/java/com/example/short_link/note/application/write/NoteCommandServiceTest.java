@@ -361,6 +361,25 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aNoteKeepsItsHashtagsAndAnEditRewritesThemOnlyWhenTheSetChanges() {
+    saving();
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+    service().create(7L, new NoteDraft("오늘 #스프링 #Boot", List.of(), null, null));
+    verify(notes).tag(100L, List.of("스프링", "Boot"));
+
+    NoteEntity mine = note(1L, 7L, "#a #b");
+    when(notes.findById(1L)).thenReturn(Optional.of(mine));
+    when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
+    when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
+
+    service().edit(7L, 1L, "#B then #A");
+    verify(notes, never()).retag(any(), any());
+
+    service().edit(7L, 1L, "only #c now");
+    verify(notes).retag(1L, List.of("c"));
+  }
+
+  @Test
   void onlyTheAuthorEditsAndTheEditIsStampedToMicroseconds() {
     NoteEntity mine = note(1L, 7L, "old");
     when(notes.findById(1L)).thenReturn(Optional.of(mine));

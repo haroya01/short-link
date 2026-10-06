@@ -52,6 +52,14 @@
 @junit | note-feed-preferences-update | 0 | 1 | 0 | 0 | 1
 @junit | note-following-no-reposts | 6 | 0 | 0 | 0 | 6
 @junit | note-everyone | 6 | 0 | 0 | 0 | 6
+# Hashtags: a note's tags go in with one multi-row insert after the note (none when it has no tags).
+# An edit rewrites them (delete, insert) only when the set of tags changed. The tag page reads the
+# tagged notes newest first, then builds the page as usual. Notes under a tag the reader follows join
+# the following feed inside its one union query.
+@junit | note-create-tagged | 3 | 2 | 0 | 0 | 5
+@junit | note-tagged | 4 | 0 | 0 | 0 | 4
+@junit | note-following-tags | 6 | 0 | 0 | 0 | 6
+@junit | note-edit-retag | 7 | 1 | 1 | 1 | 10
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6

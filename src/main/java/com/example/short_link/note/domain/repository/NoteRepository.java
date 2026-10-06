@@ -35,5 +35,11 @@ public interface NoteRepository {
 
   List<NoteEntity> quotesOf(Long noteId, int offset, int limit);
 
+  List<NoteEntity> tagged(String tag, int offset, int limit);
+
+  void tag(Long noteId, List<String> tags);
+
+  void retag(Long noteId, List<String> tags);
+
   long countByAuthor(Long userId);
 }

@@ -41,6 +41,44 @@ class NoteDocumentsTest {
   }
 
   @Test
+  @SuppressWarnings("unchecked")
+  void hashtagsLinkToTheTagPageAndTravelAsHashtagObjects() {
+    Map<String, Object> object =
+        documents.note(
+            note(
+                "#스프링 it's https://example.com/a#frag and a#b #Spring #123 &#tag",
+                null,
+                List.of(),
+                null),
+            "pid");
+
+    assertThat((String) object.get("content"))
+        .isEqualTo(
+            "<p><a href=\"https://blog.kurl.me/tags/%EC%8A%A4%ED%94%84%EB%A7%81?view=notes\""
+                + " class=\"mention hashtag\" rel=\"tag\">#<span>스프링</span></a> it&#39;s"
+                + " <a href=\"https://example.com/a#frag\" rel=\"nofollow noopener noreferrer\""
+                + " target=\"_blank\">https://example.com/a#frag</a> and a#b"
+                + " <a href=\"https://blog.kurl.me/tags/Spring?view=notes\" class=\"mention hashtag\""
+                + " rel=\"tag\">#<span>Spring</span></a> #123 &amp;"
+                + "<a href=\"https://blog.kurl.me/tags/tag?view=notes\" class=\"mention hashtag\""
+                + " rel=\"tag\">#<span>tag</span></a></p>");
+    assertThat((List<Map<String, Object>>) object.get("tag"))
+        .containsExactly(
+            Map.of(
+                "type", "Hashtag",
+                "href", "https://blog.kurl.me/tags/%EC%8A%A4%ED%94%84%EB%A7%81?view=notes",
+                "name", "#스프링"),
+            Map.of(
+                "type", "Hashtag",
+                "href", "https://blog.kurl.me/tags/Spring?view=notes",
+                "name", "#Spring"),
+            Map.of(
+                "type", "Hashtag",
+                "href", "https://blog.kurl.me/tags/tag?view=notes",
+                "name", "#tag"));
+  }
+
+  @Test
   void aQuotedBlogPostIsLinkedAndAnImageOnlyNoteHasNoTextParagraph() {
     String html =
         documents.content(note("", new Quote("Essay <1>", "my-essay", "yuki"), List.of(), null));
