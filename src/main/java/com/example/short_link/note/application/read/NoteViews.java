@@ -8,6 +8,7 @@ import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -31,20 +32,35 @@ public class NoteViews {
   private final NoteMediaRepository media;
   private final NotePeopleReader people;
   private final QuotedPostReader quotedPosts;
+  private final NoteRepostRepository reposts;
 
   public List<NoteView> of(List<NoteEntity> page, Long viewerId) {
     if (page.isEmpty()) {
       return List.of();
     }
-    Map<Long, NoteAuthor> authors =
-        people.activeAuthors(page.stream().map(NoteEntity::getUserId).collect(Collectors.toSet()));
+    Set<Long> quotedNoteIds =
+        page.stream()
+            .map(NoteEntity::getQuotedNoteId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+    List<NoteEntity> quotedNotes =
+        quotedNoteIds.isEmpty() ? List.of() : notes.findAllByIdIn(quotedNoteIds);
+    Set<Long> authorIds = page.stream().map(NoteEntity::getUserId).collect(Collectors.toSet());
+    quotedNotes.forEach(quotedNote -> authorIds.add(quotedNote.getUserId()));
+    Map<Long, NoteAuthor> authors = people.activeAuthors(authorIds);
     List<NoteEntity> visible =
         page.stream().filter(note -> authors.containsKey(note.getUserId())).toList();
     if (visible.isEmpty()) {
       return List.of();
     }
     List<Long> ids = visible.stream().map(NoteEntity::getId).toList();
-    Map<Long, List<NoteView.Media>> images = images(ids);
+    Map<Long, NoteEntity> quotedById =
+        quotedNotes.stream()
+            .filter(quotedNote -> authors.containsKey(quotedNote.getUserId()))
+            .collect(Collectors.toMap(NoteEntity::getId, quotedNote -> quotedNote));
+    List<Long> imageNoteIds = new ArrayList<>(ids);
+    imageNoteIds.addAll(quotedById.keySet());
+    Map<Long, List<NoteView.Media>> images = images(imageNoteIds);
     Set<Long> quoted =
         visible.stream()
             .map(NoteEntity::getQuotedPostId)
@@ -60,8 +76,11 @@ public class NoteViews {
                 .map(NoteEntity::getId)
                 .toList();
     Map<Long, Long> likeCounts = own.isEmpty() ? Map.of() : likes.counts(own);
+    Map<Long, Long> repostCounts = own.isEmpty() ? Map.of() : reposts.counts(own);
     Set<Long> liked =
         viewerId == null ? Set.of() : new HashSet<>(likes.likedNoteIds(viewerId, ids));
+    Set<Long> reposted =
+        viewerId == null ? Set.of() : new HashSet<>(reposts.repostedNoteIds(viewerId, ids));
 
     List<NoteView> views = new ArrayList<>(visible.size());
     for (NoteEntity note : visible) {
@@ -78,9 +97,25 @@ public class NoteViews {
               images.getOrDefault(note.getId(), List.of()),
               note.getQuotedPostId() == null ? null : posts.get(note.getQuotedPostId()),
               note.getInReplyToId(),
-              replies.getOrDefault(note.getId(), 0L)));
+              replies.getOrDefault(note.getId(), 0L),
+              mine ? repostCounts.getOrDefault(note.getId(), 0L) : null,
+              viewerId == null ? null : reposted.contains(note.getId()),
+              quotedNote(quotedById.get(note.getQuotedNoteId()), authors, images)));
     }
     return views;
+  }
+
+  private static NoteView.QuotedNote quotedNote(
+      NoteEntity quoted, Map<Long, NoteAuthor> authors, Map<Long, List<NoteView.Media>> images) {
+    if (quoted == null) {
+      return null;
+    }
+    return new NoteView.QuotedNote(
+        quoted.getId(),
+        quoted.getBody(),
+        quoted.getCreatedAt(),
+        authors.get(quoted.getUserId()),
+        images.getOrDefault(quoted.getId(), List.of()));
   }
 
   private Map<Long, List<NoteView.Media>> images(List<Long> noteIds) {

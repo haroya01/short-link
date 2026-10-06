@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.common.note.NoteSnapshotReader.Image;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
+import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,63 @@ class NoteDocumentsTest {
 
     assertThat(html)
         .isEqualTo("<p><a href=\"https://blog.kurl.me/@yuki/my-essay\">Essay &lt;1&gt;</a></p>");
+  }
+
+  @Test
+  void aQuotedNoteCarriesTheQuoteFieldsAndAnReFallbackForServersWithoutThem() {
+    NoteSnapshot quoting =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "agreed",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            new QuotedNote(9L, "mio"));
+
+    Map<String, Object> note = documents.note(quoting, "pid");
+
+    assertThat(note.get("quoteUrl")).isEqualTo("https://kurl.me/ap/notes/9");
+    assertThat(note.get("quoteUri")).isEqualTo("https://kurl.me/ap/notes/9");
+    assertThat(note.get("_misskey_quote")).isEqualTo("https://kurl.me/ap/notes/9");
+    assertThat(note.get("content"))
+        .isEqualTo(
+            "<p>agreed</p><p class=\"quote-inline\">RE: <a href=\"https://blog.kurl.me/@mio/notes/9\">"
+                + "https://blog.kurl.me/@mio/notes/9</a></p>");
+    assertThat(documents.note(note("x", null, List.of(), null), "pid"))
+        .doesNotContainKeys("quoteUrl", "quoteUri", "_misskey_quote");
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
+  void aRepostIsAnAnnounceOfTheNoteAndUndoingItEmbedsThatAnnounce() {
+    Map<String, Object> announce = documents.announce(900L, 42L, "reposter", "author");
+
+    assertThat(announce.get("id")).isEqualTo("https://kurl.me/ap/reposts/900");
+    assertThat(announce.get("type")).isEqualTo("Announce");
+    assertThat(announce.get("actor")).isEqualTo("https://kurl.me/ap/actors/reposter");
+    assertThat(announce.get("object")).isEqualTo("https://kurl.me/ap/notes/42");
+    assertThat(announce.get("to"))
+        .isEqualTo(List.of("https://www.w3.org/ns/activitystreams#Public"));
+    assertThat(announce.get("cc"))
+        .isEqualTo(
+            List.of(
+                "https://kurl.me/ap/actors/reposter/followers",
+                "https://kurl.me/ap/actors/author"));
+
+    Map<String, Object> undo = documents.undoAnnounce(900L, 42L, "reposter");
+    assertThat(undo.get("id")).isEqualTo("https://kurl.me/ap/reposts/900#undo");
+    assertThat(undo.get("type")).isEqualTo("Undo");
+    assertThat(undo.get("actor")).isEqualTo("https://kurl.me/ap/actors/reposter");
+    Map<String, Object> undone = (Map<String, Object>) undo.get("object");
+    assertThat(undone)
+        .containsEntry("id", "https://kurl.me/ap/reposts/900")
+        .containsEntry("type", "Announce")
+        .containsEntry("actor", "https://kurl.me/ap/actors/reposter")
+        .containsEntry("object", "https://kurl.me/ap/notes/42");
   }
 
   @Test

@@ -22,6 +22,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class NoteFederation {
 
   private final NoteSnapshotReader notes;
+  private final FederationActorService localActors;
   private final FederationSettings settings;
   private final FederationActorRepository actors;
   private final FederationFollowerRepository followers;
@@ -37,6 +38,23 @@ public class NoteFederation {
   @Transactional
   public void edited(Long noteId, Long authorId) {
     deliver(authorId, publicId -> notes.find(noteId).map(note -> documents.update(note, publicId)));
+  }
+
+  @Transactional
+  public void reposted(Long repostId, Long noteId, Long reposterId) {
+    deliver(
+        reposterId,
+        publicId ->
+            notes
+                .find(noteId)
+                .flatMap(note -> localActors.byUsername(note.authorUsername()))
+                .map(author -> documents.announce(repostId, noteId, publicId, author.publicId())));
+  }
+
+  @Transactional
+  public void unreposted(Long repostId, Long noteId, Long reposterId) {
+    deliver(
+        reposterId, publicId -> Optional.of(documents.undoAnnounce(repostId, noteId, publicId)));
   }
 
   @Transactional

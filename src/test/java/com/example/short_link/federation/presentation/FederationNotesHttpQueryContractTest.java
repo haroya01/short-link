@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.databind.JsonNode;
 
 class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
 
@@ -47,13 +48,17 @@ class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   private List<String> queuedTypes(UserEntity user) {
+    return queued(user).stream().map(body -> body.path("type").asString()).toList();
+  }
+
+  private List<JsonNode> queued(UserEntity user) {
     return jdbc
         .queryForList(
             "SELECT body FROM federation_delivery WHERE signer_user_id = ? ORDER BY id",
             String.class,
             user.getId())
         .stream()
-        .map(body -> json.readTree(body).path("type").asString())
+        .map(json::readTree)
         .toList();
   }
 
@@ -118,6 +123,29 @@ class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
         Map.of("Accept", "text/html"),
         302);
 
+    call("federation-note-repost", "PUT", "/api/v1/notes/" + noteId + "/repost", null, token, 200);
+    call(
+        "federation-note-unrepost",
+        "DELETE",
+        "/api/v1/notes/" + noteId + "/repost",
+        null,
+        token,
+        200);
+    call(
+        "federation-note-quote",
+        "POST",
+        "/api/v1/notes",
+        Map.of("body", "quoting", "quotedNoteId", noteId),
+        token,
+        201);
+    List<JsonNode> sent = queued(owner);
+    assertThat(queuedTypes(owner)).containsExactly("Create", "Announce", "Undo", "Create");
+    assertThat(sent.get(1).path("object").asString()).isEqualTo(urls.note(noteId));
+    assertThat(sent.get(2).path("object").path("id").asString())
+        .isEqualTo(sent.get(1).path("id").asString());
+    assertThat(sent.get(3).path("object").path("quoteUrl").asString()).isEqualTo(urls.note(noteId));
+    assertThat(sent.get(3).path("object").path("content").asString()).contains("RE: <a href=");
+
     call(
         "federation-note-edit",
         "PATCH",
@@ -126,7 +154,8 @@ class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
         token,
         200);
     call("federation-note-delete", "DELETE", "/api/v1/notes/" + noteId, null, token, 204);
-    assertThat(queuedTypes(owner)).containsExactly("Create", "Update", "Delete");
+    assertThat(queuedTypes(owner))
+        .containsExactly("Create", "Announce", "Undo", "Create", "Update", "Delete");
 
     call(
         "federation-settings-off",
@@ -135,7 +164,8 @@ class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
         Map.of("enabled", false),
         token,
         200);
-    assertThat(queuedTypes(owner)).containsExactly("Create", "Update", "Delete", "Delete");
+    assertThat(queuedTypes(owner))
+        .containsExactly("Create", "Announce", "Undo", "Create", "Update", "Delete", "Delete");
     assertThat(count("SELECT COUNT(*) FROM federation_follower WHERE user_id = ?", owner.getId()))
         .isZero();
     callWithHeaders(

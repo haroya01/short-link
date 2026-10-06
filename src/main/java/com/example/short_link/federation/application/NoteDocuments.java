@@ -37,6 +37,12 @@ public class NoteDocuments {
     object.put("to", List.of(ActivityStreams.PUBLIC));
     object.put("cc", List.of(urls.followers(actorPublicId)));
     object.put("inReplyTo", note.inReplyToId() == null ? null : urls.note(note.inReplyToId()));
+    if (note.quotedNote() != null) {
+      String quoted = urls.note(note.quotedNote().id());
+      object.put("quoteUrl", quoted);
+      object.put("quoteUri", quoted);
+      object.put("_misskey_quote", quoted);
+    }
     object.put("sensitive", false);
     List<Map<String, Object>> attachments = new ArrayList<>();
     for (var image : note.images()) {
@@ -66,6 +72,26 @@ public class NoteDocuments {
         activity(urls.note(note.id()) + "#updates/" + version, "Update", actorPublicId);
     activity.put("cc", List.of(urls.followers(actorPublicId)));
     activity.put("object", note(note, actorPublicId));
+    return activity;
+  }
+
+  public Map<String, Object> announce(
+      Long repostId, Long noteId, String actorPublicId, String noteAuthorPublicId) {
+    Map<String, Object> activity = activity(urls.repost(repostId), "Announce", actorPublicId);
+    activity.put("cc", List.of(urls.followers(actorPublicId), urls.actor(noteAuthorPublicId)));
+    activity.put("object", urls.note(noteId));
+    return activity;
+  }
+
+  public Map<String, Object> undoAnnounce(Long repostId, Long noteId, String actorPublicId) {
+    Map<String, Object> announce = new LinkedHashMap<>();
+    announce.put("id", urls.repost(repostId));
+    announce.put("type", "Announce");
+    announce.put("actor", urls.actor(actorPublicId));
+    announce.put("object", urls.note(noteId));
+    Map<String, Object> activity = activity(urls.repost(repostId) + "#undo", "Undo", actorPublicId);
+    activity.put("cc", List.of(urls.followers(actorPublicId)));
+    activity.put("object", announce);
     return activity;
   }
 
@@ -102,6 +128,16 @@ public class NoteDocuments {
           .append(HtmlUtils.htmlEscape(href))
           .append("\">")
           .append(HtmlUtils.htmlEscape(note.quote().title()))
+          .append("</a></p>");
+    }
+    if (note.quotedNote() != null) {
+      String href =
+          HtmlUtils.htmlEscape(
+              urls.notePage(note.quotedNote().authorUsername(), note.quotedNote().id()));
+      html.append("<p class=\"quote-inline\">RE: <a href=\"")
+          .append(href)
+          .append("\">")
+          .append(href)
           .append("</a></p>");
     }
     return html.toString();

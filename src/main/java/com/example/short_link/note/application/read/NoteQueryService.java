@@ -5,11 +5,16 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.function.BiFunction;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +28,7 @@ public class NoteQueryService {
 
   private final NoteRepository notes;
   private final NoteLikeRepository likes;
+  private final NoteRepostRepository reposts;
   private final NotePeopleReader people;
   private final NoteViews views;
 
@@ -50,6 +56,25 @@ public class NoteQueryService {
         size,
         viewerId,
         (offset, limit) -> notes.topLevelByAuthors(List.of(author.id()), offset, limit));
+  }
+
+  @Transactional(readOnly = true)
+  public NoteFeedView reposts(String username, int page, int size, Long viewerId) {
+    NoteAuthor author =
+        people
+            .activeByUsername(username)
+            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
+    return page(
+        page,
+        size,
+        viewerId,
+        (offset, limit) -> {
+          List<Long> ids = reposts.recentNoteIdsByUser(author.id(), offset, limit);
+          Map<Long, NoteEntity> found =
+              notes.findAllByIdIn(ids).stream()
+                  .collect(Collectors.toMap(NoteEntity::getId, Function.identity()));
+          return ids.stream().map(found::get).filter(Objects::nonNull).toList();
+        });
   }
 
   @Transactional(readOnly = true)

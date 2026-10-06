@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
 
 // Notes and their image rows go with the user by ON DELETE CASCADE, but the stored image files and
-// this user's likes on other people's notes (no cascading FK) do not.
+// this user's likes and reposts of other people's notes (no cascading FK on the user) do not.
 @Slf4j
 @Repository
 @RequiredArgsConstructor
@@ -24,6 +24,9 @@ class NoteUserDataEraser implements UserDataEraser {
   @Override
   public void eraseFor(long userId) {
     em.createNativeQuery("DELETE FROM note_like WHERE user_id = :userId")
+        .setParameter("userId", userId)
+        .executeUpdate();
+    em.createNativeQuery("DELETE FROM note_repost WHERE user_id = :userId")
         .setParameter("userId", userId)
         .executeUpdate();
     if (!storage.isConfigured()) {

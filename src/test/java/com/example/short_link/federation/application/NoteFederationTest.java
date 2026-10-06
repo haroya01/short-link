@@ -11,6 +11,7 @@ import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
+import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
 import java.time.Instant;
@@ -40,6 +41,7 @@ class NoteFederationTest {
           List.of());
 
   @Mock private NoteSnapshotReader notes;
+  @Mock private FederationActorService localActors;
   @Mock private FederationSettings settings;
   @Mock private FederationActorRepository actors;
   @Mock private FederationFollowerRepository followers;
@@ -48,6 +50,7 @@ class NoteFederationTest {
   private NoteFederation service() {
     return new NoteFederation(
         notes,
+        localActors,
         settings,
         actors,
         followers,
@@ -104,6 +107,43 @@ class NoteFederationTest {
             org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/notes/42#delete"),
             any(),
             any());
+  }
+
+  @Test
+  void aRepostAnnouncesTheNoteToTheRepostersFollowersOnlyWhileItsAuthorFederates() {
+    when(actors.findByUserId(8L))
+        .thenReturn(Optional.of(new FederationActorEntity(8L, "rp", "PUB", "enc")));
+    when(followers.deliveryInboxes(8L)).thenReturn(List.of("https://c.example/inbox"));
+    when(settings.isEnabled(8L)).thenReturn(true);
+    when(notes.find(42L)).thenReturn(Optional.of(NOTE));
+    when(localActors.byUsername("yuki"))
+        .thenReturn(
+            Optional.of(new LocalActor(new FederationUser(7L, "yuki", null, null), "pid", "PUB")),
+            Optional.empty());
+
+    service().reposted(900L, 42L, 8L);
+    service().unreposted(900L, 42L, 8L);
+    service().reposted(901L, 42L, 8L);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(8L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/reposts/900"),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://c.example/inbox")));
+    assertThat(JSON.readTree(body.getValue()).path("type").asString()).isEqualTo("Announce");
+    assertThat(JSON.readTree(body.getValue()).path("cc").get(1).asString())
+        .isEqualTo("https://kurl.me/ap/actors/pid");
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(8L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/reposts/900#undo"),
+            any(),
+            any());
+    verify(deliveries, never())
+        .enqueue(
+            any(), org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/reposts/901"), any(), any());
   }
 
   @Test

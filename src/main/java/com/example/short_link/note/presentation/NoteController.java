@@ -56,6 +56,15 @@ public class NoteController {
     return query.byAuthor(username, page, size, viewerId);
   }
 
+  @GetMapping("/api/v1/public/profiles/{username}/reposts")
+  public NoteFeedView reposts(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String username,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.reposts(username, page, size, viewerId);
+  }
+
   @GetMapping("/api/v1/notes/following")
   public NoteFeedView following(
       @AuthenticationPrincipal Long userId,
@@ -95,6 +104,18 @@ public class NoteController {
   public NoteCommandService.LikeStatus unlike(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return command.setLike(userId, id, false);
+  }
+
+  @PutMapping("/api/v1/notes/{id}/repost")
+  public NoteCommandService.RepostStatus repost(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setRepost(userId, id, true);
+  }
+
+  @DeleteMapping("/api/v1/notes/{id}/repost")
+  public NoteCommandService.RepostStatus unrepost(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setRepost(userId, id, false);
   }
 
   @GetMapping("/api/v1/notes/like-status")

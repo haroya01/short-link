@@ -84,6 +84,37 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
 
     step("note-like", "PUT", "/api/v1/notes/" + noteId + "/like", reader, null, 200);
 
+    var repost =
+        step("note-repost", "PUT", "/api/v1/notes/" + noteId + "/repost", reader, null, 200);
+    assertThat(repost.path("reposted").asBoolean()).isTrue();
+    assertThat(repost.path("repostCount").asLong()).isZero();
+
+    var quote =
+        step(
+            "note-quote",
+            "POST",
+            "/api/v1/notes",
+            reader,
+            Map.of("body", "인용", "quotedNoteId", noteId),
+            201);
+    long quoteId = quote.path("id").asLong();
+    assertThat(quote.path("quotedNote").path("id").asLong()).isEqualTo(noteId);
+    assertThat(quote.path("quotedNote").path("author").path("username").asText())
+        .isEqualTo(writer.username());
+    assertThat(quote.path("quotedNote").path("media").get(0).path("altText").asText())
+        .isEqualTo("창밖 풍경");
+
+    var reposts =
+        step(
+            "note-reposts",
+            "GET",
+            "/api/v1/public/profiles/" + reader.username() + "/reposts",
+            null,
+            null,
+            200);
+    assertThat(reposts.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
+    assertThat(reposts.path("items").get(0).path("repostCount").isNull()).isTrue();
+
     var thread = step("note-thread", "GET", "/api/v1/public/notes/" + noteId, reader, null, 200);
     assertThat(thread.path("note").path("replyCount").asLong()).isEqualTo(1);
     assertThat(thread.path("note").path("likedByMe").asBoolean()).isTrue();
@@ -99,9 +130,16 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
             null,
             200);
     assertThat(mine.path("items").get(0).path("likeCount").asLong()).isEqualTo(1);
+    assertThat(mine.path("items").get(0).path("repostCount").asLong()).isEqualTo(1);
+
+    var unrepost =
+        step("note-unrepost", "DELETE", "/api/v1/notes/" + noteId + "/repost", reader, null, 200);
+    assertThat(unrepost.path("reposted").asBoolean()).isFalse();
+    assertThat(count("note_repost", "note_id = ?", noteId)).isZero();
 
     var following = step("note-following", "GET", "/api/v1/notes/following", reader, null, 200);
-    assertThat(following.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
+    assertThat(following.path("items").get(0).path("id").asLong()).isEqualTo(quoteId);
+    assertThat(following.path("items").get(1).path("id").asLong()).isEqualTo(noteId);
 
     var everyone = step("note-everyone", "GET", "/api/v1/public/notes", null, null, 200);
     assertThat(everyone.path("items").get(0).path("likeCount").asLong()).isZero();
@@ -122,6 +160,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     verify(objectStorage, timeout(5_000)).delete(key);
     assertThat(count("note_media", "note_id = ?", noteId)).isZero();
     assertThat(count("note", "id = ? AND in_reply_to_id IS NULL", replyId)).isEqualTo(1);
+    assertThat(count("note", "id = ? AND quoted_note_id IS NULL", quoteId)).isEqualTo(1);
     step("note-thread-gone", "GET", "/api/v1/public/notes/" + noteId, null, null, 404);
   }
 }

@@ -5,8 +5,8 @@ import com.example.short_link.note.domain.QuotedPost;
 import java.time.Instant;
 import java.util.List;
 
-// likeCount is the author's own number; everyone else gets null (like counts are not public).
-// likedByMe is null for anonymous readers.
+// likeCount and repostCount are the author's own numbers; everyone else gets null (counts are not
+// public). likedByMe and repostedByMe are null for anonymous readers.
 public record NoteView(
     Long id,
     String body,
@@ -18,9 +18,15 @@ public record NoteView(
     List<Media> media,
     QuotedPost quotedPost,
     Long inReplyToId,
-    long replyCount) {
+    long replyCount,
+    Long repostCount,
+    Boolean repostedByMe,
+    QuotedNote quotedNote) {
 
   public record Media(String url, String altText, String contentType) {}
+
+  public record QuotedNote(
+      Long id, String body, Instant createdAt, NoteAuthor author, List<Media> media) {}
 
   NoteView withLikeCount(Long count) {
     return new NoteView(
@@ -34,6 +40,9 @@ public record NoteView(
         media,
         quotedPost,
         inReplyToId,
-        replyCount);
+        replyCount,
+        repostCount,
+        repostedByMe,
+        quotedNote);
   }
 }

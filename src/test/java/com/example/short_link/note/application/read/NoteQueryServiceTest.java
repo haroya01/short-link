@@ -11,6 +11,7 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.exception.NoteException;
 import java.util.List;
 import java.util.Optional;
@@ -29,6 +30,7 @@ class NoteQueryServiceTest {
 
   @Mock private NoteRepository notes;
   @Mock private NoteLikeRepository likes;
+  @Mock private NoteRepostRepository reposts;
   @Mock private NotePeopleReader people;
   @Mock private NoteViews views;
   @InjectMocks private NoteQueryService service;
@@ -41,7 +43,8 @@ class NoteQueryServiceTest {
 
   private static NoteView view(Long id, Long inReplyTo, Long likeCount) {
     return new NoteView(
-        id, "n" + id, null, null, likeCount, null, ME, List.of(), null, inReplyTo, 0);
+        id, "n" + id, null, null, likeCount, null, ME, List.of(), null, inReplyTo, 0, null, null,
+        null);
   }
 
   @Test
@@ -87,6 +90,26 @@ class NoteQueryServiceTest {
     when(people.followingIds(9L)).thenReturn(List.of(7L, 8L));
     when(notes.topLevelByAuthors(List.of(7L, 8L, 9L), 0, 21)).thenReturn(List.of());
     assertThat(service.following(9L, 0, 20).items()).isEmpty();
+  }
+
+  @Test
+  void repostsKeepRepostOrderAndSkipNotesThatAreGone() {
+    when(people.activeByUsername("me")).thenReturn(Optional.of(ME));
+    when(reposts.recentNoteIdsByUser(7L, 0, 21)).thenReturn(List.of(5L, 9L, 2L));
+    NoteEntity two = note(2L, null);
+    NoteEntity five = note(5L, null);
+    when(notes.findAllByIdIn(List.of(5L, 9L, 2L))).thenReturn(List.of(two, five));
+    when(views.of(List.of(five, two), 9L))
+        .thenReturn(List.of(view(5L, null, null), view(2L, null, null)));
+
+    NoteFeedView feed = service.reposts("me", 0, 20, 9L);
+
+    assertThat(feed.items()).extracting(NoteView::id).containsExactly(5L, 2L);
+    assertThat(feed.hasNext()).isFalse();
+
+    when(people.activeByUsername("ghost")).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.reposts("ghost", 0, 20, null))
+        .isInstanceOf(NoteException.class);
   }
 
   @Test

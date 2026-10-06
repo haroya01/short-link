@@ -46,11 +46,17 @@
 @junit | federation-settings-get | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
 @junit | federation-note-create | 9 | 2 | 0 | 0 | 11
-@junit | federation-note-edit | 14 | 1 | 1 | 0 | 16
+@junit | federation-note-edit | 16 | 1 | 1 | 0 | 18
 @junit | federation-note-delete | 6 | 1 | 0 | 3 | 10
 # The note document: note, author, images, then the author's actor (user, preference, actor).
 @junit | federation-note-document | 6 | 0 | 0 | 0 | 6
 @junit | federation-note-page | 6 | 0 | 0 | 0 | 6
+# Reposting your own note: the repost write and its count, then the Announce, which reads the note
+# to find its author's actor. Undo reads nothing but the reposter's actor. A quote reads the quoted
+# note and its author on both the write and the delivery side.
+@junit | federation-note-repost | 14 | 2 | 0 | 0 | 16
+@junit | federation-note-unrepost | 7 | 1 | 0 | 1 | 9
+@junit | federation-note-quote | 15 | 2 | 0 | 0 | 17
 # Turning federation off sends Delete(Person) to follower servers and clears the followers.
 @junit | federation-settings-off | 5 | 1 | 1 | 1 | 8
 @junit | federation-webfinger-opted-out | 2 | 0 | 0 | 0 | 2

@@ -5,6 +5,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteSnapshotReader.Image;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
+import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
@@ -54,6 +55,27 @@ class NoteSnapshotProviderTest {
     assertThat(snapshot.inReplyToId()).isEqualTo(3L);
     assertThat(snapshot.quote()).isEqualTo(new Quote("Essay", "essay", "yuki"));
     assertThat(snapshot.images()).containsExactly(new Image("https://cdn/k", "image/png", "alt"));
+  }
+
+  @Test
+  void aQuotedNoteResolvesOnlyWhileItAndItsAuthorExist() {
+    NoteEntity quoting = note(null);
+    ReflectionTestUtils.setField(quoting, "quotedNoteId", 50L);
+    NoteEntity quoted = new NoteEntity(8L, "original", null, null);
+    ReflectionTestUtils.setField(quoted, "id", 50L);
+    when(notes.findById(42L)).thenReturn(Optional.of(quoting));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
+    when(media.findByNoteIds(List.of(42L))).thenReturn(List.of());
+    when(notes.findById(50L)).thenReturn(Optional.of(quoted));
+    when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "mio", null)));
+
+    assertThat(provider.find(42L).orElseThrow().quotedNote()).isEqualTo(new QuotedNote(50L, "mio"));
+
+    when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of());
+    assertThat(provider.find(42L).orElseThrow().quotedNote()).isNull();
+
+    when(notes.findById(50L)).thenReturn(Optional.empty());
+    assertThat(provider.find(42L).orElseThrow().quotedNote()).isNull();
   }
 
   @Test

@@ -4,6 +4,8 @@ import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
+import com.example.short_link.common.event.NoteRepostedEvent;
+import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.federation.application.FederationLeaving;
 import com.example.short_link.federation.application.NoteFederation;
 import lombok.RequiredArgsConstructor;
@@ -37,6 +39,18 @@ public class NoteFederationListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onDeleted(NoteDeletedEvent event) {
     notes.deleted(event.noteId(), event.authorId());
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onReposted(NoteRepostedEvent event) {
+    notes.reposted(event.repostId(), event.noteId(), event.userId());
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onUnreposted(NoteUnrepostedEvent event) {
+    notes.unreposted(event.repostId(), event.noteId(), event.userId());
   }
 
   @Async("webhookExecutor")

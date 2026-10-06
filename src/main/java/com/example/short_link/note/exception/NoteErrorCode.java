@@ -12,7 +12,10 @@ public enum NoteErrorCode {
   NOTE_IMAGE_INVALID(HttpStatus.BAD_REQUEST, "%s"),
   NOTE_IMAGES_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "image storage is not configured"),
   NOTE_QUOTE_NOT_FOUND(HttpStatus.BAD_REQUEST, "quoted post is not published: %s"),
-  NOTE_REPLY_BLOCKED(HttpStatus.FORBIDDEN, "cannot reply to this note");
+  NOTE_QUOTED_NOTE_NOT_FOUND(HttpStatus.BAD_REQUEST, "quoted note not found: %s"),
+  NOTE_QUOTE_CONFLICT(HttpStatus.BAD_REQUEST, "a note quotes a post or a note, not both"),
+  NOTE_REPLY_BLOCKED(HttpStatus.FORBIDDEN, "cannot reply to this note"),
+  NOTE_INTERACTION_BLOCKED(HttpStatus.FORBIDDEN, "cannot repost or quote this note");
 
   private final HttpStatus status;
   private final String template;
