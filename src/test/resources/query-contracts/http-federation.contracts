@@ -43,21 +43,38 @@
 @junit | federation-inbox-delete-actor | 2 | 0 | 0 | 1 | 3
 @junit | federation-inbox-delete-unknown-actor | 1 | 0 | 0 | 0 | 1
 @junit | federation-inbox-unknown | 1 | 0 | 0 | 0 | 1
+# Likes and boosts from a remote account. The target is checked before the signature with the rule
+# that serves the note document (note, author, images, then the author's user, preference, actor);
+# a personal inbox reuses its owner when the owner wrote the note. Then the key and one upsert, so a
+# re-sent Like keeps one row.
+@junit | federation-inbox-like | 7 | 1 | 0 | 0 | 8
+@junit | federation-inbox-like-again | 7 | 1 | 0 | 0 | 8
+@junit | federation-inbox-announce | 7 | 1 | 0 | 0 | 8
+@junit | federation-inbox-like-before-delete | 7 | 1 | 0 | 0 | 8
+# The author's view adds one grouped count of remote reactions; anyone else gets no counts at all.
+@junit | federation-note-remote-counts | 10 | 0 | 0 | 0 | 10
+@junit | federation-note-remote-counts-stranger | 7 | 0 | 0 | 0 | 7
+# Undo of an embedded Like deletes by note, actor and kind; a bare activity id clears a follow or a
+# reaction with that id.
+@junit | federation-inbox-undo-like | 1 | 0 | 0 | 1 | 2
+@junit | federation-inbox-undo-by-id | 1 | 0 | 0 | 2 | 3
+# Reactions go with the actor row by ON DELETE CASCADE.
+@junit | federation-inbox-delete-liker | 2 | 0 | 0 | 1 | 3
 # Notes and settings, with one seeded remote follower. Note steps include the after-commit delivery
 # work: actor, follower inboxes, preference, then the note (note, author, images) and the queue.
 @junit | federation-settings-get | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
 @junit | federation-note-create | 9 | 3 | 0 | 0 | 12
-@junit | federation-note-edit | 16 | 1 | 1 | 1 | 19
+@junit | federation-note-edit | 17 | 1 | 1 | 1 | 20
 @junit | federation-note-delete | 6 | 1 | 0 | 3 | 10
 # The note document: note, author, images, then the author's actor (user, preference, actor).
 @junit | federation-note-document | 6 | 0 | 0 | 0 | 6
 @junit | federation-note-page | 6 | 0 | 0 | 0 | 6
-# Reposting your own note: the repost write and its count, then the Announce, which reads the note
-# to find its author's actor. Undo reads nothing but the reposter's actor. A quote reads the quoted
-# note and its author on both the write and the delivery side.
-@junit | federation-note-repost | 14 | 2 | 0 | 0 | 16
-@junit | federation-note-unrepost | 7 | 1 | 0 | 1 | 9
+# Reposting your own note: the repost write and its count with boosts from other servers, then the
+# Announce, which reads the note to find its author's actor. Undo reads nothing but the reposter's
+# actor. A quote reads the quoted note and its author on both the write and the delivery side.
+@junit | federation-note-repost | 15 | 2 | 0 | 0 | 17
+@junit | federation-note-unrepost | 8 | 1 | 0 | 1 | 10
 @junit | federation-note-quote | 15 | 2 | 0 | 0 | 17
 # Turning federation off sends Delete(Person) to follower servers and clears the followers.
 @junit | federation-settings-off | 5 | 1 | 1 | 1 | 8

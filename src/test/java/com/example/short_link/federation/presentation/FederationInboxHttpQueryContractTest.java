@@ -156,6 +156,81 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void aMastodonAccountLikesAndBoostsANoteAndTheAuthorSeesBothCounted() throws Exception {
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at) VALUES (?, 'hello fediverse', NOW(6))",
+        owner.getId());
+    Long noteId =
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, owner.getId());
+    String note = urls.note(noteId);
+    String personal = "/ap/actors/" + target.publicId() + "/inbox";
+    String boost = alice + "/statuses/1/activity";
+
+    post("federation-inbox-like", personal, activity(alice + "#likes/1", "Like", note), 202);
+    post("federation-inbox-like-again", personal, activity(alice + "#likes/2", "Like", note), 202);
+    post("federation-inbox-announce", "/ap/inbox", activity(boost, "Announce", note), 202);
+    assertThat(count("SELECT COUNT(*) FROM note_remote_reaction WHERE note_id = ?", noteId))
+        .isEqualTo(2);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT activity_id FROM note_remote_reaction WHERE note_id = ? AND kind = 'LIKE'",
+                String.class,
+                noteId))
+        .isEqualTo(alice + "#likes/2");
+
+    var mine =
+        body(
+            call(
+                "federation-note-remote-counts",
+                "GET",
+                "/api/v1/public/notes/" + noteId,
+                null,
+                token,
+                200));
+    assertThat(mine.path("note").path("likeCount").asLong()).isEqualTo(1);
+    assertThat(mine.path("note").path("repostCount").asLong()).isEqualTo(1);
+    var theirs =
+        body(
+            call(
+                "federation-note-remote-counts-stranger",
+                "GET",
+                "/api/v1/public/notes/" + noteId,
+                null,
+                strangerToken,
+                200));
+    assertThat(theirs.path("note").path("likeCount").isNull()).isTrue();
+
+    Map<String, Object> like = new LinkedHashMap<>();
+    like.put("id", alice + "#likes/2");
+    like.put("type", "Like");
+    like.put("actor", alice);
+    like.put("object", note);
+    post(
+        "federation-inbox-undo-like", "/ap/inbox", activity(remote + "/undo/l", "Undo", like), 202);
+    post(
+        "federation-inbox-undo-by-id",
+        "/ap/inbox",
+        activity(remote + "/undo/a", "Undo", boost),
+        202);
+    assertThat(count("SELECT COUNT(*) FROM note_remote_reaction WHERE note_id = ?", noteId))
+        .isZero();
+
+    post(
+        "federation-inbox-like-before-delete",
+        "/ap/inbox",
+        activity(alice + "#likes/3", "Like", note),
+        202);
+    post(
+        "federation-inbox-delete-liker",
+        "/ap/inbox",
+        activity(alice + "#delete", "Delete", alice),
+        202);
+    assertThat(count("SELECT COUNT(*) FROM note_remote_reaction WHERE note_id = ?", noteId))
+        .isZero();
+  }
+
+  @Test
   void aPersonalInboxOfNoOneIs404() throws Exception {
     String path = "/ap/actors/nobody0000/inbox";
     post("federation-inbox-unknown", path, activity(remote + "/f/9", "Follow", "x"), 404);

@@ -9,6 +9,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteSnapshotReader;
+import com.example.short_link.common.note.RemoteNoteReactions;
+import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationFollowers;
 import com.example.short_link.federation.application.FederationProperties;
@@ -22,12 +25,14 @@ import com.example.short_link.federation.domain.repository.FederationActorReposi
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +47,8 @@ class InboxServiceTest {
   @Mock private FederationActorService localActors;
   @Mock private FederationActorRepository actorRows;
   @Mock private FederationFollowers followers;
+  @Mock private NoteSnapshotReader notes;
+  @Mock private RemoteNoteReactions reactions;
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
 
@@ -51,6 +58,8 @@ class InboxServiceTest {
         localActors,
         actorRows,
         followers,
+        notes,
+        reactions,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
         JsonMapper.builder().build(),
         meters);
@@ -73,6 +82,35 @@ class InboxServiceTest {
   }
 
   private static final RemoteActorEntity ALICE_ACTOR = remote(ALICE, "mastodon.example");
+
+  static {
+    ReflectionTestUtils.setField(ALICE_ACTOR, "id", 42L);
+  }
+
+  private static final String NOTE_URI = "https://kurl.me/ap/notes/1";
+
+  private void noteOneFederates() {
+    when(notes.find(1L))
+        .thenReturn(
+            Optional.of(
+                new NoteSnapshotReader.NoteSnapshot(
+                    1L,
+                    7L,
+                    "haroya",
+                    "hello",
+                    Instant.parse("2026-10-06T00:00:00Z"),
+                    null,
+                    null,
+                    null,
+                    List.of())));
+    when(localActors.byUsername("haroya")).thenReturn(Optional.of(OWNER));
+  }
+
+  private static String activity(String id, String type, String object) {
+    return """
+        {"id":"%s","type":"%s","actor":"%s","object":%s}"""
+        .formatted(id, type, ALICE, object);
+  }
 
   private static InboxMessage request(String json) {
     return new InboxMessage("/ap/inbox", null, Map.of(), json.getBytes(StandardCharsets.UTF_8));
@@ -116,7 +154,7 @@ class InboxServiceTest {
   @Test
   void activitiesWeDoNotHandleAreAcknowledgedWithoutAKeyFetch() {
     InboxService service = service();
-    for (String type : new String[] {"Like", "Announce", "Create", "Update", "Accept"}) {
+    for (String type : new String[] {"EmojiReact", "Create", "Update", "Accept", "Block"}) {
       var outcome =
           service.receive(
               request(
@@ -268,22 +306,33 @@ class InboxServiceTest {
         null);
 
     verify(followers).unfollow(ALICE_ACTOR, "https://mastodon.example/f/1");
+    verify(reactions).removeByActivity(42L, "https://mastodon.example/f/1");
     verify(followers).unfollow(ALICE_ACTOR, "https://mastodon.example/f/2");
     verify(followers, never()).unfollow(any(Long.class), any());
   }
 
   @Test
-  void undoOfAnythingButAFollowIsLeftAlone() {
+  void undoOfAnythingWeNeverRecordedIsLeftAlone() {
     InboxService service = service();
     assertThat(
             service.receive(
                 request(
                     """
                     {"id":"https://mastodon.example/u/1","type":"Undo","actor":"%s",
-                     "object":{"id":"https://mastodon.example/l/1","type":"Like","actor":"%s"}}"""
+                     "object":{"id":"https://mastodon.example/b/1","type":"Block","actor":"%s"}}"""
                         .formatted(ALICE, ALICE)),
                 null))
         .isEqualTo(InboxOutcome.ignored("unsupported"));
+    assertThat(
+            service.receive(
+                request(
+                    """
+                    {"id":"https://mastodon.example/u/1","type":"Undo","actor":"%s",
+                     "object":{"id":"https://mastodon.example/l/1","type":"Like",
+                               "actor":"https://mastodon.example/users/bob"}}"""
+                        .formatted(ALICE)),
+                null))
+        .isEqualTo(InboxOutcome.ignored("actor-mismatch"));
     assertThat(
             service.receive(
                 request(
@@ -302,7 +351,97 @@ class InboxServiceTest {
                         .formatted(ALICE)),
                 null))
         .isEqualTo(InboxOutcome.malformed("fields"));
-    verifyNoInteractions(verifier, followers);
+    verifyNoInteractions(verifier, followers, reactions);
+  }
+
+  @Test
+  void aLikeOrABoostOfAFederatedNoteIsRecordedAgainstTheVerifiedActor() {
+    noteOneFederates();
+    when(localActors.byPublicId("owner1")).thenReturn(Optional.of(OWNER));
+    verifiedAs(ALICE_ACTOR);
+    InboxService service = service();
+
+    assertThat(
+            service.receive(
+                request(
+                    activity(
+                        "https://mastodon.example/users/alice#likes/9",
+                        "Like",
+                        "\"" + NOTE_URI + "\"")),
+                null))
+        .isEqualTo(InboxOutcome.accepted("like"));
+    assertThat(
+            service.receive(
+                request(
+                    activity(
+                        "https://mastodon.example/users/alice/statuses/5/activity",
+                        "Announce",
+                        "{\"id\":\"" + NOTE_URI + "\",\"type\":\"Note\"}")),
+                "owner1"))
+        .isEqualTo(InboxOutcome.accepted("announce"));
+
+    verify(reactions).add(1L, 42L, Kind.LIKE, "https://mastodon.example/users/alice#likes/9");
+    verify(localActors).byUsername("haroya");
+    verify(reactions)
+        .add(1L, 42L, Kind.ANNOUNCE, "https://mastodon.example/users/alice/statuses/5/activity");
+  }
+
+  @Test
+  void reactionsToAnythingButAFederatedNoteAreIgnoredWithoutAKeyFetch() {
+    InboxService service = service();
+    when(notes.find(2L)).thenReturn(Optional.empty());
+    when(notes.find(3L))
+        .thenReturn(
+            Optional.of(
+                new NoteSnapshotReader.NoteSnapshot(
+                    3L, 8L, "quiet", "x", Instant.EPOCH, null, null, null, List.of())));
+    when(localActors.byUsername("quiet")).thenReturn(Optional.empty());
+
+    for (String object :
+        new String[] {
+          "\"https://mastodon.example/statuses/1\"",
+          "\"https://kurl.me/ap/notes/abc\"",
+          "\"https://kurl.me/ap/notes/2\"",
+          "\"https://kurl.me/ap/notes/3\"",
+          "null"
+        }) {
+      assertThat(
+              service.receive(
+                  request(activity("https://mastodon.example/l/1", "Like", object)), null))
+          .isEqualTo(InboxOutcome.ignored("unknown-target"));
+    }
+    verifyNoInteractions(verifier, reactions);
+  }
+
+  @Test
+  void undoOfALikeOrABoostRemovesItByNoteOrByActivityId() {
+    verifiedAs(ALICE_ACTOR);
+    InboxService service = service();
+
+    assertThat(
+            service.receive(
+                request(
+                    """
+                    {"id":"https://mastodon.example/u/3","type":"Undo","actor":"%s",
+                     "object":{"id":"https://mastodon.example/users/alice#likes/9","type":"Like",
+                               "actor":"%s","object":"%s"}}"""
+                        .formatted(ALICE, ALICE, NOTE_URI)),
+                null))
+        .isEqualTo(InboxOutcome.accepted("undo-like"));
+    assertThat(
+            service.receive(
+                request(
+                    """
+                    {"id":"https://mastodon.example/u/4","type":"Undo","actor":"%s",
+                     "object":{"id":"https://mastodon.example/s/5/activity","type":"Announce",
+                               "actor":"%s"}}"""
+                        .formatted(ALICE, ALICE)),
+                null))
+        .isEqualTo(InboxOutcome.accepted("undo-announce"));
+
+    verify(reactions).remove(1L, 42L, Kind.LIKE);
+    verify(reactions).removeByActivity(42L, "https://mastodon.example/s/5/activity");
+    verifyNoInteractions(followers);
   }
 
   @Test

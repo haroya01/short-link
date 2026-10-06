@@ -18,14 +18,15 @@
 # quoted note's images.
 @junit | note-quote | 7 | 1 | 0 | 0 | 8
 # A page of notes costs one query per kind of data: notes, quoted notes (only when one quotes),
-# authors, images, quoted posts, reply counts, the viewer's own like and repost counts (only when
-# they wrote one) and the viewer's likes and reposts.
+# authors, images, quoted posts, reply counts, the viewer's own like and repost counts plus one
+# grouped count of likes and boosts from other servers (only when they wrote one) and the viewer's
+# likes and reposts.
 @junit | note-reposts | 7 | 0 | 0 | 0 | 7
-@junit | note-thread | 10 | 0 | 0 | 0 | 10
-@junit | note-profile | 10 | 0 | 0 | 0 | 10
-@junit | note-following | 11 | 0 | 0 | 0 | 11
+@junit | note-thread | 11 | 0 | 0 | 0 | 11
+@junit | note-profile | 11 | 0 | 0 | 0 | 11
+@junit | note-following | 12 | 0 | 0 | 0 | 12
 @junit | note-everyone | 6 | 0 | 0 | 0 | 6
-@junit | note-edit | 11 | 0 | 1 | 0 | 12
+@junit | note-edit | 12 | 0 | 1 | 0 | 13
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 3 | 6
