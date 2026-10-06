@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.application.read;
 
+import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -12,7 +13,7 @@ import java.util.Map;
 record CollectionContentSnapshot(
     Map<Long, PostEntity> posts,
     Map<Long, PostHighlightEntity> highlights,
-    Map<Long, String> notes,
+    Map<Long, NoteBlock> notes,
     Map<Long, UserEntity> authors) {
 
   private static final int PREVIEW_LABEL_MAX = 40;
@@ -75,10 +76,10 @@ record CollectionContentSnapshot(
   }
 
   private ConnectionView noteCard(CollectionConnectionEntity connection) {
-    String body = notes.get(connection.getRefId());
-    if (body == null) return null;
+    NoteBlock note = notes.get(connection.getRefId());
+    if (note == null) return null;
     return ConnectionView.note(
-        connection.getId(), connection.getWhy(), connection.getCreatedAt(), body);
+        connection.getId(), connection.getWhy(), connection.getCreatedAt(), note);
   }
 
   private String authorUsername(PostEntity post) {
@@ -100,9 +101,9 @@ record CollectionContentSnapshot(
         yield shortenLabel(highlight.getQuote());
       }
       case NOTE -> {
-        String body = notes.get(connection.getRefId());
-        if (body == null) yield null;
-        yield shortenLabel(body);
+        NoteBlock note = notes.get(connection.getRefId());
+        if (note == null) yield null;
+        yield shortenLabel(note.body());
       }
     };
   }

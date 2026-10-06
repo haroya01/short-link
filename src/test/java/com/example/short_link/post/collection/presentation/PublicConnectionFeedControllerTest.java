@@ -45,6 +45,7 @@ class PublicConnectionFeedControllerTest {
             "hexagonal",
             "honggildong",
             null,
+            null,
             null);
     when(discoverFeedQuery.publicFeed(0, 20))
         .thenReturn(new DiscoverFeedView(List.of(item), 0, 20, false, "global"));
