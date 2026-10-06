@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -12,6 +13,8 @@ import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
+import com.example.short_link.common.event.NoteRepostedEvent;
+import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
@@ -19,11 +22,13 @@ import com.example.short_link.note.application.read.NoteViews;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -50,6 +55,7 @@ class NoteCommandServiceTest {
 
   @Mock private NoteRepository notes;
   @Mock private NoteLikeRepository likes;
+  @Mock private NoteRepostRepository reposts;
   @Mock private NoteMediaRepository media;
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NotePeopleReader people;
@@ -64,6 +70,7 @@ class NoteCommandServiceTest {
     return new NoteCommandService(
         notes,
         likes,
+        reposts,
         media,
         quotedPosts,
         people,
@@ -210,12 +217,106 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aQuotedNoteIsStoredAndComesBackWithItsAuthorAndImages() {
+    saving();
+    NoteAuthor other = new NoteAuthor(8L, "other", null);
+    when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
+    when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER, 8L, other));
+    when(media.findByNoteIds(List.of(50L)))
+        .thenReturn(List.of(new NoteMediaEntity(50L, 0, "k", "https://cdn/k", "image/png", "alt")));
+
+    NoteView view = service().create(7L, new NoteDraft("so true", null, null, null, 50L));
+
+    ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
+    verify(notes).save(saved.capture());
+    assertThat(saved.getValue().getQuotedNoteId()).isEqualTo(50L);
+    assertThat(view.quotedNote().id()).isEqualTo(50L);
+    assertThat(view.quotedNote().body()).isEqualTo("original");
+    assertThat(view.quotedNote().author()).isEqualTo(other);
+    assertThat(view.quotedNote().media())
+        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png"));
+    assertThat(view.repostCount()).isZero();
+    assertThat(view.repostedByMe()).isFalse();
+    verify(events).publishEvent(new NotePublishedEvent(100L, 7L));
+  }
+
+  @Test
+  void aNoteQuotesAPostOrANoteButNeverBoth() {
+    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, 5L, null, 50L)))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTE_CONFLICT));
+    verify(notes, never()).save(any());
+  }
+
+  @Test
+  void aQuotedNoteMustExistHaveAnActiveAuthorAndNotCrossABlock() {
+    when(notes.findById(51L)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, null, null, 51L)))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
+
+    when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
+    when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER));
+    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, null, null, 50L)))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND));
+
+    when(blocks.isBlocked(8L, 7L)).thenReturn(true);
+    assertThatThrownBy(() -> service().create(7L, new NoteDraft("x", null, null, null, 50L)))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_INTERACTION_BLOCKED));
+    verify(notes, never()).save(any());
+  }
+
+  @Test
+  void onlyARealRepostChangeIsAnnouncedAndTheCountGoesToTheAuthor() {
+    when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
+    NoteRepostEntity repost = new NoteRepostEntity(1L, 8L);
+    ReflectionTestUtils.setField(repost, "id", 900L);
+    when(reposts.addIfAbsent(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
+    when(reposts.delete(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
+    when(reposts.countByNoteId(1L)).thenReturn(2L);
+
+    assertThat(service().setRepost(8L, 1L, true))
+        .isEqualTo(new NoteCommandService.RepostStatus(true, 0L));
+    service().setRepost(8L, 1L, true);
+    assertThat(service().setRepost(8L, 1L, false))
+        .isEqualTo(new NoteCommandService.RepostStatus(false, 0L));
+    service().setRepost(8L, 1L, false);
+
+    verify(moderation, times(2)).requireCanWrite(8L);
+    verify(events, times(1)).publishEvent(new NoteRepostedEvent(900L, 1L, 8L));
+    verify(events, times(1)).publishEvent(new NoteUnrepostedEvent(900L, 1L, 8L));
+
+    when(reposts.addIfAbsent(1L, 7L)).thenReturn(Optional.empty());
+    assertThat(service().setRepost(7L, 1L, true))
+        .isEqualTo(new NoteCommandService.RepostStatus(true, 2L));
+  }
+
+  @Test
+  void aBlockEitherWayStopsARepost() {
+    when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
+    when(blocks.isBlocked(7L, 8L)).thenReturn(true);
+
+    assertThatThrownBy(() -> service().setRepost(8L, 1L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_INTERACTION_BLOCKED));
+    verify(reposts, never()).addIfAbsent(any(), any());
+  }
+
+  @Test
   void onlyTheAuthorEditsAndTheEditIsStampedToMicroseconds() {
     NoteEntity mine = note(1L, 7L, "old");
     when(notes.findById(1L)).thenReturn(Optional.of(mine));
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
     NoteView edited =
-        new NoteView(1L, "new", null, null, 0L, false, WRITER, List.of(), null, null, 0);
+        new NoteView(
+            1L, "new", null, null, 0L, false, WRITER, List.of(), null, null, 0, null, null, null);
     when(views.of(List.of(mine), 7L)).thenReturn(List.of(edited));
 
     assertThat(service().edit(7L, 1L, " new ")).isEqualTo(edited);

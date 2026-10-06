@@ -9,7 +9,8 @@ public record CreateNoteRequest(
     String body,
     @Size(max = 4) List<@Valid ImageRequest> images,
     Long quotedPostId,
-    Long inReplyToId) {
+    Long inReplyToId,
+    Long quotedNoteId) {
 
   public record ImageRequest(String key, String altText) {}
 
@@ -22,6 +23,7 @@ public record CreateNoteRequest(
                 .map(image -> new NoteDraft.Image(image.key(), image.altText()))
                 .toList(),
         quotedPostId,
-        inReplyToId);
+        inReplyToId,
+        quotedNoteId);
   }
 }

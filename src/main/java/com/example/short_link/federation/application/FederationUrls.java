@@ -72,6 +72,10 @@ public class FederationUrls {
     return props.baseUrl() + "/ap/notes/" + noteId;
   }
 
+  public String repost(Long repostId) {
+    return props.baseUrl() + "/ap/reposts/" + repostId;
+  }
+
   public String notePage(String username, Long noteId) {
     return profile(username) + "/notes/" + noteId;
   }

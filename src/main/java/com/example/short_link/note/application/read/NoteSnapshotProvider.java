@@ -44,6 +44,17 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
         quote = new Quote(post.title(), post.slug(), post.authorUsername());
       }
     }
+    QuotedNote quotedNote = null;
+    if (note.getQuotedNoteId() != null) {
+      Optional<NoteEntity> quoted = notes.findById(note.getQuotedNoteId());
+      if (quoted.isPresent()) {
+        NoteAuthor quotedAuthor =
+            people.activeAuthors(Set.of(quoted.get().getUserId())).get(quoted.get().getUserId());
+        if (quotedAuthor != null) {
+          quotedNote = new QuotedNote(quoted.get().getId(), quotedAuthor.username());
+        }
+      }
+    }
     List<Image> images =
         media.findByNoteIds(List.of(noteId)).stream()
             .map(image -> new Image(image.getUrl(), image.getContentType(), image.getAltText()))
@@ -58,7 +69,8 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
             note.getEditedAt(),
             note.getInReplyToId(),
             quote,
-            images));
+            images,
+            quotedNote));
   }
 
   @Override

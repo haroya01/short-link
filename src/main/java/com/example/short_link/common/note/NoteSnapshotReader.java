@@ -21,9 +21,36 @@ public interface NoteSnapshotReader {
       Instant editedAt,
       Long inReplyToId,
       Quote quote,
-      List<Image> images) {}
+      List<Image> images,
+      QuotedNote quotedNote) {
+
+    public NoteSnapshot(
+        Long id,
+        Long authorId,
+        String authorUsername,
+        String body,
+        Instant createdAt,
+        Instant editedAt,
+        Long inReplyToId,
+        Quote quote,
+        List<Image> images) {
+      this(
+          id,
+          authorId,
+          authorUsername,
+          body,
+          createdAt,
+          editedAt,
+          inReplyToId,
+          quote,
+          images,
+          null);
+    }
+  }
 
   record Quote(String title, String slug, String authorUsername) {}
+
+  record QuotedNote(Long id, String authorUsername) {}
 
   record Image(String url, String contentType, String altText) {}
 }

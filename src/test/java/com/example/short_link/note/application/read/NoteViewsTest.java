@@ -15,6 +15,7 @@ import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ class NoteViewsTest {
   @Mock private NoteMediaRepository media;
   @Mock private NotePeopleReader people;
   @Mock private QuotedPostReader quotedPosts;
+  @Mock private NoteRepostRepository reposts;
   @InjectMocks private NoteViews views;
 
   private static NoteEntity note(Long id, Long userId, Long quotedPostId) {
@@ -84,6 +86,39 @@ class NoteViewsTest {
   }
 
   @Test
+  void aQuotedNoteIsBatchedWithItsAuthorAndImagesAndRepostsFollowTheLikeRules() {
+    NoteEntity quoting = note(1L, 7L, null);
+    ReflectionTestUtils.setField(quoting, "quotedNoteId", 50L);
+    NoteEntity gone = note(2L, 7L, null);
+    ReflectionTestUtils.setField(gone, "quotedNoteId", 60L);
+    when(notes.findAllByIdIn(Set.of(50L, 60L)))
+        .thenReturn(List.of(note(50L, 8L, null), note(60L, 9L, null)));
+    NoteAuthor them = new NoteAuthor(8L, "them", null);
+    when(people.activeAuthors(Set.of(7L, 8L, 9L)))
+        .thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null), 8L, them));
+    when(media.findByNoteIds(List.of(1L, 2L, 50L)))
+        .thenReturn(List.of(new NoteMediaEntity(50L, 0, "k", "https://cdn/k", "image/png", "alt")));
+    when(reposts.counts(List.of(1L, 2L))).thenReturn(Map.of(1L, 2L));
+    when(reposts.repostedNoteIds(7L, List.of(1L, 2L))).thenReturn(List.of());
+    when(reposts.repostedNoteIds(8L, List.of(1L, 2L))).thenReturn(List.of(2L));
+
+    List<NoteView> asAuthor = views.of(List.of(quoting, gone), 7L);
+    assertThat(asAuthor.get(0).quotedNote().author()).isEqualTo(them);
+    assertThat(asAuthor.get(0).quotedNote().body()).isEqualTo("n50");
+    assertThat(asAuthor.get(0).quotedNote().media())
+        .containsExactly(new NoteView.Media("https://cdn/k", "alt", "image/png"));
+    assertThat(asAuthor.get(0).media()).isEmpty();
+    assertThat(asAuthor.get(0).repostCount()).isEqualTo(2L);
+    assertThat(asAuthor.get(1).quotedNote()).isNull();
+    assertThat(asAuthor.get(1).repostCount()).isZero();
+
+    List<NoteView> asOther = views.of(List.of(quoting, gone), 8L);
+    assertThat(asOther.get(0).repostCount()).isNull();
+    assertThat(asOther.get(0).repostedByMe()).isFalse();
+    assertThat(asOther.get(1).repostedByMe()).isTrue();
+  }
+
+  @Test
   void anonymousReadersGetNoViewerFields() {
     when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "them", null)));
 
@@ -91,7 +126,10 @@ class NoteViewsTest {
 
     assertThat(view.likeCount()).isNull();
     assertThat(view.likedByMe()).isNull();
+    assertThat(view.repostCount()).isNull();
+    assertThat(view.repostedByMe()).isNull();
     verify(likes, never()).counts(anyCollection());
+    verify(reposts, never()).counts(anyCollection());
     verify(quotedPosts, never()).publishedByIds(anyCollection());
   }
 }

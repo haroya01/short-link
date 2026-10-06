@@ -37,14 +37,23 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(name = "quoted_post_id")
   private Long quotedPostId;
 
+  @Column(name = "quoted_note_id")
+  private Long quotedNoteId;
+
   @Column(name = "edited_at")
   private Instant editedAt;
 
   public NoteEntity(Long userId, String body, Long inReplyToId, Long quotedPostId) {
+    this(userId, body, inReplyToId, quotedPostId, null);
+  }
+
+  public NoteEntity(
+      Long userId, String body, Long inReplyToId, Long quotedPostId, Long quotedNoteId) {
     this.userId = userId;
     this.body = body;
     this.inReplyToId = inReplyToId;
     this.quotedPostId = quotedPostId;
+    this.quotedNoteId = quotedNoteId;
   }
 
   public boolean isOwnedBy(Long viewerId) {

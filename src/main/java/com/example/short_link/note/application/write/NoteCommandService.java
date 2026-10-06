@@ -4,10 +4,13 @@ import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
+import com.example.short_link.common.event.NoteRepostedEvent;
+import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViews;
+import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.QuotedPost;
@@ -15,13 +18,16 @@ import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
+import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
@@ -33,6 +39,7 @@ public class NoteCommandService {
 
   private final NoteRepository notes;
   private final NoteLikeRepository likes;
+  private final NoteRepostRepository reposts;
   private final NoteMediaRepository media;
   private final QuotedPostReader quotedPosts;
   private final NotePeopleReader people;
@@ -48,6 +55,7 @@ public class NoteCommandService {
   public NoteCommandService(
       NoteRepository notes,
       NoteLikeRepository likes,
+      NoteRepostRepository reposts,
       NoteMediaRepository media,
       QuotedPostReader quotedPosts,
       NotePeopleReader people,
@@ -60,6 +68,7 @@ public class NoteCommandService {
     this(
         notes,
         likes,
+        reposts,
         media,
         quotedPosts,
         people,
@@ -75,6 +84,7 @@ public class NoteCommandService {
   NoteCommandService(
       NoteRepository notes,
       NoteLikeRepository likes,
+      NoteRepostRepository reposts,
       NoteMediaRepository media,
       QuotedPostReader quotedPosts,
       NotePeopleReader people,
@@ -87,6 +97,7 @@ public class NoteCommandService {
       Clock clock) {
     this.notes = notes;
     this.likes = likes;
+    this.reposts = reposts;
     this.media = media;
     this.quotedPosts = quotedPosts;
     this.people = people;
@@ -117,6 +128,20 @@ public class NoteCommandService {
       }
       parentId = parent.getId();
     }
+    if (draft.quotedPostId() != null && draft.quotedNoteId() != null) {
+      throw new NoteException(NoteErrorCode.NOTE_QUOTE_CONFLICT);
+    }
+    NoteEntity quotedNote = null;
+    if (draft.quotedNoteId() != null) {
+      quotedNote =
+          notes
+              .findById(draft.quotedNoteId())
+              .orElseThrow(
+                  () ->
+                      new NoteException(
+                          NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId()));
+      requireNotBlocked(userId, quotedNote);
+    }
     QuotedPost quoted = null;
     if (draft.quotedPostId() != null) {
       quoted = quotedPosts.publishedByIds(Set.of(draft.quotedPostId())).get(draft.quotedPostId());
@@ -127,7 +152,18 @@ public class NoteCommandService {
     List<NoteImages.StoredImage> stored =
         attached.stream().map(image -> images.verify(userId, image)).toList();
 
-    NoteEntity note = notes.save(new NoteEntity(userId, body, parentId, draft.quotedPostId()));
+    Set<Long> authorIds = new HashSet<>(Set.of(userId));
+    if (quotedNote != null) {
+      authorIds.add(quotedNote.getUserId());
+    }
+    Map<Long, NoteAuthor> authors = people.activeAuthors(authorIds);
+    if (quotedNote != null && !authors.containsKey(quotedNote.getUserId())) {
+      throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
+    }
+
+    NoteEntity note =
+        notes.save(
+            new NoteEntity(userId, body, parentId, draft.quotedPostId(), draft.quotedNoteId()));
     List<NoteMediaEntity> rows = new ArrayList<>(stored.size());
     for (int i = 0; i < stored.size(); i++) {
       NoteImages.StoredImage image = stored.get(i);
@@ -144,13 +180,29 @@ public class NoteCommandService {
         null,
         0L,
         false,
-        people.activeAuthors(Set.of(userId)).get(userId),
+        authors.get(userId),
         stored.stream()
             .map(image -> new NoteView.Media(image.url(), image.altText(), image.contentType()))
             .toList(),
         quoted,
         parentId,
-        0L);
+        0L,
+        0L,
+        false,
+        quotedNote == null ? null : quotedView(quotedNote, authors.get(quotedNote.getUserId())));
+  }
+
+  private NoteView.QuotedNote quotedView(NoteEntity quoted, NoteAuthor author) {
+    return new NoteView.QuotedNote(
+        quoted.getId(),
+        quoted.getBody(),
+        quoted.getCreatedAt(),
+        author,
+        media.findByNoteIds(List.of(quoted.getId())).stream()
+            .map(
+                image ->
+                    new NoteView.Media(image.getUrl(), image.getAltText(), image.getContentType()))
+            .toList());
   }
 
   @Transactional
@@ -185,6 +237,32 @@ public class NoteCommandService {
     return new LikeStatus(on, note.isOwnedBy(userId) ? likes.countByNoteId(noteId) : 0L);
   }
 
+  @Transactional
+  public RepostStatus setRepost(Long userId, Long noteId, boolean on) {
+    NoteEntity note = find(noteId);
+    if (on) {
+      moderation.requireCanWrite(userId);
+      requireNotBlocked(userId, note);
+      reposts
+          .addIfAbsent(noteId, userId)
+          .ifPresent(
+              repost -> events.publishEvent(new NoteRepostedEvent(repost.getId(), noteId, userId)));
+    } else {
+      reposts
+          .delete(noteId, userId)
+          .ifPresent(
+              repost ->
+                  events.publishEvent(new NoteUnrepostedEvent(repost.getId(), noteId, userId)));
+    }
+    return new RepostStatus(on, note.isOwnedBy(userId) ? reposts.countByNoteId(noteId) : 0L);
+  }
+
+  private void requireNotBlocked(Long userId, NoteEntity note) {
+    if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
+      throw new NoteException(NoteErrorCode.NOTE_INTERACTION_BLOCKED);
+    }
+  }
+
   private NoteEntity owned(Long userId, Long noteId) {
     NoteEntity note = find(noteId);
     if (!note.isOwnedBy(userId)) {
@@ -215,4 +293,7 @@ public class NoteCommandService {
   // likeCount is the real number only for the note's author; others get 0 so older clients that
   // require the field keep decoding.
   public record LikeStatus(boolean liked, long likeCount) {}
+
+  // repostCount is the real number only for the note's author, like likeCount.
+  public record RepostStatus(boolean reposted, long repostCount) {}
 }

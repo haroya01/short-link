@@ -10,13 +10,22 @@
 # Reply: moderation, parent note, a block check each way, insert, author.
 @junit | note-reply | 6 | 1 | 0 | 0 | 7
 @junit | note-like | 2 | 1 | 0 | 0 | 3
-# A page of notes costs one query per kind of data: notes, authors, images, quoted posts, reply
-# counts, the viewer's own like counts (only when they wrote one) and the viewer's likes.
-@junit | note-thread | 8 | 0 | 0 | 0 | 8
-@junit | note-profile | 8 | 0 | 0 | 0 | 8
-@junit | note-following | 7 | 0 | 0 | 0 | 7
-@junit | note-everyone | 5 | 0 | 0 | 0 | 5
-@junit | note-edit | 9 | 0 | 1 | 0 | 10
+# Repost: note, moderation, a block check each way, the existing row, insert, then the after-commit
+# federation check. Undoing it reads the row it deletes so the Undo can name the Announce.
+@junit | note-repost | 6 | 1 | 0 | 0 | 7
+@junit | note-unrepost | 3 | 0 | 0 | 1 | 4
+# Quote: moderation, quoted note, a block check each way, both authors in one read, insert, the
+# quoted note's images.
+@junit | note-quote | 7 | 1 | 0 | 0 | 8
+# A page of notes costs one query per kind of data: notes, quoted notes (only when one quotes),
+# authors, images, quoted posts, reply counts, the viewer's own like and repost counts (only when
+# they wrote one) and the viewer's likes and reposts.
+@junit | note-reposts | 7 | 0 | 0 | 0 | 7
+@junit | note-thread | 10 | 0 | 0 | 0 | 10
+@junit | note-profile | 10 | 0 | 0 | 0 | 10
+@junit | note-following | 11 | 0 | 0 | 0 | 11
+@junit | note-everyone | 6 | 0 | 0 | 0 | 6
+@junit | note-edit | 11 | 0 | 1 | 0 | 12
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 3 | 6
