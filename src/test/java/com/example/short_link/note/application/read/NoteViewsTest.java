@@ -1,7 +1,6 @@
 package com.example.short_link.note.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -13,13 +12,12 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinkPreviewEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteStats;
+import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.QuotedPost;
-import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
-import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import java.util.List;
 import java.util.Map;
@@ -35,11 +33,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 class NoteViewsTest {
 
   @Mock private NoteRepository notes;
-  @Mock private NoteLikeRepository likes;
   @Mock private NoteMediaRepository media;
   @Mock private NotePeopleReader people;
   @Mock private QuotedPostReader quotedPosts;
-  @Mock private NoteRepostRepository reposts;
   @Mock private NoteLinkPreviewRepository linkPreviews;
   @InjectMocks private NoteViews views;
 
@@ -52,7 +48,7 @@ class NoteViewsTest {
   @Test
   void anEmptyPageQueriesNothing() {
     assertThat(views.of(List.of(), 7L)).isEmpty();
-    verifyNoInteractions(people, media, likes, notes, quotedPosts);
+    verifyNoInteractions(people, media, notes, quotedPosts);
   }
 
   @Test
@@ -60,7 +56,7 @@ class NoteViewsTest {
     when(people.activeAuthors(Set.of(9L))).thenReturn(Map.of());
 
     assertThat(views.of(List.of(note(1L, 9L, null)), null)).isEmpty();
-    verifyNoInteractions(media, likes, quotedPosts);
+    verifyNoInteractions(media, quotedPosts);
   }
 
   @Test
@@ -75,14 +71,17 @@ class NoteViewsTest {
     when(quotedPosts.publishedByIds(Set.of(5L)))
         .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "me")));
     when(notes.stats(List.of(1L, 2L)))
-        .thenReturn(Map.of(1L, new NoteStats(0, 5, 1), 2L, new NoteStats(4, 2, 0)));
-    when(likes.likedNoteIds(7L, List.of(1L, 2L))).thenReturn(List.of(2L));
+        .thenReturn(Map.of(1L, new NoteStats(0, 5, 1, 0), 2L, new NoteStats(4, 2, 0, 0)));
+    when(notes.viewerMarks(7L, List.of(1L, 2L)))
+        .thenReturn(new NoteViewerMarks(Set.of(2L), Set.of(), Set.of(1L)));
 
     List<NoteView> page = views.of(List.of(mine, theirs), 7L);
 
     assertThat(page.get(0).likeCount()).isEqualTo(5L);
     assertThat(page.get(0).repostCount()).isEqualTo(1L);
     assertThat(page.get(0).likedByMe()).isFalse();
+    assertThat(page.get(0).bookmarkedByMe()).isTrue();
+    assertThat(page.get(1).bookmarkedByMe()).isFalse();
     assertThat(page.get(0).quotedPost().slug()).isEqualTo("essay");
     assertThat(page.get(1).likeCount()).isEqualTo(2L);
     assertThat(page.get(1).likedByMe()).isTrue();
@@ -104,9 +103,10 @@ class NoteViewsTest {
         .thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null), 8L, them));
     when(media.findByNoteIds(List.of(1L, 2L, 50L)))
         .thenReturn(List.of(new NoteMediaEntity(50L, 0, "k", "https://cdn/k", "image/png", "alt")));
-    when(notes.stats(List.of(1L, 2L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 2)));
-    when(reposts.repostedNoteIds(7L, List.of(1L, 2L))).thenReturn(List.of());
-    when(reposts.repostedNoteIds(8L, List.of(1L, 2L))).thenReturn(List.of(2L));
+    when(notes.stats(List.of(1L, 2L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 2, 0)));
+    when(notes.viewerMarks(7L, List.of(1L, 2L))).thenReturn(NoteViewerMarks.NONE);
+    when(notes.viewerMarks(8L, List.of(1L, 2L)))
+        .thenReturn(new NoteViewerMarks(Set.of(), Set.of(2L), Set.of()));
 
     List<NoteView> asAuthor = views.of(List.of(quoting, gone), 7L);
     assertThat(asAuthor.get(0).quotedNote().author()).isEqualTo(them);
@@ -158,7 +158,7 @@ class NoteViewsTest {
     assertThat(view.likedByMe()).isNull();
     assertThat(view.repostCount()).isZero();
     assertThat(view.repostedByMe()).isNull();
-    verify(likes, never()).likedNoteIds(any(), anyCollection());
+    verify(notes).viewerMarks(null, List.of(2L));
     verify(quotedPosts, never()).publishedByIds(anyCollection());
   }
 }

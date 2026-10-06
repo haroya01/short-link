@@ -3,6 +3,7 @@ package com.example.short_link.note.infrastructure.persistence;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteStats;
+import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -11,9 +12,11 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -148,8 +151,8 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
-  // Replies, likes and reposts of a page in one statement; likes and boosts from other servers add
-  // to likes and reposts.
+  // Replies, likes, reposts and quotes of a page in one statement; likes and boosts from other
+  // servers add to likes and reposts.
   @Override
   public Map<Long, NoteStats> stats(Collection<Long> noteIds) {
     Map<Long, NoteStats> stats = new HashMap<>();
@@ -161,6 +164,8 @@ class NoteRepositoryAdapter implements NoteRepository {
                 "SELECT s.note_id, s.kind, COUNT(*) FROM ("
                     + "SELECT in_reply_to_id AS note_id, 'REPLY' AS kind FROM note"
                     + " WHERE in_reply_to_id IN (:ids)"
+                    + " UNION ALL SELECT quoted_note_id, 'QUOTE' FROM note"
+                    + " WHERE quoted_note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, 'LIKE' FROM note_like WHERE note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, 'REPOST' FROM note_repost WHERE note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, IF(kind = 'LIKE', 'LIKE', 'REPOST')"
@@ -176,12 +181,57 @@ class NoteRepositoryAdapter implements NoteRepository {
       stats.put(
           noteId,
           switch (cols[1].toString()) {
-            case "REPLY" -> new NoteStats(count, current.likes(), current.reposts());
-            case "LIKE" -> new NoteStats(current.replies(), count, current.reposts());
-            default -> new NoteStats(current.replies(), current.likes(), count);
+            case "REPLY" ->
+                new NoteStats(count, current.likes(), current.reposts(), current.quotes());
+            case "LIKE" ->
+                new NoteStats(current.replies(), count, current.reposts(), current.quotes());
+            case "QUOTE" ->
+                new NoteStats(current.replies(), current.likes(), current.reposts(), count);
+            default -> new NoteStats(current.replies(), current.likes(), count, current.quotes());
           });
     }
     return stats;
+  }
+
+  @Override
+  public NoteViewerMarks viewerMarks(Long userId, Collection<Long> noteIds) {
+    if (userId == null || noteIds.isEmpty()) {
+      return NoteViewerMarks.NONE;
+    }
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT note_id, 'LIKE' FROM note_like WHERE user_id = :user AND note_id IN (:ids)"
+                    + " UNION ALL SELECT note_id, 'REPOST' FROM note_repost"
+                    + " WHERE user_id = :user AND note_id IN (:ids)"
+                    + " UNION ALL SELECT note_id, 'BOOKMARK' FROM note_bookmark"
+                    + " WHERE user_id = :user AND note_id IN (:ids)")
+            .setParameter("user", userId)
+            .setParameter("ids", noteIds)
+            .getResultList();
+    Set<Long> liked = new HashSet<>();
+    Set<Long> reposted = new HashSet<>();
+    Set<Long> bookmarked = new HashSet<>();
+    for (Object raw : rows) {
+      Object[] cols = (Object[]) raw;
+      Long noteId = ((Number) cols[0]).longValue();
+      switch (cols[1].toString()) {
+        case "LIKE" -> liked.add(noteId);
+        case "REPOST" -> reposted.add(noteId);
+        default -> bookmarked.add(noteId);
+      }
+    }
+    return new NoteViewerMarks(liked, reposted, bookmarked);
+  }
+
+  @Override
+  public List<NoteEntity> quotesOf(Long noteId, int offset, int limit) {
+    return em.createQuery(
+            "select n from NoteEntity n where n.quotedNoteId = :noteId order by n.id desc",
+            NoteEntity.class)
+        .setParameter("noteId", noteId)
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
   }
 
   @Override

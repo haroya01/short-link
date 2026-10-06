@@ -17,6 +17,7 @@ import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.QuotedPost;
+import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
@@ -44,6 +45,7 @@ public class NoteCommandService {
   private final NoteRepository notes;
   private final NoteLikeRepository likes;
   private final NoteRepostRepository reposts;
+  private final NoteBookmarkRepository bookmarks;
   private final NoteMediaRepository media;
   private final QuotedPostReader quotedPosts;
   private final NotePeopleReader people;
@@ -60,6 +62,7 @@ public class NoteCommandService {
       NoteRepository notes,
       NoteLikeRepository likes,
       NoteRepostRepository reposts,
+      NoteBookmarkRepository bookmarks,
       NoteMediaRepository media,
       QuotedPostReader quotedPosts,
       NotePeopleReader people,
@@ -73,6 +76,7 @@ public class NoteCommandService {
         notes,
         likes,
         reposts,
+        bookmarks,
         media,
         quotedPosts,
         people,
@@ -89,6 +93,7 @@ public class NoteCommandService {
       NoteRepository notes,
       NoteLikeRepository likes,
       NoteRepostRepository reposts,
+      NoteBookmarkRepository bookmarks,
       NoteMediaRepository media,
       QuotedPostReader quotedPosts,
       NotePeopleReader people,
@@ -102,6 +107,7 @@ public class NoteCommandService {
     this.notes = notes;
     this.likes = likes;
     this.reposts = reposts;
+    this.bookmarks = bookmarks;
     this.media = media;
     this.quotedPosts = quotedPosts;
     this.people = people;
@@ -286,6 +292,18 @@ public class NoteCommandService {
     return new RepostStatus(on, statsOf(noteId).reposts());
   }
 
+  // A bookmark is the reader's own: it notifies no one and does not federate.
+  @Transactional
+  public BookmarkStatus setBookmark(Long userId, Long noteId, boolean on) {
+    find(noteId);
+    if (on) {
+      bookmarks.addIfAbsent(noteId, userId);
+    } else {
+      bookmarks.delete(noteId, userId);
+    }
+    return new BookmarkStatus(on);
+  }
+
   private NoteStats statsOf(Long noteId) {
     return notes.stats(List.of(noteId)).getOrDefault(noteId, NoteStats.NONE);
   }
@@ -336,10 +354,9 @@ public class NoteCommandService {
     }
   }
 
-  // likeCount is the real number only for the note's author; others get 0 so older clients that
-  // require the field keep decoding.
   public record LikeStatus(boolean liked, long likeCount) {}
 
-  // repostCount is the real number only for the note's author, like likeCount.
   public record RepostStatus(boolean reposted, long repostCount) {}
+
+  public record BookmarkStatus(boolean bookmarked) {}
 }

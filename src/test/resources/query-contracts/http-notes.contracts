@@ -22,22 +22,30 @@
 # quoted note's images.
 @junit | note-quote | 11 | 2 | 0 | 0 | 13
 # A page of notes costs one query per kind of data: notes, quoted notes (only when one quotes),
-# authors, images, quoted posts, one statement for the page's reply, like and repost counts
-# (public, likes and boosts from other servers included) and the viewer's likes and reposts.
+# authors, images, quoted posts, one statement for the page's reply, like, repost and quote counts
+# (public, likes and boosts from other servers included) and, for a signed-in reader, one statement
+# for what they liked, reposted and bookmarked.
 @junit | note-reposts | 7 | 0 | 0 | 0 | 7
-@junit | note-thread | 8 | 0 | 0 | 0 | 8
-@junit | note-profile | 8 | 0 | 0 | 0 | 8
-@junit | note-following | 9 | 0 | 0 | 0 | 9
+@junit | note-thread | 7 | 0 | 0 | 0 | 7
+# Quotes of a note: the notes quoting it, then the page as usual (anonymous, so no reader marks).
+@junit | note-quotes | 5 | 0 | 0 | 0 | 5
+# Bookmarks are the reader's own: the note, the existing row, insert or delete. The list reads the
+# reader's bookmark ids newest first, those notes, then the page as usual.
+@junit | note-bookmark | 2 | 1 | 0 | 0 | 3
+@junit | note-bookmarks | 7 | 0 | 0 | 0 | 7
+@junit | note-unbookmark | 2 | 0 | 0 | 1 | 3
+@junit | note-profile | 7 | 0 | 0 | 0 | 7
+@junit | note-following | 8 | 0 | 0 | 0 | 8
 # The following feed takes reposts too: follows, then one query that unions the authors' top-level
 # notes with their reposts, keeps each note once at its newest activity (ROW_NUMBER), leaves out
 # reposts of people the reader blocked either way and returns the note rows; then the reposters'
 # names, and the page is built like any other.
-@junit | note-following-reposts | 8 | 0 | 0 | 0 | 8
+@junit | note-following-reposts | 7 | 0 | 0 | 0 | 7
 @junit | note-everyone | 6 | 0 | 0 | 0 | 6
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6
-@junit | note-edit | 9 | 0 | 1 | 0 | 10
+@junit | note-edit | 8 | 0 | 1 | 0 | 9
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 3 | 6

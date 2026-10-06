@@ -3,6 +3,7 @@ package com.example.short_link.note.domain.repository;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteStats;
+import com.example.short_link.note.domain.NoteViewerMarks;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -29,6 +30,10 @@ public interface NoteRepository {
   List<NoteEntity> replies(Long noteId, int limit);
 
   Map<Long, NoteStats> stats(Collection<Long> noteIds);
+
+  NoteViewerMarks viewerMarks(Long userId, Collection<Long> noteIds);
+
+  List<NoteEntity> quotesOf(Long noteId, int offset, int limit);
 
   long countByAuthor(Long userId);
 }

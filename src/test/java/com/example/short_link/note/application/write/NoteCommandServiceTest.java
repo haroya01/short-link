@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
@@ -26,6 +27,7 @@ import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.QuotedPost;
+import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
@@ -58,6 +60,7 @@ class NoteCommandServiceTest {
   @Mock private NoteRepository notes;
   @Mock private NoteLikeRepository likes;
   @Mock private NoteRepostRepository reposts;
+  @Mock private NoteBookmarkRepository bookmarks;
   @Mock private NoteMediaRepository media;
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NotePeopleReader people;
@@ -73,6 +76,7 @@ class NoteCommandServiceTest {
         notes,
         likes,
         reposts,
+        bookmarks,
         media,
         quotedPosts,
         people,
@@ -289,7 +293,7 @@ class NoteCommandServiceTest {
     ReflectionTestUtils.setField(repost, "id", 900L);
     when(reposts.addIfAbsent(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
     when(reposts.delete(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
-    when(notes.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 3)));
+    when(notes.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 3, 0)));
 
     assertThat(service().setRepost(8L, 1L, true))
         .isEqualTo(new NoteCommandService.RepostStatus(true, 3L));
@@ -409,7 +413,7 @@ class NoteCommandServiceTest {
   @Test
   void likeCountsAreReturnedToEveryone() {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
-    when(notes.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 5, 0)));
+    when(notes.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 5, 0, 0)));
     when(likes.addIfAbsent(1L, 7L)).thenReturn(false);
     when(likes.addIfAbsent(1L, 8L)).thenReturn(true, false);
 
@@ -425,5 +429,19 @@ class NoteCommandServiceTest {
         .publishEvent(
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.LIKE, 7L, 8L, null, 1L, "x", null, null));
+  }
+
+  @Test
+  void aBookmarkIsTheReadersOwnAndQuiet() {
+    when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
+
+    assertThat(service().setBookmark(8L, 1L, true))
+        .isEqualTo(new NoteCommandService.BookmarkStatus(true));
+    assertThat(service().setBookmark(8L, 1L, false))
+        .isEqualTo(new NoteCommandService.BookmarkStatus(false));
+
+    verify(bookmarks).addIfAbsent(1L, 8L);
+    verify(bookmarks).delete(1L, 8L);
+    verifyNoInteractions(events);
   }
 }

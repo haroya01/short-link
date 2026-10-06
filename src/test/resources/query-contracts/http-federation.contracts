@@ -63,8 +63,8 @@
 @junit | notification-note-unread | 1 | 0 | 0 | 0 | 1
 @junit | notification-note-group-read | 0 | 0 | 1 | 0 | 1
 # Counts are public: the author and anyone else read the same one count statement for the page.
-@junit | federation-note-remote-counts | 7 | 0 | 0 | 0 | 7
-@junit | federation-note-remote-counts-stranger | 7 | 0 | 0 | 0 | 7
+@junit | federation-note-remote-counts | 6 | 0 | 0 | 0 | 6
+@junit | federation-note-remote-counts-stranger | 6 | 0 | 0 | 0 | 6
 # Undo of an embedded Like deletes by note, actor and kind; a bare activity id clears a follow or a
 # reaction with that id.
 @junit | federation-inbox-undo-like | 1 | 0 | 0 | 1 | 2
@@ -76,7 +76,7 @@
 @junit | federation-settings-get | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
 @junit | federation-note-create | 9 | 3 | 0 | 0 | 12
-@junit | federation-note-edit | 14 | 1 | 1 | 1 | 17
+@junit | federation-note-edit | 13 | 1 | 1 | 1 | 16
 @junit | federation-note-delete | 6 | 1 | 0 | 3 | 10
 # The note document: note, author, images, then the author's actor (user, preference, actor).
 @junit | federation-note-document | 6 | 0 | 0 | 0 | 6
