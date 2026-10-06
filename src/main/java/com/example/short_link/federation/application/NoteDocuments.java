@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -19,6 +20,8 @@ import org.springframework.web.util.HtmlUtils;
 public class NoteDocuments {
 
   private static final Pattern URL = Pattern.compile("https?://[^\\s<]+");
+  private static final Pattern TOKEN =
+      Pattern.compile("(" + URL.pattern() + ")|" + Hashtags.PATTERN.pattern());
   private static final Pattern TRAILING_PUNCTUATION = Pattern.compile("[.,!?:;)\\]'\"]+$");
 
   private final FederationUrls urls;
@@ -54,6 +57,15 @@ public class NoteDocuments {
       attachments.add(attachment);
     }
     object.put("attachment", attachments);
+    List<Map<String, Object>> tags = new ArrayList<>();
+    for (String name : Hashtags.of(note.body())) {
+      Map<String, Object> tag = new LinkedHashMap<>();
+      tag.put("type", "Hashtag");
+      tag.put("href", urls.tag(name));
+      tag.put("name", "#" + name);
+      tags.add(tag);
+    }
+    object.put("tag", tags);
     return object;
   }
 
@@ -143,25 +155,41 @@ public class NoteDocuments {
     return html.toString();
   }
 
-  private static String linkify(String escaped) {
-    Matcher matcher = URL.matcher(escaped);
+  private String linkify(String escaped) {
+    Matcher matcher = TOKEN.matcher(escaped);
     StringBuilder out = new StringBuilder();
     while (matcher.find()) {
-      String candidate = matcher.group();
-      Matcher trailing = TRAILING_PUNCTUATION.matcher(candidate);
-      String tail = trailing.find() ? trailing.group() : "";
-      String link = candidate.substring(0, candidate.length() - tail.length());
       matcher.appendReplacement(
           out,
           Matcher.quoteReplacement(
-              "<a href=\""
-                  + link
-                  + "\" rel=\"nofollow noopener noreferrer\" target=\"_blank\">"
-                  + link
-                  + "</a>"
-                  + tail));
+              matcher.group(1) != null ? link(matcher.group(1)) : hashtag(matcher)));
     }
     matcher.appendTail(out);
     return out.toString();
+  }
+
+  private static String link(String candidate) {
+    Matcher trailing = TRAILING_PUNCTUATION.matcher(candidate);
+    String tail = trailing.find() ? trailing.group() : "";
+    String link = candidate.substring(0, candidate.length() - tail.length());
+    return "<a href=\""
+        + link
+        + "\" rel=\"nofollow noopener noreferrer\" target=\"_blank\">"
+        + link
+        + "</a>"
+        + tail;
+  }
+
+  private String hashtag(Matcher matcher) {
+    String name = Hashtags.nameAt(matcher, 2);
+    if (name == null) {
+      return matcher.group();
+    }
+    return "<a href=\""
+        + HtmlUtils.htmlEscape(urls.tag(name))
+        + "\" class=\"mention hashtag\" rel=\"tag\">#<span>"
+        + name
+        + "</span></a>"
+        + matcher.group().substring(1 + name.length());
   }
 }

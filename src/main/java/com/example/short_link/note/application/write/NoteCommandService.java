@@ -7,6 +7,7 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
+import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
@@ -182,6 +183,7 @@ public class NoteCommandService {
               note.getId(), i, image.key(), image.url(), image.contentType(), image.altText()));
     }
     media.saveAll(rows);
+    notes.tag(note.getId(), Hashtags.of(body));
     events.publishEvent(new NotePublishedEvent(note.getId(), userId));
     if (parent != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
@@ -235,6 +237,9 @@ public class NoteCommandService {
     requireContent(body, hasMedia);
     boolean hasQuote = note.getQuotedPostId() != null || note.getQuotedNoteId() != null;
     String before = NoteLinks.previewUrl(note.getBody(), hasMedia, hasQuote);
+    if (!Hashtags.sameTags(note.getBody(), body)) {
+      notes.retag(noteId, Hashtags.of(body));
+    }
     note.edit(body, clock.instant().truncatedTo(ChronoUnit.MICROS));
     events.publishEvent(new NoteEditedEvent(noteId, userId));
     String after = NoteLinks.previewUrl(body, hasMedia, hasQuote);

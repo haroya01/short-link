@@ -91,6 +91,13 @@ public class FederationUrls {
     return profile(username) + "/notes/" + noteId;
   }
 
+  public String tag(String name) {
+    return props.profileBaseUrl()
+        + "/tags/"
+        + UriUtils.encodePathSegment(name, StandardCharsets.UTF_8)
+        + "?view=notes";
+  }
+
   public String blogPost(String username, String slug) {
     return profile(username) + "/" + UriUtils.encodePathSegment(slug, StandardCharsets.UTF_8);
   }

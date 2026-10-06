@@ -130,6 +130,57 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(count("note_repost_mute", "user_id = ?", reader.id())).isZero();
   }
 
+  @Test
+  void hashtagsFileANoteUnderItsTagsAndAFollowedTagBringsItIntoTheFollowingFeed() throws Exception {
+    Actor writer = actor("tag-writer", false);
+    Actor reader = actor("tag-reader", false);
+    jdbc.update(
+        "INSERT INTO user_tag_pref (user_id, tag, kind, created_at)"
+            + " VALUES (?, '스프링', 'FOLLOW', NOW(6))",
+        reader.id());
+
+    long noteId =
+        step(
+                "note-create-tagged",
+                "POST",
+                "/api/v1/notes",
+                writer,
+                Map.of("body", "오늘 #스프링 정리, #Kotlin 도 #kotlin 조금"),
+                201)
+            .path("id")
+            .asLong();
+    assertThat(
+            jdbc.queryForList(
+                "SELECT tag FROM note_tag WHERE note_id = ? ORDER BY tag", String.class, noteId))
+        .containsExactlyInAnyOrder("스프링", "Kotlin");
+
+    var tagged =
+        step(
+            "note-tagged",
+            "GET",
+            "/api/v1/public/notes/tags/%EC%8A%A4%ED%94%84%EB%A7%81",
+            null,
+            null,
+            200);
+    assertThat(ids(tagged)).containsExactly(noteId);
+
+    var following =
+        step("note-following-tags", "GET", "/api/v1/notes/following", reader, null, 200);
+    assertThat(ids(following)).containsExactly(noteId);
+    assertThat(following.path("items").get(0).path("repostedBy").isNull()).isTrue();
+
+    step(
+        "note-edit-retag",
+        "PATCH",
+        "/api/v1/notes/" + noteId,
+        writer,
+        Map.of("body", "#Kotlin 만 남김"),
+        200);
+    assertThat(
+            jdbc.queryForList("SELECT tag FROM note_tag WHERE note_id = ?", String.class, noteId))
+        .containsExactly("Kotlin");
+  }
+
   private static List<Long> ids(JsonNode feed) {
     List<Long> ids = new ArrayList<>();
     feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));

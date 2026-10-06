@@ -102,7 +102,9 @@ class NoteRepositoryAdapter implements NoteRepository {
   // Top-level notes by the authors and their reposts, one row per note at its newest activity; the
   // original wins a tie with a repost. A repost of someone the viewer blocked, or who blocked the
   // viewer, is left out, as are reposts by people whose reposts the viewer hid and every repost
-  // when the viewer turned reposts off.
+  // when the viewer turned reposts off. Top-level notes carrying a tag the viewer follows (the
+  // blog's
+  // tag follows) join in as originals, again never from someone on either side of a block.
   @Override
   public List<NoteFeedRow> following(
       Collection<Long> authorIds, Long viewerId, int offset, int limit) {
@@ -129,6 +131,14 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " WHERE m.user_id = :viewer AND m.muted_user_id = r.user_id)"
                     + " AND NOT EXISTS (SELECT 1 FROM note_feed_preference p"
                     + " WHERE p.user_id = :viewer AND p.show_reposts = FALSE)"
+                    + " UNION ALL"
+                    + " SELECT g.note_id, gn.created_at, NULL FROM user_tag_pref f"
+                    + " JOIN note_tag g ON g.tag = f.tag"
+                    + " JOIN note gn ON gn.id = g.note_id"
+                    + " WHERE f.user_id = :viewer AND f.kind = 'FOLLOW' AND gn.in_reply_to_id IS NULL"
+                    + " AND NOT EXISTS (SELECT 1 FROM user_block b"
+                    + " WHERE (b.blocker_id = :viewer AND b.blocked_id = gn.user_id)"
+                    + " OR (b.blocker_id = gn.user_id AND b.blocked_id = :viewer))"
                     + ") t) y WHERE y.position = 1"
                     + ") x JOIN note n ON n.id = x.note_id"
                     + " ORDER BY x.at DESC, x.note_id DESC LIMIT :limit OFFSET :offset",
@@ -237,6 +247,45 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> tagged(String tag, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note_tag g JOIN note n ON n.id = g.note_id"
+                + " WHERE g.tag = :tag ORDER BY g.note_id DESC LIMIT :limit OFFSET :offset",
+            NoteEntity.class)
+        .setParameter("tag", tag)
+        .setParameter("limit", limit)
+        .setParameter("offset", offset)
+        .getResultList();
+  }
+
+  // INSERT IGNORE: the column's collation folds more than lower-casing does (accents, widths), so
+  // two tags the extractor keeps apart can still be one key here.
+  @Override
+  public void tag(Long noteId, List<String> tags) {
+    if (tags.isEmpty()) {
+      return;
+    }
+    StringBuilder sql = new StringBuilder("INSERT IGNORE INTO note_tag (note_id, tag) VALUES ");
+    for (int i = 0; i < tags.size(); i++) {
+      sql.append(i == 0 ? "" : ", ").append("(:note, :tag").append(i).append(')');
+    }
+    var query = em.createNativeQuery(sql.toString()).setParameter("note", noteId);
+    for (int i = 0; i < tags.size(); i++) {
+      query.setParameter("tag" + i, tags.get(i));
+    }
+    query.executeUpdate();
+  }
+
+  @Override
+  public void retag(Long noteId, List<String> tags) {
+    em.createNativeQuery("DELETE FROM note_tag WHERE note_id = :note")
+        .setParameter("note", noteId)
+        .executeUpdate();
+    tag(noteId, tags);
   }
 
   @Override

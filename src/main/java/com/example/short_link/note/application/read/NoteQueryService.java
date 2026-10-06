@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.read;
 
+import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
@@ -44,6 +45,15 @@ public class NoteQueryService {
   @Transactional(readOnly = true)
   public NoteFeedView trending(int page, int size, Long viewerId) {
     return page(page, size, viewerId, notes::trending);
+  }
+
+  @Transactional(readOnly = true)
+  public NoteFeedView tagged(String tag, int page, int size, Long viewerId) {
+    String name = tag.startsWith("#") ? tag.substring(1) : tag;
+    if (name.isBlank() || name.length() > Hashtags.MAX_LENGTH) {
+      return new NoteFeedView(List.of(), Math.max(page, 0), false);
+    }
+    return page(page, size, viewerId, (offset, limit) -> notes.tagged(name, offset, limit));
   }
 
   @Transactional(readOnly = true)
