@@ -37,9 +37,12 @@ public class NoteController {
   @GetMapping("/api/v1/public/notes")
   public NoteFeedView everyone(
       @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "recent") String sort,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
-    return query.everyone(page, size, viewerId);
+    return "trending".equalsIgnoreCase(sort)
+        ? query.trending(page, size, viewerId)
+        : query.everyone(page, size, viewerId);
   }
 
   @GetMapping("/api/v1/public/notes/{id}")

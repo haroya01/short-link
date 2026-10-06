@@ -20,6 +20,8 @@ public interface NoteRepository {
 
   List<NoteEntity> topLevelByAuthors(Collection<Long> authorIds, int offset, int limit);
 
+  List<NoteEntity> trending(int offset, int limit);
+
   List<NoteEntity> replies(Long noteId, int limit);
 
   Map<Long, Long> replyCounts(Collection<Long> noteIds);

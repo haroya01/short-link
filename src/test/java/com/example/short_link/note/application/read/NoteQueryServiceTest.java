@@ -62,6 +62,19 @@ class NoteQueryServiceTest {
   }
 
   @Test
+  void trendingPagesLikeThePublicFeedAndKeepsHiddenCountsAtZero() {
+    List<NoteEntity> two = LongStream.of(5, 9).mapToObj(id -> note(id, null)).toList();
+    when(notes.trending(0, 21)).thenReturn(two);
+    when(views.of(two, null)).thenReturn(List.of(view(5L, null, null), view(9L, null, null)));
+
+    NoteFeedView feed = service.trending(0, 20, null);
+
+    assertThat(feed.hasNext()).isFalse();
+    assertThat(feed.items()).extracting(NoteView::id).containsExactly(5L, 9L);
+    assertThat(feed.items()).extracting(NoteView::likeCount).containsExactly(0L, 0L);
+  }
+
+  @Test
   void pageAndSizeAreClamped() {
     when(notes.topLevel(0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
     when(views.of(List.of(), null)).thenReturn(List.of());

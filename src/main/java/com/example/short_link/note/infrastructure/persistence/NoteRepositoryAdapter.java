@@ -4,6 +4,8 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -15,6 +17,8 @@ import org.springframework.stereotype.Repository;
 @Repository
 @RequiredArgsConstructor
 class NoteRepositoryAdapter implements NoteRepository {
+
+  private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaNoteRepository jpa;
 
@@ -60,6 +64,30 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " order by n.id desc",
             NoteEntity.class)
         .setParameter("authors", authorIds)
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  // Top-level notes written in the window, by reactions from people other than the author: likes,
+  // reposts, replies and likes or boosts from other servers. Ties fall back to newest first.
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> trending(int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n"
+                + " WHERE n.in_reply_to_id IS NULL AND n.created_at >= :since"
+                + " ORDER BY ("
+                + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
+                + " AND l.user_id <> n.user_id)"
+                + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
+                + " AND r.user_id <> n.user_id)"
+                + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
+                + " AND c.user_id <> n.user_id)"
+                + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
+                + ") DESC, n.id DESC",
+            NoteEntity.class)
+        .setParameter("since", Instant.now().minus(TRENDING_WINDOW))
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
