@@ -26,7 +26,9 @@ public record NoteView(
     NoteAuthor repostedBy,
     long quoteCount,
     Boolean bookmarkedByMe,
-    List<String> mentions) {
+    List<String> mentions,
+    String contentWarning,
+    boolean sensitive) {
 
   public NoteView(
       Long id,
@@ -63,7 +65,9 @@ public record NoteView(
         null,
         0,
         null,
-        List.of());
+        List.of(),
+        null,
+        false);
   }
 
   public record Media(String url, String altText, String contentType) {}
@@ -71,7 +75,13 @@ public record NoteView(
   public record LinkPreview(String url, String title, String description, String image) {}
 
   public record QuotedNote(
-      Long id, String body, Instant createdAt, NoteAuthor author, List<Media> media) {}
+      Long id,
+      String body,
+      Instant createdAt,
+      NoteAuthor author,
+      List<Media> media,
+      String contentWarning,
+      boolean sensitive) {}
 
   NoteView withRepostedBy(NoteAuthor reposter) {
     return new NoteView(
@@ -93,6 +103,8 @@ public record NoteView(
         reposter,
         quoteCount,
         bookmarkedByMe,
-        mentions);
+        mentions,
+        contentWarning,
+        sensitive);
   }
 }

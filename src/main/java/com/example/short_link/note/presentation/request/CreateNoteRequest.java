@@ -10,7 +10,9 @@ public record CreateNoteRequest(
     @Size(max = 4) List<@Valid ImageRequest> images,
     Long quotedPostId,
     Long inReplyToId,
-    Long quotedNoteId) {
+    Long quotedNoteId,
+    String contentWarning,
+    Boolean sensitive) {
 
   public record ImageRequest(String key, String altText) {}
 
@@ -24,6 +26,8 @@ public record CreateNoteRequest(
                 .toList(),
         quotedPostId,
         inReplyToId,
-        quotedNoteId);
+        quotedNoteId,
+        contentWarning,
+        Boolean.TRUE.equals(sensitive));
   }
 }

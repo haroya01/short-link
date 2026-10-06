@@ -65,6 +65,10 @@
 # like any other note notice: block check, preference, insert, then both names for the push.
 @junit | note-create-mention | 7 | 2 | 0 | 0 | 9
 @junit | note-thread-mention | 5 | 0 | 0 | 0 | 5
+# A content warning and the sensitive mark are columns on the note: they ride in its one insert and
+# its one update.
+@junit | note-create-warning | 3 | 1 | 0 | 0 | 4
+@junit | note-edit-warning | 7 | 0 | 1 | 0 | 8
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6

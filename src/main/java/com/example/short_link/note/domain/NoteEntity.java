@@ -29,6 +29,7 @@ public class NoteEntity extends BaseCreatedEntity {
 
   // MySQL VARCHAR(500) counts code points, so length checks use codePointCount, not length().
   public static final int MAX_BODY_LENGTH = 500;
+  public static final int MAX_WARNING_LENGTH = 100;
   private static final int EXCERPT_LENGTH = 80;
 
   @Id
@@ -53,6 +54,12 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(name = "edited_at")
   private Instant editedAt;
 
+  @Column(name = "content_warning", length = MAX_WARNING_LENGTH)
+  private String contentWarning;
+
+  @Column(name = "marked_sensitive", nullable = false)
+  private boolean sensitive;
+
   public NoteEntity(Long userId, String body, Long inReplyToId, Long quotedPostId) {
     this(userId, body, inReplyToId, quotedPostId, null);
   }
@@ -76,6 +83,12 @@ public class NoteEntity extends BaseCreatedEntity {
       return flat;
     }
     return flat.substring(0, flat.offsetByCodePoints(0, EXCERPT_LENGTH)) + "…";
+  }
+
+  // As on Mastodon, a warning hides the photos too, so a note with one is always sensitive.
+  public void markContent(String warning, boolean sensitive) {
+    this.contentWarning = warning;
+    this.sensitive = sensitive || warning != null;
   }
 
   public void edit(String body, Instant at) {

@@ -208,6 +208,33 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
         .isEqualTo(1);
   }
 
+  @Test
+  void aContentWarningIsStoredWithTheNoteAndCostsNoQuery() throws Exception {
+    Actor writer = actor("warn-writer", false);
+
+    var created =
+        step(
+            "note-create-warning",
+            "POST",
+            "/api/v1/notes",
+            writer,
+            Map.of("body", "결말 이야기", "contentWarning", "스포일러", "sensitive", false),
+            201);
+    long noteId = created.path("id").asLong();
+    assertThat(created.path("contentWarning").asText()).isEqualTo("스포일러");
+    assertThat(created.path("sensitive").asBoolean()).isTrue();
+
+    var edited =
+        step(
+            "note-edit-warning",
+            "PATCH",
+            "/api/v1/notes/" + noteId,
+            writer,
+            Map.of("body", "결말 이야기", "contentWarning", ""),
+            200);
+    assertThat(edited.path("contentWarning").isNull()).isTrue();
+  }
+
   private static List<Long> ids(JsonNode feed) {
     List<Long> ids = new ArrayList<>();
     feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));
