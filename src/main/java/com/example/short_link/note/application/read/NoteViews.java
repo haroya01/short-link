@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.read;
 
+import com.example.short_link.common.note.Mentions;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
@@ -24,7 +25,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 // Batches every lookup for a page of notes: one query per kind of data, never per note. Notes by
-// soft-deleted authors are dropped.
+// soft-deleted authors are dropped. Mentioned members ride along in the authors query, so a mention
+// links only when that member exists.
 @Component
 @RequiredArgsConstructor
 public class NoteViews {
@@ -48,7 +50,16 @@ public class NoteViews {
         quotedNoteIds.isEmpty() ? List.of() : notes.findAllByIdIn(quotedNoteIds);
     Set<Long> authorIds = page.stream().map(NoteEntity::getUserId).collect(Collectors.toSet());
     quotedNotes.forEach(quotedNote -> authorIds.add(quotedNote.getUserId()));
-    Map<Long, NoteAuthor> authors = people.activeAuthors(authorIds);
+    Set<String> handles =
+        page.stream()
+            .flatMap(note -> Mentions.of(note.getBody()).stream())
+            .collect(Collectors.toSet());
+    Map<Long, NoteAuthor> authors =
+        handles.isEmpty()
+            ? people.activeAuthors(authorIds)
+            : people.activeAuthors(authorIds, handles);
+    Set<String> members =
+        authors.values().stream().map(NoteAuthor::username).collect(Collectors.toSet());
     List<NoteEntity> visible =
         page.stream().filter(note -> authors.containsKey(note.getUserId())).toList();
     if (visible.isEmpty()) {
@@ -94,7 +105,8 @@ public class NoteViews {
               cards.get(note.getId()),
               null,
               counts.quotes(),
-              viewerId == null ? null : marks.bookmarked().contains(note.getId())));
+              viewerId == null ? null : marks.bookmarked().contains(note.getId()),
+              Mentions.of(note.getBody()).stream().filter(members::contains).toList()));
     }
     return views;
   }

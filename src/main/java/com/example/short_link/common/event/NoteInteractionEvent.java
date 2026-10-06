@@ -16,7 +16,8 @@ public record NoteInteractionEvent(
     LIKE,
     REPOST,
     REPLY,
-    QUOTE
+    QUOTE,
+    MENTION
   }
 
   public boolean isSelfAction() {

@@ -60,6 +60,11 @@
 @junit | note-tagged | 4 | 0 | 0 | 0 | 4
 @junit | note-following-tags | 6 | 0 | 0 | 0 | 6
 @junit | note-edit-retag | 7 | 1 | 1 | 1 | 10
+# Mentions: the mentioned handles ride in the authors query (id IN … OR username IN …), so neither
+# writing nor reading a note with mentions adds a query. Each mentioned member is told after commit
+# like any other note notice: block check, preference, insert, then both names for the push.
+@junit | note-create-mention | 7 | 2 | 0 | 0 | 9
+@junit | note-thread-mention | 5 | 0 | 0 | 0 | 5
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6

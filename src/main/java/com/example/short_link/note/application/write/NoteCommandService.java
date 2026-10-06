@@ -8,6 +8,7 @@ import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.note.Hashtags;
+import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
@@ -30,6 +31,7 @@ import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -167,7 +169,11 @@ public class NoteCommandService {
     if (quotedNote != null) {
       authorIds.add(quotedNote.getUserId());
     }
-    Map<Long, NoteAuthor> authors = people.activeAuthors(authorIds);
+    List<String> handles = Mentions.of(body);
+    Map<Long, NoteAuthor> authors =
+        handles.isEmpty()
+            ? people.activeAuthors(authorIds)
+            : people.activeAuthors(authorIds, handles);
     if (quotedNote != null && !authors.containsKey(quotedNote.getUserId())) {
       throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
     }
@@ -191,6 +197,15 @@ public class NoteCommandService {
     if (quotedNote != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));
     }
+    Set<Long> toldOtherwise = new HashSet<>(Set.of(userId));
+    if (parent != null) {
+      toldOtherwise.add(parent.getUserId());
+    }
+    if (quotedNote != null) {
+      toldOtherwise.add(quotedNote.getUserId());
+    }
+    List<NoteAuthor> mentioned = members(authors, handles);
+    mention(note, userId, mentioned, toldOtherwise);
     String previewUrl =
         NoteLinks.previewUrl(body, !stored.isEmpty(), quoted != null || quotedNote != null);
     if (previewUrl != null) {
@@ -213,7 +228,36 @@ public class NoteCommandService {
         0L,
         false,
         quotedNote == null ? null : quotedView(quotedNote, authors.get(quotedNote.getUserId())),
-        null);
+        null,
+        null,
+        0,
+        false,
+        mentioned.stream().map(NoteAuthor::username).toList());
+  }
+
+  private static List<NoteAuthor> members(Map<Long, NoteAuthor> found, List<String> handles) {
+    Map<String, NoteAuthor> byName = new HashMap<>();
+    found.values().forEach(author -> byName.put(author.username(), author));
+    return handles.stream().map(byName::get).filter(Objects::nonNull).toList();
+  }
+
+  // Whoever already hears about this note as the replied-to or quoted author is not told twice.
+  private void mention(
+      NoteEntity note, Long actorId, List<NoteAuthor> mentioned, Set<Long> toldOtherwise) {
+    for (NoteAuthor member : mentioned) {
+      if (!toldOtherwise.contains(member.id())) {
+        events.publishEvent(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.MENTION,
+                member.id(),
+                actorId,
+                null,
+                note.getId(),
+                note.excerpt(),
+                null,
+                null));
+      }
+    }
   }
 
   private NoteView.QuotedNote quotedView(NoteEntity quoted, NoteAuthor author) {
@@ -240,7 +284,12 @@ public class NoteCommandService {
     if (!Hashtags.sameTags(note.getBody(), body)) {
       notes.retag(noteId, Hashtags.of(body));
     }
+    List<String> added = new ArrayList<>(Mentions.of(body));
+    added.removeAll(Mentions.of(note.getBody()));
     note.edit(body, clock.instant().truncatedTo(ChronoUnit.MICROS));
+    if (!added.isEmpty()) {
+      mention(note, userId, members(people.activeAuthors(List.of(), added), added), Set.of(userId));
+    }
     events.publishEvent(new NoteEditedEvent(noteId, userId));
     String after = NoteLinks.previewUrl(body, hasMedia, hasQuote);
     if (!Objects.equals(before, after)) {

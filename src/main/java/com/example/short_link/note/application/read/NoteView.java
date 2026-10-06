@@ -25,7 +25,8 @@ public record NoteView(
     LinkPreview linkPreview,
     NoteAuthor repostedBy,
     long quoteCount,
-    Boolean bookmarkedByMe) {
+    Boolean bookmarkedByMe,
+    List<String> mentions) {
 
   public NoteView(
       Long id,
@@ -61,7 +62,8 @@ public record NoteView(
         linkPreview,
         null,
         0,
-        null);
+        null,
+        List.of());
   }
 
   public record Media(String url, String altText, String contentType) {}
@@ -90,6 +92,7 @@ public record NoteView(
         linkPreview,
         reposter,
         quoteCount,
-        bookmarkedByMe);
+        bookmarkedByMe,
+        mentions);
   }
 }

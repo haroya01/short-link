@@ -39,6 +39,7 @@ public class NoteNotificationListener {
           case REPOST -> NotificationType.NOTE_REPOST;
           case REPLY -> NotificationType.NOTE_REPLY;
           case QUOTE -> NotificationType.NOTE_QUOTE;
+          case MENTION -> NotificationType.NOTE_MENTION;
         };
     recordUseCase.record(
         event.recipientUserId(),
