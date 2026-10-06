@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
@@ -94,7 +95,8 @@ class DiscoverFeedQueryServiceTest {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of());
     when(connectionRepository.findRecentPublicConnections(0, 20))
         .thenReturn(List.of(row(100L, ConnectionBlockType.NOTE, 7L, 3L)));
-    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of(7L, "전역에서 온 노트"));
+    when(noteBodies.blocksByIds(anyCollection()))
+        .thenReturn(Map.of(7L, new NoteBlock(7L, "전역에서 온 노트", "note_author")));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(3L, "sori")));
 
     DiscoverFeedView feed = service.feed(1L, 0, 20, false);
@@ -102,6 +104,8 @@ class DiscoverFeedQueryServiceTest {
     assertThat(feed.source()).isEqualTo("global");
     assertThat(feed.items()).hasSize(1);
     assertThat(feed.items().get(0).body()).isEqualTo("전역에서 온 노트");
+    assertThat(feed.items().get(0).username()).isEqualTo("note_author");
+    assertThat(feed.items().get(0).noteId()).isEqualTo(7L);
     verify(connectionRepository, never())
         .findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt());
   }
@@ -113,7 +117,8 @@ class DiscoverFeedQueryServiceTest {
         .thenReturn(List.of());
     when(connectionRepository.findRecentPublicConnections(0, 20))
         .thenReturn(List.of(row(100L, ConnectionBlockType.NOTE, 7L, 3L)));
-    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of(7L, "전역에서 온 노트"));
+    when(noteBodies.blocksByIds(anyCollection()))
+        .thenReturn(Map.of(7L, new NoteBlock(7L, "전역에서 온 노트", "note_author")));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(3L, "sori")));
 
     DiscoverFeedView feed = service.feed(1L, 0, 20, false);
@@ -162,7 +167,8 @@ class DiscoverFeedQueryServiceTest {
         new PostHighlightEntity(6L, 4L, 0, 0, 0, 3, "좋은 추상은 더 지울 게 없을 때", null);
     ReflectionTestUtils.setField(hl, "id", 9L);
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(hl));
-    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of(7L, "더 나은 질문을 기다리는 일"));
+    when(noteBodies.blocksByIds(anyCollection()))
+        .thenReturn(Map.of(7L, new NoteBlock(7L, "더 나은 질문을 기다리는 일", "note_author")));
     when(postRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(post(5L, 4L), post(6L, 4L)));
     when(userRepository.findAllByIdIn(anyCollection()))
@@ -197,7 +203,13 @@ class DiscoverFeedQueryServiceTest {
             List.of(
                 row(100L, ConnectionBlockType.NOTE, 7L, 2L),
                 row(101L, ConnectionBlockType.NOTE, 8L, 999L)));
-    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of(7L, "보이는 노트", 8L, "주인 없는 노트"));
+    when(noteBodies.blocksByIds(anyCollection()))
+        .thenReturn(
+            Map.of(
+                7L,
+                new NoteBlock(7L, "보이는 노트", "note_author"),
+                8L,
+                new NoteBlock(8L, "주인 없는 노트", "note_author")));
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(2L, "minji")));
@@ -216,7 +228,8 @@ class DiscoverFeedQueryServiceTest {
             List.of(
                 row(100L, ConnectionBlockType.POST, 5L, 2L),
                 row(101L, ConnectionBlockType.NOTE, 7L, 3L)));
-    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of(7L, "더 나은 질문을 기다리는 일"));
+    when(noteBodies.blocksByIds(anyCollection()))
+        .thenReturn(Map.of(7L, new NoteBlock(7L, "더 나은 질문을 기다리는 일", "note_author")));
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(post(5L, 4L)));
     when(userRepository.findAllByIdIn(anyCollection()))
@@ -244,7 +257,7 @@ class DiscoverFeedQueryServiceTest {
                 row(100L, ConnectionBlockType.POST, 5L, 2L),
                 row(101L, ConnectionBlockType.POST, 6L, 2L)));
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
-    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of());
+    when(noteBodies.blocksByIds(anyCollection())).thenReturn(Map.of());
     when(postRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(post(5L, 4L), draftPost(6L, 4L)));
     when(userRepository.findAllByIdIn(anyCollection()))
@@ -285,7 +298,7 @@ class DiscoverFeedQueryServiceTest {
     when(connectionRepository.findRecentPublicConnections(0, 20))
         .thenReturn(List.of(gibberishCollection, gibberishWhy, thinPost));
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
-    when(noteBodies.bodiesByIds(anyCollection())).thenReturn(Map.of());
+    when(noteBodies.blocksByIds(anyCollection())).thenReturn(Map.of());
     PostEntity thin = new PostEntity(4L, "thin", "거거거구ㅜㅅ", "ko");
     thin.publish();
     thin.measureBody("ㅎㅎㅎ");

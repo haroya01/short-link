@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.application.read;
 
+import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
@@ -67,7 +68,7 @@ public class DiscoverFeedQueryService {
         bulk(
             highlightRepository.findAllByIdIn(refIds(rows, "HIGHLIGHT")),
             PostHighlightEntity::getId);
-    Map<Long, String> notes = noteBodies.bodiesByIds(refIds(rows, "NOTE"));
+    Map<Long, NoteBlock> notes = noteBodies.blocksByIds(refIds(rows, "NOTE"));
 
     Set<Long> postIds = new HashSet<>(refIds(rows, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
@@ -100,7 +101,7 @@ public class DiscoverFeedQueryService {
       UserEntity curator,
       Map<Long, PostEntity> posts,
       Map<Long, PostHighlightEntity> highlights,
-      Map<Long, String> notes,
+      Map<Long, NoteBlock> notes,
       Map<Long, UserEntity> users) {
     PublicAuthorView curatorView = PublicAuthorView.from(curator);
     return switch (row.blockType()) {
@@ -116,6 +117,7 @@ public class DiscoverFeedQueryService {
             post.getExcerpt(),
             post.getSlug(),
             author == null ? null : author.getUsername(),
+            null,
             null,
             null);
       }
@@ -134,12 +136,23 @@ public class DiscoverFeedQueryService {
             post.getSlug(),
             author == null ? null : author.getUsername(),
             hl.getQuote(),
+            null,
             null);
       }
       case NOTE -> {
-        String body = notes.get(row.refId());
-        if (body == null || !DiscoveryQuality.isMeaningfulLabel(body)) yield null;
-        yield view(row, curatorView, "NOTE", null, null, null, null, null, body);
+        NoteBlock note = notes.get(row.refId());
+        if (note == null || !DiscoveryQuality.isMeaningfulLabel(note.body())) yield null;
+        yield view(
+            row,
+            curatorView,
+            "NOTE",
+            null,
+            null,
+            null,
+            note.authorUsername(),
+            null,
+            note.body(),
+            note.id());
       }
     };
   }
@@ -153,7 +166,8 @@ public class DiscoverFeedQueryService {
       String slug,
       String username,
       String quote,
-      String body) {
+      String body,
+      Long noteId) {
     return new DiscoverConnectionView(
         row.connectionId(),
         curator,
@@ -168,7 +182,8 @@ public class DiscoverFeedQueryService {
         slug,
         username,
         quote,
-        body);
+        body,
+        noteId);
   }
 
   private static List<Long> refIds(List<DiscoverConnectionRow> rows, String type) {

@@ -67,7 +67,7 @@ public class CollectionContentReader {
             highlightRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.HIGHLIGHT)),
             PostHighlightEntity::getId);
     if (publishedOnly && !highlights.isEmpty()) keepHighlightsOfPublishedPosts(highlights);
-    var notes = noteBodies.bodiesByIds(refIds(connections, ConnectionBlockType.NOTE));
+    var notes = noteBodies.blocksByIds(refIds(connections, ConnectionBlockType.NOTE));
     return new CollectionContentSnapshot(posts, highlights, notes, Map.of());
   }
 
@@ -90,7 +90,7 @@ public class CollectionContentReader {
         indexedBy(
             highlightRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.HIGHLIGHT)),
             PostHighlightEntity::getId);
-    var notes = noteBodies.bodiesByIds(refIds(connections, ConnectionBlockType.NOTE));
+    var notes = noteBodies.blocksByIds(refIds(connections, ConnectionBlockType.NOTE));
 
     Set<Long> postIds = new HashSet<>(refIds(connections, ConnectionBlockType.POST));
     highlights.values().forEach(highlight -> postIds.add(highlight.getPostId()));
