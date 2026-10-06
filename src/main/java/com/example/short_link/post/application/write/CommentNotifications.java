@@ -46,6 +46,7 @@ public class CommentNotifications {
               post.getId(),
               post.getSlug(),
               post.getTitle(),
+              comment.getId(),
               comment.getCreatedAt()));
       suppressMentionUnlessMuted(
           mentionSuppressedRecipients, ownerId, BlogNotificationKind.COMMENT);
@@ -62,6 +63,7 @@ public class CommentNotifications {
               post.getSlug(),
               post.getTitle(),
               ownerUsername,
+              comment.getId(),
               comment.getCreatedAt()));
       suppressMentionUnlessMuted(
           mentionSuppressedRecipients, parentAuthorId, BlogNotificationKind.REPLY);
@@ -79,6 +81,7 @@ public class CommentNotifications {
                     post.getSlug(),
                     post.getTitle(),
                     ownerUsername,
+                    comment.getId(),
                     comment.getCreatedAt())));
   }
 
@@ -102,6 +105,7 @@ public class CommentNotifications {
               post.getSlug(),
               post.getTitle(),
               ownerUsername,
+              highlight.getId(),
               reply.getCreatedAt()));
       suppressMentionUnlessMuted(
           mentionSuppressedRecipients, highlightAuthorId, BlogNotificationKind.REPLY);
@@ -119,6 +123,7 @@ public class CommentNotifications {
                     post.getSlug(),
                     post.getTitle(),
                     ownerUsername,
+                    highlight.getId(),
                     reply.getCreatedAt())));
   }
 

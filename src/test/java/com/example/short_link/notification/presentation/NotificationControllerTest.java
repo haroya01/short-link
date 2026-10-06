@@ -1,5 +1,6 @@
 package com.example.short_link.notification.presentation;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
@@ -57,7 +58,43 @@ class NotificationControllerTest {
         .andExpect(jsonPath("$.items[0].type").value("LIKE"))
         .andExpect(jsonPath("$.items[0].actorUsername").value("alice"))
         .andExpect(jsonPath("$.items[0].postSlug").value("my-post"))
+        .andExpect(jsonPath("$.items[0].commentId").value(nullValue()))
+        .andExpect(jsonPath("$.items[0].highlightId").value(nullValue()))
         .andExpect(jsonPath("$.hasMore").value(false));
+  }
+
+  @Test
+  void listPointsCommentAndHighlightNoticesAtTheirSpot() throws Exception {
+    NotificationView comment =
+        new NotificationView(
+            6L,
+            NotificationType.COMMENT,
+            new NotificationActor(2L, "alice", null),
+            new NotificationPostRef(10L, "my-post", "Hi", null, 77L, null),
+            null,
+            null,
+            false,
+            Instant.parse("2026-06-07T00:00:00Z"));
+    NotificationView reply =
+        new NotificationView(
+            7L,
+            NotificationType.REPLY,
+            new NotificationActor(2L, "alice", null),
+            new NotificationPostRef(10L, "my-post", "Hi", "owner", null, 41L),
+            null,
+            null,
+            false,
+            Instant.parse("2026-06-07T00:00:00Z"));
+    when(queryService.list(eq(USER_ID), isNull(), eq(20)))
+        .thenReturn(new NotificationListResult(List.of(comment, reply), null, false));
+
+    mvc.perform(
+            get("/api/v1/notifications").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].commentId").value(77))
+        .andExpect(jsonPath("$.items[0].highlightId").value(nullValue()))
+        .andExpect(jsonPath("$.items[1].highlightId").value(41))
+        .andExpect(jsonPath("$.items[1].commentId").value(nullValue()));
   }
 
   @Test
