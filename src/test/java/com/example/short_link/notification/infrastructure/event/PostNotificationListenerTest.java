@@ -39,17 +39,20 @@ class PostNotificationListenerTest {
   @Test
   void replyRecordsReplyNotificationCarryingPostAuthorHandle() {
     listener()
-        .onCommentReply(new CommentReplyEvent(3L, 9L, 10L, "the-post", "The Post", "owner", AT));
+        .onCommentReply(
+            new CommentReplyEvent(3L, 9L, 10L, "the-post", "The Post", "owner", 77L, AT));
 
     ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
     verify(recordUseCase).record(eq(3L), eq(NotificationType.REPLY), eq(9L), post.capture());
     assertThat(post.getValue().authorUsername()).isEqualTo("owner");
     assertThat(post.getValue().slug()).isEqualTo("the-post");
+    assertThat(post.getValue().commentId()).isEqualTo(77L);
+    assertThat(post.getValue().highlightId()).isNull();
   }
 
   @Test
   void selfReplyIsSkipped() {
-    listener().onCommentReply(new CommentReplyEvent(9L, 9L, 10L, "s", "t", "o", AT));
+    listener().onCommentReply(new CommentReplyEvent(9L, 9L, 10L, "s", "t", "o", 77L, AT));
 
     verify(recordUseCase, never()).record(any(), any(), any(), any());
   }
@@ -58,29 +61,33 @@ class PostNotificationListenerTest {
   void mentionRecordsMentionNotificationCarryingPostAuthorHandle() {
     listener()
         .onCommentMention(
-            new CommentMentionEvent(5L, 9L, 10L, "the-post", "The Post", "owner", AT));
+            new CommentMentionEvent(5L, 9L, 10L, "the-post", "The Post", "owner", 78L, AT));
 
     ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
     verify(recordUseCase).record(eq(5L), eq(NotificationType.MENTION), eq(9L), post.capture());
     assertThat(post.getValue().authorUsername()).isEqualTo("owner");
     assertThat(post.getValue().slug()).isEqualTo("the-post");
+    assertThat(post.getValue().commentId()).isEqualTo(78L);
+    assertThat(post.getValue().highlightId()).isNull();
   }
 
   @Test
   void highlightReplyRecordsReplyNotificationCarryingPostAuthorHandle() {
     listener()
         .onHighlightReply(
-            new HighlightReplyEvent(3L, 9L, 10L, "the-post", "The Post", "owner", AT));
+            new HighlightReplyEvent(3L, 9L, 10L, "the-post", "The Post", "owner", 41L, AT));
 
     ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
     verify(recordUseCase).record(eq(3L), eq(NotificationType.REPLY), eq(9L), post.capture());
     assertThat(post.getValue().authorUsername()).isEqualTo("owner");
     assertThat(post.getValue().slug()).isEqualTo("the-post");
+    assertThat(post.getValue().highlightId()).isEqualTo(41L);
+    assertThat(post.getValue().commentId()).isNull();
   }
 
   @Test
   void selfHighlightReplyIsSkipped() {
-    listener().onHighlightReply(new HighlightReplyEvent(9L, 9L, 10L, "s", "t", "o", AT));
+    listener().onHighlightReply(new HighlightReplyEvent(9L, 9L, 10L, "s", "t", "o", 41L, AT));
 
     verify(recordUseCase, never()).record(any(), any(), any(), any());
   }
@@ -89,12 +96,14 @@ class PostNotificationListenerTest {
   void highlightMentionRecordsMentionNotificationCarryingPostAuthorHandle() {
     listener()
         .onHighlightMention(
-            new HighlightMentionEvent(5L, 9L, 10L, "the-post", "The Post", "owner", AT));
+            new HighlightMentionEvent(5L, 9L, 10L, "the-post", "The Post", "owner", 42L, AT));
 
     ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
     verify(recordUseCase).record(eq(5L), eq(NotificationType.MENTION), eq(9L), post.capture());
     assertThat(post.getValue().authorUsername()).isEqualTo("owner");
     assertThat(post.getValue().slug()).isEqualTo("the-post");
+    assertThat(post.getValue().highlightId()).isEqualTo(42L);
+    assertThat(post.getValue().commentId()).isNull();
   }
 
   @Test

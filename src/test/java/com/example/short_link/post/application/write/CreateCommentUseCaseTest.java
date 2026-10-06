@@ -80,6 +80,16 @@ class CreateCommentUseCaseTest {
     return u;
   }
 
+  private void commentSavesAsId(long id) {
+    when(commentRepository.save(any(CommentEntity.class)))
+        .thenAnswer(
+            inv -> {
+              CommentEntity saved = inv.getArgument(0);
+              org.springframework.test.util.ReflectionTestUtils.setField(saved, "id", id);
+              return saved;
+            });
+  }
+
   private UserEntity userWithId(long id, String username) {
     UserEntity u = new UserEntity("u" + id + "@x.com", "google", "g-" + id);
     u.claimUsername(username);
@@ -90,7 +100,7 @@ class CreateCommentUseCaseTest {
   @Test
   void createsTopLevelComment() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
-    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    commentSavesAsId(88L);
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
 
     CommentView c = useCase.execute(new CreateCommentCommand(9L, 42L, null, "  hello  "));
@@ -105,6 +115,7 @@ class CreateCommentUseCaseTest {
     assertThat(evt.getValue().type())
         .isEqualTo(com.example.short_link.common.event.BlogInteractionType.COMMENT);
     assertThat(evt.getValue().recipientUserId()).isEqualTo(7L);
+    assertThat(evt.getValue().commentId()).isEqualTo(88L);
   }
 
   @Test
@@ -134,7 +145,7 @@ class CreateCommentUseCaseTest {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     CommentEntity parent = new CommentEntity(42L, 3L, null, "top");
     when(commentRepository.findById(50L)).thenReturn(Optional.of(parent));
-    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    commentSavesAsId(89L);
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
 
@@ -160,6 +171,8 @@ class CreateCommentUseCaseTest {
     assertThat(reply.actorUserId()).isEqualTo(9L);
     // The reply carries the post owner's handle (not the recipient's) so the link resolves.
     assertThat(reply.postAuthorUsername()).isEqualTo("olivia");
+    assertThat(comment.commentId()).isEqualTo(89L);
+    assertThat(reply.commentId()).isEqualTo(89L);
   }
 
   @Test
@@ -198,7 +211,7 @@ class CreateCommentUseCaseTest {
   @Test
   void mentionNotifiesTheMentionedUser() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
-    when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    commentSavesAsId(90L);
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(userWithId(5L, "bob")));
@@ -216,6 +229,7 @@ class CreateCommentUseCaseTest {
     assertThat(mention.recipientUserId()).isEqualTo(5L);
     assertThat(mention.actorUserId()).isEqualTo(9L);
     assertThat(mention.postAuthorUsername()).isEqualTo("olivia");
+    assertThat(mention.commentId()).isEqualTo(90L);
   }
 
   @Test
