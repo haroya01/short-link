@@ -70,10 +70,10 @@
 @junit | author-liked-comment-ids | 2 | 0 | 0 | 0 | 2
 # Liking someone's note also notifies them after commit (block, preference, today's group, insert,
 # both names for the push), the same work as note-like.
-@junit | author-note-like | 7 | 2 | 0 | 0 | 9
-@junit | author-note-like-idempotent | 2 | 0 | 0 | 0 | 2
+@junit | author-note-like | 8 | 2 | 0 | 0 | 10
+@junit | author-note-like-idempotent | 3 | 0 | 0 | 0 | 3
 @junit | author-note-liked-ids | 1 | 0 | 0 | 0 | 1
-@junit | author-note-unlike | 2 | 0 | 0 | 1 | 3
+@junit | author-note-unlike | 3 | 0 | 0 | 1 | 4
 @junit | author-post-analytics-detail | 7 | 0 | 0 | 0 | 7
 @junit | author-post-delete | 3 | 0 | 0 | 10 | 13
 @junit | author-post-pin | 1 | 0 | 1 | 0 | 2

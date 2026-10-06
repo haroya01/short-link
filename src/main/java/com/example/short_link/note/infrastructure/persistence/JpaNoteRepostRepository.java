@@ -12,15 +12,8 @@ public interface JpaNoteRepostRepository extends JpaRepository<NoteRepostEntity,
 
   Optional<NoteRepostEntity> findByNoteIdAndUserId(Long noteId, Long userId);
 
-  long countByNoteId(Long noteId);
-
   @Query(
       "select r.noteId from NoteRepostEntity r where r.userId = :userId and r.noteId in :noteIds")
   List<Long> repostedNoteIds(
       @Param("userId") Long userId, @Param("noteIds") Collection<Long> noteIds);
-
-  @Query(
-      "select r.noteId, count(r) from NoteRepostEntity r where r.noteId in :noteIds"
-          + " group by r.noteId")
-  List<Object[]> counts(@Param("noteIds") Collection<Long> noteIds);
 }

@@ -1,16 +1,15 @@
 package com.example.short_link.note.application.read;
 
-import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
-import com.example.short_link.note.domain.repository.NoteRemoteReactionRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
@@ -39,7 +38,6 @@ public class NoteViews {
   private final QuotedPostReader quotedPosts;
   private final NoteRepostRepository reposts;
   private final NoteLinkPreviewRepository linkPreviews;
-  private final NoteRemoteReactionRepository remoteReactions;
 
   public List<NoteView> of(List<NoteEntity> page, Long viewerId) {
     if (page.isEmpty()) {
@@ -74,19 +72,7 @@ public class NoteViews {
             .filter(Objects::nonNull)
             .collect(Collectors.toSet());
     Map<Long, QuotedPost> posts = quoted.isEmpty() ? Map.of() : quotedPosts.publishedByIds(quoted);
-    Map<Long, Long> replies = notes.replyCounts(ids);
-    List<Long> own =
-        viewerId == null
-            ? List.of()
-            : visible.stream()
-                .filter(note -> note.isOwnedBy(viewerId))
-                .map(NoteEntity::getId)
-                .toList();
-    Map<Long, Long> likeCounts = own.isEmpty() ? Map.of() : likes.counts(own);
-    Map<Long, Long> repostCounts = own.isEmpty() ? Map.of() : reposts.counts(own);
-    Map<Kind, Map<Long, Long>> remote = own.isEmpty() ? Map.of() : remoteReactions.counts(own);
-    Map<Long, Long> remoteLikes = remote.getOrDefault(Kind.LIKE, Map.of());
-    Map<Long, Long> remoteReposts = remote.getOrDefault(Kind.ANNOUNCE, Map.of());
+    Map<Long, NoteStats> stats = notes.stats(ids);
     Set<Long> liked =
         viewerId == null ? Set.of() : new HashSet<>(likes.likedNoteIds(viewerId, ids));
     Set<Long> reposted =
@@ -95,27 +81,21 @@ public class NoteViews {
 
     List<NoteView> views = new ArrayList<>(visible.size());
     for (NoteEntity note : visible) {
-      boolean mine = viewerId != null && note.isOwnedBy(viewerId);
+      NoteStats counts = stats.getOrDefault(note.getId(), NoteStats.NONE);
       views.add(
           new NoteView(
               note.getId(),
               note.getBody(),
               note.getCreatedAt(),
               note.getEditedAt(),
-              mine
-                  ? likeCounts.getOrDefault(note.getId(), 0L)
-                      + remoteLikes.getOrDefault(note.getId(), 0L)
-                  : null,
+              counts.likes(),
               viewerId == null ? null : liked.contains(note.getId()),
               authors.get(note.getUserId()),
               images.getOrDefault(note.getId(), List.of()),
               note.getQuotedPostId() == null ? null : posts.get(note.getQuotedPostId()),
               note.getInReplyToId(),
-              replies.getOrDefault(note.getId(), 0L),
-              mine
-                  ? repostCounts.getOrDefault(note.getId(), 0L)
-                      + remoteReposts.getOrDefault(note.getId(), 0L)
-                  : null,
+              counts.replies(),
+              counts.reposts(),
               viewerId == null ? null : reposted.contains(note.getId()),
               quotedNote(quotedById.get(note.getQuotedNoteId()), authors, images),
               cards.get(note.getId())));

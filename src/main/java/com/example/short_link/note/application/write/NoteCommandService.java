@@ -7,7 +7,6 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
-import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
@@ -16,11 +15,11 @@ import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
-import com.example.short_link.note.domain.repository.NoteRemoteReactionRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
@@ -45,7 +44,6 @@ public class NoteCommandService {
   private final NoteRepository notes;
   private final NoteLikeRepository likes;
   private final NoteRepostRepository reposts;
-  private final NoteRemoteReactionRepository remoteReactions;
   private final NoteMediaRepository media;
   private final QuotedPostReader quotedPosts;
   private final NotePeopleReader people;
@@ -62,7 +60,6 @@ public class NoteCommandService {
       NoteRepository notes,
       NoteLikeRepository likes,
       NoteRepostRepository reposts,
-      NoteRemoteReactionRepository remoteReactions,
       NoteMediaRepository media,
       QuotedPostReader quotedPosts,
       NotePeopleReader people,
@@ -76,7 +73,6 @@ public class NoteCommandService {
         notes,
         likes,
         reposts,
-        remoteReactions,
         media,
         quotedPosts,
         people,
@@ -93,7 +89,6 @@ public class NoteCommandService {
       NoteRepository notes,
       NoteLikeRepository likes,
       NoteRepostRepository reposts,
-      NoteRemoteReactionRepository remoteReactions,
       NoteMediaRepository media,
       QuotedPostReader quotedPosts,
       NotePeopleReader people,
@@ -107,7 +102,6 @@ public class NoteCommandService {
     this.notes = notes;
     this.likes = likes;
     this.reposts = reposts;
-    this.remoteReactions = remoteReactions;
     this.media = media;
     this.quotedPosts = quotedPosts;
     this.people = people;
@@ -265,11 +259,7 @@ public class NoteCommandService {
     } else {
       likes.delete(noteId, userId);
     }
-    return new LikeStatus(
-        on,
-        note.isOwnedBy(userId)
-            ? likes.countByNoteId(noteId) + remoteReactions.count(noteId, Kind.LIKE)
-            : 0L);
+    return new LikeStatus(on, statsOf(noteId).likes());
   }
 
   @Transactional
@@ -293,11 +283,11 @@ public class NoteCommandService {
               repost ->
                   events.publishEvent(new NoteUnrepostedEvent(repost.getId(), noteId, userId)));
     }
-    return new RepostStatus(
-        on,
-        note.isOwnedBy(userId)
-            ? reposts.countByNoteId(noteId) + remoteReactions.count(noteId, Kind.ANNOUNCE)
-            : 0L);
+    return new RepostStatus(on, statsOf(noteId).reposts());
+  }
+
+  private NoteStats statsOf(Long noteId) {
+    return notes.stats(List.of(noteId)).getOrDefault(noteId, NoteStats.NONE);
   }
 
   private static NoteInteractionEvent interaction(

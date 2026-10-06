@@ -16,7 +16,6 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
-import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
@@ -25,11 +24,11 @@ import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteRepostEntity;
+import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
-import com.example.short_link.note.domain.repository.NoteRemoteReactionRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
@@ -59,7 +58,6 @@ class NoteCommandServiceTest {
   @Mock private NoteRepository notes;
   @Mock private NoteLikeRepository likes;
   @Mock private NoteRepostRepository reposts;
-  @Mock private NoteRemoteReactionRepository remoteReactions;
   @Mock private NoteMediaRepository media;
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NotePeopleReader people;
@@ -75,7 +73,6 @@ class NoteCommandServiceTest {
         notes,
         likes,
         reposts,
-        remoteReactions,
         media,
         quotedPosts,
         people,
@@ -286,19 +283,19 @@ class NoteCommandServiceTest {
   }
 
   @Test
-  void onlyARealRepostChangeIsAnnouncedAndTheCountGoesToTheAuthor() {
+  void onlyARealRepostChangeIsAnnouncedAndEveryoneGetsTheCount() {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
     NoteRepostEntity repost = new NoteRepostEntity(1L, 8L);
     ReflectionTestUtils.setField(repost, "id", 900L);
     when(reposts.addIfAbsent(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
     when(reposts.delete(1L, 8L)).thenReturn(Optional.of(repost), Optional.empty());
-    when(reposts.countByNoteId(1L)).thenReturn(2L);
+    when(notes.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 0, 3)));
 
     assertThat(service().setRepost(8L, 1L, true))
-        .isEqualTo(new NoteCommandService.RepostStatus(true, 0L));
+        .isEqualTo(new NoteCommandService.RepostStatus(true, 3L));
     service().setRepost(8L, 1L, true);
     assertThat(service().setRepost(8L, 1L, false))
-        .isEqualTo(new NoteCommandService.RepostStatus(false, 0L));
+        .isEqualTo(new NoteCommandService.RepostStatus(false, 3L));
     service().setRepost(8L, 1L, false);
 
     verify(moderation, times(2)).requireCanWrite(8L);
@@ -306,7 +303,6 @@ class NoteCommandServiceTest {
     verify(events, times(1)).publishEvent(new NoteUnrepostedEvent(900L, 1L, 8L));
 
     when(reposts.addIfAbsent(1L, 7L)).thenReturn(Optional.empty());
-    when(remoteReactions.count(1L, Kind.ANNOUNCE)).thenReturn(1L);
     assertThat(service().setRepost(7L, 1L, true))
         .isEqualTo(new NoteCommandService.RepostStatus(true, 3L));
   }
@@ -411,19 +407,18 @@ class NoteCommandServiceTest {
   }
 
   @Test
-  void likeCountsAreReturnedOnlyToTheAuthor() {
+  void likeCountsAreReturnedToEveryone() {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
-    when(likes.countByNoteId(1L)).thenReturn(3L);
-    when(remoteReactions.count(1L, Kind.LIKE)).thenReturn(2L);
+    when(notes.stats(List.of(1L))).thenReturn(Map.of(1L, new NoteStats(0, 5, 0)));
     when(likes.addIfAbsent(1L, 7L)).thenReturn(false);
     when(likes.addIfAbsent(1L, 8L)).thenReturn(true, false);
 
     assertThat(service().setLike(7L, 1L, true))
         .isEqualTo(new NoteCommandService.LikeStatus(true, 5L));
     assertThat(service().setLike(8L, 1L, true))
-        .isEqualTo(new NoteCommandService.LikeStatus(true, 0L));
+        .isEqualTo(new NoteCommandService.LikeStatus(true, 5L));
     assertThat(service().setLike(8L, 1L, false))
-        .isEqualTo(new NoteCommandService.LikeStatus(false, 0L));
+        .isEqualTo(new NoteCommandService.LikeStatus(false, 5L));
     service().setLike(8L, 1L, true);
     verify(likes).delete(1L, 8L);
     verify(events, times(1))
