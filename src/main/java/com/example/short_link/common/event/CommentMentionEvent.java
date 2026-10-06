@@ -12,4 +12,5 @@ public record CommentMentionEvent(
     String postSlug,
     String postTitle,
     String postAuthorUsername,
+    Long commentId,
     Instant occurredAt) {}

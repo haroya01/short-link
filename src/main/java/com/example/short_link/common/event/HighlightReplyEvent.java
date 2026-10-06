@@ -12,6 +12,7 @@ public record HighlightReplyEvent(
     String postSlug,
     String postTitle,
     String postAuthorUsername,
+    Long highlightId,
     Instant occurredAt) {
 
   public boolean isSelfReply() {
