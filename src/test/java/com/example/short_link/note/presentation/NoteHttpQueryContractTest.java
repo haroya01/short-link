@@ -144,7 +144,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     var repost =
         step("note-repost", "PUT", "/api/v1/notes/" + noteId + "/repost", reader, null, 200);
     assertThat(repost.path("reposted").asBoolean()).isTrue();
-    assertThat(repost.path("repostCount").asLong()).isZero();
+    assertThat(repost.path("repostCount").asLong()).isEqualTo(1);
 
     var quote =
         step(
@@ -170,12 +170,12 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
             null,
             200);
     assertThat(reposts.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
-    assertThat(reposts.path("items").get(0).path("repostCount").isNull()).isTrue();
+    assertThat(reposts.path("items").get(0).path("repostCount").asLong()).isEqualTo(1);
 
     var thread = step("note-thread", "GET", "/api/v1/public/notes/" + noteId, reader, null, 200);
     assertThat(thread.path("note").path("replyCount").asLong()).isEqualTo(1);
     assertThat(thread.path("note").path("likedByMe").asBoolean()).isTrue();
-    assertThat(thread.path("note").path("likeCount").isNull()).isTrue();
+    assertThat(thread.path("note").path("likeCount").asLong()).isEqualTo(1);
     assertThat(thread.path("replies").get(0).path("id").asLong()).isEqualTo(replyId);
 
     var mine =

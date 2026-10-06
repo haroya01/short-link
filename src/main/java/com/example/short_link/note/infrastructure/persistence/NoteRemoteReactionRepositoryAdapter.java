@@ -4,10 +4,6 @@ import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.note.domain.repository.NoteRemoteReactionRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
-import java.util.Collection;
-import java.util.EnumMap;
-import java.util.HashMap;
-import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,8 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Repository
 @RequiredArgsConstructor
 class NoteRemoteReactionRepositoryAdapter implements NoteRemoteReactionRepository {
-
-  private final JpaNoteRemoteReactionRepository jpa;
 
   @PersistenceContext private EntityManager em;
 
@@ -71,25 +65,5 @@ class NoteRemoteReactionRepositoryAdapter implements NoteRemoteReactionRepositor
         .setParameter("actorId", remoteActorId)
         .setParameter("activityId", activityId)
         .executeUpdate();
-  }
-
-  @Override
-  public long count(Long noteId, Kind kind) {
-    return jpa.countByNoteIdAndKind(noteId, kind);
-  }
-
-  @Override
-  public Map<Kind, Map<Long, Long>> counts(Collection<Long> noteIds) {
-    Map<Kind, Map<Long, Long>> counts = new EnumMap<>(Kind.class);
-    for (Kind kind : Kind.values()) {
-      counts.put(kind, new HashMap<>());
-    }
-    if (noteIds.isEmpty()) {
-      return counts;
-    }
-    for (Object[] row : jpa.counts(noteIds)) {
-      counts.get((Kind) row[1]).put((Long) row[0], (Long) row[2]);
-    }
-    return counts;
   }
 }

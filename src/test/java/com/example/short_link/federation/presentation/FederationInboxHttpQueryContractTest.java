@@ -251,7 +251,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
                 null,
                 strangerToken,
                 200));
-    assertThat(theirs.path("note").path("likeCount").isNull()).isTrue();
+    assertThat(theirs.path("note").path("likeCount").asLong()).isEqualTo(2);
 
     Map<String, Object> like = new LinkedHashMap<>();
     like.put("id", alice + "#likes/2");

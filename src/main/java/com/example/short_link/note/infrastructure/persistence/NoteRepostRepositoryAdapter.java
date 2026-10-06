@@ -5,9 +5,7 @@ import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -39,23 +37,6 @@ class NoteRepostRepositoryAdapter implements NoteRepostRepository {
     Optional<NoteRepostEntity> found = jpa.findByNoteIdAndUserId(noteId, userId);
     found.ifPresent(jpa::delete);
     return found;
-  }
-
-  @Override
-  public long countByNoteId(Long noteId) {
-    return jpa.countByNoteId(noteId);
-  }
-
-  @Override
-  public Map<Long, Long> counts(Collection<Long> noteIds) {
-    Map<Long, Long> counts = new HashMap<>();
-    if (noteIds.isEmpty()) {
-      return counts;
-    }
-    for (Object[] row : jpa.counts(noteIds)) {
-      counts.put((Long) row[0], (Long) row[1]);
-    }
-    return counts;
   }
 
   @Override

@@ -55,7 +55,7 @@ class NoteQueryServiceTest {
     List<NoteEntity> three = LongStream.of(3, 2, 1).mapToObj(id -> note(id, null)).toList();
     when(notes.topLevel(2, 3)).thenReturn(three);
     when(views.of(three.subList(0, 2), 7L))
-        .thenReturn(List.of(view(3L, null, 4L), view(2L, null, null)));
+        .thenReturn(List.of(view(3L, null, 4L), view(2L, null, 0L)));
 
     NoteFeedView feed = service.everyone(1, 2, 7L);
 
@@ -65,16 +65,16 @@ class NoteQueryServiceTest {
   }
 
   @Test
-  void trendingPagesLikeThePublicFeedAndKeepsHiddenCountsAtZero() {
+  void trendingPagesLikeThePublicFeed() {
     List<NoteEntity> two = LongStream.of(5, 9).mapToObj(id -> note(id, null)).toList();
     when(notes.trending(0, 21)).thenReturn(two);
-    when(views.of(two, null)).thenReturn(List.of(view(5L, null, null), view(9L, null, null)));
+    when(views.of(two, null)).thenReturn(List.of(view(5L, null, 3L), view(9L, null, 0L)));
 
     NoteFeedView feed = service.trending(0, 20, null);
 
     assertThat(feed.hasNext()).isFalse();
     assertThat(feed.items()).extracting(NoteView::id).containsExactly(5L, 9L);
-    assertThat(feed.items()).extracting(NoteView::likeCount).containsExactly(0L, 0L);
+    assertThat(feed.items()).extracting(NoteView::likeCount).containsExactly(3L, 0L);
   }
 
   @Test

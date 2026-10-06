@@ -36,23 +36,12 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteFeedView everyone(int page, int size, Long viewerId) {
-    return publicFeed(page(page, size, viewerId, notes::topLevel));
+    return page(page, size, viewerId, notes::topLevel);
   }
 
   @Transactional(readOnly = true)
   public NoteFeedView trending(int page, int size, Long viewerId) {
-    return publicFeed(page(page, size, viewerId, notes::trending));
-  }
-
-  // Older clients require likeCount on the public feeds, so a hidden count is sent as 0; a
-  // signed-in reader also gets their own likes and their own notes' counts.
-  private static NoteFeedView publicFeed(NoteFeedView feed) {
-    return new NoteFeedView(
-        feed.items().stream()
-            .map(view -> view.likeCount() == null ? view.withLikeCount(0L) : view)
-            .toList(),
-        feed.page(),
-        feed.hasNext());
+    return page(page, size, viewerId, notes::trending);
   }
 
   @Transactional(readOnly = true)

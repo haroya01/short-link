@@ -12,22 +12,22 @@
 # already in today's group, the insert, then the recipient's and the actor's names for the push.
 # Reply: moderation, parent note, a block check each way, insert, author.
 @junit | note-reply | 10 | 2 | 0 | 0 | 12
-@junit | note-like | 7 | 2 | 0 | 0 | 9
+# Liking or reposting answers with the note's public counts in one statement, whoever asks.
+@junit | note-like | 8 | 2 | 0 | 0 | 10
 # Repost: note, moderation, a block check each way, the existing row, insert, then the after-commit
 # federation check. Undoing it reads the row it deletes so the Undo can name the Announce.
-@junit | note-repost | 11 | 2 | 0 | 0 | 13
-@junit | note-unrepost | 3 | 0 | 0 | 1 | 4
+@junit | note-repost | 12 | 2 | 0 | 0 | 14
+@junit | note-unrepost | 4 | 0 | 0 | 1 | 5
 # Quote: moderation, quoted note, a block check each way, both authors in one read, insert, the
 # quoted note's images.
 @junit | note-quote | 11 | 2 | 0 | 0 | 13
 # A page of notes costs one query per kind of data: notes, quoted notes (only when one quotes),
-# authors, images, quoted posts, reply counts, the viewer's own like and repost counts plus one
-# grouped count of likes and boosts from other servers (only when they wrote one) and the viewer's
-# likes and reposts.
+# authors, images, quoted posts, one statement for the page's reply, like and repost counts
+# (public, likes and boosts from other servers included) and the viewer's likes and reposts.
 @junit | note-reposts | 7 | 0 | 0 | 0 | 7
-@junit | note-thread | 11 | 0 | 0 | 0 | 11
-@junit | note-profile | 11 | 0 | 0 | 0 | 11
-@junit | note-following | 12 | 0 | 0 | 0 | 12
+@junit | note-thread | 8 | 0 | 0 | 0 | 8
+@junit | note-profile | 8 | 0 | 0 | 0 | 8
+@junit | note-following | 9 | 0 | 0 | 0 | 9
 # The following feed takes reposts too: follows, then one query that unions the authors' top-level
 # notes with their reposts, keeps each note once at its newest activity (ROW_NUMBER), leaves out
 # reposts of people the reader blocked either way and returns the note rows; then the reposters'
@@ -37,7 +37,7 @@
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6
-@junit | note-edit | 12 | 0 | 1 | 0 | 13
+@junit | note-edit | 9 | 0 | 1 | 0 | 10
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 3 | 6

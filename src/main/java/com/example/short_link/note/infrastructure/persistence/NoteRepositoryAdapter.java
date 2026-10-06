@@ -2,6 +2,7 @@ package com.example.short_link.note.infrastructure.persistence;
 
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
+import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -147,16 +148,40 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
+  // Replies, likes and reposts of a page in one statement; likes and boosts from other servers add
+  // to likes and reposts.
   @Override
-  public Map<Long, Long> replyCounts(Collection<Long> noteIds) {
-    Map<Long, Long> counts = new HashMap<>();
+  public Map<Long, NoteStats> stats(Collection<Long> noteIds) {
+    Map<Long, NoteStats> stats = new HashMap<>();
     if (noteIds.isEmpty()) {
-      return counts;
+      return stats;
     }
-    for (Object[] row : jpa.replyCounts(noteIds)) {
-      counts.put((Long) row[0], (Long) row[1]);
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT s.note_id, s.kind, COUNT(*) FROM ("
+                    + "SELECT in_reply_to_id AS note_id, 'REPLY' AS kind FROM note"
+                    + " WHERE in_reply_to_id IN (:ids)"
+                    + " UNION ALL SELECT note_id, 'LIKE' FROM note_like WHERE note_id IN (:ids)"
+                    + " UNION ALL SELECT note_id, 'REPOST' FROM note_repost WHERE note_id IN (:ids)"
+                    + " UNION ALL SELECT note_id, IF(kind = 'LIKE', 'LIKE', 'REPOST')"
+                    + " FROM note_remote_reaction WHERE note_id IN (:ids)"
+                    + ") s GROUP BY s.note_id, s.kind")
+            .setParameter("ids", noteIds)
+            .getResultList();
+    for (Object raw : rows) {
+      Object[] cols = (Object[]) raw;
+      Long noteId = ((Number) cols[0]).longValue();
+      long count = ((Number) cols[2]).longValue();
+      NoteStats current = stats.getOrDefault(noteId, NoteStats.NONE);
+      stats.put(
+          noteId,
+          switch (cols[1].toString()) {
+            case "REPLY" -> new NoteStats(count, current.likes(), current.reposts());
+            case "LIKE" -> new NoteStats(current.replies(), count, current.reposts());
+            default -> new NoteStats(current.replies(), current.likes(), count);
+          });
     }
-    return counts;
+    return stats;
   }
 
   @Override
