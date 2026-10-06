@@ -104,10 +104,25 @@ class FederationDiscoveryHttpQueryContractTest extends AccountHttpJourneySupport
             callWithHeaders(
                 "federation-instance-known", "GET", "/ap/instance", null, ACTIVITY_JSON, 200));
 
+    var found =
+        body(
+            callWithHeaders(
+                "federation-webfinger-instance",
+                "GET",
+                "/.well-known/webfinger?resource=acct:"
+                    + created.path("preferredUsername").asText()
+                    + "@"
+                    + urls.domain(),
+                null,
+                Map.of(),
+                200));
+
     assertThat(created.path("type").asText()).isEqualTo("Application");
     assertThat(served.path("publicKey").path("publicKeyPem").asText())
         .isEqualTo(created.path("publicKey").path("publicKeyPem").asText());
     assertThat(count("SELECT COUNT(*) FROM federation_instance_actor")).isEqualTo(1);
+    assertThat(found.path("links").get(0).path("href").asText())
+        .isEqualTo(created.path("id").asText());
   }
 
   @Test
