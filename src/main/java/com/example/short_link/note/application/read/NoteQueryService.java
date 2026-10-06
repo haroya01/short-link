@@ -2,6 +2,7 @@ package com.example.short_link.note.application.read;
 
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -12,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -85,12 +87,40 @@ public class NoteQueryService {
         });
   }
 
+  // A repost shows under its reposter; if the reposter's account is gone the note leaves the feed
+  // with it, since it only came in through them.
   @Transactional(readOnly = true)
   public NoteFeedView following(Long viewerId, int page, int size) {
     List<Long> authors = new ArrayList<>(people.followingIds(viewerId));
     authors.add(viewerId);
-    return page(
-        page, size, viewerId, (offset, limit) -> notes.topLevelByAuthors(authors, offset, limit));
+    int safePage = Math.max(page, 0);
+    int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
+    List<NoteFeedRow> rows = notes.following(authors, viewerId, safePage * safeSize, safeSize + 1);
+    boolean hasNext = rows.size() > safeSize;
+    List<NoteFeedRow> current = hasNext ? rows.subList(0, safeSize) : rows;
+    Set<Long> reposterIds =
+        current.stream()
+            .map(NoteFeedRow::reposterId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+    Map<Long, NoteAuthor> reposters =
+        reposterIds.isEmpty() ? Map.of() : people.activeAuthors(reposterIds);
+    Map<Long, NoteView> byId =
+        views.of(current.stream().map(NoteFeedRow::note).toList(), viewerId).stream()
+            .collect(Collectors.toMap(NoteView::id, Function.identity()));
+    List<NoteView> items = new ArrayList<>(current.size());
+    for (NoteFeedRow row : current) {
+      NoteView view = byId.get(row.note().getId());
+      if (view == null) {
+        continue;
+      }
+      if (row.reposterId() == null) {
+        items.add(view);
+      } else if (reposters.containsKey(row.reposterId())) {
+        items.add(view.withRepostedBy(reposters.get(row.reposterId())));
+      }
+    }
+    return new NoteFeedView(items, safePage, hasNext);
   }
 
   @Transactional(readOnly = true)

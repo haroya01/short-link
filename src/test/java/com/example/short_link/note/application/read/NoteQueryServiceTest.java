@@ -8,13 +8,16 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.exception.NoteException;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.LongStream;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -101,8 +104,31 @@ class NoteQueryServiceTest {
     service.byAuthor("me", 0, 20, 9L);
 
     when(people.followingIds(9L)).thenReturn(List.of(7L, 8L));
-    when(notes.topLevelByAuthors(List.of(7L, 8L, 9L), 0, 21)).thenReturn(List.of());
+    when(notes.following(List.of(7L, 8L, 9L), 9L, 0, 21)).thenReturn(List.of());
     assertThat(service.following(9L, 0, 20).items()).isEmpty();
+  }
+
+  @Test
+  void aRepostInTheFollowingFeedShowsItsReposterAndLeavesWithAGoneOne() {
+    NoteEntity own = note(1L, null);
+    NoteEntity reposted = note(2L, null);
+    NoteEntity orphaned = note(3L, null);
+    when(people.followingIds(9L)).thenReturn(List.of(8L));
+    when(notes.following(List.of(8L, 9L), 9L, 0, 21))
+        .thenReturn(
+            List.of(
+                new NoteFeedRow(reposted, 8L),
+                new NoteFeedRow(orphaned, 6L),
+                new NoteFeedRow(own, null)));
+    when(people.activeAuthors(Set.of(8L, 6L))).thenReturn(Map.of(8L, ME));
+    when(views.of(List.of(reposted, orphaned, own), 9L))
+        .thenReturn(List.of(view(2L, null, null), view(3L, null, null), view(1L, null, null)));
+
+    List<NoteView> items = service.following(9L, 0, 20).items();
+
+    assertThat(items).extracting(NoteView::id).containsExactly(2L, 1L);
+    assertThat(items.get(0).repostedBy()).isEqualTo(ME);
+    assertThat(items.get(1).repostedBy()).isNull();
   }
 
   @Test

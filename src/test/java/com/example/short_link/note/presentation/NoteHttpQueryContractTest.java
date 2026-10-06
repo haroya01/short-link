@@ -22,6 +22,61 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
   @MockitoBean private ObjectStorage objectStorage;
 
   @Test
+  void repostsByPeopleYouFollowFlowIntoTheFollowingFeedOnceButNeverFromSomeoneYouBlocked()
+      throws Exception {
+    Actor reader = actor("feed-reader", false);
+    Actor friend = actor("feed-friend", false);
+    Actor stranger = actor("feed-stranger", false);
+    Actor blocked = actor("feed-blocked", false);
+    jdbc.update(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        reader.id(),
+        friend.id());
+    jdbc.update(
+        "INSERT INTO user_block (blocker_id, blocked_id, created_at) VALUES (?, ?, NOW(6))",
+        reader.id(),
+        blocked.id());
+    long friendNote = noteAt(friend, "친구가 쓴 노트", 10);
+    long strangerNote = noteAt(stranger, "모르는 사람의 노트", 9);
+    long blockedNote = noteAt(blocked, "차단한 사람의 노트", 8);
+    repostAt(friend, strangerNote, 3);
+    repostAt(friend, blockedNote, 2);
+    repostAt(friend, friendNote, 1);
+
+    var feed = step("note-following-reposts", "GET", "/api/v1/notes/following", reader, null, 200);
+
+    List<Long> ids = new ArrayList<>();
+    feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));
+    assertThat(ids).containsExactly(friendNote, strangerNote);
+    assertThat(feed.path("items").get(0).path("repostedBy").path("username").asText())
+        .isEqualTo(friend.username());
+    assertThat(feed.path("items").get(1).path("repostedBy").path("username").asText())
+        .isEqualTo(friend.username());
+    assertThat(feed.path("items").get(1).path("author").path("username").asText())
+        .isEqualTo(stranger.username());
+  }
+
+  private long noteAt(Actor author, String body, int minutesAgo) {
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at)"
+            + " VALUES (?, ?, NOW(6) - INTERVAL ? MINUTE)",
+        author.id(),
+        body,
+        minutesAgo);
+    return jdbc.queryForObject(
+        "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, author.id());
+  }
+
+  private void repostAt(Actor reposter, long noteId, int minutesAgo) {
+    jdbc.update(
+        "INSERT INTO note_repost (note_id, user_id, created_at)"
+            + " VALUES (?, ?, NOW(6) - INTERVAL ? MINUTE)",
+        noteId,
+        reposter.id(),
+        minutesAgo);
+  }
+
+  @Test
   void aWriterPostsRepliesQuotesEditsAndDeletesNotes() throws Exception {
     Actor writer = actor("note-writer", false);
     Actor reader = actor("note-reader", false);
