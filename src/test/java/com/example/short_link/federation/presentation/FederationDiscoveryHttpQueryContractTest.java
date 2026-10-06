@@ -93,6 +93,24 @@ class FederationDiscoveryHttpQueryContractTest extends AccountHttpJourneySupport
   }
 
   @Test
+  void theInstanceActorIsCreatedOnceThenServed() throws Exception {
+    jdbc.update("DELETE FROM federation_instance_actor");
+    var created =
+        body(
+            callWithHeaders(
+                "federation-instance-first", "GET", "/ap/instance", null, ACTIVITY_JSON, 200));
+    var served =
+        body(
+            callWithHeaders(
+                "federation-instance-known", "GET", "/ap/instance", null, ACTIVITY_JSON, 200));
+
+    assertThat(created.path("type").asText()).isEqualTo("Application");
+    assertThat(served.path("publicKey").path("publicKeyPem").asText())
+        .isEqualTo(created.path("publicKey").path("publicKeyPem").asText());
+    assertThat(count("SELECT COUNT(*) FROM federation_instance_actor")).isEqualTo(1);
+  }
+
+  @Test
   void aDeletedAccountStopsResolvingAtOnce() throws Exception {
     String acct = "acct:" + stranger.getUsername() + "@" + urls.domain();
     var found =

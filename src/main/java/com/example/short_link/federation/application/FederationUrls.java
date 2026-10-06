@@ -43,6 +43,14 @@ public class FederationUrls {
     return actor(publicId) + "/following";
   }
 
+  public String instance() {
+    return props.baseUrl() + "/ap/instance";
+  }
+
+  public String instanceKey() {
+    return instance() + "#main-key";
+  }
+
   public String sharedInbox() {
     return props.baseUrl() + "/ap/inbox";
   }
