@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.application.read;
 
+import com.example.short_link.common.note.NoteBlock;
 import java.time.Instant;
 
 public record ConnectionView(
@@ -12,11 +13,13 @@ public record ConnectionView(
     String slug,
     String username,
     String quote,
-    String body) {
+    String body,
+    Long noteId) {
 
   public static ConnectionView post(
       Long id, String why, Instant at, String title, String excerpt, String slug, String username) {
-    return new ConnectionView(id, "POST", why, at, title, excerpt, slug, username, null, null);
+    return new ConnectionView(
+        id, "POST", why, at, title, excerpt, slug, username, null, null, null);
   }
 
   public static ConnectionView highlight(
@@ -28,10 +31,11 @@ public record ConnectionView(
       String slug,
       String username) {
     return new ConnectionView(
-        id, "HIGHLIGHT", why, at, postTitle, null, slug, username, quote, null);
+        id, "HIGHLIGHT", why, at, postTitle, null, slug, username, quote, null, null);
   }
 
-  public static ConnectionView note(Long id, String why, Instant at, String body) {
-    return new ConnectionView(id, "NOTE", why, at, null, null, null, null, null, body);
+  public static ConnectionView note(Long id, String why, Instant at, NoteBlock note) {
+    return new ConnectionView(
+        id, "NOTE", why, at, null, null, null, note.authorUsername(), null, note.body(), note.id());
   }
 }

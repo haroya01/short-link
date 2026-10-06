@@ -17,4 +17,5 @@ public record DiscoverConnectionView(
     String slug,
     String username,
     String quote,
-    String body) {}
+    String body,
+    Long noteId) {}

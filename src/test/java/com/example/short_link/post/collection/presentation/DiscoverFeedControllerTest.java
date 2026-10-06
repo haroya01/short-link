@@ -48,6 +48,7 @@ class DiscoverFeedControllerTest {
             "hexagonal",
             "honggildong",
             null,
+            null,
             null);
     when(discoverFeedQuery.feed(USER_ID, 0, 20, false))
         .thenReturn(new DiscoverFeedView(List.of(item), 0, 20, false, "following"));

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
@@ -70,7 +71,8 @@ class CollectionContentReaderTest {
             connection(5L, ConnectionBlockType.POST, 404L));
     when(highlights.findAllByIdIn(List.of(20L, 21L)))
         .thenReturn(List.of(highlight(20L, 10L), highlight(21L, 30L)));
-    when(noteBodies.bodiesByIds(List.of(40L))).thenReturn(Map.of(40L, "A note remains visible"));
+    when(noteBodies.blocksByIds(List.of(40L)))
+        .thenReturn(Map.of(40L, new NoteBlock(40L, "A note remains visible", "note_author")));
     when(posts.findAllByIdIn(Set.of(10L, 30L, 404L)))
         .thenReturn(List.of(post(10L, true), post(30L, false)));
     when(users.findAllByIdIn(anyCollection())).thenReturn(List.of());
@@ -85,6 +87,8 @@ class CollectionContentReaderTest {
     assertThat(cards.get(1).username()).isNull();
     assertThat(cards.get(1).quote()).isEqualTo("Quoted post 10");
     assertThat(cards.get(2).body()).isEqualTo("A note remains visible");
+    assertThat(cards.get(2).username()).isEqualTo("note_author");
+    assertThat(cards.get(2).noteId()).isEqualTo(40L);
     verify(posts).findAllByIdIn(Set.of(10L, 30L, 404L));
     verifyNoMoreInteractions(posts);
     verify(users).findAllByIdIn(Set.of(7L));
