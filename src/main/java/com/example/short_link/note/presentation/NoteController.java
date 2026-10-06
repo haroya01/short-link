@@ -5,6 +5,7 @@ import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.write.NoteCommandService;
+import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteImages;
 import com.example.short_link.note.presentation.request.CreateNoteRequest;
 import com.example.short_link.note.presentation.request.EditNoteRequest;
@@ -33,6 +34,7 @@ public class NoteController {
   private final NoteQueryService query;
   private final NoteCommandService command;
   private final NoteImages images;
+  private final NoteFeedSettingsService feedSettings;
 
   @GetMapping("/api/v1/public/notes")
   public NoteFeedView everyone(
@@ -148,6 +150,37 @@ public class NoteController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     return query.quotes(id, page, size, viewerId);
+  }
+
+  @GetMapping("/api/v1/notes/feed-preferences")
+  public NoteFeedSettingsService.FeedPreferences feedPreferences(
+      @AuthenticationPrincipal Long userId) {
+    return feedSettings.preferences(userId);
+  }
+
+  @PutMapping("/api/v1/notes/feed-preferences")
+  public NoteFeedSettingsService.FeedPreferences updateFeedPreferences(
+      @AuthenticationPrincipal Long userId,
+      @RequestBody NoteFeedSettingsService.FeedPreferences request) {
+    return feedSettings.setShowReposts(userId, request.showReposts());
+  }
+
+  @GetMapping("/api/v1/notes/repost-visibility/{username}")
+  public NoteFeedSettingsService.RepostVisibility repostVisibility(
+      @AuthenticationPrincipal Long userId, @PathVariable String username) {
+    return feedSettings.repostsOf(userId, username);
+  }
+
+  @PutMapping("/api/v1/notes/repost-visibility/{username}")
+  public NoteFeedSettingsService.RepostVisibility hideReposts(
+      @AuthenticationPrincipal Long userId, @PathVariable String username) {
+    return feedSettings.setRepostsHidden(userId, username, true);
+  }
+
+  @DeleteMapping("/api/v1/notes/repost-visibility/{username}")
+  public NoteFeedSettingsService.RepostVisibility showReposts(
+      @AuthenticationPrincipal Long userId, @PathVariable String username) {
+    return feedSettings.setRepostsHidden(userId, username, false);
   }
 
   @GetMapping("/api/v1/notes/like-status")

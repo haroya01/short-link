@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteImages;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
@@ -30,6 +31,7 @@ class NoteControllerTest {
   @MockitoBean private NoteQueryService query;
   @MockitoBean private NoteCommandService command;
   @MockitoBean private NoteImages images;
+  @MockitoBean private NoteFeedSettingsService feedSettings;
 
   @Test
   void aNoteErrorKeepsItsStatusAndCode() throws Exception {

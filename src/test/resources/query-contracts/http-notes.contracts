@@ -38,9 +38,19 @@
 @junit | note-following | 8 | 0 | 0 | 0 | 8
 # The following feed takes reposts too: follows, then one query that unions the authors' top-level
 # notes with their reposts, keeps each note once at its newest activity (ROW_NUMBER), leaves out
-# reposts of people the reader blocked either way and returns the note rows; then the reposters'
+# reposts of people the reader blocked either way or hid, and returns the note rows; then the reposters'
 # names, and the page is built like any other.
 @junit | note-following-reposts | 7 | 0 | 0 | 0 | 7
+# Hiding reposts changes only what the reader sees. Per person: the username, then the row (insert
+# ignore, select or delete). The feed filters both settings inside the same union query, so hiding
+# costs it nothing; with every repost off there are no reposter names to read.
+@junit | note-hide-reposts | 1 | 1 | 0 | 0 | 2
+@junit | note-repost-visibility | 2 | 0 | 0 | 0 | 2
+@junit | note-show-reposts | 1 | 0 | 0 | 1 | 2
+@junit | note-following-hidden-reposts | 7 | 0 | 0 | 0 | 7
+@junit | note-feed-preferences | 1 | 0 | 0 | 0 | 1
+@junit | note-feed-preferences-update | 0 | 1 | 0 | 0 | 1
+@junit | note-following-no-reposts | 6 | 0 | 0 | 0 | 6
 @junit | note-everyone | 6 | 0 | 0 | 0 | 6
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
