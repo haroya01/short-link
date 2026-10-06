@@ -1,11 +1,13 @@
 package com.example.short_link.note.infrastructure.persistence;
 
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
@@ -91,6 +93,48 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
+  }
+
+  // Top-level notes by the authors and their reposts, one row per note at its newest activity; the
+  // original wins a tie with a repost. A repost of someone the viewer blocked, or who blocked the
+  // viewer, is left out.
+  @Override
+  public List<NoteFeedRow> following(
+      Collection<Long> authorIds, Long viewerId, int offset, int limit) {
+    if (authorIds.isEmpty()) {
+      return List.of();
+    }
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT n.*, x.reposter_id FROM ("
+                    + "SELECT y.note_id, y.at, y.reposter_id FROM ("
+                    + "SELECT t.note_id, t.at, t.reposter_id, ROW_NUMBER() OVER ("
+                    + "PARTITION BY t.note_id ORDER BY t.at DESC, t.reposter_id IS NULL DESC"
+                    + ") AS position FROM ("
+                    + "SELECT o.id AS note_id, o.created_at AS at, NULL AS reposter_id FROM note o"
+                    + " WHERE o.user_id IN (:authors) AND o.in_reply_to_id IS NULL"
+                    + " UNION ALL"
+                    + " SELECT r.note_id, r.created_at, r.user_id FROM note_repost r"
+                    + " JOIN note s ON s.id = r.note_id"
+                    + " WHERE r.user_id IN (:authors) AND NOT EXISTS ("
+                    + "SELECT 1 FROM user_block b"
+                    + " WHERE (b.blocker_id = :viewer AND b.blocked_id = s.user_id)"
+                    + " OR (b.blocker_id = s.user_id AND b.blocked_id = :viewer))"
+                    + ") t) y WHERE y.position = 1"
+                    + ") x JOIN note n ON n.id = x.note_id"
+                    + " ORDER BY x.at DESC, x.note_id DESC LIMIT :limit OFFSET :offset",
+                NoteEntity.FEED_MAPPING)
+            .setParameter("authors", authorIds)
+            .setParameter("viewer", viewerId)
+            .setParameter("limit", limit)
+            .setParameter("offset", offset)
+            .getResultList();
+    List<NoteFeedRow> feed = new ArrayList<>(rows.size());
+    for (Object raw : rows) {
+      Object[] cols = (Object[]) raw;
+      feed.add(new NoteFeedRow((NoteEntity) cols[0], (Long) cols[1]));
+    }
+    return feed;
   }
 
   @Override

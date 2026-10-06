@@ -28,6 +28,11 @@
 @junit | note-thread | 11 | 0 | 0 | 0 | 11
 @junit | note-profile | 11 | 0 | 0 | 0 | 11
 @junit | note-following | 12 | 0 | 0 | 0 | 12
+# The following feed takes reposts too: follows, then one query that unions the authors' top-level
+# notes with their reposts, keeps each note once at its newest activity (ROW_NUMBER), leaves out
+# reposts of people the reader blocked either way and returns the note rows; then the reposters'
+# names, and the page is built like any other.
+@junit | note-following-reposts | 8 | 0 | 0 | 0 | 8
 @junit | note-everyone | 6 | 0 | 0 | 0 | 6
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.

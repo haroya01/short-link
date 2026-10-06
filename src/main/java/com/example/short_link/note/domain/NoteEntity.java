@@ -2,10 +2,13 @@ package com.example.short_link.note.domain;
 
 import com.example.short_link.common.jpa.BaseCreatedEntity;
 import jakarta.persistence.Column;
+import jakarta.persistence.ColumnResult;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityResult;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SqlResultSetMapping;
 import jakarta.persistence.Table;
 import java.time.Instant;
 import lombok.AccessLevel;
@@ -14,9 +17,15 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "note")
+@SqlResultSetMapping(
+    name = NoteEntity.FEED_MAPPING,
+    entities = @EntityResult(entityClass = NoteEntity.class),
+    columns = @ColumnResult(name = "reposter_id", type = Long.class))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class NoteEntity extends BaseCreatedEntity {
+
+  public static final String FEED_MAPPING = "NoteEntity.feed";
 
   // MySQL VARCHAR(500) counts code points, so length checks use codePointCount, not length().
   public static final int MAX_BODY_LENGTH = 500;

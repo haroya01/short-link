@@ -22,7 +22,43 @@ public record NoteView(
     Long repostCount,
     Boolean repostedByMe,
     QuotedNote quotedNote,
-    LinkPreview linkPreview) {
+    LinkPreview linkPreview,
+    NoteAuthor repostedBy) {
+
+  public NoteView(
+      Long id,
+      String body,
+      Instant createdAt,
+      Instant editedAt,
+      Long likeCount,
+      Boolean likedByMe,
+      NoteAuthor author,
+      List<Media> media,
+      QuotedPost quotedPost,
+      Long inReplyToId,
+      long replyCount,
+      Long repostCount,
+      Boolean repostedByMe,
+      QuotedNote quotedNote,
+      LinkPreview linkPreview) {
+    this(
+        id,
+        body,
+        createdAt,
+        editedAt,
+        likeCount,
+        likedByMe,
+        author,
+        media,
+        quotedPost,
+        inReplyToId,
+        replyCount,
+        repostCount,
+        repostedByMe,
+        quotedNote,
+        linkPreview,
+        null);
+  }
 
   public record Media(String url, String altText, String contentType) {}
 
@@ -47,6 +83,27 @@ public record NoteView(
         repostCount,
         repostedByMe,
         quotedNote,
-        linkPreview);
+        linkPreview,
+        repostedBy);
+  }
+
+  NoteView withRepostedBy(NoteAuthor reposter) {
+    return new NoteView(
+        id,
+        body,
+        createdAt,
+        editedAt,
+        likeCount,
+        likedByMe,
+        author,
+        media,
+        quotedPost,
+        inReplyToId,
+        replyCount,
+        repostCount,
+        repostedByMe,
+        quotedNote,
+        linkPreview,
+        reposter);
   }
 }

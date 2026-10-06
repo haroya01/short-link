@@ -1,6 +1,7 @@
 package com.example.short_link.note.domain.repository;
 
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteFeedRow;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,8 @@ public interface NoteRepository {
   List<NoteEntity> topLevelByAuthors(Collection<Long> authorIds, int offset, int limit);
 
   List<NoteEntity> trending(int offset, int limit);
+
+  List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
   List<NoteEntity> replies(Long noteId, int limit);
 
