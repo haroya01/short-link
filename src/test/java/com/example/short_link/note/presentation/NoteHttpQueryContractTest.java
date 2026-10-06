@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.testsupport.OperationalHttpJourneySupport;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -144,6 +145,12 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
 
     var everyone = step("note-everyone", "GET", "/api/v1/public/notes", null, null, 200);
     assertThat(everyone.path("items").get(0).path("likeCount").asLong()).isZero();
+    var trending =
+        step("note-trending", "GET", "/api/v1/public/notes?sort=trending&size=50", null, null, 200);
+    List<Long> ranked = new ArrayList<>();
+    trending.path("items").forEach(item -> ranked.add(item.path("id").asLong()));
+    assertThat(ranked).contains(noteId, quoteId).doesNotContain(replyId);
+    assertThat(ranked.indexOf(noteId)).isLessThan(ranked.indexOf(quoteId));
 
     var edited =
         step("note-edit", "PATCH", "/api/v1/notes/" + noteId, writer, Map.of("body", "고친 노트"), 200);

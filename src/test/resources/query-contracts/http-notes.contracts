@@ -26,6 +26,9 @@
 @junit | note-profile | 11 | 0 | 0 | 0 | 11
 @junit | note-following | 12 | 0 | 0 | 0 | 12
 @junit | note-everyone | 6 | 0 | 0 | 0 | 6
+# Trending ranks the week's top-level notes in one query (reaction counts are correlated
+# subqueries inside it), then builds the page like the public feed.
+@junit | note-trending | 6 | 0 | 0 | 0 | 6
 @junit | note-edit | 12 | 0 | 1 | 0 | 13
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
