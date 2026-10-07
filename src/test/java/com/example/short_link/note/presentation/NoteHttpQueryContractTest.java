@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -910,6 +911,47 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     List<Long> ids = new ArrayList<>();
     feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));
     return ids;
+  }
+
+  @Test
+  void aHashtagTwoMembersUsedThisWeekTrendsWithItsDailyCounts() throws Exception {
+    Actor first = actor("trend-a", false);
+    Actor second = actor("trend-b", false);
+    String tag = "trend" + UUID.randomUUID().toString().substring(0, 8);
+    String lonely = tag + "solo";
+    List<Long> ids = new ArrayList<>();
+    ids.add(noteAt(first, "#" + tag, 60 * 60));
+    ids.add(noteAt(second, "#" + tag, 10));
+    ids.add(noteAt(second, "#" + tag + " again", 5));
+    for (long id : ids) {
+      jdbc.update("INSERT INTO note_tag (note_id, tag) VALUES (?, ?)", id, tag);
+    }
+    long solo = noteAt(first, "#" + lonely, 3);
+    jdbc.update("INSERT INTO note_tag (note_id, tag) VALUES (?, ?)", solo, lonely);
+    ids.add(solo);
+    try {
+      var trends =
+          step("note-trending-tags", "GET", "/api/v1/public/notes/trending-tags", null, null, 200);
+      JsonNode mine = null;
+      List<String> tags = new ArrayList<>();
+      for (JsonNode trend : trends) {
+        tags.add(trend.path("tag").asString());
+        if (trend.path("tag").asString().equals(tag)) {
+          mine = trend;
+        }
+      }
+      assertThat(tags).contains(tag).doesNotContain(lonely);
+      assertThat(mine.path("accounts").asLong()).isEqualTo(2);
+      assertThat(mine.path("uses").asLong()).isEqualTo(3);
+      List<Long> history = new ArrayList<>();
+      mine.path("history").forEach(day -> history.add(day.asLong()));
+      assertThat(history).containsExactly(0L, 0L, 0L, 0L, 1L, 0L, 2L);
+    } finally {
+      for (long id : ids) {
+        jdbc.update("DELETE FROM note_tag WHERE note_id = ?", id);
+        jdbc.update("DELETE FROM note WHERE id = ?", id);
+      }
+    }
   }
 
   private long noteAt(Actor author, String body, int minutesAgo) {

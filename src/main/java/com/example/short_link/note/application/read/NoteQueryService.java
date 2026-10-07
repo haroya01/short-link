@@ -11,6 +11,7 @@ import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -59,6 +60,18 @@ public class NoteQueryService {
   @Transactional(readOnly = true)
   public NoteFeedView trending(int page, int size, Long viewerId) {
     return page(page, size, viewerId, (offset, limit) -> notes.trending(viewerId, offset, limit));
+  }
+
+  // Mastodon's trending hashtags: a week, used by at least two accounts, the top ten.
+  static final int TREND_DAYS = 7;
+  static final int TREND_MIN_ACCOUNTS = 2;
+  static final int TREND_LIMIT = 10;
+
+  @Transactional(readOnly = true)
+  public List<TrendingTagView> trendingTags() {
+    return notes.trendingTags(Instant.now(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT).stream()
+        .map(TrendingTagView::of)
+        .toList();
   }
 
   @Transactional(readOnly = true)

@@ -9,6 +9,7 @@ import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.TrendingTag;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -563,6 +564,61 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();
+  }
+
+  // Trending hashtags in one statement: public notes of the window, from members or — as with
+  // trending notes — from elsewhere once a member touched them, never from a limited or suspended
+  // server. Ranked by how many accounts used the tag; each day's count rides along.
+  @Override
+  public List<TrendingTag> trendingTags(Instant now, int days, int minAccounts, int limit) {
+    // The last day has no end: a note stamped a little ahead (another server's clock) is today's.
+    StringBuilder perDay = new StringBuilder();
+    for (int day = 0; day < days; day++) {
+      perDay.append(", SUM(n.created_at >= :d").append(day);
+      if (day < days - 1) {
+        perDay.append(" AND n.created_at < :d").append(day + 1);
+      }
+      perDay.append(")");
+    }
+    var query =
+        em.createNativeQuery(
+            "SELECT g.tag, COUNT(DISTINCT COALESCE(n.user_id, -n.remote_actor_id)) AS accounts,"
+                + " COUNT(*) AS uses"
+                + perDay
+                + " FROM note_tag g JOIN note n ON n.id = g.note_id"
+                + " WHERE n.created_at >= :d0 AND n.visibility = 'PUBLIC'"
+                + " AND (n.remote_actor_id IS NULL"
+                + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = n.id)"
+                + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = n.id)"
+                + " OR EXISTS (SELECT 1 FROM note mc WHERE mc.in_reply_to_id = n.id"
+                + " AND mc.user_id IS NOT NULL))"
+                + " AND NOT EXISTS (SELECT 1 FROM federation_remote_actor ta"
+                + " JOIN federation_domain_block tb ON "
+                + ServerBlockSql.covers("tb", "ta.domain")
+                + " WHERE ta.id = n.remote_actor_id)"
+                + " GROUP BY g.tag HAVING accounts >= :minAccounts"
+                + " ORDER BY accounts DESC, uses DESC, g.tag LIMIT :limit");
+    for (int day = 0; day < days; day++) {
+      query.setParameter("d" + day, now.minus(Duration.ofDays(days - day)));
+    }
+    List<?> rows =
+        query.setParameter("minAccounts", minAccounts).setParameter("limit", limit).getResultList();
+    List<TrendingTag> tags = new ArrayList<>(rows.size());
+    for (Object raw : rows) {
+      Object[] columns = (Object[]) raw;
+      List<Long> history = new ArrayList<>(days);
+      for (int day = 0; day < days; day++) {
+        Object count = columns[3 + day];
+        history.add(count == null ? 0L : ((Number) count).longValue());
+      }
+      tags.add(
+          new TrendingTag(
+              (String) columns[0],
+              ((Number) columns[1]).longValue(),
+              ((Number) columns[2]).longValue(),
+              List.copyOf(history)));
+    }
+    return tags;
   }
 
   @Override

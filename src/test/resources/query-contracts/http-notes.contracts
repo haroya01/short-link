@@ -82,6 +82,9 @@
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6
+# Trending hashtags (Mastodon's): one statement — a week of public notes grouped by tag, the
+# accounts and the notes per day counted in it, blocked servers left out.
+@junit | note-trending-tags | 1 | 0 | 0 | 0 | 1
 # After commit an edit asks once who reposted or quoted the note (Mastodon's update notice). Here
 # the reader's quote is still up, so they hear of it: preference, insert, names for the push.
 @junit | note-edit | 12 | 2 | 1 | 0 | 15

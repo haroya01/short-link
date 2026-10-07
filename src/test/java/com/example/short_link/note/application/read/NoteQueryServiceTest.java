@@ -92,6 +92,22 @@ class NoteQueryServiceTest {
   }
 
   @Test
+  void trendingHashtagsAreAWeekOfTagsTwoAccountsUsed() {
+    when(notes.trendingTags(
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.eq(7),
+            org.mockito.ArgumentMatchers.eq(2),
+            org.mockito.ArgumentMatchers.eq(10)))
+        .thenReturn(
+            List.of(
+                new com.example.short_link.note.domain.TrendingTag(
+                    "산책", 3, 5, List.of(0L, 0L, 1L, 0L, 2L, 1L, 1L))));
+
+    assertThat(service.trendingTags())
+        .containsExactly(new TrendingTagView("산책", 3, 5, List.of(0L, 0L, 1L, 0L, 2L, 1L, 1L)));
+  }
+
+  @Test
   void pageAndSizeAreClamped() {
     when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
     when(views.of(List.of(), null)).thenReturn(List.of());

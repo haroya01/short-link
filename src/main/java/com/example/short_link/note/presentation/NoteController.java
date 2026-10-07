@@ -5,6 +5,7 @@ import com.example.short_link.note.application.read.NoteHistoryView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.TrendingTagView;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteImages;
@@ -47,6 +48,11 @@ public class NoteController {
     return "trending".equalsIgnoreCase(sort)
         ? query.trending(page, size, viewerId)
         : query.everyone(page, size, viewerId);
+  }
+
+  @GetMapping("/api/v1/public/notes/trending-tags")
+  public List<TrendingTagView> trendingTags() {
+    return query.trendingTags();
   }
 
   @GetMapping("/api/v1/public/notes/tags/{tag}")
