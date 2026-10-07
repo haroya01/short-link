@@ -18,6 +18,7 @@ import com.example.short_link.federation.application.FederationFollowers;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
+import com.example.short_link.federation.application.RemoteFollowing;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.RemoteActorDocument;
@@ -48,6 +49,7 @@ class InboxServiceTest {
   @Mock private FederationActorService localActors;
   @Mock private FederationActorRepository actorRows;
   @Mock private FederationFollowers followers;
+  @Mock private RemoteFollowing following;
   @Mock private NoteSnapshotReader notes;
   @Mock private RemoteNoteReactions reactions;
   @Mock private RemoteNotePollVotes votes;
@@ -60,6 +62,7 @@ class InboxServiceTest {
         localActors,
         actorRows,
         followers,
+        following,
         notes,
         reactions,
         votes,
@@ -445,6 +448,68 @@ class InboxServiceTest {
     verify(reactions).remove(1L, 42L, Kind.LIKE);
     verify(reactions).removeByActivity(42L, "https://mastodon.example/s/5/activity");
     verifyNoInteractions(followers);
+  }
+
+  @Test
+  void anAcceptOrRejectOfOurFollowAnswersIt() {
+    when(localActors.byPublicId("owner1")).thenReturn(Optional.of(OWNER));
+    verifiedAs(ALICE_ACTOR);
+    when(following.answered(ALICE_ACTOR, OWNER_URI + "#follows/1", OWNER_URI, true))
+        .thenReturn(true);
+    when(following.answered(ALICE_ACTOR, OWNER_URI + "#follows/2", null, false)).thenReturn(true);
+    when(following.answered(ALICE_ACTOR, OWNER_URI + "#follows/3", null, true)).thenReturn(false);
+
+    String embedded =
+        """
+        {"id":"%s","type":"Follow","actor":"%s","object":"%s"}"""
+            .formatted(OWNER_URI + "#follows/1", OWNER_URI, ALICE);
+    assertThat(
+            service()
+                .receive(
+                    request(activity("https://mastodon.example/a/1", "Accept", embedded)),
+                    "owner1"))
+        .isEqualTo(InboxOutcome.accepted("accept"));
+    assertThat(
+            service()
+                .receive(
+                    request(
+                        activity(
+                            "https://mastodon.example/a/2",
+                            "Reject",
+                            "\"" + OWNER_URI + "#follows/2\"")),
+                    null))
+        .isEqualTo(InboxOutcome.accepted("reject"));
+    assertThat(
+            service()
+                .receive(
+                    request(
+                        activity(
+                            "https://mastodon.example/a/3",
+                            "Accept",
+                            "\"" + OWNER_URI + "#follows/3\"")),
+                    null))
+        .isEqualTo(InboxOutcome.ignored("unknown-follow"));
+  }
+
+  @Test
+  void answersToAnythingButOurFollowAreIgnoredWithoutAKeyFetch() {
+    String notAFollow =
+        """
+        {"id":"https://x.example/1","type":"Like","actor":"%s","object":"%s"}"""
+            .formatted(OWNER_URI, ALICE);
+    String someoneElses =
+        """
+        {"id":"https://x.example/2","type":"Follow","actor":"https://x.example/u/b","object":"%s"}"""
+            .formatted(ALICE);
+    for (String object :
+        new String[] {notAFollow, someoneElses, "\"https://kurl.me/ap/actors/owner1\""}) {
+      assertThat(
+              service()
+                  .receive(
+                      request(activity("https://mastodon.example/a/9", "Accept", object)), null))
+          .isEqualTo(InboxOutcome.ignored("unsupported"));
+    }
+    verifyNoInteractions(verifier, following);
   }
 
   @Test

@@ -19,9 +19,9 @@
 @junit | federation-host-meta | 0 | 0 | 0 | 0 | 0
 @junit | federation-nodeinfo-discovery | 0 | 0 | 0 | 0 | 0
 @junit | federation-nodeinfo | 0 | 0 | 0 | 0 | 0
-# A soft-deleted account stops resolving. After commit it leaves: actor, follower inboxes (none
-# here), then the follower rows are cleared.
-@junit | federation-account-delete | 4 | 1 | 1 | 1 | 7
+# A soft-deleted account stops resolving. After commit it leaves: actor, the accounts it follows
+# elsewhere (none here), follower inboxes (none here), then the follower rows are cleared.
+@junit | federation-account-delete | 5 | 1 | 1 | 1 | 8
 @junit | federation-webfinger-after-delete | 1 | 0 | 0 | 0 | 1
 @junit | federation-actor-after-delete | 2 | 0 | 0 | 0 | 2
 # The instance actor (signs fetches): first request creates its key, later ones only read it.
@@ -89,11 +89,12 @@
 @junit | federation-note-repost | 14 | 2 | 0 | 0 | 16
 @junit | federation-note-unrepost | 7 | 1 | 0 | 1 | 9
 @junit | federation-note-quote | 15 | 2 | 0 | 0 | 17
-# Turning federation off sends Delete(Person) to follower servers and clears the followers.
-@junit | federation-settings-off | 5 | 1 | 1 | 1 | 8
+# Turning federation off unfollows accounts elsewhere (none here), sends Delete(Person) to follower
+# servers and clears the followers.
+@junit | federation-settings-off | 6 | 1 | 1 | 1 | 9
 @junit | federation-webfinger-opted-out | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-on | 2 | 0 | 1 | 0 | 3
-@junit | federation-account-delete-leaves | 5 | 2 | 1 | 1 | 9
+@junit | federation-account-delete-leaves | 6 | 2 | 1 | 1 | 10
 # A vote from another server is a Create of a Note named after the option, replying to the Question.
 # The target check is the like's (the note snapshot, which reads the poll's tally too, and the
 # author's actor), then the key, the note and one INSERT IGNORE: a single-choice poll keeps the first
@@ -101,3 +102,16 @@
 @junit | federation-inbox-vote | 9 | 1 | 0 | 0 | 10
 @junit | federation-inbox-vote-again | 9 | 1 | 0 | 0 | 10
 @junit | federation-note-question | 7 | 0 | 0 | 0 | 7
+# A member follows an account on another server. The account is cached and fresh, so the lookup
+# asks no one remotely: the account by handle, then the member's follow of it.
+@junit | federation-remote-lookup | 2 | 0 | 0 | 0 | 2
+# Follow: the account, the member's actor (user, preference, actor), no follow yet, the follow row,
+# then the Follow delivery's dedupe check and insert.
+@junit | federation-remote-follow | 6 | 2 | 0 | 0 | 8
+# Accept to the personal inbox: inbox owner (actor, user, preference), the signer's key, our follow
+# by its id, and its accepted time.
+@junit | federation-remote-accept | 5 | 0 | 1 | 0 | 6
+@junit | federation-remote-following | 2 | 0 | 0 | 0 | 2
+@junit | federation-remote-account | 2 | 0 | 0 | 0 | 2
+# Unfollow: the account, the follow, the member's actor for the Undo, its delivery, the row.
+@junit | federation-remote-unfollow | 4 | 1 | 0 | 1 | 6

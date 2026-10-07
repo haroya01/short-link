@@ -90,6 +90,10 @@ public class RemoteActorResolver {
     return parsed.map(this::store).or(() -> cached);
   }
 
+  public Optional<RemoteActorEntity> refreshed(RemoteActorEntity cached) {
+    return fresh(cached) ? Optional.of(cached) : byActorUri(cached.getActorUri());
+  }
+
   private Optional<JsonNode> fetch(URI uri) {
     return switch (http.get(uri, signingKeys.forInstance())) {
       case FederationHttp.Result.Ok ok -> {

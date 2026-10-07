@@ -33,6 +33,10 @@ public class FederationActorService {
     return users.findActiveByUsername(username).filter(this::federates).map(this::withActor);
   }
 
+  public Optional<LocalActor> byUserId(Long userId) {
+    return users.findActiveById(userId).filter(this::federates).map(this::withActor);
+  }
+
   public Optional<LocalActor> byPublicId(String publicId) {
     return actors
         .findByPublicId(publicId)

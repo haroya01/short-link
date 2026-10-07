@@ -38,6 +38,11 @@ public class FederationUrls {
     return PUBLIC_ID.matcher(publicId).matches() ? Optional.of(publicId) : Optional.empty();
   }
 
+  public boolean isFollow(String activityId) {
+    int mark = activityId == null ? -1 : activityId.indexOf("#follows/");
+    return mark > 0 && publicIdOf(activityId.substring(0, mark)).isPresent();
+  }
+
   public String key(String publicId) {
     return actor(publicId) + "#main-key";
   }

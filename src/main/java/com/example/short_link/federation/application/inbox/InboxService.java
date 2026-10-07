@@ -12,6 +12,7 @@ import com.example.short_link.federation.application.FederationFollowers;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.application.RemoteActorParser;
+import com.example.short_link.federation.application.RemoteFollowing;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
@@ -37,6 +38,7 @@ public class InboxService {
   private final FederationActorService localActors;
   private final FederationActorRepository actorRows;
   private final FederationFollowers followers;
+  private final RemoteFollowing following;
   private final NoteSnapshotReader notes;
   private final RemoteNoteReactions reactions;
   private final RemoteNotePollVotes votes;
@@ -58,6 +60,8 @@ public class InboxService {
     record Vote(Long noteId, String option) implements Intent {}
 
     record Forget() implements Intent {}
+
+    record Answer(String followId, String localActor, boolean accepted) implements Intent {}
   }
 
   public InboxOutcome receive(InboxMessage request, String inboxPublicId) {
@@ -159,6 +163,21 @@ public class InboxService {
         }
         intent = new Intent.Vote(noteId.get(), option);
       }
+      case "Accept", "Reject" -> {
+        JsonNode object = activity.get("object");
+        boolean embedded = object != null && object.isObject();
+        String followId = idOf(object);
+        String localActor = embedded ? idOf(object.get("actor")) : null;
+        boolean ours =
+            embedded
+                ? "Follow".equals(text(object.get("type")))
+                    && urls.publicIdOf(localActor).isPresent()
+                : urls.isFollow(followId);
+        if (!ours) {
+          return InboxOutcome.ignored("unsupported");
+        }
+        intent = new Intent.Answer(followId, localActor, "Accept".equals(type));
+      }
       case "Delete" -> {
         if (!actorUri.equals(idOf(activity.get("object")))) {
           return InboxOutcome.ignored("unsupported");
@@ -225,6 +244,12 @@ public class InboxService {
         yield votes.recordRemoteVote(vote.noteId(), actor.getId(), vote.option())
             ? InboxOutcome.accepted("vote")
             : InboxOutcome.ignored("vote-rejected");
+      }
+      case Intent.Answer answer -> {
+        if (!following.answered(actor, answer.followId(), answer.localActor(), answer.accepted())) {
+          yield InboxOutcome.ignored("unknown-follow");
+        }
+        yield InboxOutcome.accepted(answer.accepted() ? "accept" : "reject");
       }
       case Intent.Forget gone -> {
         followers.forget(actor);

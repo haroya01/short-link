@@ -9,4 +9,6 @@ public interface JpaRemoteActorRepository extends JpaRepository<RemoteActorEntit
   Optional<RemoteActorEntity> findByActorUri(String actorUri);
 
   Optional<RemoteActorEntity> findFirstByKeyId(String keyId);
+
+  Optional<RemoteActorEntity> findFirstByDomainAndUsername(String domain, String username);
 }
