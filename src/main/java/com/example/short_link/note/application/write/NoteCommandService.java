@@ -131,8 +131,23 @@ public class NoteCommandService {
     this.clock = clock;
   }
 
-  @Transactional
-  public NoteView create(Long userId, NoteDraft draft) {
+  private record Checked(
+      String body,
+      List<NoteImages.StoredImage> stored,
+      List<String> pollOptions,
+      NoteVisibility requested,
+      NoteEntity parent,
+      NoteEntity quotedNote,
+      QuotedPost quoted,
+      List<String> handles,
+      Map<Long, NoteAuthor> authors) {}
+
+  @Transactional(readOnly = true)
+  public void validate(Long userId, NoteDraft draft) {
+    check(userId, draft);
+  }
+
+  private Checked check(Long userId, NoteDraft draft) {
     moderation.requireCanWrite(userId);
     String body = normalize(draft.body());
     List<NoteDraft.Image> attached = draft.images() == null ? List.of() : draft.images();
@@ -162,7 +177,6 @@ public class NoteCommandService {
         throw new NoteException(NoteErrorCode.NOTE_REPLY_BLOCKED);
       }
     }
-    Long parentId = parent == null ? null : parent.getId();
     if (draft.quotedPostId() != null && draft.quotedNoteId() != null) {
       throw new NoteException(NoteErrorCode.NOTE_QUOTE_CONFLICT);
     }
@@ -205,6 +219,23 @@ public class NoteCommandService {
       throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
     }
 
+    return new Checked(
+        body, stored, pollOptions, requested, parent, quotedNote, quoted, handles, authors);
+  }
+
+  @Transactional
+  public NoteView create(Long userId, NoteDraft draft) {
+    Checked checked = check(userId, draft);
+    String body = checked.body();
+    List<NoteImages.StoredImage> stored = checked.stored();
+    List<String> pollOptions = checked.pollOptions();
+    NoteVisibility requested = checked.requested();
+    NoteEntity parent = checked.parent();
+    Long parentId = parent == null ? null : parent.getId();
+    NoteEntity quotedNote = checked.quotedNote();
+    QuotedPost quoted = checked.quoted();
+    List<String> handles = checked.handles();
+    Map<Long, NoteAuthor> authors = checked.authors();
     NoteEntity fresh =
         new NoteEntity(userId, body, parentId, draft.quotedPostId(), draft.quotedNoteId());
     if (parent != null) {

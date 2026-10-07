@@ -10,7 +10,10 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.note.application.write.NotePollService;
+import com.example.short_link.note.application.write.NoteScheduleService;
 import com.example.short_link.testsupport.OperationalHttpJourneySupport;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -24,6 +27,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
 
   @MockitoBean private ObjectStorage objectStorage;
   @Autowired private NotePollService polls;
+  @Autowired private NoteScheduleService schedules;
 
   @Test
   void repostsByPeopleYouFollowFlowIntoTheFollowingFeedOnceButNeverFromSomeoneYouBlocked()
@@ -728,6 +732,70 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
                 noteId))
         .containsExactly(reposter.id(), quoter.id());
     jdbc.update("DELETE FROM note WHERE id = ? OR quoted_note_id = ?", noteId, noteId);
+  }
+
+  @Test
+  void aWriterSchedulesNotesThatPostWhenDue() throws Exception {
+    Actor writer = actor("schedule-writer", false);
+    String later = Instant.now().plus(Duration.ofHours(3)).toString();
+    step(
+        "note-schedule-too-soon",
+        "POST",
+        "/api/v1/notes/scheduled",
+        writer,
+        Map.of(
+            "note",
+            Map.of("body", "곧"),
+            "scheduledAt",
+            Instant.now().plus(Duration.ofMinutes(1)).toString()),
+        422);
+    long first =
+        step(
+                "note-schedule",
+                "POST",
+                "/api/v1/notes/scheduled",
+                writer,
+                Map.of("note", Map.of("body", "예약한 노트 #아침"), "scheduledAt", later),
+                201)
+            .path("id")
+            .asLong();
+    long second =
+        step(
+                "note-schedule-another",
+                "POST",
+                "/api/v1/notes/scheduled",
+                writer,
+                Map.of(
+                    "note",
+                    Map.of("body", "취소할 노트", "visibility", "PRIVATE"),
+                    "scheduledAt",
+                    later),
+                201)
+            .path("id")
+            .asLong();
+    assertThat(
+            step("note-schedules", "GET", "/api/v1/notes/scheduled", writer, null, 200)
+                .findValues("id")
+                .stream()
+                .map(id -> id.asLong())
+                .toList())
+        .containsExactly(first, second);
+    step(
+        "note-schedule-move",
+        "PATCH",
+        "/api/v1/notes/scheduled/" + first,
+        writer,
+        Map.of("scheduledAt", Instant.now().plus(Duration.ofHours(1)).toString()),
+        200);
+
+    jdbc.update(
+        "UPDATE note_schedule SET publish_at = publish_at - INTERVAL 1 DAY WHERE id = ?", first);
+    assertThat(schedules.publishDue()).isEqualTo(1);
+    assertThat(count("note", "user_id = ? AND body = '예약한 노트 #아침'", writer.id())).isEqualTo(1);
+    assertThat(count("note_schedule", "id = ?", first)).isZero();
+
+    step("note-schedule-cancel", "DELETE", "/api/v1/notes/scheduled/" + second, writer, null, 204);
+    assertThat(count("note_schedule", "user_id = ?", writer.id())).isZero();
   }
 
   @Test
