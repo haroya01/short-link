@@ -11,9 +11,11 @@ import com.example.short_link.federation.domain.repository.FederationActorReposi
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
 import java.time.Clock;
 import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -110,40 +112,103 @@ public class NoteFederation {
       return;
     }
     NoteSnapshot note = found.get();
-    RemoteParents.Parent parent = remoteParents.of(note.inReplyToId()).orElse(null);
-    List<RemoteActorEntity> named = new ArrayList<>();
-    for (String handle : Mentions.remote(note.body())) {
-      finder.find(handle).ifPresent(named::add);
-    }
-    if (parent == null && named.isEmpty()) {
+    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()));
+    if (reach.isEmpty()) {
       created(noteId, authorId);
       return;
     }
-    List<String> inboxes = new ArrayList<>();
-    if (note.visibility() != Visibility.DIRECT) {
-      inboxes.addAll(followers.deliveryInboxes(authorId));
-    }
-    if (parent != null) {
-      inboxes.add(parent.inbox());
-    }
-    named.forEach(person -> inboxes.add(person.deliveryInbox()));
     send(
         authorId,
-        documents.create(
-            note,
-            actor.get().publicId(),
-            parent,
-            named.stream()
-                .map(
-                    person ->
-                        new NoteDocuments.Addressee(
-                            person.getActorUri(),
-                            "@" + person.getUsername() + "@" + person.getDomain(),
-                            person.getProfileUrl() == null
-                                ? person.getActorUri()
-                                : person.getProfileUrl()))
-                .toList()),
+        documents.create(note, actor.get().publicId(), reach.parent(), reach.addressees()),
+        reach.inboxes(
+            note.visibility() == Visibility.DIRECT
+                ? List.of()
+                : followers.deliveryInboxes(authorId)));
+  }
+
+  // An edit goes wherever the note went: to the writer's followers, and to the server of the note
+  // it answers and of the people it names.
+  @Transactional
+  public void edited(Long noteId, Long authorId, boolean reachesElsewhere) {
+    if (!reachesElsewhere) {
+      edited(noteId, authorId);
+      return;
+    }
+    Optional<LocalActor> actor = localActors.byUserId(authorId);
+    Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
+    if (found.isEmpty()) {
+      return;
+    }
+    NoteSnapshot note = found.get();
+    Reach reach = reach(note.inReplyToId(), Mentions.remote(note.body()));
+    List<String> inboxes =
+        reach.inboxes(
+            note.visibility() == Visibility.DIRECT
+                ? List.of()
+                : followers.deliveryInboxes(authorId));
+    if (inboxes.isEmpty()) {
+      return;
+    }
+    send(
+        authorId,
+        documents.update(note, actor.get().publicId(), reach.parent(), reach.addressees()),
         inboxes);
+  }
+
+  // The note is already gone, so what it answered and whom it named come with the call.
+  @Transactional
+  public void deleted(Long noteId, Long authorId, Long inReplyToId, List<String> handles) {
+    if (inReplyToId == null && handles.isEmpty()) {
+      deleted(noteId, authorId);
+      return;
+    }
+    Optional<LocalActor> actor = localActors.byUserId(authorId);
+    if (actor.isEmpty()) {
+      return;
+    }
+    List<String> inboxes = reach(inReplyToId, handles).inboxes(followers.deliveryInboxes(authorId));
+    if (inboxes.isEmpty()) {
+      return;
+    }
+    send(authorId, documents.delete(noteId, actor.get().publicId()), inboxes);
+  }
+
+  private record Reach(RemoteParents.Parent parent, List<RemoteActorEntity> named) {
+
+    boolean isEmpty() {
+      return parent == null && named.isEmpty();
+    }
+
+    List<NoteDocuments.Addressee> addressees() {
+      return named.stream()
+          .map(
+              person ->
+                  new NoteDocuments.Addressee(
+                      person.getActorUri(),
+                      "@" + person.getUsername() + "@" + person.getDomain(),
+                      person.getProfileUrl() == null
+                          ? person.getActorUri()
+                          : person.getProfileUrl()))
+          .toList();
+    }
+
+    List<String> inboxes(List<String> followerInboxes) {
+      Set<String> inboxes = new LinkedHashSet<>(followerInboxes);
+      if (parent != null) {
+        inboxes.add(parent.inbox());
+      }
+      named.forEach(person -> inboxes.add(person.deliveryInbox()));
+      return List.copyOf(inboxes);
+    }
+  }
+
+  private Reach reach(Long inReplyToId, List<String> handles) {
+    RemoteParents.Parent parent = remoteParents.of(inReplyToId).orElse(null);
+    List<RemoteActorEntity> named = new ArrayList<>();
+    for (String handle : handles) {
+      finder.find(handle).ifPresent(named::add);
+    }
+    return new Reach(parent, named);
   }
 
   @Transactional

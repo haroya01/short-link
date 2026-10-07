@@ -431,7 +431,9 @@ public class NoteCommandService {
       }
       mention(note, userId, newlyMentioned, Set.of(userId));
     }
-    events.publishEvent(new NoteEditedEvent(noteId, userId));
+    events.publishEvent(
+        new NoteEditedEvent(
+            noteId, userId, note.getInReplyToId() != null || !Mentions.remote(body).isEmpty()));
     events.publishEvent(new NoteRevisedEvent(noteId, userId, null, note.excerpt()));
     String after = NoteLinks.previewUrl(body, hasMedia || note.hasPoll(), hasQuote);
     if (!Objects.equals(before, after)) {
@@ -488,7 +490,13 @@ public class NoteCommandService {
     connections.purgeForNote(noteId);
     notes.delete(note);
     if (!note.isRemote()) {
-      events.publishEvent(new NoteDeletedEvent(noteId, note.getUserId(), keys));
+      events.publishEvent(
+          new NoteDeletedEvent(
+              noteId,
+              note.getUserId(),
+              keys,
+              note.getInReplyToId(),
+              Mentions.remote(note.getBody())));
     }
   }
 

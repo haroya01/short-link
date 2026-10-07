@@ -38,7 +38,7 @@ public class NoteFederationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onEdited(NoteEditedEvent event) {
-    notes.edited(event.noteId(), event.authorId());
+    notes.edited(event.noteId(), event.authorId(), event.reachesElsewhere());
   }
 
   @Async("webhookExecutor")
@@ -50,7 +50,7 @@ public class NoteFederationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onDeleted(NoteDeletedEvent event) {
-    notes.deleted(event.noteId(), event.authorId());
+    notes.deleted(event.noteId(), event.authorId(), event.inReplyToId(), event.remoteHandles());
   }
 
   @Async("webhookExecutor")

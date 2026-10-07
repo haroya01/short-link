@@ -249,6 +249,84 @@ class NoteFederationTest {
   }
 
   @Test
+  void anEditedReplyElsewhereReachesThatServerAsWellAsTheFollowers() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
+    when(followers.deliveryInboxes(7L))
+        .thenReturn(List.of("https://a.example/inbox", "https://m.example/inbox"));
+
+    service().edited(43L, 7L, true);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/notes/43#updates/0"),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(
+                List.of("https://a.example/inbox", "https://m.example/inbox")));
+    var update = JSON.readTree(body.getValue());
+    assertThat(update.path("type").asString()).isEqualTo("Update");
+    assertThat(update.path("object").path("inReplyTo").asString()).isEqualTo(ALICE_NOTE.uri());
+    assertThat(update.path("cc").toString()).contains("https://m.example/users/alice");
+  }
+
+  @Test
+  void anEditThatOwesNoOneElsewhereGoesToTheFollowersAloneOrNowhere() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(remoteParents.of(41L)).thenReturn(Optional.empty());
+    when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"), List.of());
+
+    service().edited(43L, 7L, true);
+    service().edited(43L, 7L, true);
+
+    verify(deliveries, org.mockito.Mockito.times(1))
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            any(),
+            any(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://a.example/inbox")));
+  }
+
+  @Test
+  void aDeletedReplyElsewhereTellsThatServerAndTheOnesItNamed() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
+    when(finder.find("bob@b.example")).thenReturn(Optional.empty());
+    when(followers.deliveryInboxes(7L)).thenReturn(List.of());
+
+    service().deleted(43L, 7L, 41L, List.of("bob@b.example"));
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/notes/43#delete"),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://m.example/inbox")));
+    assertThat(JSON.readTree(body.getValue()).path("type").asString()).isEqualTo("Delete");
+  }
+
+  @Test
+  void aDeleteThatNeverLeftForElsewhereTakesTheUsualPath() {
+    when(notes.find(42L)).thenReturn(Optional.of(NOTE));
+    federating();
+
+    service().deleted(42L, 7L, null, List.of());
+    service().edited(42L, 7L, false);
+
+    verify(localActors, never()).byUserId(any());
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/notes/42#delete"),
+            any(),
+            any());
+  }
+
+  @Test
   void aBoostOfANoteElsewhereAndItsUndoReachTheFollowersAndThatServer() {
     when(localActors.byUserId(8L))
         .thenReturn(
