@@ -407,6 +407,45 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(count("note_recipient", "note_id IN (?, ?)", prv, dm)).isEqualTo(2);
   }
 
+  @Test
+  void anOwnerKeepsAListOfPeopleAndReadsTheirNotesThere() throws Exception {
+    Actor owner = actor("list-owner", false);
+    Actor alice = actor("list-alice", false);
+    Actor bob = actor("list-bob", false);
+    long aliceNote = noteAt(alice, "리스트에 든 사람의 노트", 2);
+    long bobNote = noteAt(bob, "리스트 밖 사람의 노트", 1);
+
+    var created =
+        step("note-list-create", "POST", "/api/v1/notes/lists", owner, Map.of("title", "동료"), 201);
+    long listId = created.path("id").asLong();
+    String list = "/api/v1/notes/lists/" + listId;
+    step("note-list-add", "PUT", list + "/members/" + alice.username(), owner, null, 204);
+
+    var mine = step("note-list-mine", "GET", "/api/v1/notes/lists", owner, null, 200);
+    assertThat(mine.get(0).path("memberCount").asLong()).isEqualTo(1);
+    var members = step("note-list-members", "GET", list + "/members", owner, null, 200);
+    assertThat(members.get(0).path("username").asText()).isEqualTo(alice.username());
+    var membership =
+        step(
+            "note-list-membership",
+            "GET",
+            "/api/v1/notes/list-memberships/" + alice.username(),
+            owner,
+            null,
+            200);
+    assertThat(membership.path("listIds").get(0).asLong()).isEqualTo(listId);
+
+    var feed = step("note-list-feed", "GET", list + "/notes", owner, null, 200);
+    assertThat(only(feed, List.of(aliceNote, bobNote))).containsExactly(aliceNote);
+    step("note-list-feed-stranger", "GET", list + "/notes", bob, null, 404);
+
+    var renamed = step("note-list-rename", "PATCH", list, owner, Map.of("title", "가까운 동료"), 200);
+    assertThat(renamed.path("title").asText()).isEqualTo("가까운 동료");
+    step("note-list-remove", "DELETE", list + "/members/" + alice.username(), owner, null, 204);
+    step("note-list-delete", "DELETE", list, owner, null, 204);
+    assertThat(count("note_list", "id = ?", listId)).isZero();
+  }
+
   private long post(String id, Actor author, String body, String visibility) throws Exception {
     return step(
             id,

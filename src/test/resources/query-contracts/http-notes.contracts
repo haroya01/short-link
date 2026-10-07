@@ -120,3 +120,17 @@
 @junit | note-vis-reply-direct-follower | 3 | 0 | 0 | 0 | 3
 @junit | note-vis-ap-private | 3 | 0 | 0 | 0 | 3
 @junit | note-vis-ap-unlisted | 7 | 1 | 0 | 0 | 8
+# Lists are their owner's alone. Every call first finds the list by id and owner (a stranger gets
+# 404 there). Mine counts members in one grouped query; adding checks the person and the member cap
+# before an insert ignore; the feed is one query over the members' notes under the profile's
+# visibility rules, then the usual page. Deleting a list removes its members by cascade.
+@junit | note-list-create | 1 | 1 | 0 | 0 | 2
+@junit | note-list-add | 3 | 1 | 0 | 0 | 4
+@junit | note-list-mine | 1 | 0 | 0 | 0 | 1
+@junit | note-list-members | 3 | 0 | 0 | 0 | 3
+@junit | note-list-membership | 2 | 0 | 0 | 0 | 2
+@junit | note-list-feed | 6 | 0 | 0 | 0 | 6
+@junit | note-list-feed-stranger | 1 | 0 | 0 | 0 | 1
+@junit | note-list-rename | 2 | 0 | 1 | 0 | 3
+@junit | note-list-remove | 2 | 0 | 0 | 1 | 3
+@junit | note-list-delete | 1 | 0 | 0 | 1 | 2
