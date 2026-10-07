@@ -93,6 +93,10 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(name = "hide_follower_count", nullable = false)
   private boolean hideFollowerCount = false;
 
+  // Mastodon's locked account: every follow waits for this member's approval.
+  @Column(nullable = false)
+  private boolean locked = false;
+
   @Enumerated(EnumType.STRING)
   @Column(name = "moderation_status", nullable = false, length = 16)
   private ModerationStatus moderationStatus = ModerationStatus.ACTIVE;
@@ -156,6 +160,10 @@ public class UserEntity extends BaseCreatedEntity {
 
   public void updateHideFollowerCount(boolean hideFollowerCount) {
     this.hideFollowerCount = hideFollowerCount;
+  }
+
+  public void updateLocked(boolean locked) {
+    this.locked = locked;
   }
 
   public void updateAvatar(String url, String key) {

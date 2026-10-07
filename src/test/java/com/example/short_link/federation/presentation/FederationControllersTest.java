@@ -96,6 +96,21 @@ class FederationControllersTest {
   }
 
   @Test
+  void aLockedAccountTellsOtherServersItApprovesFollowersByHand() throws Exception {
+    when(actors.byPublicId("pid456"))
+        .thenReturn(
+            Optional.of(
+                new LocalActor(
+                    new FederationUser(8L, "mio", null, null, null, List.of(), true),
+                    "pid456",
+                    YUKI.publicKeyPem())));
+
+    mvc.perform(get("/ap/actors/pid456").header("Accept", "application/activity+json"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.manuallyApprovesFollowers").value(true));
+  }
+
+  @Test
   void actorDocumentCarriesWhatMastodonNeeds() throws Exception {
     when(actors.byPublicId("pid123")).thenReturn(Optional.of(YUKI));
 

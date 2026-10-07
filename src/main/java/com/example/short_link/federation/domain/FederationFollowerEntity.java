@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -30,10 +31,22 @@ public class FederationFollowerEntity extends BaseTimeEntity {
   @Column(name = "follow_activity_id", nullable = false, length = 512)
   private String followActivityId;
 
+  // Null while a locked member has not approved the follow: no follower-only note goes there.
+  @Column(name = "accepted_at")
+  private Instant acceptedAt;
+
   public FederationFollowerEntity(Long userId, Long remoteActorId, String followActivityId) {
     this.userId = userId;
     this.remoteActorId = remoteActorId;
     this.followActivityId = followActivityId;
+  }
+
+  public boolean isPending() {
+    return acceptedAt == null;
+  }
+
+  public void accept(Instant at) {
+    this.acceptedAt = at;
   }
 
   public void refollow(String followActivityId) {

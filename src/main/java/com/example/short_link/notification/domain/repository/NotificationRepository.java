@@ -28,4 +28,8 @@ public interface NotificationRepository {
   int deleteFromDomain(Long recipientUserId, String domain);
 
   int deleteFromServer(String domain);
+
+  int deleteFollowRequest(Long recipientUserId, Long actorUserId, Long actorRemoteId);
+
+  int deleteFollowRequests(Long recipientUserId);
 }

@@ -8,9 +8,20 @@ public record FederationUser(
     String bio,
     String avatarUrl,
     String displayName,
-    List<ProfileLink> links) {
+    List<ProfileLink> links,
+    boolean locked) {
 
   public record ProfileLink(String channel, String url) {}
+
+  public FederationUser(
+      Long id,
+      String username,
+      String bio,
+      String avatarUrl,
+      String displayName,
+      List<ProfileLink> links) {
+    this(id, username, bio, avatarUrl, displayName, links, false);
+  }
 
   public FederationUser(Long id, String username, String bio, String avatarUrl) {
     this(id, username, bio, avatarUrl, null, List.of());

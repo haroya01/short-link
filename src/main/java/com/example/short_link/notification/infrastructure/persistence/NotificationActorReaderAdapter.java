@@ -56,7 +56,7 @@ class NotificationActorReaderAdapter implements NotificationActorReader {
       String handle = cols[1] == null ? domain : cols[1] + "@" + domain;
       String avatarUrl = cols[3] == null ? null : cols[3].toString();
       String profileUrl = cols[4] == null ? cols[5].toString() : cols[4].toString();
-      resolved.put(id, new NotificationActor(null, handle, avatarUrl, profileUrl));
+      resolved.put(id, new NotificationActor(null, handle, avatarUrl, profileUrl, id));
     }
     return resolved;
   }

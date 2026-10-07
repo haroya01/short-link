@@ -7,7 +7,19 @@ public record UpdateProfileCommand(
     String theme,
     String socials,
     Boolean hideFollowerCount,
-    String displayName) {
+    String displayName,
+    Boolean locked) {
+
+  public UpdateProfileCommand(
+      Long userId,
+      String username,
+      String bio,
+      String theme,
+      String socials,
+      Boolean hideFollowerCount,
+      String displayName) {
+    this(userId, username, bio, theme, socials, hideFollowerCount, displayName, null);
+  }
 
   public UpdateProfileCommand(
       Long userId,
@@ -16,7 +28,7 @@ public record UpdateProfileCommand(
       String theme,
       String socials,
       Boolean hideFollowerCount) {
-    this(userId, username, bio, theme, socials, hideFollowerCount, null);
+    this(userId, username, bio, theme, socials, hideFollowerCount, null, null);
   }
 
   public UpdateProfileCommand {

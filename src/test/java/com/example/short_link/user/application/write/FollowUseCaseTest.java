@@ -5,13 +5,18 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.FollowRequestSettledEvent;
+import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.user.application.read.FollowStatus;
 import com.example.short_link.user.domain.FollowEntity;
+import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
+import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
@@ -28,6 +33,7 @@ class FollowUseCaseTest {
 
   @Mock private UserRepository userRepository;
   @Mock private FollowRepository followRepository;
+  @Mock private FollowRequestRepository followRequests;
   @Mock private BlockRepository blockRepository;
   @Mock private org.springframework.context.ApplicationEventPublisher events;
 
@@ -35,7 +41,9 @@ class FollowUseCaseTest {
 
   @BeforeEach
   void setUp() {
-    useCase = new FollowUseCase(userRepository, followRepository, blockRepository, events);
+    useCase =
+        new FollowUseCase(
+            userRepository, followRepository, followRequests, blockRepository, events);
   }
 
   private UserEntity user(long id, String username) {
@@ -156,5 +164,83 @@ class FollowUseCaseTest {
         .isInstanceOfSatisfying(
             UserException.class,
             e -> assertThat(e.errorCode()).isEqualTo(UserErrorCode.NOT_FOLLOWING));
+  }
+
+  private UserEntity locked(long id, String username) {
+    UserEntity u = user(id, username);
+    u.updateLocked(true);
+    return u;
+  }
+
+  @Test
+  void followingALockedAccountLeavesARequestInstead() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
+    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(false);
+    when(followRequests.exists(9L, 2L)).thenReturn(false);
+
+    FollowStatus status = useCase.follow(9L, "bob", null);
+
+    assertThat(status.following()).isFalse();
+    assertThat(status.requested()).isTrue();
+    assertThat(status.locked()).isTrue();
+    verify(followRequests).save(any(FollowRequestEntity.class));
+    verify(followRepository, never()).save(any());
+    verify(events).publishEvent(new FollowRequestedEvent(2L, 9L, null));
+  }
+
+  @Test
+  void askingALockedAccountAgainLeavesOneRequest() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
+    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(false);
+    when(followRequests.exists(9L, 2L)).thenReturn(true);
+
+    assertThat(useCase.follow(9L, "bob", null).requested()).isTrue();
+    verify(followRequests, never()).save(any());
+    verify(events, never()).publishEvent(any());
+  }
+
+  @Test
+  void aFollowerOfALockedAccountStaysAFollower() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
+    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(true);
+
+    FollowStatus status = useCase.follow(9L, "bob", null);
+
+    assertThat(status.following()).isTrue();
+    assertThat(status.requested()).isFalse();
+    verifyNoInteractions(followRequests);
+  }
+
+  @Test
+  void unfollowingALockedAccountWithdrawsTheRequest() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+    when(followRequests.delete(9L, 2L)).thenReturn(1);
+
+    FollowStatus status = useCase.unfollow(9L, "bob");
+
+    assertThat(status.requested()).isFalse();
+    verify(events).publishEvent(new FollowRequestSettledEvent(2L, 9L, null));
+  }
+
+  @Test
+  void withdrawingARequestThatIsNotThereSaysNothing() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(locked(2L, "bob")));
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+    when(followRequests.delete(9L, 2L)).thenReturn(0);
+
+    useCase.unfollow(9L, "bob");
+
+    verify(events, never()).publishEvent(any());
+  }
+
+  @Test
+  void unfollowingAnOpenAccountNeverTouchesRequests() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+
+    useCase.unfollow(9L, "bob");
+
+    verifyNoInteractions(followRequests);
   }
 }

@@ -17,7 +17,7 @@ import tools.jackson.databind.json.JsonMapper;
 class FederationUserReaderAdapter implements FederationUserReader {
 
   private static final String SELECT =
-      "SELECT id, username, bio, avatar_url, display_name, socials FROM users"
+      "SELECT id, username, bio, avatar_url, display_name, socials, locked FROM users"
           + " WHERE deleted_at IS NULL AND ";
 
   private static final TypeReference<List<FederationUser.ProfileLink>> LINKS =
@@ -55,7 +55,8 @@ class FederationUserReaderAdapter implements FederationUserReader {
                   (String) columns[2],
                   (String) columns[3],
                   (String) columns[4],
-                  links((String) columns[5]));
+                  links((String) columns[5]),
+                  Boolean.TRUE.equals(columns[6]) || Integer.valueOf(1).equals(columns[6]));
             });
   }
 

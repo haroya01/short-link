@@ -231,7 +231,8 @@ class RecordBlogNotificationUseCaseTest {
             Map.entry(NotificationType.NOTE_MENTION, "yuki님이 노트에서 회원님을 언급했습니다"),
             Map.entry(NotificationType.NOTE_POLL, "투표가 끝났습니다. 결과를 확인해 보세요"),
             Map.entry(NotificationType.NOTE_POST, "yuki님이 새 노트를 올렸습니다"),
-            Map.entry(NotificationType.NOTE_EDIT, "yuki님이 리포스트하거나 인용한 노트를 수정했습니다"));
+            Map.entry(NotificationType.NOTE_EDIT, "yuki님이 리포스트하거나 인용한 노트를 수정했습니다"),
+            Map.entry(NotificationType.FOLLOW_REQUEST, "yuki님이 팔로우를 요청했습니다"));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "my-post", "글 제목", null);
     for (NotificationType type : NotificationType.values()) {

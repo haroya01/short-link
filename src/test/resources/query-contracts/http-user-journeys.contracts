@@ -232,6 +232,30 @@
 @junit | event-registration-cancel-repeat | 1 | 0 | 0 | 0 | 1
 @junit | event-reopen | 6 | 0 | 1 | 0 | 7
 @junit | event-update | 7 | 1 | 1 | 1 | 10
+# Following a locked member leaves a request (Mastodon-style approval). Locking is the plain profile
+# update. A request adds one lookup to the follow (is one already waiting), then its insert; status
+# counts follow; after commit the notification asks block/mute, preference, inserts, then the
+# recipient's and the asker's names for the push. Asking again finds the request and writes nothing.
+@junit | follow-request-lock | 1 | 0 | 1 | 0 | 2
+@junit | follow-request-ask | 10 | 2 | 0 | 0 | 12
+@junit | follow-request-ask-second | 10 | 2 | 0 | 0 | 12
+@junit | follow-request-ask-again-second | 10 | 2 | 0 | 0 | 12
+@junit | follow-request-ask-third | 10 | 2 | 0 | 0 | 12
+@junit | follow-request-ask-again | 6 | 0 | 0 | 0 | 6
+# Status looks for a waiting request only when the account is locked.
+@junit | follow-request-status | 5 | 0 | 0 | 0 | 5
+# One join of requests and askers, skipping deleted and blocked accounts.
+@junit | follow-request-list | 1 | 0 | 0 | 0 | 1
+# Approving deletes the request (its row count is the 404 check), adds the follow unless one exists,
+# and after commit drops the request notification.
+@junit | follow-request-authorize | 2 | 1 | 0 | 2 | 5
+@junit | follow-request-authorize-missing | 1 | 0 | 0 | 1 | 2
+@junit | follow-request-reject | 1 | 0 | 0 | 2 | 3
+# Unfollowing with no follow withdraws the request, then its notification.
+@junit | follow-request-withdraw | 4 | 0 | 0 | 2 | 6
+# Unlocking: profile read and update, local requests become follows (INSERT IGNORE … SELECT, delete);
+# after commit nobody waits elsewhere and the request notifications are cleared.
+@junit | follow-request-unlock | 2 | 1 | 1 | 2 | 6
 @junit | image-commit | 1 | 0 | 0 | 0 | 1
 @junit | image-create-post | 2 | 1 | 0 | 0 | 3
 @junit | image-denies-other | 1 | 0 | 0 | 0 | 1

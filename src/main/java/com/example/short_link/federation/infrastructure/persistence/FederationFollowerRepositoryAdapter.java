@@ -7,6 +7,8 @@ import com.example.short_link.federation.domain.repository.FederationFollowerRep
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -43,6 +45,24 @@ class FederationFollowerRepositoryAdapter implements FederationFollowerRepositor
   @Override
   public List<FollowOnDomain<FederationFollowerEntity>> onDomain(Long userId, String domain) {
     return jpa.onDomain(userId, domain).stream()
+        .map(
+            row ->
+                new FollowOnDomain<>((FederationFollowerEntity) row[0], (RemoteActorEntity) row[1]))
+        .toList();
+  }
+
+  @Override
+  public List<FollowOnDomain<FederationFollowerEntity>> pending(Long userId) {
+    return pairs(jpa.pending(userId, Pageable.unpaged()));
+  }
+
+  @Override
+  public List<FollowOnDomain<FederationFollowerEntity>> pending(Long userId, int page, int size) {
+    return pairs(jpa.pending(userId, PageRequest.of(page, size)));
+  }
+
+  private static List<FollowOnDomain<FederationFollowerEntity>> pairs(List<Object[]> rows) {
+    return rows.stream()
         .map(
             row ->
                 new FollowOnDomain<>((FederationFollowerEntity) row[0], (RemoteActorEntity) row[1]))

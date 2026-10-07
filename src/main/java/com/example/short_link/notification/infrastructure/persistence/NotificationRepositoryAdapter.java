@@ -154,6 +154,27 @@ class NotificationRepositoryAdapter implements NotificationRepository {
   }
 
   @Override
+  public int deleteFollowRequest(Long recipientUserId, Long actorUserId, Long actorRemoteId) {
+    return em.createNativeQuery(
+            "DELETE FROM notification WHERE recipient_user_id = :recipient"
+                + " AND type = 'FOLLOW_REQUEST' AND actor_user_id <=> :actorUserId"
+                + " AND actor_remote_id <=> :actorRemoteId")
+        .setParameter("recipient", recipientUserId)
+        .setParameter("actorUserId", actorUserId)
+        .setParameter("actorRemoteId", actorRemoteId)
+        .executeUpdate();
+  }
+
+  @Override
+  public int deleteFollowRequests(Long recipientUserId) {
+    return em.createNativeQuery(
+            "DELETE FROM notification WHERE recipient_user_id = :recipient"
+                + " AND type = 'FOLLOW_REQUEST'")
+        .setParameter("recipient", recipientUserId)
+        .executeUpdate();
+  }
+
+  @Override
   public int deleteFromDomain(Long recipientUserId, String domain) {
     return em.createNativeQuery(
             "DELETE n FROM notification n JOIN federation_remote_actor a ON a.id = n.actor_remote_id"

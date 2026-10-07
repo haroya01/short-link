@@ -22,7 +22,8 @@ public enum NotificationType {
   NOTE_MENTION,
   NOTE_POLL,
   NOTE_POST,
-  NOTE_EDIT;
+  NOTE_EDIT,
+  FOLLOW_REQUEST;
 
   public boolean grouped() {
     return this == NOTE_LIKE || this == NOTE_REPOST;

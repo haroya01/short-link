@@ -12,7 +12,31 @@ public record MyProfile(
     String bannerUrl,
     List<Social> socials,
     boolean hideFollowerCount,
-    String displayName) {
+    String displayName,
+    boolean locked) {
+
+  public MyProfile(
+      String username,
+      String bio,
+      String theme,
+      String publicUrl,
+      String avatarUrl,
+      String bannerUrl,
+      List<Social> socials,
+      boolean hideFollowerCount,
+      String displayName) {
+    this(
+        username,
+        bio,
+        theme,
+        publicUrl,
+        avatarUrl,
+        bannerUrl,
+        socials,
+        hideFollowerCount,
+        displayName,
+        false);
+  }
 
   public MyProfile(
       String username,
@@ -23,6 +47,16 @@ public record MyProfile(
       String bannerUrl,
       List<Social> socials,
       boolean hideFollowerCount) {
-    this(username, bio, theme, publicUrl, avatarUrl, bannerUrl, socials, hideFollowerCount, null);
+    this(
+        username,
+        bio,
+        theme,
+        publicUrl,
+        avatarUrl,
+        bannerUrl,
+        socials,
+        hideFollowerCount,
+        null,
+        false);
   }
 }

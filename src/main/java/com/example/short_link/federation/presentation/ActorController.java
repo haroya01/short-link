@@ -155,7 +155,7 @@ public class ActorController {
         urls.featured(actor.publicId()),
         attachment(actor.user().links()),
         new ActorResponse.Endpoints(urls.sharedInbox()),
-        false,
+        actor.user().locked(),
         true,
         avatar == null || avatar.isBlank() ? null : new ActorResponse.Image("Image", avatar),
         new ActorResponse.PublicKey(urls.key(actor.publicId()), id, actor.publicKeyPem()));

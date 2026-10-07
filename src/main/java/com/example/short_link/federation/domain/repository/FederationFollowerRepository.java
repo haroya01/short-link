@@ -19,5 +19,10 @@ public interface FederationFollowerRepository {
 
   List<FollowOnDomain<FederationFollowerEntity>> onDomain(Long userId, String domain);
 
+  // Follows from elsewhere waiting on a locked member's approval, newest first.
+  List<FollowOnDomain<FederationFollowerEntity>> pending(Long userId);
+
+  List<FollowOnDomain<FederationFollowerEntity>> pending(Long userId, int page, int size);
+
   int deleteAllForUser(Long userId);
 }

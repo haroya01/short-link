@@ -10,4 +10,5 @@ public record MyProfileUpdateRequest(
         String theme,
     @Size(max = 1024) String socials,
     Boolean hideFollowerCount,
-    @Size(max = 60) String displayName) {}
+    @Size(max = 60) String displayName,
+    Boolean locked) {}
