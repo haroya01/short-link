@@ -7,6 +7,7 @@ import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
+import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.federation.application.FederationLeaving;
 import com.example.short_link.federation.application.NoteFederation;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,11 @@ public class NoteFederationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onPublished(NotePublishedEvent event) {
-    notes.created(event.noteId(), event.authorId());
+    if (event.replyToRemote()) {
+      notes.repliedToRemote(event.noteId(), event.authorId());
+    } else {
+      notes.created(event.noteId(), event.authorId());
+    }
   }
 
   @Async("webhookExecutor")
@@ -51,13 +56,27 @@ public class NoteFederationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onReposted(NoteRepostedEvent event) {
-    notes.reposted(event.repostId(), event.noteId(), event.userId());
+    if (event.remote()) {
+      notes.repostedRemote(event.repostId(), event.noteId(), event.userId(), true);
+    } else {
+      notes.reposted(event.repostId(), event.noteId(), event.userId());
+    }
   }
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onUnreposted(NoteUnrepostedEvent event) {
-    notes.unreposted(event.repostId(), event.noteId(), event.userId());
+    if (event.remote()) {
+      notes.repostedRemote(event.repostId(), event.noteId(), event.userId(), false);
+    } else {
+      notes.unreposted(event.repostId(), event.noteId(), event.userId());
+    }
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onRemoteNoteLiked(RemoteNoteLikedEvent event) {
+    notes.likedRemote(event.noteId(), event.userId(), event.liked());
   }
 
   @Async("webhookExecutor")

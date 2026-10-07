@@ -14,6 +14,7 @@ import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.application.NoteDocuments;
+import com.example.short_link.federation.application.RemoteParents;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import java.time.Instant;
@@ -54,6 +55,7 @@ class NoteObjectControllerTest {
   @Autowired private MockMvc mvc;
   @MockitoBean private NoteSnapshotReader notes;
   @MockitoBean private FederationActorService actors;
+  @MockitoBean private RemoteParents remoteParents;
 
   @Test
   void remoteServersGetTheNoteAndBrowsersGoToItsPage() throws Exception {

@@ -45,9 +45,7 @@ public enum NoteErrorCode {
   NOTE_QUOTE_CONFLICT(HttpStatus.BAD_REQUEST, "a note quotes a post or a note, not both"),
   NOTE_REPLY_BLOCKED(HttpStatus.FORBIDDEN, "cannot reply to this note"),
   NOTE_INTERACTION_BLOCKED(HttpStatus.FORBIDDEN, "cannot repost or quote this note"),
-  NOTE_REMOTE_UNSUPPORTED(
-      HttpStatus.BAD_REQUEST,
-      "notes from other servers cannot be replied to, reposted or quoted yet");
+  NOTE_REMOTE_UNSUPPORTED(HttpStatus.BAD_REQUEST, "notes from other servers cannot be quoted yet");
 
   private final HttpStatus status;
   private final String template;

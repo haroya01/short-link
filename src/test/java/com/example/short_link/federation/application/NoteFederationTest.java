@@ -14,7 +14,9 @@ import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,7 @@ class NoteFederationTest {
           List.of());
 
   @Mock private NoteSnapshotReader notes;
+  @Mock private RemoteParents remoteParents;
   @Mock private FederationActorService localActors;
   @Mock private FederationSettings settings;
   @Mock private FederationActorRepository actors;
@@ -50,6 +53,7 @@ class NoteFederationTest {
   private NoteFederation service() {
     return new NoteFederation(
         notes,
+        remoteParents,
         localActors,
         settings,
         actors,
@@ -58,7 +62,8 @@ class NoteFederationTest {
             new FederationUrls(
                 new FederationProperties("https://kurl.me", "https://blog.kurl.me"))),
         deliveries,
-        JSON);
+        JSON,
+        Clock.fixed(Instant.ofEpochMilli(5_000), ZoneOffset.UTC));
   }
 
   private void federating() {
@@ -167,5 +172,167 @@ class NoteFederationTest {
 
     verifyNoInteractions(deliveries);
     verify(notes, never()).find(44L);
+  }
+
+  private static final RemoteParents.Parent ALICE_NOTE =
+      new RemoteParents.Parent(
+          "https://m.example/users/alice/statuses/9",
+          "https://m.example/users/alice",
+          "@alice@m.example",
+          "https://m.example/inbox",
+          true);
+  private static final LocalActor WRITER =
+      new LocalActor(new FederationUser(7L, "yuki", null, null), "pid", "PUB");
+
+  private static NoteSnapshot reply(NoteSnapshotReader.Visibility visibility) {
+    return new NoteSnapshot(
+        43L,
+        7L,
+        "yuki",
+        "an answer",
+        Instant.parse("2026-10-06T00:00:00Z"),
+        null,
+        41L,
+        null,
+        List.of(),
+        null,
+        null,
+        false,
+        visibility);
+  }
+
+  @Test
+  void aReplyToANoteElsewhereReachesItsAuthorsServerEvenWithoutFollowers() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
+    when(followers.deliveryInboxes(7L)).thenReturn(List.of());
+
+    service().repliedToRemote(43L, 7L);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/notes/43/activity"),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://m.example/inbox")));
+    var create = JSON.readTree(body.getValue());
+    assertThat(create.path("object").path("inReplyTo").asString()).isEqualTo(ALICE_NOTE.uri());
+    assertThat(create.path("cc").toString()).contains("https://m.example/users/alice");
+    assertThat(create.path("object").path("tag").get(0).path("name").asString())
+        .isEqualTo("@alice@m.example");
+  }
+
+  @Test
+  void aDirectReplyElsewhereGoesToThatAuthorAloneAndNothingLeavesWithoutAnActor() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER), Optional.empty());
+    when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.DIRECT)));
+    when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
+
+    service().repliedToRemote(43L, 7L);
+    service().repliedToRemote(43L, 7L);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            any(),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://m.example/inbox")));
+    var create = JSON.readTree(body.getValue());
+    assertThat(create.path("to").toString()).isEqualTo("[\"https://m.example/users/alice\"]");
+    assertThat(create.path("cc").size()).isZero();
+    verify(followers, never()).deliveryInboxes(any());
+  }
+
+  @Test
+  void aBoostOfANoteElsewhereAndItsUndoReachTheFollowersAndThatServer() {
+    when(localActors.byUserId(8L))
+        .thenReturn(
+            Optional.of(new LocalActor(new FederationUser(8L, "rp", null, null), "rp", "PUB")));
+    when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
+    when(followers.deliveryInboxes(8L)).thenReturn(List.of("https://c.example/inbox"));
+
+    service().repostedRemote(5L, 41L, 8L, true);
+    service().repostedRemote(5L, 41L, 8L, false);
+
+    ArgumentCaptor<String> bodies = ArgumentCaptor.forClass(String.class);
+    verify(deliveries, org.mockito.Mockito.times(2))
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(8L),
+            any(),
+            bodies.capture(),
+            org.mockito.ArgumentMatchers.eq(
+                List.of("https://c.example/inbox", "https://m.example/inbox")));
+    var announce = JSON.readTree(bodies.getAllValues().get(0));
+    assertThat(announce.path("type").asString()).isEqualTo("Announce");
+    assertThat(announce.path("object").asString()).isEqualTo(ALICE_NOTE.uri());
+    var undo = JSON.readTree(bodies.getAllValues().get(1));
+    assertThat(undo.path("type").asString()).isEqualTo("Undo");
+    assertThat(undo.path("object").path("object").asString()).isEqualTo(ALICE_NOTE.uri());
+  }
+
+  @Test
+  void aPrivateNoteElsewhereIsNeverBoosted() {
+    when(localActors.byUserId(8L))
+        .thenReturn(
+            Optional.of(new LocalActor(new FederationUser(8L, "rp", null, null), "rp", "PUB")));
+    when(remoteParents.of(41L))
+        .thenReturn(
+            Optional.of(
+                new RemoteParents.Parent(
+                    ALICE_NOTE.uri(),
+                    ALICE_NOTE.actorUri(),
+                    "@alice@m.example",
+                    ALICE_NOTE.inbox(),
+                    false)));
+
+    service().repostedRemote(5L, 41L, 8L, true);
+
+    verifyNoInteractions(deliveries);
+  }
+
+  @Test
+  void aLikeAndItsUndoGoOnlyToTheAuthorsServerEachWithAnIdOfItsOwn() {
+    when(localActors.byUserId(8L))
+        .thenReturn(
+            Optional.of(new LocalActor(new FederationUser(8L, "rp", null, null), "rp", "PUB")));
+    when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
+
+    service().likedRemote(41L, 8L, true);
+    service().likedRemote(41L, 8L, false);
+
+    ArgumentCaptor<String> ids = ArgumentCaptor.forClass(String.class);
+    ArgumentCaptor<String> bodies = ArgumentCaptor.forClass(String.class);
+    verify(deliveries, org.mockito.Mockito.times(2))
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(8L),
+            ids.capture(),
+            bodies.capture(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://m.example/inbox")));
+    assertThat(ids.getAllValues())
+        .containsExactly(
+            "https://kurl.me/ap/actors/rp#likes/41/5000",
+            "https://kurl.me/ap/actors/rp#likes/41/5000/undo");
+    var undo = JSON.readTree(bodies.getAllValues().get(1));
+    assertThat(undo.path("object").path("type").asString()).isEqualTo("Like");
+    assertThat(undo.path("object").path("object").asString()).isEqualTo(ALICE_NOTE.uri());
+  }
+
+  @Test
+  void nothingIsSentForANoteThatIsNotFromElsewhere() {
+    when(localActors.byUserId(8L))
+        .thenReturn(
+            Optional.of(new LocalActor(new FederationUser(8L, "rp", null, null), "rp", "PUB")));
+    when(remoteParents.of(41L)).thenReturn(Optional.empty());
+    when(localActors.byUserId(9L)).thenReturn(Optional.empty());
+
+    service().likedRemote(41L, 8L, true);
+    service().repostedRemote(5L, 41L, 8L, true);
+    service().likedRemote(41L, 9L, true);
+    service().repostedRemote(5L, 41L, 9L, true);
+
+    verifyNoInteractions(deliveries);
   }
 }

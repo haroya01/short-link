@@ -9,6 +9,7 @@ import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
+import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.federation.application.FederationLeaving;
 import com.example.short_link.federation.application.NoteFederation;
 import java.util.List;
@@ -35,5 +36,18 @@ class NoteFederationListenerTest {
     verify(notes).reposted(900L, 1L, 8L);
     verify(notes).unreposted(900L, 1L, 8L);
     verify(leaving).leave(7L);
+  }
+
+  @Test
+  void interactionsWithNotesFromElsewhereTakeTheirOwnPath() {
+    listener.onPublished(new NotePublishedEvent(2L, 7L, true));
+    listener.onReposted(new NoteRepostedEvent(901L, 3L, 8L, true));
+    listener.onUnreposted(new NoteUnrepostedEvent(901L, 3L, 8L, true));
+    listener.onRemoteNoteLiked(new RemoteNoteLikedEvent(3L, 8L, true));
+
+    verify(notes).repliedToRemote(2L, 7L);
+    verify(notes).repostedRemote(901L, 3L, 8L, true);
+    verify(notes).repostedRemote(901L, 3L, 8L, false);
+    verify(notes).likedRemote(3L, 8L, true);
   }
 }

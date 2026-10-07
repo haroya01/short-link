@@ -337,6 +337,46 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
                 .toList())
         .doesNotContain(noteId);
 
+    String aliceInbox = remote + "/inbox";
+    call(
+        "federation-remote-note-like",
+        "PUT",
+        "/api/v1/notes/" + noteId + "/like",
+        null,
+        token,
+        200);
+    call(
+        "federation-remote-note-repost",
+        "PUT",
+        "/api/v1/notes/" + noteId + "/repost",
+        null,
+        token,
+        200);
+    var answer =
+        body(
+            call(
+                "federation-remote-note-reply",
+                "POST",
+                "/api/v1/notes",
+                Map.of("body", "replying from kurl", "inReplyToId", noteId),
+                token,
+                201));
+    List<String> sent =
+        jdbc.queryForList(
+            "SELECT body FROM federation_delivery WHERE signer_user_id = ? AND inbox = ?"
+                + " ORDER BY id",
+            String.class,
+            owner.getId(),
+            aliceInbox);
+    assertThat(sent).hasSize(3);
+    assertThat(json.readTree(sent.get(0)).path("type").asString()).isEqualTo("Like");
+    assertThat(json.readTree(sent.get(0)).path("object").asString()).isEqualTo(status);
+    assertThat(json.readTree(sent.get(1)).path("type").asString()).isEqualTo("Announce");
+    var created = json.readTree(sent.get(2));
+    assertThat(created.path("type").asString()).isEqualTo("Create");
+    assertThat(created.path("object").path("inReplyTo").asString()).isEqualTo(status);
+    jdbc.update("DELETE FROM note WHERE id = ?", answer.path("id").asLong());
+
     jdbc.update(
         "INSERT INTO note (user_id, body, created_at) VALUES (?, 'a question', NOW(6))",
         owner.getId());

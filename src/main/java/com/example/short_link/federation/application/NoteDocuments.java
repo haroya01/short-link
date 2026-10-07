@@ -28,6 +28,11 @@ public class NoteDocuments {
   private final FederationUrls urls;
 
   public Map<String, Object> note(NoteSnapshot note, String actorPublicId) {
+    return note(note, actorPublicId, null);
+  }
+
+  public Map<String, Object> note(
+      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
     Map<String, Object> object = new LinkedHashMap<>();
     object.put("id", urls.note(note.id()));
     object.put("type", note.poll() == null ? "Note" : "Question");
@@ -38,9 +43,13 @@ public class NoteDocuments {
       object.put("updated", note.editedAt().truncatedTo(ChronoUnit.SECONDS).toString());
     }
     object.put("url", urls.notePage(note.authorUsername(), note.id()));
-    object.put("to", to(note, actorPublicId));
-    object.put("cc", cc(note, actorPublicId));
-    object.put("inReplyTo", note.inReplyToId() == null ? null : urls.note(note.inReplyToId()));
+    object.put("to", to(note, actorPublicId, parent));
+    object.put("cc", cc(note, actorPublicId, parent));
+    object.put(
+        "inReplyTo",
+        parent != null
+            ? parent.uri()
+            : note.inReplyToId() == null ? null : urls.note(note.inReplyToId()));
     if (note.quotedNote() != null) {
       String quoted = urls.note(note.quotedNote().id());
       object.put("quoteUrl", quoted);
@@ -60,6 +69,13 @@ public class NoteDocuments {
     }
     object.put("attachment", attachments);
     List<Map<String, Object>> tags = new ArrayList<>();
+    if (parent != null) {
+      Map<String, Object> mention = new LinkedHashMap<>();
+      mention.put("type", "Mention");
+      mention.put("href", parent.actorUri());
+      mention.put("name", parent.handle());
+      tags.add(mention);
+    }
     for (String name : Hashtags.of(note.body())) {
       Map<String, Object> tag = new LinkedHashMap<>();
       tag.put("type", "Hashtag");
@@ -103,30 +119,53 @@ public class NoteDocuments {
   }
 
   public Map<String, Object> create(NoteSnapshot note, String actorPublicId) {
+    return create(note, actorPublicId, null);
+  }
+
+  public Map<String, Object> create(
+      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
     String noteUri = urls.note(note.id());
     Map<String, Object> activity = activity(noteUri + "/activity", "Create", actorPublicId);
     activity.put("published", note.createdAt().truncatedTo(ChronoUnit.SECONDS).toString());
-    activity.put("to", to(note, actorPublicId));
-    activity.put("cc", cc(note, actorPublicId));
-    activity.put("object", note(note, actorPublicId));
+    activity.put("to", to(note, actorPublicId, parent));
+    activity.put("cc", cc(note, actorPublicId, parent));
+    activity.put("object", note(note, actorPublicId, parent));
     return activity;
   }
 
   // Mastodon's addressing: public is to everyone and copied to followers; unlisted is to followers
   // and copied to everyone, which keeps it off public timelines; followers-only is to followers
-  // alone. Direct notes are never delivered.
+  // alone. Direct notes leave only as a reply to someone elsewhere, addressed to that person alone;
+  // any other reply to them copies them in.
   private List<String> to(NoteSnapshot note, String actorPublicId) {
+    return to(note, actorPublicId, null);
+  }
+
+  private List<String> to(NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
+    if (parent != null && note.visibility() == NoteSnapshotReader.Visibility.DIRECT) {
+      return List.of(parent.actorUri());
+    }
     return note.visibility() == NoteSnapshotReader.Visibility.PUBLIC
         ? List.of(ActivityStreams.PUBLIC)
         : List.of(urls.followers(actorPublicId));
   }
 
   private List<String> cc(NoteSnapshot note, String actorPublicId) {
-    return switch (note.visibility()) {
-      case PUBLIC -> List.of(urls.followers(actorPublicId));
-      case UNLISTED -> List.of(ActivityStreams.PUBLIC);
-      case PRIVATE, DIRECT -> List.of();
-    };
+    return cc(note, actorPublicId, null);
+  }
+
+  private List<String> cc(NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
+    List<String> cc =
+        new ArrayList<>(
+            switch (note.visibility()) {
+              case PUBLIC -> List.of(urls.followers(actorPublicId));
+              case UNLISTED -> List.of(ActivityStreams.PUBLIC);
+              case PRIVATE, DIRECT -> List.<String>of();
+            });
+    if (parent != null && note.visibility() != NoteSnapshotReader.Visibility.DIRECT) {
+      cc.add(parent.actorUri());
+    }
+    return cc;
   }
 
   public Map<String, Object> update(NoteSnapshot note, String actorPublicId) {
@@ -157,6 +196,51 @@ public class NoteDocuments {
     activity.put("cc", List.of(urls.followers(actorPublicId)));
     activity.put("object", announce);
     return activity;
+  }
+
+  public Map<String, Object> announceRemote(
+      Long repostId, RemoteParents.Parent note, String actorPublicId) {
+    Map<String, Object> activity = activity(urls.repost(repostId), "Announce", actorPublicId);
+    activity.put("cc", List.of(urls.followers(actorPublicId), note.actorUri()));
+    activity.put("object", note.uri());
+    return activity;
+  }
+
+  public Map<String, Object> undoAnnounceRemote(
+      Long repostId, RemoteParents.Parent note, String actorPublicId) {
+    Map<String, Object> announce = new LinkedHashMap<>();
+    announce.put("id", urls.repost(repostId));
+    announce.put("type", "Announce");
+    announce.put("actor", urls.actor(actorPublicId));
+    announce.put("object", note.uri());
+    Map<String, Object> activity = activity(urls.repost(repostId) + "#undo", "Undo", actorPublicId);
+    activity.put("cc", List.of(urls.followers(actorPublicId), note.actorUri()));
+    activity.put("object", announce);
+    return activity;
+  }
+
+  // Each like and undo gets an id of its own: the delivery queue keeps one copy per id and inbox,
+  // so liking again after an undo must not reuse the first like's id.
+  public Map<String, Object> like(
+      Long noteId, RemoteParents.Parent note, String actorPublicId, long at, boolean liked) {
+    String likeId = urls.actor(actorPublicId) + "#likes/" + noteId + "/" + at;
+    Map<String, Object> like = new LinkedHashMap<>();
+    like.put("@context", ActivityStreams.CONTEXT);
+    like.put("id", likeId);
+    like.put("type", "Like");
+    like.put("actor", urls.actor(actorPublicId));
+    like.put("object", note.uri());
+    if (liked) {
+      return like;
+    }
+    like.remove("@context");
+    Map<String, Object> undo = new LinkedHashMap<>();
+    undo.put("@context", ActivityStreams.CONTEXT);
+    undo.put("id", likeId + "/undo");
+    undo.put("type", "Undo");
+    undo.put("actor", urls.actor(actorPublicId));
+    undo.put("object", like);
+    return undo;
   }
 
   public Map<String, Object> delete(Long noteId, String actorPublicId) {

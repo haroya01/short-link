@@ -17,6 +17,7 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
+import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
@@ -46,7 +47,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -328,28 +328,36 @@ class NoteCommandServiceTest {
   }
 
   @Test
-  void aNoteFromAnotherServerIsLikedAndKeptButNotRepliedRepostedOrQuotedYet() {
+  void aNoteFromAnotherServerIsLikedRepostedAndAnsweredWithItsServerToldButNotQuotedYet() {
     NoteEntity remote = note(1L, null, "from afar");
     ReflectionTestUtils.setField(remote, "remoteActorId", 42L);
     when(notes.findById(1L)).thenReturn(Optional.of(remote));
     when(likes.addIfAbsent(1L, 8L)).thenReturn(true);
     when(notes.stats(List.of(1L))).thenReturn(Map.of());
+    NoteRepostEntity repost = new NoteRepostEntity(1L, 8L);
+    ReflectionTestUtils.setField(repost, "id", 77L);
+    when(reposts.addIfAbsent(1L, 8L)).thenReturn(Optional.of(repost));
+    when(reposts.delete(1L, 8L)).thenReturn(Optional.of(repost));
+    when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "me", null)));
+    saving();
 
     assertThat(service().setLike(8L, 1L, true).liked()).isTrue();
+    service().setLike(8L, 1L, false);
     assertThat(service().setBookmark(8L, 1L, true).bookmarked()).isTrue();
-    for (ThrowingCallable attempt :
-        List.<ThrowingCallable>of(
-            () -> service().setRepost(8L, 1L, true),
-            () -> service().create(8L, new NoteDraft("hi", null, null, 1L, null)),
-            () -> service().create(8L, new NoteDraft("hi", null, null, null, 1L)))) {
-      assertThatThrownBy(attempt)
-          .isInstanceOfSatisfying(
-              NoteException.class,
-              e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REMOTE_UNSUPPORTED));
-    }
-    verify(reposts, never()).addIfAbsent(any(), any());
-    verify(notes, never()).save(any());
-    verifyNoInteractions(blocks);
+    service().setRepost(8L, 1L, true);
+    service().setRepost(8L, 1L, false);
+    service().create(8L, new NoteDraft("an answer", null, null, 1L, null));
+
+    verify(events).publishEvent(new RemoteNoteLikedEvent(1L, 8L, true));
+    verify(events).publishEvent(new RemoteNoteLikedEvent(1L, 8L, false));
+    verify(events).publishEvent(new NoteRepostedEvent(77L, 1L, 8L, true));
+    verify(events).publishEvent(new NoteUnrepostedEvent(77L, 1L, 8L, true));
+    verify(events).publishEvent(new NotePublishedEvent(100L, 8L, true));
+    assertThatThrownBy(() -> service().create(8L, new NoteDraft("hi", null, null, null, 1L)))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REMOTE_UNSUPPORTED));
+    verify(blocks, never()).isBlocked(any(), any());
   }
 
   @Test

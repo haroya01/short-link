@@ -58,6 +58,18 @@ class RemoteNoteRecorder implements RemoteNotes {
   }
 
   @Override
+  @Transactional(readOnly = true)
+  public Optional<Target> target(Long noteId) {
+    return notes
+        .findById(noteId)
+        .filter(NoteEntity::isRemote)
+        .map(
+            note ->
+                new Target(
+                    note.getUri(), note.getRemoteActorId(), note.getVisibility().shareable()));
+  }
+
+  @Override
   @Transactional
   public Optional<Long> receive(Received received) {
     Long parentId = received.inReplyToLocalId();
