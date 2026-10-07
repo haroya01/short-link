@@ -70,7 +70,9 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
             note.getInReplyToId(),
             quote,
             images,
-            quotedNote));
+            quotedNote,
+            note.getContentWarning(),
+            note.isSensitive()));
   }
 
   @Override

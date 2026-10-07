@@ -99,7 +99,7 @@ public class NoteController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @RequestBody EditNoteRequest request) {
-    return command.edit(userId, id, request.body());
+    return command.edit(userId, id, request.body(), request.contentWarning(), request.sensitive());
   }
 
   @DeleteMapping("/api/v1/notes/{id}")

@@ -46,7 +46,8 @@ public class NoteDocuments {
       object.put("quoteUri", quoted);
       object.put("_misskey_quote", quoted);
     }
-    object.put("sensitive", false);
+    object.put("summary", note.contentWarning());
+    object.put("sensitive", note.sensitive());
     List<Map<String, Object>> attachments = new ArrayList<>();
     for (var image : note.images()) {
       Map<String, Object> attachment = new LinkedHashMap<>();

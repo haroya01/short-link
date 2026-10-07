@@ -41,6 +41,21 @@ class NoteDocumentsTest {
   }
 
   @Test
+  void aContentWarningTravelsAsTheSummaryAndMarksTheNoteSensitive() {
+    NoteSnapshot warned =
+        new NoteSnapshot(
+            42L, 7L, "yuki", "spoilers", CREATED, null, null, null, List.of(), null, "결말 포함", true);
+
+    Map<String, Object> note = documents.note(warned, "pid");
+
+    assertThat(note.get("summary")).isEqualTo("결말 포함");
+    assertThat(note.get("sensitive")).isEqualTo(true);
+    assertThat(documents.note(note("plain", null, List.of(), null), "pid"))
+        .containsEntry("summary", null)
+        .containsEntry("sensitive", false);
+  }
+
+  @Test
   @SuppressWarnings("unchecked")
   void hashtagsLinkToTheTagPageAndTravelAsHashtagObjects() {
     Map<String, Object> object =
@@ -100,7 +115,9 @@ class NoteDocumentsTest {
             null,
             null,
             List.of(),
-            new QuotedNote(9L, "mio"));
+            new QuotedNote(9L, "mio"),
+            null,
+            false);
 
     Map<String, Object> note = documents.note(quoting, "pid");
 

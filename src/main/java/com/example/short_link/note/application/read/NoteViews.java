@@ -106,7 +106,9 @@ public class NoteViews {
               null,
               counts.quotes(),
               viewerId == null ? null : marks.bookmarked().contains(note.getId()),
-              Mentions.of(note.getBody()).stream().filter(members::contains).toList()));
+              Mentions.of(note.getBody()).stream().filter(members::contains).toList(),
+              note.getContentWarning(),
+              note.isSensitive()));
     }
     return views;
   }
@@ -141,7 +143,9 @@ public class NoteViews {
         quoted.getBody(),
         quoted.getCreatedAt(),
         authors.get(quoted.getUserId()),
-        images.getOrDefault(quoted.getId(), List.of()));
+        images.getOrDefault(quoted.getId(), List.of()),
+        quoted.getContentWarning(),
+        quoted.isSensitive());
   }
 
   private Map<Long, List<NoteView.Media>> images(List<Long> noteIds) {

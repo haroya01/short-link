@@ -350,13 +350,13 @@ class NoteCommandServiceTest {
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
     when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
 
-    service().edit(7L, 1L, "typo fixed https://example.com/a");
+    service().edit(7L, 1L, "typo fixed https://example.com/a", null, null);
     verify(events, never()).publishEvent(any(NoteLinkPreviewRequested.class));
 
-    service().edit(7L, 1L, "now https://example.com/b");
+    service().edit(7L, 1L, "now https://example.com/b", null, null);
     verify(events).publishEvent(new NoteLinkPreviewRequested(1L, "https://example.com/b"));
 
-    service().edit(7L, 1L, "no address any more");
+    service().edit(7L, 1L, "no address any more", null, null);
     verify(events).publishEvent(new NoteLinkPreviewRequested(1L, null));
   }
 
@@ -372,10 +372,10 @@ class NoteCommandServiceTest {
     when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
     when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
 
-    service().edit(7L, 1L, "#B then #A");
+    service().edit(7L, 1L, "#B then #A", null, null);
     verify(notes, never()).retag(any(), any());
 
-    service().edit(7L, 1L, "only #c now");
+    service().edit(7L, 1L, "only #c now", null, null);
     verify(notes).retag(1L, List.of("c"));
   }
 
@@ -422,7 +422,7 @@ class NoteCommandServiceTest {
     when(people.activeAuthors(List.of(), List.of("yuki")))
         .thenReturn(Map.of(11L, new NoteAuthor(11L, "yuki", null)));
 
-    service().edit(7L, 1L, "@mina and @yuki hi");
+    service().edit(7L, 1L, "@mina and @yuki hi", null, null);
 
     verify(events)
         .publishEvent(
@@ -438,6 +438,48 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aWarningIsTrimmedCappedAndAlwaysHidesThePhotosToo() {
+    saving();
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    NoteView warned =
+        service().create(7L, new NoteDraft("결말", List.of(), null, null, null, "  스포일러  ", false));
+    assertThat(warned.contentWarning()).isEqualTo("스포일러");
+    assertThat(warned.sensitive()).isTrue();
+
+    NoteView plain =
+        service().create(7L, new NoteDraft("평범", List.of(), null, null, null, "   ", false));
+    assertThat(plain.contentWarning()).isNull();
+    assertThat(plain.sensitive()).isFalse();
+
+    assertThatThrownBy(
+            () ->
+                service()
+                    .create(
+                        7L,
+                        new NoteDraft("x", List.of(), null, null, null, "가".repeat(101), false)))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_WARNING_TOO_LONG));
+  }
+
+  @Test
+  void anEditKeepsTheWarningUnlessItSendsOneAndAnEmptyWarningRemovesIt() {
+    NoteEntity mine = note(1L, 7L, "old");
+    mine.markContent("스포일러", false);
+    when(notes.findById(1L)).thenReturn(Optional.of(mine));
+    when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
+    when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
+
+    service().edit(7L, 1L, "body only", null, null);
+    assertThat(mine.getContentWarning()).isEqualTo("스포일러");
+
+    service().edit(7L, 1L, "no warning", "", false);
+    assertThat(mine.getContentWarning()).isNull();
+    assertThat(mine.isSensitive()).isFalse();
+  }
+
+  @Test
   void onlyTheAuthorEditsAndTheEditIsStampedToMicroseconds() {
     NoteEntity mine = note(1L, 7L, "old");
     when(notes.findById(1L)).thenReturn(Optional.of(mine));
@@ -448,12 +490,12 @@ class NoteCommandServiceTest {
             null);
     when(views.of(List.of(mine), 7L)).thenReturn(List.of(edited));
 
-    assertThat(service().edit(7L, 1L, " new ")).isEqualTo(edited);
+    assertThat(service().edit(7L, 1L, " new ", null, null)).isEqualTo(edited);
     assertThat(mine.getBody()).isEqualTo("new");
     assertThat(mine.getEditedAt()).isEqualTo(Instant.parse("2026-10-06T00:00:00.123456Z"));
     verify(events).publishEvent(new NoteEditedEvent(1L, 7L));
 
-    assertThatThrownBy(() -> service().edit(8L, 1L, "theirs"))
+    assertThatThrownBy(() -> service().edit(8L, 1L, "theirs", null, null))
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
@@ -467,7 +509,7 @@ class NoteCommandServiceTest {
         .thenReturn(List.of(new NoteMediaEntity(1L, 0, "k", "u", "image/png", null)));
     when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
 
-    service().edit(7L, 1L, "");
+    service().edit(7L, 1L, "", null, null);
 
     assertThat(mine.getBody()).isEmpty();
   }

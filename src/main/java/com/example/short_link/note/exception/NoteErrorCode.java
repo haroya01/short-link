@@ -7,6 +7,7 @@ public enum NoteErrorCode {
   NOTE_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "note permission denied"),
   NOTE_BODY_REQUIRED(HttpStatus.BAD_REQUEST, "note body or an image is required"),
   NOTE_BODY_TOO_LONG(HttpStatus.BAD_REQUEST, "note body exceeds %s characters"),
+  NOTE_WARNING_TOO_LONG(HttpStatus.BAD_REQUEST, "content warning exceeds %s characters"),
   NOTE_TOO_MANY_IMAGES(HttpStatus.BAD_REQUEST, "a note holds at most %s images"),
   NOTE_ALT_TEXT_TOO_LONG(HttpStatus.BAD_REQUEST, "alt text exceeds %s characters"),
   NOTE_IMAGE_INVALID(HttpStatus.BAD_REQUEST, "%s"),

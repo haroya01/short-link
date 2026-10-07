@@ -22,7 +22,9 @@ public interface NoteSnapshotReader {
       Long inReplyToId,
       Quote quote,
       List<Image> images,
-      QuotedNote quotedNote) {
+      QuotedNote quotedNote,
+      String contentWarning,
+      boolean sensitive) {
 
     public NoteSnapshot(
         Long id,
@@ -44,7 +46,9 @@ public interface NoteSnapshotReader {
           inReplyToId,
           quote,
           images,
-          null);
+          null,
+          null,
+          false);
     }
   }
 

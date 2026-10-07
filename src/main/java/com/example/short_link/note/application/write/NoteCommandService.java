@@ -178,9 +178,10 @@ public class NoteCommandService {
       throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
     }
 
-    NoteEntity note =
-        notes.save(
-            new NoteEntity(userId, body, parentId, draft.quotedPostId(), draft.quotedNoteId()));
+    NoteEntity fresh =
+        new NoteEntity(userId, body, parentId, draft.quotedPostId(), draft.quotedNoteId());
+    fresh.markContent(warning(draft.contentWarning()), draft.sensitive());
+    NoteEntity note = notes.save(fresh);
     List<NoteMediaEntity> rows = new ArrayList<>(stored.size());
     for (int i = 0; i < stored.size(); i++) {
       NoteImages.StoredImage image = stored.get(i);
@@ -232,7 +233,9 @@ public class NoteCommandService {
         null,
         0,
         false,
-        mentioned.stream().map(NoteAuthor::username).toList());
+        mentioned.stream().map(NoteAuthor::username).toList(),
+        note.getContentWarning(),
+        note.isSensitive());
   }
 
   private static List<NoteAuthor> members(Map<Long, NoteAuthor> found, List<String> handles) {
@@ -270,11 +273,14 @@ public class NoteCommandService {
             .map(
                 image ->
                     new NoteView.Media(image.getUrl(), image.getAltText(), image.getContentType()))
-            .toList());
+            .toList(),
+        quoted.getContentWarning(),
+        quoted.isSensitive());
   }
 
   @Transactional
-  public NoteView edit(Long userId, Long noteId, String rawBody) {
+  public NoteView edit(
+      Long userId, Long noteId, String rawBody, String rawWarning, Boolean sensitive) {
     NoteEntity note = owned(userId, noteId);
     String body = normalize(rawBody);
     boolean hasMedia = !media.findByNoteIds(List.of(noteId)).isEmpty();
@@ -287,6 +293,11 @@ public class NoteCommandService {
     List<String> added = new ArrayList<>(Mentions.of(body));
     added.removeAll(Mentions.of(note.getBody()));
     note.edit(body, clock.instant().truncatedTo(ChronoUnit.MICROS));
+    if (rawWarning != null || sensitive != null) {
+      note.markContent(
+          rawWarning == null ? note.getContentWarning() : warning(rawWarning),
+          sensitive == null ? note.isSensitive() : sensitive);
+    }
     if (!added.isEmpty()) {
       mention(note, userId, members(people.activeAuthors(List.of(), added), added), Set.of(userId));
     }
@@ -397,6 +408,17 @@ public class NoteCommandService {
 
   private static String normalize(String body) {
     return body == null ? "" : body.strip();
+  }
+
+  private static String warning(String raw) {
+    String warning = raw == null ? "" : raw.strip();
+    if (warning.isEmpty()) {
+      return null;
+    }
+    if (warning.codePointCount(0, warning.length()) > NoteEntity.MAX_WARNING_LENGTH) {
+      throw new NoteException(NoteErrorCode.NOTE_WARNING_TOO_LONG, NoteEntity.MAX_WARNING_LENGTH);
+    }
+    return warning;
   }
 
   private static void requireContent(String body, boolean hasImages) {
