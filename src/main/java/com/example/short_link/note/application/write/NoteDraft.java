@@ -9,7 +9,8 @@ public record NoteDraft(
     Long inReplyToId,
     Long quotedNoteId,
     String contentWarning,
-    boolean sensitive) {
+    boolean sensitive,
+    String visibility) {
 
   public NoteDraft(String body, List<Image> images, Long quotedPostId, Long inReplyToId) {
     this(body, images, quotedPostId, inReplyToId, null);
@@ -17,7 +18,18 @@ public record NoteDraft(
 
   public NoteDraft(
       String body, List<Image> images, Long quotedPostId, Long inReplyToId, Long quotedNoteId) {
-    this(body, images, quotedPostId, inReplyToId, quotedNoteId, null, false);
+    this(body, images, quotedPostId, inReplyToId, quotedNoteId, null, false, null);
+  }
+
+  public NoteDraft(
+      String body,
+      List<Image> images,
+      Long quotedPostId,
+      Long inReplyToId,
+      Long quotedNoteId,
+      String contentWarning,
+      boolean sensitive) {
+    this(body, images, quotedPostId, inReplyToId, quotedNoteId, contentWarning, sensitive, null);
   }
 
   public record Image(String key, String altText) {}

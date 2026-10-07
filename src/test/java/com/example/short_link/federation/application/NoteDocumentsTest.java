@@ -2,6 +2,7 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.Image;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
@@ -38,6 +39,47 @@ class NoteDocumentsTest {
                 + " rel=\"nofollow noopener noreferrer\" target=\"_blank\">"
                 + "https://example.com/a?b=1&amp;c=2</a>.<br>next line</p>"
                 + "<p>second &lt;script&gt;</p>");
+  }
+
+  @Test
+  void unlistedAndFollowersOnlyNotesAreAddressedAsMastodonDoes() {
+    NoteSnapshot unlisted =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "quiet",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            null,
+            false,
+            NoteSnapshotReader.Visibility.UNLISTED);
+    NoteSnapshot followersOnly =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "close",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            null,
+            false,
+            NoteSnapshotReader.Visibility.PRIVATE);
+
+    Map<String, Object> quiet = documents.create(unlisted, "pid");
+    assertThat(quiet.get("to")).isEqualTo(List.of("https://kurl.me/ap/actors/pid/followers"));
+    assertThat(quiet.get("cc")).isEqualTo(List.of("https://www.w3.org/ns/activitystreams#Public"));
+    Map<String, Object> close = documents.note(followersOnly, "pid");
+    assertThat(close.get("to")).isEqualTo(List.of("https://kurl.me/ap/actors/pid/followers"));
+    assertThat(close.get("cc")).isEqualTo(List.of());
   }
 
   @Test

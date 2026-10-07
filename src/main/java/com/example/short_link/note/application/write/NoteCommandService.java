@@ -19,6 +19,7 @@ import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
+import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -133,9 +134,18 @@ public class NoteCommandService {
     if (attached.size() > NoteMediaEntity.MAX_PER_NOTE) {
       throw new NoteException(NoteErrorCode.NOTE_TOO_MANY_IMAGES, NoteMediaEntity.MAX_PER_NOTE);
     }
+    NoteVisibility requested =
+        draft.visibility() == null
+            ? null
+            : NoteVisibility.parse(draft.visibility())
+                .orElseThrow(
+                    () ->
+                        new NoteException(
+                            NoteErrorCode.NOTE_VISIBILITY_INVALID, draft.visibility()));
     NoteEntity parent = null;
     if (draft.inReplyToId() != null) {
       parent = find(draft.inReplyToId());
+      requireReadable(userId, parent);
       if (blocks.isBlocked(parent.getUserId(), userId)
           || blocks.isBlocked(userId, parent.getUserId())) {
         throw new NoteException(NoteErrorCode.NOTE_REPLY_BLOCKED);
@@ -154,6 +164,10 @@ public class NoteCommandService {
                   () ->
                       new NoteException(
                           NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId()));
+      requireReadable(userId, quotedNote);
+      if (!quotedNote.getVisibility().shareable()) {
+        throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
+      }
       requireNotBlocked(userId, quotedNote);
     }
     QuotedPost quoted = null;
@@ -182,6 +196,10 @@ public class NoteCommandService {
     NoteEntity fresh =
         new NoteEntity(userId, body, parentId, draft.quotedPostId(), draft.quotedNoteId());
     fresh.markContent(warning(draft.contentWarning()), draft.sensitive());
+    fresh.showTo(
+        requested != null
+            ? requested
+            : parent != null ? parent.getVisibility() : NoteVisibility.PUBLIC);
     NoteEntity note = notes.save(fresh);
     List<NoteMediaEntity> rows = new ArrayList<>(stored.size());
     for (int i = 0; i < stored.size(); i++) {
@@ -207,6 +225,9 @@ public class NoteCommandService {
       toldOtherwise.add(quotedNote.getUserId());
     }
     List<NoteAuthor> mentioned = members(authors, handles);
+    if (note.getVisibility().restricted()) {
+      notes.addRecipients(note.getId(), recipients(mentioned, userId));
+    }
     mention(note, userId, mentioned, toldOtherwise);
     String previewUrl =
         NoteLinks.previewUrl(body, !stored.isEmpty(), quoted != null || quotedNote != null);
@@ -237,7 +258,12 @@ public class NoteCommandService {
         mentioned.stream().map(NoteAuthor::username).toList(),
         note.getContentWarning(),
         note.isSensitive(),
-        false);
+        false,
+        note.getVisibility().apiName());
+  }
+
+  private static List<Long> recipients(List<NoteAuthor> mentioned, Long authorId) {
+    return mentioned.stream().map(NoteAuthor::id).filter(id -> !id.equals(authorId)).toList();
   }
 
   private static List<NoteAuthor> members(Map<Long, NoteAuthor> found, List<String> handles) {
@@ -312,7 +338,11 @@ public class NoteCommandService {
     note.edit(body, clock.instant().truncatedTo(ChronoUnit.MICROS));
     note.markContent(nextWarning, nextSensitive);
     if (!added.isEmpty()) {
-      mention(note, userId, members(people.activeAuthors(List.of(), added), added), Set.of(userId));
+      List<NoteAuthor> newlyMentioned = members(people.activeAuthors(List.of(), added), added);
+      if (note.getVisibility().restricted()) {
+        notes.addRecipients(noteId, recipients(newlyMentioned, userId));
+      }
+      mention(note, userId, newlyMentioned, Set.of(userId));
     }
     events.publishEvent(new NoteEditedEvent(noteId, userId));
     String after = NoteLinks.previewUrl(body, hasMedia, hasQuote);
@@ -337,6 +367,9 @@ public class NoteCommandService {
     if (note.getInReplyToId() != null) {
       throw new NoteException(NoteErrorCode.NOTE_PIN_REPLY);
     }
+    if (note.getVisibility() == NoteVisibility.DIRECT) {
+      throw new NoteException(NoteErrorCode.NOTE_PIN_DIRECT);
+    }
     if (notes.countPinned(userId) >= NoteEntity.MAX_PINS) {
       throw new NoteException(NoteErrorCode.NOTE_PIN_LIMIT, NoteEntity.MAX_PINS);
     }
@@ -357,7 +390,7 @@ public class NoteCommandService {
 
   @Transactional
   public LikeStatus setLike(Long userId, Long noteId, boolean on) {
-    NoteEntity note = find(noteId);
+    NoteEntity note = readable(userId, noteId);
     if (on) {
       if (likes.addIfAbsent(noteId, userId)) {
         events.publishEvent(interaction(NoteInteractionEvent.Type.LIKE, note, userId, null));
@@ -370,8 +403,11 @@ public class NoteCommandService {
 
   @Transactional
   public RepostStatus setRepost(Long userId, Long noteId, boolean on) {
-    NoteEntity note = find(noteId);
+    NoteEntity note = readable(userId, noteId);
     if (on) {
+      if (!note.getVisibility().shareable()) {
+        throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
+      }
       moderation.requireCanWrite(userId);
       requireNotBlocked(userId, note);
       reposts
@@ -395,7 +431,7 @@ public class NoteCommandService {
   // A bookmark is the reader's own: it notifies no one and does not federate.
   @Transactional
   public BookmarkStatus setBookmark(Long userId, Long noteId, boolean on) {
-    find(noteId);
+    readable(userId, noteId);
     if (on) {
       bookmarks.addIfAbsent(noteId, userId);
     } else {
@@ -424,6 +460,21 @@ public class NoteCommandService {
   private void requireNotBlocked(Long userId, NoteEntity note) {
     if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
       throw new NoteException(NoteErrorCode.NOTE_INTERACTION_BLOCKED);
+    }
+  }
+
+  // A followers-only or direct note someone may not read is, to them, a note that does not exist.
+  private NoteEntity readable(Long userId, Long noteId) {
+    NoteEntity note = find(noteId);
+    requireReadable(userId, note);
+    return note;
+  }
+
+  private void requireReadable(Long userId, NoteEntity note) {
+    if (note.getVisibility().restricted()
+        && !note.isOwnedBy(userId)
+        && !notes.visibleTo(userId, Set.of(note.getId())).contains(note.getId())) {
+      throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, note.getId());
     }
   }
 

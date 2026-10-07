@@ -12,7 +12,8 @@ public record CreateNoteRequest(
     Long inReplyToId,
     Long quotedNoteId,
     String contentWarning,
-    Boolean sensitive) {
+    Boolean sensitive,
+    String visibility) {
 
   public record ImageRequest(String key, String altText) {}
 
@@ -28,6 +29,7 @@ public record CreateNoteRequest(
         inReplyToId,
         quotedNoteId,
         contentWarning,
-        Boolean.TRUE.equals(sensitive));
+        Boolean.TRUE.equals(sensitive),
+        visibility);
   }
 }

@@ -5,6 +5,8 @@ import jakarta.persistence.Column;
 import jakarta.persistence.ColumnResult;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EntityResult;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -64,6 +66,10 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(name = "pinned_at")
   private Instant pinnedAt;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  private NoteVisibility visibility = NoteVisibility.PUBLIC;
+
   public NoteEntity(Long userId, String body, Long inReplyToId, Long quotedPostId) {
     this(userId, body, inReplyToId, quotedPostId, null);
   }
@@ -93,6 +99,10 @@ public class NoteEntity extends BaseCreatedEntity {
   public void markContent(String warning, boolean sensitive) {
     this.contentWarning = warning;
     this.sensitive = sensitive || warning != null;
+  }
+
+  public void showTo(NoteVisibility visibility) {
+    this.visibility = visibility;
   }
 
   public void pin(Instant at) {

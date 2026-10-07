@@ -26,7 +26,8 @@ public interface NoteSnapshotReader {
       List<Image> images,
       QuotedNote quotedNote,
       String contentWarning,
-      boolean sensitive) {
+      boolean sensitive,
+      Visibility visibility) {
 
     public NoteSnapshot(
         Long id,
@@ -50,8 +51,46 @@ public interface NoteSnapshotReader {
           images,
           null,
           null,
-          false);
+          false,
+          Visibility.PUBLIC);
     }
+
+    public NoteSnapshot(
+        Long id,
+        Long authorId,
+        String authorUsername,
+        String body,
+        Instant createdAt,
+        Instant editedAt,
+        Long inReplyToId,
+        Quote quote,
+        List<Image> images,
+        QuotedNote quotedNote,
+        String contentWarning,
+        boolean sensitive) {
+      this(
+          id,
+          authorId,
+          authorUsername,
+          body,
+          createdAt,
+          editedAt,
+          inReplyToId,
+          quote,
+          images,
+          quotedNote,
+          contentWarning,
+          sensitive,
+          Visibility.PUBLIC);
+    }
+  }
+
+  // Mirrors the note slice's visibility for readers outside it. Direct notes are never federated.
+  enum Visibility {
+    PUBLIC,
+    UNLISTED,
+    PRIVATE,
+    DIRECT
   }
 
   record Quote(String title, String slug, String authorUsername) {}

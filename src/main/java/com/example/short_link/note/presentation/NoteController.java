@@ -58,8 +58,16 @@ public class NoteController {
   }
 
   @GetMapping("/api/v1/public/notes/{id}/history")
-  public NoteHistoryView history(@PathVariable Long id) {
-    return query.history(id);
+  public NoteHistoryView history(@AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
+    return query.history(id, viewerId);
+  }
+
+  @GetMapping("/api/v1/notes/direct")
+  public NoteFeedView direct(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.direct(viewerId, page, size);
   }
 
   @GetMapping("/api/v1/public/notes/{id}")

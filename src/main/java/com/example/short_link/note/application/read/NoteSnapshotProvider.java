@@ -72,7 +72,8 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
             images,
             quotedNote,
             note.getContentWarning(),
-            note.isSensitive()));
+            note.isSensitive(),
+            NoteSnapshotReader.Visibility.valueOf(note.getVisibility().name())));
   }
 
   @Override

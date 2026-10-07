@@ -90,3 +90,33 @@
 # one upsert. Reading it back adds one card query, and only for pages that have an address at all.
 @junit | note-create-link | 3 | 2 | 0 | 0 | 5
 @junit | note-thread-link | 6 | 0 | 0 | 0 | 6
+# Visibility (Mastodon's four). Restricted notes (followers-only, direct) record the members they
+# mention as recipients in one insert; they still get their mention notices. Shared feeds (everyone,
+# tags) filter public inside their one query. A page with restricted notes by someone else asks once
+# which of them this viewer may read (author, recipient, or follower for followers-only); a page of
+# public notes asks nothing more. Hidden notes answer 404 on every path. /ap/notes serves only public
+# and unlisted notes (its first read also creates the author's actor).
+@junit | note-vis-create-public | 3 | 2 | 0 | 0 | 5
+@junit | note-vis-create-unlisted | 3 | 2 | 0 | 0 | 5
+@junit | note-vis-create-private | 7 | 4 | 0 | 0 | 11
+@junit | note-vis-create-direct | 7 | 4 | 0 | 0 | 11
+@junit | note-vis-everyone | 5 | 0 | 0 | 0 | 5
+@junit | note-vis-tagged | 4 | 0 | 0 | 0 | 4
+@junit | note-vis-profile-anonymous | 5 | 0 | 0 | 0 | 5
+@junit | note-vis-profile-follower | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-profile-mentioned | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-profile-author | 6 | 0 | 0 | 0 | 6
+@junit | note-vis-thread-private-stranger | 4 | 0 | 0 | 0 | 4
+@junit | note-vis-thread-private-follower | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-thread-direct-follower | 4 | 0 | 0 | 0 | 4
+@junit | note-vis-thread-direct-mentioned | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-history-private-anonymous | 2 | 0 | 0 | 0 | 2
+@junit | note-vis-direct-mentioned | 6 | 0 | 0 | 0 | 6
+@junit | note-vis-direct-follower | 1 | 0 | 0 | 0 | 1
+@junit | note-vis-following-follower | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-following-mentioned | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-like-private-stranger | 2 | 0 | 0 | 0 | 2
+@junit | note-vis-repost-private-follower | 2 | 0 | 0 | 0 | 2
+@junit | note-vis-reply-direct-follower | 3 | 0 | 0 | 0 | 3
+@junit | note-vis-ap-private | 3 | 0 | 0 | 0 | 3
+@junit | note-vis-ap-unlisted | 7 | 1 | 0 | 0 | 8

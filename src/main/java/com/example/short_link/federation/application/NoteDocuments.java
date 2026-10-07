@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application;
 
 import com.example.short_link.common.note.Hashtags;
+import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -37,8 +38,8 @@ public class NoteDocuments {
       object.put("updated", note.editedAt().truncatedTo(ChronoUnit.SECONDS).toString());
     }
     object.put("url", urls.notePage(note.authorUsername(), note.id()));
-    object.put("to", List.of(ActivityStreams.PUBLIC));
-    object.put("cc", List.of(urls.followers(actorPublicId)));
+    object.put("to", to(note, actorPublicId));
+    object.put("cc", cc(note, actorPublicId));
     object.put("inReplyTo", note.inReplyToId() == null ? null : urls.note(note.inReplyToId()));
     if (note.quotedNote() != null) {
       String quoted = urls.note(note.quotedNote().id());
@@ -74,16 +75,35 @@ public class NoteDocuments {
     String noteUri = urls.note(note.id());
     Map<String, Object> activity = activity(noteUri + "/activity", "Create", actorPublicId);
     activity.put("published", note.createdAt().truncatedTo(ChronoUnit.SECONDS).toString());
-    activity.put("cc", List.of(urls.followers(actorPublicId)));
+    activity.put("to", to(note, actorPublicId));
+    activity.put("cc", cc(note, actorPublicId));
     activity.put("object", note(note, actorPublicId));
     return activity;
+  }
+
+  // Mastodon's addressing: public is to everyone and copied to followers; unlisted is to followers
+  // and copied to everyone, which keeps it off public timelines; followers-only is to followers
+  // alone. Direct notes are never delivered.
+  private List<String> to(NoteSnapshot note, String actorPublicId) {
+    return note.visibility() == NoteSnapshotReader.Visibility.PUBLIC
+        ? List.of(ActivityStreams.PUBLIC)
+        : List.of(urls.followers(actorPublicId));
+  }
+
+  private List<String> cc(NoteSnapshot note, String actorPublicId) {
+    return switch (note.visibility()) {
+      case PUBLIC -> List.of(urls.followers(actorPublicId));
+      case UNLISTED -> List.of(ActivityStreams.PUBLIC);
+      case PRIVATE, DIRECT -> List.of();
+    };
   }
 
   public Map<String, Object> update(NoteSnapshot note, String actorPublicId) {
     long version = note.editedAt() == null ? 0 : note.editedAt().toEpochMilli();
     Map<String, Object> activity =
         activity(urls.note(note.id()) + "#updates/" + version, "Update", actorPublicId);
-    activity.put("cc", List.of(urls.followers(actorPublicId)));
+    activity.put("to", to(note, actorPublicId));
+    activity.put("cc", cc(note, actorPublicId));
     activity.put("object", note(note, actorPublicId));
     return activity;
   }
