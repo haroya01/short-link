@@ -6,13 +6,21 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 // present so clients can distinguish hidden counts from zero.
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record FollowStatus(
-    boolean following, Long followerCount, Long followingCount, boolean hideFollowerCount) {
+    boolean following,
+    Long followerCount,
+    Long followingCount,
+    boolean hideFollowerCount,
+    boolean notifyNotes) {
 
   public static FollowStatus visible(boolean following, long followerCount, long followingCount) {
-    return new FollowStatus(following, followerCount, followingCount, false);
+    return new FollowStatus(following, followerCount, followingCount, false, false);
   }
 
   public static FollowStatus hidden(boolean following) {
-    return new FollowStatus(following, null, null, true);
+    return new FollowStatus(following, null, null, true, false);
+  }
+
+  public FollowStatus notifyingOfNotes(boolean on) {
+    return new FollowStatus(following, followerCount, followingCount, hideFollowerCount, on);
   }
 }

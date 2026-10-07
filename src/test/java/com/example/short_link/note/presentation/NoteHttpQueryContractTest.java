@@ -625,6 +625,64 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
   }
 
   @Test
+  void aFollowerWhoRingsTheBellHearsOfEveryNewNoteButNotOfRepliesToOthers() throws Exception {
+    Actor writer = actor("bell-writer", false);
+    Actor fan = actor("bell-fan", false);
+    String bell = "/api/v1/users/" + writer.username() + "/follow/notes";
+    step("note-bell-before-follow", "PUT", bell, fan, null, 409);
+    jdbc.update(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        fan.id(),
+        writer.id());
+
+    assertThat(step("note-bell-on", "PUT", bell, fan, null, 200).path("notifyNotes").asBoolean())
+        .isTrue();
+    assertThat(
+            step(
+                    "note-bell-follow-status",
+                    "GET",
+                    "/api/v1/users/" + writer.username() + "/follow",
+                    fan,
+                    null,
+                    200)
+                .path("notifyNotes")
+                .asBoolean())
+        .isTrue();
+
+    long noteId =
+        step(
+                "note-create-bell",
+                "POST",
+                "/api/v1/notes",
+                writer,
+                Map.of("body", "종을 켠 사람에게 가는 노트"),
+                201)
+            .path("id")
+            .asLong();
+    long other = noteAt(fan, "다른 사람의 노트", 1);
+    step(
+        "note-reply-bell-elsewhere",
+        "POST",
+        "/api/v1/notes",
+        writer,
+        Map.of("body", "남의 노트에 단 답글", "inReplyToId", other),
+        201);
+    assertThat(
+            jdbc.queryForList(
+                "SELECT JSON_EXTRACT(payload, '$.noteId') FROM notification"
+                    + " WHERE recipient_user_id = ? AND type = 'NOTE_POST' AND actor_user_id = ?",
+                Long.class,
+                fan.id(),
+                writer.id()))
+        .containsExactly(noteId);
+
+    assertThat(
+            step("note-bell-off", "DELETE", bell, fan, null, 200).path("notifyNotes").asBoolean())
+        .isFalse();
+    assertThat(count("user_follow", "follower_id = ? AND notify_notes", fan.id())).isZero();
+  }
+
+  @Test
   void anOwnerKeepsKeywordFiltersThatTheirAppsApply() throws Exception {
     Actor owner = actor("filter-owner", false);
     Actor stranger = actor("filter-stranger", false);

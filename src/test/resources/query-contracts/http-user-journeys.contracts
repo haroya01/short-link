@@ -160,7 +160,7 @@
 @junit | curation-disconnect-post | 2 | 0 | 0 | 1 | 3
 @junit | curation-my-collections | 8 | 0 | 0 | 0 | 8
 @junit | curation-my-collections-connected-status | 9 | 0 | 0 | 0 | 9
-@junit | curation-note-create | 3 | 1 | 0 | 0 | 4
+@junit | curation-note-create | 4 | 1 | 0 | 0 | 5
 @junit | curation-partial-reorder-denied | 2 | 0 | 0 | 0 | 2
 @junit | curation-path-after-target-deletion | 5 | 0 | 0 | 0 | 5
 @junit | curation-private-path-create | 0 | 1 | 0 | 0 | 1
@@ -493,7 +493,7 @@
 @junit | reader-series-subscription-ids | 1 | 0 | 0 | 0 | 1
 @junit | reader-series-subscription-status | 2 | 0 | 0 | 0 | 2
 @junit | reader-series-unsubscribe | 2 | 0 | 0 | 1 | 3
-@junit | reader-short-note-create | 3 | 1 | 0 | 0 | 4
+@junit | reader-short-note-create | 4 | 1 | 0 | 0 | 5
 @junit | reader-short-note-delete | 3 | 0 | 0 | 3 | 6
 @junit | reader-subscribed-series-cards | 4 | 0 | 0 | 0 | 4
 @junit | reader-tag-follow | 2 | 1 | 0 | 0 | 3

@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.event;
 
+import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
@@ -7,6 +8,7 @@ import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
+import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -24,6 +26,7 @@ public class NoteNotificationListener {
 
   private final RecordBlogNotificationUseCase recordUseCase;
   private final UserBlockChecker blocks;
+  private final NotificationFollowerReader followers;
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -50,6 +53,20 @@ public class NoteNotificationListener {
         new NotificationNoteRef(
             event.noteId(), event.noteExcerpt(), event.sourceNoteId(), event.sourceExcerpt()),
         type.grouped() ? groupKey(type, event.noteId()) : null);
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onNoteBroadcast(NoteBroadcastEvent event) {
+    List<Long> subscribers = followers.noteSubscribersOf(event.authorId());
+    if (subscribers.isEmpty()) {
+      return;
+    }
+    recordUseCase.recordForEach(
+        subscribers,
+        NotificationType.NOTE_POST,
+        event.authorId(),
+        new NotificationNoteRef(event.noteId(), event.excerpt(), null, null));
   }
 
   @Async("webhookExecutor")

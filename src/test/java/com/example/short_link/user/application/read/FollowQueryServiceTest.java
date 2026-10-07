@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -39,7 +40,9 @@ class FollowQueryServiceTest {
   @Test
   void statusReflectsFollowingForAuthenticatedViewer() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(true);
+    FollowEntity follow = new FollowEntity(9L, 2L);
+    follow.notifyOfNotes(true);
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.of(follow));
     when(followRepository.countByFollowingId(2L)).thenReturn(5L);
     when(followRepository.countByFollowerId(2L)).thenReturn(3L);
 
@@ -48,6 +51,7 @@ class FollowQueryServiceTest {
     assertThat(status.following()).isTrue();
     assertThat(status.followerCount()).isEqualTo(5);
     assertThat(status.followingCount()).isEqualTo(3);
+    assertThat(status.notifyNotes()).isTrue();
   }
 
   @Test
@@ -74,7 +78,8 @@ class FollowQueryServiceTest {
     UserEntity bob = user(2L, "bob");
     bob.updateHideFollowerCount(true);
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
-    when(followRepository.existsByFollowerIdAndFollowingId(9L, 2L)).thenReturn(true);
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L))
+        .thenReturn(Optional.of(new FollowEntity(9L, 2L)));
 
     FollowStatus status = service.status(9L, "bob");
 

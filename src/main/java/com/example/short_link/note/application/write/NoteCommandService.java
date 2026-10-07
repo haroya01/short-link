@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.write;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
@@ -235,6 +236,10 @@ public class NoteCommandService {
             (parent != null && parent.isRemote()) || !Mentions.remote(body).isEmpty()));
     if (parent != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
+    }
+    if (note.getVisibility() != NoteVisibility.DIRECT
+        && (parent == null || userId.equals(parent.getUserId()))) {
+      events.publishEvent(new NoteBroadcastEvent(note.getId(), userId, note.excerpt()));
     }
     if (quotedNote != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));

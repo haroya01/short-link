@@ -139,4 +139,22 @@ class FollowUseCaseTest {
     assertThat(status.followerCount()).isNull();
     assertThat(status.followingCount()).isNull();
   }
+
+  @Test
+  void onlyAFollowerCanAskToHearOfEveryNewNote() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    FollowEntity follow = new FollowEntity(9L, 2L);
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.of(follow));
+
+    assertThat(useCase.setNoteNotifications(9L, "bob", true).notifyNotes()).isTrue();
+    assertThat(follow.isNotifyNotes()).isTrue();
+    assertThat(useCase.setNoteNotifications(9L, "bob", false).notifyNotes()).isFalse();
+    assertThat(follow.isNotifyNotes()).isFalse();
+
+    when(followRepository.findByFollowerIdAndFollowingId(8L, 2L)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> useCase.setNoteNotifications(8L, "bob", true))
+        .isInstanceOfSatisfying(
+            UserException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(UserErrorCode.NOT_FOLLOWING));
+  }
 }

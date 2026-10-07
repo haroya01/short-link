@@ -94,6 +94,37 @@ class FollowControllerTest {
   }
 
   @Test
+  void theBellTurnsOnAndOffForAFollowedMember() throws Exception {
+    when(followUseCase.setNoteNotifications(USER_ID, "bob", true))
+        .thenReturn(new FollowUseCase.NoteNotifications(true));
+    when(followUseCase.setNoteNotifications(USER_ID, "bob", false))
+        .thenReturn(new FollowUseCase.NoteNotifications(false));
+
+    mvc.perform(
+            put("/api/v1/users/bob/follow/notes")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.notifyNotes").value(true));
+    mvc.perform(
+            delete("/api/v1/users/bob/follow/notes")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.notifyNotes").value(false));
+  }
+
+  @Test
+  void theBellIsOnlyForFollowers() throws Exception {
+    when(followUseCase.setNoteNotifications(USER_ID, "bob", true))
+        .thenThrow(new UserException(UserErrorCode.NOT_FOLLOWING));
+
+    mvc.perform(
+            put("/api/v1/users/bob/follow/notes")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("NOT_FOLLOWING"));
+  }
+
+  @Test
   void followingYourselfIs400() throws Exception {
     when(followUseCase.follow(USER_ID, "me", null))
         .thenThrow(new UserException(UserErrorCode.CANNOT_FOLLOW_SELF));

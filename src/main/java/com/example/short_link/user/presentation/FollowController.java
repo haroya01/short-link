@@ -34,6 +34,18 @@ public class FollowController {
     return followUseCase.follow(userId, username, sourcePostId);
   }
 
+  @PutMapping("/notes")
+  public FollowUseCase.NoteNotifications notifyOfNotes(
+      @AuthenticationPrincipal Long userId, @PathVariable String username) {
+    return followUseCase.setNoteNotifications(userId, username, true);
+  }
+
+  @DeleteMapping("/notes")
+  public FollowUseCase.NoteNotifications stopNotifyingOfNotes(
+      @AuthenticationPrincipal Long userId, @PathVariable String username) {
+    return followUseCase.setNoteNotifications(userId, username, false);
+  }
+
   @DeleteMapping
   public FollowStatus unfollow(
       @AuthenticationPrincipal Long userId, @PathVariable String username) {

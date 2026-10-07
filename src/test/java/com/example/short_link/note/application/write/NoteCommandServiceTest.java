@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
@@ -228,6 +229,34 @@ class NoteCommandServiceTest {
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_FOUND));
+  }
+
+  @Test
+  void followersWhoAskedHearOfNewNotesAndSelfThreadsButNotRepliesToOthersOrDirectNotes() {
+    saving();
+    when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "parent")));
+    when(notes.findById(60L)).thenReturn(Optional.of(note(60L, 7L, "first")));
+
+    service().create(7L, new NoteDraft("hello", null, null, null));
+    service().create(7L, new NoteDraft("re", null, null, 50L));
+    service().create(7L, new NoteDraft("and then", null, null, 60L));
+
+    ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
+    verify(events, org.mockito.Mockito.atLeastOnce()).publishEvent(published.capture());
+    assertThat(published.getAllValues())
+        .filteredOn(NoteBroadcastEvent.class::isInstance)
+        .containsExactly(
+            new NoteBroadcastEvent(100L, 7L, "hello"),
+            new NoteBroadcastEvent(100L, 7L, "and then"));
+  }
+
+  @Test
+  void aDirectNoteIsNeverBroadcast() {
+    saving();
+    service()
+        .create(7L, new NoteDraft("psst", null, null, null, null, null, false, "DIRECT", null));
+
+    verify(events, never()).publishEvent(any(NoteBroadcastEvent.class));
   }
 
   @Test

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
@@ -14,6 +15,7 @@ import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
+import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -28,9 +30,10 @@ class NoteNotificationListenerTest {
 
   @Mock private RecordBlogNotificationUseCase recordUseCase;
   @Mock private UserBlockChecker blocks;
+  @Mock private NotificationFollowerReader followers;
 
   private NoteNotificationListener listener() {
-    return new NoteNotificationListener(recordUseCase, blocks);
+    return new NoteNotificationListener(recordUseCase, blocks, followers);
   }
 
   private static NoteInteractionEvent event(
@@ -132,5 +135,28 @@ class NoteNotificationListenerTest {
     NotificationNoteRef note = new NotificationNoteRef(5L, "어디서 볼까?", null, null);
     verify(recordUseCase).record(7L, NotificationType.NOTE_POLL, 7L, null, note, null);
     verify(recordUseCase).recordForEach(List.of(10L), NotificationType.NOTE_POLL, 7L, note);
+  }
+
+  @Test
+  void aNewNoteTellsTheFollowersWhoAskedToHearOfIt() {
+    when(followers.noteSubscribersOf(7L)).thenReturn(List.of(10L, 11L));
+
+    listener().onNoteBroadcast(new NoteBroadcastEvent(5L, 7L, "hello"));
+
+    verify(recordUseCase)
+        .recordForEach(
+            List.of(10L, 11L),
+            NotificationType.NOTE_POST,
+            7L,
+            new NotificationNoteRef(5L, "hello", null, null));
+  }
+
+  @Test
+  void aNewNoteNobodyAskedForRecordsNothing() {
+    when(followers.noteSubscribersOf(7L)).thenReturn(List.of());
+
+    listener().onNoteBroadcast(new NoteBroadcastEvent(5L, 7L, "hello"));
+
+    verifyNoInteractions(recordUseCase);
   }
 }

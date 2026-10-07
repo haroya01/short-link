@@ -76,9 +76,10 @@
 @junit | federation-inbox-delete-liker | 2 | 0 | 0 | 1 | 3
 # Notes and settings, with one seeded remote follower. Note steps include the after-commit delivery
 # work: actor, follower inboxes, preference, then the note (note, author, images) and the queue.
+# A new note and a quote also ask once for the members who rang the author's bell.
 @junit | federation-settings-get | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
-@junit | federation-note-create | 9 | 3 | 0 | 0 | 12
+@junit | federation-note-create | 10 | 3 | 0 | 0 | 13
 @junit | federation-note-edit | 13 | 2 | 1 | 1 | 17
 @junit | federation-note-delete | 6 | 1 | 0 | 3 | 10
 # The note document: note, author, images, then the author's actor (user, preference, actor).
@@ -89,7 +90,7 @@
 # actor. A quote reads the quoted note and its author on both the write and the delivery side.
 @junit | federation-note-repost | 14 | 2 | 0 | 0 | 16
 @junit | federation-note-unrepost | 7 | 1 | 0 | 1 | 9
-@junit | federation-note-quote | 15 | 2 | 0 | 0 | 17
+@junit | federation-note-quote | 16 | 2 | 0 | 0 | 18
 # Turning federation off unfollows accounts elsewhere (none here), sends Delete(Person) to follower
 # servers and clears the followers.
 @junit | federation-settings-off | 6 | 1 | 1 | 1 | 9

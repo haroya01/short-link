@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 public enum UserErrorCode {
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "user not found"),
   CANNOT_FOLLOW_SELF(HttpStatus.BAD_REQUEST, "cannot follow yourself"),
+  NOT_FOLLOWING(HttpStatus.CONFLICT, "follow first to hear of every new note"),
   CANNOT_BLOCK_SELF(HttpStatus.BAD_REQUEST, "cannot block yourself"),
   CANNOT_MUTE_SELF(HttpStatus.BAD_REQUEST, "cannot mute yourself"),
   MUTE_DURATION_INVALID(HttpStatus.BAD_REQUEST, "a mute lasts from a minute to a year, or forever"),
