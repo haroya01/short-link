@@ -30,14 +30,14 @@
 # Mastodon resolves the instance actor's acct back to its id before trusting its key; answered from config.
 @junit | federation-webfinger-instance | 0 | 0 | 0 | 0 | 0
 # Inbox POSTs signed by a seeded remote actor whose key is cached, so nothing is fetched remotely.
-# Follow to the personal inbox: inbox owner (actor, user), key, follower lookup and insert, Accept
-# dedupe check and insert. A new follower notifies the user (preference, insert, recipient name,
+# Follow to the personal inbox: inbox owner (actor, user), key, whether the member blocked the
+# follower's server, follower lookup and insert, Accept dedupe check and insert. A new follower notifies the user (preference, insert, recipient name,
 # remote actor); a refollow does not.
-@junit | federation-inbox-follow | 9 | 3 | 0 | 0 | 12
-@junit | federation-inbox-follow-before-leave | 9 | 3 | 0 | 0 | 12
-# The shared inbox resolves the target (actor, user, preference); the existing row takes the new
-# follow id.
-@junit | federation-inbox-refollow | 6 | 1 | 1 | 0 | 8
+@junit | federation-inbox-follow | 10 | 3 | 0 | 0 | 13
+@junit | federation-inbox-follow-before-leave | 10 | 3 | 0 | 0 | 13
+# The shared inbox resolves the target (actor, user, preference), asks about a server block; the
+# existing row takes the new follow id.
+@junit | federation-inbox-refollow | 7 | 1 | 1 | 0 | 9
 # The target is resolved before the signature is checked; an unsigned request writes nothing.
 @junit | federation-inbox-unsigned | 3 | 0 | 0 | 0 | 3
 @junit | federation-inbox-undo | 2 | 0 | 0 | 1 | 3
@@ -106,18 +106,34 @@
 @junit | federation-inbox-vote-again | 9 | 1 | 0 | 0 | 10
 @junit | federation-note-question | 7 | 0 | 0 | 0 | 7
 # A member follows an account on another server. The account is cached and fresh, so the lookup
-# asks no one remotely: the account by handle, then the member's follow of it.
-@junit | federation-remote-lookup | 2 | 0 | 0 | 0 | 2
-# Follow: the account, the member's actor (user, preference, actor), no follow yet, the follow row,
-# then the Follow delivery's dedupe check and insert.
-@junit | federation-remote-follow | 6 | 2 | 0 | 0 | 8
+# asks no one remotely: the account by handle, the member's follow of it, and whether they blocked
+# its server. Reading the account by id asks the same.
+@junit | federation-remote-lookup | 3 | 0 | 0 | 0 | 3
+# Follow: the account, no block on its server, the member's actor (user, preference, actor), no
+# follow yet, the follow row, then the Follow delivery's dedupe check and insert.
+@junit | federation-remote-follow | 7 | 2 | 0 | 0 | 9
 # Accept to the personal inbox: inbox owner (actor, user, preference), the signer's key, our follow
 # by its id, and its accepted time.
 @junit | federation-remote-accept | 5 | 0 | 1 | 0 | 6
 @junit | federation-remote-following | 2 | 0 | 0 | 0 | 2
-@junit | federation-remote-account | 2 | 0 | 0 | 0 | 2
+@junit | federation-remote-account | 3 | 0 | 0 | 0 | 3
 # Unfollow: the account, the follow, the member's actor for the Undo, its delivery, the row.
 @junit | federation-remote-unfollow | 4 | 1 | 0 | 1 | 6
+# A member blocks a whole server (Mastodon's domain block): the block row, then each follow there
+# with its account in one read, the member's actor, its Undo (dedupe, insert) and row; each
+# follower there the same way with a Reject; then, after commit, their notices from there.
+@junit | federation-domain-block | 6 | 3 | 0 | 3 | 12
+@junit | federation-domain-blocks | 1 | 0 | 0 | 0 | 1
+@junit | federation-domain-blocked-account | 3 | 0 | 0 | 0 | 3
+# Following an account there stops at the block, before the member's actor is read.
+@junit | federation-domain-blocked-follow | 2 | 0 | 0 | 0 | 2
+# A Follow from there is answered with a Reject and never stored (owner, key, block, delivery).
+@junit | federation-inbox-follow-blocked-domain | 6 | 1 | 0 | 0 | 7
+# A reply from there is kept for its thread, but the author's notice stops at the one silence
+# check (server block OR muted conversation), and the thread leaves it out in its one query.
+@junit | federation-inbox-reply-blocked-domain | 10 | 1 | 0 | 0 | 11
+@junit | notes-thread-blocked-domain | 6 | 0 | 0 | 0 | 6
+@junit | federation-domain-unblock | 0 | 0 | 0 | 1 | 1
 # Notes from an account a member follows. Before the key: is anyone following it. Then the key,
 # INSERT IGNORE on the note's uri, its id, and its image (the address stays on its server).
 @junit | federation-inbox-remote-note | 3 | 2 | 0 | 0 | 5

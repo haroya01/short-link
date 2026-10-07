@@ -36,10 +36,12 @@ class UserBlockCheckerAdapter implements UserBlockChecker {
 
   @Override
   @Transactional(readOnly = true)
-  public boolean silences(Long recipientId, Long actorId, Long conversationId) {
-    if (recipientId == null || (actorId == null && conversationId == null)) {
+  public boolean silences(Long recipientId, Long actorId, Long remoteActorId, Long conversationId) {
+    if (recipientId == null
+        || (actorId == null && remoteActorId == null && conversationId == null)) {
       return false;
     }
-    return muteRepository.silences(recipientId, actorId, conversationId, clock.instant());
+    return muteRepository.silences(
+        recipientId, actorId, remoteActorId, conversationId, clock.instant());
   }
 }

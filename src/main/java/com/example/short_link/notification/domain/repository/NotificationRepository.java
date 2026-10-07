@@ -24,4 +24,6 @@ public interface NotificationRepository {
   void markRead(Long id, Long recipientUserId, Instant at);
 
   int markAllRead(Long recipientUserId, Instant at);
+
+  int deleteFromDomain(Long recipientUserId, String domain);
 }

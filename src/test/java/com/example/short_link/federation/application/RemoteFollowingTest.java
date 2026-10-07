@@ -15,11 +15,13 @@ import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationFollowingEntity;
 import com.example.short_link.federation.domain.FederationUser;
+import com.example.short_link.federation.domain.FollowOnDomain;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
+import com.example.short_link.federation.domain.repository.UserDomainBlockRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.time.Clock;
@@ -48,6 +50,7 @@ class RemoteFollowingTest {
       new LocalActor(new FederationUser(7L, "yuki", null, null), "pid", "pem");
 
   @Mock private FederationFollowingRepository followings;
+  @Mock private UserDomainBlockRepository domainBlocks;
   @Mock private RemoteActorRepository remoteActors;
   @Mock private RemoteAccountFinder finder;
   @Mock private FederationActorService localActors;
@@ -80,6 +83,7 @@ class RemoteFollowingTest {
   private RemoteFollowing following() {
     return new RemoteFollowing(
         followings,
+        domainBlocks,
         remoteActors,
         finder,
         localActors,
@@ -128,7 +132,8 @@ class RemoteFollowingTest {
                 "https://files.mastodon.example/a.png",
                 "https://mastodon.example/@alice",
                 false,
-                true));
+                true,
+                false));
   }
 
   @Test
@@ -308,5 +313,44 @@ class RemoteFollowingTest {
 
     verify(followings, never()).deleteAllForUser(any());
     verifyNoInteractions(deliveries, remoteActors);
+  }
+
+  @Test
+  void anAccountOnABlockedServerSaysSoAndCannotBeFollowed() {
+    when(followings.find(7L, 42L)).thenReturn(Optional.empty());
+    when(domainBlocks.blocks(7L, "mastodon.example")).thenReturn(true);
+
+    assertThat(following().account(7L, 42L).domainBlocked()).isTrue();
+    assertThatThrownBy(() -> following().follow(7L, 42L))
+        .isInstanceOfSatisfying(
+            FederationException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(FederationErrorCode.REMOTE_DOMAIN_BLOCKED));
+    verify(followings, never()).save(any());
+    verifyNoInteractions(deliveries);
+  }
+
+  @Test
+  void blockingAServerUndoesEveryFollowThere() {
+    FederationFollowingEntity row = row(ME + "#follows/1", true);
+    when(followings.onDomain(7L, "mastodon.example"))
+        .thenReturn(List.of(new FollowOnDomain<>(row, alice)));
+    when(actorRows.findByUserId(7L))
+        .thenReturn(Optional.of(new FederationActorEntity(7L, "pid", "PUB", "enc")));
+
+    following().leaveDomain(7L, "mastodon.example");
+
+    verify(followings).delete(row);
+    ArgumentCaptor<String> id = ArgumentCaptor.forClass(String.class);
+    verify(deliveries).enqueue(eq(7L), id.capture(), anyString(), eq(List.of(ALICE + "/inbox")));
+    assertThat(delivered(id.getValue()).path("type").asString()).isEqualTo("Undo");
+  }
+
+  @Test
+  void blockingAServerNobodyFollowsThereTouchesNothing() {
+    when(followings.onDomain(7L, "quiet.example")).thenReturn(List.of());
+
+    following().leaveDomain(7L, "quiet.example");
+
+    verifyNoInteractions(deliveries, remoteActors, actorRows);
   }
 }

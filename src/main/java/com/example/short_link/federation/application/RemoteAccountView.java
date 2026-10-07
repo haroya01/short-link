@@ -13,10 +13,18 @@ public record RemoteAccountView(
     String avatarUrl,
     String url,
     boolean following,
-    boolean requested) {
+    boolean requested,
+    boolean domainBlocked) {
 
   static RemoteAccountView of(
       RemoteActorEntity actor, Optional<FederationFollowingEntity> following) {
+    return of(actor, following, false);
+  }
+
+  static RemoteAccountView of(
+      RemoteActorEntity actor,
+      Optional<FederationFollowingEntity> following,
+      boolean domainBlocked) {
     String username = actor.getUsername() == null ? "" : actor.getUsername();
     return new RemoteAccountView(
         actor.getId(),
@@ -27,6 +35,7 @@ public record RemoteAccountView(
         actor.getAvatarUrl(),
         actor.getProfileUrl() == null ? actor.getActorUri() : actor.getProfileUrl(),
         following.map(FederationFollowingEntity::accepted).orElse(false),
-        following.map(row -> !row.accepted()).orElse(false));
+        following.map(row -> !row.accepted()).orElse(false),
+        domainBlocked);
   }
 }

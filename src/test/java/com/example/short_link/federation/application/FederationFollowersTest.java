@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -11,12 +12,16 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
+import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationFollowerEntity;
 import com.example.short_link.federation.domain.FederationUser;
+import com.example.short_link.federation.domain.FollowOnDomain;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
+import com.example.short_link.federation.domain.repository.UserDomainBlockRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -39,6 +44,8 @@ class FederationFollowersTest {
   private static final String TARGET_URI = "https://kurl.me/ap/actors/owner1";
 
   @Mock private FederationFollowerRepository followers;
+  @Mock private UserDomainBlockRepository domainBlocks;
+  @Mock private FederationActorRepository actorRows;
   @Mock private RemoteActorRepository remoteActors;
   @Mock private DeliveryQueue deliveries;
   @Mock private ApplicationEventPublisher events;
@@ -46,6 +53,8 @@ class FederationFollowersTest {
   private FederationFollowers service() {
     return new FederationFollowers(
         followers,
+        domainBlocks,
+        actorRows,
         remoteActors,
         deliveries,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
@@ -154,5 +163,39 @@ class FederationFollowersTest {
     service.forget(alice);
 
     verify(remoteActors).delete(alice);
+  }
+
+  @Test
+  void aFollowFromABlockedServerIsRejectedAndNeverStored() {
+    when(domainBlocks.blocks(7L, "mastodon.example")).thenReturn(true);
+
+    service().follow(TARGET, alice(), "https://mastodon.example/f/1");
+
+    verify(followers, never()).save(any());
+    verifyNoInteractions(events);
+    JsonNode reject = enqueuedAccept();
+    assertThat(reject.path("type").asString()).isEqualTo("Reject");
+    assertThat(reject.path("id").asString()).startsWith(TARGET_URI + "#rejects/follows/");
+    assertThat(reject.path("object").path("id").asString())
+        .isEqualTo("https://mastodon.example/f/1");
+  }
+
+  @Test
+  void blockingAServerRejectsEachFollowerThereAndForgetsThem() {
+    when(followers.onDomain(7L, "mastodon.example"))
+        .thenReturn(
+            List.of(
+                new FollowOnDomain<>(
+                    new FederationFollowerEntity(7L, 42L, "https://mastodon.example/f/1"),
+                    alice())));
+    when(actorRows.findByUserId(7L))
+        .thenReturn(Optional.of(new FederationActorEntity(7L, "owner1", "PUB", "enc")));
+
+    service().rejectDomain(7L, "mastodon.example");
+
+    verify(followers).delete(7L, 42L);
+    JsonNode reject = enqueuedAccept();
+    assertThat(reject.path("type").asString()).isEqualTo("Reject");
+    assertThat(reject.path("actor").asString()).isEqualTo(TARGET_URI);
   }
 }

@@ -616,6 +616,146 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void aMemberBlocksAServerAndEverythingFromItGoes() throws Exception {
+    String me = urls.actor(target.publicId());
+    String host = URI.create(remote).getHost();
+    Long aliceId =
+        jdbc.queryForObject(
+            "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
+    jdbc.update(
+        "INSERT INTO federation_follower (user_id, remote_actor_id, follow_activity_id,"
+            + " created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6))",
+        owner.getId(),
+        aliceId,
+        remote + "/follows/9");
+    jdbc.update(
+        "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+        owner.getId(),
+        aliceId,
+        me + "#follows/9");
+    jdbc.update(
+        "INSERT INTO notification (recipient_user_id, type, actor_remote_id, created_at)"
+            + " VALUES (?, 'REMOTE_FOLLOW', ?, NOW(6))",
+        owner.getId(),
+        aliceId);
+
+    var blocked =
+        body(
+            call(
+                "federation-domain-block",
+                "PUT",
+                "/api/v1/federation/domain-blocks/" + host.toUpperCase(),
+                null,
+                token,
+                200));
+    assertThat(blocked.path("domain").asString()).isEqualTo(host);
+    assertThat(count("SELECT COUNT(*) FROM federation_following WHERE user_id = ?", owner.getId()))
+        .isZero();
+    assertThat(count("SELECT COUNT(*) FROM federation_follower WHERE user_id = ?", owner.getId()))
+        .isZero();
+    assertThat(
+            jdbc.queryForList(
+                "SELECT JSON_UNQUOTE(JSON_EXTRACT(body, '$.type')) FROM federation_delivery"
+                    + " WHERE signer_user_id = ? AND inbox = ? ORDER BY id",
+                String.class,
+                owner.getId(),
+                alice + "/inbox"))
+        .containsExactly("Undo", "Reject");
+    assertThat(
+            count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
+        .isZero();
+
+    assertThat(
+            body(call(
+                    "federation-domain-blocks",
+                    "GET",
+                    "/api/v1/federation/domain-blocks",
+                    null,
+                    token,
+                    200))
+                .get(0)
+                .path("domain")
+                .asString())
+        .isEqualTo(host);
+    assertThat(
+            body(call(
+                    "federation-domain-blocked-account",
+                    "GET",
+                    "/api/v1/federation/accounts/" + aliceId,
+                    null,
+                    token,
+                    200))
+                .path("domainBlocked")
+                .asBoolean())
+        .isTrue();
+    call(
+        "federation-domain-blocked-follow",
+        "POST",
+        "/api/v1/federation/accounts/" + aliceId + "/follow",
+        null,
+        token,
+        409);
+
+    post(
+        "federation-inbox-follow-blocked-domain",
+        "/ap/actors/" + target.publicId() + "/inbox",
+        activity(remote + "/follows/10", "Follow", me),
+        202);
+    assertThat(count("SELECT COUNT(*) FROM federation_follower WHERE user_id = ?", owner.getId()))
+        .isZero();
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM federation_delivery WHERE signer_user_id = ?"
+                    + " AND body LIKE '%\"Reject\"%'",
+                owner.getId()))
+        .isEqualTo(2);
+
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at) VALUES (?, 'from kurl', NOW(6))",
+        owner.getId());
+    Long mine =
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, owner.getId());
+    Map<String, Object> reply = new LinkedHashMap<>();
+    reply.put("id", alice + "/statuses/90");
+    reply.put("type", "Note");
+    reply.put("attributedTo", alice);
+    reply.put("inReplyTo", urls.note(mine));
+    reply.put("content", "<p>from a blocked server</p>");
+    reply.put("published", "2026-10-07T00:00:00Z");
+    reply.put("to", List.of("https://www.w3.org/ns/activitystreams#Public"));
+    post(
+        "federation-inbox-reply-blocked-domain",
+        "/ap/inbox",
+        activity(alice + "/statuses/90/activity", "Create", reply),
+        202);
+    assertThat(
+            count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
+        .isZero();
+    assertThat(
+            body(call(
+                    "notes-thread-blocked-domain",
+                    "GET",
+                    "/api/v1/public/notes/" + mine,
+                    null,
+                    token,
+                    200))
+                .path("replies"))
+        .isEmpty();
+
+    call(
+        "federation-domain-unblock",
+        "DELETE",
+        "/api/v1/federation/domain-blocks/" + host,
+        null,
+        token,
+        204);
+    assertThat(count("SELECT COUNT(*) FROM user_domain_block WHERE user_id = ?", owner.getId()))
+        .isZero();
+  }
+
+  @Test
   void aPersonalInboxOfNoOneIs404() throws Exception {
     String path = "/ap/actors/nobody0000/inbox";
     post("federation-inbox-unknown", path, activity(remote + "/f/9", "Follow", "x"), 404);

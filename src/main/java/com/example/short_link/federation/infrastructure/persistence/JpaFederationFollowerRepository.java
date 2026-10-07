@@ -32,6 +32,11 @@ public interface JpaFederationFollowerRepository
           + " RemoteActorEntity r where r.id = f.remoteActorId and f.userId = :userId")
   List<String> deliveryInboxes(@Param("userId") Long userId);
 
+  @Query(
+      "select f, r from FederationFollowerEntity f, RemoteActorEntity r"
+          + " where r.id = f.remoteActorId and f.userId = :userId and r.domain = :domain")
+  List<Object[]> onDomain(@Param("userId") Long userId, @Param("domain") String domain);
+
   @Modifying
   @Query("delete from FederationFollowerEntity f where f.userId = :userId")
   int deleteAllForUser(@Param("userId") Long userId);

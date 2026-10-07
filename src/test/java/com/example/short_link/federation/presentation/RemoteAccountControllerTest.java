@@ -32,7 +32,8 @@ class RemoteAccountControllerTest {
           null,
           "https://mastodon.example/@alice",
           false,
-          true);
+          true,
+          false);
 
   @Autowired private MockMvc mvc;
   @MockitoBean private RemoteFollowing following;
@@ -52,6 +53,7 @@ class RemoteAccountControllerTest {
                 "Alice",
                 null,
                 "https://mastodon.example/@alice",
+                false,
                 false,
                 false));
 

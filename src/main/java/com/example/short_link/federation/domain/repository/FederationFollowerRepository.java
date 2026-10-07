@@ -1,6 +1,7 @@
 package com.example.short_link.federation.domain.repository;
 
 import com.example.short_link.federation.domain.FederationFollowerEntity;
+import com.example.short_link.federation.domain.FollowOnDomain;
 import java.util.List;
 import java.util.Optional;
 
@@ -15,6 +16,8 @@ public interface FederationFollowerRepository {
   int deleteByFollowActivity(Long remoteActorId, String followActivityId);
 
   List<String> deliveryInboxes(Long userId);
+
+  List<FollowOnDomain<FederationFollowerEntity>> onDomain(Long userId, String domain);
 
   int deleteAllForUser(Long userId);
 }
