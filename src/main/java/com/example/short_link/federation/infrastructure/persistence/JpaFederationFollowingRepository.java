@@ -26,6 +26,11 @@ public interface JpaFederationFollowingRepository
           + " where r.id = f.remoteActorId and r.actorUri = :actorUri and f.acceptedAt is not null")
   boolean anyAcceptedFollowOf(@Param("actorUri") String actorUri);
 
+  @Query(
+      "select f, r from FederationFollowingEntity f, RemoteActorEntity r"
+          + " where r.id = f.remoteActorId and f.userId = :userId and r.domain = :domain")
+  List<Object[]> onDomain(@Param("userId") Long userId, @Param("domain") String domain);
+
   @Modifying
   @Query("delete from FederationFollowingEntity f where f.userId = :userId")
   int deleteAllForUser(@Param("userId") Long userId);

@@ -142,4 +142,14 @@ class NotificationRepositoryAdapter implements NotificationRepository {
   public int markAllRead(Long recipientUserId, Instant at) {
     return jpa.markAllRead(recipientUserId, at);
   }
+
+  @Override
+  public int deleteFromDomain(Long recipientUserId, String domain) {
+    return em.createNativeQuery(
+            "DELETE n FROM notification n JOIN federation_remote_actor a ON a.id = n.actor_remote_id"
+                + " WHERE n.recipient_user_id = :recipient AND a.domain = :domain")
+        .setParameter("recipient", recipientUserId)
+        .setParameter("domain", domain)
+        .executeUpdate();
+  }
 }

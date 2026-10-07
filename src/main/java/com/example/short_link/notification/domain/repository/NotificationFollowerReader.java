@@ -8,5 +8,5 @@ public interface NotificationFollowerReader {
 
   List<Long> noteSubscribersOf(Long authorUserId);
 
-  List<Long> noteSharersOf(Long noteId, Long authorUserId);
+  List<Long> noteSharersOf(Long noteId, Long authorUserId, Long authorRemoteId);
 }

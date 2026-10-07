@@ -72,6 +72,16 @@ class NoteRepositoryAdapter implements NoteRepository {
         + ".user_id AND (hm.expires_at IS NULL OR hm.expires_at > :now))";
   }
 
+  // As heard, for a note row: one from an account on a server the viewer blocked stays out too.
+  static String heardNote(String alias) {
+    return heard(alias)
+        + " AND NOT EXISTS (SELECT 1 FROM user_domain_block hd"
+        + " JOIN federation_remote_actor ha ON ha.domain = hd.domain"
+        + " WHERE hd.user_id = :viewer AND ha.id = "
+        + alias
+        + ".remote_actor_id)";
+  }
+
   static long viewer(Long viewerId) {
     return viewerId == null ? -1L : viewerId;
   }
@@ -243,7 +253,7 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " SELECT r.note_id, r.created_at, r.user_id FROM note_repost r"
                     + " JOIN note s ON s.id = r.note_id"
                     + " WHERE r.user_id IN (:authors) AND s.visibility IN ('PUBLIC', 'UNLISTED')"
-                    + heard("s")
+                    + heardNote("s")
                     + heard("r")
                     + " AND NOT EXISTS (SELECT 1 FROM note_repost_mute m"
                     + " WHERE m.user_id = :viewer AND m.muted_user_id = r.user_id)"
@@ -260,7 +270,7 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " JOIN note gn ON gn.id = g.note_id"
                     + " WHERE f.user_id = :viewer AND f.kind = 'FOLLOW' AND gn.in_reply_to_id IS NULL"
                     + " AND gn.visibility = 'PUBLIC'"
-                    + heard("gn")
+                    + heardNote("gn")
                     + ") t) y WHERE y.position = 1"
                     + ") x JOIN note n ON n.id = x.note_id"
                     + " ORDER BY x.at DESC, x.note_id DESC LIMIT :limit OFFSET :offset",
@@ -284,7 +294,7 @@ class NoteRepositoryAdapter implements NoteRepository {
   public List<NoteEntity> replies(Long noteId, Long viewerId, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM note n WHERE n.in_reply_to_id = :noteId"
-                + heard("n")
+                + heardNote("n")
                 + " ORDER BY n.id ASC",
             NoteEntity.class)
         .setParameter("noteId", noteId)
@@ -385,6 +395,9 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " AND ff.accepted_at IS NOT NULL))"
                 + " OR EXISTS (SELECT 1 FROM note_recipient r"
                 + " WHERE r.note_id = n.id AND r.user_id = :viewer))"
+                + " AND NOT EXISTS (SELECT 1 FROM user_domain_block hd"
+                + " JOIN federation_remote_actor ha ON ha.domain = hd.domain"
+                + " WHERE hd.user_id = :viewer AND ha.id = n.remote_actor_id)"
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("actor", remoteActorId)
@@ -484,7 +497,7 @@ class NoteRepositoryAdapter implements NoteRepository {
     return em.createNativeQuery(
             "SELECT n.* FROM note n WHERE n.quoted_note_id = :noteId"
                 + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
-                + heard("n")
+                + heardNote("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("noteId", noteId)
@@ -501,7 +514,7 @@ class NoteRepositoryAdapter implements NoteRepository {
     return em.createNativeQuery(
             "SELECT n.* FROM note_tag g JOIN note n ON n.id = g.note_id"
                 + " WHERE g.tag = :tag AND n.visibility = 'PUBLIC'"
-                + heard("n")
+                + heardNote("n")
                 + " ORDER BY g.note_id DESC LIMIT :limit OFFSET :offset",
             NoteEntity.class)
         .setParameter("tag", tag)

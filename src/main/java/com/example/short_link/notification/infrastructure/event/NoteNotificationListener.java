@@ -35,7 +35,11 @@ public class NoteNotificationListener {
     if (event.isSelfAction() || event.recipientUserId() == null) {
       return;
     }
-    if (blocks.silences(event.recipientUserId(), event.actorUserId(), event.conversationId())) {
+    if (blocks.silences(
+        event.recipientUserId(),
+        event.actorUserId(),
+        event.actorRemoteId(),
+        event.conversationId())) {
       return;
     }
     NotificationType type =
@@ -73,7 +77,8 @@ public class NoteNotificationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onNoteRevised(NoteRevisedEvent event) {
-    List<Long> sharers = followers.noteSharersOf(event.noteId(), event.authorUserId());
+    List<Long> sharers =
+        followers.noteSharersOf(event.noteId(), event.authorUserId(), event.authorRemoteId());
     if (sharers.isEmpty()) {
       return;
     }

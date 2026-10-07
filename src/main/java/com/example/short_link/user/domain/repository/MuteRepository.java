@@ -17,7 +17,8 @@ public interface MuteRepository {
 
   boolean silences(Long recipientId, Long actorId, Instant now);
 
-  boolean silences(Long recipientId, Long actorId, Long conversationId, Instant now);
+  boolean silences(
+      Long recipientId, Long actorId, Long remoteActorId, Long conversationId, Instant now);
 
   int deleteAllInvolving(Long userId);
 }

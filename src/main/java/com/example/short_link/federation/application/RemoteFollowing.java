@@ -3,10 +3,12 @@ package com.example.short_link.federation.application;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationFollowingEntity;
+import com.example.short_link.federation.domain.FollowOnDomain;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
+import com.example.short_link.federation.domain.repository.UserDomainBlockRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.time.Clock;
@@ -28,6 +30,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class RemoteFollowing {
 
   private final FederationFollowingRepository followings;
+  private final UserDomainBlockRepository domainBlocks;
   private final RemoteActorRepository remoteActors;
   private final RemoteAccountFinder finder;
   private final FederationActorService localActors;
@@ -40,6 +43,7 @@ public class RemoteFollowing {
   @Autowired
   public RemoteFollowing(
       FederationFollowingRepository followings,
+      UserDomainBlockRepository domainBlocks,
       RemoteActorRepository remoteActors,
       RemoteAccountFinder finder,
       FederationActorService localActors,
@@ -49,6 +53,7 @@ public class RemoteFollowing {
       JsonMapper json) {
     this(
         followings,
+        domainBlocks,
         remoteActors,
         finder,
         localActors,
@@ -61,6 +66,7 @@ public class RemoteFollowing {
 
   RemoteFollowing(
       FederationFollowingRepository followings,
+      UserDomainBlockRepository domainBlocks,
       RemoteActorRepository remoteActors,
       RemoteAccountFinder finder,
       FederationActorService localActors,
@@ -70,6 +76,7 @@ public class RemoteFollowing {
       JsonMapper json,
       Clock clock) {
     this.followings = followings;
+    this.domainBlocks = domainBlocks;
     this.remoteActors = remoteActors;
     this.finder = finder;
     this.localActors = localActors;
@@ -89,18 +96,27 @@ public class RemoteFollowing {
                 () ->
                     new FederationException(
                         FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND, handle.strip()));
-    return RemoteAccountView.of(actor, followings.find(userId, actor.getId()));
+    return view(userId, actor);
   }
 
   @Transactional(readOnly = true)
   public RemoteAccountView account(Long userId, Long remoteActorId) {
-    RemoteActorEntity actor = remote(remoteActorId);
-    return RemoteAccountView.of(actor, followings.find(userId, actor.getId()));
+    return view(userId, remote(remoteActorId));
+  }
+
+  private RemoteAccountView view(Long userId, RemoteActorEntity actor) {
+    return RemoteAccountView.of(
+        actor,
+        followings.find(userId, actor.getId()),
+        domainBlocks.blocks(userId, actor.getDomain()));
   }
 
   @Transactional
   public RemoteAccountView follow(Long userId, Long remoteActorId) {
     RemoteActorEntity remote = remote(remoteActorId);
+    if (domainBlocks.blocks(userId, remote.getDomain())) {
+      throw new FederationException(FederationErrorCode.REMOTE_DOMAIN_BLOCKED, remote.getDomain());
+    }
     LocalActor me =
         localActors
             .byUserId(userId)
@@ -174,6 +190,21 @@ public class RemoteFollowing {
       followings.delete(row.get());
     }
     return true;
+  }
+
+  // Blocking a server ends every follow of its accounts, each with an Undo, as on Mastodon.
+  @Transactional
+  public void leaveDomain(Long userId, String domain) {
+    List<FollowOnDomain<FederationFollowingEntity>> rows = followings.onDomain(userId, domain);
+    if (rows.isEmpty()) {
+      return;
+    }
+    Optional<String> actor =
+        actorRows.findByUserId(userId).map(row -> urls.actor(row.getPublicId()));
+    for (FollowOnDomain<FederationFollowingEntity> row : rows) {
+      followings.delete(row.follow());
+      actor.ifPresent(uri -> undo(userId, uri, row.follow(), row.actor()));
+    }
   }
 
   @Transactional

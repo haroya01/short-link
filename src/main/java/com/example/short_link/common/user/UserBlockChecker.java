@@ -9,7 +9,7 @@ public interface UserBlockChecker {
   boolean silences(Long recipientId, Long actorId);
 
   // As above, or the recipient muted the conversation the notice is about (Mastodon's mute
-  // conversation). The actor may be an account elsewhere (null), and then only the conversation
-  // is asked about.
-  boolean silences(Long recipientId, Long actorId, Long conversationId);
+  // conversation). An actor elsewhere comes as remoteActorId (actorId null), and silences when the
+  // recipient blocked their server.
+  boolean silences(Long recipientId, Long actorId, Long remoteActorId, Long conversationId);
 }

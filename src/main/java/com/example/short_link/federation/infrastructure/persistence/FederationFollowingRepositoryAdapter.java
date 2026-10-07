@@ -1,6 +1,8 @@
 package com.example.short_link.federation.infrastructure.persistence;
 
 import com.example.short_link.federation.domain.FederationFollowingEntity;
+import com.example.short_link.federation.domain.FollowOnDomain;
+import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
 import java.util.List;
 import java.util.Optional;
@@ -43,6 +45,16 @@ class FederationFollowingRepositoryAdapter implements FederationFollowingReposit
   @Override
   public List<FederationFollowingEntity> allForUser(Long userId) {
     return jpa.findByUserId(userId);
+  }
+
+  @Override
+  public List<FollowOnDomain<FederationFollowingEntity>> onDomain(Long userId, String domain) {
+    return jpa.onDomain(userId, domain).stream()
+        .map(
+            row ->
+                new FollowOnDomain<>(
+                    (FederationFollowingEntity) row[0], (RemoteActorEntity) row[1]))
+        .toList();
   }
 
   @Override

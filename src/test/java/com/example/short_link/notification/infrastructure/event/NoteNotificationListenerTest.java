@@ -86,7 +86,7 @@ class NoteNotificationListenerTest {
 
   @Test
   void yourOwnActionsAndPeopleYouBlockedOrMutedNeverNotify() {
-    when(blocks.silences(9L, 3L, null)).thenReturn(true);
+    when(blocks.silences(9L, 3L, null, null)).thenReturn(true);
 
     listener()
         .onNoteInteraction(
@@ -99,7 +99,7 @@ class NoteNotificationListenerTest {
 
   @Test
   void aMutedConversationIsQuietEvenForAccountsElsewhere() {
-    when(blocks.silences(9L, null, 40L)).thenReturn(true);
+    when(blocks.silences(9L, null, 7L, 40L)).thenReturn(true);
 
     listener()
         .onNoteInteraction(
@@ -163,8 +163,8 @@ class NoteNotificationListenerTest {
 
   @Test
   void anEditTellsWhoRepostedOrQuotedTheNoteWhetherTheAuthorIsHereOrElsewhere() {
-    when(followers.noteSharersOf(5L, 7L)).thenReturn(List.of(10L));
-    when(followers.noteSharersOf(6L, null)).thenReturn(List.of(11L, 12L));
+    when(followers.noteSharersOf(5L, 7L, null)).thenReturn(List.of(10L));
+    when(followers.noteSharersOf(6L, null, 40L)).thenReturn(List.of(11L, 12L));
 
     listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "고친 문장"));
     listener().onNoteRevised(new NoteRevisedEvent(6L, null, 40L, "fixed"));
@@ -187,7 +187,7 @@ class NoteNotificationListenerTest {
 
   @Test
   void anEditNobodySharedRecordsNothing() {
-    when(followers.noteSharersOf(5L, 7L)).thenReturn(List.of());
+    when(followers.noteSharersOf(5L, 7L, null)).thenReturn(List.of());
 
     listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "x"));
 

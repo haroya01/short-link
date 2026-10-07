@@ -43,13 +43,19 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
     return rows.stream().map(raw -> ((Number) raw).longValue()).toList();
   }
 
-  // Members who reposted or quoted the note. An author elsewhere (null) has no member blocks or
-  // mutes to honour; a muted conversation still silences.
+  // Members who reposted or quoted the note. A member author is silenced by blocks and notice
+  // mutes, an author elsewhere by a blocked server; a muted conversation silences either.
   @Override
-  public List<Long> noteSharersOf(Long noteId, Long authorUserId) {
+  public List<Long> noteSharersOf(Long noteId, Long authorUserId, Long authorRemoteId) {
+    String server =
+        authorRemoteId == null
+            ? ""
+            : " AND NOT EXISTS (SELECT 1 FROM user_domain_block d"
+                + " JOIN federation_remote_actor a ON a.domain = d.domain"
+                + " WHERE d.user_id = s.user_id AND a.id = :remote)";
     String silenced =
         authorUserId == null
-            ? ""
+            ? server
             : " AND s.user_id <> :author"
                 + " AND NOT EXISTS (SELECT 1 FROM user_block b"
                 + " WHERE b.blocker_id = s.user_id AND b.blocked_id = :author)"
@@ -69,6 +75,9 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
             .setParameter("note", noteId);
     if (authorUserId != null) {
       query.setParameter("author", authorUserId).setParameter("now", Instant.now());
+    }
+    if (authorRemoteId != null) {
+      query.setParameter("remote", authorRemoteId);
     }
     List<?> rows = query.getResultList();
     return rows.stream().map(raw -> ((Number) raw).longValue()).toList();
