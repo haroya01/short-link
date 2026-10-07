@@ -18,6 +18,7 @@ import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
 import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
 import com.example.short_link.common.link.LinkModerationPort;
+import com.example.short_link.common.note.NoteModerationPort;
 import com.example.short_link.common.post.CommentModerationPort;
 import com.example.short_link.common.post.PostModerationPort;
 import com.example.short_link.common.user.UserModerationPort;
@@ -36,6 +37,7 @@ class ResolveAbuseReportUseCaseTest {
   @Mock private AbuseReportRepository abuseReportRepository;
   @Mock private PostModerationPort postModerationPort;
   @Mock private CommentModerationPort commentModerationPort;
+  @Mock private NoteModerationPort noteModerationPort;
   @Mock private UserModerationPort userModerationPort;
   @Mock private LinkModerationPort linkModerationPort;
 
@@ -48,6 +50,7 @@ class ResolveAbuseReportUseCaseTest {
             abuseReportRepository,
             postModerationPort,
             commentModerationPort,
+            noteModerationPort,
             userModerationPort,
             linkModerationPort);
   }
@@ -152,6 +155,22 @@ class ResolveAbuseReportUseCaseTest {
             null));
 
     verify(commentModerationPort).softDelete(1L, 55L);
+  }
+
+  @Test
+  void deleteNoteActionTakesTheNoteDownAndOnlyFitsANote() {
+    AbuseReportEntity r =
+        new AbuseReportEntity(7L, AbuseSubjectType.NOTE, 66L, AbuseReason.SPAM, null);
+    when(abuseReportRepository.findById(1L)).thenReturn(Optional.of(r));
+    when(abuseReportRepository.save(any(AbuseReportEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        cmd(1L, ResolveAbuseReportCommand.Resolution.RESOLVED, ModerationAction.DELETE_NOTE, null));
+
+    verify(noteModerationPort).takeDown(1L, 66L);
+    assertThat(ModerationAction.DELETE_NOTE.appliesTo(AbuseSubjectType.POST)).isFalse();
+    assertThat(ModerationAction.DELETE_COMMENT.appliesTo(AbuseSubjectType.NOTE)).isFalse();
   }
 
   @Test

@@ -7,6 +7,7 @@ import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
 import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
 import com.example.short_link.common.link.LinkModerationPort;
+import com.example.short_link.common.note.NoteModerationPort;
 import com.example.short_link.common.post.CommentModerationPort;
 import com.example.short_link.common.post.PostModerationPort;
 import com.example.short_link.common.user.UserModerationPort;
@@ -23,6 +24,7 @@ public class ResolveAbuseReportUseCase {
   private final AbuseReportRepository abuseReportRepository;
   private final PostModerationPort postModerationPort;
   private final CommentModerationPort commentModerationPort;
+  private final NoteModerationPort noteModerationPort;
   private final UserModerationPort userModerationPort;
   private final LinkModerationPort linkModerationPort;
 
@@ -69,6 +71,7 @@ public class ResolveAbuseReportUseCase {
       case SUSPEND_USER -> userModerationPort.suspend(adminUserId, subjectId, requireFuture(cmd));
       case BAN_USER -> userModerationPort.ban(adminUserId, subjectId);
       case DISABLE_LINK -> linkModerationPort.disable(adminUserId, subjectId);
+      case DELETE_NOTE -> noteModerationPort.takeDown(adminUserId, subjectId);
       case NONE -> {
         // 위에서 이미 걸러져 여기 올 일은 없다.
       }

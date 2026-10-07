@@ -429,13 +429,29 @@ public class NoteCommandService {
 
   @Transactional
   public void delete(Long userId, Long noteId) {
-    NoteEntity note = owned(userId, noteId);
+    remove(owned(userId, noteId));
+  }
+
+  // An admin takes a reported note down as if its author deleted it: a member's note also leaves
+  // their followers' servers; a note from elsewhere only leaves this one.
+  @Transactional
+  public void takeDown(Long noteId) {
+    notes.findById(noteId).ifPresent(this::remove);
+  }
+
+  private void remove(NoteEntity note) {
+    Long noteId = note.getId();
     List<String> keys =
-        media.findByNoteIds(List.of(noteId)).stream().map(NoteMediaEntity::getStorageKey).toList();
+        media.findByNoteIds(List.of(noteId)).stream()
+            .map(NoteMediaEntity::getStorageKey)
+            .filter(key -> !key.isEmpty())
+            .toList();
     likes.deleteAllByNoteId(noteId);
     connections.purgeForNote(noteId);
     notes.delete(note);
-    events.publishEvent(new NoteDeletedEvent(noteId, userId, keys));
+    if (!note.isRemote()) {
+      events.publishEvent(new NoteDeletedEvent(noteId, note.getUserId(), keys));
+    }
   }
 
   @Transactional

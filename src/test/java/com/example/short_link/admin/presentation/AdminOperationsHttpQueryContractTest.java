@@ -287,6 +287,50 @@ class AdminOperationsHttpQueryContractTest extends OperationalHttpJourneySupport
   }
 
   @Test
+  void takesDownAReportedNoteAsItsAuthorWouldDeleteIt() throws Exception {
+    Actor admin = actor("note-moderator", true);
+    Actor author = actor("noted-author", false);
+    Actor reader = actor("note-reporter", false);
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at) VALUES (?, '신고될 노트', NOW(6))", author.id());
+    long noteId =
+        jdbc.queryForObject("SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, author.id());
+
+    step(
+        "ops-submit-note-abuse",
+        "POST",
+        "/api/v1/public/abuse-reports",
+        reader,
+        Map.of("subjectType", "NOTE", "subjectId", noteId, "reasonCode", "HARASSMENT"),
+        202);
+    long reportId =
+        jdbc.queryForObject(
+            "SELECT id FROM abuse_report WHERE subject_id = ? AND subject_type = 'NOTE'",
+            Long.class,
+            noteId);
+    assertThat(
+            step(
+                    "ops-note-abuse-backlog",
+                    "GET",
+                    "/api/v1/admin/abuse-reports?status=OPEN",
+                    admin,
+                    null,
+                    200)
+                .toString())
+        .contains("신고될 노트")
+        .contains(author.username());
+    step(
+        "ops-resolve-note-abuse",
+        "POST",
+        "/api/v1/admin/abuse-reports/" + reportId + "/resolve",
+        admin,
+        Map.of("resolution", "RESOLVED", "action", "DELETE_NOTE", "adminNote", "Took it down"),
+        200);
+    assertThat(count("note", "id = ?", noteId)).isZero();
+    jdbc.update("DELETE FROM abuse_report WHERE id = ?", reportId);
+  }
+
+  @Test
   void takesDownAReportedShortLinkAndBringsItBack() throws Exception {
     Actor admin = actor("link-moderator", true);
     Actor owner = actor("link-owner", false);

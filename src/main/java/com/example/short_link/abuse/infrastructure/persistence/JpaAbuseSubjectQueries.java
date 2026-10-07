@@ -3,6 +3,7 @@ package com.example.short_link.abuse.infrastructure.persistence;
 import com.example.short_link.abuse.domain.AbuseReportEntity;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.CommentSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.LinkSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.NoteSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.PostSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.UserSubjectSnapshot;
 import java.util.Collection;
@@ -57,6 +58,20 @@ public interface JpaAbuseSubjectQueries extends Repository<AbuseReportEntity, Lo
 
   @Query(value = "SELECT COUNT(*) FROM link WHERE id = :id", nativeQuery = true)
   long countLinkById(@Param("id") Long id);
+
+  // A note from another server is named by its account there, user@server.
+  @Query(
+      value =
+          "SELECT n.id AS subjectId, SUBSTRING(n.body, 1, 200) AS excerpt, "
+              + "COALESCE(u.username, CONCAT(r.username, '@', r.domain)) AS authorHandle "
+              + "FROM note n LEFT JOIN users u ON u.id = n.user_id "
+              + "LEFT JOIN federation_remote_actor r ON r.id = n.remote_actor_id "
+              + "WHERE n.id IN (:noteIds)",
+      nativeQuery = true)
+  List<NoteSubjectSnapshot> findNoteSubjectSnapshots(@Param("noteIds") Collection<Long> noteIds);
+
+  @Query(value = "SELECT COUNT(*) FROM note WHERE id = :id", nativeQuery = true)
+  long countNoteById(@Param("id") Long id);
 
   @Query(value = "SELECT COUNT(*) FROM posts WHERE id = :id", nativeQuery = true)
   long countPostById(@Param("id") Long id);
