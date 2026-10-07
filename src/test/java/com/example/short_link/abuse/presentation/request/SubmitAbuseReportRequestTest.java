@@ -11,7 +11,7 @@ import org.junit.jupiter.api.Test;
 class SubmitAbuseReportRequestTest {
 
   private SubmitAbuseReportRequest req(String reasonCode, String detail, String reason) {
-    return new SubmitAbuseReportRequest("POST", 42L, reasonCode, detail, reason);
+    return new SubmitAbuseReportRequest("POST", 42L, reasonCode, detail, reason, null);
   }
 
   @Test

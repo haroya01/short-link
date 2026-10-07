@@ -8,7 +8,17 @@ public record SubmitAbuseReportCommand(
     AbuseSubjectType subjectType,
     Long subjectId,
     AbuseReason reasonCode,
-    String detail) {
+    String detail,
+    boolean forward) {
+
+  public SubmitAbuseReportCommand(
+      Long reporterUserId,
+      AbuseSubjectType subjectType,
+      Long subjectId,
+      AbuseReason reasonCode,
+      String detail) {
+    this(reporterUserId, subjectType, subjectId, reasonCode, detail, false);
+  }
 
   public SubmitAbuseReportCommand {
     if (subjectType == null) throw new IllegalArgumentException("subjectType required");

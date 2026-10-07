@@ -14,7 +14,8 @@ public record SubmitAbuseReportRequest(
     @NotNull Long subjectId,
     String reasonCode,
     @Size(max = 2000) String detail,
-    @Size(max = 2000) String reason) {
+    @Size(max = 2000) String reason,
+    Boolean forward) {
 
   public AbuseReason resolvedReasonCode() {
     if (reasonCode != null && !reasonCode.isBlank()) {

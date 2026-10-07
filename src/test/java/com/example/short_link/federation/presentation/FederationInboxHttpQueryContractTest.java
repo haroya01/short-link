@@ -337,6 +337,27 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
                 .toList())
         .doesNotContain(noteId);
 
+    call(
+        "federation-remote-note-report",
+        "POST",
+        "/api/v1/public/abuse-reports",
+        Map.of(
+            "subjectType", "NOTE",
+            "subjectId", noteId,
+            "reasonCode", "SPAM",
+            "detail", "광고 계정",
+            "forward", true),
+        token,
+        202);
+    var flag =
+        json.readTree(
+            jdbc.queryForObject(
+                "SELECT body FROM federation_delivery WHERE signer_user_id IS NULL"
+                    + " AND inbox = ? AND activity_id LIKE '%#flags/%'",
+                String.class, remote + "/inbox"));
+    assertThat(flag.path("type").asString()).isEqualTo("Flag");
+    assertThat(flag.path("object").get(1).asString()).isEqualTo(status);
+
     String aliceInbox = remote + "/inbox";
     call(
         "federation-remote-note-like",

@@ -33,7 +33,8 @@ public class PublicAbuseReportController {
             AbuseSubjectType.valueOf(request.subjectType().toUpperCase(Locale.ROOT)),
             request.subjectId(),
             request.resolvedReasonCode(),
-            request.resolvedDetail()));
+            request.resolvedDetail(),
+            Boolean.TRUE.equals(request.forward())));
   }
 
   @PostMapping("/links")
