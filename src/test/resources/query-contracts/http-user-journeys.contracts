@@ -31,6 +31,16 @@
 @junit | export-bookmarks | 1 | 0 | 0 | 0 | 1
 @junit | export-lists | 1 | 0 | 0 | 0 | 1
 @junit | export-unknown | 0 | 0 | 0 | 0 | 0
+# Mastodon's import (merge): starting checks for a running import, saves it and its lines in one
+# multi-row INSERT per 500; the worker applies them outside the request. An unknown kind is turned
+# away before any query; an empty file after the running check.
+@junit | import-start-following | 1 | 2 | 0 | 0 | 3
+@junit | import-start-domain-blocks | 1 | 2 | 0 | 0 | 3
+@junit | import-start-running | 1 | 0 | 0 | 0 | 1
+@junit | import-start-empty | 1 | 0 | 0 | 0 | 1
+@junit | import-start-unknown | 0 | 0 | 0 | 0 | 0
+@junit | import-list-running | 1 | 0 | 0 | 0 | 1
+@junit | import-list-finished | 1 | 0 | 0 | 0 | 1
 @junit | account-delete | 3 | 1 | 1 | 1 | 6
 @junit | account-deleted-me-rejected | 1 | 0 | 0 | 0 | 1
 @junit | account-dev-login | 2 | 1 | 0 | 0 | 3
