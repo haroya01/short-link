@@ -63,6 +63,20 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
+  public NoteFeedView search(String query, int page, int size, Long viewerId) {
+    String trimmed = query == null ? "" : query.strip();
+    if (trimmed.isEmpty() || trimmed.length() > NoteSearchTerms.MAX_LENGTH) {
+      return new NoteFeedView(List.of(), Math.max(page, 0), false);
+    }
+    NoteSearchTerms terms = NoteSearchTerms.of(trimmed);
+    return page(
+        page,
+        size,
+        viewerId,
+        (offset, limit) -> notes.search(terms.match(), terms.like(), viewerId, offset, limit));
+  }
+
+  @Transactional(readOnly = true)
   public NoteFeedView byAuthor(String username, int page, int size, Long viewerId) {
     NoteAuthor author =
         people

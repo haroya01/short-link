@@ -57,6 +57,15 @@ public class NoteController {
     return query.tagged(tag, page, size, viewerId);
   }
 
+  @GetMapping("/api/v1/public/notes/search")
+  public NoteFeedView search(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "") String q,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.search(q, page, size, viewerId);
+  }
+
   @GetMapping("/api/v1/public/notes/{id}/history")
   public NoteHistoryView history(@AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
     return query.history(id, viewerId);

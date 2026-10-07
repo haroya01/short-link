@@ -217,4 +217,22 @@ class NoteQueryServiceTest {
         .extracting(NoteView::id)
         .containsExactly(2L);
   }
+
+  @Test
+  void aSearchWithNothingToLookForAsksNothingAndOtherwisePagesTheMatches() {
+    assertThat(service.search("  ", 0, 20, null).items()).isEmpty();
+    assertThat(service.search("가".repeat(101), 0, 20, null).items()).isEmpty();
+    org.mockito.Mockito.verifyNoInteractions(notes);
+
+    NoteEntity hit = note(4L, null);
+    when(notes.search("헥사고날", null, 7L, 0, 21)).thenReturn(List.of(hit));
+    when(views.of(List.of(hit), 7L)).thenReturn(List.of(view(4L, null, 0L)));
+    assertThat(service.search(" 헥사고날 ", 0, 20, 7L).items())
+        .extracting(NoteView::id)
+        .containsExactly(4L);
+
+    when(notes.search(null, "%밥%", null, 0, 21)).thenReturn(List.of());
+    when(views.of(List.of(), null)).thenReturn(List.of());
+    assertThat(service.search("밥", 0, 20, null).items()).isEmpty();
+  }
 }
