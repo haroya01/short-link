@@ -14,7 +14,8 @@ public record CreateNoteRequest(
     String contentWarning,
     Boolean sensitive,
     String visibility,
-    PollRequest poll) {
+    PollRequest poll,
+    String language) {
 
   public record ImageRequest(String key, String altText) {}
 
@@ -37,6 +38,7 @@ public record CreateNoteRequest(
         poll == null
             ? null
             : new NoteDraft.Poll(
-                poll.options(), poll.expiresIn(), Boolean.TRUE.equals(poll.multiple())));
+                poll.options(), poll.expiresIn(), Boolean.TRUE.equals(poll.multiple())),
+        language);
   }
 }

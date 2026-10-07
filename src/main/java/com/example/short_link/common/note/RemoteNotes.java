@@ -21,7 +21,8 @@ public interface RemoteNotes {
       Long inReplyToLocalId,
       String inReplyToUri,
       Collection<Long> addressedUserIds,
-      List<Media> media) {}
+      List<Media> media,
+      String language) {}
 
   record Media(String url, String altText, String contentType) {}
 

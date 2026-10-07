@@ -50,7 +50,7 @@
 @junit | note-show-reposts | 1 | 0 | 0 | 1 | 2
 @junit | note-following-hidden-reposts | 7 | 0 | 0 | 0 | 7
 @junit | note-feed-preferences | 1 | 0 | 0 | 0 | 1
-@junit | note-feed-preferences-update | 0 | 1 | 0 | 0 | 1
+@junit | note-feed-preferences-update | 1 | 1 | 0 | 0 | 2
 @junit | note-following-no-reposts | 6 | 0 | 0 | 0 | 6
 @junit | note-everyone | 6 | 0 | 0 | 0 | 6
 # Hashtags: a note's tags go in with one multi-row insert after the note (none when it has no tags).
@@ -210,3 +210,9 @@
 @junit | note-schedules | 1 | 0 | 0 | 0 | 1
 @junit | note-schedule-move | 1 | 0 | 1 | 0 | 2
 @junit | note-schedule-cancel | 1 | 0 | 0 | 1 | 2
+# Mastodon's posting language and filter languages. A note keeps its language in its one insert.
+# Choosing languages is one upsert, then the answer reads both settings back (either may change
+# alone). All notes asks the choice inside its one query, so the page costs what it did.
+@junit | note-create-language | 4 | 1 | 0 | 0 | 5
+@junit | note-feed-languages | 1 | 1 | 0 | 0 | 2
+@junit | note-everyone-languages | 5 | 0 | 0 | 0 | 5

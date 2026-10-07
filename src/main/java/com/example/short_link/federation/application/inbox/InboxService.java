@@ -318,7 +318,8 @@ public class InboxService {
                         note.inReplyToLocalId().orElse(null),
                         note.inReplyToUri(),
                         addressed,
-                        note.media()))
+                        note.media(),
+                        note.language()))
                 .isPresent()
             ? InboxOutcome.accepted("note")
             : InboxOutcome.ignored("duplicate");

@@ -28,7 +28,41 @@ public interface NoteSnapshotReader {
       String contentWarning,
       boolean sensitive,
       Visibility visibility,
-      Poll poll) {
+      Poll poll,
+      String language) {
+
+    public NoteSnapshot(
+        Long id,
+        Long authorId,
+        String authorUsername,
+        String body,
+        Instant createdAt,
+        Instant editedAt,
+        Long inReplyToId,
+        Quote quote,
+        List<Image> images,
+        QuotedNote quotedNote,
+        String contentWarning,
+        boolean sensitive,
+        Visibility visibility,
+        Poll poll) {
+      this(
+          id,
+          authorId,
+          authorUsername,
+          body,
+          createdAt,
+          editedAt,
+          inReplyToId,
+          quote,
+          images,
+          quotedNote,
+          contentWarning,
+          sensitive,
+          visibility,
+          poll,
+          null);
+    }
 
     public NoteSnapshot(
         Long id,

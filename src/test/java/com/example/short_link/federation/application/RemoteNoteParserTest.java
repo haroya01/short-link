@@ -91,6 +91,7 @@ class RemoteNoteParserTest {
         json(
             """
             {"id":"https://m.example/s/1","type":"Note","url":["https://m.example/@a/1"],
+             "contentMap":{"pt-BR":"<p>olá</p>"},
              "summary":"<p>spoilers</p>","sensitive":true,"published":"not a date",
              "inReplyTo":"https://kurl.me/ap/notes/7",
              "to":["https://kurl.me/ap/actors/pid"],"cc":["https://m.example/users/a/followers"],
@@ -114,6 +115,10 @@ class RemoteNoteParserTest {
     assertThat(parsed.visibility()).isEqualTo("private");
     assertThat(parsed.inReplyToLocalId()).contains(7L);
     assertThat(parsed.addressedPublicIds()).containsExactly("pid", "other");
+    assertThat(parsed.language()).isEqualTo("pt");
+    assertThat(
+            parser.parse(json("{\"id\":\"x\",\"content\":\"<p>hi</p>\"}"), json("{}")).language())
+        .isNull();
     assertThat(parsed.media())
         .containsExactly(
             new RemoteNotes.Media("https://files.m.example/1.png", "a cat", "image/png"),

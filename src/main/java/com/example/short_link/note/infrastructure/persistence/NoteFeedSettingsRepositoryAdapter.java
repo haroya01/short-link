@@ -12,12 +12,32 @@ class NoteFeedSettingsRepositoryAdapter implements NoteFeedSettingsRepository {
   @PersistenceContext private EntityManager em;
 
   @Override
-  public boolean showsReposts(Long userId) {
+  public Preferences read(Long userId) {
     List<?> rows =
-        em.createNativeQuery("SELECT show_reposts FROM note_feed_preference WHERE user_id = :user")
+        em.createNativeQuery(
+                "SELECT show_reposts, languages FROM note_feed_preference WHERE user_id = :user")
             .setParameter("user", userId)
             .getResultList();
-    return rows.isEmpty() || Boolean.TRUE.equals(asBoolean(rows.getFirst()));
+    if (rows.isEmpty()) {
+      return new Preferences(true, List.of());
+    }
+    Object[] row = (Object[]) rows.getFirst();
+    String languages = (String) row[1];
+    return new Preferences(
+        Boolean.TRUE.equals(asBoolean(row[0])),
+        languages == null || languages.isEmpty() ? List.of() : List.of(languages.split(",")));
+  }
+
+  @Override
+  public void setLanguages(Long userId, List<String> languages) {
+    em.createNativeQuery(
+            "INSERT INTO note_feed_preference (user_id, show_reposts, languages, updated_at)"
+                + " VALUES (:user, TRUE, :languages, NOW(6)) AS fresh"
+                + " ON DUPLICATE KEY UPDATE languages = fresh.languages,"
+                + " updated_at = fresh.updated_at")
+        .setParameter("user", userId)
+        .setParameter("languages", languages.isEmpty() ? null : String.join(",", languages))
+        .executeUpdate();
   }
 
   @Override

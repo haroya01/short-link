@@ -42,9 +42,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -52,6 +54,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class NoteCommandService {
+
+  private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,3}");
 
   private final NoteRepository notes;
   private final NoteLikeRepository likes;
@@ -140,7 +144,8 @@ public class NoteCommandService {
       NoteEntity quotedNote,
       QuotedPost quoted,
       List<String> handles,
-      Map<Long, NoteAuthor> authors) {}
+      Map<Long, NoteAuthor> authors,
+      String language) {}
 
   @Transactional(readOnly = true)
   public void validate(Long userId, NoteDraft draft) {
@@ -220,7 +225,16 @@ public class NoteCommandService {
     }
 
     return new Checked(
-        body, stored, pollOptions, requested, parent, quotedNote, quoted, handles, authors);
+        body,
+        stored,
+        pollOptions,
+        requested,
+        parent,
+        quotedNote,
+        quoted,
+        handles,
+        authors,
+        language(draft.language()));
   }
 
   @Transactional
@@ -242,6 +256,7 @@ public class NoteCommandService {
       fresh.answer(parent);
     }
     fresh.markContent(warning(draft.contentWarning()), draft.sensitive());
+    fresh.writeIn(checked.language());
     fresh.showTo(
         requested != null
             ? requested
@@ -320,7 +335,20 @@ public class NoteCommandService {
         note.isSensitive(),
         false,
         note.getVisibility().apiName(),
-        note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null);
+        note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
+        null,
+        note.getLanguage());
+  }
+
+  static String language(String raw) {
+    if (raw == null || raw.isBlank()) {
+      return null;
+    }
+    String code = raw.strip().toLowerCase(Locale.ROOT);
+    if (!LANGUAGE.matcher(code).matches()) {
+      throw new NoteException(NoteErrorCode.NOTE_LANGUAGE_INVALID, raw);
+    }
+    return code;
   }
 
   private static List<String> pollOptions(NoteDraft.Poll poll) {

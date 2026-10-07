@@ -11,6 +11,7 @@ public enum NoteErrorCode {
   NOTE_PIN_LIMIT(HttpStatus.BAD_REQUEST, "at most %s notes can be pinned"),
   NOTE_PIN_REPLY(HttpStatus.BAD_REQUEST, "a reply cannot be pinned"),
   NOTE_VISIBILITY_INVALID(HttpStatus.BAD_REQUEST, "unknown visibility: %s"),
+  NOTE_LANGUAGE_INVALID(HttpStatus.BAD_REQUEST, "a language is an ISO 639 code like ko: %s"),
   NOTE_PIN_DIRECT(HttpStatus.BAD_REQUEST, "a direct note cannot be pinned"),
   NOTE_LIST_NOT_FOUND(HttpStatus.NOT_FOUND, "list not found: %s"),
   NOTE_LIST_LIMIT(HttpStatus.BAD_REQUEST, "at most %s lists"),

@@ -12,4 +12,5 @@ public record RemoteNoteRow(
     boolean sensitive,
     NoteVisibility visibility,
     Long inReplyToId,
-    Long conversationId) {}
+    Long conversationId,
+    String language) {}

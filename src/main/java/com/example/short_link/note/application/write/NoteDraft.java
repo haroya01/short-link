@@ -11,7 +11,31 @@ public record NoteDraft(
     String contentWarning,
     boolean sensitive,
     String visibility,
-    Poll poll) {
+    Poll poll,
+    String language) {
+
+  public NoteDraft(
+      String body,
+      List<Image> images,
+      Long quotedPostId,
+      Long inReplyToId,
+      Long quotedNoteId,
+      String contentWarning,
+      boolean sensitive,
+      String visibility,
+      Poll poll) {
+    this(
+        body,
+        images,
+        quotedPostId,
+        inReplyToId,
+        quotedNoteId,
+        contentWarning,
+        sensitive,
+        visibility,
+        poll,
+        null);
+  }
 
   public NoteDraft(
       String body,

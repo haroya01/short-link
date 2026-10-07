@@ -99,7 +99,8 @@ class RemoteNoteRecorder implements RemoteNotes {
                 received.sensitive() || warning != null,
                 visibility,
                 parent == null ? null : parent.getId(),
-                parent == null ? null : parent.conversation()));
+                parent == null ? null : parent.conversation(),
+                received.language()));
     if (stored.isEmpty()) {
       return Optional.empty();
     }

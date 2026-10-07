@@ -81,7 +81,8 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
             note.getContentWarning(),
             note.isSensitive(),
             NoteSnapshotReader.Visibility.valueOf(note.getVisibility().name()),
-            poll(note)));
+            poll(note),
+            note.getLanguage()));
   }
 
   private Poll poll(NoteEntity note) {

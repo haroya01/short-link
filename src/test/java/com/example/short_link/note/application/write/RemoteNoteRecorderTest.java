@@ -65,7 +65,8 @@ class RemoteNoteRecorderTest {
         localParent,
         parentUri,
         addressed,
-        images);
+        images,
+        "en");
   }
 
   @Test
@@ -90,6 +91,7 @@ class RemoteNoteRecorderTest {
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(notes).insertRemote(row.capture());
     assertThat(row.getValue().visibility()).isEqualTo(NoteVisibility.PUBLIC);
+    assertThat(row.getValue().language()).isEqualTo("en");
     assertThat(row.getValue().createdAt()).isEqualTo(Instant.parse("2026-10-07T01:00:00.123456Z"));
     assertThat(row.getValue().inReplyToId()).isNull();
     assertThat(row.getValue().sensitive()).isFalse();
