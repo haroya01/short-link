@@ -160,12 +160,18 @@
 # insert), then after commit the note and its account, and a Flag from this server's own actor to
 # that server (dedupe, insert) — the reporter is never named there.
 @junit | federation-remote-note-report | 5 | 2 | 0 | 0 | 7
+# Trending before any member touched a note from elsewhere: the one ranking statement, then the
+# page's local authors, media and stats; no account from elsewhere is read, the note is not there.
+@junit | notes-trending-remote-untouched | 4 | 0 | 0 | 0 | 4
 # A member likes, boosts and answers a note from elsewhere; each reaches its author's server. After
 # the member's own work: their actor (user, preference, actor), the note and its account, then the
 # delivery (dedupe check, insert). A boost and a reply also go to the member's followers' servers.
 @junit | federation-remote-note-like | 9 | 2 | 0 | 0 | 11
 @junit | federation-remote-note-repost | 11 | 2 | 0 | 0 | 13
 @junit | federation-remote-note-reply | 13 | 2 | 0 | 0 | 15
+# Once members liked, boosted and answered it, the same ranking statement brings it in, and its
+# account from elsewhere joins the page's authors.
+@junit | notes-trending-remote | 5 | 0 | 0 | 0 | 5
 # Editing and deleting that reply reach the server it answered as well as the member's followers:
 # after the member's own work, their actor (user, preference, actor), the reply and its parent's
 # account, follower inboxes, then the delivery. The delete carries what the reply answered, since
