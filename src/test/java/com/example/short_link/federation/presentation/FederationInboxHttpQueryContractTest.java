@@ -158,6 +158,108 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void aMemberFollowsAMastodonAccountThatAcceptsThenUnfollows() throws Exception {
+    String me = urls.actor(target.publicId());
+    String host = URI.create(remote).getHost();
+    var found =
+        body(
+            call(
+                "federation-remote-lookup",
+                "GET",
+                "/api/v1/federation/accounts/lookup?acct=@alice@" + host,
+                null,
+                token,
+                200));
+    long id = found.path("id").asLong();
+    assertThat(found.path("acct").asString()).isEqualTo("alice@" + host);
+    assertThat(found.path("requested").asBoolean()).isFalse();
+
+    var requested =
+        body(
+            call(
+                "federation-remote-follow",
+                "POST",
+                "/api/v1/federation/accounts/" + id + "/follow",
+                null,
+                token,
+                200));
+    assertThat(requested.path("requested").asBoolean()).isTrue();
+    String followId =
+        jdbc.queryForObject(
+            "SELECT follow_activity_id FROM federation_following WHERE user_id = ?",
+            String.class,
+            owner.getId());
+    var follow =
+        json.readTree(
+            jdbc.queryForObject(
+                "SELECT body FROM federation_delivery WHERE activity_id = ?",
+                String.class,
+                followId));
+    assertThat(follow.path("type").asString()).isEqualTo("Follow");
+    assertThat(follow.path("actor").asString()).isEqualTo(me);
+    assertThat(follow.path("object").asString()).isEqualTo(alice);
+
+    Map<String, Object> echoed = new LinkedHashMap<>();
+    echoed.put("id", followId);
+    echoed.put("type", "Follow");
+    echoed.put("actor", me);
+    echoed.put("object", alice);
+    post(
+        "federation-remote-accept",
+        "/ap/actors/" + target.publicId() + "/inbox",
+        activity(remote + "/accepts/1", "Accept", echoed),
+        202);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM federation_following"
+                    + " WHERE user_id = ? AND accepted_at IS NOT NULL",
+                owner.getId()))
+        .isEqualTo(1);
+
+    var listed =
+        body(
+            call(
+                "federation-remote-following",
+                "GET",
+                "/api/v1/federation/following",
+                null,
+                token,
+                200));
+    assertThat(listed.get(0).path("following").asBoolean()).isTrue();
+    assertThat(
+            body(call(
+                    "federation-remote-account",
+                    "GET",
+                    "/api/v1/federation/accounts/" + id,
+                    null,
+                    token,
+                    200))
+                .path("following")
+                .asBoolean())
+        .isTrue();
+
+    var dropped =
+        body(
+            call(
+                "federation-remote-unfollow",
+                "DELETE",
+                "/api/v1/federation/accounts/" + id + "/follow",
+                null,
+                token,
+                200));
+    assertThat(dropped.path("following").asBoolean()).isFalse();
+    assertThat(count("SELECT COUNT(*) FROM federation_following WHERE user_id = ?", owner.getId()))
+        .isZero();
+    var undo =
+        json.readTree(
+            jdbc.queryForObject(
+                "SELECT body FROM federation_delivery WHERE signer_user_id = ?"
+                    + " AND activity_id LIKE '%#undo/%'",
+                String.class, owner.getId()));
+    assertThat(undo.path("object").path("id").asString()).isEqualTo(followId);
+  }
+
+  @Test
   void aMastodonAccountVotesInAPollAndTheQuestionCountsItOnce() throws Exception {
     jdbc.update(
         "INSERT INTO note (user_id, body, created_at, poll_options, poll_expires_at)"

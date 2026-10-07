@@ -185,4 +185,17 @@ class RemoteActorResolverTest {
 
     assertThat(resolver().byActorUri("::bad")).isEmpty();
   }
+
+  @Test
+  void aCachedActorIsReusedWhileFreshAndRefetchedOnceStale() {
+    RemoteActorEntity fresh = cached(NOW.minusSeconds(60));
+    assertThat(resolver().refreshed(fresh)).contains(fresh);
+    verify(actors, never()).findByActorUri(any());
+
+    RemoteActorEntity stale = cached(NOW.minus(RemoteActorResolver.FRESH_FOR).minusSeconds(1));
+    when(actors.findByActorUri(MASTODON_ACTOR.toString())).thenReturn(Optional.of(stale));
+    when(http.get(MASTODON_ACTOR, instance)).thenReturn(new FederationHttp.Result.Unreachable("x"));
+    assertThat(resolver().refreshed(stale)).contains(stale);
+    verify(http).get(MASTODON_ACTOR, instance);
+  }
 }

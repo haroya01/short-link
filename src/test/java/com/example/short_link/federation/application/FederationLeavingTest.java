@@ -31,12 +31,14 @@ class FederationLeavingTest {
 
   @Mock private FederationActorRepository actors;
   @Mock private FederationFollowerRepository followers;
+  @Mock private RemoteFollowing following;
   @Mock private DeliveryQueue deliveries;
 
   private FederationLeaving leaving() {
     return new FederationLeaving(
         actors,
         followers,
+        following,
         deliveries,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
         JSON,
@@ -51,6 +53,7 @@ class FederationLeavingTest {
 
     leaving().leave(7L);
 
+    verify(following).leave(7L, "https://kurl.me/ap/actors/pid");
     ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
     verify(deliveries)
         .enqueue(

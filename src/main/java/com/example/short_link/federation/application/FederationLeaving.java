@@ -14,14 +14,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
 
-// Leaving the fediverse (turning federation off, or deleting the account) tells every follower's
-// server to drop the account and its notes, then forgets the followers. Remote copies are deleted
+// Leaving the fediverse (turning federation off, or deleting the account) unfollows everyone it
+// followed elsewhere, tells every follower's server to drop the account and its notes, then
+// forgets the followers. Remote copies are deleted
 // by those servers, not by us; re-enabling starts with no followers.
 @Service
 public class FederationLeaving {
 
   private final FederationActorRepository actors;
   private final FederationFollowerRepository followers;
+  private final RemoteFollowing following;
   private final DeliveryQueue deliveries;
   private final FederationUrls urls;
   private final JsonMapper json;
@@ -31,21 +33,24 @@ public class FederationLeaving {
   public FederationLeaving(
       FederationActorRepository actors,
       FederationFollowerRepository followers,
+      RemoteFollowing following,
       DeliveryQueue deliveries,
       FederationUrls urls,
       JsonMapper json) {
-    this(actors, followers, deliveries, urls, json, Clock.systemUTC());
+    this(actors, followers, following, deliveries, urls, json, Clock.systemUTC());
   }
 
   FederationLeaving(
       FederationActorRepository actors,
       FederationFollowerRepository followers,
+      RemoteFollowing following,
       DeliveryQueue deliveries,
       FederationUrls urls,
       JsonMapper json,
       Clock clock) {
     this.actors = actors;
     this.followers = followers;
+    this.following = following;
     this.deliveries = deliveries;
     this.urls = urls;
     this.json = json;
@@ -58,9 +63,10 @@ public class FederationLeaving {
     if (actor.isEmpty()) {
       return;
     }
+    String actorUri = urls.actor(actor.get().getPublicId());
+    following.leave(userId, actorUri);
     List<String> inboxes = followers.deliveryInboxes(userId);
     if (!inboxes.isEmpty()) {
-      String actorUri = urls.actor(actor.get().getPublicId());
       String id = actorUri + "#delete/" + clock.millis();
       Map<String, Object> delete = new LinkedHashMap<>();
       delete.put("@context", ActivityStreams.CONTEXT);
