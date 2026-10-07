@@ -791,6 +791,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     jdbc.update(
         "UPDATE note_schedule SET publish_at = publish_at - INTERVAL 1 DAY WHERE id = ?", first);
     assertThat(schedules.publishDue()).isEqualTo(1);
+    awaitAsyncWork();
     assertThat(count("note", "user_id = ? AND body = '예약한 노트 #아침'", writer.id())).isEqualTo(1);
     assertThat(count("note_schedule", "id = ?", first)).isZero();
 
