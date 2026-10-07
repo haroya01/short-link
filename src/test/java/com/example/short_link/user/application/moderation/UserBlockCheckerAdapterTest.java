@@ -35,4 +35,16 @@ class UserBlockCheckerAdapterTest {
     assertThat(adapter().silences(9L, null)).isFalse();
     verifyNoInteractions(blocks);
   }
+
+  @Test
+  void aMutedConversationIsAskedInTheSameQueryAndNothingToAskIsNoQuery() {
+    when(mutes.silences(9L, 2L, 40L, NOW)).thenReturn(true);
+    when(mutes.silences(9L, null, 41L, NOW)).thenReturn(false);
+
+    assertThat(adapter().silences(9L, 2L, 40L)).isTrue();
+    assertThat(adapter().silences(9L, null, 41L)).isFalse();
+    assertThat(adapter().silences(9L, null, null)).isFalse();
+    assertThat(adapter().silences(null, 2L, 40L)).isFalse();
+    verifyNoInteractions(blocks);
+  }
 }

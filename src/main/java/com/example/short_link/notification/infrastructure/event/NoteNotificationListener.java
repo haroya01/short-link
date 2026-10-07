@@ -31,8 +31,7 @@ public class NoteNotificationListener {
     if (event.isSelfAction() || event.recipientUserId() == null) {
       return;
     }
-    if (event.actorUserId() != null
-        && blocks.silences(event.recipientUserId(), event.actorUserId())) {
+    if (blocks.silences(event.recipientUserId(), event.actorUserId(), event.conversationId())) {
       return;
     }
     NotificationType type =

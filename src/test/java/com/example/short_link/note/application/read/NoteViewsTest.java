@@ -93,6 +93,18 @@ class NoteViewsTest {
   }
 
   @Test
+  void aMutedConversationIsMarkedForItsReaderOnly() {
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
+    when(notes.stats(List.of(1L))).thenReturn(Map.of());
+    when(notes.viewerMarks(8L, List.of(1L)))
+        .thenReturn(new NoteViewerMarks(Set.of(), Set.of(), Set.of(), Set.of(1L)));
+
+    assertThat(views.of(List.of(note(1L, 7L, null)), 8L).get(0).conversationMuted()).isTrue();
+    when(notes.viewerMarks(null, List.of(1L))).thenReturn(NoteViewerMarks.NONE);
+    assertThat(views.of(List.of(note(1L, 7L, null)), null).get(0).conversationMuted()).isNull();
+  }
+
+  @Test
   void aPageOfMembersNotesNeverAsksForRemoteAccounts() {
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
     when(notes.stats(List.of(1L))).thenReturn(Map.of());

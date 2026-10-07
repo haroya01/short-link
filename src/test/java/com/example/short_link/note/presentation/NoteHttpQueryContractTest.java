@@ -561,6 +561,70 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
   }
 
   @Test
+  void aMutedConversationStopsItsNoticesWhileTheThreadStaysReadable() throws Exception {
+    Actor writer = actor("conv-writer", false);
+    Actor talker = actor("conv-talker", false);
+    long root = noteAt(writer, "대화의 시작", 1);
+    long answer =
+        step(
+                "note-reply-before-mute",
+                "POST",
+                "/api/v1/notes",
+                talker,
+                Map.of("body", "첫 답글", "inReplyToId", root),
+                201)
+            .path("id")
+            .asLong();
+
+    var muted =
+        step(
+            "note-conversation-mute",
+            "PUT",
+            "/api/v1/notes/" + answer + "/conversation-mute",
+            writer,
+            null,
+            200);
+    assertThat(muted.path("muted").asBoolean()).isTrue();
+    var thread =
+        step(
+            "note-thread-conversation-muted",
+            "GET",
+            "/api/v1/public/notes/" + root,
+            writer,
+            null,
+            200);
+    assertThat(thread.path("note").path("conversationMuted").asBoolean()).isTrue();
+    assertThat(thread.path("replies").get(0).path("conversationMuted").asBoolean()).isTrue();
+
+    long before = count("notification", "recipient_user_id = ?", writer.id());
+    step(
+        "note-reply-conversation-muted",
+        "POST",
+        "/api/v1/notes",
+        talker,
+        Map.of("body", "뮤트된 대화의 답글", "inReplyToId", root),
+        201);
+    step(
+        "note-like-conversation-muted",
+        "PUT",
+        "/api/v1/notes/" + root + "/like",
+        talker,
+        null,
+        200);
+    Thread.sleep(500);
+    assertThat(count("notification", "recipient_user_id = ?", writer.id())).isEqualTo(before);
+
+    step(
+        "note-conversation-unmute",
+        "DELETE",
+        "/api/v1/notes/" + root + "/conversation-mute",
+        writer,
+        null,
+        200);
+    assertThat(count("note_conversation_mute", "user_id = ?", writer.id())).isZero();
+  }
+
+  @Test
   void anOwnerKeepsKeywordFiltersThatTheirAppsApply() throws Exception {
     Actor owner = actor("filter-owner", false);
     Actor stranger = actor("filter-stranger", false);

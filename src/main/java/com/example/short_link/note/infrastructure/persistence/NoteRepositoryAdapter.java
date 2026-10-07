@@ -347,23 +347,29 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " UNION ALL SELECT note_id, 'REPOST' FROM note_repost"
                     + " WHERE user_id = :user AND note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, 'BOOKMARK' FROM note_bookmark"
-                    + " WHERE user_id = :user AND note_id IN (:ids)")
+                    + " WHERE user_id = :user AND note_id IN (:ids)"
+                    + " UNION ALL SELECT n.id, 'MUTED' FROM note n"
+                    + " JOIN note_conversation_mute c"
+                    + " ON c.conversation_id = COALESCE(n.conversation_id, n.id)"
+                    + " WHERE c.user_id = :user AND n.id IN (:ids)")
             .setParameter("user", userId)
             .setParameter("ids", noteIds)
             .getResultList();
     Set<Long> liked = new HashSet<>();
     Set<Long> reposted = new HashSet<>();
     Set<Long> bookmarked = new HashSet<>();
+    Set<Long> muted = new HashSet<>();
     for (Object raw : rows) {
       Object[] cols = (Object[]) raw;
       Long noteId = ((Number) cols[0]).longValue();
       switch (cols[1].toString()) {
         case "LIKE" -> liked.add(noteId);
         case "REPOST" -> reposted.add(noteId);
+        case "MUTED" -> muted.add(noteId);
         default -> bookmarked.add(noteId);
       }
     }
-    return new NoteViewerMarks(liked, reposted, bookmarked);
+    return new NoteViewerMarks(liked, reposted, bookmarked, muted);
   }
 
   // An account elsewhere, as this viewer may read it: public and unlisted to anyone, followers-only
@@ -405,8 +411,9 @@ class NoteRepositoryAdapter implements NoteRepository {
         em.createNativeQuery(
                 "INSERT IGNORE INTO note (remote_actor_id, uri, remote_url, body, created_at,"
                     + " content_warning, marked_sensitive, visibility, in_reply_to_id,"
-                    + " poll_multiple) VALUES (:actor, :uri, :url, :body, :createdAt, :warning,"
-                    + " :sensitive, :visibility, :parent, FALSE)")
+                    + " conversation_id, poll_multiple) VALUES (:actor, :uri, :url, :body,"
+                    + " :createdAt, :warning, :sensitive, :visibility, :parent, :conversation,"
+                    + " FALSE)")
             .setParameter("actor", row.remoteActorId())
             .setParameter("uri", row.uri())
             .setParameter("url", row.url())
@@ -416,6 +423,7 @@ class NoteRepositoryAdapter implements NoteRepository {
             .setParameter("sensitive", row.sensitive())
             .setParameter("visibility", row.visibility().name())
             .setParameter("parent", row.inReplyToId())
+            .setParameter("conversation", row.conversationId())
             .executeUpdate();
     return inserted == 0 ? Optional.empty() : idByUri(row.uri());
   }
@@ -438,6 +446,27 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setParameter("editedAt", editedAt)
         .setParameter("uri", uri)
         .setParameter("actor", remoteActorId)
+        .executeUpdate();
+  }
+
+  @Override
+  public void muteConversation(Long userId, Long conversationId, Instant at) {
+    em.createNativeQuery(
+            "INSERT IGNORE INTO note_conversation_mute (user_id, conversation_id, created_at)"
+                + " VALUES (:user, :conversation, :at)")
+        .setParameter("user", userId)
+        .setParameter("conversation", conversationId)
+        .setParameter("at", at)
+        .executeUpdate();
+  }
+
+  @Override
+  public void unmuteConversation(Long userId, Long conversationId) {
+    em.createNativeQuery(
+            "DELETE FROM note_conversation_mute WHERE user_id = :user"
+                + " AND conversation_id = :conversation")
+        .setParameter("user", userId)
+        .setParameter("conversation", conversationId)
         .executeUpdate();
   }
 

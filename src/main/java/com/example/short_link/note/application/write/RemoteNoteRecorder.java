@@ -91,7 +91,8 @@ class RemoteNoteRecorder implements RemoteNotes {
                 warning,
                 received.sensitive() || warning != null,
                 visibility,
-                parent == null ? null : parent.getId()));
+                parent == null ? null : parent.getId(),
+                parent == null ? null : parent.conversation()));
     if (stored.isEmpty()) {
       return Optional.empty();
     }
@@ -112,7 +113,8 @@ class RemoteNoteRecorder implements RemoteNotes {
               parent.getId(),
               parent.excerpt(),
               noteId,
-              excerpt));
+              excerpt,
+              parent.conversation()));
       addressed.remove(parent.getUserId());
     }
     for (Long member : addressed) {
@@ -125,7 +127,8 @@ class RemoteNoteRecorder implements RemoteNotes {
               noteId,
               excerpt,
               null,
-              null));
+              null,
+              parent == null ? noteId : parent.conversation()));
     }
     return stored;
   }

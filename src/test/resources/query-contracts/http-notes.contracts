@@ -171,3 +171,13 @@
 @junit | note-search-seed-private | 3 | 1 | 0 | 0 | 4
 @junit | note-search | 4 | 0 | 0 | 0 | 4
 @junit | note-search-short | 4 | 0 | 0 | 0 | 4
+# Mastodon's mute conversation. A reply joins its thread's root (no extra write: a top-level note is
+# its own conversation). Muting reads the note for its conversation and INSERT IGNOREs the mute;
+# the reader's marks pick it up in the same statement as likes, reposts and bookmarks.
+@junit | note-reply-before-mute | 10 | 2 | 0 | 0 | 12
+@junit | note-conversation-mute | 1 | 1 | 0 | 0 | 2
+@junit | note-thread-conversation-muted | 6 | 0 | 0 | 0 | 6
+# A reply or a like in the muted thread stops at the one silence check (block, mute, conversation).
+@junit | note-reply-conversation-muted | 7 | 1 | 0 | 0 | 8
+@junit | note-like-conversation-muted | 4 | 1 | 0 | 0 | 5
+@junit | note-conversation-unmute | 1 | 0 | 0 | 1 | 2
