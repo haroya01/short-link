@@ -252,17 +252,31 @@ public class RemoteNoteParser {
     }
     Iterable<JsonNode> items = attachments.isArray() ? attachments : List.of(attachments);
     for (JsonNode attachment : items) {
-      String type = text(attachment.get("mediaType"));
-      boolean image =
-          type != null
-              ? type.toLowerCase(Locale.ROOT).startsWith("image/")
-              : "Image".equals(text(attachment.get("type")));
+      String type = mediaType(attachment);
       String url = link(attachment.get("url"));
-      if (image && url != null && url.startsWith("https://") && url.length() <= 512) {
+      if (type != null && url != null && url.startsWith("https://") && url.length() <= 512) {
         media.add(new RemoteNotes.Media(url, text(attachment.get("name")), type));
       }
     }
     return media;
+  }
+
+  // Pictures, video (Mastodon's GIFs arrive as silent mp4) and audio stay on their server and play
+  // from there; anything else is left out.
+  private static String mediaType(JsonNode attachment) {
+    String declared = text(attachment.get("mediaType"));
+    if (declared != null) {
+      String type = declared.toLowerCase(Locale.ROOT);
+      return type.startsWith("image/") || type.startsWith("video/") || type.startsWith("audio/")
+          ? type
+          : null;
+    }
+    return switch (String.valueOf(text(attachment.get("type")))) {
+      case "Image" -> "image/jpeg";
+      case "Video" -> "video/mp4";
+      case "Audio" -> "audio/mpeg";
+      default -> null;
+    };
   }
 
   private static Set<String> addresses(JsonNode primary, JsonNode fallback) {
