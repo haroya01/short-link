@@ -12,6 +12,11 @@ public enum NoteErrorCode {
   NOTE_PIN_REPLY(HttpStatus.BAD_REQUEST, "a reply cannot be pinned"),
   NOTE_VISIBILITY_INVALID(HttpStatus.BAD_REQUEST, "unknown visibility: %s"),
   NOTE_PIN_DIRECT(HttpStatus.BAD_REQUEST, "a direct note cannot be pinned"),
+  NOTE_LIST_NOT_FOUND(HttpStatus.NOT_FOUND, "list not found: %s"),
+  NOTE_LIST_LIMIT(HttpStatus.BAD_REQUEST, "at most %s lists"),
+  NOTE_LIST_MEMBER_LIMIT(HttpStatus.BAD_REQUEST, "a list holds at most %s people"),
+  NOTE_LIST_TITLE_INVALID(HttpStatus.BAD_REQUEST, "a list title is 1 to %s characters"),
+  NOTE_LIST_SELF(HttpStatus.BAD_REQUEST, "you are not added to your own list"),
   NOTE_NOT_SHAREABLE(
       HttpStatus.BAD_REQUEST, "only public and unlisted notes can be reposted or quoted"),
   NOTE_TOO_MANY_IMAGES(HttpStatus.BAD_REQUEST, "a note holds at most %s images"),
