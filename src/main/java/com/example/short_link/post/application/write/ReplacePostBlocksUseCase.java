@@ -16,6 +16,7 @@ public class ReplacePostBlocksUseCase {
   private final PostOwnership postOwnership;
   private final PostBlockRepository postBlockRepository;
   private final PostSearchTextUpdater searchTextUpdater;
+  private final PostNoteQuotes noteQuotes;
 
   @Transactional
   public List<PostBlockEntity> execute(ReplacePostBlocksCommand cmd) {
@@ -26,6 +27,7 @@ public class ReplacePostBlocksUseCase {
     if (cmd.blocks().isEmpty()) {
       // 본문이 비었어도 검색 컬럼은 제목·요약·태그로 다시 채워야 한다(예전 본문 잔재가 남지 않게).
       searchTextUpdater.refresh(post, List.of());
+      noteQuotes.index(post, List.of());
       return List.of();
     }
     List<PostBlockEntity> entities = new ArrayList<>(cmd.blocks().size());
@@ -38,6 +40,7 @@ public class ReplacePostBlocksUseCase {
     List<PostBlockEntity> persisted =
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId());
     searchTextUpdater.refresh(post, persisted);
+    noteQuotes.index(post, persisted);
     return persisted;
   }
 }

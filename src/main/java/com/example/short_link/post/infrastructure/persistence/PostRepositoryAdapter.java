@@ -193,6 +193,11 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> findPublishedQuotingNote(Long noteId, int offset, int limit) {
+    return jpa.findPublishedQuotingNote(noteId, offset, limit);
+  }
+
+  @Override
   public long countPublishedByTag(String tag) {
     return jpa.countPublishedByTag(
         tag, PostStatus.PUBLISHED, DiscoveryQuality.MIN_BODY_TEXT_LENGTH);

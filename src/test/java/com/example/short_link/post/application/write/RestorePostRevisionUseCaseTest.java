@@ -33,6 +33,7 @@ class RestorePostRevisionUseCaseTest {
   @Mock private PostRevisionRepository postRevisionRepository;
   @Mock private PostBlockRepository postBlockRepository;
   @Mock private PostSearchTextRepository postSearchTextRepository;
+  @Mock private PostNoteQuotes noteQuotes;
 
   private final ObjectMapper objectMapper = new ObjectMapper();
   private RestorePostRevisionUseCase useCase;
@@ -51,6 +52,7 @@ class RestorePostRevisionUseCaseTest {
             postRevisionRepository,
             postBlockRepository,
             searchTextUpdater,
+            noteQuotes,
             new PostWriteViewAssembler(postRepository));
   }
 
@@ -83,6 +85,7 @@ class RestorePostRevisionUseCaseTest {
     assertThat(restored.languageTag()).isEqualTo("ja");
     verify(postBlockRepository).deleteAllByPostId(42L);
     verify(postBlockRepository).insertAll(anyList());
+    verify(noteQuotes).index(post, List.of());
   }
 
   @Test

@@ -32,7 +32,10 @@ public class PostSearchTextUpdater {
     post.measureBody(flattener.bodyText(blocks));
   }
 
-  public void refresh(PostEntity post) {
-    refresh(post, postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()));
+  public List<PostBlockEntity> refresh(PostEntity post) {
+    List<PostBlockEntity> blocks =
+        postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId());
+    refresh(post, blocks);
+    return blocks;
   }
 }
