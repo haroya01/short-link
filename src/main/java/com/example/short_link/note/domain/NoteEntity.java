@@ -32,6 +32,7 @@ public class NoteEntity extends BaseCreatedEntity {
 
   // MySQL VARCHAR(500) counts code points, so length checks use codePointCount, not length().
   public static final int MAX_BODY_LENGTH = 500;
+  public static final int MAX_STORED_BODY_LENGTH = 5000;
   public static final int MAX_WARNING_LENGTH = 100;
   public static final int MAX_PINS = 5;
   public static final int MIN_POLL_OPTIONS = 2;
@@ -45,10 +46,19 @@ public class NoteEntity extends BaseCreatedEntity {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "user_id", nullable = false)
+  @Column(name = "user_id")
   private Long userId;
 
-  @Column(nullable = false, length = MAX_BODY_LENGTH)
+  @Column(name = "remote_actor_id")
+  private Long remoteActorId;
+
+  @Column(length = 512)
+  private String uri;
+
+  @Column(name = "remote_url", length = 512)
+  private String remoteUrl;
+
+  @Column(nullable = false, length = MAX_STORED_BODY_LENGTH)
   private String body;
 
   @Column(name = "in_reply_to_id")
@@ -103,10 +113,18 @@ public class NoteEntity extends BaseCreatedEntity {
   }
 
   public boolean isOwnedBy(Long viewerId) {
-    return userId.equals(viewerId);
+    return userId != null && userId.equals(viewerId);
+  }
+
+  public boolean isRemote() {
+    return remoteActorId != null;
   }
 
   public String excerpt() {
+    return excerptOf(body);
+  }
+
+  public static String excerptOf(String body) {
     String flat = body == null ? "" : body.strip().replaceAll("\\s+", " ");
     if (flat.codePointCount(0, flat.length()) <= EXCERPT_LENGTH) {
       return flat;

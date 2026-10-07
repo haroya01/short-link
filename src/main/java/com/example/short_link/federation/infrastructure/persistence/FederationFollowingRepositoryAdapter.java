@@ -49,4 +49,9 @@ class FederationFollowingRepositoryAdapter implements FederationFollowingReposit
   public int deleteAllForUser(Long userId) {
     return jpa.deleteAllForUser(userId);
   }
+
+  @Override
+  public boolean anyAcceptedFollowOf(String actorUri) {
+    return jpa.anyAcceptedFollowOf(actorUri);
+  }
 }

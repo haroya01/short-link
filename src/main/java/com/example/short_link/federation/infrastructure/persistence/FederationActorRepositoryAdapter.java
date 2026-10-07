@@ -2,6 +2,8 @@ package com.example.short_link.federation.infrastructure.persistence;
 
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -20,6 +22,11 @@ class FederationActorRepositoryAdapter implements FederationActorRepository {
   @Override
   public Optional<FederationActorEntity> findByPublicId(String publicId) {
     return jpa.findByPublicId(publicId);
+  }
+
+  @Override
+  public List<FederationActorEntity> findByPublicIds(Collection<String> publicIds) {
+    return publicIds.isEmpty() ? List.of() : jpa.findByPublicIdIn(publicIds);
   }
 
   @Override

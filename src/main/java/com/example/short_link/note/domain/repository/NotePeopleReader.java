@@ -16,5 +16,7 @@ public interface NotePeopleReader {
 
   Optional<NoteAuthor> activeByUsername(String username);
 
+  Map<Long, NoteAuthor> remoteAuthors(Collection<Long> remoteActorIds);
+
   List<Long> followingIds(Long userId);
 }

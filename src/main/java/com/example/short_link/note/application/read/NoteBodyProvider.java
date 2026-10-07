@@ -26,7 +26,7 @@ class NoteBodyProvider implements NoteBodyReader {
   public Map<Long, NoteBlock> blocksByIds(Collection<Long> noteIds) {
     List<NoteEntity> found =
         notes.findAllByIdIn(noteIds).stream()
-            .filter(note -> note.getVisibility().shareable())
+            .filter(note -> note.getVisibility().shareable() && !note.isRemote())
             .toList();
     if (found.isEmpty()) return Map.of();
     Map<Long, NoteAuthor> authors =
@@ -42,6 +42,9 @@ class NoteBodyProvider implements NoteBodyReader {
 
   @Override
   public boolean exists(Long noteId) {
-    return notes.findById(noteId).filter(note -> note.getVisibility().shareable()).isPresent();
+    return notes
+        .findById(noteId)
+        .filter(note -> note.getVisibility().shareable() && !note.isRemote())
+        .isPresent();
   }
 }

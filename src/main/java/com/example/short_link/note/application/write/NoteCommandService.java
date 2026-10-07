@@ -153,6 +153,7 @@ public class NoteCommandService {
     if (draft.inReplyToId() != null) {
       parent = find(draft.inReplyToId());
       requireReadable(userId, parent);
+      requireLocal(parent);
       if (blocks.isBlocked(parent.getUserId(), userId)
           || blocks.isBlocked(userId, parent.getUserId())) {
         throw new NoteException(NoteErrorCode.NOTE_REPLY_BLOCKED);
@@ -172,6 +173,7 @@ public class NoteCommandService {
                       new NoteException(
                           NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId()));
       requireReadable(userId, quotedNote);
+      requireLocal(quotedNote);
       if (!quotedNote.getVisibility().shareable()) {
         throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
       }
@@ -447,6 +449,7 @@ public class NoteCommandService {
       if (!note.getVisibility().shareable()) {
         throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
       }
+      requireLocal(note);
       moderation.requireCanWrite(userId);
       requireNotBlocked(userId, note);
       reposts
@@ -497,6 +500,9 @@ public class NoteCommandService {
   }
 
   private void requireNotBlocked(Long userId, NoteEntity note) {
+    if (note.isRemote()) {
+      return;
+    }
     if (blocks.isBlocked(note.getUserId(), userId) || blocks.isBlocked(userId, note.getUserId())) {
       throw new NoteException(NoteErrorCode.NOTE_INTERACTION_BLOCKED);
     }
@@ -514,6 +520,12 @@ public class NoteCommandService {
         && !note.isOwnedBy(userId)
         && !notes.visibleTo(userId, Set.of(note.getId())).contains(note.getId())) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, note.getId());
+    }
+  }
+
+  private static void requireLocal(NoteEntity note) {
+    if (note.isRemote()) {
+      throw new NoteException(NoteErrorCode.NOTE_REMOTE_UNSUPPORTED);
     }
   }
 

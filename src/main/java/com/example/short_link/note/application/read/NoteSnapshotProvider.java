@@ -33,7 +33,7 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
   @Override
   @Transactional(readOnly = true)
   public Optional<NoteSnapshot> find(Long noteId) {
-    Optional<NoteEntity> found = notes.findById(noteId);
+    Optional<NoteEntity> found = notes.findById(noteId).filter(note -> !note.isRemote());
     if (found.isEmpty()) {
       return Optional.empty();
     }
@@ -52,7 +52,8 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
     }
     QuotedNote quotedNote = null;
     if (note.getQuotedNoteId() != null) {
-      Optional<NoteEntity> quoted = notes.findById(note.getQuotedNoteId());
+      Optional<NoteEntity> quoted =
+          notes.findById(note.getQuotedNoteId()).filter(candidate -> !candidate.isRemote());
       if (quoted.isPresent()) {
         NoteAuthor quotedAuthor =
             people.activeAuthors(Set.of(quoted.get().getUserId())).get(quoted.get().getUserId());

@@ -14,6 +14,7 @@ import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
+import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
@@ -49,6 +50,57 @@ class NoteViewsTest {
     NoteEntity note = new NoteEntity(userId, "n" + id, null, quotedPostId);
     ReflectionTestUtils.setField(note, "id", id);
     return note;
+  }
+
+  private static NoteEntity remote(Long id, Long remoteActorId, NoteVisibility visibility) {
+    NoteEntity note = new NoteEntity(null, "from afar " + id, null, null);
+    ReflectionTestUtils.setField(note, "id", id);
+    ReflectionTestUtils.setField(note, "remoteActorId", remoteActorId);
+    note.showTo(visibility);
+    return note;
+  }
+
+  @Test
+  void notesFromOtherServersCarryTheirAccountAndDropWhenItIsGone() {
+    NoteEntity mine = note(1L, 7L, null);
+    NoteEntity followersOnly = remote(2L, 42L, NoteVisibility.PRIVATE);
+    NoteEntity orphan = remote(3L, 43L, NoteVisibility.PUBLIC);
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
+    when(people.remoteAuthors(Set.of(42L, 43L)))
+        .thenReturn(
+            Map.of(
+                42L,
+                NoteAuthor.remote(
+                    42L,
+                    "alice@m.example",
+                    "https://m.example/a.png",
+                    "Alice",
+                    "https://m.example/@alice")));
+    when(notes.visibleTo(7L, Set.of(2L))).thenReturn(Set.of(2L));
+    when(notes.stats(List.of(1L, 2L))).thenReturn(Map.of());
+    when(notes.viewerMarks(7L, List.of(1L, 2L)))
+        .thenReturn(new NoteViewerMarks(Set.of(), Set.of(), Set.of()));
+
+    List<NoteView> page = views.of(List.of(mine, followersOnly, orphan), 7L);
+
+    assertThat(page).extracting(NoteView::id).containsExactly(1L, 2L);
+    NoteAuthor alice = page.get(1).author();
+    assertThat(alice.id()).isEqualTo(-42L);
+    assertThat(alice.remoteId()).isEqualTo(42L);
+    assertThat(alice.username()).isEqualTo("alice@m.example");
+    assertThat(alice.url()).isEqualTo("https://m.example/@alice");
+    assertThat(page.get(0).author().remoteId()).isNull();
+  }
+
+  @Test
+  void aPageOfMembersNotesNeverAsksForRemoteAccounts() {
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
+    when(notes.stats(List.of(1L))).thenReturn(Map.of());
+    when(notes.viewerMarks(7L, List.of(1L)))
+        .thenReturn(new NoteViewerMarks(Set.of(), Set.of(), Set.of()));
+
+    assertThat(views.of(List.of(note(1L, 7L, null)), 7L)).hasSize(1);
+    verify(people, never()).remoteAuthors(anyCollection());
   }
 
   @Test

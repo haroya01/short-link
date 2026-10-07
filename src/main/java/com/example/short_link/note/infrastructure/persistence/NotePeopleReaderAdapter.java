@@ -64,6 +64,36 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
     return rows.stream().findFirst().map(row -> author((Object[]) row));
   }
 
+  // Keyed by the remote actor id. An account without a username shows as its server.
+  @Override
+  public Map<Long, NoteAuthor> remoteAuthors(Collection<Long> remoteActorIds) {
+    Map<Long, NoteAuthor> authors = new HashMap<>();
+    if (remoteActorIds.isEmpty()) {
+      return authors;
+    }
+    for (Object raw :
+        em.createNativeQuery(
+                "SELECT id, username, domain, avatar_url, display_name,"
+                    + " COALESCE(profile_url, actor_uri) FROM federation_remote_actor"
+                    + " WHERE id IN (:ids)")
+            .setParameter("ids", remoteActorIds)
+            .getResultList()) {
+      Object[] columns = (Object[]) raw;
+      Long id = ((Number) columns[0]).longValue();
+      String username = (String) columns[1];
+      String domain = (String) columns[2];
+      authors.put(
+          id,
+          NoteAuthor.remote(
+              id,
+              username == null ? domain : username + "@" + domain,
+              (String) columns[3],
+              (String) columns[4],
+              (String) columns[5]));
+    }
+    return authors;
+  }
+
   @Override
   public List<Long> followingIds(Long userId) {
     return em

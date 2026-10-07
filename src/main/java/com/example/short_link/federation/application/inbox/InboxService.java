@@ -7,16 +7,20 @@ import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
+import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationFollowers;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.application.RemoteActorParser;
 import com.example.short_link.federation.application.RemoteFollowing;
+import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
+import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
 import io.micrometer.core.instrument.MeterRegistry;
+import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -34,6 +38,8 @@ import tools.jackson.databind.json.JsonMapper;
 @RequiredArgsConstructor
 public class InboxService {
 
+  private static final int MAX_URI = 512;
+
   private final InboxVerifier verifier;
   private final FederationActorService localActors;
   private final FederationActorRepository actorRows;
@@ -42,6 +48,9 @@ public class InboxService {
   private final NoteSnapshotReader notes;
   private final RemoteNoteReactions reactions;
   private final RemoteNotePollVotes votes;
+  private final RemoteNotes remoteNotes;
+  private final RemoteNoteParser noteParser;
+  private final FederationFollowingRepository followingRows;
   private final FederationUrls urls;
   private final JsonMapper json;
   private final MeterRegistry meters;
@@ -62,6 +71,12 @@ public class InboxService {
     record Forget() implements Intent {}
 
     record Answer(String followId, String localActor, boolean accepted) implements Intent {}
+
+    record Receive(JsonNode object, JsonNode activity) implements Intent {}
+
+    record Revise(JsonNode object, JsonNode activity) implements Intent {}
+
+    record Retract(String uri) implements Intent {}
   }
 
   public InboxOutcome receive(InboxMessage request, String inboxPublicId) {
@@ -154,14 +169,37 @@ public class InboxService {
           return InboxOutcome.ignored("unsupported");
         }
         String option = text(object.get("name"));
-        Optional<Long> noteId = urls.noteIdOf(idOf(object.get("inReplyTo")));
-        if (option == null || noteId.isEmpty()) {
+        String inReplyTo = idOf(object.get("inReplyTo"));
+        Optional<Long> noteId = urls.noteIdOf(inReplyTo);
+        if (option != null && noteId.isPresent()) {
+          if (!federated(noteId.get(), owner)) {
+            return InboxOutcome.ignored("unknown-target");
+          }
+          intent = new Intent.Vote(noteId.get(), option);
+        } else {
+          if (!authoredBy(object, actorUri)) {
+            return InboxOutcome.ignored("unsupported");
+          }
+          boolean wanted =
+              noteParser.addressesUs(object, activity)
+                  || (noteId.isPresent() && federated(noteId.get(), owner))
+                  || remoteNotes.exists(inReplyTo)
+                  || followingRows.anyAcceptedFollowOf(actorUri);
+          if (!wanted) {
+            return InboxOutcome.ignored("unsolicited");
+          }
+          intent = new Intent.Receive(object, activity);
+        }
+      }
+      case "Update" -> {
+        JsonNode object = activity.get("object");
+        if (object == null || !object.isObject() || !"Note".equals(text(object.get("type")))) {
           return InboxOutcome.ignored("unsupported");
         }
-        if (!federated(noteId.get(), owner)) {
-          return InboxOutcome.ignored("unknown-target");
+        if (!authoredBy(object, actorUri) || !remoteNotes.exists(idOf(object))) {
+          return InboxOutcome.ignored("unknown-note");
         }
-        intent = new Intent.Vote(noteId.get(), option);
+        intent = new Intent.Revise(object, activity);
       }
       case "Accept", "Reject" -> {
         JsonNode object = activity.get("object");
@@ -179,10 +217,14 @@ public class InboxService {
         intent = new Intent.Answer(followId, localActor, "Accept".equals(type));
       }
       case "Delete" -> {
-        if (!actorUri.equals(idOf(activity.get("object")))) {
+        String deleted = idOf(activity.get("object"));
+        if (actorUri.equals(deleted)) {
+          intent = new Intent.Forget();
+        } else if (remoteNotes.exists(deleted)) {
+          intent = new Intent.Retract(deleted);
+        } else {
           return InboxOutcome.ignored("unsupported");
         }
-        intent = new Intent.Forget();
       }
       default -> {
         return InboxOutcome.ignored("unsupported");
@@ -251,6 +293,51 @@ public class InboxService {
         }
         yield InboxOutcome.accepted(answer.accepted() ? "accept" : "reject");
       }
+      case Intent.Receive receive -> {
+        if (!Objects.equals(RemoteActorParser.host(idOf(receive.object())), actor.getDomain())) {
+          yield InboxOutcome.ignored("foreign-id");
+        }
+        RemoteNoteParser.Parsed note = noteParser.parse(receive.object(), receive.activity());
+        List<Long> addressed =
+            actorRows.findByPublicIds(note.addressedPublicIds()).stream()
+                .map(FederationActorEntity::getUserId)
+                .toList();
+        yield remoteNotes
+                .receive(
+                    new RemoteNotes.Received(
+                        actor.getId(),
+                        note.uri(),
+                        note.url() != null && note.url().length() <= MAX_URI ? note.url() : null,
+                        note.body(),
+                        note.contentWarning(),
+                        note.sensitive(),
+                        note.visibility(),
+                        note.publishedAt(),
+                        note.inReplyToLocalId().orElse(null),
+                        note.inReplyToUri(),
+                        addressed,
+                        note.media()))
+                .isPresent()
+            ? InboxOutcome.accepted("note")
+            : InboxOutcome.ignored("duplicate");
+      }
+      case Intent.Revise revise -> {
+        RemoteNoteParser.Parsed note = noteParser.parse(revise.object(), revise.activity());
+        yield remoteNotes.revise(
+                actor.getId(),
+                note.uri(),
+                note.body(),
+                note.contentWarning(),
+                note.sensitive(),
+                RemoteNoteParser.updated(revise.object()))
+            ? InboxOutcome.accepted("update")
+            : InboxOutcome.ignored("unknown-note");
+      }
+      case Intent.Retract retract -> {
+        yield remoteNotes.retract(actor.getId(), retract.uri())
+            ? InboxOutcome.accepted("delete")
+            : InboxOutcome.ignored("unknown-note");
+      }
       case Intent.Forget gone -> {
         followers.forget(actor);
         yield InboxOutcome.accepted("delete-actor");
@@ -268,6 +355,13 @@ public class InboxService {
                 owner.filter(actor -> actor.user().id().equals(note.authorId())).isPresent()
                     || localActors.byUsername(note.authorUsername()).isPresent())
         .isPresent();
+  }
+
+  private static boolean authoredBy(JsonNode object, String actorUri) {
+    String uri = idOf(object);
+    return uri != null
+        && uri.length() <= MAX_URI
+        && actorUri.equals(idOf(object.get("attributedTo")));
   }
 
   private static Kind reactionKind(String type) {

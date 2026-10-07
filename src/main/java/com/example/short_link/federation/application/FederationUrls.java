@@ -38,6 +38,13 @@ public class FederationUrls {
     return PUBLIC_ID.matcher(publicId).matches() ? Optional.of(publicId) : Optional.empty();
   }
 
+  public boolean isOurs(String url) {
+    String host = RemoteActorParser.host(url);
+    return host != null
+        && (host.equals(RemoteActorParser.host(props.baseUrl()))
+            || host.equals(RemoteActorParser.host(props.profileBaseUrl())));
+  }
+
   public boolean isFollow(String activityId) {
     int mark = activityId == null ? -1 : activityId.indexOf("#follows/");
     return mark > 0 && publicIdOf(activityId.substring(0, mark)).isPresent();
