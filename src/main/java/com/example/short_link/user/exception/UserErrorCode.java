@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 
 public enum UserErrorCode {
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "user not found"),
+  EXPORT_KIND_NOT_FOUND(HttpStatus.NOT_FOUND, "no export called %s"),
   CANNOT_FOLLOW_SELF(HttpStatus.BAD_REQUEST, "cannot follow yourself"),
   NOT_FOLLOWING(HttpStatus.CONFLICT, "follow first to hear of every new note"),
   FOLLOW_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "no follow request from %s"),
