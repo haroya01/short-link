@@ -1,5 +1,6 @@
 package com.example.short_link.profile.application.write;
 
+import com.example.short_link.common.event.AccountUnlockedEvent;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.MyProfileMapper;
 import com.example.short_link.profile.application.ProfileCacheEviction;
@@ -19,6 +20,7 @@ import java.time.Instant;
 import java.util.Locale;
 import java.util.regex.Pattern;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,7 @@ public class UpdateProfileUseCase {
   private final UsernameHistoryRepository usernameHistoryRepository;
   private final MeterRegistry meterRegistry;
   private final ProfileCacheEviction cacheEviction;
+  private final ApplicationEventPublisher events;
   private final String publicProfileBaseUrl;
 
   public UpdateProfileUseCase(
@@ -40,12 +43,14 @@ public class UpdateProfileUseCase {
       UsernameHistoryRepository usernameHistoryRepository,
       MeterRegistry meterRegistry,
       ProfileCacheEviction cacheEviction,
+      ApplicationEventPublisher events,
       @Value("${short-link.public-profile-base-url:http://localhost:3001/u/}")
           String publicProfileBaseUrl) {
     this.userRepository = userRepository;
     this.usernameHistoryRepository = usernameHistoryRepository;
     this.meterRegistry = meterRegistry;
     this.cacheEviction = cacheEviction;
+    this.events = events;
     this.publicProfileBaseUrl = publicProfileBaseUrl;
   }
 
@@ -58,6 +63,7 @@ public class UpdateProfileUseCase {
     String previousUsername = user.getUsername();
     updateUsername(user, cmd.username(), cmd.userId());
     updateAppearance(user, cmd);
+    updateLocked(user, cmd.locked());
     cacheEviction.evictByUsername(previousUsername);
     String currentUsername = user.getUsername();
     if (currentUsername != null && !currentUsername.equals(previousUsername)) {
@@ -122,6 +128,17 @@ public class UpdateProfileUseCase {
     }
     if (cmd.hideFollowerCount() != null) {
       user.updateHideFollowerCount(cmd.hideFollowerCount());
+    }
+  }
+
+  // Unlocking lets everyone still waiting in, as on Mastodon.
+  private void updateLocked(UserEntity user, Boolean locked) {
+    if (locked == null || locked == user.isLocked()) {
+      return;
+    }
+    user.updateLocked(locked);
+    if (!locked) {
+      events.publishEvent(new AccountUnlockedEvent(user.getId()));
     }
   }
 

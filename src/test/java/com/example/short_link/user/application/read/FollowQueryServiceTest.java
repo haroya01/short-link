@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
+import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
 import java.util.Optional;
@@ -22,12 +23,13 @@ class FollowQueryServiceTest {
 
   @Mock private UserRepository userRepository;
   @Mock private FollowRepository followRepository;
+  @Mock private FollowRequestRepository followRequests;
 
   private FollowQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new FollowQueryService(userRepository, followRepository);
+    service = new FollowQueryService(userRepository, followRepository, followRequests);
   }
 
   private UserEntity user(long id, String username) {
@@ -87,5 +89,32 @@ class FollowQueryServiceTest {
     assertThat(status.following()).isTrue();
     assertThat(status.followerCount()).isNull();
     assertThat(status.followingCount()).isNull();
+  }
+
+  @Test
+  void aViewerWaitingOnALockedAccountSeesTheirRequest() {
+    UserEntity bob = user(2L, "bob");
+    bob.updateLocked(true);
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(bob));
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+    when(followRequests.exists(9L, 2L)).thenReturn(true);
+
+    FollowStatus status = service.status(9L, "bob");
+
+    assertThat(status.following()).isFalse();
+    assertThat(status.requested()).isTrue();
+    assertThat(status.locked()).isTrue();
+  }
+
+  @Test
+  void anOpenAccountNeverLooksForRequests() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+
+    FollowStatus status = service.status(9L, "bob");
+
+    assertThat(status.requested()).isFalse();
+    assertThat(status.locked()).isFalse();
+    org.mockito.Mockito.verifyNoInteractions(followRequests);
   }
 }

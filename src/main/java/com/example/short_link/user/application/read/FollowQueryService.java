@@ -3,6 +3,7 @@ package com.example.short_link.user.application.read;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
+import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
@@ -18,6 +19,7 @@ public class FollowQueryService {
 
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
+  private final FollowRequestRepository followRequests;
 
   public FollowStatus status(Long viewerId, String targetUsername) {
     UserEntity target =
@@ -30,13 +32,19 @@ public class FollowQueryService {
             : followRepository.findByFollowerIdAndFollowingId(viewerId, target.getId());
     boolean following = follow.isPresent();
     boolean notifyNotes = follow.map(FollowEntity::isNotifyNotes).orElse(false);
-    if (target.isHideFollowerCount()) {
-      return FollowStatus.hidden(following).notifyingOfNotes(notifyNotes);
-    }
-    return FollowStatus.visible(
-            following,
-            followRepository.countByFollowingId(target.getId()),
-            followRepository.countByFollowerId(target.getId()))
-        .notifyingOfNotes(notifyNotes);
+    // Only a locked account can have a request waiting, so only then is it looked up.
+    boolean requested =
+        !following
+            && viewerId != null
+            && target.isLocked()
+            && followRequests.exists(viewerId, target.getId());
+    FollowStatus status =
+        target.isHideFollowerCount()
+            ? FollowStatus.hidden(following)
+            : FollowStatus.visible(
+                following,
+                followRepository.countByFollowingId(target.getId()),
+                followRepository.countByFollowerId(target.getId()));
+    return status.notifyingOfNotes(notifyNotes).requesting(requested, target.isLocked());
   }
 }

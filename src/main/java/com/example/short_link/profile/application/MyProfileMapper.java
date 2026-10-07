@@ -18,6 +18,7 @@ public final class MyProfileMapper {
         user.getBannerUrl(),
         Socials.toList(user.getSocials()),
         user.isHideFollowerCount(),
-        user.getDisplayName());
+        user.getDisplayName(),
+        user.isLocked());
   }
 }

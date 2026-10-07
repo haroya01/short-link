@@ -8,7 +8,8 @@ public enum FederationErrorCode {
   FEDERATION_DISABLED(
       HttpStatus.CONFLICT, "turn on federation to follow accounts on other servers"),
   REMOTE_DOMAIN_INVALID(HttpStatus.BAD_REQUEST, "a server is a domain like mastodon.social"),
-  REMOTE_DOMAIN_BLOCKED(HttpStatus.CONFLICT, "you blocked %s");
+  REMOTE_DOMAIN_BLOCKED(HttpStatus.CONFLICT, "you blocked %s"),
+  REMOTE_FOLLOW_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "no follow request from that account");
 
   private final HttpStatus status;
   private final String template;

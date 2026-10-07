@@ -47,6 +47,25 @@
 @junit | federation-inbox-delete-actor | 2 | 0 | 0 | 1 | 3
 @junit | federation-inbox-delete-unknown-actor | 1 | 0 | 0 | 0 | 1
 @junit | federation-inbox-unknown | 1 | 0 | 0 | 0 | 1
+# A locked member's Follow waits: the same reads and follower insert as an open account's, with no
+# Accept (dedupe check, delivery). The request notification first asks whether the member muted the
+# asker, then preference, insert, recipient name, remote actor.
+@junit | federation-inbox-follow-locked | 10 | 2 | 0 | 0 | 12
+@junit | federation-inbox-follow-locked-again | 10 | 2 | 0 | 0 | 12
+@junit | federation-inbox-follow-locked-before-unlock | 10 | 2 | 0 | 0 | 12
+@junit | federation-inbox-undo-locked | 2 | 0 | 0 | 1 | 3
+# Requests from elsewhere are one paged join of waiting follower rows and their actors.
+@junit | federation-follow-requests | 1 | 0 | 0 | 0 | 1
+# Approving: the waiting row, the member's actor and the asker for the Accept (dedupe check, insert),
+# the row marked accepted, then the request notification goes after commit.
+@junit | federation-follow-request-authorize | 4 | 1 | 1 | 1 | 7
+@junit | federation-follow-request-authorize-missing | 1 | 0 | 0 | 0 | 1
+# Turning down deletes the row and sends Reject the same way.
+@junit | federation-follow-request-reject | 4 | 1 | 0 | 2 | 7
+# Unlocking (profile read, update) lets local requests in (INSERT IGNORE … SELECT, delete) and, after
+# commit, clears request notifications and accepts each waiting follower elsewhere: the waiting rows,
+# the member's actor, an Accept per row (dedupe check, insert) and the row marked accepted.
+@junit | federation-unlock-accepts-waiting | 4 | 2 | 2 | 2 | 10
 # Likes and boosts from a remote account. The target is checked before the signature with the rule
 # that serves the note document (note, author, images, then the author's user, preference, actor);
 # a personal inbox reuses its owner when the owner wrote the note. Then the key and INSERT IGNORE.

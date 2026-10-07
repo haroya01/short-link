@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
@@ -192,5 +193,17 @@ class NoteNotificationListenerTest {
     listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "x"));
 
     verifyNoInteractions(recordUseCase);
+  }
+
+  @Test
+  void aFollowRequestNotifiesTheLockedMemberUnlessTheyMutedTheAsker() {
+    when(blocks.silences(2L, null, 7L, null)).thenReturn(false);
+    when(blocks.silences(2L, 3L, null, null)).thenReturn(true);
+
+    listener().onFollowRequested(new FollowRequestedEvent(2L, null, 7L));
+    listener().onFollowRequested(new FollowRequestedEvent(2L, 3L, null));
+
+    verify(recordUseCase).record(2L, NotificationType.FOLLOW_REQUEST, null, 7L, null, null);
+    org.mockito.Mockito.verifyNoMoreInteractions(recordUseCase);
   }
 }

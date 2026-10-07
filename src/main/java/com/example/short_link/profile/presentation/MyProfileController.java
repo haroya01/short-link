@@ -42,7 +42,8 @@ public class MyProfileController {
             request.theme(),
             request.socials(),
             request.hideFollowerCount(),
-            request.displayName()));
+            request.displayName(),
+            request.locked()));
   }
 
   @PutMapping("/order")

@@ -44,7 +44,7 @@ class FederationNotesHttpQueryContractTest extends AccountHttpJourneySupport {
         remote.substring("https://".length()));
     jdbc.update(
         "INSERT INTO federation_follower (user_id, remote_actor_id, follow_activity_id,"
-            + " created_at, updated_at) SELECT ?, id, ?, NOW(6), NOW(6)"
+            + " accepted_at, created_at, updated_at) SELECT ?, id, ?, NOW(6), NOW(6), NOW(6)"
             + " FROM federation_remote_actor WHERE actor_uri = ?",
         user.getId(),
         remote + "/follows/1",

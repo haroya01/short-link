@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.event;
 
+import com.example.short_link.common.event.FollowRequestedEvent;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
@@ -95,6 +96,23 @@ public class NoteNotificationListener {
   public void onRemoteFollowed(RemoteFollowedEvent event) {
     recordUseCase.record(
         event.userId(), NotificationType.REMOTE_FOLLOW, null, event.remoteActorId(), null, null);
+  }
+
+  // Someone asks to follow a locked member, from this server or another.
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onFollowRequested(FollowRequestedEvent event) {
+    if (blocks.silences(
+        event.targetUserId(), event.followerUserId(), event.followerRemoteActorId(), null)) {
+      return;
+    }
+    recordUseCase.record(
+        event.targetUserId(),
+        NotificationType.FOLLOW_REQUEST,
+        event.followerUserId(),
+        event.followerRemoteActorId(),
+        null,
+        null);
   }
 
   @Async("webhookExecutor")

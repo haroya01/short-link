@@ -158,6 +158,140 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void aLockedMemberApprovesAMastodonFollowerThenTurnsTheNextFollowDown() throws Exception {
+    jdbc.update("UPDATE users SET locked = TRUE WHERE id = ?", owner.getId());
+    String me = urls.actor(target.publicId());
+    String personal = "/ap/actors/" + target.publicId() + "/inbox";
+    String requests = "/api/v1/federation/follow-requests";
+
+    post(
+        "federation-inbox-follow-locked",
+        personal,
+        activity(remote + "/follows/1", "Follow", me),
+        202);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM federation_follower WHERE user_id = ? AND accepted_at IS NULL",
+                owner.getId()))
+        .isEqualTo(1);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM federation_delivery WHERE signer_user_id = ?", owner.getId()))
+        .isZero();
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?"
+                    + " AND type = 'FOLLOW_REQUEST' AND actor_remote_id IS NOT NULL",
+                owner.getId()))
+        .isEqualTo(1);
+
+    var waiting = body(call("federation-follow-requests", "GET", requests, null, token, 200));
+    assertThat(waiting).hasSize(1);
+    assertThat(waiting.get(0).path("acct").asString())
+        .isEqualTo("alice@" + URI.create(remote).getHost());
+    long aliceId = waiting.get(0).path("id").asLong();
+
+    call(
+        "federation-follow-request-authorize",
+        "POST",
+        requests + "/" + aliceId + "/authorize",
+        null,
+        token,
+        204);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM federation_follower WHERE user_id = ? AND accepted_at IS NULL",
+                owner.getId()))
+        .isZero();
+    var accept =
+        json.readTree(
+            jdbc.queryForObject(
+                "SELECT body FROM federation_delivery WHERE signer_user_id = ?",
+                String.class,
+                owner.getId()));
+    assertThat(accept.path("type").asString()).isEqualTo("Accept");
+    assertThat(accept.path("object").path("id").asString()).isEqualTo(remote + "/follows/1");
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?"
+                    + " AND type = 'FOLLOW_REQUEST'",
+                owner.getId()))
+        .isZero();
+
+    call(
+        "federation-follow-request-authorize-missing",
+        "POST",
+        requests + "/" + aliceId + "/authorize",
+        null,
+        token,
+        404);
+
+    Map<String, Object> follow = new LinkedHashMap<>();
+    follow.put("id", remote + "/follows/1");
+    follow.put("type", "Follow");
+    follow.put("actor", alice);
+    follow.put("object", me);
+    post(
+        "federation-inbox-undo-locked",
+        "/ap/inbox",
+        activity(remote + "/undo/1", "Undo", follow),
+        202);
+    post(
+        "federation-inbox-follow-locked-again",
+        personal,
+        activity(remote + "/follows/2", "Follow", me),
+        202);
+    call(
+        "federation-follow-request-reject",
+        "POST",
+        requests + "/" + aliceId + "/reject",
+        null,
+        token,
+        204);
+    assertThat(count("SELECT COUNT(*) FROM federation_follower WHERE user_id = ?", owner.getId()))
+        .isZero();
+    assertThat(
+            json.readTree(
+                    jdbc.queryForObject(
+                        "SELECT body FROM federation_delivery WHERE signer_user_id = ?"
+                            + " ORDER BY id DESC LIMIT 1",
+                        String.class,
+                        owner.getId()))
+                .path("type")
+                .asString())
+        .isEqualTo("Reject");
+
+    post(
+        "federation-inbox-follow-locked-before-unlock",
+        personal,
+        activity(remote + "/follows/3", "Follow", me),
+        202);
+    call(
+        "federation-unlock-accepts-waiting",
+        "PUT",
+        "/api/v1/users/me/profile",
+        Map.of("locked", false),
+        token,
+        200);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM federation_follower WHERE user_id = ? AND accepted_at IS NOT NULL",
+                owner.getId()))
+        .isEqualTo(1);
+    assertThat(
+            json.readTree(
+                    jdbc.queryForObject(
+                        "SELECT body FROM federation_delivery WHERE signer_user_id = ?"
+                            + " ORDER BY id DESC LIMIT 1",
+                        String.class,
+                        owner.getId()))
+                .path("object")
+                .path("id")
+                .asString())
+        .isEqualTo(remote + "/follows/3");
+  }
+
+  @Test
   void aMemberFollowsAMastodonAccountThatAcceptsThenUnfollows() throws Exception {
     String me = urls.actor(target.publicId());
     String host = URI.create(remote).getHost();
@@ -585,6 +719,9 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(boosts.path("count").asLong()).isEqualTo(1);
     assertThat(boosts.path("actorUsername").asString()).isEqualTo(handle);
     assertThat(boosts.path("actorProfileUrl").asString()).isEqualTo(alice);
+    assertThat(boosts.path("actorRemoteId").asLong())
+        .isEqualTo(count("SELECT id FROM federation_remote_actor WHERE actor_uri = ?", alice));
+    assertThat(likes.path("actorRemoteId").isNull()).isTrue();
     assertThat(
             count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
         .isEqualTo(3);
@@ -672,7 +809,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
             "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
     jdbc.update(
         "INSERT INTO federation_follower (user_id, remote_actor_id, follow_activity_id,"
-            + " created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6))",
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
         owner.getId(),
         aliceId,
         remote + "/follows/9");
@@ -814,7 +951,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
             "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
     jdbc.update(
         "INSERT INTO federation_follower (user_id, remote_actor_id, follow_activity_id,"
-            + " created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6))",
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
         owner.getId(),
         aliceId,
         remote + "/follows/9");

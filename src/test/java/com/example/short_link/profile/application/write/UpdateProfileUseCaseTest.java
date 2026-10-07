@@ -22,6 +22,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class UpdateProfileUseCaseTest {
@@ -29,6 +30,7 @@ class UpdateProfileUseCaseTest {
   @Mock private UserRepository userRepository;
   @Mock private UsernameHistoryRepository usernameHistoryRepository;
   @Mock private ProfileCacheEviction cacheEviction;
+  @Mock private ApplicationEventPublisher events;
 
   private SimpleMeterRegistry meterRegistry;
   private UpdateProfileUseCase useCase;
@@ -42,6 +44,7 @@ class UpdateProfileUseCaseTest {
             usernameHistoryRepository,
             meterRegistry,
             cacheEviction,
+            events,
             "https://kurl.app/u/");
   }
 
@@ -215,5 +218,42 @@ class UpdateProfileUseCaseTest {
     useCase.execute(new UpdateProfileCommand(7L, "alice", null, null, null, null));
     verify(cacheEviction).evictByUsername("old");
     verify(cacheEviction).evictByUsername("alice");
+  }
+
+  @Test
+  void lockingTheAccountMakesFollowersAsk() {
+    UserEntity u = userWithId(7L);
+    when(userRepository.findById(7L)).thenReturn(Optional.of(u));
+
+    MyProfile p =
+        useCase.execute(new UpdateProfileCommand(7L, null, null, null, null, null, null, true));
+
+    assertThat(u.isLocked()).isTrue();
+    assertThat(p.locked()).isTrue();
+    org.mockito.Mockito.verifyNoInteractions(events);
+  }
+
+  @Test
+  void unlockingLetsEveryoneWaitingIn() {
+    UserEntity u = userWithId(7L);
+    u.updateLocked(true);
+    when(userRepository.findById(7L)).thenReturn(Optional.of(u));
+
+    useCase.execute(new UpdateProfileCommand(7L, null, null, null, null, null, null, false));
+
+    assertThat(u.isLocked()).isFalse();
+    org.mockito.Mockito.verify(events)
+        .publishEvent(new com.example.short_link.common.event.AccountUnlockedEvent(7L));
+  }
+
+  @Test
+  void sayingTheSameLockAgainChangesNothing() {
+    UserEntity u = userWithId(7L);
+    when(userRepository.findById(7L)).thenReturn(Optional.of(u));
+
+    useCase.execute(new UpdateProfileCommand(7L, null, null, null, null, null, null, false));
+
+    assertThat(u.isLocked()).isFalse();
+    org.mockito.Mockito.verifyNoInteractions(events);
   }
 }
