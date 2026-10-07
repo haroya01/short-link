@@ -6,6 +6,7 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.TrendingTag;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -68,6 +69,8 @@ public interface NoteRepository {
   List<NoteEntity> quotesOf(Long noteId, Long viewerId, int offset, int limit);
 
   List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit);
+
+  List<TrendingTag> trendingTags(Instant now, int days, int minAccounts, int limit);
 
   List<NoteEntity> search(String match, String like, Long viewerId, int offset, int limit);
 
