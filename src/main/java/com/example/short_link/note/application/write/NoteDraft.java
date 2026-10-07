@@ -10,7 +10,29 @@ public record NoteDraft(
     Long quotedNoteId,
     String contentWarning,
     boolean sensitive,
-    String visibility) {
+    String visibility,
+    Poll poll) {
+
+  public NoteDraft(
+      String body,
+      List<Image> images,
+      Long quotedPostId,
+      Long inReplyToId,
+      Long quotedNoteId,
+      String contentWarning,
+      boolean sensitive,
+      String visibility) {
+    this(
+        body,
+        images,
+        quotedPostId,
+        inReplyToId,
+        quotedNoteId,
+        contentWarning,
+        sensitive,
+        visibility,
+        null);
+  }
 
   public NoteDraft(String body, List<Image> images, Long quotedPostId, Long inReplyToId) {
     this(body, images, quotedPostId, inReplyToId, null);
@@ -33,4 +55,6 @@ public record NoteDraft(
   }
 
   public record Image(String key, String altText) {}
+
+  public record Poll(List<String> options, Long expiresIn, boolean multiple) {}
 }

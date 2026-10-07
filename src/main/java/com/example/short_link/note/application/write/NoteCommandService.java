@@ -11,12 +11,14 @@ import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.note.application.read.NotePolls;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.NoteViews;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteVisibility;
@@ -31,6 +33,7 @@ import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -134,6 +137,10 @@ public class NoteCommandService {
     if (attached.size() > NoteMediaEntity.MAX_PER_NOTE) {
       throw new NoteException(NoteErrorCode.NOTE_TOO_MANY_IMAGES, NoteMediaEntity.MAX_PER_NOTE);
     }
+    List<String> pollOptions = draft.poll() == null ? null : pollOptions(draft.poll());
+    if (pollOptions != null && !attached.isEmpty()) {
+      throw new NoteException(NoteErrorCode.NOTE_POLL_WITH_MEDIA);
+    }
     NoteVisibility requested =
         draft.visibility() == null
             ? null
@@ -200,6 +207,11 @@ public class NoteCommandService {
         requested != null
             ? requested
             : parent != null ? parent.getVisibility() : NoteVisibility.PUBLIC);
+    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+    if (pollOptions != null) {
+      fresh.attachPoll(
+          pollOptions, now.plusSeconds(draft.poll().expiresIn()), draft.poll().multiple());
+    }
     NoteEntity note = notes.save(fresh);
     List<NoteMediaEntity> rows = new ArrayList<>(stored.size());
     for (int i = 0; i < stored.size(); i++) {
@@ -230,7 +242,8 @@ public class NoteCommandService {
     }
     mention(note, userId, mentioned, toldOtherwise);
     String previewUrl =
-        NoteLinks.previewUrl(body, !stored.isEmpty(), quoted != null || quotedNote != null);
+        NoteLinks.previewUrl(
+            body, !stored.isEmpty() || note.hasPoll(), quoted != null || quotedNote != null);
     if (previewUrl != null) {
       events.publishEvent(new NoteLinkPreviewRequested(note.getId(), previewUrl));
     }
@@ -259,7 +272,33 @@ public class NoteCommandService {
         note.getContentWarning(),
         note.isSensitive(),
         false,
-        note.getVisibility().apiName());
+        note.getVisibility().apiName(),
+        note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null);
+  }
+
+  private static List<String> pollOptions(NoteDraft.Poll poll) {
+    List<String> options =
+        (poll.options() == null ? List.<String>of() : poll.options())
+            .stream()
+                .map(option -> option == null ? "" : option.strip().replaceAll("\\s+", " "))
+                .toList();
+    boolean valid =
+        options.size() >= NoteEntity.MIN_POLL_OPTIONS
+            && options.size() <= NoteEntity.MAX_POLL_OPTIONS
+            && options.stream()
+                .allMatch(
+                    option ->
+                        !option.isEmpty()
+                            && option.codePointCount(0, option.length())
+                                <= NoteEntity.MAX_POLL_OPTION_LENGTH)
+            && new HashSet<>(options).size() == options.size()
+            && poll.expiresIn() != null
+            && poll.expiresIn() >= NoteEntity.MIN_POLL_SECONDS
+            && poll.expiresIn() <= NoteEntity.MAX_POLL_SECONDS;
+    if (!valid) {
+      throw new NoteException(NoteErrorCode.NOTE_POLL_INVALID);
+    }
+    return options;
   }
 
   private static List<Long> recipients(List<NoteAuthor> mentioned, Long authorId) {
@@ -322,7 +361,7 @@ public class NoteCommandService {
       return views.of(List.of(note), userId).getFirst();
     }
     boolean hasQuote = note.getQuotedPostId() != null || note.getQuotedNoteId() != null;
-    String before = NoteLinks.previewUrl(note.getBody(), hasMedia, hasQuote);
+    String before = NoteLinks.previewUrl(note.getBody(), hasMedia || note.hasPoll(), hasQuote);
     if (!Hashtags.sameTags(note.getBody(), body)) {
       notes.retag(noteId, Hashtags.of(body));
     }
@@ -345,7 +384,7 @@ public class NoteCommandService {
       mention(note, userId, newlyMentioned, Set.of(userId));
     }
     events.publishEvent(new NoteEditedEvent(noteId, userId));
-    String after = NoteLinks.previewUrl(body, hasMedia, hasQuote);
+    String after = NoteLinks.previewUrl(body, hasMedia || note.hasPoll(), hasQuote);
     if (!Objects.equals(before, after)) {
       events.publishEvent(new NoteLinkPreviewRequested(noteId, after));
     }

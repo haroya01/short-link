@@ -158,6 +158,49 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void aMastodonAccountVotesInAPollAndTheQuestionCountsItOnce() throws Exception {
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at, poll_options, poll_expires_at)"
+            + " VALUES (?, '점심 어디서?', NOW(6), ?, '2099-01-01')",
+        owner.getId(),
+        "국밥\n파스타");
+    Long noteId =
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, owner.getId());
+    String note = urls.note(noteId);
+
+    post("federation-inbox-vote", "/ap/inbox", vote(alice + "#votes/1", "파스타", note), 202);
+    post("federation-inbox-vote-again", "/ap/inbox", vote(alice + "#votes/2", "국밥", note), 202);
+    assertThat(count("SELECT choices FROM note_poll_remote_vote WHERE note_id = ?", noteId))
+        .isEqualTo(2);
+
+    var question =
+        body(
+            callWithHeaders(
+                "federation-note-question",
+                "GET",
+                "/ap/notes/" + noteId,
+                null,
+                Map.of("Accept", "application/activity+json"),
+                200));
+    assertThat(question.path("type").asString()).isEqualTo("Question");
+    assertThat(question.path("oneOf").get(1).path("replies").path("totalItems").asLong())
+        .isEqualTo(1);
+    assertThat(question.path("votersCount").asLong()).isEqualTo(1);
+    jdbc.update("DELETE FROM note WHERE id = ?", noteId);
+  }
+
+  private Map<String, Object> vote(String id, String option, String question) {
+    Map<String, Object> object = new LinkedHashMap<>();
+    object.put("id", id + "/object");
+    object.put("type", "Note");
+    object.put("name", option);
+    object.put("attributedTo", alice);
+    object.put("inReplyTo", question);
+    return activity(id, "Create", object);
+  }
+
+  @Test
   void aMastodonAccountLikesAndBoostsANoteAndTheAuthorSeesBothCounted() throws Exception {
     jdbc.update(
         "INSERT INTO note (user_id, body, created_at) VALUES (?, 'hello fediverse', NOW(6))",

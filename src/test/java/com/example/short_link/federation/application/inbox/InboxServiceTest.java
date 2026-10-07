@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
+import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.federation.application.FederationActorService;
@@ -49,6 +50,7 @@ class InboxServiceTest {
   @Mock private FederationFollowers followers;
   @Mock private NoteSnapshotReader notes;
   @Mock private RemoteNoteReactions reactions;
+  @Mock private RemoteNotePollVotes votes;
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
 
@@ -60,6 +62,7 @@ class InboxServiceTest {
         followers,
         notes,
         reactions,
+        votes,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
         JsonMapper.builder().build(),
         meters);
@@ -493,5 +496,67 @@ class InboxServiceTest {
                     null))
         .isEqualTo(InboxOutcome.ignored("unsupported"));
     verifyNoInteractions(verifier);
+  }
+
+  private static String vote(String id, String name, String inReplyTo) {
+    return activity(
+        id,
+        "Create",
+        """
+        {"id":"%s/object","type":"Note","name":%s,"attributedTo":"%s","inReplyTo":"%s"}"""
+            .formatted(id, name == null ? "null" : "\"" + name + "\"", ALICE, inReplyTo));
+  }
+
+  @Test
+  void aVoteFromAnotherServerIsANamedNoteReplyingToTheQuestion() {
+    noteOneFederates();
+    verifiedAs(ALICE_ACTOR);
+    when(votes.recordRemoteVote(1L, 42L, "강남")).thenReturn(true);
+    when(votes.recordRemoteVote(1L, 42L, "판교")).thenReturn(false);
+    InboxService service = service();
+
+    assertThat(
+            service.receive(
+                request(vote("https://mastodon.example/users/alice#votes/1", "강남", NOTE_URI)),
+                null))
+        .isEqualTo(InboxOutcome.accepted("vote"));
+    assertThat(
+            service.receive(
+                request(vote("https://mastodon.example/users/alice#votes/2", "판교", NOTE_URI)),
+                null))
+        .isEqualTo(InboxOutcome.ignored("vote-rejected"));
+  }
+
+  @Test
+  void aCreateThatIsNotAVoteOnOurNoteIsAcknowledgedWithoutAKeyFetch() {
+    when(notes.find(2L)).thenReturn(Optional.empty());
+    InboxService service = service();
+
+    assertThat(service.receive(request(vote("https://mastodon.example/v/1", null, NOTE_URI)), null))
+        .isEqualTo(InboxOutcome.ignored("unsupported"));
+    assertThat(
+            service.receive(
+                request(
+                    vote(
+                        "https://mastodon.example/v/2",
+                        "강남",
+                        "https://mastodon.example/statuses/1")),
+                null))
+        .isEqualTo(InboxOutcome.ignored("unsupported"));
+    assertThat(
+            service.receive(
+                request(
+                    activity(
+                        "https://mastodon.example/v/3",
+                        "Create",
+                        "{\"type\":\"Question\",\"name\":\"강남\"}")),
+                null))
+        .isEqualTo(InboxOutcome.ignored("unsupported"));
+    assertThat(
+            service.receive(
+                request(vote("https://mastodon.example/v/4", "강남", "https://kurl.me/ap/notes/2")),
+                null))
+        .isEqualTo(InboxOutcome.ignored("unknown-target"));
+    verifyNoInteractions(verifier, votes);
   }
 }

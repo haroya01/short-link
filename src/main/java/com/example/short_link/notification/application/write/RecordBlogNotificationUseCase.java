@@ -185,7 +185,14 @@ public class RecordBlogNotificationUseCase {
               ? new PushRoute(
                   actorUsername, actorUsername, null, null, null, null, null, note.sourceNoteId())
               : new PushRoute(
-                  actorUsername, recipientUsername, null, null, null, null, null, note.noteId());
+                  actorUsername,
+                  type == NotificationType.NOTE_POLL ? actorUsername : recipientUsername,
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  note.noteId());
       case null -> new PushRoute(actorUsername, null, null, null, null, null, null);
     };
   }

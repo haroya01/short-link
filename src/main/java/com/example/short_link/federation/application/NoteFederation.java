@@ -55,6 +55,17 @@ public class NoteFederation {
   }
 
   @Transactional
+  public void pollEnded(Long noteId, Long authorId) {
+    deliver(
+        authorId,
+        publicId ->
+            notes
+                .find(noteId)
+                .filter(NoteFederation::leaves)
+                .map(note -> documents.pollEnded(note, publicId)));
+  }
+
+  @Transactional
   public void reposted(Long repostId, Long noteId, Long reposterId) {
     deliver(
         reposterId,

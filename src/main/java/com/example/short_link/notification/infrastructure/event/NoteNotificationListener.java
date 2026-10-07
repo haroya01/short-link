@@ -1,6 +1,7 @@
 package com.example.short_link.notification.infrastructure.event;
 
 import com.example.short_link.common.event.NoteInteractionEvent;
+import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
@@ -8,6 +9,7 @@ import com.example.short_link.notification.application.write.RecordBlogNotificat
 import com.example.short_link.notification.domain.NotificationType;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
@@ -56,6 +58,21 @@ public class NoteNotificationListener {
   public void onRemoteFollowed(RemoteFollowedEvent event) {
     recordUseCase.record(
         event.userId(), NotificationType.REMOTE_FOLLOW, null, event.remoteActorId(), null, null);
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onPollEnded(NotePollEndedEvent event) {
+    NotificationNoteRef note =
+        new NotificationNoteRef(event.noteId(), event.noteExcerpt(), null, null);
+    recordUseCase.record(
+        event.authorId(), NotificationType.NOTE_POLL, event.authorId(), null, note, null);
+    List<Long> voters =
+        event.voterIds().stream()
+            .filter(voter -> !voter.equals(event.authorId()))
+            .filter(voter -> !blocks.isBlocked(voter, event.authorId()))
+            .toList();
+    recordUseCase.recordForEach(voters, NotificationType.NOTE_POLL, event.authorId(), note);
   }
 
   static String groupKey(NotificationType type, Long noteId) {

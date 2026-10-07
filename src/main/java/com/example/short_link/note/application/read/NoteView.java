@@ -30,7 +30,8 @@ public record NoteView(
     String contentWarning,
     boolean sensitive,
     boolean pinned,
-    String visibility) {
+    String visibility,
+    Poll poll) {
 
   public NoteView(
       Long id,
@@ -71,10 +72,25 @@ public record NoteView(
         null,
         false,
         false,
-        "public");
+        "public",
+        null);
   }
 
   public record Media(String url, String altText, String contentType) {}
+
+  // Mastodon's poll: counts are public, and voted is true for the author, who sees results and does
+  // not vote. voted and ownVotes are null for anonymous readers.
+  public record Poll(
+      Instant expiresAt,
+      boolean expired,
+      boolean multiple,
+      long votesCount,
+      long votersCount,
+      List<PollOption> options,
+      Boolean voted,
+      List<Integer> ownVotes) {}
+
+  public record PollOption(String title, long votesCount) {}
 
   public record LinkPreview(String url, String title, String description, String image) {}
 
@@ -111,6 +127,7 @@ public record NoteView(
         contentWarning,
         sensitive,
         pinned,
-        visibility);
+        visibility,
+        poll);
   }
 }

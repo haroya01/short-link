@@ -4,6 +4,7 @@ import static com.example.short_link.federation.application.ActivityStreams.idOf
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
+import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
 import com.example.short_link.federation.application.FederationActorService;
@@ -38,6 +39,7 @@ public class InboxService {
   private final FederationFollowers followers;
   private final NoteSnapshotReader notes;
   private final RemoteNoteReactions reactions;
+  private final RemoteNotePollVotes votes;
   private final FederationUrls urls;
   private final JsonMapper json;
   private final MeterRegistry meters;
@@ -52,6 +54,8 @@ public class InboxService {
     record Unreact(Long noteId, Kind kind, String activityId) implements Intent {}
 
     record UndoById(String activityId) implements Intent {}
+
+    record Vote(Long noteId, String option) implements Intent {}
 
     record Forget() implements Intent {}
   }
@@ -140,6 +144,21 @@ public class InboxService {
           intent = new Intent.UndoById(undoneId);
         }
       }
+      case "Create" -> {
+        JsonNode object = activity.get("object");
+        if (object == null || !object.isObject() || !"Note".equals(text(object.get("type")))) {
+          return InboxOutcome.ignored("unsupported");
+        }
+        String option = text(object.get("name"));
+        Optional<Long> noteId = urls.noteIdOf(idOf(object.get("inReplyTo")));
+        if (option == null || noteId.isEmpty()) {
+          return InboxOutcome.ignored("unsupported");
+        }
+        if (!federated(noteId.get(), owner)) {
+          return InboxOutcome.ignored("unknown-target");
+        }
+        intent = new Intent.Vote(noteId.get(), option);
+      }
       case "Delete" -> {
         if (!actorUri.equals(idOf(activity.get("object")))) {
           return InboxOutcome.ignored("unsupported");
@@ -201,6 +220,11 @@ public class InboxService {
         followers.unfollow(actor, undo.activityId());
         reactions.removeByActivity(actor.getId(), undo.activityId());
         yield InboxOutcome.accepted("undo");
+      }
+      case Intent.Vote vote -> {
+        yield votes.recordRemoteVote(vote.noteId(), actor.getId(), vote.option())
+            ? InboxOutcome.accepted("vote")
+            : InboxOutcome.ignored("vote-rejected");
       }
       case Intent.Forget gone -> {
         followers.forget(actor);

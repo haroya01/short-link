@@ -134,3 +134,14 @@
 @junit | note-list-rename | 2 | 0 | 1 | 0 | 3
 @junit | note-list-remove | 2 | 0 | 0 | 1 | 3
 @junit | note-list-delete | 1 | 0 | 0 | 1 | 2
+# Polls (Mastodon's): options, end and choice mode ride on the note row, so writing one adds no
+# statement and a page reads one tally (local and remote votes in one union) only when it holds a
+# poll. A vote reads the note, a block check each way, then one INSERT IGNORE on (note, voter): a
+# second vote inserts nothing and answers 409; the response is the fresh tally. The author and an
+# ended poll are refused after the note read.
+@junit | note-create-poll | 3 | 1 | 0 | 0 | 4
+@junit | note-poll-vote | 4 | 1 | 0 | 0 | 5
+@junit | note-poll-vote-again | 3 | 1 | 0 | 0 | 4
+@junit | note-poll-vote-own | 1 | 0 | 0 | 0 | 1
+@junit | note-poll-vote-ended | 1 | 0 | 0 | 0 | 1
+@junit | note-thread-poll | 6 | 0 | 0 | 0 | 6

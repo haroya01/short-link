@@ -252,4 +252,73 @@ class NoteDocumentsTest {
     assertThat(delete.get("object"))
         .isEqualTo(Map.of("id", "https://kurl.me/ap/notes/42", "type", "Tombstone"));
   }
+
+  private static NoteSnapshot polled(boolean multiple, boolean closed) {
+    return new NoteSnapshot(
+        42L,
+        7L,
+        "yuki",
+        "어디서 볼까?",
+        CREATED,
+        null,
+        null,
+        null,
+        List.of(),
+        null,
+        null,
+        false,
+        NoteSnapshotReader.Visibility.PUBLIC,
+        new NoteSnapshotReader.Poll(
+            List.of(
+                new NoteSnapshotReader.PollOption("강남", 3),
+                new NoteSnapshotReader.PollOption("홍대", 1)),
+            Instant.parse("2026-10-08T01:02:03.999Z"),
+            multiple,
+            4,
+            closed));
+  }
+
+  @Test
+  void aPollIsAQuestionWhoseOptionsCountTheirVotesAsReplies() {
+    Map<String, Object> single = documents.note(polled(false, false), "abc");
+
+    assertThat(single.get("type")).isEqualTo("Question");
+    assertThat(single.get("oneOf"))
+        .isEqualTo(
+            List.of(
+                Map.of(
+                    "type",
+                    "Note",
+                    "name",
+                    "강남",
+                    "replies",
+                    Map.of("type", "Collection", "totalItems", 3L)),
+                Map.of(
+                    "type",
+                    "Note",
+                    "name",
+                    "홍대",
+                    "replies",
+                    Map.of("type", "Collection", "totalItems", 1L))));
+    assertThat(single).doesNotContainKey("anyOf").doesNotContainKey("closed");
+    assertThat(single.get("endTime")).isEqualTo("2026-10-08T01:02:03Z");
+    assertThat(single.get("votersCount")).isEqualTo(4L);
+
+    Map<String, Object> multiple = documents.note(polled(true, true), "abc");
+    assertThat(multiple).containsKey("anyOf").doesNotContainKey("oneOf");
+    assertThat(multiple.get("closed")).isEqualTo("2026-10-08T01:02:03Z");
+    assertThat(documents.note(note("plain", null, List.of(), null), "abc").get("type"))
+        .isEqualTo("Note");
+  }
+
+  @Test
+  void anEndedPollGoesOutAsAnUpdateOfItsOwn() {
+    Map<String, Object> update = documents.pollEnded(polled(false, true), "abc");
+
+    assertThat(update.get("id")).isEqualTo("https://kurl.me/ap/notes/42#updates/poll-ended");
+    assertThat(update.get("type")).isEqualTo("Update");
+    @SuppressWarnings("unchecked")
+    Map<String, Object> object = (Map<String, Object>) update.get("object");
+    assertThat(object.get("closed")).isEqualTo("2026-10-08T01:02:03Z");
+  }
 }

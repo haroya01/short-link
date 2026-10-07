@@ -27,7 +27,39 @@ public interface NoteSnapshotReader {
       QuotedNote quotedNote,
       String contentWarning,
       boolean sensitive,
-      Visibility visibility) {
+      Visibility visibility,
+      Poll poll) {
+
+    public NoteSnapshot(
+        Long id,
+        Long authorId,
+        String authorUsername,
+        String body,
+        Instant createdAt,
+        Instant editedAt,
+        Long inReplyToId,
+        Quote quote,
+        List<Image> images,
+        QuotedNote quotedNote,
+        String contentWarning,
+        boolean sensitive,
+        Visibility visibility) {
+      this(
+          id,
+          authorId,
+          authorUsername,
+          body,
+          createdAt,
+          editedAt,
+          inReplyToId,
+          quote,
+          images,
+          quotedNote,
+          contentWarning,
+          sensitive,
+          visibility,
+          null);
+    }
 
     public NoteSnapshot(
         Long id,
@@ -98,4 +130,9 @@ public interface NoteSnapshotReader {
   record QuotedNote(Long id, String authorUsername) {}
 
   record Image(String url, String contentType, String altText) {}
+
+  record Poll(
+      List<PollOption> options, Instant endTime, boolean multiple, long voters, boolean closed) {}
+
+  record PollOption(String title, long votes) {}
 }
