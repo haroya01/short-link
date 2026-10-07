@@ -464,6 +464,13 @@
 @junit | profile-owner-update | 1 | 0 | 1 | 0 | 2
 @junit | profile-product-block-create | 3 | 1 | 0 | 0 | 4
 @junit | profile-public-directory | 2 | 0 | 0 | 0 | 2
+# Follow suggestions (Mastodon's): friends' picks and the active popular pool ranked in one
+# statement, with follows, requests, blocks, mutes and set-aside ones left out there. Setting one
+# aside finds the account, then INSERT IGNORE.
+@junit | suggestions-friends | 1 | 0 | 0 | 0 | 1
+@junit | suggestions-after-dismiss | 1 | 0 | 0 | 0 | 1
+@junit | suggestions-dismiss | 1 | 1 | 0 | 0 | 2
+@junit | suggestions-dismiss-nobody | 1 | 0 | 0 | 0 | 1
 @junit | profile-public-read | 4 | 0 | 0 | 0 | 4
 @junit | profile-public-read-after-delete | 4 | 0 | 0 | 0 | 4
 @junit | profile-public-stats-private-rejected | 1 | 0 | 0 | 0 | 1
