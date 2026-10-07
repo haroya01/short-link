@@ -131,7 +131,7 @@ public class ActorController {
         id,
         "Person",
         username,
-        username,
+        actor.user().displayName() == null ? username : actor.user().displayName(),
         summary(actor.user().bio()),
         urls.profile(username),
         urls.inbox(actor.publicId()),

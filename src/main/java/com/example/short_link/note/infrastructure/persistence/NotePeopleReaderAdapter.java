@@ -15,7 +15,7 @@ import org.springframework.stereotype.Repository;
 class NotePeopleReaderAdapter implements NotePeopleReader {
 
   private static final String AUTHOR =
-      "SELECT id, username, avatar_url FROM users"
+      "SELECT id, username, avatar_url, display_name FROM users"
           + " WHERE deleted_at IS NULL AND username IS NOT NULL AND ";
 
   @PersistenceContext private EntityManager em;
@@ -77,6 +77,9 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
 
   private static NoteAuthor author(Object[] columns) {
     return new NoteAuthor(
-        ((Number) columns[0]).longValue(), (String) columns[1], (String) columns[2]);
+        ((Number) columns[0]).longValue(),
+        (String) columns[1],
+        (String) columns[2],
+        (String) columns[3]);
   }
 }

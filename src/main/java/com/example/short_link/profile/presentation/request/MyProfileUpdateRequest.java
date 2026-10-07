@@ -9,4 +9,5 @@ public record MyProfileUpdateRequest(
     @Pattern(regexp = "^(light|dark|accent|sunset|ocean|forest|mono|neon|aurora|wave|ember)?$")
         String theme,
     @Size(max = 1024) String socials,
-    Boolean hideFollowerCount) {}
+    Boolean hideFollowerCount,
+    @Size(max = 60) String displayName) {}

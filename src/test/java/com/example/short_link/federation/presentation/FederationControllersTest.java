@@ -38,7 +38,8 @@ class FederationControllersTest {
 
   private static final LocalActor YUKI =
       new LocalActor(
-          new FederationUser(7L, "yuki", "first line\n<b>second</b>", "https://cdn/a.png"),
+          new FederationUser(
+              7L, "yuki", "first line\n<b>second</b>", "https://cdn/a.png", "유키 · 백엔드"),
           "pid123",
           "-----BEGIN PUBLIC KEY-----\nAAA\n-----END PUBLIC KEY-----\n");
 
@@ -102,6 +103,7 @@ class FederationControllersTest {
         .andExpect(jsonPath("$.id").value("https://kurl.me/ap/actors/pid123"))
         .andExpect(jsonPath("$.type").value("Person"))
         .andExpect(jsonPath("$.preferredUsername").value("yuki"))
+        .andExpect(jsonPath("$.name").value("유키 · 백엔드"))
         .andExpect(jsonPath("$.summary").value("<p>first line<br>&lt;b&gt;second&lt;/b&gt;</p>"))
         .andExpect(jsonPath("$.url").value("https://blog.kurl.me/@yuki"))
         .andExpect(jsonPath("$.inbox").value("https://kurl.me/ap/actors/pid123/inbox"))

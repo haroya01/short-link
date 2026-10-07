@@ -12,7 +12,7 @@ import org.springframework.stereotype.Repository;
 class FederationUserReaderAdapter implements FederationUserReader {
 
   private static final String SELECT =
-      "SELECT id, username, bio, avatar_url FROM users WHERE deleted_at IS NULL AND ";
+      "SELECT id, username, bio, avatar_url, display_name FROM users WHERE deleted_at IS NULL AND ";
 
   @PersistenceContext private EntityManager em;
 
@@ -42,7 +42,8 @@ class FederationUserReaderAdapter implements FederationUserReader {
                   ((Number) columns[0]).longValue(),
                   (String) columns[1],
                   (String) columns[2],
-                  (String) columns[3]);
+                  (String) columns[3],
+                  (String) columns[4]);
             });
   }
 }

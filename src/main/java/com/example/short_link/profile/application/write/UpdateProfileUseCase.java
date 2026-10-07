@@ -107,6 +107,13 @@ public class UpdateProfileUseCase {
       }
       user.updateBio(trimmed.isEmpty() ? null : trimmed);
     }
+    if (cmd.displayName() != null) {
+      String name = cmd.displayName().strip().replaceAll("\\s+", " ");
+      if (name.codePointCount(0, name.length()) > 30) {
+        throw new ProfileException(ProfileErrorCode.INVALID_USERNAME, "display name too long");
+      }
+      user.updateDisplayName(name.isEmpty() ? null : name);
+    }
     if (cmd.theme() != null) {
       user.updateProfileTheme(cmd.theme());
     }

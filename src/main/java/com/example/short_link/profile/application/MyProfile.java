@@ -11,4 +11,18 @@ public record MyProfile(
     String avatarUrl,
     String bannerUrl,
     List<Social> socials,
-    boolean hideFollowerCount) {}
+    boolean hideFollowerCount,
+    String displayName) {
+
+  public MyProfile(
+      String username,
+      String bio,
+      String theme,
+      String publicUrl,
+      String avatarUrl,
+      String bannerUrl,
+      List<Social> socials,
+      boolean hideFollowerCount) {
+    this(username, bio, theme, publicUrl, avatarUrl, bannerUrl, socials, hideFollowerCount, null);
+  }
+}
