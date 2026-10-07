@@ -100,7 +100,9 @@ class RemoteNoteParserTest {
                {"type":"Document","mediaType":"image/png","url":"https://files.m.example/1.png","name":"a cat"},
                {"type":"Document","mediaType":"video/mp4","url":"https://files.m.example/2.mp4"},
                {"type":"Image","url":{"href":"https://files.m.example/3.jpg"}},
-               {"type":"Document","mediaType":"image/png","url":"http://insecure.example/4.png"}]}
+               {"type":"Document","mediaType":"image/png","url":"http://insecure.example/4.png"},
+               {"type":"Audio","url":"https://files.m.example/5.mp3"},
+               {"type":"Document","mediaType":"application/pdf","url":"https://files.m.example/6.pdf"}]}
             """);
     RemoteNoteParser.Parsed parsed = parser.parse(object, json("{}"));
 
@@ -115,7 +117,9 @@ class RemoteNoteParserTest {
     assertThat(parsed.media())
         .containsExactly(
             new RemoteNotes.Media("https://files.m.example/1.png", "a cat", "image/png"),
-            new RemoteNotes.Media("https://files.m.example/3.jpg", null, null));
+            new RemoteNotes.Media("https://files.m.example/2.mp4", null, "video/mp4"),
+            new RemoteNotes.Media("https://files.m.example/3.jpg", null, "image/jpeg"),
+            new RemoteNotes.Media("https://files.m.example/5.mp3", null, "audio/mpeg"));
     assertThat(parser.addressesUs(object, json("{}"))).isTrue();
     assertThat(
             parser.addressesUs(
