@@ -1,6 +1,7 @@
 package com.example.short_link.note.presentation;
 
 import com.example.short_link.note.application.read.NoteFeedView;
+import com.example.short_link.note.application.read.NoteHistoryView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
@@ -54,6 +55,11 @@ public class NoteController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     return query.tagged(tag, page, size, viewerId);
+  }
+
+  @GetMapping("/api/v1/public/notes/{id}/history")
+  public NoteHistoryView history(@PathVariable Long id) {
+    return query.history(id);
   }
 
   @GetMapping("/api/v1/public/notes/{id}")

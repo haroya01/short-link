@@ -18,6 +18,7 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteStats;
+import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -286,6 +287,14 @@ public class NoteCommandService {
     String body = normalize(rawBody);
     boolean hasMedia = !media.findByNoteIds(List.of(noteId)).isEmpty();
     requireContent(body, hasMedia);
+    String nextWarning = rawWarning == null ? note.getContentWarning() : warning(rawWarning);
+    boolean nextSensitive =
+        (sensitive == null ? note.isSensitive() : sensitive) || nextWarning != null;
+    if (body.equals(note.getBody())
+        && Objects.equals(nextWarning, note.getContentWarning())
+        && nextSensitive == note.isSensitive()) {
+      return views.of(List.of(note), userId).getFirst();
+    }
     boolean hasQuote = note.getQuotedPostId() != null || note.getQuotedNoteId() != null;
     String before = NoteLinks.previewUrl(note.getBody(), hasMedia, hasQuote);
     if (!Hashtags.sameTags(note.getBody(), body)) {
@@ -293,12 +302,15 @@ public class NoteCommandService {
     }
     List<String> added = new ArrayList<>(Mentions.of(body));
     added.removeAll(Mentions.of(note.getBody()));
+    notes.recordVersion(
+        noteId,
+        new NoteVersion(
+            note.getBody(),
+            note.getContentWarning(),
+            note.isSensitive(),
+            note.getEditedAt() == null ? note.getCreatedAt() : note.getEditedAt()));
     note.edit(body, clock.instant().truncatedTo(ChronoUnit.MICROS));
-    if (rawWarning != null || sensitive != null) {
-      note.markContent(
-          rawWarning == null ? note.getContentWarning() : warning(rawWarning),
-          sensitive == null ? note.isSensitive() : sensitive);
-    }
+    note.markContent(nextWarning, nextSensitive);
     if (!added.isEmpty()) {
       mention(note, userId, members(people.activeAuthors(List.of(), added), added), Set.of(userId));
     }

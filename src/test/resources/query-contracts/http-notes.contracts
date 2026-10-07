@@ -59,16 +59,20 @@
 @junit | note-create-tagged | 3 | 2 | 0 | 0 | 5
 @junit | note-tagged | 4 | 0 | 0 | 0 | 4
 @junit | note-following-tags | 6 | 0 | 0 | 0 | 6
-@junit | note-edit-retag | 7 | 1 | 1 | 1 | 10
+@junit | note-edit-retag | 7 | 2 | 1 | 1 | 11
 # Mentions: the mentioned handles ride in the authors query (id IN … OR username IN …), so neither
 # writing nor reading a note with mentions adds a query. Each mentioned member is told after commit
 # like any other note notice: block check, preference, insert, then both names for the push.
 @junit | note-create-mention | 7 | 2 | 0 | 0 | 9
 @junit | note-thread-mention | 5 | 0 | 0 | 0 | 5
 # A content warning and the sensitive mark are columns on the note: they ride in its one insert and
-# its one update.
+# its one update (the edit also keeps the version it replaces).
 @junit | note-create-warning | 3 | 1 | 0 | 0 | 4
-@junit | note-edit-warning | 7 | 0 | 1 | 0 | 8
+@junit | note-edit-warning | 7 | 1 | 1 | 0 | 9
+# Edits keep the version they replace (Mastodon edit history): one insert per edit that changes
+# anything; an edit that changes nothing is not an edit. History reads the note, checks the author is
+# still active, then the earlier versions newest first.
+@junit | note-history | 3 | 0 | 0 | 0 | 3
 # Pins: the note, how many the author already pinned (at most five), the update. The profile list
 # orders pins first inside its one query, so a pinned profile costs the same.
 @junit | note-pin | 2 | 0 | 1 | 0 | 3
@@ -77,7 +81,7 @@
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6
-@junit | note-edit | 8 | 0 | 1 | 0 | 9
+@junit | note-edit | 8 | 1 | 1 | 0 | 10
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 3 | 6

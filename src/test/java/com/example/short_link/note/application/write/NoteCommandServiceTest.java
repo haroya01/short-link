@@ -26,6 +26,7 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.NoteStats;
+import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -505,6 +506,28 @@ class NoteCommandServiceTest {
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_REPLY));
     assertThatThrownBy(() -> service().setPin(8L, 1L, true)).isInstanceOf(NoteException.class);
+  }
+
+  @Test
+  void anEditThatChangesTheNoteKeepsThePreviousVersionAndAnUnchangedOneDoesNot() {
+    NoteEntity mine = note(1L, 7L, "처음");
+    ReflectionTestUtils.setField(mine, "createdAt", Instant.parse("2026-10-01T00:00:00Z"));
+    when(notes.findById(1L)).thenReturn(Optional.of(mine));
+    when(media.findByNoteIds(List.of(1L))).thenReturn(List.of());
+    when(views.of(anyList(), any())).thenReturn(List.of(org.mockito.Mockito.mock(NoteView.class)));
+
+    service().edit(7L, 1L, "처음", null, null);
+    verify(notes, never()).recordVersion(any(), any());
+
+    service().edit(7L, 1L, "고친 글", null, null);
+    verify(notes)
+        .recordVersion(
+            1L, new NoteVersion("처음", null, false, Instant.parse("2026-10-01T00:00:00Z")));
+
+    service().edit(7L, 1L, "고친 글", "스포일러", null);
+    verify(notes)
+        .recordVersion(
+            1L, new NoteVersion("고친 글", null, false, Instant.parse("2026-10-06T00:00:00.123456Z")));
   }
 
   @Test
