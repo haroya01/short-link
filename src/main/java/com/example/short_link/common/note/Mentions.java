@@ -18,7 +18,30 @@ public final class Mentions {
       Pattern.compile(
           "(?<![A-Za-z0-9_])@([a-z0-9][a-z0-9_]{2,15})(?![A-Za-z0-9_@])", Pattern.CASE_INSENSITIVE);
 
+  private static final Pattern REMOTE =
+      Pattern.compile(
+          "(?<![A-Za-z0-9_@])@([A-Za-z0-9_][A-Za-z0-9_.-]{0,63})@([A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+)"
+              + "(?![A-Za-z0-9_-])");
+
   private Mentions() {}
+
+  // Accounts elsewhere, as user@server in lower case. A trailing full stop ends the sentence, not
+  // the server name.
+  public static List<String> remote(String text) {
+    if (text == null || text.indexOf('@') < 0) {
+      return List.of();
+    }
+    Set<String> handles = new LinkedHashSet<>();
+    Matcher matcher = REMOTE.matcher(text);
+    while (matcher.find() && handles.size() < MAX_MENTIONS) {
+      String user = matcher.group(1);
+      if (user.endsWith(".")) {
+        continue;
+      }
+      handles.add((user + "@" + matcher.group(2)).toLowerCase(Locale.ROOT));
+    }
+    return List.copyOf(handles);
+  }
 
   public static List<String> of(String text) {
     if (text == null || text.indexOf('@') < 0) {

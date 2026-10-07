@@ -133,3 +133,9 @@
 @junit | federation-inbox-remote-delete | 2 | 0 | 0 | 1 | 3
 # A note no member follows, answers or is named in: one question, then nothing.
 @junit | federation-inbox-remote-unsolicited | 1 | 0 | 0 | 0 | 1
+# A member likes, boosts and answers a note from elsewhere; each reaches its author's server. After
+# the member's own work: their actor (user, preference, actor), the note and its account, then the
+# delivery (dedupe check, insert). A boost and a reply also go to the member's followers' servers.
+@junit | federation-remote-note-like | 9 | 2 | 0 | 0 | 11
+@junit | federation-remote-note-repost | 11 | 2 | 0 | 0 | 13
+@junit | federation-remote-note-reply | 13 | 2 | 0 | 0 | 15

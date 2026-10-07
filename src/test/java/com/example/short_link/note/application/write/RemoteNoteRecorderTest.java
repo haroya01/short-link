@@ -197,4 +197,19 @@ class RemoteNoteRecorderTest {
     assertThat(recorder().exists(URI)).isTrue();
     assertThat(recorder().exists(null)).isFalse();
   }
+
+  @Test
+  void onlyANoteFromElsewhereHasATarget() {
+    NoteEntity remote = new NoteEntity(null, "theirs", null, null);
+    ReflectionTestUtils.setField(remote, "id", 6L);
+    ReflectionTestUtils.setField(remote, "remoteActorId", 43L);
+    ReflectionTestUtils.setField(remote, "uri", URI);
+    remote.showTo(NoteVisibility.PRIVATE);
+    NoteEntity mine = new NoteEntity(7L, "mine", null, null);
+    when(notes.findById(6L)).thenReturn(Optional.of(remote));
+    when(notes.findById(5L)).thenReturn(Optional.of(mine));
+
+    assertThat(recorder().target(6L)).contains(new RemoteNotes.Target(URI, 43L, false));
+    assertThat(recorder().target(5L)).isEmpty();
+  }
 }

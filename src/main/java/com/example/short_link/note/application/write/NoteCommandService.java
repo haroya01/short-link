@@ -7,6 +7,7 @@ import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
+import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.user.UserBlockChecker;
@@ -153,9 +154,9 @@ public class NoteCommandService {
     if (draft.inReplyToId() != null) {
       parent = find(draft.inReplyToId());
       requireReadable(userId, parent);
-      requireLocal(parent);
-      if (blocks.isBlocked(parent.getUserId(), userId)
-          || blocks.isBlocked(userId, parent.getUserId())) {
+      if (!parent.isRemote()
+          && (blocks.isBlocked(parent.getUserId(), userId)
+              || blocks.isBlocked(userId, parent.getUserId()))) {
         throw new NoteException(NoteErrorCode.NOTE_REPLY_BLOCKED);
       }
     }
@@ -224,7 +225,11 @@ public class NoteCommandService {
     }
     media.saveAll(rows);
     notes.tag(note.getId(), Hashtags.of(body));
-    events.publishEvent(new NotePublishedEvent(note.getId(), userId));
+    events.publishEvent(
+        new NotePublishedEvent(
+            note.getId(),
+            userId,
+            (parent != null && parent.isRemote()) || !Mentions.remote(body).isEmpty()));
     if (parent != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
     }
@@ -435,9 +440,15 @@ public class NoteCommandService {
     if (on) {
       if (likes.addIfAbsent(noteId, userId)) {
         events.publishEvent(interaction(NoteInteractionEvent.Type.LIKE, note, userId, null));
+        if (note.isRemote()) {
+          events.publishEvent(new RemoteNoteLikedEvent(noteId, userId, true));
+        }
       }
     } else {
       likes.delete(noteId, userId);
+      if (note.isRemote()) {
+        events.publishEvent(new RemoteNoteLikedEvent(noteId, userId, false));
+      }
     }
     return new LikeStatus(on, statsOf(noteId).likes());
   }
@@ -449,14 +460,14 @@ public class NoteCommandService {
       if (!note.getVisibility().shareable()) {
         throw new NoteException(NoteErrorCode.NOTE_NOT_SHAREABLE);
       }
-      requireLocal(note);
       moderation.requireCanWrite(userId);
       requireNotBlocked(userId, note);
       reposts
           .addIfAbsent(noteId, userId)
           .ifPresent(
               repost -> {
-                events.publishEvent(new NoteRepostedEvent(repost.getId(), noteId, userId));
+                events.publishEvent(
+                    new NoteRepostedEvent(repost.getId(), noteId, userId, note.isRemote()));
                 events.publishEvent(
                     interaction(NoteInteractionEvent.Type.REPOST, note, userId, null));
               });
@@ -465,7 +476,8 @@ public class NoteCommandService {
           .delete(noteId, userId)
           .ifPresent(
               repost ->
-                  events.publishEvent(new NoteUnrepostedEvent(repost.getId(), noteId, userId)));
+                  events.publishEvent(
+                      new NoteUnrepostedEvent(repost.getId(), noteId, userId, note.isRemote())));
     }
     return new RepostStatus(on, statsOf(noteId).reposts());
   }

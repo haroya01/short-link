@@ -25,7 +25,11 @@ public interface RemoteNotes {
 
   record Media(String url, String altText, String contentType) {}
 
+  record Target(String uri, Long remoteActorId, boolean shareable) {}
+
   boolean exists(String uri);
+
+  Optional<Target> target(Long noteId);
 
   Optional<Long> receive(Received note);
 
