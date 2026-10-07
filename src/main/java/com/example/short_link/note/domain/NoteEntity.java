@@ -13,6 +13,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SqlResultSetMapping;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.List;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -33,6 +34,11 @@ public class NoteEntity extends BaseCreatedEntity {
   public static final int MAX_BODY_LENGTH = 500;
   public static final int MAX_WARNING_LENGTH = 100;
   public static final int MAX_PINS = 5;
+  public static final int MIN_POLL_OPTIONS = 2;
+  public static final int MAX_POLL_OPTIONS = 4;
+  public static final int MAX_POLL_OPTION_LENGTH = 50;
+  public static final long MIN_POLL_SECONDS = 300;
+  public static final long MAX_POLL_SECONDS = 2_629_746;
   private static final int EXCERPT_LENGTH = 80;
 
   @Id
@@ -69,6 +75,19 @@ public class NoteEntity extends BaseCreatedEntity {
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private NoteVisibility visibility = NoteVisibility.PUBLIC;
+
+  @Getter(AccessLevel.NONE)
+  @Column(name = "poll_options")
+  private String pollOptions;
+
+  @Column(name = "poll_expires_at")
+  private Instant pollExpiresAt;
+
+  @Column(name = "poll_multiple", nullable = false)
+  private boolean pollMultiple;
+
+  @Column(name = "poll_closed_at")
+  private Instant pollClosedAt;
 
   public NoteEntity(Long userId, String body, Long inReplyToId, Long quotedPostId) {
     this(userId, body, inReplyToId, quotedPostId, null);
@@ -117,6 +136,25 @@ public class NoteEntity extends BaseCreatedEntity {
 
   public boolean isPinned() {
     return pinnedAt != null;
+  }
+
+  // Option titles never contain a newline; it separates them in the one column.
+  public void attachPoll(List<String> options, Instant expiresAt, boolean multiple) {
+    this.pollOptions = String.join("\n", options);
+    this.pollExpiresAt = expiresAt;
+    this.pollMultiple = multiple;
+  }
+
+  public boolean hasPoll() {
+    return pollOptions != null;
+  }
+
+  public List<String> pollOptions() {
+    return pollOptions == null ? List.of() : List.of(pollOptions.split("\n"));
+  }
+
+  public boolean pollEndedBy(Instant now) {
+    return pollExpiresAt != null && !pollExpiresAt.isAfter(now);
   }
 
   public void edit(String body, Instant at) {

@@ -94,3 +94,10 @@
 @junit | federation-webfinger-opted-out | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-on | 2 | 0 | 1 | 0 | 3
 @junit | federation-account-delete-leaves | 5 | 2 | 1 | 1 | 9
+# A vote from another server is a Create of a Note named after the option, replying to the Question.
+# The target check is the like's (the note snapshot, which reads the poll's tally too, and the
+# author's actor), then the key, the note and one INSERT IGNORE: a single-choice poll keeps the first
+# vote. The Question document adds the tally to the note document's reads.
+@junit | federation-inbox-vote | 9 | 1 | 0 | 0 | 10
+@junit | federation-inbox-vote-again | 9 | 1 | 0 | 0 | 10
+@junit | federation-note-question | 7 | 0 | 0 | 0 | 7

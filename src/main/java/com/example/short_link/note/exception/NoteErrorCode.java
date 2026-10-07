@@ -17,6 +17,17 @@ public enum NoteErrorCode {
   NOTE_LIST_MEMBER_LIMIT(HttpStatus.BAD_REQUEST, "a list holds at most %s people"),
   NOTE_LIST_TITLE_INVALID(HttpStatus.BAD_REQUEST, "a list title is 1 to %s characters"),
   NOTE_LIST_SELF(HttpStatus.BAD_REQUEST, "you are not added to your own list"),
+  NOTE_POLL_INVALID(
+      HttpStatus.BAD_REQUEST,
+      "a poll has 2 to 4 different options of up to 50 characters and lasts 5 minutes to a month"),
+  NOTE_POLL_WITH_MEDIA(HttpStatus.BAD_REQUEST, "a note has a poll or images, not both"),
+  NOTE_POLL_NOT_FOUND(HttpStatus.NOT_FOUND, "note has no poll: %s"),
+  NOTE_POLL_ENDED(HttpStatus.BAD_REQUEST, "the poll has ended"),
+  NOTE_POLL_OWN(HttpStatus.BAD_REQUEST, "you do not vote in your own poll"),
+  NOTE_POLL_ALREADY_VOTED(HttpStatus.CONFLICT, "you already voted in this poll"),
+  NOTE_POLL_BLOCKED(HttpStatus.FORBIDDEN, "cannot vote in this poll"),
+  NOTE_POLL_CHOICES_INVALID(
+      HttpStatus.BAD_REQUEST, "choose one option, or several in a multiple-choice poll"),
   NOTE_NOT_SHAREABLE(
       HttpStatus.BAD_REQUEST, "only public and unlisted notes can be reposted or quoted"),
   NOTE_TOO_MANY_IMAGES(HttpStatus.BAD_REQUEST, "a note holds at most %s images"),

@@ -9,18 +9,21 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.link.application.dto.OgMetadata;
+import com.example.short_link.note.application.write.NotePollService;
 import com.example.short_link.testsupport.OperationalHttpJourneySupport;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import tools.jackson.databind.JsonNode;
 
 class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
 
   @MockitoBean private ObjectStorage objectStorage;
+  @Autowired private NotePollService polls;
 
   @Test
   void repostsByPeopleYouFollowFlowIntoTheFollowingFeedOnceButNeverFromSomeoneYouBlocked()
@@ -444,6 +447,55 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     step("note-list-remove", "DELETE", list + "/members/" + alice.username(), owner, null, 204);
     step("note-list-delete", "DELETE", list, owner, null, 204);
     assertThat(count("note_list", "id = ?", listId)).isZero();
+  }
+
+  @Test
+  void aPollTakesOneVoteEachAndTellsItsVotersWhenItEnds() throws Exception {
+    Actor author = actor("poll-author", false);
+    Actor voter = actor("poll-voter", false);
+    var created =
+        step(
+            "note-create-poll",
+            "POST",
+            "/api/v1/notes",
+            author,
+            Map.of(
+                "body",
+                "점심 어디서 먹을까?",
+                "poll",
+                Map.of("options", List.of("국밥", "파스타", "샐러드"), "expiresIn", 3600)),
+            201);
+    long noteId = created.path("id").asLong();
+    assertThat(created.path("poll").path("options").size()).isEqualTo(3);
+    assertThat(created.path("poll").path("voted").asBoolean()).isTrue();
+    String votes = "/api/v1/notes/" + noteId + "/poll/votes";
+
+    var voted = step("note-poll-vote", "POST", votes, voter, Map.of("choices", List.of(1)), 200);
+    assertThat(voted.path("ownVotes").get(0).asInt()).isEqualTo(1);
+    assertThat(voted.path("options").get(1).path("votesCount").asLong()).isEqualTo(1);
+    step("note-poll-vote-again", "POST", votes, voter, Map.of("choices", List.of(0)), 409);
+    step("note-poll-vote-own", "POST", votes, author, Map.of("choices", List.of(0)), 400);
+
+    var thread = step("note-thread-poll", "GET", "/api/v1/public/notes/" + noteId, null, null, 200);
+    assertThat(thread.path("note").path("poll").path("votesCount").asLong()).isEqualTo(1);
+    assertThat(thread.path("note").path("poll").path("voted").isNull()).isTrue();
+
+    jdbc.update("UPDATE note SET poll_expires_at = '2000-01-01' WHERE id = ?", noteId);
+    step("note-poll-vote-ended", "POST", votes, author, Map.of("choices", List.of(0)), 400);
+    polls.closeDue();
+    assertThat(count("note", "id = ? AND poll_closed_at IS NOT NULL", noteId)).isEqualTo(1);
+    long told = 0;
+    for (int i = 0; i < 50 && told < 2; i++) {
+      Thread.sleep(100);
+      told =
+          count(
+              "notification",
+              "type = 'NOTE_POLL' AND recipient_user_id IN (?, ?)",
+              author.id(),
+              voter.id());
+    }
+    assertThat(told).isEqualTo(2);
+    jdbc.update("DELETE FROM note WHERE id = ?", noteId);
   }
 
   private long post(String id, Actor author, String body, String visibility) throws Exception {

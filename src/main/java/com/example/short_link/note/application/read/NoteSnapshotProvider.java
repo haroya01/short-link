@@ -3,11 +3,15 @@ package com.example.short_link.note.application.read;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
+import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
+import java.time.Clock;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -23,6 +27,8 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
   private final NoteMediaRepository media;
   private final NotePeopleReader people;
   private final QuotedPostReader quotedPosts;
+  private final NotePollRepository polls;
+  private final Clock clock;
 
   @Override
   @Transactional(readOnly = true)
@@ -73,7 +79,27 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
             quotedNote,
             note.getContentWarning(),
             note.isSensitive(),
-            NoteSnapshotReader.Visibility.valueOf(note.getVisibility().name())));
+            NoteSnapshotReader.Visibility.valueOf(note.getVisibility().name()),
+            poll(note)));
+  }
+
+  private Poll poll(NoteEntity note) {
+    if (!note.hasPoll()) {
+      return null;
+    }
+    NotePollTally tally =
+        polls.tallies(List.of(note.getId()), null).getOrDefault(note.getId(), NotePollTally.NONE);
+    List<String> titles = note.pollOptions();
+    List<PollOption> options = new ArrayList<>(titles.size());
+    for (int i = 0; i < titles.size(); i++) {
+      options.add(new PollOption(titles.get(i), tally.votesFor(i)));
+    }
+    return new Poll(
+        options,
+        note.getPollExpiresAt(),
+        note.isPollMultiple(),
+        tally.voters(),
+        note.pollEndedBy(clock.instant()));
   }
 
   @Override

@@ -3,17 +3,23 @@ package com.example.short_link.note.application.read;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.Image;
 import com.example.short_link.common.note.NoteSnapshotReader.Quote;
 import com.example.short_link.common.note.NoteSnapshotReader.QuotedNote;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
+import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -32,6 +38,7 @@ class NoteSnapshotProviderTest {
   @Mock private NoteMediaRepository media;
   @Mock private NotePeopleReader people;
   @Mock private QuotedPostReader quotedPosts;
+  @Mock private NotePollRepository polls;
   @InjectMocks private NoteSnapshotProvider provider;
 
   private static NoteEntity note(Long quotedPostId) {
@@ -94,5 +101,34 @@ class NoteSnapshotProviderTest {
 
     when(notes.countByAuthor(7L)).thenReturn(2L);
     assertThat(provider.countByAuthor(7L)).isEqualTo(2L);
+  }
+
+  @Test
+  void aPollCarriesItsCountsAndWhetherItHasEnded() {
+    NoteEntity note = new NoteEntity(7L, "어디서 볼까?", null, null);
+    ReflectionTestUtils.setField(note, "id", 42L);
+    Instant ends = Instant.parse("2026-10-07T12:00:00Z");
+    note.attachPoll(List.of("강남", "홍대"), ends, false);
+    NoteSnapshotProvider ended =
+        new NoteSnapshotProvider(
+            notes,
+            media,
+            people,
+            quotedPosts,
+            polls,
+            Clock.fixed(ends.plusSeconds(1), ZoneOffset.UTC));
+    when(notes.findById(42L)).thenReturn(Optional.of(note));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
+    when(polls.tallies(List.of(42L), null))
+        .thenReturn(Map.of(42L, new NotePollTally(3, List.of(2L, 1L, 0L, 0L), null)));
+
+    NoteSnapshotReader.Poll poll = ended.find(42L).orElseThrow().poll();
+
+    assertThat(poll.options())
+        .containsExactly(
+            new NoteSnapshotReader.PollOption("강남", 2), new NoteSnapshotReader.PollOption("홍대", 1));
+    assertThat(poll.voters()).isEqualTo(3);
+    assertThat(poll.endTime()).isEqualTo(ends);
+    assertThat(poll.closed()).isTrue();
   }
 }

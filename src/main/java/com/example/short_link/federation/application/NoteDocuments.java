@@ -30,7 +30,7 @@ public class NoteDocuments {
   public Map<String, Object> note(NoteSnapshot note, String actorPublicId) {
     Map<String, Object> object = new LinkedHashMap<>();
     object.put("id", urls.note(note.id()));
-    object.put("type", "Note");
+    object.put("type", note.poll() == null ? "Note" : "Question");
     object.put("attributedTo", urls.actor(actorPublicId));
     object.put("content", content(note));
     object.put("published", note.createdAt().truncatedTo(ChronoUnit.SECONDS).toString());
@@ -68,7 +68,38 @@ public class NoteDocuments {
       tags.add(tag);
     }
     object.put("tag", tags);
+    if (note.poll() != null) {
+      poll(object, note.poll());
+    }
     return object;
+  }
+
+  // Mastodon's Question: each option is a named Note whose replies count is its vote count.
+  private static void poll(Map<String, Object> object, NoteSnapshotReader.Poll poll) {
+    List<Map<String, Object>> options = new ArrayList<>();
+    for (var option : poll.options()) {
+      Map<String, Object> entry = new LinkedHashMap<>();
+      entry.put("type", "Note");
+      entry.put("name", option.title());
+      entry.put("replies", Map.of("type", "Collection", "totalItems", option.votes()));
+      options.add(entry);
+    }
+    object.put(poll.multiple() ? "anyOf" : "oneOf", options);
+    String end = poll.endTime().truncatedTo(ChronoUnit.SECONDS).toString();
+    object.put("endTime", end);
+    if (poll.closed()) {
+      object.put("closed", end);
+    }
+    object.put("votersCount", poll.voters());
+  }
+
+  public Map<String, Object> pollEnded(NoteSnapshot note, String actorPublicId) {
+    Map<String, Object> activity =
+        activity(urls.note(note.id()) + "#updates/poll-ended", "Update", actorPublicId);
+    activity.put("to", to(note, actorPublicId));
+    activity.put("cc", cc(note, actorPublicId));
+    activity.put("object", note(note, actorPublicId));
+    return activity;
   }
 
   public Map<String, Object> create(NoteSnapshot note, String actorPublicId) {

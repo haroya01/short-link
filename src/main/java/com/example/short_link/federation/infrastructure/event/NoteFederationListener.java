@@ -3,6 +3,7 @@ package com.example.short_link.federation.infrastructure.event;
 import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.event.NoteDeletedEvent;
 import com.example.short_link.common.event.NoteEditedEvent;
+import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
@@ -33,6 +34,12 @@ public class NoteFederationListener {
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onEdited(NoteEditedEvent event) {
     notes.edited(event.noteId(), event.authorId());
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onPollEnded(NotePollEndedEvent event) {
+    notes.pollEnded(event.noteId(), event.authorId());
   }
 
   @Async("webhookExecutor")

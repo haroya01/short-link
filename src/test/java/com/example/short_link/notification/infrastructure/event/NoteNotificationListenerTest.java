@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.NoteInteractionEvent;
+import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
@@ -15,6 +16,7 @@ import com.example.short_link.notification.application.write.RecordBlogNotificat
 import com.example.short_link.notification.domain.NotificationType;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -106,5 +108,17 @@ class NoteNotificationListenerTest {
             group.capture());
     assertThat(group.getValue()).isNull();
     verifyNoInteractions(blocks);
+  }
+
+  @Test
+  void anEndedPollTellsItsAuthorAndEveryVoterWhoHasNotBlockedThem() {
+    when(blocks.isBlocked(10L, 7L)).thenReturn(false);
+    when(blocks.isBlocked(11L, 7L)).thenReturn(true);
+
+    listener().onPollEnded(new NotePollEndedEvent(5L, 7L, "어디서 볼까?", List.of(7L, 10L, 11L)));
+
+    NotificationNoteRef note = new NotificationNoteRef(5L, "어디서 볼까?", null, null);
+    verify(recordUseCase).record(7L, NotificationType.NOTE_POLL, 7L, null, note, null);
+    verify(recordUseCase).recordForEach(List.of(10L), NotificationType.NOTE_POLL, 7L, note);
   }
 }

@@ -11,14 +11,19 @@ import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinkPreviewEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
+import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,6 +42,7 @@ class NoteViewsTest {
   @Mock private NotePeopleReader people;
   @Mock private QuotedPostReader quotedPosts;
   @Mock private NoteLinkPreviewRepository linkPreviews;
+  @Mock private NotePollRepository polls;
   @InjectMocks private NoteViews views;
 
   private static NoteEntity note(Long id, Long userId, Long quotedPostId) {
@@ -160,5 +166,57 @@ class NoteViewsTest {
     assertThat(view.repostedByMe()).isNull();
     verify(notes).viewerMarks(null, List.of(2L));
     verify(quotedPosts, never()).publishedByIds(anyCollection());
+  }
+
+  @Test
+  void onlyAPageWithAPollAsksForTalliesAndAnsweredOrEndedPollsShowResults() {
+    Instant now = Instant.parse("2026-10-07T12:00:00Z");
+    NoteViews clocked =
+        new NoteViews(
+            notes,
+            media,
+            people,
+            quotedPosts,
+            linkPreviews,
+            polls,
+            Clock.fixed(now, ZoneOffset.UTC));
+    NoteEntity polled = note(1L, 7L, null);
+    polled.attachPoll(List.of("강남", "홍대"), now.plusSeconds(60), false);
+    NoteEntity ended = note(2L, 8L, null);
+    ended.attachPoll(List.of("예", "아니오"), now, true);
+    NoteEntity plain = note(3L, 8L, null);
+    when(people.activeAuthors(Set.of(7L, 8L)))
+        .thenReturn(
+            Map.of(7L, new NoteAuthor(7L, "me", null), 8L, new NoteAuthor(8L, "them", null)));
+    when(polls.tallies(List.of(1L, 2L), 8L))
+        .thenReturn(Map.of(2L, new NotePollTally(2, List.of(2L, 1L, 0L, 0L), 0b11)));
+    when(notes.viewerMarks(org.mockito.ArgumentMatchers.any(), anyCollection()))
+        .thenReturn(NoteViewerMarks.NONE);
+
+    List<NoteView> page = clocked.of(List.of(polled, ended, plain), 8L);
+
+    assertThat(page.get(0).poll().voted()).isFalse();
+    assertThat(page.get(0).poll().votesCount()).isZero();
+    assertThat(page.get(0).poll().expired()).isFalse();
+    assertThat(page.get(1).poll().voted()).isTrue();
+    assertThat(page.get(1).poll().ownVotes()).containsExactly(0, 1);
+    assertThat(page.get(1).poll().votesCount()).isEqualTo(3);
+    assertThat(page.get(1).poll().expired()).isTrue();
+    assertThat(page.get(1).poll().multiple()).isTrue();
+    assertThat(page.get(2).poll()).isNull();
+
+    when(polls.tallies(List.of(1L, 2L), null)).thenReturn(Map.of());
+    List<NoteView> anonymous = clocked.of(List.of(polled, ended), null);
+    assertThat(anonymous.get(0).poll().voted()).isNull();
+    assertThat(anonymous.get(0).poll().ownVotes()).isNull();
+  }
+
+  @Test
+  void aPageWithoutAPollNeverAsksForTallies() {
+    when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "them", null)));
+    when(notes.viewerMarks(8L, List.of(1L))).thenReturn(NoteViewerMarks.NONE);
+
+    assertThat(views.of(List.of(note(1L, 8L, null)), 8L).getFirst().poll()).isNull();
+    verifyNoInteractions(polls);
   }
 }

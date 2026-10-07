@@ -41,6 +41,7 @@ import com.example.short_link.note.exception.NoteException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -661,5 +662,98 @@ class NoteCommandServiceTest {
     verify(bookmarks).addIfAbsent(1L, 8L);
     verify(bookmarks).delete(1L, 8L);
     verifyNoInteractions(events);
+  }
+
+  private static NoteDraft polled(List<String> options, Long expiresIn, boolean multiple) {
+    return new NoteDraft(
+        "어디서 볼까?",
+        List.of(),
+        null,
+        null,
+        null,
+        null,
+        false,
+        null,
+        new NoteDraft.Poll(options, expiresIn, multiple));
+  }
+
+  @Test
+  void aPollKeepsItsTrimmedOptionsAndEndsAfterItsDuration() {
+    saving();
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    NoteView view = service().create(7L, polled(List.of("  강남 ", "홍대\n입구"), 3600L, true));
+
+    ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
+    verify(notes).save(saved.capture());
+    assertThat(saved.getValue().pollOptions()).containsExactly("강남", "홍대 입구");
+    assertThat(saved.getValue().isPollMultiple()).isTrue();
+    assertThat(view.poll().expiresAt())
+        .isEqualTo(NOW.truncatedTo(ChronoUnit.MICROS).plusSeconds(3600));
+    assertThat(view.poll().options())
+        .extracting(NoteView.PollOption::title, NoteView.PollOption::votesCount)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("강남", 0L),
+            org.assertj.core.groups.Tuple.tuple("홍대 입구", 0L));
+    assertThat(view.poll().voted()).isTrue();
+    assertThat(view.poll().expired()).isFalse();
+  }
+
+  @Test
+  void aPollTakesTheMediaSlotSoItsAddressGetsNoCard() {
+    saving();
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+    NoteDraft draft =
+        new NoteDraft(
+            "어느 쪽? https://kurl.me/about",
+            List.of(),
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            new NoteDraft.Poll(List.of("a", "b"), 3600L, false));
+
+    service().create(7L, draft);
+
+    verify(events, never()).publishEvent(any(NoteLinkPreviewRequested.class));
+  }
+
+  @Test
+  void aPollNeedsTwoToFourDifferentShortOptionsAFittingDurationAndNoImages() {
+    String long51 = "가".repeat(51);
+    for (NoteDraft draft :
+        List.of(
+            polled(List.of("하나"), 3600L, false),
+            polled(List.of("a", "b", "c", "d", "e"), 3600L, false),
+            polled(List.of("같다", " 같다 "), 3600L, false),
+            polled(List.of("a", "  "), 3600L, false),
+            polled(List.of("a", long51), 3600L, false),
+            polled(null, 3600L, false),
+            polled(List.of("a", "b"), null, false),
+            polled(List.of("a", "b"), 299L, false),
+            polled(List.of("a", "b"), 2_629_747L, false))) {
+      assertThatThrownBy(() -> service().create(7L, draft))
+          .isInstanceOfSatisfying(
+              NoteException.class,
+              e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_POLL_INVALID));
+    }
+    NoteDraft withImage =
+        new NoteDraft(
+            "x",
+            List.of(new NoteDraft.Image("k1", null)),
+            null,
+            null,
+            null,
+            null,
+            false,
+            null,
+            new NoteDraft.Poll(List.of("a", "b"), 3600L, false));
+    assertThatThrownBy(() -> service().create(7L, withImage))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_POLL_WITH_MEDIA));
+    verify(notes, never()).save(any());
   }
 }

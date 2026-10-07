@@ -13,9 +13,12 @@ public record CreateNoteRequest(
     Long quotedNoteId,
     String contentWarning,
     Boolean sensitive,
-    String visibility) {
+    String visibility,
+    PollRequest poll) {
 
   public record ImageRequest(String key, String altText) {}
+
+  public record PollRequest(List<String> options, Long expiresIn, Boolean multiple) {}
 
   public NoteDraft toDraft() {
     return new NoteDraft(
@@ -30,6 +33,10 @@ public record CreateNoteRequest(
         quotedNoteId,
         contentWarning,
         Boolean.TRUE.equals(sensitive),
-        visibility);
+        visibility,
+        poll == null
+            ? null
+            : new NoteDraft.Poll(
+                poll.options(), poll.expiresIn(), Boolean.TRUE.equals(poll.multiple())));
   }
 }

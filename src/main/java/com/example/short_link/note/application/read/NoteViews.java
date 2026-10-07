@@ -5,14 +5,18 @@ import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
+import com.example.short_link.note.domain.repository.NotePollRepository;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -38,6 +42,8 @@ public class NoteViews {
   private final NotePeopleReader people;
   private final QuotedPostReader quotedPosts;
   private final NoteLinkPreviewRepository linkPreviews;
+  private final NotePollRepository polls;
+  private final Clock clock;
 
   public List<NoteView> of(List<NoteEntity> page, Long viewerId) {
     if (page.isEmpty()) {
@@ -103,6 +109,7 @@ public class NoteViews {
     Map<Long, NoteStats> stats = notes.stats(ids);
     NoteViewerMarks marks = notes.viewerMarks(viewerId, ids);
     Map<Long, NoteView.LinkPreview> cards = linkCards(visible);
+    Map<Long, NoteView.Poll> pollViews = polls(visible, viewerId);
 
     List<NoteView> views = new ArrayList<>(visible.size());
     for (NoteEntity note : visible) {
@@ -131,7 +138,27 @@ public class NoteViews {
               note.getContentWarning(),
               note.isSensitive(),
               note.isPinned(),
-              note.getVisibility().apiName()));
+              note.getVisibility().apiName(),
+              pollViews.get(note.getId())));
+    }
+    return views;
+  }
+
+  // Like link cards, a page without a poll costs no query.
+  private Map<Long, NoteView.Poll> polls(List<NoteEntity> visible, Long viewerId) {
+    List<NoteEntity> polled = visible.stream().filter(NoteEntity::hasPoll).toList();
+    Map<Long, NoteView.Poll> views = new HashMap<>();
+    if (polled.isEmpty()) {
+      return views;
+    }
+    Map<Long, NotePollTally> tallies =
+        polls.tallies(polled.stream().map(NoteEntity::getId).toList(), viewerId);
+    Instant now = clock.instant();
+    for (NoteEntity note : polled) {
+      views.put(
+          note.getId(),
+          NotePolls.view(
+              note, tallies.getOrDefault(note.getId(), NotePollTally.NONE), viewerId, now));
     }
     return views;
   }
