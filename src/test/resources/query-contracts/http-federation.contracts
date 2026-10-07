@@ -49,13 +49,14 @@
 # Likes and boosts from a remote account. The target is checked before the signature with the rule
 # that serves the note document (note, author, images, then the author's user, preference, actor);
 # a personal inbox reuses its owner when the owner wrote the note. Then the key and INSERT IGNORE.
-# A new reaction re-reads the note for its author and notifies them (preference, group check,
-# insert, recipient name, remote actor); a re-sent one only refreshes its activity id; a Like again
-# after an Undo on the same day finds the actor already in the group and writes no notification.
-@junit | federation-inbox-like | 12 | 2 | 0 | 0 | 14
+# A new reaction re-reads the note for its author and notifies them (whether they muted this
+# conversation, preference, group check, insert, recipient name, remote actor); a re-sent one only
+# refreshes its activity id; a Like again after an Undo on the same day finds the actor already in
+# the group and writes no notification.
+@junit | federation-inbox-like | 13 | 2 | 0 | 0 | 15
 @junit | federation-inbox-like-again | 7 | 1 | 1 | 0 | 9
-@junit | federation-inbox-announce | 12 | 2 | 0 | 0 | 14
-@junit | federation-inbox-like-before-delete | 10 | 1 | 0 | 0 | 11
+@junit | federation-inbox-announce | 13 | 2 | 0 | 0 | 15
+@junit | federation-inbox-like-before-delete | 11 | 1 | 0 | 0 | 12
 # A member likes the same note: the like and the author's notice joining today's group.
 @junit | federation-note-member-like | 8 | 2 | 0 | 0 | 10
 # The author's inbox reads groups, not rows: each group's newest row with its size and unread sum
@@ -125,8 +126,9 @@
 @junit | notes-everyone-without-remote | 4 | 0 | 0 | 0 | 4
 # A reply to a member's note is wanted from anyone: the target is checked with the note document's
 # rule (note, author, images, user, preference, actor), then the key, the parent, the insert and its
-# id; the author hears of it (preference, notification, recipient, remote actor).
-@junit | federation-inbox-remote-reply | 12 | 2 | 0 | 0 | 14
+# id; the author hears of it (muted conversation, preference, notification, recipient, remote
+# actor).
+@junit | federation-inbox-remote-reply | 13 | 2 | 0 | 0 | 15
 @junit | notes-thread-remote-reply | 6 | 0 | 0 | 0 | 6
 # Edits and deletes first ask whether we kept that note, so others never cost a key fetch.
 @junit | federation-inbox-remote-update | 2 | 0 | 1 | 0 | 3

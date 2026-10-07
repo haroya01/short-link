@@ -205,6 +205,9 @@ public class NoteCommandService {
 
     NoteEntity fresh =
         new NoteEntity(userId, body, parentId, draft.quotedPostId(), draft.quotedNoteId());
+    if (parent != null) {
+      fresh.answer(parent);
+    }
     fresh.markContent(warning(draft.contentWarning()), draft.sensitive());
     fresh.showTo(
         requested != null
@@ -332,7 +335,8 @@ public class NoteCommandService {
                 note.getId(),
                 note.excerpt(),
                 null,
-                null));
+                null,
+                note.conversation()));
       }
     }
   }
@@ -482,6 +486,18 @@ public class NoteCommandService {
     return new RepostStatus(on, statsOf(noteId).reposts());
   }
 
+  // Mastodon's "mute conversation": the reader hears nothing more from the thread this note is in.
+  @Transactional
+  public ConversationMuteStatus setConversationMuted(Long userId, Long noteId, boolean on) {
+    NoteEntity note = readable(userId, noteId);
+    if (on) {
+      notes.muteConversation(userId, note.conversation(), clock.instant());
+    } else {
+      notes.unmuteConversation(userId, note.conversation());
+    }
+    return new ConversationMuteStatus(on);
+  }
+
   // A bookmark is the reader's own: it notifies no one and does not federate.
   @Transactional
   public BookmarkStatus setBookmark(Long userId, Long noteId, boolean on) {
@@ -508,7 +524,8 @@ public class NoteCommandService {
         target.getId(),
         target.excerpt(),
         source == null ? null : source.getId(),
-        source == null ? null : source.excerpt());
+        source == null ? null : source.excerpt(),
+        target.conversation());
   }
 
   private void requireNotBlocked(Long userId, NoteEntity note) {
@@ -586,4 +603,6 @@ public class NoteCommandService {
   public record BookmarkStatus(boolean bookmarked) {}
 
   public record PinStatus(boolean pinned) {}
+
+  public record ConversationMuteStatus(boolean muted) {}
 }

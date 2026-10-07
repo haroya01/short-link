@@ -145,7 +145,8 @@ public class NoteViews {
               note.isSensitive(),
               note.isPinned(),
               note.getVisibility().apiName(),
-              pollViews.get(note.getId())));
+              pollViews.get(note.getId()),
+              viewerId == null ? null : marks.muted().contains(note.getId())));
     }
     return views;
   }

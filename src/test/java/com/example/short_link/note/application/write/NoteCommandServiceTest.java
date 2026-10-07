@@ -211,7 +211,7 @@ class NoteCommandServiceTest {
     verify(events)
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.REPLY, 8L, 7L, null, 50L, "parent", 100L, "re"));
+                NoteInteractionEvent.Type.REPLY, 8L, 7L, null, 50L, "parent", 100L, "re", 50L));
 
     when(blocks.isBlocked(8L, 7L)).thenReturn(true);
     assertThatThrownBy(() -> service().create(7L, new NoteDraft("re", null, null, 50L)))
@@ -255,7 +255,15 @@ class NoteCommandServiceTest {
     verify(events)
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.QUOTE, 8L, 7L, null, 50L, "original", 100L, "so true"));
+                NoteInteractionEvent.Type.QUOTE,
+                8L,
+                7L,
+                null,
+                50L,
+                "original",
+                100L,
+                "so true",
+                50L));
   }
 
   @Test
@@ -449,7 +457,8 @@ class NoteCommandServiceTest {
                 100L,
                 "@mina @Yuki @writer @ghost 안녕",
                 null,
-                null));
+                null,
+                5L));
     ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
     verify(events, org.mockito.Mockito.atLeastOnce()).publishEvent(published.capture());
     assertThat(published.getAllValues())
@@ -481,7 +490,8 @@ class NoteCommandServiceTest {
                 1L,
                 "@mina and @yuki hi",
                 null,
-                null));
+                null,
+                1L));
   }
 
   @Test
@@ -691,7 +701,37 @@ class NoteCommandServiceTest {
     verify(events, times(1))
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.LIKE, 7L, 8L, null, 1L, "x", null, null));
+                NoteInteractionEvent.Type.LIKE, 7L, 8L, null, 1L, "x", null, null, 1L));
+  }
+
+  @Test
+  void mutingAConversationCoversTheWholeThreadFromAnyNoteInIt() {
+    NoteEntity reply = note(60L, 8L, "a reply");
+    reply.answer(note(50L, 7L, "root"));
+    when(notes.findById(60L)).thenReturn(Optional.of(reply));
+    when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 7L, "root")));
+
+    assertThat(service().setConversationMuted(9L, 60L, true).muted()).isTrue();
+    assertThat(service().setConversationMuted(9L, 50L, false).muted()).isFalse();
+
+    verify(notes).muteConversation(9L, 50L, NOW);
+    verify(notes).unmuteConversation(9L, 50L);
+  }
+
+  @Test
+  void aReplyToAReplyJoinsTheRootsConversation() {
+    saving();
+    NoteEntity middle = note(60L, 8L, "middle");
+    middle.answer(note(50L, 8L, "root"));
+    when(notes.findById(60L)).thenReturn(Optional.of(middle));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    service().create(7L, new NoteDraft("deeper", null, null, 60L));
+
+    ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
+    verify(notes).save(saved.capture());
+    assertThat(saved.getValue().getConversationId()).isEqualTo(50L);
+    assertThat(saved.getValue().conversation()).isEqualTo(50L);
   }
 
   @Test

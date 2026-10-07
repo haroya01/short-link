@@ -82,13 +82,25 @@ class NoteNotificationListenerTest {
 
   @Test
   void yourOwnActionsAndPeopleYouBlockedOrMutedNeverNotify() {
-    when(blocks.silences(9L, 3L)).thenReturn(true);
+    when(blocks.silences(9L, 3L, null)).thenReturn(true);
 
     listener()
         .onNoteInteraction(
             new NoteInteractionEvent(
                 NoteInteractionEvent.Type.LIKE, 9L, 9L, null, 5L, "hi", null, null));
     listener().onNoteInteraction(event(NoteInteractionEvent.Type.QUOTE, 3L, null));
+
+    verifyNoInteractions(recordUseCase);
+  }
+
+  @Test
+  void aMutedConversationIsQuietEvenForAccountsElsewhere() {
+    when(blocks.silences(9L, null, 40L)).thenReturn(true);
+
+    listener()
+        .onNoteInteraction(
+            new NoteInteractionEvent(
+                NoteInteractionEvent.Type.LIKE, 9L, null, 7L, 5L, "hi", null, null, 40L));
 
     verifyNoInteractions(recordUseCase);
   }

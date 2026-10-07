@@ -130,7 +130,8 @@ class RemoteNoteRecorderTest {
                 5L,
                 "my question",
                 901L,
-                "hello from afar"));
+                "hello from afar",
+                5L));
     verify(events)
         .publishEvent(
             new NoteInteractionEvent(
@@ -141,7 +142,8 @@ class RemoteNoteRecorderTest {
                 901L,
                 "hello from afar",
                 null,
-                null));
+                null,
+                5L));
   }
 
   @Test

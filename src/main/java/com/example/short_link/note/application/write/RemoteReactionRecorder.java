@@ -38,7 +38,8 @@ class RemoteReactionRecorder implements RemoteNoteReactions {
                         note.getId(),
                         note.excerpt(),
                         null,
-                        null)));
+                        null,
+                        note.conversation())));
   }
 
   @Override

@@ -152,6 +152,18 @@ public class NoteController {
     return command.setLike(userId, id, false);
   }
 
+  @PutMapping("/api/v1/notes/{id}/conversation-mute")
+  public NoteCommandService.ConversationMuteStatus muteConversation(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setConversationMuted(userId, id, true);
+  }
+
+  @DeleteMapping("/api/v1/notes/{id}/conversation-mute")
+  public NoteCommandService.ConversationMuteStatus unmuteConversation(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setConversationMuted(userId, id, false);
+  }
+
   @PutMapping("/api/v1/notes/{id}/repost")
   public NoteCommandService.RepostStatus repost(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {

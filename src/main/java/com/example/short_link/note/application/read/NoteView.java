@@ -5,8 +5,9 @@ import com.example.short_link.note.domain.QuotedPost;
 import java.time.Instant;
 import java.util.List;
 
-// Counts are public and include likes and boosts from other servers. likedByMe, repostedByMe and
-// bookmarkedByMe are null for anonymous readers; a bookmark is seen by no one else.
+// Counts are public and include likes and boosts from other servers. likedByMe, repostedByMe,
+// bookmarkedByMe and conversationMuted are null for anonymous readers; a bookmark and a muted
+// conversation are seen by no one else.
 public record NoteView(
     Long id,
     String body,
@@ -31,7 +32,61 @@ public record NoteView(
     boolean sensitive,
     boolean pinned,
     String visibility,
-    Poll poll) {
+    Poll poll,
+    Boolean conversationMuted) {
+
+  public NoteView(
+      Long id,
+      String body,
+      Instant createdAt,
+      Instant editedAt,
+      Long likeCount,
+      Boolean likedByMe,
+      NoteAuthor author,
+      List<Media> media,
+      QuotedPost quotedPost,
+      Long inReplyToId,
+      long replyCount,
+      Long repostCount,
+      Boolean repostedByMe,
+      QuotedNote quotedNote,
+      LinkPreview linkPreview,
+      NoteAuthor repostedBy,
+      long quoteCount,
+      Boolean bookmarkedByMe,
+      List<String> mentions,
+      String contentWarning,
+      boolean sensitive,
+      boolean pinned,
+      String visibility,
+      Poll poll) {
+    this(
+        id,
+        body,
+        createdAt,
+        editedAt,
+        likeCount,
+        likedByMe,
+        author,
+        media,
+        quotedPost,
+        inReplyToId,
+        replyCount,
+        repostCount,
+        repostedByMe,
+        quotedNote,
+        linkPreview,
+        repostedBy,
+        quoteCount,
+        bookmarkedByMe,
+        mentions,
+        contentWarning,
+        sensitive,
+        pinned,
+        visibility,
+        poll,
+        null);
+  }
 
   public NoteView(
       Long id,
@@ -128,6 +183,7 @@ public record NoteView(
         sensitive,
         pinned,
         visibility,
-        poll);
+        poll,
+        conversationMuted);
   }
 }

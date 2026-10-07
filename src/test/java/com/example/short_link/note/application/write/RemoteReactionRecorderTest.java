@@ -40,7 +40,7 @@ class RemoteReactionRecorderTest {
     verify(events)
         .publishEvent(
             new NoteInteractionEvent(
-                NoteInteractionEvent.Type.REPOST, 9L, null, 7L, 5L, "hello there", null, null));
+                NoteInteractionEvent.Type.REPOST, 9L, null, 7L, 5L, "hello there", null, null, 5L));
   }
 
   @Test

@@ -64,6 +64,9 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(name = "in_reply_to_id")
   private Long inReplyToId;
 
+  @Column(name = "conversation_id")
+  private Long conversationId;
+
   @Column(name = "quoted_post_id")
   private Long quotedPostId;
 
@@ -118,6 +121,15 @@ public class NoteEntity extends BaseCreatedEntity {
 
   public boolean isRemote() {
     return remoteActorId != null;
+  }
+
+  // A top-level note is its own conversation; a reply carries its thread's root.
+  public Long conversation() {
+    return conversationId != null ? conversationId : id;
+  }
+
+  public void answer(NoteEntity parent) {
+    this.conversationId = parent.conversation();
   }
 
   public String excerpt() {

@@ -59,6 +59,10 @@ public interface NoteRepository {
 
   int deleteRemote(Long remoteActorId, String uri);
 
+  void muteConversation(Long userId, Long conversationId, Instant at);
+
+  void unmuteConversation(Long userId, Long conversationId);
+
   List<NoteEntity> quotesOf(Long noteId, Long viewerId, int offset, int limit);
 
   List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit);
