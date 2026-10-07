@@ -204,23 +204,30 @@ class NoteRepositoryAdapter implements NoteRepository {
   }
 
   // Top-level notes written in the window, by reactions from people other than the author: likes,
-  // reposts, replies and likes or boosts from other servers. Ties fall back to newest first.
+  // reposts, replies and likes or boosts from other servers. Ties fall back to newest first. A note
+  // received from elsewhere joins once a member liked, reposted or answered it — Mastodon trends
+  // such notes too, with a member's touch standing in for its moderator review.
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> trending(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM note n"
                 + " WHERE n.in_reply_to_id IS NULL AND n.visibility = 'PUBLIC'"
-                + " AND n.remote_actor_id IS NULL AND n.created_at >= :since"
-                + heard("n")
+                + " AND n.created_at >= :since"
+                + " AND (n.remote_actor_id IS NULL"
+                + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = n.id)"
+                + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = n.id)"
+                + " OR EXISTS (SELECT 1 FROM note mc WHERE mc.in_reply_to_id = n.id"
+                + " AND mc.user_id IS NOT NULL))"
+                + heardNote("n")
                 + inLanguages("n")
                 + " ORDER BY ("
                 + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
-                + " AND l.user_id <> n.user_id)"
+                + " AND NOT (l.user_id <=> n.user_id))"
                 + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
-                + " AND r.user_id <> n.user_id)"
+                + " AND NOT (r.user_id <=> n.user_id))"
                 + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
-                + " AND c.user_id <> n.user_id)"
+                + " AND NOT (c.user_id <=> n.user_id))"
                 + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
                 + ") DESC, n.id DESC",
             NoteEntity.class)

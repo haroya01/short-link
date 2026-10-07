@@ -358,6 +358,9 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(flag.path("type").asString()).isEqualTo("Flag");
     assertThat(flag.path("object").get(1).asString()).isEqualTo(status);
 
+    jdbc.update("UPDATE note SET created_at = NOW(6) WHERE id = ?", noteId);
+    assertThat(trendingIds("notes-trending-remote-untouched")).doesNotContain(noteId);
+
     String aliceInbox = remote + "/inbox";
     call(
         "federation-remote-note-like",
@@ -396,6 +399,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
     var created = json.readTree(sent.get(2));
     assertThat(created.path("type").asString()).isEqualTo("Create");
     assertThat(created.path("object").path("inReplyTo").asString()).isEqualTo(status);
+    assertThat(trendingIds("notes-trending-remote")).contains(noteId);
     long answerId = answer.path("id").asLong();
     call(
         "federation-remote-reply-edit",
@@ -790,6 +794,14 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         204);
     assertThat(count("SELECT COUNT(*) FROM user_domain_block WHERE user_id = ?", owner.getId()))
         .isZero();
+  }
+
+  private List<Long> trendingIds(String id) throws Exception {
+    List<Long> ids = new ArrayList<>();
+    body(call(id, "GET", "/api/v1/public/notes?sort=trending&size=50", null, null, 200))
+        .path("items")
+        .forEach(item -> ids.add(item.path("id").asLong()));
+    return ids;
   }
 
   @Test
