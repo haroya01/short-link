@@ -159,6 +159,11 @@
 # INSERT IGNORE on the note's uri, its id, and its image (the address stays on its server).
 @junit | federation-inbox-remote-note | 3 | 2 | 0 | 0 | 5
 # The following feed carries it: a page of only remote notes reads their accounts, never users.
+# Mastodon's live feed of other servers, for members: the one page statement (server blocks,
+# limits, the reader's blocks and languages inside it), then the page's remote authors, media,
+# stats and the reader's marks. Anonymous readers are turned away before any query.
+@junit | notes-federated | 5 | 0 | 0 | 0 | 5
+@junit | notes-federated-anonymous | 0 | 0 | 0 | 0 | 0
 @junit | notes-following-remote | 6 | 0 | 0 | 0 | 6
 @junit | federation-remote-notes | 5 | 0 | 0 | 0 | 5
 # All notes stays kurl's own (remote_actor_id IS NULL), the same four queries as before.

@@ -62,6 +62,11 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
+  public NoteFeedView federated(Long viewerId, int page, int size) {
+    return page(page, size, viewerId, (offset, limit) -> notes.federated(viewerId, offset, limit));
+  }
+
+  @Transactional(readOnly = true)
   public NoteFeedView tagged(String tag, int page, int size, Long viewerId) {
     String name = tag.startsWith("#") ? tag.substring(1) : tag;
     if (name.isBlank() || name.length() > Hashtags.MAX_LENGTH) {
