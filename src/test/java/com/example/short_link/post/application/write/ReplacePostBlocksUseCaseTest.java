@@ -30,6 +30,7 @@ class ReplacePostBlocksUseCaseTest {
   @Mock private PostOwnership postOwnership;
   @Mock private PostBlockRepository postBlockRepository;
   @Mock private PostSearchTextRepository postSearchTextRepository;
+  @Mock private PostNoteQuotes noteQuotes;
 
   private ReplacePostBlocksUseCase useCase;
 
@@ -38,7 +39,9 @@ class ReplacePostBlocksUseCaseTest {
     PostSearchTextUpdater searchTextUpdater =
         new PostSearchTextUpdater(
             postBlockRepository, postSearchTextRepository, JsonMapper.builder().build());
-    useCase = new ReplacePostBlocksUseCase(postOwnership, postBlockRepository, searchTextUpdater);
+    useCase =
+        new ReplacePostBlocksUseCase(
+            postOwnership, postBlockRepository, searchTextUpdater, noteQuotes);
   }
 
   @Test
@@ -82,6 +85,7 @@ class ReplacePostBlocksUseCaseTest {
     ArgumentCaptor<String> searchText = ArgumentCaptor.forClass(String.class);
     verify(postSearchTextRepository).upsert(any(), searchText.capture());
     assertThat(searchText.getValue()).contains("My Post").contains("Hello");
+    verify(noteQuotes).index(post, persisted);
   }
 
   @Test
@@ -95,6 +99,7 @@ class ReplacePostBlocksUseCaseTest {
     verify(postBlockRepository).deleteAllByPostId(42L);
     assertThat(result).isEmpty();
     verify(postSearchTextRepository).upsert(any(), eq("My Post"));
+    verify(noteQuotes).index(post, List.of());
   }
 
   @Test

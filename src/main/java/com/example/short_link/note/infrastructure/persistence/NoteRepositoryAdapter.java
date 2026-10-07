@@ -326,7 +326,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   }
 
   // Replies, likes, reposts and quotes of a page in one statement; likes and boosts from other
-  // servers add to likes and reposts.
+  // servers add to likes and reposts, and published posts that carry a note as a card add to its
+  // quotes.
   @Override
   public Map<Long, NoteStats> stats(Collection<Long> noteIds) {
     Map<Long, NoteStats> stats = new HashMap<>();
@@ -340,6 +341,9 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " WHERE in_reply_to_id IN (:ids)"
                     + " UNION ALL SELECT quoted_note_id, 'QUOTE' FROM note"
                     + " WHERE quoted_note_id IN (:ids)"
+                    + " UNION ALL SELECT q.note_id, 'QUOTE' FROM post_note_quote q"
+                    + " JOIN posts p ON p.id = q.post_id"
+                    + " WHERE q.note_id IN (:ids) AND p.status = 'PUBLISHED'"
                     + " UNION ALL SELECT note_id, 'LIKE' FROM note_like WHERE note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, 'REPOST' FROM note_repost WHERE note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, IF(kind = 'LIKE', 'LIKE', 'REPOST')"

@@ -12,6 +12,7 @@ import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.repository.PostRepository;
+import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +28,7 @@ class PublishPostUseCaseTest {
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionCapture postRevisionCapture;
   @Mock private PostSearchTextUpdater searchTextUpdater;
+  @Mock private PostNoteQuotes noteQuotes;
   @Mock private ProfileCacheInvalidator cacheEviction;
   @Mock private ApplicationEventPublisher events;
 
@@ -39,7 +41,7 @@ class PublishPostUseCaseTest {
             postOwnership,
             postRepository,
             new PostPublicationCompletion(
-                postRevisionCapture, searchTextUpdater, cacheEviction, events),
+                postRevisionCapture, searchTextUpdater, noteQuotes, cacheEviction, events),
             new PostWriteViewAssembler(postRepository));
   }
 
@@ -56,6 +58,8 @@ class PublishPostUseCaseTest {
     verify(postRevisionCapture).capture(post);
     // 발행 시점에도 검색 평문을 채워 "제목만 붙이고 블록 편집 없이 발행" 한 글이 본문·제목 검색에서 누락되지 않게 한다.
     verify(searchTextUpdater).refresh(post);
+    verify(noteQuotes).indexFirstPublish(post, List.of());
+    verify(noteQuotes, never()).index(any(), any());
     ArgumentCaptor<PostPublishedEvent> evt = ArgumentCaptor.forClass(PostPublishedEvent.class);
     verify(events).publishEvent(evt.capture());
     assertThat(evt.getValue().authorUserId()).isEqualTo(7L);
@@ -72,5 +76,7 @@ class PublishPostUseCaseTest {
     useCase.execute(new PublishPostCommand(7L, 42L));
 
     verify(events, never()).publishEvent(any());
+    verify(noteQuotes).index(post, List.of());
+    verify(noteQuotes, never()).indexFirstPublish(any(), any());
   }
 }

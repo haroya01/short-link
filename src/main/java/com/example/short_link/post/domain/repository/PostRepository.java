@@ -77,6 +77,8 @@ public interface PostRepository {
 
   long countPublishedByTag(String tag);
 
+  List<PostEntity> findPublishedQuotingNote(Long noteId, int offset, int limit);
+
   List<PostEntity> searchPublishedByRelevance(String query, String lang, int page, int size);
 
   List<PostEntity> searchPublished(String query, String lang, int page, int size);

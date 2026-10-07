@@ -29,6 +29,7 @@ public class RestorePostRevisionUseCase {
   private final PostRevisionRepository postRevisionRepository;
   private final PostBlockRepository postBlockRepository;
   private final PostSearchTextUpdater searchTextUpdater;
+  private final PostNoteQuotes noteQuotes;
   private final PostWriteViewAssembler writeViews;
 
   @Transactional
@@ -66,7 +67,7 @@ public class RestorePostRevisionUseCase {
     }
 
     post.markEdited();
-    searchTextUpdater.refresh(post);
+    noteQuotes.index(post, searchTextUpdater.refresh(post));
     return writeViews.fromSaved(postRepository.save(post));
   }
 

@@ -85,7 +85,8 @@
 @junit | author-preview-token-issue | 1 | 0 | 1 | 0 | 2
 @junit | author-published-slug-frozen | 2 | 0 | 0 | 0 | 2
 @junit | author-revision-list | 2 | 0 | 0 | 0 | 2
-@junit | author-revision-restore-first | 4 | 2 | 1 | 1 | 8
+# Restoring a public post's revision also rewrites the notes its body carries (one delete; none carried).
+@junit | author-revision-restore-first | 4 | 2 | 1 | 2 | 9
 @junit | author-schedule-cancel | 2 | 0 | 1 | 0 | 3
 @junit | author-second-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | author-second-draft-markdown-write | 3 | 2 | 1 | 1 | 7
@@ -102,7 +103,8 @@
 @junit | author-series-order-posts | 5 | 0 | 2 | 0 | 7
 @junit | author-series-reader-stats | 19 | 0 | 0 | 0 | 19
 @junit | author-unblock-reader | 2 | 0 | 0 | 1 | 3
-@junit | author-unpublished-body-edit | 3 | 2 | 1 | 1 | 7
+# A post taken down still keeps the notes its body carries current for a republish (one delete).
+@junit | author-unpublished-body-edit | 3 | 2 | 1 | 2 | 8
 @junit | blocked-reader-comment-denied | 3 | 0 | 0 | 0 | 3
 @junit | campaign-archive | 2 | 0 | 1 | 0 | 3
 @junit | campaign-batch-bulk | 11 | 14 | 4 | 0 | 29
