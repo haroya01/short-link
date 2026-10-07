@@ -8,7 +8,9 @@ import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
 import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
+import com.example.short_link.common.event.NoteReportForwardRequested;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,6 +20,7 @@ public class SubmitAbuseReportUseCase {
 
   private final AbuseReportRepository abuseReportRepository;
   private final AbuseSubjectReader subjects;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public AbuseReportEntity executeForLink(
@@ -42,7 +45,11 @@ public class SubmitAbuseReportUseCase {
           .with("subjectType", cmd.subjectType().name())
           .with("subjectId", cmd.subjectId());
     }
-    return save(cmd);
+    AbuseReportEntity saved = save(cmd);
+    if (cmd.forward() && cmd.subjectType() == AbuseSubjectType.NOTE) {
+      events.publishEvent(new NoteReportForwardRequested(cmd.subjectId(), cmd.detail()));
+    }
+    return saved;
   }
 
   private AbuseReportEntity save(SubmitAbuseReportCommand cmd) {

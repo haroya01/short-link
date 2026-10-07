@@ -16,24 +16,27 @@ import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
 import com.example.short_link.abuse.exception.AbuseErrorCode;
 import com.example.short_link.abuse.exception.AbuseException;
+import com.example.short_link.common.event.NoteReportForwardRequested;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class SubmitAbuseReportUseCaseTest {
 
   @Mock private AbuseReportRepository abuseReportRepository;
   @Mock private AbuseSubjectReader subjects;
+  @Mock private ApplicationEventPublisher events;
 
   private SubmitAbuseReportUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new SubmitAbuseReportUseCase(abuseReportRepository, subjects);
+    useCase = new SubmitAbuseReportUseCase(abuseReportRepository, subjects, events);
   }
 
   @Test
@@ -150,5 +153,24 @@ class SubmitAbuseReportUseCaseTest {
         new SubmitAbuseReportCommand(null, AbuseSubjectType.POST, 42L, AbuseReason.SPAM, null));
 
     verify(abuseReportRepository).save(any(AbuseReportEntity.class));
+  }
+
+  @Test
+  void onlyANoteReportAskedToBeForwardedGoesOnToItsServer() {
+    when(subjects.subjectExists(AbuseSubjectType.NOTE, 9L)).thenReturn(true);
+    when(subjects.subjectExists(AbuseSubjectType.POST, 42L)).thenReturn(true);
+    when(abuseReportRepository.save(any(AbuseReportEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        new SubmitAbuseReportCommand(
+            7L, AbuseSubjectType.NOTE, 9L, AbuseReason.SPAM, "광고 계정", true));
+    useCase.execute(
+        new SubmitAbuseReportCommand(8L, AbuseSubjectType.NOTE, 9L, AbuseReason.SPAM, null));
+    useCase.execute(
+        new SubmitAbuseReportCommand(7L, AbuseSubjectType.POST, 42L, AbuseReason.SPAM, null, true));
+
+    verify(events).publishEvent(new NoteReportForwardRequested(9L, "광고 계정"));
+    verify(events, org.mockito.Mockito.times(1)).publishEvent(any(Object.class));
   }
 }

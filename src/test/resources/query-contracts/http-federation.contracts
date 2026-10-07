@@ -156,6 +156,10 @@
 @junit | federation-inbox-remote-delete | 2 | 0 | 0 | 1 | 3
 # A note no member follows, answers or is named in: one question, then nothing.
 @junit | federation-inbox-remote-unsolicited | 1 | 0 | 0 | 0 | 1
+# Reporting a note from elsewhere with forwarding on: the report as usual (subject, open report,
+# insert), then after commit the note and its account, and a Flag from this server's own actor to
+# that server (dedupe, insert) — the reporter is never named there.
+@junit | federation-remote-note-report | 5 | 2 | 0 | 0 | 7
 # A member likes, boosts and answers a note from elsewhere; each reaches its author's server. After
 # the member's own work: their actor (user, preference, actor), the note and its account, then the
 # delivery (dedupe check, insert). A boost and a reply also go to the member's followers' servers.
