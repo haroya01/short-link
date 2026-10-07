@@ -6,6 +6,8 @@ public enum UserErrorCode {
   USER_NOT_FOUND(HttpStatus.NOT_FOUND, "user not found"),
   CANNOT_FOLLOW_SELF(HttpStatus.BAD_REQUEST, "cannot follow yourself"),
   CANNOT_BLOCK_SELF(HttpStatus.BAD_REQUEST, "cannot block yourself"),
+  CANNOT_MUTE_SELF(HttpStatus.BAD_REQUEST, "cannot mute yourself"),
+  MUTE_DURATION_INVALID(HttpStatus.BAD_REQUEST, "a mute lasts from a minute to a year, or forever"),
   INVALID_REFRESH_TOKEN(HttpStatus.UNAUTHORIZED, "invalid or expired refresh token"),
   INVALID_EXCHANGE_CODE(HttpStatus.UNAUTHORIZED, "invalid or expired exchange code"),
   INVALID_TIMEZONE(HttpStatus.BAD_REQUEST, "Invalid timezone: %s"),

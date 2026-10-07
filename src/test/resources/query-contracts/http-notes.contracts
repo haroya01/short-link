@@ -145,3 +145,15 @@
 @junit | note-poll-vote-own | 1 | 0 | 0 | 0 | 1
 @junit | note-poll-vote-ended | 1 | 0 | 0 | 0 | 1
 @junit | note-thread-poll | 6 | 0 | 0 | 0 | 6
+# Mutes (Mastodon's, account-level like blocks). Muting reads the person and the existing row, then
+# inserts or updates; unmuting deletes it. Shared lists (all notes, trending, tags, the following
+# feed, lists, a thread's replies, quotes) keep out authors blocked either way or muted, inside
+# their one query, so they cost what they did. A muted person's reply stops at the notice check,
+# which asks block-or-muted-notices in the one statement the block check was.
+@junit | user-mute | 2 | 1 | 0 | 0 | 3
+@junit | user-mute-status | 2 | 0 | 0 | 0 | 2
+@junit | user-mutes | 2 | 0 | 0 | 0 | 2
+@junit | note-everyone-muted | 6 | 0 | 0 | 0 | 6
+@junit | note-reply-muted | 7 | 1 | 0 | 0 | 8
+@junit | note-thread-muted | 6 | 0 | 0 | 0 | 6
+@junit | user-unmute | 2 | 0 | 0 | 1 | 3

@@ -6,6 +6,7 @@ import com.example.short_link.note.domain.NoteListSummary;
 import com.example.short_link.note.domain.repository.NoteListRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -132,13 +133,12 @@ class NoteListRepositoryAdapter implements NoteListRepository {
                 + " WHERE f.follower_id = :viewer AND f.following_id = n.user_id))"
                 + " OR EXISTS (SELECT 1 FROM note_recipient r"
                 + " WHERE r.note_id = n.id AND r.user_id = :viewer))"
-                + " AND NOT EXISTS (SELECT 1 FROM user_block b"
-                + " WHERE (b.blocker_id = :viewer AND b.blocked_id = n.user_id)"
-                + " OR (b.blocker_id = n.user_id AND b.blocked_id = :viewer))"
+                + NoteRepositoryAdapter.heard("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("list", listId)
         .setParameter("viewer", viewerId)
+        .setParameter("now", Instant.now())
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();

@@ -21,7 +21,7 @@ public interface NoteRepository {
 
   void delete(NoteEntity note);
 
-  List<NoteEntity> topLevel(int offset, int limit);
+  List<NoteEntity> topLevel(Long viewerId, int offset, int limit);
 
   List<NoteEntity> topLevelByAuthor(Long authorId, Long viewerId, int offset, int limit);
 
@@ -31,19 +31,19 @@ public interface NoteRepository {
 
   List<NoteEntity> direct(Long viewerId, int offset, int limit);
 
-  List<NoteEntity> trending(int offset, int limit);
+  List<NoteEntity> trending(Long viewerId, int offset, int limit);
 
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
-  List<NoteEntity> replies(Long noteId, int limit);
+  List<NoteEntity> replies(Long noteId, Long viewerId, int limit);
 
   Map<Long, NoteStats> stats(Collection<Long> noteIds);
 
   NoteViewerMarks viewerMarks(Long userId, Collection<Long> noteIds);
 
-  List<NoteEntity> quotesOf(Long noteId, int offset, int limit);
+  List<NoteEntity> quotesOf(Long noteId, Long viewerId, int offset, int limit);
 
-  List<NoteEntity> tagged(String tag, int offset, int limit);
+  List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit);
 
   long countPinned(Long userId);
 

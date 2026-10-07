@@ -81,8 +81,8 @@ class NoteNotificationListenerTest {
   }
 
   @Test
-  void yourOwnActionsAndPeopleYouBlockedNeverNotify() {
-    when(blocks.isBlocked(9L, 3L)).thenReturn(true);
+  void yourOwnActionsAndPeopleYouBlockedOrMutedNeverNotify() {
+    when(blocks.silences(9L, 3L)).thenReturn(true);
 
     listener()
         .onNoteInteraction(
@@ -111,9 +111,9 @@ class NoteNotificationListenerTest {
   }
 
   @Test
-  void anEndedPollTellsItsAuthorAndEveryVoterWhoHasNotBlockedThem() {
-    when(blocks.isBlocked(10L, 7L)).thenReturn(false);
-    when(blocks.isBlocked(11L, 7L)).thenReturn(true);
+  void anEndedPollTellsItsAuthorAndEveryVoterWhoHasNotSilencedThem() {
+    when(blocks.silences(10L, 7L)).thenReturn(false);
+    when(blocks.silences(11L, 7L)).thenReturn(true);
 
     listener().onPollEnded(new NotePollEndedEvent(5L, 7L, "어디서 볼까?", List.of(7L, 10L, 11L)));
 

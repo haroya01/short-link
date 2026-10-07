@@ -4,4 +4,7 @@ package com.example.short_link.common.user;
 public interface UserBlockChecker {
 
   boolean isBlocked(Long blockerId, Long blockedId);
+
+  // The recipient blocked the actor, or muted them with their notices.
+  boolean silences(Long recipientId, Long actorId);
 }

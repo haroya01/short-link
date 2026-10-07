@@ -10,6 +10,7 @@ import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
+import com.example.short_link.user.domain.repository.MuteRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.domain.repository.WebPushSubscriptionRepository;
 import com.example.short_link.user.exception.UserErrorCode;
@@ -33,6 +34,7 @@ public class UserDeletionService {
   private final ClickEventRepository clickEventRepository;
   private final FollowRepository followRepository;
   private final BlockRepository blockRepository;
+  private final MuteRepository muteRepository;
   private final WebPushSubscriptionRepository webPushSubscriptionRepository;
   private final List<UserDataEraser> userDataErasers;
   private final RefreshTokenStore refreshTokenStore;
@@ -72,6 +74,7 @@ public class UserDeletionService {
     userDataErasers.forEach(eraser -> eraser.eraseFor(userId));
     followRepository.deleteAllInvolving(userId);
     blockRepository.deleteAllInvolving(userId);
+    muteRepository.deleteAllInvolving(userId);
     // Web-push subscriptions have no users FK, so delete their endpoint and keys explicitly.
     webPushSubscriptionRepository.deleteByUserId(userId);
 
