@@ -233,6 +233,12 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
             Map.of("body", "결말 이야기", "contentWarning", ""),
             200);
     assertThat(edited.path("contentWarning").isNull()).isTrue();
+
+    var history =
+        step("note-history", "GET", "/api/v1/public/notes/" + noteId + "/history", null, null, 200);
+    assertThat(history.path("versions")).hasSize(2);
+    assertThat(history.path("versions").get(0).path("contentWarning").isNull()).isTrue();
+    assertThat(history.path("versions").get(1).path("contentWarning").asText()).isEqualTo("스포일러");
   }
 
   @Test

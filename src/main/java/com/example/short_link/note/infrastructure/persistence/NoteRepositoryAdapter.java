@@ -1,8 +1,10 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.note.domain.NoteEditEntity;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteStats;
+import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import jakarta.persistence.EntityManager;
@@ -287,6 +289,24 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setParameter("note", noteId)
         .executeUpdate();
     tag(noteId, tags);
+  }
+
+  @Override
+  public void recordVersion(Long noteId, NoteVersion version) {
+    em.persist(new NoteEditEntity(noteId, version));
+  }
+
+  @Override
+  public List<NoteVersion> versions(Long noteId) {
+    return em
+        .createQuery(
+            "select e from NoteEditEntity e where e.noteId = :note order by e.id desc",
+            NoteEditEntity.class)
+        .setParameter("note", noteId)
+        .getResultList()
+        .stream()
+        .map(NoteEditEntity::version)
+        .toList();
   }
 
   @Override

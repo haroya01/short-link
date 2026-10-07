@@ -139,6 +139,31 @@ public class NoteQueryService {
     return new NoteFeedView(items, safePage, hasNext);
   }
 
+  // Mastodon's edit history: the note as it reads now, then each earlier version, newest first.
+  @Transactional(readOnly = true)
+  public NoteHistoryView history(Long noteId) {
+    NoteEntity note =
+        notes
+            .findById(noteId)
+            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
+    if (people.activeAuthors(Set.of(note.getUserId())).isEmpty()) {
+      throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
+    }
+    List<NoteHistoryView.Version> versions = new ArrayList<>();
+    versions.add(
+        new NoteHistoryView.Version(
+            note.getBody(),
+            note.getContentWarning(),
+            note.isSensitive(),
+            note.getEditedAt() == null ? note.getCreatedAt() : note.getEditedAt()));
+    for (var earlier : notes.versions(noteId)) {
+      versions.add(
+          new NoteHistoryView.Version(
+              earlier.body(), earlier.contentWarning(), earlier.sensitive(), earlier.at()));
+    }
+    return new NoteHistoryView(noteId, versions);
+  }
+
   @Transactional(readOnly = true)
   public NoteThreadView thread(Long noteId, Long viewerId) {
     NoteEntity note =

@@ -3,6 +3,7 @@ package com.example.short_link.note.domain.repository;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteStats;
+import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import java.util.Collection;
 import java.util.List;
@@ -38,6 +39,10 @@ public interface NoteRepository {
   List<NoteEntity> tagged(String tag, int offset, int limit);
 
   long countPinned(Long userId);
+
+  void recordVersion(Long noteId, NoteVersion version);
+
+  List<NoteVersion> versions(Long noteId);
 
   List<Long> pinnedIds(Long userId);
 
