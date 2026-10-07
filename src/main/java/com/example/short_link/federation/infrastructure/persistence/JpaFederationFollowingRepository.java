@@ -21,6 +21,11 @@ public interface JpaFederationFollowingRepository
 
   List<FederationFollowingEntity> findByUserId(Long userId);
 
+  @Query(
+      "select count(f) > 0 from FederationFollowingEntity f, RemoteActorEntity r"
+          + " where r.id = f.remoteActorId and r.actorUri = :actorUri and f.acceptedAt is not null")
+  boolean anyAcceptedFollowOf(@Param("actorUri") String actorUri);
+
   @Modifying
   @Query("delete from FederationFollowingEntity f where f.userId = :userId")
   int deleteAllForUser(@Param("userId") Long userId);

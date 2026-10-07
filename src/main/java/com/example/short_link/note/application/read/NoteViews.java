@@ -56,33 +56,39 @@ public class NoteViews {
             .collect(Collectors.toSet());
     List<NoteEntity> quotedNotes =
         quotedNoteIds.isEmpty() ? List.of() : notes.findAllByIdIn(quotedNoteIds);
-    Set<Long> authorIds = page.stream().map(NoteEntity::getUserId).collect(Collectors.toSet());
-    quotedNotes.forEach(quotedNote -> authorIds.add(quotedNote.getUserId()));
+    Set<Long> authorIds = new HashSet<>();
+    Set<Long> remoteIds = new HashSet<>();
+    for (NoteEntity note : page) {
+      collectAuthor(note, authorIds, remoteIds);
+    }
+    quotedNotes.forEach(quotedNote -> collectAuthor(quotedNote, authorIds, remoteIds));
     Set<String> handles =
         page.stream()
             .flatMap(note -> Mentions.of(note.getBody()).stream())
             .collect(Collectors.toSet());
-    Map<Long, NoteAuthor> authors =
+    Map<Long, NoteAuthor> members =
         handles.isEmpty()
             ? people.activeAuthors(authorIds)
             : people.activeAuthors(authorIds, handles);
-    Set<String> members =
-        authors.values().stream().map(NoteAuthor::username).collect(Collectors.toSet());
+    Set<String> memberNames =
+        members.values().stream().map(NoteAuthor::username).collect(Collectors.toSet());
+    Authors authors =
+        new Authors(members, remoteIds.isEmpty() ? Map.of() : people.remoteAuthors(remoteIds));
     Set<Long> restricted = new HashSet<>();
     for (NoteEntity note : page) {
-      if (note.getVisibility().restricted() && !note.getUserId().equals(viewerId)) {
+      if (note.getVisibility().restricted() && !note.isOwnedBy(viewerId)) {
         restricted.add(note.getId());
       }
     }
     for (NoteEntity quoted : quotedNotes) {
-      if (quoted.getVisibility().restricted() && !quoted.getUserId().equals(viewerId)) {
+      if (quoted.getVisibility().restricted() && !quoted.isOwnedBy(viewerId)) {
         restricted.add(quoted.getId());
       }
     }
     Set<Long> allowed = notes.visibleTo(viewerId, restricted);
     List<NoteEntity> visible =
         page.stream()
-            .filter(note -> authors.containsKey(note.getUserId()))
+            .filter(note -> authors.of(note) != null)
             .filter(note -> !restricted.contains(note.getId()) || allowed.contains(note.getId()))
             .toList();
     if (visible.isEmpty()) {
@@ -91,7 +97,7 @@ public class NoteViews {
     List<Long> ids = visible.stream().map(NoteEntity::getId).toList();
     Map<Long, NoteEntity> quotedById =
         quotedNotes.stream()
-            .filter(quotedNote -> authors.containsKey(quotedNote.getUserId()))
+            .filter(quotedNote -> authors.of(quotedNote) != null)
             .filter(
                 quotedNote ->
                     !restricted.contains(quotedNote.getId())
@@ -122,7 +128,7 @@ public class NoteViews {
               note.getEditedAt(),
               counts.likes(),
               viewerId == null ? null : marks.liked().contains(note.getId()),
-              authors.get(note.getUserId()),
+              authors.of(note),
               images.getOrDefault(note.getId(), List.of()),
               note.getQuotedPostId() == null ? null : posts.get(note.getQuotedPostId()),
               note.getInReplyToId(),
@@ -134,7 +140,7 @@ public class NoteViews {
               null,
               counts.quotes(),
               viewerId == null ? null : marks.bookmarked().contains(note.getId()),
-              Mentions.of(note.getBody()).stream().filter(members::contains).toList(),
+              Mentions.of(note.getBody()).stream().filter(memberNames::contains).toList(),
               note.getContentWarning(),
               note.isSensitive(),
               note.isPinned(),
@@ -183,8 +189,22 @@ public class NoteViews {
     return cards;
   }
 
+  private static void collectAuthor(NoteEntity note, Set<Long> authorIds, Set<Long> remoteIds) {
+    if (note.isRemote()) {
+      remoteIds.add(note.getRemoteActorId());
+    } else {
+      authorIds.add(note.getUserId());
+    }
+  }
+
+  private record Authors(Map<Long, NoteAuthor> members, Map<Long, NoteAuthor> remote) {
+    NoteAuthor of(NoteEntity note) {
+      return note.isRemote() ? remote.get(note.getRemoteActorId()) : members.get(note.getUserId());
+    }
+  }
+
   private static NoteView.QuotedNote quotedNote(
-      NoteEntity quoted, Map<Long, NoteAuthor> authors, Map<Long, List<NoteView.Media>> images) {
+      NoteEntity quoted, Authors authors, Map<Long, List<NoteView.Media>> images) {
     if (quoted == null) {
       return null;
     }
@@ -192,7 +212,7 @@ public class NoteViews {
         quoted.getId(),
         quoted.getBody(),
         quoted.getCreatedAt(),
-        authors.get(quoted.getUserId()),
+        authors.of(quoted),
         images.getOrDefault(quoted.getId(), List.of()),
         quoted.getContentWarning(),
         quoted.isSensitive());

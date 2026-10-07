@@ -5,6 +5,8 @@ import com.example.short_link.note.domain.NoteFeedRow;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
+import com.example.short_link.note.domain.RemoteNoteRow;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +42,22 @@ public interface NoteRepository {
   Map<Long, NoteStats> stats(Collection<Long> noteIds);
 
   NoteViewerMarks viewerMarks(Long userId, Collection<Long> noteIds);
+
+  List<NoteEntity> byRemoteActor(Long remoteActorId, Long viewerId, int offset, int limit);
+
+  Optional<Long> idByUri(String uri);
+
+  Optional<Long> insertRemote(RemoteNoteRow row);
+
+  int reviseRemote(
+      Long remoteActorId,
+      String uri,
+      String body,
+      String contentWarning,
+      boolean sensitive,
+      Instant editedAt);
+
+  int deleteRemote(Long remoteActorId, String uri);
 
   List<NoteEntity> quotesOf(Long noteId, Long viewerId, int offset, int limit);
 

@@ -43,6 +43,15 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
+  public NoteFeedView byRemoteActor(Long remoteActorId, int page, int size, Long viewerId) {
+    return page(
+        page,
+        size,
+        viewerId,
+        (offset, limit) -> notes.byRemoteActor(remoteActorId, viewerId, offset, limit));
+  }
+
+  @Transactional(readOnly = true)
   public NoteFeedView direct(Long viewerId, int page, int size) {
     return page(page, size, viewerId, (offset, limit) -> notes.direct(viewerId, offset, limit));
   }
@@ -167,7 +176,7 @@ public class NoteQueryService {
         notes
             .findById(noteId)
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
-    if (people.activeAuthors(Set.of(note.getUserId())).isEmpty()
+    if ((!note.isRemote() && people.activeAuthors(Set.of(note.getUserId())).isEmpty())
         || (note.getVisibility().restricted()
             && !note.isOwnedBy(viewerId)
             && !notes.visibleTo(viewerId, Set.of(noteId)).contains(noteId))) {

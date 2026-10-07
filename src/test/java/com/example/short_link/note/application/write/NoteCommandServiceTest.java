@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import org.assertj.core.api.ThrowableAssert.ThrowingCallable;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -324,6 +325,31 @@ class NoteCommandServiceTest {
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_INTERACTION_BLOCKED));
     verify(reposts, never()).addIfAbsent(any(), any());
+  }
+
+  @Test
+  void aNoteFromAnotherServerIsLikedAndKeptButNotRepliedRepostedOrQuotedYet() {
+    NoteEntity remote = note(1L, null, "from afar");
+    ReflectionTestUtils.setField(remote, "remoteActorId", 42L);
+    when(notes.findById(1L)).thenReturn(Optional.of(remote));
+    when(likes.addIfAbsent(1L, 8L)).thenReturn(true);
+    when(notes.stats(List.of(1L))).thenReturn(Map.of());
+
+    assertThat(service().setLike(8L, 1L, true).liked()).isTrue();
+    assertThat(service().setBookmark(8L, 1L, true).bookmarked()).isTrue();
+    for (ThrowingCallable attempt :
+        List.<ThrowingCallable>of(
+            () -> service().setRepost(8L, 1L, true),
+            () -> service().create(8L, new NoteDraft("hi", null, null, 1L, null)),
+            () -> service().create(8L, new NoteDraft("hi", null, null, null, 1L)))) {
+      assertThatThrownBy(attempt)
+          .isInstanceOfSatisfying(
+              NoteException.class,
+              e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REMOTE_UNSUPPORTED));
+    }
+    verify(reposts, never()).addIfAbsent(any(), any());
+    verify(notes, never()).save(any());
+    verifyNoInteractions(blocks);
   }
 
   @Test

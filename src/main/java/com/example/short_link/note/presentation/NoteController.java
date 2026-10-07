@@ -66,6 +66,15 @@ public class NoteController {
     return query.search(q, page, size, viewerId);
   }
 
+  @GetMapping("/api/v1/federation/accounts/{id}/notes")
+  public NoteFeedView remoteAccountNotes(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable Long id,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.byRemoteActor(id, page, size, viewerId);
+  }
+
   @GetMapping("/api/v1/public/notes/{id}/history")
   public NoteHistoryView history(@AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
     return query.history(id, viewerId);

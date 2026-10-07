@@ -260,6 +260,147 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void aFollowedMastodonAccountsNotesReachTheFollowingFeedAndRepliesTheThread() throws Exception {
+    String host = URI.create(remote).getHost();
+    Long aliceId =
+        jdbc.queryForObject(
+            "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
+    jdbc.update(
+        "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+        owner.getId(),
+        aliceId,
+        urls.actor(target.publicId()) + "#follows/seed");
+    String status = alice + "/statuses/1";
+    Map<String, Object> note = new LinkedHashMap<>();
+    note.put("id", status);
+    note.put("type", "Note");
+    note.put("attributedTo", alice);
+    note.put("url", remote + "/@alice/1");
+    note.put(
+        "content",
+        "<p>hello <a href=\""
+            + remote
+            + "/tags/cats\" class=\"mention hashtag\">#<span>cats</span></a></p>");
+    note.put("published", "2026-10-07T00:00:00Z");
+    note.put("to", List.of("https://www.w3.org/ns/activitystreams#Public"));
+    note.put("cc", List.of(alice + "/followers"));
+    note.put(
+        "attachment",
+        List.of(
+            Map.of(
+                "type", "Document",
+                "mediaType", "image/png",
+                "url", remote + "/media/1.png",
+                "name", "a cat")));
+    post(
+        "federation-inbox-remote-note",
+        "/ap/inbox",
+        activity(status + "/activity", "Create", note),
+        202);
+    Long noteId = jdbc.queryForObject("SELECT id FROM note WHERE uri = ?", Long.class, status);
+
+    var following =
+        body(call("notes-following-remote", "GET", "/api/v1/notes/following", null, token, 200));
+    var first = following.path("items").get(0);
+    assertThat(first.path("id").asLong()).isEqualTo(noteId);
+    assertThat(first.path("body").asString()).isEqualTo("hello #cats");
+    assertThat(first.path("author").path("username").asString()).isEqualTo("alice@" + host);
+    assertThat(first.path("author").path("remoteId").asLong()).isEqualTo(aliceId);
+    assertThat(first.path("media").get(0).path("altText").asString()).isEqualTo("a cat");
+    assertThat(
+            body(call(
+                    "federation-remote-notes",
+                    "GET",
+                    "/api/v1/federation/accounts/" + aliceId + "/notes",
+                    null,
+                    token,
+                    200))
+                .path("items")
+                .get(0)
+                .path("id")
+                .asLong())
+        .isEqualTo(noteId);
+    assertThat(
+            body(
+                    call(
+                        "notes-everyone-without-remote",
+                        "GET",
+                        "/api/v1/public/notes",
+                        null,
+                        null,
+                        200))
+                .path("items")
+                .findValues("id")
+                .stream()
+                .map(id -> id.asLong())
+                .toList())
+        .doesNotContain(noteId);
+
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at) VALUES (?, 'a question', NOW(6))",
+        owner.getId());
+    Long mine =
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, owner.getId());
+    Map<String, Object> reply = new LinkedHashMap<>(note);
+    reply.put("id", alice + "/statuses/2");
+    reply.put("inReplyTo", urls.note(mine));
+    reply.put("content", "<p>an answer</p>");
+    reply.remove("attachment");
+    post(
+        "federation-inbox-remote-reply",
+        "/ap/inbox",
+        activity(alice + "/statuses/2/activity", "Create", reply),
+        202);
+    var thread =
+        body(
+            call(
+                "notes-thread-remote-reply",
+                "GET",
+                "/api/v1/public/notes/" + mine,
+                null,
+                null,
+                200));
+    assertThat(thread.path("replies").get(0).path("body").asString()).isEqualTo("an answer");
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? AND type = 'NOTE_REPLY'",
+                owner.getId()))
+        .isEqualTo(1);
+
+    Map<String, Object> edited = new LinkedHashMap<>(note);
+    edited.put("content", "<p>hello again</p>");
+    edited.put("updated", "2026-10-07T01:00:00Z");
+    post(
+        "federation-inbox-remote-update",
+        "/ap/inbox",
+        activity(status + "#updates/1", "Update", edited),
+        202);
+    assertThat(jdbc.queryForObject("SELECT body FROM note WHERE id = ?", String.class, noteId))
+        .isEqualTo("hello again");
+
+    post(
+        "federation-inbox-remote-delete",
+        "/ap/inbox",
+        activity(status + "#delete", "Delete", Map.of("id", status, "type", "Tombstone")),
+        202);
+    assertThat(count("SELECT COUNT(*) FROM note WHERE id = ?", noteId)).isZero();
+
+    jdbc.update("DELETE FROM federation_following WHERE user_id = ?", owner.getId());
+    Map<String, Object> unasked = new LinkedHashMap<>(note);
+    unasked.put("id", alice + "/statuses/3");
+    post(
+        "federation-inbox-remote-unsolicited",
+        "/ap/inbox",
+        activity(alice + "/statuses/3/activity", "Create", unasked),
+        202);
+    assertThat(count("SELECT COUNT(*) FROM note WHERE uri = ?", alice + "/statuses/3")).isZero();
+    jdbc.update("DELETE FROM note WHERE remote_actor_id = ?", aliceId);
+    jdbc.update("DELETE FROM note WHERE id = ?", mine);
+  }
+
+  @Test
   void aMastodonAccountVotesInAPollAndTheQuestionCountsItOnce() throws Exception {
     jdbc.update(
         "INSERT INTO note (user_id, body, created_at, poll_options, poll_expires_at)"

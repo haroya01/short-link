@@ -20,4 +20,6 @@ public interface FederationFollowingRepository {
   List<FederationFollowingEntity> allForUser(Long userId);
 
   int deleteAllForUser(Long userId);
+
+  boolean anyAcceptedFollowOf(String actorUri);
 }

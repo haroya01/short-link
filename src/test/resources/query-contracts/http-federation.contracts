@@ -115,3 +115,21 @@
 @junit | federation-remote-account | 2 | 0 | 0 | 0 | 2
 # Unfollow: the account, the follow, the member's actor for the Undo, its delivery, the row.
 @junit | federation-remote-unfollow | 4 | 1 | 0 | 1 | 6
+# Notes from an account a member follows. Before the key: is anyone following it. Then the key,
+# INSERT IGNORE on the note's uri, its id, and its image (the address stays on its server).
+@junit | federation-inbox-remote-note | 3 | 2 | 0 | 0 | 5
+# The following feed carries it: a page of only remote notes reads their accounts, never users.
+@junit | notes-following-remote | 6 | 0 | 0 | 0 | 6
+@junit | federation-remote-notes | 5 | 0 | 0 | 0 | 5
+# All notes stays kurl's own (remote_actor_id IS NULL), the same four queries as before.
+@junit | notes-everyone-without-remote | 4 | 0 | 0 | 0 | 4
+# A reply to a member's note is wanted from anyone: the target is checked with the note document's
+# rule (note, author, images, user, preference, actor), then the key, the parent, the insert and its
+# id; the author hears of it (preference, notification, recipient, remote actor).
+@junit | federation-inbox-remote-reply | 12 | 2 | 0 | 0 | 14
+@junit | notes-thread-remote-reply | 6 | 0 | 0 | 0 | 6
+# Edits and deletes first ask whether we kept that note, so others never cost a key fetch.
+@junit | federation-inbox-remote-update | 2 | 0 | 1 | 0 | 3
+@junit | federation-inbox-remote-delete | 2 | 0 | 0 | 1 | 3
+# A note no member follows, answers or is named in: one question, then nothing.
+@junit | federation-inbox-remote-unsolicited | 1 | 0 | 0 | 0 | 1

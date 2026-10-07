@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -13,25 +14,30 @@ import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.RemoteNotePollVotes;
 import com.example.short_link.common.note.RemoteNoteReactions;
 import com.example.short_link.common.note.RemoteNoteReactions.Kind;
+import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationFollowers;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.application.RemoteFollowing;
+import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
+import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -53,8 +59,13 @@ class InboxServiceTest {
   @Mock private NoteSnapshotReader notes;
   @Mock private RemoteNoteReactions reactions;
   @Mock private RemoteNotePollVotes votes;
+  @Mock private RemoteNotes remoteNotes;
+  @Mock private FederationFollowingRepository followingRows;
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
+
+  private static final FederationUrls URLS =
+      new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me"));
 
   private InboxService service() {
     return new InboxService(
@@ -66,7 +77,10 @@ class InboxServiceTest {
         notes,
         reactions,
         votes,
-        new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
+        remoteNotes,
+        new RemoteNoteParser(URLS),
+        followingRows,
+        URLS,
         JsonMapper.builder().build(),
         meters);
   }
@@ -593,12 +607,13 @@ class InboxServiceTest {
   }
 
   @Test
-  void aCreateThatIsNotAVoteOnOurNoteIsAcknowledgedWithoutAKeyFetch() {
+  void aCreateNoOneHereAskedForIsAcknowledgedWithoutAKeyFetch() {
     when(notes.find(2L)).thenReturn(Optional.empty());
+    when(notes.find(1L)).thenReturn(Optional.empty());
     InboxService service = service();
 
     assertThat(service.receive(request(vote("https://mastodon.example/v/1", null, NOTE_URI)), null))
-        .isEqualTo(InboxOutcome.ignored("unsupported"));
+        .isEqualTo(InboxOutcome.ignored("unsolicited"));
     assertThat(
             service.receive(
                 request(
@@ -607,7 +622,7 @@ class InboxServiceTest {
                         "강남",
                         "https://mastodon.example/statuses/1")),
                 null))
-        .isEqualTo(InboxOutcome.ignored("unsupported"));
+        .isEqualTo(InboxOutcome.ignored("unsolicited"));
     assertThat(
             service.receive(
                 request(
@@ -623,5 +638,123 @@ class InboxServiceTest {
                 null))
         .isEqualTo(InboxOutcome.ignored("unknown-target"));
     verifyNoInteractions(verifier, votes);
+  }
+
+  private static String note(String id, String extra) {
+    return activity(
+        id + "/activity",
+        "Create",
+        """
+        {"id":"%s","type":"Note","attributedTo":"%s","published":"2026-10-07T01:00:00Z",
+         "content":"<p>hi <span class=\\"h-card\\"><a href=\\"https://other.example/@bob\\" class=\\"u-url mention\\">@<span>bob</span></a></span></p><p>bye</p>",
+         "to":["https://www.w3.org/ns/activitystreams#Public"],"cc":["%s/followers"]%s}"""
+            .formatted(id, ALICE, ALICE, extra));
+  }
+
+  @Test
+  void aNoteFromAnAccountSomeoneFollowsIsStoredAsPlainText() {
+    when(followingRows.anyAcceptedFollowOf(ALICE)).thenReturn(true);
+    verifiedAs(ALICE_ACTOR);
+    when(remoteNotes.receive(any())).thenReturn(Optional.of(500L), Optional.empty());
+    InboxService service = service();
+
+    assertThat(service.receive(request(note(ALICE + "/statuses/9", "")), null))
+        .isEqualTo(InboxOutcome.accepted("note"));
+    assertThat(service.receive(request(note(ALICE + "/statuses/9", "")), null))
+        .isEqualTo(InboxOutcome.ignored("duplicate"));
+
+    ArgumentCaptor<RemoteNotes.Received> received =
+        ArgumentCaptor.forClass(RemoteNotes.Received.class);
+    verify(remoteNotes, times(2)).receive(received.capture());
+    RemoteNotes.Received first = received.getAllValues().get(0);
+    assertThat(first.remoteActorId()).isEqualTo(42L);
+    assertThat(first.uri()).isEqualTo(ALICE + "/statuses/9");
+    assertThat(first.body()).isEqualTo("hi @bob@other.example\n\nbye");
+    assertThat(first.visibility()).isEqualTo("public");
+    assertThat(first.publishedAt()).isEqualTo(Instant.parse("2026-10-07T01:00:00Z"));
+    assertThat(first.addressedUserIds()).isEmpty();
+  }
+
+  @Test
+  void aReplyToOurNoteThatNamesAMemberIsStoredFromAnyone() {
+    verifiedAs(ALICE_ACTOR);
+    when(actorRows.findByPublicIds(Set.of("owner1")))
+        .thenReturn(List.of(new FederationActorEntity(7L, "owner1", "PUB", "enc")));
+    when(remoteNotes.receive(any())).thenReturn(Optional.of(501L));
+
+    var outcome =
+        service()
+            .receive(
+                request(
+                    note(
+                        ALICE + "/statuses/10",
+                        ",\"inReplyTo\":\"%s\",\"tag\":[{\"type\":\"Mention\",\"href\":\"%s\"}]"
+                            .formatted(NOTE_URI, OWNER_URI))),
+                null);
+
+    assertThat(outcome).isEqualTo(InboxOutcome.accepted("note"));
+    ArgumentCaptor<RemoteNotes.Received> received =
+        ArgumentCaptor.forClass(RemoteNotes.Received.class);
+    verify(remoteNotes).receive(received.capture());
+    assertThat(received.getValue().inReplyToLocalId()).isEqualTo(1L);
+    assertThat(received.getValue().addressedUserIds()).containsExactly(7L);
+    verify(followingRows, never()).anyAcceptedFollowOf(any());
+  }
+
+  @Test
+  void aNoteWhoseIdOrAuthorIsSomeoneElseIsNotStored() {
+    when(followingRows.anyAcceptedFollowOf(ALICE)).thenReturn(true);
+    verifiedAs(ALICE_ACTOR);
+
+    assertThat(service().receive(request(note("https://elsewhere.example/s/1", "")), null))
+        .isEqualTo(InboxOutcome.ignored("foreign-id"));
+    String borrowed =
+        activity(
+            ALICE + "/statuses/11/activity",
+            "Create",
+            "{\"id\":\"%s/statuses/11\",\"type\":\"Note\",\"attributedTo\":\"https://x.example/u/b\"}"
+                .formatted(ALICE));
+    assertThat(service().receive(request(borrowed), null))
+        .isEqualTo(InboxOutcome.ignored("unsupported"));
+    verify(remoteNotes, never()).receive(any());
+  }
+
+  @Test
+  void anEditOrDeleteOfANoteWeKeptChangesIt() {
+    String uri = ALICE + "/statuses/9";
+    when(remoteNotes.exists(uri)).thenReturn(true);
+    verifiedAs(ALICE_ACTOR);
+    when(remoteNotes.revise(42L, uri, "edited", null, false, Instant.parse("2026-10-07T02:00:00Z")))
+        .thenReturn(true);
+    when(remoteNotes.retract(42L, uri)).thenReturn(true, false);
+    InboxService service = service();
+
+    String update =
+        activity(
+            uri + "#updates/1",
+            "Update",
+            "{\"id\":\"%s\",\"type\":\"Note\",\"attributedTo\":\"%s\",\"content\":\"<p>edited</p>\",\"updated\":\"2026-10-07T02:00:00Z\"}"
+                .formatted(uri, ALICE));
+    assertThat(service.receive(request(update), null)).isEqualTo(InboxOutcome.accepted("update"));
+
+    String delete =
+        activity(
+            uri + "#delete", "Delete", "{\"id\":\"%s\",\"type\":\"Tombstone\"}".formatted(uri));
+    assertThat(service.receive(request(delete), null)).isEqualTo(InboxOutcome.accepted("delete"));
+    assertThat(service.receive(request(delete), null))
+        .isEqualTo(InboxOutcome.ignored("unknown-note"));
+  }
+
+  @Test
+  void anEditOfANoteWeNeverKeptIsAcknowledgedWithoutAKeyFetch() {
+    String update =
+        activity(
+            ALICE + "/statuses/77#updates/1",
+            "Update",
+            "{\"id\":\"%s/statuses/77\",\"type\":\"Note\",\"attributedTo\":\"%s\"}"
+                .formatted(ALICE, ALICE));
+    assertThat(service().receive(request(update), null))
+        .isEqualTo(InboxOutcome.ignored("unknown-note"));
+    verifyNoInteractions(verifier);
   }
 }
