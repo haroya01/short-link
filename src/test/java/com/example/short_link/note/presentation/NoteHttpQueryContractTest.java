@@ -954,6 +954,64 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     }
   }
 
+  @Test
+  void aLinkTwoMembersSharedThisWeekTrendsAndOpensTheNotesThatCarriedIt() throws Exception {
+    Actor first = actor("link-a", false);
+    Actor second = actor("link-b", false);
+    String url = "https://example.com/" + UUID.randomUUID().toString().substring(0, 8);
+    String lonely = url + "/solo";
+    List<Long> ids = new ArrayList<>();
+    ids.add(noteAt(first, "읽어 볼 것 " + url, 60 * 60));
+    ids.add(noteAt(second, "이것도 " + url, 10));
+    for (long id : ids) {
+      jdbc.update(
+          "INSERT INTO note_link_preview (note_id, url, title, fetched_at)"
+              + " VALUES (?, ?, 'A long read', NOW(6))",
+          id,
+          url);
+    }
+    long solo = noteAt(first, lonely, 3);
+    jdbc.update(
+        "INSERT INTO note_link_preview (note_id, url, title, fetched_at) VALUES (?, ?, 'Solo', NOW(6))",
+        solo,
+        lonely);
+    ids.add(solo);
+    try {
+      var trends =
+          step(
+              "note-trending-links", "GET", "/api/v1/public/notes/trending-links", null, null, 200);
+      JsonNode mine = null;
+      List<String> urls = new ArrayList<>();
+      for (JsonNode trend : trends) {
+        urls.add(trend.path("url").asString());
+        if (trend.path("url").asString().equals(url)) {
+          mine = trend;
+        }
+      }
+      assertThat(urls).contains(url).doesNotContain(lonely);
+      assertThat(mine.path("title").asString()).isEqualTo("A long read");
+      assertThat(mine.path("accounts").asLong()).isEqualTo(2);
+      List<Long> history = new ArrayList<>();
+      mine.path("history").forEach(day -> history.add(day.asLong()));
+      assertThat(history).containsExactly(0L, 0L, 0L, 0L, 1L, 0L, 1L);
+
+      var linked =
+          step(
+              "note-linked-notes",
+              "GET",
+              "/api/v1/public/notes/links?url="
+                  + java.net.URLEncoder.encode(url, java.nio.charset.StandardCharsets.UTF_8),
+              null,
+              null,
+              200);
+      assertThat(ids(linked)).containsExactly(ids.get(1), ids.get(0));
+    } finally {
+      for (long id : ids) {
+        jdbc.update("DELETE FROM note WHERE id = ?", id);
+      }
+    }
+  }
+
   private long noteAt(Actor author, String body, int minutesAgo) {
     jdbc.update(
         "INSERT INTO note (user_id, body, created_at)"

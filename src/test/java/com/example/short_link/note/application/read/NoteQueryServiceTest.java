@@ -108,6 +108,35 @@ class NoteQueryServiceTest {
   }
 
   @Test
+  void trendingLinksAreAWeekOfCardsTwoAccountsShared() {
+    when(notes.trendingLinks(
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.eq(7),
+            org.mockito.ArgumentMatchers.eq(2),
+            org.mockito.ArgumentMatchers.eq(10)))
+        .thenReturn(
+            List.of(
+                new com.example.short_link.note.domain.TrendingLink(
+                    "https://e.com", "E", null, null, 2, 3, List.of(0L, 0L, 0L, 0L, 0L, 1L, 2L))));
+
+    assertThat(service.trendingLinks())
+        .extracting(TrendingLinkView::url, TrendingLinkView::accounts)
+        .containsExactly(org.assertj.core.groups.Tuple.tuple("https://e.com", 2L));
+  }
+
+  @Test
+  void theNotesOfALinkPageLikeAnyFeedAndABlankLinkHasNone() {
+    List<NoteEntity> two = LongStream.of(7, 8).mapToObj(id -> note(id, null)).toList();
+    when(notes.linked("https://e.com", 3L, 0, 21)).thenReturn(two);
+    when(views.of(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
+
+    assertThat(service.linked("https://e.com", 0, 20, 3L).items())
+        .extracting(NoteView::id)
+        .containsExactly(7L, 8L);
+    assertThat(service.linked(" ", 0, 20, 3L).items()).isEmpty();
+  }
+
+  @Test
   void pageAndSizeAreClamped() {
     when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
     when(views.of(List.of(), null)).thenReturn(List.of());

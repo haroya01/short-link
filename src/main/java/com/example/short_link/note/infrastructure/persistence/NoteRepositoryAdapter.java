@@ -9,6 +9,7 @@ import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.TrendingLink;
 import com.example.short_link.note.domain.TrendingTag;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import jakarta.persistence.EntityManager;
@@ -571,7 +572,92 @@ class NoteRepositoryAdapter implements NoteRepository {
   // server. Ranked by how many accounts used the tag; each day's count rides along.
   @Override
   public List<TrendingTag> trendingTags(Instant now, int days, int minAccounts, int limit) {
-    // The last day has no end: a note stamped a little ahead (another server's clock) is today's.
+    var query =
+        em.createNativeQuery(
+            "SELECT g.tag, COUNT(DISTINCT COALESCE(n.user_id, -n.remote_actor_id)) AS accounts,"
+                + " COUNT(*) AS uses"
+                + perDay(days)
+                + " FROM note_tag g JOIN note n ON n.id = g.note_id"
+                + " WHERE n.created_at >= :d0 AND n.visibility = 'PUBLIC'"
+                + trendable("n")
+                + " GROUP BY g.tag HAVING accounts >= :minAccounts"
+                + " ORDER BY accounts DESC, uses DESC, g.tag LIMIT :limit");
+    bindDays(query, now, days);
+    List<?> rows =
+        query.setParameter("minAccounts", minAccounts).setParameter("limit", limit).getResultList();
+    List<TrendingTag> tags = new ArrayList<>(rows.size());
+    for (Object raw : rows) {
+      Object[] columns = (Object[]) raw;
+      tags.add(
+          new TrendingTag(
+              (String) columns[0],
+              ((Number) columns[1]).longValue(),
+              ((Number) columns[2]).longValue(),
+              history(columns, 3, days)));
+    }
+    return tags;
+  }
+
+  // Mastodon's trending links: the link cards of public notes in the window, by how many accounts
+  // shared them. A card's title and image are the latest fetched.
+  @Override
+  public List<TrendingLink> trendingLinks(Instant now, int days, int minAccounts, int limit) {
+    var query =
+        em.createNativeQuery(
+            "SELECT p.url, MAX(p.title), MAX(p.description), MAX(p.image_url),"
+                + " COUNT(DISTINCT COALESCE(n.user_id, -n.remote_actor_id)) AS accounts,"
+                + " COUNT(*) AS uses"
+                + perDay(days)
+                + " FROM note_link_preview p JOIN note n ON n.id = p.note_id"
+                + " WHERE n.created_at >= :d0 AND n.visibility = 'PUBLIC'"
+                + trendable("n")
+                + " GROUP BY p.url HAVING accounts >= :minAccounts"
+                + " ORDER BY accounts DESC, uses DESC, p.url LIMIT :limit");
+    bindDays(query, now, days);
+    List<?> rows =
+        query.setParameter("minAccounts", minAccounts).setParameter("limit", limit).getResultList();
+    List<TrendingLink> links = new ArrayList<>(rows.size());
+    for (Object raw : rows) {
+      Object[] columns = (Object[]) raw;
+      links.add(
+          new TrendingLink(
+              (String) columns[0],
+              (String) columns[1],
+              (String) columns[2],
+              (String) columns[3],
+              ((Number) columns[4]).longValue(),
+              ((Number) columns[5]).longValue(),
+              history(columns, 6, days)));
+    }
+    return links;
+  }
+
+  // A member's public note trends; one received from elsewhere once a member liked, reposted or
+  // answered it, and never from a server moderators blocked.
+  private static String trendable(String alias) {
+    return " AND ("
+        + alias
+        + ".remote_actor_id IS NULL"
+        + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = "
+        + alias
+        + ".id)"
+        + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = "
+        + alias
+        + ".id)"
+        + " OR EXISTS (SELECT 1 FROM note mc WHERE mc.in_reply_to_id = "
+        + alias
+        + ".id"
+        + " AND mc.user_id IS NOT NULL))"
+        + " AND NOT EXISTS (SELECT 1 FROM federation_remote_actor ta"
+        + " JOIN federation_domain_block tb ON "
+        + ServerBlockSql.covers("tb", "ta.domain")
+        + " WHERE ta.id = "
+        + alias
+        + ".remote_actor_id)";
+  }
+
+  // The last day has no end: a note stamped a little ahead (another server's clock) is today's.
+  private static String perDay(int days) {
     StringBuilder perDay = new StringBuilder();
     for (int day = 0; day < days; day++) {
       perDay.append(", SUM(n.created_at >= :d").append(day);
@@ -580,45 +666,41 @@ class NoteRepositoryAdapter implements NoteRepository {
       }
       perDay.append(")");
     }
-    var query =
-        em.createNativeQuery(
-            "SELECT g.tag, COUNT(DISTINCT COALESCE(n.user_id, -n.remote_actor_id)) AS accounts,"
-                + " COUNT(*) AS uses"
-                + perDay
-                + " FROM note_tag g JOIN note n ON n.id = g.note_id"
-                + " WHERE n.created_at >= :d0 AND n.visibility = 'PUBLIC'"
-                + " AND (n.remote_actor_id IS NULL"
-                + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = n.id)"
-                + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = n.id)"
-                + " OR EXISTS (SELECT 1 FROM note mc WHERE mc.in_reply_to_id = n.id"
-                + " AND mc.user_id IS NOT NULL))"
-                + " AND NOT EXISTS (SELECT 1 FROM federation_remote_actor ta"
-                + " JOIN federation_domain_block tb ON "
-                + ServerBlockSql.covers("tb", "ta.domain")
-                + " WHERE ta.id = n.remote_actor_id)"
-                + " GROUP BY g.tag HAVING accounts >= :minAccounts"
-                + " ORDER BY accounts DESC, uses DESC, g.tag LIMIT :limit");
+    return perDay.toString();
+  }
+
+  private static void bindDays(jakarta.persistence.Query query, Instant now, int days) {
     for (int day = 0; day < days; day++) {
       query.setParameter("d" + day, now.minus(Duration.ofDays(days - day)));
     }
-    List<?> rows =
-        query.setParameter("minAccounts", minAccounts).setParameter("limit", limit).getResultList();
-    List<TrendingTag> tags = new ArrayList<>(rows.size());
-    for (Object raw : rows) {
-      Object[] columns = (Object[]) raw;
-      List<Long> history = new ArrayList<>(days);
-      for (int day = 0; day < days; day++) {
-        Object count = columns[3 + day];
-        history.add(count == null ? 0L : ((Number) count).longValue());
-      }
-      tags.add(
-          new TrendingTag(
-              (String) columns[0],
-              ((Number) columns[1]).longValue(),
-              ((Number) columns[2]).longValue(),
-              List.copyOf(history)));
+  }
+
+  private static List<Long> history(Object[] columns, int from, int days) {
+    List<Long> history = new ArrayList<>(days);
+    for (int day = 0; day < days; day++) {
+      Object count = columns[from + day];
+      history.add(count == null ? 0L : ((Number) count).longValue());
     }
-    return tags;
+    return List.copyOf(history);
+  }
+
+  // Public notes that carried the link's card, newest first, as the viewer may read them.
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> linked(String url, Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note_link_preview p JOIN note n ON n.id = p.note_id"
+                + " WHERE p.url = :url AND n.visibility = 'PUBLIC'"
+                + heardNote("n")
+                + unlimited("n")
+                + " ORDER BY n.id DESC LIMIT :limit OFFSET :offset",
+            NoteEntity.class)
+        .setParameter("url", url)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setParameter("limit", limit)
+        .setParameter("offset", offset)
+        .getResultList();
   }
 
   @Override

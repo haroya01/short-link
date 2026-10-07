@@ -85,6 +85,10 @@
 # Trending hashtags (Mastodon's): one statement — a week of public notes grouped by tag, the
 # accounts and the notes per day counted in it, blocked servers left out.
 @junit | note-trending-tags | 1 | 0 | 0 | 0 | 1
+# Trending links rank link cards the same way, in one statement. A link's notes read like a tag's
+# (notes, authors, media, stats) plus the batch of their link cards, which these notes carry.
+@junit | note-trending-links | 1 | 0 | 0 | 0 | 1
+@junit | note-linked-notes | 5 | 0 | 0 | 0 | 5
 # After commit an edit asks once who reposted or quoted the note (Mastodon's update notice). Here
 # the reader's quote is still up, so they hear of it: preference, insert, names for the push.
 @junit | note-edit | 12 | 2 | 1 | 0 | 15
