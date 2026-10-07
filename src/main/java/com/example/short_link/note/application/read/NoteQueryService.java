@@ -74,6 +74,23 @@ public class NoteQueryService {
         .toList();
   }
 
+  // Mastodon's trending links: same window and floor as hashtags.
+  @Transactional(readOnly = true)
+  public List<TrendingLinkView> trendingLinks() {
+    return notes.trendingLinks(Instant.now(), TREND_DAYS, TREND_MIN_ACCOUNTS, TREND_LIMIT).stream()
+        .map(TrendingLinkView::of)
+        .toList();
+  }
+
+  @Transactional(readOnly = true)
+  public NoteFeedView linked(String url, int page, int size, Long viewerId) {
+    if (url == null || url.isBlank()) {
+      return new NoteFeedView(List.of(), Math.max(page, 0), false);
+    }
+    return page(
+        page, size, viewerId, (offset, limit) -> notes.linked(url, viewerId, offset, limit));
+  }
+
   @Transactional(readOnly = true)
   public NoteFeedView federated(Long viewerId, int page, int size) {
     return page(page, size, viewerId, (offset, limit) -> notes.federated(viewerId, offset, limit));

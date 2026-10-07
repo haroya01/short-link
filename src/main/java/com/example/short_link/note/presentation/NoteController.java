@@ -5,6 +5,7 @@ import com.example.short_link.note.application.read.NoteHistoryView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.TrendingLinkView;
 import com.example.short_link.note.application.read.TrendingTagView;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
@@ -53,6 +54,20 @@ public class NoteController {
   @GetMapping("/api/v1/public/notes/trending-tags")
   public List<TrendingTagView> trendingTags() {
     return query.trendingTags();
+  }
+
+  @GetMapping("/api/v1/public/notes/trending-links")
+  public List<TrendingLinkView> trendingLinks() {
+    return query.trendingLinks();
+  }
+
+  @GetMapping("/api/v1/public/notes/links")
+  public NoteFeedView linked(
+      @AuthenticationPrincipal Long viewerId,
+      @RequestParam(defaultValue = "") String url,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.linked(url, page, size, viewerId);
   }
 
   @GetMapping("/api/v1/public/notes/tags/{tag}")
