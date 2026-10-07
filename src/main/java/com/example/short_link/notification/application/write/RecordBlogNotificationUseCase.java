@@ -15,7 +15,10 @@ import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.NotificationUser;
+import com.example.short_link.notification.domain.policy.NotificationPolicy;
+import com.example.short_link.notification.domain.policy.NotificationPolicyLevel;
 import com.example.short_link.notification.domain.repository.NotificationActorReader;
+import com.example.short_link.notification.domain.repository.NotificationPolicyRepository;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.util.List;
@@ -45,6 +48,7 @@ public class RecordBlogNotificationUseCase {
   private final BlogNotificationPreferenceService preferenceService;
   private final NotificationFanoutWriter fanoutWriter;
   private final NotificationActorReader actorReader;
+  private final NotificationPolicyRepository policies;
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
@@ -64,7 +68,9 @@ public class RecordBlogNotificationUseCase {
   }
 
   // A grouped notification is written once per actor: liking, unliking and liking again adds no
-  // second row or push to the same group.
+  // second row or push to the same group. A notice someone caused first passes the recipient's
+  // notification policy, read together with the type preference in one statement: dropped, kept
+  // aside without a push, or delivered.
   private void write(
       Long recipientUserId,
       NotificationType type,
@@ -72,7 +78,9 @@ public class RecordBlogNotificationUseCase {
       Long actorRemoteId,
       NotificationTarget payload,
       String groupKey) {
-    if (!preferenceService.isEnabled(recipientUserId, type)) {
+    NotificationPolicyLevel verdict =
+        verdict(recipientUserId, type, actorUserId, actorRemoteId, payload);
+    if (verdict == NotificationPolicyLevel.DROP) {
       return;
     }
     if (groupKey != null
@@ -80,8 +88,13 @@ public class RecordBlogNotificationUseCase {
       return;
     }
     String json = targetCodec.encode(payload);
+    boolean filtered = verdict == NotificationPolicyLevel.FILTER;
     repository.save(
-        new NotificationEntity(recipientUserId, type, actorUserId, actorRemoteId, json, groupKey));
+        new NotificationEntity(
+            recipientUserId, type, actorUserId, actorRemoteId, json, groupKey, filtered));
+    if (filtered) {
+      return;
+    }
     Optional<NotificationUser> recipient = userReader.findById(recipientUserId);
     pushDelivery.send(
         recipientUserId,
@@ -92,6 +105,25 @@ public class RecordBlogNotificationUseCase {
             payload,
             Locale.forLanguageTag(recipient.map(NotificationUser::locale).orElse("ko")),
             recipient.map(NotificationUser::username).orElse(null)));
+  }
+
+  private NotificationPolicyLevel verdict(
+      Long recipientUserId,
+      NotificationType type,
+      Long actorUserId,
+      Long actorRemoteId,
+      NotificationTarget payload) {
+    if (!type.filterable() || (actorUserId == null && actorRemoteId == null)) {
+      return preferenceService.isEnabled(recipientUserId, type)
+          ? NotificationPolicyLevel.ACCEPT
+          : NotificationPolicyLevel.DROP;
+    }
+    Long mentionNoteId =
+        type == NotificationType.NOTE_MENTION && payload instanceof NotificationNoteRef note
+            ? note.noteId()
+            : null;
+    return NotificationPolicy.verdict(
+        policies.sender(recipientUserId, type, actorUserId, actorRemoteId, mentionNoteId));
   }
 
   // 수신 거부자를 제외하고 청크별 트랜잭션으로 연결 점유 시간을 제한한다. 수신자 수는 제한하지 않는다.

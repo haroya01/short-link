@@ -28,4 +28,27 @@ public enum NotificationType {
   public boolean grouped() {
     return this == NOTE_LIKE || this == NOTE_REPOST;
   }
+
+  // Notices a person causes, which the notification policy may keep aside or drop (Mastodon's
+  // filterable types). Ones the member subscribed to (new posts and notes, polls they voted in,
+  // edits of notes they shared) and the reading graph's notices always arrive.
+  public boolean filterable() {
+    return switch (this) {
+      case LIKE,
+              COMMENT,
+              FOLLOW,
+              SERIES_SUBSCRIBE,
+              REPLY,
+              MENTION,
+              NOTE_LIKE,
+              NOTE_REPOST,
+              NOTE_REPLY,
+              NOTE_QUOTE,
+              REMOTE_FOLLOW,
+              NOTE_MENTION,
+              FOLLOW_REQUEST ->
+          true;
+      case NEW_POST, CONNECTED, PATH_GREW, NOTE_POLL, NOTE_POST, NOTE_EDIT -> false;
+    };
+  }
 }

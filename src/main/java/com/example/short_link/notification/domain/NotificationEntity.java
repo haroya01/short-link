@@ -60,6 +60,11 @@ public class NotificationEntity extends BaseCreatedEntity {
   @Column(name = "read_at")
   private Instant readAt;
 
+  // Kept aside by the recipient's notification policy: out of the list, the unread count and push
+  // until they accept the sender.
+  @Column(nullable = false)
+  private boolean filtered;
+
   public NotificationEntity(
       Long recipientUserId, NotificationType type, Long actorUserId, String payload) {
     this(recipientUserId, type, actorUserId, null, payload, null);
@@ -72,12 +77,24 @@ public class NotificationEntity extends BaseCreatedEntity {
       Long actorRemoteId,
       String payload,
       String groupKey) {
+    this(recipientUserId, type, actorUserId, actorRemoteId, payload, groupKey, false);
+  }
+
+  public NotificationEntity(
+      Long recipientUserId,
+      NotificationType type,
+      Long actorUserId,
+      Long actorRemoteId,
+      String payload,
+      String groupKey,
+      boolean filtered) {
     this.recipientUserId = recipientUserId;
     this.type = type;
     this.actorUserId = actorUserId;
     this.actorRemoteId = actorRemoteId;
     this.payload = payload;
     this.groupKey = groupKey;
+    this.filtered = filtered;
   }
 
   public boolean isRead() {

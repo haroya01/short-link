@@ -105,7 +105,9 @@
 @junit | note-vis-create-public | 4 | 2 | 0 | 0 | 6
 @junit | note-vis-create-unlisted | 4 | 2 | 0 | 0 | 6
 @junit | note-vis-create-private | 8 | 4 | 0 | 0 | 12
-@junit | note-vis-create-direct | 7 | 4 | 0 | 0 | 11
+# A direct mention from someone the recipient doesn't follow is an unsolicited private mention,
+# which the default notification policy keeps aside: stored filtered, no push (its two lookups go).
+@junit | note-vis-create-direct | 5 | 4 | 0 | 0 | 9
 @junit | note-vis-everyone | 5 | 0 | 0 | 0 | 5
 @junit | note-vis-tagged | 4 | 0 | 0 | 0 | 4
 @junit | note-vis-profile-anonymous | 5 | 0 | 0 | 0 | 5

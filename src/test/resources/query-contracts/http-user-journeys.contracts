@@ -347,6 +347,27 @@
 @junit | notification-webpush-cross-user-remove | 1 | 0 | 0 | 0 | 1
 @junit | notification-webpush-subscribe | 2 | 1 | 0 | 0 | 3
 @junit | notification-webpush-unsubscribe | 1 | 0 | 0 | 1 | 2
+# Notification policy (Mastodon's filtering). Reading it is the one row; an update reads it and
+# upserts. A notice someone caused reads the type preference, the policy and the sender facts
+# (permission, follows both ways, account age, private mention) in the one statement that used to
+# read only the preference, so a follow kept aside is the plain follow minus the push lookups and an
+# accepted sender's is exactly the plain follow. The list and unread count leave kept notices out in
+# the same statement.
+@junit | notification-policy-read | 1 | 0 | 0 | 0 | 1
+@junit | notification-policy-update | 1 | 1 | 0 | 0 | 2
+@junit | notification-policy-filtered-follow | 7 | 2 | 0 | 0 | 9
+@junit | notification-policy-filtered-follow-second | 7 | 2 | 0 | 0 | 9
+@junit | notification-policy-inbox-without | 1 | 0 | 0 | 0 | 1
+@junit | notification-policy-unread-without | 1 | 0 | 0 | 0 | 1
+# Kept notices grouped by sender, then the senders' names (members here; another server adds one).
+@junit | notification-policy-requests | 2 | 0 | 0 | 0 | 2
+# Accepting records the permission once and lets the kept notices in; dismissing deletes them.
+@junit | notification-policy-accept | 0 | 1 | 1 | 0 | 2
+@junit | notification-policy-inbox-with | 2 | 0 | 0 | 0 | 2
+@junit | notification-policy-accepted-unfollow | 4 | 0 | 0 | 1 | 5
+@junit | notification-policy-accepted-refollow | 9 | 2 | 0 | 0 | 11
+@junit | notification-policy-dismiss | 0 | 0 | 0 | 1 | 1
+@junit | notification-policy-accept-nobody | 0 | 0 | 0 | 0 | 0
 @junit | ops-abuse-backlog | 2 | 0 | 0 | 0 | 2
 @junit | ops-active-users | 1 | 0 | 0 | 0 | 1
 @junit | ops-block-domain | 2 | 1 | 0 | 0 | 3
