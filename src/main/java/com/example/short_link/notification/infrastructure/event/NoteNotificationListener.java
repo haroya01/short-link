@@ -32,7 +32,7 @@ public class NoteNotificationListener {
       return;
     }
     if (event.actorUserId() != null
-        && blocks.isBlocked(event.recipientUserId(), event.actorUserId())) {
+        && blocks.silences(event.recipientUserId(), event.actorUserId())) {
       return;
     }
     NotificationType type =
@@ -70,7 +70,7 @@ public class NoteNotificationListener {
     List<Long> voters =
         event.voterIds().stream()
             .filter(voter -> !voter.equals(event.authorId()))
-            .filter(voter -> !blocks.isBlocked(voter, event.authorId()))
+            .filter(voter -> !blocks.silences(voter, event.authorId()))
             .toList();
     recordUseCase.recordForEach(voters, NotificationType.NOTE_POLL, event.authorId(), note);
   }

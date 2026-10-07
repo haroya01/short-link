@@ -2,6 +2,8 @@ package com.example.short_link.user.application.moderation;
 
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.domain.repository.BlockRepository;
+import com.example.short_link.user.domain.repository.MuteRepository;
+import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 class UserBlockCheckerAdapter implements UserBlockChecker {
 
   private final BlockRepository blockRepository;
+  private final MuteRepository muteRepository;
+  private final Clock clock;
 
   @Override
   @Transactional(readOnly = true)
@@ -19,5 +23,14 @@ class UserBlockCheckerAdapter implements UserBlockChecker {
       return false;
     }
     return blockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public boolean silences(Long recipientId, Long actorId) {
+    if (recipientId == null || actorId == null) {
+      return false;
+    }
+    return muteRepository.silences(recipientId, actorId, clock.instant());
   }
 }

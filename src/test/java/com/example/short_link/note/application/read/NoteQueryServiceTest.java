@@ -55,7 +55,7 @@ class NoteQueryServiceTest {
   @Test
   void pagesFetchOneExtraRowToKnowIfMoreFollow() {
     List<NoteEntity> three = LongStream.of(3, 2, 1).mapToObj(id -> note(id, null)).toList();
-    when(notes.topLevel(2, 3)).thenReturn(three);
+    when(notes.topLevel(7L, 2, 3)).thenReturn(three);
     when(views.of(three.subList(0, 2), 7L))
         .thenReturn(List.of(view(3L, null, 4L), view(2L, null, 0L)));
 
@@ -69,7 +69,7 @@ class NoteQueryServiceTest {
   @Test
   void trendingPagesLikeThePublicFeed() {
     List<NoteEntity> two = LongStream.of(5, 9).mapToObj(id -> note(id, null)).toList();
-    when(notes.trending(0, 21)).thenReturn(two);
+    when(notes.trending(null, 0, 21)).thenReturn(two);
     when(views.of(two, null)).thenReturn(List.of(view(5L, null, 3L), view(9L, null, 0L)));
 
     NoteFeedView feed = service.trending(0, 20, null);
@@ -81,7 +81,7 @@ class NoteQueryServiceTest {
 
   @Test
   void pageAndSizeAreClamped() {
-    when(notes.topLevel(0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
+    when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
     when(views.of(List.of(), null)).thenReturn(List.of());
 
     NoteFeedView feed = service.everyone(-3, 10_000, null);
@@ -160,7 +160,7 @@ class NoteQueryServiceTest {
     NoteEntity reply = note(3L, 2L);
     when(notes.findById(2L)).thenReturn(Optional.of(main));
     when(notes.findById(1L)).thenReturn(Optional.of(parent));
-    when(notes.replies(2L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
+    when(notes.replies(2L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
     when(views.of(List.of(main, parent, reply), 9L))
         .thenReturn(List.of(view(2L, 1L, null), view(1L, null, null), view(3L, 2L, null)));
 
@@ -176,7 +176,11 @@ class NoteQueryServiceTest {
     NoteEntity orphan = note(2L, 1L);
     when(notes.findById(2L)).thenReturn(Optional.of(orphan));
     when(notes.findById(1L)).thenReturn(Optional.empty());
-    when(notes.replies(2L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
+    when(notes.replies(
+            org.mockito.ArgumentMatchers.eq(2L),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.eq(NoteQueryService.MAX_REPLIES)))
+        .thenReturn(List.of());
     when(views.of(List.of(orphan), null)).thenReturn(List.of(view(2L, 1L, null)));
     assertThat(service.thread(2L, null).parent()).isNull();
 
@@ -207,7 +211,7 @@ class NoteQueryServiceTest {
         .extracting(NoteView::id)
         .containsExactly(5L, 2L);
 
-    when(notes.quotesOf(7L, 0, 21)).thenReturn(List.of(two));
+    when(notes.quotesOf(7L, null, 0, 21)).thenReturn(List.of(two));
     when(views.of(List.of(two), null)).thenReturn(List.of(view(2L, null, 0L)));
     assertThat(service.quotes(7L, 0, 20, null).items())
         .extracting(NoteView::id)

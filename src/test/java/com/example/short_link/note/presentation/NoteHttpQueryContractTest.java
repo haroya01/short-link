@@ -498,6 +498,68 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     jdbc.update("DELETE FROM note WHERE id = ?", noteId);
   }
 
+  @Test
+  void aMutedPersonLeavesSharedFeedsAndThreadsAndTheirNoticesStopUntilUnmuted() throws Exception {
+    Actor reader = actor("mute-reader", false);
+    Actor loud = actor("mute-loud", false);
+    Actor calm = actor("mute-calm", false);
+    long loudNote = noteAt(loud, "뮤트될 사람의 노트", 1);
+    long calmNote = noteAt(calm, "조용한 사람의 노트", 2);
+    long mine = noteAt(reader, "내 노트", 3);
+
+    var muted =
+        step(
+            "user-mute",
+            "PUT",
+            "/api/v1/users/" + loud.username() + "/mute",
+            reader,
+            Map.of("notifications", true),
+            200);
+    assertThat(muted.path("muted").asBoolean()).isTrue();
+    assertThat(
+            step(
+                    "user-mute-status",
+                    "GET",
+                    "/api/v1/users/" + loud.username() + "/mute",
+                    reader,
+                    null,
+                    200)
+                .path("notifications")
+                .asBoolean())
+        .isTrue();
+    assertThat(
+            step("user-mutes", "GET", "/api/v1/users/me/mutes", reader, null, 200)
+                .get(0)
+                .path("username")
+                .asText())
+        .isEqualTo(loud.username());
+
+    var everyone = step("note-everyone-muted", "GET", "/api/v1/public/notes", reader, null, 200);
+    assertThat(only(everyone, List.of(loudNote, calmNote))).containsExactly(calmNote);
+
+    step(
+        "note-reply-muted",
+        "POST",
+        "/api/v1/notes",
+        loud,
+        Map.of("body", "뮤트된 사람의 답글", "inReplyToId", mine),
+        201);
+    var thread =
+        step("note-thread-muted", "GET", "/api/v1/public/notes/" + mine, reader, null, 200);
+    assertThat(thread.path("replies").size()).isZero();
+    Thread.sleep(500);
+    assertThat(
+            count(
+                "notification",
+                "recipient_user_id = ? AND actor_user_id = ?",
+                reader.id(),
+                loud.id()))
+        .isZero();
+
+    step("user-unmute", "DELETE", "/api/v1/users/" + loud.username() + "/mute", reader, null, 204);
+    assertThat(count("user_mute", "user_id = ?", reader.id())).isZero();
+  }
+
   private long post(String id, Actor author, String body, String visibility) throws Exception {
     return step(
             id,

@@ -39,7 +39,7 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteFeedView everyone(int page, int size, Long viewerId) {
-    return page(page, size, viewerId, notes::topLevel);
+    return page(page, size, viewerId, (offset, limit) -> notes.topLevel(viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -49,7 +49,7 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteFeedView trending(int page, int size, Long viewerId) {
-    return page(page, size, viewerId, notes::trending);
+    return page(page, size, viewerId, (offset, limit) -> notes.trending(viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -58,7 +58,8 @@ public class NoteQueryService {
     if (name.isBlank() || name.length() > Hashtags.MAX_LENGTH) {
       return new NoteFeedView(List.of(), Math.max(page, 0), false);
     }
-    return page(page, size, viewerId, (offset, limit) -> notes.tagged(name, offset, limit));
+    return page(
+        page, size, viewerId, (offset, limit) -> notes.tagged(name, viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -100,7 +101,8 @@ public class NoteQueryService {
 
   @Transactional(readOnly = true)
   public NoteFeedView quotes(Long noteId, int page, int size, Long viewerId) {
-    return page(page, size, viewerId, (offset, limit) -> notes.quotesOf(noteId, offset, limit));
+    return page(
+        page, size, viewerId, (offset, limit) -> notes.quotesOf(noteId, viewerId, offset, limit));
   }
 
   private List<NoteEntity> inOrder(List<Long> ids) {
@@ -183,7 +185,7 @@ public class NoteQueryService {
     if (note.getInReplyToId() != null) {
       notes.findById(note.getInReplyToId()).ifPresent(batch::add);
     }
-    batch.addAll(notes.replies(noteId, MAX_REPLIES));
+    batch.addAll(notes.replies(noteId, viewerId, MAX_REPLIES));
     List<NoteView> loaded = views.of(batch, viewerId);
     NoteView main =
         loaded.stream()
