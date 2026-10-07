@@ -4,11 +4,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.NoteInteractionEvent;
+import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
@@ -187,13 +189,15 @@ class RemoteNoteRecorderTest {
 
   @Test
   void editsAndDeletesTouchOnlyTheSendersNote() {
-    when(notes.reviseRemote(42L, URI, "edited", "x".repeat(99) + "…", true, NOW)).thenReturn(1);
-    when(notes.reviseRemote(42L, URI, "again", null, false, NOW.minusSeconds(5))).thenReturn(0);
+    when(notes.reviseRemote(42L, 900L, "edited", "x".repeat(99) + "…", true, NOW)).thenReturn(1);
+    when(notes.reviseRemote(42L, 900L, "again", null, false, NOW.minusSeconds(5))).thenReturn(0);
     when(notes.deleteRemote(42L, URI)).thenReturn(1, 0);
     when(notes.idByUri(URI)).thenReturn(Optional.of(900L));
 
-    assertThat(recorder().revise(42L, URI, "edited", "x".repeat(150), false, null)).isTrue();
-    assertThat(recorder().revise(42L, URI, "again", " ", false, NOW.minusSeconds(5))).isFalse();
+    assertThat(recorder().revise(42L, 900L, "edited", "x".repeat(150), false, null)).isTrue();
+    assertThat(recorder().revise(42L, 900L, "again", " ", false, NOW.minusSeconds(5))).isFalse();
+    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "edited"));
+    verify(events, times(1)).publishEvent(any(NoteRevisedEvent.class));
     assertThat(recorder().retract(42L, URI)).isTrue();
     assertThat(recorder().retract(42L, URI)).isFalse();
     assertThat(recorder().exists(URI)).isTrue();

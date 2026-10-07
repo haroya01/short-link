@@ -683,6 +683,54 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
   }
 
   @Test
+  void anEditTellsEveryoneWhoRepostedOrQuotedTheNoteButNotItsAuthor() throws Exception {
+    Actor writer = actor("edit-writer", false);
+    Actor reposter = actor("edit-reposter", false);
+    Actor quoter = actor("edit-quoter", false);
+    long noteId = noteAt(writer, "고치기 전 문장", 1);
+    step(
+        "note-repost-before-edit",
+        "PUT",
+        "/api/v1/notes/" + noteId + "/repost",
+        reposter,
+        null,
+        200);
+    step(
+        "note-quote-before-edit",
+        "POST",
+        "/api/v1/notes",
+        quoter,
+        Map.of("body", "이 문장 좋다", "quotedNoteId", noteId),
+        201);
+    step(
+        "note-repost-own-before-edit",
+        "PUT",
+        "/api/v1/notes/" + noteId + "/repost",
+        writer,
+        null,
+        200);
+
+    step(
+        "note-edit-shared",
+        "PATCH",
+        "/api/v1/notes/" + noteId,
+        writer,
+        Map.of("body", "고친 문장"),
+        200);
+
+    assertThat(
+            jdbc.queryForList(
+                "SELECT recipient_user_id FROM notification WHERE type = 'NOTE_EDIT'"
+                    + " AND actor_user_id = ? AND JSON_EXTRACT(payload, '$.noteId') = ?"
+                    + " ORDER BY recipient_user_id",
+                Long.class,
+                writer.id(),
+                noteId))
+        .containsExactly(reposter.id(), quoter.id());
+    jdbc.update("DELETE FROM note WHERE id = ? OR quoted_note_id = ?", noteId, noteId);
+  }
+
+  @Test
   void anOwnerKeepsKeywordFiltersThatTheirAppsApply() throws Exception {
     Actor owner = actor("filter-owner", false);
     Actor stranger = actor("filter-stranger", false);

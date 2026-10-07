@@ -431,7 +431,7 @@ class NoteRepositoryAdapter implements NoteRepository {
   @Override
   public int reviseRemote(
       Long remoteActorId,
-      String uri,
+      Long noteId,
       String body,
       String contentWarning,
       boolean sensitive,
@@ -439,12 +439,12 @@ class NoteRepositoryAdapter implements NoteRepository {
     return em.createNativeQuery(
             "UPDATE note SET body = :body, content_warning = :warning,"
                 + " marked_sensitive = :sensitive, edited_at = :editedAt"
-                + " WHERE uri = :uri AND remote_actor_id = :actor")
+                + " WHERE id = :id AND remote_actor_id = :actor")
         .setParameter("body", body)
         .setParameter("warning", contentWarning)
         .setParameter("sensitive", sensitive)
         .setParameter("editedAt", editedAt)
-        .setParameter("uri", uri)
+        .setParameter("id", noteId)
         .setParameter("actor", remoteActorId)
         .executeUpdate();
   }

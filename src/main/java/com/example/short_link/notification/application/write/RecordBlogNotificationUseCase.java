@@ -100,6 +100,15 @@ public class RecordBlogNotificationUseCase {
       NotificationType type,
       Long actorUserId,
       NotificationTarget payload) {
+    recordForEach(recipientUserIds, type, actorUserId, null, payload);
+  }
+
+  public void recordForEach(
+      List<Long> recipientUserIds,
+      NotificationType type,
+      Long actorUserId,
+      Long actorRemoteId,
+      NotificationTarget payload) {
     if (recipientUserIds.isEmpty()) {
       return;
     }
@@ -111,7 +120,7 @@ public class RecordBlogNotificationUseCase {
     for (int i = 0; i < enabledRecipients.size(); i += FANOUT_CHUNK) {
       List<Long> chunk =
           enabledRecipients.subList(i, Math.min(i + FANOUT_CHUNK, enabledRecipients.size()));
-      fanoutWriter.persistChunk(chunk, type, actorUserId, json);
+      fanoutWriter.persistChunk(chunk, type, actorUserId, actorRemoteId, json);
     }
     Map<String, List<Long>> byLocale =
         userReader.findAllByIdIn(enabledRecipients).stream()
@@ -123,7 +132,8 @@ public class RecordBlogNotificationUseCase {
         (tag, ids) ->
             pushDelivery.sendToAll(
                 ids,
-                pushMessage(type, actorUserId, null, payload, Locale.forLanguageTag(tag), null)));
+                pushMessage(
+                    type, actorUserId, actorRemoteId, payload, Locale.forLanguageTag(tag), null)));
   }
 
   private PushSender.PushMessage pushMessage(
@@ -186,7 +196,9 @@ public class RecordBlogNotificationUseCase {
                   actorUsername, actorUsername, null, null, null, null, null, note.sourceNoteId())
               : new PushRoute(
                   actorUsername,
-                  type == NotificationType.NOTE_POLL || type == NotificationType.NOTE_POST
+                  type == NotificationType.NOTE_POLL
+                          || type == NotificationType.NOTE_POST
+                          || type == NotificationType.NOTE_EDIT
                       ? actorUsername
                       : recipientUsername,
                   null,

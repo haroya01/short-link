@@ -722,9 +722,11 @@ class InboxServiceTest {
   @Test
   void anEditOrDeleteOfANoteWeKeptChangesIt() {
     String uri = ALICE + "/statuses/9";
+    when(remoteNotes.kept(uri)).thenReturn(Optional.of(900L));
     when(remoteNotes.exists(uri)).thenReturn(true);
     verifiedAs(ALICE_ACTOR);
-    when(remoteNotes.revise(42L, uri, "edited", null, false, Instant.parse("2026-10-07T02:00:00Z")))
+    when(remoteNotes.revise(
+            42L, 900L, "edited", null, false, Instant.parse("2026-10-07T02:00:00Z")))
         .thenReturn(true);
     when(remoteNotes.retract(42L, uri)).thenReturn(true, false);
     InboxService service = service();

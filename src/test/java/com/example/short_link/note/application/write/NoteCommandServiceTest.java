@@ -17,6 +17,7 @@ import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
+import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
@@ -677,6 +678,7 @@ class NoteCommandServiceTest {
     assertThat(mine.getBody()).isEqualTo("new");
     assertThat(mine.getEditedAt()).isEqualTo(Instant.parse("2026-10-06T00:00:00.123456Z"));
     verify(events).publishEvent(new NoteEditedEvent(1L, 7L));
+    verify(events).publishEvent(new NoteRevisedEvent(1L, 7L, null, "new"));
 
     assertThatThrownBy(() -> service().edit(8L, 1L, "theirs", null, null))
         .isInstanceOfSatisfying(

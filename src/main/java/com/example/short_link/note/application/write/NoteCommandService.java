@@ -7,6 +7,7 @@ import com.example.short_link.common.event.NoteEditedEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
+import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.note.Hashtags;
@@ -400,6 +401,7 @@ public class NoteCommandService {
       mention(note, userId, newlyMentioned, Set.of(userId));
     }
     events.publishEvent(new NoteEditedEvent(noteId, userId));
+    events.publishEvent(new NoteRevisedEvent(noteId, userId, null, note.excerpt()));
     String after = NoteLinks.previewUrl(body, hasMedia || note.hasPoll(), hasQuote);
     if (!Objects.equals(before, after)) {
       events.publishEvent(new NoteLinkPreviewRequested(noteId, after));

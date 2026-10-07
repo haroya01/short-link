@@ -74,7 +74,7 @@ public class InboxService {
 
     record Receive(JsonNode object, JsonNode activity) implements Intent {}
 
-    record Revise(JsonNode object, JsonNode activity) implements Intent {}
+    record Revise(JsonNode object, JsonNode activity, Long noteId) implements Intent {}
 
     record Retract(String uri) implements Intent {}
   }
@@ -196,10 +196,12 @@ public class InboxService {
         if (object == null || !object.isObject() || !"Note".equals(text(object.get("type")))) {
           return InboxOutcome.ignored("unsupported");
         }
-        if (!authoredBy(object, actorUri) || !remoteNotes.exists(idOf(object))) {
+        Optional<Long> kept =
+            authoredBy(object, actorUri) ? remoteNotes.kept(idOf(object)) : Optional.empty();
+        if (kept.isEmpty()) {
           return InboxOutcome.ignored("unknown-note");
         }
-        intent = new Intent.Revise(object, activity);
+        intent = new Intent.Revise(object, activity, kept.get());
       }
       case "Accept", "Reject" -> {
         JsonNode object = activity.get("object");
@@ -325,7 +327,7 @@ public class InboxService {
         RemoteNoteParser.Parsed note = noteParser.parse(revise.object(), revise.activity());
         yield remoteNotes.revise(
                 actor.getId(),
-                note.uri(),
+                revise.noteId(),
                 note.body(),
                 note.contentWarning(),
                 note.sensitive(),

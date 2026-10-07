@@ -419,6 +419,13 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         202);
     assertThat(jdbc.queryForObject("SELECT body FROM note WHERE id = ?", String.class, noteId))
         .isEqualTo("hello again");
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?"
+                    + " AND type = 'NOTE_EDIT' AND actor_remote_id = ?",
+                owner.getId(),
+                aliceId))
+        .isEqualTo(1);
 
     post(
         "federation-inbox-remote-delete",

@@ -18,9 +18,14 @@ public class NotificationFanoutWriter {
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void persistChunk(
-      List<Long> recipientUserIds, NotificationType type, Long actorUserId, String json) {
+      List<Long> recipientUserIds,
+      NotificationType type,
+      Long actorUserId,
+      Long actorRemoteId,
+      String json) {
     for (Long recipientUserId : recipientUserIds) {
-      repository.save(new NotificationEntity(recipientUserId, type, actorUserId, json));
+      repository.save(
+          new NotificationEntity(recipientUserId, type, actorUserId, actorRemoteId, json, null));
     }
   }
 }

@@ -60,7 +60,7 @@
 @junit | note-create-tagged | 4 | 2 | 0 | 0 | 6
 @junit | note-tagged | 4 | 0 | 0 | 0 | 4
 @junit | note-following-tags | 6 | 0 | 0 | 0 | 6
-@junit | note-edit-retag | 7 | 2 | 1 | 1 | 11
+@junit | note-edit-retag | 8 | 2 | 1 | 1 | 12
 # Mentions: the mentioned handles ride in the authors query (id IN … OR username IN …), so neither
 # writing nor reading a note with mentions adds a query. Each mentioned member is told after commit
 # like any other note notice: block check, preference, insert, then both names for the push.
@@ -69,7 +69,7 @@
 # A content warning and the sensitive mark are columns on the note: they ride in its one insert and
 # its one update (the edit also keeps the version it replaces).
 @junit | note-create-warning | 4 | 1 | 0 | 0 | 5
-@junit | note-edit-warning | 7 | 1 | 1 | 0 | 9
+@junit | note-edit-warning | 8 | 1 | 1 | 0 | 10
 # Edits keep the version they replace (Mastodon edit history): one insert per edit that changes
 # anything; an edit that changes nothing is not an edit. History reads the note, checks the author is
 # still active, then the earlier versions newest first.
@@ -82,7 +82,9 @@
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6
-@junit | note-edit | 8 | 1 | 1 | 0 | 10
+# After commit an edit asks once who reposted or quoted the note (Mastodon's update notice). Here
+# the reader's quote is still up, so they hear of it: preference, insert, names for the push.
+@junit | note-edit | 12 | 2 | 1 | 0 | 15
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 3 | 6
@@ -193,3 +195,9 @@
 # A reply to someone else's note rings no bell; Mastodon tells of posts and self-threads only.
 @junit | note-reply-bell-elsewhere | 10 | 2 | 0 | 0 | 12
 @junit | note-bell-off | 2 | 0 | 1 | 0 | 3
+# Who shared a note hears of its edit, once each: a reposter and a quoter, never the author who
+# reposted their own note, nor anyone who blocked or muted them or the conversation (one query).
+@junit | note-repost-before-edit | 12 | 2 | 0 | 0 | 14
+@junit | note-quote-before-edit | 12 | 2 | 0 | 0 | 14
+@junit | note-repost-own-before-edit | 7 | 1 | 0 | 0 | 8
+@junit | note-edit-shared | 11 | 3 | 1 | 0 | 15

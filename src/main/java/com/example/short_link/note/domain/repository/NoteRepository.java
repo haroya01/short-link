@@ -51,7 +51,7 @@ public interface NoteRepository {
 
   int reviseRemote(
       Long remoteActorId,
-      String uri,
+      Long noteId,
       String body,
       String contentWarning,
       boolean sensitive,
