@@ -800,6 +800,46 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
   }
 
   @Test
+  void aReaderWhoChoseLanguagesSeesAllNotesInThemAndNotesWithNone() throws Exception {
+    Actor writer = actor("lang-writer", false);
+    Actor reader = actor("lang-reader", false);
+    long japanese =
+        step(
+                "note-create-language",
+                "POST",
+                "/api/v1/notes",
+                writer,
+                Map.of("body", "こんにちは", "language", "JA"),
+                201)
+            .path("id")
+            .asLong();
+    long english = noteAt(writer, "hello", 0);
+    jdbc.update("UPDATE note SET language = 'en' WHERE id = ?", english);
+    long unstated = noteAt(writer, "언어를 정하지 않은 노트", 0);
+
+    assertThat(
+            step(
+                    "note-feed-languages",
+                    "PUT",
+                    "/api/v1/notes/feed-preferences",
+                    reader,
+                    Map.of("languages", List.of("ja")),
+                    200)
+                .path("languages")
+                .toString())
+        .isEqualTo("[\"ja\"]");
+    List<Long> shown = new ArrayList<>();
+    step("note-everyone-languages", "GET", "/api/v1/public/notes", reader, null, 200)
+        .path("items")
+        .forEach(item -> shown.add(item.path("id").asLong()));
+    assertThat(shown).contains(japanese, unstated).doesNotContain(english);
+    assertThat(
+            jdbc.queryForObject("SELECT language FROM note WHERE id = ?", String.class, japanese))
+        .isEqualTo("ja");
+    jdbc.update("DELETE FROM note WHERE id IN (?, ?, ?)", japanese, english, unstated);
+  }
+
+  @Test
   void anOwnerKeepsKeywordFiltersThatTheirAppsApply() throws Exception {
     Actor owner = actor("filter-owner", false);
     Actor stranger = actor("filter-stranger", false);

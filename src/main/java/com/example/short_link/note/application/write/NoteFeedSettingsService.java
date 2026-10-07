@@ -5,6 +5,9 @@ import com.example.short_link.note.domain.repository.NoteFeedSettingsRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,15 +19,33 @@ public class NoteFeedSettingsService {
   private final NoteFeedSettingsRepository settings;
   private final NotePeopleReader people;
 
+  private static final int MAX_LANGUAGES = 20;
+
   @Transactional(readOnly = true)
   public FeedPreferences preferences(Long userId) {
-    return new FeedPreferences(settings.showsReposts(userId));
+    NoteFeedSettingsRepository.Preferences read = settings.read(userId);
+    return new FeedPreferences(read.showReposts(), read.languages());
   }
 
   @Transactional
-  public FeedPreferences setShowReposts(Long userId, boolean show) {
-    settings.setShowsReposts(userId, show);
-    return new FeedPreferences(show);
+  public FeedPreferences update(Long userId, Boolean showReposts, List<String> languages) {
+    if (showReposts != null) {
+      settings.setShowsReposts(userId, showReposts);
+    }
+    if (languages != null) {
+      Set<String> codes = new LinkedHashSet<>();
+      for (String raw : languages) {
+        String code = NoteCommandService.language(raw);
+        if (code != null) {
+          codes.add(code);
+        }
+      }
+      if (codes.size() > MAX_LANGUAGES) {
+        throw new NoteException(NoteErrorCode.NOTE_LANGUAGE_INVALID, codes.size());
+      }
+      settings.setLanguages(userId, List.copyOf(codes));
+    }
+    return preferences(userId);
   }
 
   @Transactional(readOnly = true)
@@ -49,7 +70,7 @@ public class NoteFeedSettingsService {
         .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
   }
 
-  public record FeedPreferences(boolean showReposts) {}
+  public record FeedPreferences(boolean showReposts, List<String> languages) {}
 
   public record RepostVisibility(boolean hidden) {}
 }

@@ -10,6 +10,7 @@ import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteImages;
 import com.example.short_link.note.presentation.request.CreateNoteRequest;
 import com.example.short_link.note.presentation.request.EditNoteRequest;
+import com.example.short_link.note.presentation.request.NoteFeedPreferencesRequest;
 import com.example.short_link.note.presentation.request.NoteImagePresignRequest;
 import com.example.short_link.note.presentation.response.LikedIdsResponse;
 import jakarta.validation.Valid;
@@ -225,9 +226,8 @@ public class NoteController {
 
   @PutMapping("/api/v1/notes/feed-preferences")
   public NoteFeedSettingsService.FeedPreferences updateFeedPreferences(
-      @AuthenticationPrincipal Long userId,
-      @RequestBody NoteFeedSettingsService.FeedPreferences request) {
-    return feedSettings.setShowReposts(userId, request.showReposts());
+      @AuthenticationPrincipal Long userId, @RequestBody NoteFeedPreferencesRequest request) {
+    return feedSettings.update(userId, request.showReposts(), request.languages());
   }
 
   @GetMapping("/api/v1/notes/repost-visibility/{username}")

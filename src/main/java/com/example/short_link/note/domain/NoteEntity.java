@@ -82,6 +82,9 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(name = "marked_sensitive", nullable = false)
   private boolean sensitive;
 
+  @Column(length = 8)
+  private String language;
+
   @Column(name = "pinned_at")
   private Instant pinnedAt;
 
@@ -148,6 +151,10 @@ public class NoteEntity extends BaseCreatedEntity {
   public void markContent(String warning, boolean sensitive) {
     this.contentWarning = warning;
     this.sensitive = sensitive || warning != null;
+  }
+
+  public void writeIn(String language) {
+    this.language = language;
   }
 
   public void showTo(NoteVisibility visibility) {

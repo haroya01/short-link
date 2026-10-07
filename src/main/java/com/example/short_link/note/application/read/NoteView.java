@@ -33,7 +33,8 @@ public record NoteView(
     boolean pinned,
     String visibility,
     Poll poll,
-    Boolean conversationMuted) {
+    Boolean conversationMuted,
+    String language) {
 
   public NoteView(
       Long id,
@@ -85,6 +86,7 @@ public record NoteView(
         pinned,
         visibility,
         poll,
+        null,
         null);
   }
 
@@ -184,6 +186,7 @@ public record NoteView(
         pinned,
         visibility,
         poll,
-        conversationMuted);
+        conversationMuted,
+        language);
   }
 }

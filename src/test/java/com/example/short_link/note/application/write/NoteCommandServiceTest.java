@@ -252,6 +252,29 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aNoteKeepsItsLanguageInLowerCaseAndRefusesOneThatIsNoCode() {
+    saving();
+
+    NoteView view =
+        service()
+            .create(
+                7L,
+                new NoteDraft("hello", null, null, null, null, null, false, null, null, " EN "));
+
+    assertThat(view.language()).isEqualTo("en");
+    assertThatThrownBy(
+            () ->
+                service()
+                    .create(
+                        7L,
+                        new NoteDraft(
+                            "hi", null, null, null, null, null, false, null, null, "english")))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_LANGUAGE_INVALID));
+  }
+
+  @Test
   void aDirectNoteIsNeverBroadcast() {
     saving();
     service()

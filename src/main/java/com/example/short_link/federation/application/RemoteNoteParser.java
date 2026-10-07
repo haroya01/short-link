@@ -27,6 +27,8 @@ import tools.jackson.databind.JsonNode;
 @RequiredArgsConstructor
 public class RemoteNoteParser {
 
+  private static final Pattern LANGUAGE = Pattern.compile("[a-z]{2,3}");
+
   public static final int MAX_BODY = 5000;
 
   private static final Set<String> PUBLIC = Set.of(ActivityStreams.PUBLIC, "as:Public", "Public");
@@ -49,7 +51,8 @@ public class RemoteNoteParser {
       Optional<Long> inReplyToLocalId,
       String inReplyToUri,
       Set<String> addressedPublicIds,
-      List<RemoteNotes.Media> media) {}
+      List<RemoteNotes.Media> media,
+      String language) {}
 
   public Parsed parse(JsonNode object, JsonNode activity) {
     String inReplyTo = idOf(object.get("inReplyTo"));
@@ -81,7 +84,18 @@ public class RemoteNoteParser {
         urls.noteIdOf(inReplyTo),
         inReplyTo,
         addressed,
-        media(object.get("attachment")));
+        media(object.get("attachment")),
+        language(object.get("contentMap")));
+  }
+
+  // Mastodon names a note's language as the one key of contentMap; a region tag is dropped.
+  private static String language(JsonNode contentMap) {
+    if (contentMap == null || !contentMap.isObject() || contentMap.isEmpty()) {
+      return null;
+    }
+    String key = contentMap.propertyNames().iterator().next();
+    String code = key.split("[-_]")[0].toLowerCase(Locale.ROOT);
+    return LANGUAGE.matcher(code).matches() ? code : null;
   }
 
   public boolean addressesUs(JsonNode object, JsonNode activity) {

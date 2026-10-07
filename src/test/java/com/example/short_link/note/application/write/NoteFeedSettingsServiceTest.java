@@ -11,6 +11,7 @@ import com.example.short_link.note.domain.repository.NoteFeedSettingsRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,9 +51,28 @@ class NoteFeedSettingsServiceTest {
   }
 
   @Test
-  void theGlobalSwitchIsStoredAsGiven() {
-    assertThat(service().setShowReposts(7L, false).showReposts()).isFalse();
+  void eitherSettingChangesAloneAndTheAnswerCarriesBoth() {
+    when(settings.read(7L))
+        .thenReturn(
+            new NoteFeedSettingsRepository.Preferences(false, List.of()),
+            new NoteFeedSettingsRepository.Preferences(false, List.of("ko", "ja")));
+
+    assertThat(service().update(7L, false, null))
+        .isEqualTo(new NoteFeedSettingsService.FeedPreferences(false, List.of()));
+    assertThat(service().update(7L, null, List.of(" KO", "ja", "ko", "")).languages())
+        .containsExactly("ko", "ja");
 
     verify(settings).setShowsReposts(7L, false);
+    verify(settings).setLanguages(7L, List.of("ko", "ja"));
+  }
+
+  @Test
+  void aLanguageIsAnIsoCode() {
+    assertThatThrownBy(() -> service().update(7L, null, List.of("korean!")))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_LANGUAGE_INVALID));
+    verify(settings, org.mockito.Mockito.never())
+        .setLanguages(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
   }
 }

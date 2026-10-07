@@ -83,6 +83,33 @@ class NoteDocumentsTest {
   }
 
   @Test
+  void aNoteInAKnownLanguageCarriesItAsTheContentMapKey() {
+    NoteSnapshot korean =
+        new NoteSnapshot(
+            42L,
+            7L,
+            "yuki",
+            "안녕",
+            CREATED,
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            null,
+            false,
+            NoteSnapshotReader.Visibility.PUBLIC,
+            null,
+            "ko");
+
+    Map<String, Object> note = documents.note(korean, "pid");
+
+    assertThat(note.get("contentMap")).isEqualTo(Map.of("ko", note.get("content")));
+    assertThat(documents.note(note("plain", null, List.of(), null), "pid"))
+        .doesNotContainKey("contentMap");
+  }
+
+  @Test
   void aContentWarningTravelsAsTheSummaryAndMarksTheNoteSensitive() {
     NoteSnapshot warned =
         new NoteSnapshot(

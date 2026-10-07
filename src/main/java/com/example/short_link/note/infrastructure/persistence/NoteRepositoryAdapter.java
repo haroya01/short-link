@@ -82,6 +82,18 @@ class NoteRepositoryAdapter implements NoteRepository {
         + ".remote_actor_id)";
   }
 
+  // Mastodon's filter languages: a viewer who chose languages sees notes in them, and notes whose
+  // language nobody stated.
+  static String inLanguages(String alias) {
+    return " AND ("
+        + alias
+        + ".language IS NULL OR NOT EXISTS (SELECT 1 FROM note_feed_preference lp"
+        + " WHERE lp.user_id = :viewer AND lp.languages IS NOT NULL"
+        + " AND FIND_IN_SET("
+        + alias
+        + ".language, lp.languages) = 0))";
+  }
+
   static long viewer(Long viewerId) {
     return viewerId == null ? -1L : viewerId;
   }
@@ -93,6 +105,7 @@ class NoteRepositoryAdapter implements NoteRepository {
             "SELECT n.* FROM note n WHERE n.in_reply_to_id IS NULL AND n.visibility = 'PUBLIC'"
                 + " AND n.remote_actor_id IS NULL"
                 + heard("n")
+                + inLanguages("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("viewer", viewer(viewerId))
@@ -200,6 +213,7 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " WHERE n.in_reply_to_id IS NULL AND n.visibility = 'PUBLIC'"
                 + " AND n.remote_actor_id IS NULL AND n.created_at >= :since"
                 + heard("n")
+                + inLanguages("n")
                 + " ORDER BY ("
                 + "(SELECT COUNT(*) FROM note_like l WHERE l.note_id = n.id"
                 + " AND l.user_id <> n.user_id)"
@@ -424,9 +438,9 @@ class NoteRepositoryAdapter implements NoteRepository {
         em.createNativeQuery(
                 "INSERT IGNORE INTO note (remote_actor_id, uri, remote_url, body, created_at,"
                     + " content_warning, marked_sensitive, visibility, in_reply_to_id,"
-                    + " conversation_id, poll_multiple) VALUES (:actor, :uri, :url, :body,"
-                    + " :createdAt, :warning, :sensitive, :visibility, :parent, :conversation,"
-                    + " FALSE)")
+                    + " conversation_id, poll_multiple, language) VALUES (:actor, :uri, :url,"
+                    + " :body, :createdAt, :warning, :sensitive, :visibility, :parent,"
+                    + " :conversation, FALSE, :language)")
             .setParameter("actor", row.remoteActorId())
             .setParameter("uri", row.uri())
             .setParameter("url", row.url())
@@ -437,6 +451,7 @@ class NoteRepositoryAdapter implements NoteRepository {
             .setParameter("visibility", row.visibility().name())
             .setParameter("parent", row.inReplyToId())
             .setParameter("conversation", row.conversationId())
+            .setParameter("language", row.language())
             .executeUpdate();
     return inserted == 0 ? Optional.empty() : idByUri(row.uri());
   }

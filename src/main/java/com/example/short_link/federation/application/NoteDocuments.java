@@ -47,6 +47,9 @@ public class NoteDocuments {
     object.put("type", note.poll() == null ? "Note" : "Question");
     object.put("attributedTo", urls.actor(actorPublicId));
     object.put("content", content(note, named));
+    if (note.language() != null) {
+      object.put("contentMap", Map.of(note.language(), object.get("content")));
+    }
     object.put("published", note.createdAt().truncatedTo(ChronoUnit.SECONDS).toString());
     if (note.editedAt() != null) {
       object.put("updated", note.editedAt().truncatedTo(ChronoUnit.SECONDS).toString());
