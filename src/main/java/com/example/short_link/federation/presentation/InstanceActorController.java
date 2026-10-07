@@ -38,6 +38,7 @@ public class InstanceActorController {
                 null,
                 null,
                 null,
+                null,
                 new ActorResponse.Endpoints(urls.sharedInbox()),
                 true,
                 false,

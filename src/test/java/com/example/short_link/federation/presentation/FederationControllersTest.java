@@ -14,6 +14,7 @@ import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.testsupport.KurlWebMvcTest;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -39,7 +40,12 @@ class FederationControllersTest {
   private static final LocalActor YUKI =
       new LocalActor(
           new FederationUser(
-              7L, "yuki", "first line\n<b>second</b>", "https://cdn/a.png", "유키 · 백엔드"),
+              7L,
+              "yuki",
+              "first line\n<b>second</b>",
+              "https://cdn/a.png",
+              "유키 · 백엔드",
+              List.of(new FederationUser.ProfileLink("x", "https://x.com/yuki?a=1&b=2"))),
           "pid123",
           "-----BEGIN PUBLIC KEY-----\nAAA\n-----END PUBLIC KEY-----\n");
 
@@ -110,6 +116,15 @@ class FederationControllersTest {
         .andExpect(jsonPath("$.endpoints.sharedInbox").value("https://kurl.me/ap/inbox"))
         .andExpect(jsonPath("$.manuallyApprovesFollowers").value(false))
         .andExpect(jsonPath("$.icon.url").value("https://cdn/a.png"))
+        .andExpect(jsonPath("$['@context'][2].PropertyValue").value("schema:PropertyValue"))
+        .andExpect(jsonPath("$.attachment[0].type").value("PropertyValue"))
+        .andExpect(jsonPath("$.attachment[0].name").value("X"))
+        .andExpect(
+            jsonPath("$.attachment[0].value")
+                .value(
+                    "<a href=\"https://x.com/yuki?a=1&amp;b=2\" target=\"_blank\""
+                        + " rel=\"nofollow noopener noreferrer me\" translate=\"no\">"
+                        + "x.com/yuki?a=1&amp;b=2</a>"))
         .andExpect(jsonPath("$.publicKey.id").value("https://kurl.me/ap/actors/pid123#main-key"))
         .andExpect(jsonPath("$.publicKey.owner").value("https://kurl.me/ap/actors/pid123"))
         .andExpect(jsonPath("$.publicKey.publicKeyPem").value(YUKI.publicKeyPem()));

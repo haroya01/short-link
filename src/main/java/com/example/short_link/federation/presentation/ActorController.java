@@ -4,6 +4,7 @@ import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
+import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.presentation.response.ActorResponse;
 import com.example.short_link.federation.presentation.response.OrderedCollectionResponse;
 import java.net.URI;
@@ -34,7 +35,20 @@ public class ActorController {
               "manuallyApprovesFollowers", "as:manuallyApprovesFollowers",
               "toot", "http://joinmastodon.org/ns#",
               "discoverable", "toot:discoverable",
-              "featured", Map.of("@id", "toot:featured", "@type", "@id")));
+              "featured", Map.of("@id", "toot:featured", "@type", "@id"),
+              "schema", "http://schema.org#",
+              "PropertyValue", "schema:PropertyValue",
+              "value", "schema:value"));
+
+  private static final Map<String, String> LINK_NAMES =
+      Map.of(
+          "x", "X",
+          "line", "LINE",
+          "threads", "Threads",
+          "facebook", "Facebook",
+          "kakao", "Kakao",
+          "instagram", "Instagram",
+          "linkedin", "LinkedIn");
 
   private final FederationActorService actors;
   private final FederationUrls urls;
@@ -139,11 +153,35 @@ public class ActorController {
         urls.followers(actor.publicId()),
         urls.following(actor.publicId()),
         urls.featured(actor.publicId()),
+        attachment(actor.user().links()),
         new ActorResponse.Endpoints(urls.sharedInbox()),
         false,
         true,
         avatar == null || avatar.isBlank() ? null : new ActorResponse.Image("Image", avatar),
         new ActorResponse.PublicKey(urls.key(actor.publicId()), id, actor.publicKeyPem()));
+  }
+
+  static List<ActorResponse.PropertyValue> attachment(List<FederationUser.ProfileLink> links) {
+    if (links == null || links.isEmpty()) {
+      return null;
+    }
+    return links.stream()
+        .map(
+            link ->
+                new ActorResponse.PropertyValue(
+                    "PropertyValue",
+                    LINK_NAMES.getOrDefault(link.channel(), link.channel()),
+                    anchor(link.url())))
+        .toList();
+  }
+
+  private static String anchor(String url) {
+    String shown = url.replaceFirst("^https?://", "").replaceFirst("/$", "");
+    return "<a href=\""
+        + HtmlUtils.htmlEscape(url)
+        + "\" target=\"_blank\" rel=\"nofollow noopener noreferrer me\" translate=\"no\">"
+        + HtmlUtils.htmlEscape(shown)
+        + "</a>";
   }
 
   static String summary(String bio) {

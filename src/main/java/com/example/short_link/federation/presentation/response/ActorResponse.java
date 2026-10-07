@@ -18,6 +18,7 @@ public record ActorResponse(
     String followers,
     String following,
     String featured,
+    List<PropertyValue> attachment,
     Endpoints endpoints,
     boolean manuallyApprovesFollowers,
     boolean discoverable,
@@ -25,6 +26,8 @@ public record ActorResponse(
     PublicKey publicKey) {
 
   public record Endpoints(String sharedInbox) {}
+
+  public record PropertyValue(String type, String name, String value) {}
 
   public record Image(String type, String url) {}
 
