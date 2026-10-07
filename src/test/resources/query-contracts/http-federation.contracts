@@ -76,11 +76,12 @@
 @junit | federation-inbox-delete-liker | 2 | 0 | 0 | 1 | 3
 # Notes and settings, with one seeded remote follower. Note steps include the after-commit delivery
 # work: actor, follower inboxes, preference, then the note (note, author, images) and the queue.
-# A new note and a quote also ask once for the members who rang the author's bell.
+# A new note and a quote also ask once for the members who rang the author's bell; an edit asks
+# once who shared the note.
 @junit | federation-settings-get | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
 @junit | federation-note-create | 10 | 3 | 0 | 0 | 13
-@junit | federation-note-edit | 13 | 2 | 1 | 1 | 17
+@junit | federation-note-edit | 14 | 2 | 1 | 1 | 18
 @junit | federation-note-delete | 6 | 1 | 0 | 3 | 10
 # The note document: note, author, images, then the author's actor (user, preference, actor).
 @junit | federation-note-document | 6 | 0 | 0 | 0 | 6
@@ -131,8 +132,10 @@
 # actor).
 @junit | federation-inbox-remote-reply | 13 | 2 | 0 | 0 | 15
 @junit | notes-thread-remote-reply | 6 | 0 | 0 | 0 | 6
-# Edits and deletes first ask whether we kept that note, so others never cost a key fetch.
-@junit | federation-inbox-remote-update | 2 | 0 | 1 | 0 | 3
+# Edits and deletes first ask whether we kept that note, so others never cost a key fetch. The
+# edit updates that note by the id the question found; the member who boosted it hears of the edit
+# (who shared it, preference, insert, their name and the remote author's for the push).
+@junit | federation-inbox-remote-update | 6 | 1 | 1 | 0 | 8
 @junit | federation-inbox-remote-delete | 2 | 0 | 0 | 1 | 3
 # A note no member follows, answers or is named in: one question, then nothing.
 @junit | federation-inbox-remote-unsolicited | 1 | 0 | 0 | 0 | 1

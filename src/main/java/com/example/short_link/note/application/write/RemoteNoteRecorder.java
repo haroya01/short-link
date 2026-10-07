@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.write;
 
 import com.example.short_link.common.event.NoteInteractionEvent;
+import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
@@ -54,7 +55,13 @@ class RemoteNoteRecorder implements RemoteNotes {
   @Override
   @Transactional(readOnly = true)
   public boolean exists(String uri) {
-    return uri != null && notes.idByUri(uri).isPresent();
+    return kept(uri).isPresent();
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public Optional<Long> kept(String uri) {
+    return uri == null ? Optional.empty() : notes.idByUri(uri);
   }
 
   @Override
@@ -137,20 +144,26 @@ class RemoteNoteRecorder implements RemoteNotes {
   @Transactional
   public boolean revise(
       Long remoteActorId,
-      String uri,
+      Long noteId,
       String body,
       String contentWarning,
       boolean sensitive,
       Instant editedAt) {
     String warning = warning(contentWarning);
-    return notes.reviseRemote(
-            remoteActorId,
-            uri,
-            body,
-            warning,
-            sensitive || warning != null,
-            editedAt == null ? clock.instant() : editedAt)
-        > 0;
+    boolean revised =
+        notes.reviseRemote(
+                remoteActorId,
+                noteId,
+                body,
+                warning,
+                sensitive || warning != null,
+                editedAt == null ? clock.instant() : editedAt)
+            > 0;
+    if (revised) {
+      events.publishEvent(
+          new NoteRevisedEvent(noteId, null, remoteActorId, NoteEntity.excerptOf(body)));
+    }
+    return revised;
   }
 
   @Override

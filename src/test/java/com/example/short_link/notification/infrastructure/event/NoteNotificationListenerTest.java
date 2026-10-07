@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
+import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
@@ -156,6 +157,39 @@ class NoteNotificationListenerTest {
     when(followers.noteSubscribersOf(7L)).thenReturn(List.of());
 
     listener().onNoteBroadcast(new NoteBroadcastEvent(5L, 7L, "hello"));
+
+    verifyNoInteractions(recordUseCase);
+  }
+
+  @Test
+  void anEditTellsWhoRepostedOrQuotedTheNoteWhetherTheAuthorIsHereOrElsewhere() {
+    when(followers.noteSharersOf(5L, 7L)).thenReturn(List.of(10L));
+    when(followers.noteSharersOf(6L, null)).thenReturn(List.of(11L, 12L));
+
+    listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "고친 문장"));
+    listener().onNoteRevised(new NoteRevisedEvent(6L, null, 40L, "fixed"));
+
+    verify(recordUseCase)
+        .recordForEach(
+            List.of(10L),
+            NotificationType.NOTE_EDIT,
+            7L,
+            null,
+            new NotificationNoteRef(5L, "고친 문장", null, null));
+    verify(recordUseCase)
+        .recordForEach(
+            List.of(11L, 12L),
+            NotificationType.NOTE_EDIT,
+            null,
+            40L,
+            new NotificationNoteRef(6L, "fixed", null, null));
+  }
+
+  @Test
+  void anEditNobodySharedRecordsNothing() {
+    when(followers.noteSharersOf(5L, 7L)).thenReturn(List.of());
+
+    listener().onNoteRevised(new NoteRevisedEvent(5L, 7L, null, "x"));
 
     verifyNoInteractions(recordUseCase);
   }

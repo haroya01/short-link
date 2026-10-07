@@ -3,6 +3,7 @@ package com.example.short_link.notification.infrastructure.event;
 import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
+import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
@@ -66,6 +67,21 @@ public class NoteNotificationListener {
         subscribers,
         NotificationType.NOTE_POST,
         event.authorId(),
+        new NotificationNoteRef(event.noteId(), event.excerpt(), null, null));
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onNoteRevised(NoteRevisedEvent event) {
+    List<Long> sharers = followers.noteSharersOf(event.noteId(), event.authorUserId());
+    if (sharers.isEmpty()) {
+      return;
+    }
+    recordUseCase.recordForEach(
+        sharers,
+        NotificationType.NOTE_EDIT,
+        event.authorUserId(),
+        event.authorRemoteId(),
         new NotificationNoteRef(event.noteId(), event.excerpt(), null, null));
   }
 

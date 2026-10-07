@@ -29,13 +29,15 @@ public interface RemoteNotes {
 
   boolean exists(String uri);
 
+  Optional<Long> kept(String uri);
+
   Optional<Target> target(Long noteId);
 
   Optional<Long> receive(Received note);
 
   boolean revise(
       Long remoteActorId,
-      String uri,
+      Long noteId,
       String body,
       String contentWarning,
       boolean sensitive,
