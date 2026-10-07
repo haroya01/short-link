@@ -105,6 +105,126 @@ class NotificationJourneyHttpQueryContractTest extends AccountHttpJourneySupport
   }
 
   @Test
+  void aMemberKeepsStrangersAsideThenAcceptsOneAndDismissesAnother() throws Exception {
+    String policy = "/api/v1/notifications/policy";
+    var defaults = body(call("notification-policy-read", "GET", policy, null, token, 200));
+    assertThat(defaults.path("forNotFollowing").asString()).isEqualTo("ACCEPT");
+    assertThat(defaults.path("forPrivateMentions").asString()).isEqualTo("FILTER");
+    assertThat(
+            body(call(
+                    "notification-policy-update",
+                    "PUT",
+                    policy,
+                    Map.of("forNotFollowing", "FILTER"),
+                    token,
+                    200))
+                .path("forNotFollowing")
+                .asString())
+        .isEqualTo("FILTER");
+
+    String follow = "/api/v1/users/" + owner.getUsername() + "/follow";
+    call("notification-policy-filtered-follow", "PUT", follow, null, strangerToken, 200);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? AND filtered",
+                owner.getId()))
+        .isEqualTo(1);
+    var inbox =
+        body(
+            call(
+                "notification-policy-inbox-without",
+                "GET",
+                "/api/v1/notifications",
+                null,
+                token,
+                200));
+    assertThat(inbox.path("items")).isEmpty();
+    assertThat(
+            body(call(
+                    "notification-policy-unread-without",
+                    "GET",
+                    "/api/v1/notifications/unread-count",
+                    null,
+                    token,
+                    200))
+                .path("count")
+                .asLong())
+        .isZero();
+
+    var requests =
+        body(
+            call(
+                "notification-policy-requests",
+                "GET",
+                "/api/v1/notifications/requests",
+                null,
+                token,
+                200));
+    assertThat(requests).hasSize(1);
+    assertThat(requests.get(0).path("actorUserId").asLong()).isEqualTo(stranger.getId());
+    assertThat(requests.get(0).path("username").asString()).isEqualTo(stranger.getUsername());
+    assertThat(requests.get(0).path("count").asLong()).isEqualTo(1);
+
+    call(
+        "notification-policy-accept",
+        "POST",
+        "/api/v1/notifications/requests/accept",
+        Map.of("actorUserId", stranger.getId()),
+        token,
+        204);
+    assertThat(
+            body(call(
+                    "notification-policy-inbox-with",
+                    "GET",
+                    "/api/v1/notifications",
+                    null,
+                    token,
+                    200))
+                .path("items")
+                .get(0)
+                .path("type")
+                .asString())
+        .isEqualTo("FOLLOW");
+
+    call("notification-policy-accepted-unfollow", "DELETE", follow, null, strangerToken, 200);
+    call("notification-policy-accepted-refollow", "PUT", follow, null, strangerToken, 200);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? AND filtered",
+                owner.getId()))
+        .isZero();
+
+    var second = createUser();
+    call(
+        "notification-policy-filtered-follow-second",
+        "PUT",
+        follow,
+        null,
+        jwt.createAccessToken(second.getId(), "USER"),
+        200);
+    call(
+        "notification-policy-dismiss",
+        "POST",
+        "/api/v1/notifications/requests/dismiss",
+        Map.of("actorUserId", second.getId()),
+        token,
+        204);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? AND actor_user_id = ?",
+                owner.getId(),
+                second.getId()))
+        .isZero();
+    call(
+        "notification-policy-accept-nobody",
+        "POST",
+        "/api/v1/notifications/requests/accept",
+        Map.of(),
+        token,
+        400);
+  }
+
+  @Test
   void recipientReadsOwnBlogInboxWithoutMarkingSomeoneElsesNotification() throws Exception {
     long[] ids =
         transactions.execute(

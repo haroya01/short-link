@@ -17,7 +17,11 @@ import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.NotificationUser;
+import com.example.short_link.notification.domain.policy.NotificationPolicy;
+import com.example.short_link.notification.domain.policy.NotificationPolicyLevel;
+import com.example.short_link.notification.domain.policy.NotificationSender;
 import com.example.short_link.notification.domain.repository.NotificationActorReader;
+import com.example.short_link.notification.domain.repository.NotificationPolicyRepository;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
 import java.util.List;
@@ -52,6 +56,9 @@ class RecordBlogNotificationUseCaseTest {
   @Mock(strictness = Mock.Strictness.LENIENT)
   private NotificationActorReader actorReader;
 
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private NotificationPolicyRepository policies;
+
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final MessageSource messageSource = pushMessages();
 
@@ -76,6 +83,22 @@ class RecordBlogNotificationUseCaseTest {
             org.mockito.ArgumentMatchers.anyList(),
             org.mockito.ArgumentMatchers.any(NotificationType.class)))
         .thenAnswer(inv -> inv.getArgument(0));
+    when(policies.sender(
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(NotificationType.class),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any()))
+        .thenAnswer(
+            inv ->
+                new NotificationSender(
+                    preferenceService.isEnabled(inv.getArgument(0), inv.getArgument(1)),
+                    null,
+                    false,
+                    true,
+                    true,
+                    false,
+                    false));
   }
 
   private RecordBlogNotificationUseCase useCase() {
@@ -87,7 +110,96 @@ class RecordBlogNotificationUseCaseTest {
         messageSource,
         preferenceService,
         fanoutWriter,
-        actorReader);
+        actorReader,
+        policies);
+  }
+
+  private void keepAsideStrangers() {
+    when(policies.sender(9L, NotificationType.LIKE, 2L, null, null))
+        .thenReturn(
+            new NotificationSender(
+                true,
+                new NotificationPolicy(
+                    NotificationPolicyLevel.FILTER,
+                    NotificationPolicyLevel.ACCEPT,
+                    NotificationPolicyLevel.ACCEPT,
+                    NotificationPolicyLevel.FILTER),
+                false,
+                false,
+                true,
+                false,
+                false));
+  }
+
+  @Test
+  void aNoticeThePolicyKeepsAsideIsStoredFilteredAndNeverPushed() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    keepAsideStrangers();
+
+    useCase().record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", "t", null));
+
+    ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
+    org.mockito.Mockito.verify(repository).save(saved.capture());
+    assertThat(saved.getValue().isFiltered()).isTrue();
+    org.mockito.Mockito.verifyNoInteractions(pushSender);
+  }
+
+  @Test
+  void aNoticeThePolicyDropsWritesNothing() {
+    when(policies.sender(9L, NotificationType.FOLLOW, 2L, null, null))
+        .thenReturn(
+            new NotificationSender(
+                true,
+                new NotificationPolicy(
+                    NotificationPolicyLevel.DROP,
+                    NotificationPolicyLevel.ACCEPT,
+                    NotificationPolicyLevel.ACCEPT,
+                    NotificationPolicyLevel.FILTER),
+                false,
+                false,
+                true,
+                false,
+                false));
+
+    useCase().record(9L, NotificationType.FOLLOW, 2L, null);
+
+    org.mockito.Mockito.verifyNoInteractions(repository, pushSender);
+  }
+
+  @Test
+  void aMentionIsCheckedForBeingPrivateByItsNote() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_MENTION,
+            2L,
+            null,
+            new NotificationNoteRef(77L, "hey", null, null),
+            null);
+
+    org.mockito.Mockito.verify(policies).sender(9L, NotificationType.NOTE_MENTION, 2L, null, 77L);
+  }
+
+  @Test
+  void noticesTheMemberSubscribedToSkipThePolicy() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_POST,
+            2L,
+            null,
+            new NotificationNoteRef(77L, "new", null, null),
+            null);
+
+    org.mockito.Mockito.verifyNoInteractions(policies);
+    org.mockito.Mockito.verify(preferenceService).isEnabled(9L, NotificationType.NOTE_POST);
   }
 
   @Test

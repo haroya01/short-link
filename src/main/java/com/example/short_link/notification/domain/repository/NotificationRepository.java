@@ -3,6 +3,7 @@ package com.example.short_link.notification.domain.repository;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationGroup;
 import com.example.short_link.notification.domain.NotificationGroupActor;
+import com.example.short_link.notification.domain.policy.FilteredSender;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -32,4 +33,10 @@ public interface NotificationRepository {
   int deleteFollowRequest(Long recipientUserId, Long actorUserId, Long actorRemoteId);
 
   int deleteFollowRequests(Long recipientUserId);
+
+  List<FilteredSender> filteredSenders(Long recipientUserId, int limit);
+
+  int unfilter(Long recipientUserId, Long actorUserId, Long actorRemoteId);
+
+  int deleteFiltered(Long recipientUserId, Long actorUserId, Long actorRemoteId);
 }

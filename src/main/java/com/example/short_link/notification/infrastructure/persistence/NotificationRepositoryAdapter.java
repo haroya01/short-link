@@ -3,6 +3,7 @@ package com.example.short_link.notification.infrastructure.persistence;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationGroup;
 import com.example.short_link.notification.domain.NotificationGroupActor;
+import com.example.short_link.notification.domain.policy.FilteredSender;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -39,7 +40,7 @@ class NotificationRepositoryAdapter implements NotificationRepository {
                 "SELECT n.*, g.members, g.unread FROM ("
                     + "SELECT MAX(id) AS last_id, COUNT(*) AS members,"
                     + " SUM(read_at IS NULL) AS unread"
-                    + " FROM notification WHERE recipient_user_id = :recipient"
+                    + " FROM notification WHERE recipient_user_id = :recipient AND NOT filtered"
                     + " GROUP BY "
                     + GROUP
                     + ") g JOIN notification n ON n.id = g.last_id"
@@ -73,7 +74,7 @@ class NotificationRepositoryAdapter implements NotificationRepository {
                     + "SELECT id, group_key, actor_user_id, actor_remote_id,"
                     + " ROW_NUMBER() OVER (PARTITION BY group_key ORDER BY id DESC) AS position"
                     + " FROM notification"
-                    + " WHERE recipient_user_id = :recipient AND group_key IN (:keys)"
+                    + " WHERE recipient_user_id = :recipient AND group_key IN (:keys) AND NOT filtered"
                     + ") t WHERE t.position <= :perGroup ORDER BY t.id DESC")
             .setParameter("recipient", recipientUserId)
             .setParameter("keys", groupKeys)
@@ -117,7 +118,7 @@ class NotificationRepositoryAdapter implements NotificationRepository {
                     "SELECT COUNT(DISTINCT "
                         + GROUP
                         + ") FROM notification"
-                        + " WHERE recipient_user_id = :recipient AND read_at IS NULL")
+                        + " WHERE recipient_user_id = :recipient AND read_at IS NULL AND NOT filtered")
                 .setParameter("recipient", recipientUserId)
                 .getSingleResult();
     return unread.longValue();
@@ -158,6 +159,45 @@ class NotificationRepositoryAdapter implements NotificationRepository {
     return em.createNativeQuery(
             "DELETE FROM notification WHERE recipient_user_id = :recipient"
                 + " AND type = 'FOLLOW_REQUEST' AND actor_user_id <=> :actorUserId"
+                + " AND actor_remote_id <=> :actorRemoteId")
+        .setParameter("recipient", recipientUserId)
+        .setParameter("actorUserId", actorUserId)
+        .setParameter("actorRemoteId", actorRemoteId)
+        .executeUpdate();
+  }
+
+  // The filtered inbox: one row per sender, newest first, with how many notices wait.
+  @Override
+  public List<FilteredSender> filteredSenders(Long recipientUserId, int limit) {
+    return em.createQuery(
+            "select new com.example.short_link.notification.domain.policy.FilteredSender("
+                + "n.actorUserId, n.actorRemoteId, count(n), max(n.createdAt))"
+                + " from NotificationEntity n where n.recipientUserId = :recipient and n.filtered = true"
+                + " and (n.actorUserId is not null or n.actorRemoteId is not null)"
+                + " group by n.actorUserId, n.actorRemoteId order by max(n.id) desc",
+            FilteredSender.class)
+        .setParameter("recipient", recipientUserId)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  public int unfilter(Long recipientUserId, Long actorUserId, Long actorRemoteId) {
+    return em.createNativeQuery(
+            "UPDATE notification SET filtered = FALSE WHERE recipient_user_id = :recipient"
+                + " AND filtered AND actor_user_id <=> :actorUserId"
+                + " AND actor_remote_id <=> :actorRemoteId")
+        .setParameter("recipient", recipientUserId)
+        .setParameter("actorUserId", actorUserId)
+        .setParameter("actorRemoteId", actorRemoteId)
+        .executeUpdate();
+  }
+
+  @Override
+  public int deleteFiltered(Long recipientUserId, Long actorUserId, Long actorRemoteId) {
+    return em.createNativeQuery(
+            "DELETE FROM notification WHERE recipient_user_id = :recipient"
+                + " AND filtered AND actor_user_id <=> :actorUserId"
                 + " AND actor_remote_id <=> :actorRemoteId")
         .setParameter("recipient", recipientUserId)
         .setParameter("actorUserId", actorUserId)
