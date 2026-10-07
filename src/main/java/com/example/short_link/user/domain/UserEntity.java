@@ -65,6 +65,9 @@ public class UserEntity extends BaseCreatedEntity {
   @Column(length = 280)
   private String bio;
 
+  @Column(name = "display_name", length = 30)
+  private String displayName;
+
   @Column(name = "profile_theme", length = 16)
   private String profileTheme;
 
@@ -141,6 +144,10 @@ public class UserEntity extends BaseCreatedEntity {
 
   public void updateBio(String bio) {
     this.bio = bio;
+  }
+
+  public void updateDisplayName(String displayName) {
+    this.displayName = displayName;
   }
 
   public void updateStatsPublic(boolean statsPublic) {

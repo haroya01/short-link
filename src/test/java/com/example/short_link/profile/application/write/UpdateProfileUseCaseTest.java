@@ -74,6 +74,26 @@ class UpdateProfileUseCaseTest {
   }
 
   @Test
+  void aDisplayNameIsTrimmedToOneLineAndBlankClearsIt() {
+    UserEntity u = userWithId(7L);
+    when(userRepository.findById(7L)).thenReturn(Optional.of(u));
+    MyProfile p =
+        useCase.execute(new UpdateProfileCommand(7L, null, null, null, null, null, "  김 \n 도현  "));
+    assertThat(u.getDisplayName()).isEqualTo("김 도현");
+    assertThat(p.displayName()).isEqualTo("김 도현");
+
+    useCase.execute(new UpdateProfileCommand(7L, null, null, null, null, null, "   "));
+    assertThat(u.getDisplayName()).isNull();
+
+    String tooLong = "가".repeat(31);
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
+                    new UpdateProfileCommand(7L, null, null, null, null, null, tooLong)))
+        .isInstanceOf(ProfileException.class);
+  }
+
+  @Test
   void blankBioClears() {
     UserEntity u = userWithId(7L);
     u.updateBio("existing");

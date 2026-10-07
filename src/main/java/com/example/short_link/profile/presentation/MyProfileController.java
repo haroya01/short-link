@@ -41,7 +41,8 @@ public class MyProfileController {
             request.bio(),
             request.theme(),
             request.socials(),
-            request.hideFollowerCount()));
+            request.hideFollowerCount(),
+            request.displayName()));
   }
 
   @PutMapping("/order")
