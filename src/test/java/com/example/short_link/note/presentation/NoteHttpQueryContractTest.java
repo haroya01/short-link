@@ -560,6 +560,44 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(count("user_mute", "user_id = ?", reader.id())).isZero();
   }
 
+  @Test
+  void anOwnerKeepsKeywordFiltersThatTheirAppsApply() throws Exception {
+    Actor owner = actor("filter-owner", false);
+    Actor stranger = actor("filter-stranger", false);
+    var created =
+        step(
+            "note-filter-create",
+            "POST",
+            "/api/v1/notes/filters",
+            owner,
+            Map.of("phrase", "스포일러", "context", List.of("home", "thread"), "expiresIn", 86400),
+            201);
+    long filterId = created.path("id").asLong();
+    assertThat(created.path("action").asText()).isEqualTo("warn");
+    String filter = "/api/v1/notes/filters/" + filterId;
+
+    var mine = step("note-filters", "GET", "/api/v1/notes/filters", owner, null, 200);
+    assertThat(mine.get(0).path("phrase").asText()).isEqualTo("스포일러");
+    var updated =
+        step(
+            "note-filter-update",
+            "PUT",
+            filter,
+            owner,
+            Map.of("phrase", "결말", "context", List.of("public"), "action", "hide"),
+            200);
+    assertThat(updated.path("expiresAt").isNull()).isTrue();
+    step(
+        "note-filter-update-stranger",
+        "PUT",
+        filter,
+        stranger,
+        Map.of("phrase", "x", "context", List.of("home")),
+        404);
+    step("note-filter-delete", "DELETE", filter, owner, null, 204);
+    assertThat(count("note_filter", "user_id = ?", owner.id())).isZero();
+  }
+
   private long post(String id, Actor author, String body, String visibility) throws Exception {
     return step(
             id,
