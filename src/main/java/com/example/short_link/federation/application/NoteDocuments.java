@@ -190,12 +190,18 @@ public class NoteDocuments {
   }
 
   public Map<String, Object> update(NoteSnapshot note, String actorPublicId) {
+    return update(note, actorPublicId, null, List.of());
+  }
+
+  public Map<String, Object> update(
+      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
+    List<Addressee> addressed = addressed(parent, named);
     long version = note.editedAt() == null ? 0 : note.editedAt().toEpochMilli();
     Map<String, Object> activity =
         activity(urls.note(note.id()) + "#updates/" + version, "Update", actorPublicId);
-    activity.put("to", to(note, actorPublicId));
-    activity.put("cc", cc(note, actorPublicId));
-    activity.put("object", note(note, actorPublicId));
+    activity.put("to", to(note, actorPublicId, addressed));
+    activity.put("cc", cc(note, actorPublicId, addressed));
+    activity.put("object", note(note, actorPublicId, parent, named));
     return activity;
   }
 

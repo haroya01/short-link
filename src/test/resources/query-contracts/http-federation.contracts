@@ -162,3 +162,9 @@
 @junit | federation-remote-note-like | 9 | 2 | 0 | 0 | 11
 @junit | federation-remote-note-repost | 11 | 2 | 0 | 0 | 13
 @junit | federation-remote-note-reply | 13 | 2 | 0 | 0 | 15
+# Editing and deleting that reply reach the server it answered as well as the member's followers:
+# after the member's own work, their actor (user, preference, actor), the reply and its parent's
+# account, follower inboxes, then the delivery. The delete carries what the reply answered, since
+# the row is gone by then; the edit also asks who shared it.
+@junit | federation-remote-reply-edit | 17 | 2 | 1 | 0 | 20
+@junit | federation-remote-reply-delete | 9 | 1 | 0 | 3 | 13

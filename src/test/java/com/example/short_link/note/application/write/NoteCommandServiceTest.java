@@ -700,6 +700,26 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void anEditedOrDeletedReplyTellsFederationWhatItAnsweredAndWhomItNamed() {
+    NoteEntity reply = note(2L, 7L, "답 @bob@b.example");
+    ReflectionTestUtils.setField(reply, "inReplyToId", 50L);
+    when(notes.findById(2L)).thenReturn(Optional.of(reply));
+    when(media.findByNoteIds(List.of(2L))).thenReturn(List.of());
+    when(views.of(List.of(reply), 7L))
+        .thenReturn(
+            List.of(
+                new NoteView(
+                    2L, "고친 답", null, null, 0L, false, WRITER, List.of(), null, null, 0, null, null,
+                    null, null)));
+
+    service().edit(7L, 2L, "고친 답", null, null);
+    service().delete(7L, 2L);
+
+    verify(events).publishEvent(new NoteEditedEvent(2L, 7L, true));
+    verify(events).publishEvent(new NoteDeletedEvent(2L, 7L, List.of(), 50L, List.of()));
+  }
+
+  @Test
   void deletingClearsLikesAndCollectionBlocksAndHandsOverImageKeys() {
     NoteEntity mine = note(1L, 7L, "bye");
     when(notes.findById(1L)).thenReturn(Optional.of(mine));

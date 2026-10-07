@@ -375,7 +375,23 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
     var created = json.readTree(sent.get(2));
     assertThat(created.path("type").asString()).isEqualTo("Create");
     assertThat(created.path("object").path("inReplyTo").asString()).isEqualTo(status);
-    jdbc.update("DELETE FROM note WHERE id = ?", answer.path("id").asLong());
+    long answerId = answer.path("id").asLong();
+    call(
+        "federation-remote-reply-edit",
+        "PATCH",
+        "/api/v1/notes/" + answerId,
+        Map.of("body", "replying from kurl, edited"),
+        token,
+        200);
+    call("federation-remote-reply-delete", "DELETE", "/api/v1/notes/" + answerId, null, token, 204);
+    List<String> after =
+        jdbc.queryForList(
+            "SELECT JSON_UNQUOTE(JSON_EXTRACT(body, '$.type')) FROM federation_delivery"
+                + " WHERE signer_user_id = ? AND inbox = ? ORDER BY id",
+            String.class,
+            owner.getId(),
+            aliceInbox);
+    assertThat(after).containsExactly("Like", "Announce", "Create", "Update", "Delete");
 
     jdbc.update(
         "INSERT INTO note (user_id, body, created_at) VALUES (?, 'a question', NOW(6))",
