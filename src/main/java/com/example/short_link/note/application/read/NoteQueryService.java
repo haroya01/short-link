@@ -43,6 +43,11 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
+  public NoteFeedView direct(Long viewerId, int page, int size) {
+    return page(page, size, viewerId, (offset, limit) -> notes.direct(viewerId, offset, limit));
+  }
+
+  @Transactional(readOnly = true)
   public NoteFeedView trending(int page, int size, Long viewerId) {
     return page(page, size, viewerId, notes::trending);
   }
@@ -66,7 +71,7 @@ public class NoteQueryService {
         page,
         size,
         viewerId,
-        (offset, limit) -> notes.topLevelByAuthors(List.of(author.id()), offset, limit));
+        (offset, limit) -> notes.topLevelByAuthor(author.id(), viewerId, offset, limit));
   }
 
   @Transactional(readOnly = true)
@@ -141,12 +146,15 @@ public class NoteQueryService {
 
   // Mastodon's edit history: the note as it reads now, then each earlier version, newest first.
   @Transactional(readOnly = true)
-  public NoteHistoryView history(Long noteId) {
+  public NoteHistoryView history(Long noteId, Long viewerId) {
     NoteEntity note =
         notes
             .findById(noteId)
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
-    if (people.activeAuthors(Set.of(note.getUserId())).isEmpty()) {
+    if (people.activeAuthors(Set.of(note.getUserId())).isEmpty()
+        || (note.getVisibility().restricted()
+            && !note.isOwnedBy(viewerId)
+            && !notes.visibleTo(viewerId, Set.of(noteId)).contains(noteId))) {
       throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
     }
     List<NoteHistoryView.Version> versions = new ArrayList<>();

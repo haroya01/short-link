@@ -15,6 +15,7 @@ import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +26,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 // Batches every lookup for a page of notes: one query per kind of data, never per note. Notes by
-// soft-deleted authors are dropped. Mentioned members ride along in the authors query, so a mention
-// links only when that member exists.
+// soft-deleted authors are dropped, and so are followers-only and direct notes this viewer may not
+// read (one lookup, and only when the page has such notes by someone else). Mentioned members ride
+// along in the authors query, so a mention links only when that member exists.
 @Component
 @RequiredArgsConstructor
 public class NoteViews {
@@ -60,8 +62,23 @@ public class NoteViews {
             : people.activeAuthors(authorIds, handles);
     Set<String> members =
         authors.values().stream().map(NoteAuthor::username).collect(Collectors.toSet());
+    Set<Long> restricted = new HashSet<>();
+    for (NoteEntity note : page) {
+      if (note.getVisibility().restricted() && !note.getUserId().equals(viewerId)) {
+        restricted.add(note.getId());
+      }
+    }
+    for (NoteEntity quoted : quotedNotes) {
+      if (quoted.getVisibility().restricted() && !quoted.getUserId().equals(viewerId)) {
+        restricted.add(quoted.getId());
+      }
+    }
+    Set<Long> allowed = notes.visibleTo(viewerId, restricted);
     List<NoteEntity> visible =
-        page.stream().filter(note -> authors.containsKey(note.getUserId())).toList();
+        page.stream()
+            .filter(note -> authors.containsKey(note.getUserId()))
+            .filter(note -> !restricted.contains(note.getId()) || allowed.contains(note.getId()))
+            .toList();
     if (visible.isEmpty()) {
       return List.of();
     }
@@ -69,6 +86,10 @@ public class NoteViews {
     Map<Long, NoteEntity> quotedById =
         quotedNotes.stream()
             .filter(quotedNote -> authors.containsKey(quotedNote.getUserId()))
+            .filter(
+                quotedNote ->
+                    !restricted.contains(quotedNote.getId())
+                        || allowed.contains(quotedNote.getId()))
             .collect(Collectors.toMap(NoteEntity::getId, quotedNote -> quotedNote));
     List<Long> imageNoteIds = new ArrayList<>(ids);
     imageNoteIds.addAll(quotedById.keySet());
@@ -109,7 +130,8 @@ public class NoteViews {
               Mentions.of(note.getBody()).stream().filter(members::contains).toList(),
               note.getContentWarning(),
               note.isSensitive(),
-              note.isPinned()));
+              note.isPinned(),
+              note.getVisibility().apiName()));
     }
     return views;
   }

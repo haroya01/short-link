@@ -266,6 +266,163 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(unpinned.path("pinned").asBoolean()).isFalse();
   }
 
+  @Test
+  void visibilityDecidesWhoReadsANoteOnEveryPath() throws Exception {
+    Actor author = actor("vis-author", false);
+    Actor follower = actor("vis-follower", false);
+    Actor mentioned = actor("vis-mentioned", false);
+    Actor stranger = actor("vis-stranger", false);
+    String handle = "vm" + mentioned.id();
+    jdbc.update("UPDATE users SET username = ? WHERE id = ?", handle, mentioned.id());
+    jdbc.update(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        follower.id(),
+        author.id());
+
+    long pub = post("note-vis-create-public", author, "공개 #visall", "public");
+    long unl = post("note-vis-create-unlisted", author, "조용한 공개 #visall", "unlisted");
+    long prv = post("note-vis-create-private", author, "팔로워만 @" + handle + " #visall", "private");
+    long dm = post("note-vis-create-direct", author, "@" + handle + " 둘만 #visall", "direct");
+    List<Long> mine = List.of(pub, unl, prv, dm);
+
+    assertThat(
+            only(
+                step("note-vis-everyone", "GET", "/api/v1/public/notes?size=50", null, null, 200),
+                mine))
+        .containsExactly(pub);
+    assertThat(
+            only(
+                step("note-vis-tagged", "GET", "/api/v1/public/notes/tags/visall", null, null, 200),
+                mine))
+        .containsExactly(pub);
+    String profile = "/api/v1/public/profiles/" + author.username() + "/notes";
+    assertThat(only(step("note-vis-profile-anonymous", "GET", profile, null, null, 200), mine))
+        .containsExactly(unl, pub);
+    assertThat(only(step("note-vis-profile-follower", "GET", profile, follower, null, 200), mine))
+        .containsExactly(prv, unl, pub);
+    assertThat(only(step("note-vis-profile-mentioned", "GET", profile, mentioned, null, 200), mine))
+        .containsExactly(prv, unl, pub);
+    assertThat(only(step("note-vis-profile-author", "GET", profile, author, null, 200), mine))
+        .containsExactly(dm, prv, unl, pub);
+
+    step(
+        "note-vis-thread-private-stranger",
+        "GET",
+        "/api/v1/public/notes/" + prv,
+        stranger,
+        null,
+        404);
+    step(
+        "note-vis-thread-private-follower",
+        "GET",
+        "/api/v1/public/notes/" + prv,
+        follower,
+        null,
+        200);
+    step(
+        "note-vis-thread-direct-follower",
+        "GET",
+        "/api/v1/public/notes/" + dm,
+        follower,
+        null,
+        404);
+    step(
+        "note-vis-thread-direct-mentioned",
+        "GET",
+        "/api/v1/public/notes/" + dm,
+        mentioned,
+        null,
+        200);
+    step(
+        "note-vis-history-private-anonymous",
+        "GET",
+        "/api/v1/public/notes/" + prv + "/history",
+        null,
+        null,
+        404);
+
+    assertThat(
+            only(
+                step(
+                    "note-vis-direct-mentioned",
+                    "GET",
+                    "/api/v1/notes/direct",
+                    mentioned,
+                    null,
+                    200),
+                mine))
+        .containsExactly(dm);
+    assertThat(
+            only(
+                step(
+                    "note-vis-direct-follower", "GET", "/api/v1/notes/direct", follower, null, 200),
+                mine))
+        .isEmpty();
+    assertThat(
+            only(
+                step(
+                    "note-vis-following-follower",
+                    "GET",
+                    "/api/v1/notes/following",
+                    follower,
+                    null,
+                    200),
+                mine))
+        .containsExactly(prv, unl, pub);
+    assertThat(
+            only(
+                step(
+                    "note-vis-following-mentioned",
+                    "GET",
+                    "/api/v1/notes/following",
+                    mentioned,
+                    null,
+                    200),
+                mine))
+        .containsExactly(dm);
+
+    step(
+        "note-vis-like-private-stranger",
+        "PUT",
+        "/api/v1/notes/" + prv + "/like",
+        stranger,
+        null,
+        404);
+    step(
+        "note-vis-repost-private-follower",
+        "PUT",
+        "/api/v1/notes/" + prv + "/repost",
+        follower,
+        null,
+        400);
+    step(
+        "note-vis-reply-direct-follower",
+        "POST",
+        "/api/v1/notes",
+        follower,
+        Map.of("body", "끼어들기", "inReplyToId", dm),
+        404);
+    step("note-vis-ap-private", "GET", "/ap/notes/" + prv, null, null, 404);
+    step("note-vis-ap-unlisted", "GET", "/ap/notes/" + unl, null, null, 200);
+    assertThat(count("note_recipient", "note_id IN (?, ?)", prv, dm)).isEqualTo(2);
+  }
+
+  private long post(String id, Actor author, String body, String visibility) throws Exception {
+    return step(
+            id,
+            "POST",
+            "/api/v1/notes",
+            author,
+            Map.of("body", body, "visibility", visibility),
+            201)
+        .path("id")
+        .asLong();
+  }
+
+  private static List<Long> only(JsonNode feed, List<Long> among) {
+    return ids(feed).stream().filter(among::contains).toList();
+  }
+
   private static List<Long> ids(JsonNode feed) {
     List<Long> ids = new ArrayList<>();
     feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));

@@ -27,6 +27,7 @@ import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
+import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
@@ -528,6 +529,53 @@ class NoteCommandServiceTest {
     verify(notes)
         .recordVersion(
             1L, new NoteVersion("고친 글", null, false, Instant.parse("2026-10-06T00:00:00.123456Z")));
+  }
+
+  @Test
+  void aReplyKeepsItsParentsVisibilityAndARestrictedNoteRecordsWhomItMentions() {
+    saving();
+    NoteEntity parent = note(5L, 9L, "followers only");
+    parent.showTo(NoteVisibility.PRIVATE);
+    when(notes.findById(5L)).thenReturn(Optional.of(parent));
+    when(notes.visibleTo(7L, Set.of(5L))).thenReturn(Set.of(5L));
+    NoteAuthor mina = new NoteAuthor(11L, "mina", null);
+    when(people.activeAuthors(Set.of(7L), List.of("mina")))
+        .thenReturn(Map.of(7L, WRITER, 11L, mina));
+
+    NoteView reply = service().create(7L, new NoteDraft("@mina 같이 봐요", List.of(), null, 5L));
+
+    assertThat(reply.visibility()).isEqualTo("private");
+    verify(notes).addRecipients(100L, List.of(11L));
+  }
+
+  @Test
+  void aHiddenNoteIsNotFoundAndOnlyPublicOrUnlistedNotesAreReposted() {
+    NoteEntity hidden = note(5L, 9L, "secret");
+    hidden.showTo(NoteVisibility.DIRECT);
+    when(notes.findById(5L)).thenReturn(Optional.of(hidden));
+    assertThatThrownBy(() -> service().setLike(7L, 5L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_FOUND));
+
+    NoteEntity followersOnly = note(6L, 9L, "followers");
+    followersOnly.showTo(NoteVisibility.PRIVATE);
+    when(notes.findById(6L)).thenReturn(Optional.of(followersOnly));
+    when(notes.visibleTo(7L, Set.of(6L))).thenReturn(Set.of(6L));
+    assertThatThrownBy(() -> service().setRepost(7L, 6L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_SHAREABLE));
+
+    assertThatThrownBy(
+            () ->
+                service()
+                    .create(
+                        7L,
+                        new NoteDraft("x", List.of(), null, null, null, null, false, "everyone")))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_VISIBILITY_INVALID));
   }
 
   @Test

@@ -1,6 +1,8 @@
 package com.example.short_link.federation.application;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
+import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
+import com.example.short_link.common.note.NoteSnapshotReader.Visibility;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
@@ -32,12 +34,24 @@ public class NoteFederation {
 
   @Transactional
   public void created(Long noteId, Long authorId) {
-    deliver(authorId, publicId -> notes.find(noteId).map(note -> documents.create(note, publicId)));
+    deliver(
+        authorId,
+        publicId ->
+            notes
+                .find(noteId)
+                .filter(NoteFederation::leaves)
+                .map(note -> documents.create(note, publicId)));
   }
 
   @Transactional
   public void edited(Long noteId, Long authorId) {
-    deliver(authorId, publicId -> notes.find(noteId).map(note -> documents.update(note, publicId)));
+    deliver(
+        authorId,
+        publicId ->
+            notes
+                .find(noteId)
+                .filter(NoteFederation::leaves)
+                .map(note -> documents.update(note, publicId)));
   }
 
   @Transactional
@@ -47,6 +61,10 @@ public class NoteFederation {
         publicId ->
             notes
                 .find(noteId)
+                .filter(
+                    note ->
+                        note.visibility() == Visibility.PUBLIC
+                            || note.visibility() == Visibility.UNLISTED)
                 .flatMap(note -> localActors.byUsername(note.authorUsername()))
                 .map(author -> documents.announce(repostId, noteId, publicId, author.publicId())));
   }
@@ -60,6 +78,10 @@ public class NoteFederation {
   @Transactional
   public void deleted(Long noteId, Long authorId) {
     deliver(authorId, publicId -> Optional.of(documents.delete(noteId, publicId)));
+  }
+
+  private static boolean leaves(NoteSnapshot note) {
+    return note.visibility() != Visibility.DIRECT;
   }
 
   private void deliver(Long authorId, Function<String, Optional<Map<String, Object>>> activity) {

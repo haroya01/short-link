@@ -101,7 +101,7 @@ class NoteQueryServiceTest {
   @Test
   void profileAndFollowingReadTheRightAuthors() {
     when(people.activeByUsername("me")).thenReturn(Optional.of(ME));
-    when(notes.topLevelByAuthors(List.of(7L), 0, 21)).thenReturn(List.of());
+    when(notes.topLevelByAuthor(7L, 9L, 0, 21)).thenReturn(List.of());
     when(views.of(anyList(), eq(9L))).thenReturn(List.of());
     service.byAuthor("me", 0, 20, 9L);
 

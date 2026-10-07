@@ -9,6 +9,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 public interface NoteRepository {
 
@@ -22,7 +23,13 @@ public interface NoteRepository {
 
   List<NoteEntity> topLevel(int offset, int limit);
 
-  List<NoteEntity> topLevelByAuthors(Collection<Long> authorIds, int offset, int limit);
+  List<NoteEntity> topLevelByAuthor(Long authorId, Long viewerId, int offset, int limit);
+
+  Set<Long> visibleTo(Long viewerId, Collection<Long> restrictedIds);
+
+  void addRecipients(Long noteId, Collection<Long> userIds);
+
+  List<NoteEntity> direct(Long viewerId, int offset, int limit);
 
   List<NoteEntity> trending(int offset, int limit);
 

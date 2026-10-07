@@ -10,6 +10,10 @@ public enum NoteErrorCode {
   NOTE_WARNING_TOO_LONG(HttpStatus.BAD_REQUEST, "content warning exceeds %s characters"),
   NOTE_PIN_LIMIT(HttpStatus.BAD_REQUEST, "at most %s notes can be pinned"),
   NOTE_PIN_REPLY(HttpStatus.BAD_REQUEST, "a reply cannot be pinned"),
+  NOTE_VISIBILITY_INVALID(HttpStatus.BAD_REQUEST, "unknown visibility: %s"),
+  NOTE_PIN_DIRECT(HttpStatus.BAD_REQUEST, "a direct note cannot be pinned"),
+  NOTE_NOT_SHAREABLE(
+      HttpStatus.BAD_REQUEST, "only public and unlisted notes can be reposted or quoted"),
   NOTE_TOO_MANY_IMAGES(HttpStatus.BAD_REQUEST, "a note holds at most %s images"),
   NOTE_ALT_TEXT_TOO_LONG(HttpStatus.BAD_REQUEST, "alt text exceeds %s characters"),
   NOTE_IMAGE_INVALID(HttpStatus.BAD_REQUEST, "%s"),

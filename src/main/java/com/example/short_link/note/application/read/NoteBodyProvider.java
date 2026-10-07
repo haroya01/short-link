@@ -16,6 +16,7 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
+// Collections are public, so only public and unlisted notes can be filed in one or shown from one.
 class NoteBodyProvider implements NoteBodyReader {
 
   private final NoteRepository notes;
@@ -23,7 +24,10 @@ class NoteBodyProvider implements NoteBodyReader {
 
   @Override
   public Map<Long, NoteBlock> blocksByIds(Collection<Long> noteIds) {
-    List<NoteEntity> found = notes.findAllByIdIn(noteIds);
+    List<NoteEntity> found =
+        notes.findAllByIdIn(noteIds).stream()
+            .filter(note -> note.getVisibility().shareable())
+            .toList();
     if (found.isEmpty()) return Map.of();
     Map<Long, NoteAuthor> authors =
         people.activeAuthors(found.stream().map(NoteEntity::getUserId).collect(Collectors.toSet()));
@@ -38,6 +42,6 @@ class NoteBodyProvider implements NoteBodyReader {
 
   @Override
   public boolean exists(Long noteId) {
-    return notes.findById(noteId).isPresent();
+    return notes.findById(noteId).filter(note -> note.getVisibility().shareable()).isPresent();
   }
 }

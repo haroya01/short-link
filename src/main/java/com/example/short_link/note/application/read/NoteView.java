@@ -29,7 +29,8 @@ public record NoteView(
     List<String> mentions,
     String contentWarning,
     boolean sensitive,
-    boolean pinned) {
+    boolean pinned,
+    String visibility) {
 
   public NoteView(
       Long id,
@@ -69,7 +70,8 @@ public record NoteView(
         List.of(),
         null,
         false,
-        false);
+        false,
+        "public");
   }
 
   public record Media(String url, String altText, String contentType) {}
@@ -108,6 +110,7 @@ public record NoteView(
         mentions,
         contentWarning,
         sensitive,
-        pinned);
+        pinned,
+        visibility);
   }
 }
