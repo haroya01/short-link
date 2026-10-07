@@ -186,7 +186,9 @@ public class RecordBlogNotificationUseCase {
                   actorUsername, actorUsername, null, null, null, null, null, note.sourceNoteId())
               : new PushRoute(
                   actorUsername,
-                  type == NotificationType.NOTE_POLL ? actorUsername : recipientUsername,
+                  type == NotificationType.NOTE_POLL || type == NotificationType.NOTE_POST
+                      ? actorUsername
+                      : recipientUsername,
                   null,
                   null,
                   null,

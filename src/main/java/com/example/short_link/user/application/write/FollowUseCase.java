@@ -42,6 +42,21 @@ public class FollowUseCase {
   }
 
   @Transactional
+  public NoteNotifications setNoteNotifications(
+      Long followerId, String targetUsername, boolean on) {
+    UserEntity target = requireUser(targetUsername);
+    FollowEntity follow =
+        followRepository
+            .findByFollowerIdAndFollowingId(followerId, target.getId())
+            .orElseThrow(() -> new UserException(UserErrorCode.NOT_FOLLOWING));
+    follow.notifyOfNotes(on);
+    followRepository.save(follow);
+    return new NoteNotifications(on);
+  }
+
+  public record NoteNotifications(boolean notifyNotes) {}
+
+  @Transactional
   public FollowStatus unfollow(Long followerId, String targetUsername) {
     UserEntity target = requireUser(targetUsername);
     followRepository

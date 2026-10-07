@@ -36,6 +36,9 @@ public class FollowEntity extends BaseCreatedEntity {
   @Column(name = "source_post_id")
   private Long sourcePostId;
 
+  @Column(name = "notify_notes", nullable = false)
+  private boolean notifyNotes;
+
   public FollowEntity(Long followerId, Long followingId) {
     this(followerId, followingId, null);
   }
@@ -44,5 +47,9 @@ public class FollowEntity extends BaseCreatedEntity {
     this.followerId = followerId;
     this.followingId = followingId;
     this.sourcePostId = sourcePostId;
+  }
+
+  public void notifyOfNotes(boolean on) {
+    this.notifyNotes = on;
   }
 }

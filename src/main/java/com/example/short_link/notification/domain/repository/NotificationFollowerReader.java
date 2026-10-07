@@ -5,4 +5,6 @@ import java.util.List;
 public interface NotificationFollowerReader {
 
   List<Long> followerIdsOf(Long authorUserId);
+
+  List<Long> noteSubscribersOf(Long authorUserId);
 }
