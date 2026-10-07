@@ -80,6 +80,18 @@ class NoteQueryServiceTest {
   }
 
   @Test
+  void theFeedOfOtherServersPagesLikeThePublicFeed() {
+    List<NoteEntity> two = LongStream.of(7, 8).mapToObj(id -> note(id, null)).toList();
+    when(notes.federated(3L, 0, 21)).thenReturn(two);
+    when(views.of(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
+
+    NoteFeedView feed = service.federated(3L, 0, 20);
+
+    assertThat(feed.hasNext()).isFalse();
+    assertThat(feed.items()).extracting(NoteView::id).containsExactly(7L, 8L);
+  }
+
+  @Test
   void pageAndSizeAreClamped() {
     when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
     when(views.of(List.of(), null)).thenReturn(List.of());

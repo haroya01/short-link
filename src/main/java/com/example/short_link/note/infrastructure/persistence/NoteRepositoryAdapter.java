@@ -125,6 +125,26 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
+  // Mastodon's live feed of other servers: public notes this server received, newest first. A
+  // limited server stays out unless the viewer follows the account, as on Mastodon.
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> federated(Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.in_reply_to_id IS NULL AND n.visibility = 'PUBLIC'"
+                + " AND n.remote_actor_id IS NOT NULL"
+                + heardNote("n")
+                + unlimited("n")
+                + inLanguages("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
   // A profile shows what this viewer may read: public and unlisted to anyone, followers-only to
   // followers and mentioned members, and direct notes to no one but their author.
   @Override

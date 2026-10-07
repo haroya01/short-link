@@ -120,6 +120,14 @@ public class NoteController {
     return query.following(userId, page, size);
   }
 
+  @GetMapping("/api/v1/notes/federated")
+  public NoteFeedView federated(
+      @AuthenticationPrincipal Long userId,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.federated(userId, page, size);
+  }
+
   @PostMapping("/api/v1/notes")
   @ResponseStatus(HttpStatus.CREATED)
   public NoteView create(

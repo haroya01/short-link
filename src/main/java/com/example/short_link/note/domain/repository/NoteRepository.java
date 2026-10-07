@@ -35,6 +35,8 @@ public interface NoteRepository {
 
   List<NoteEntity> trending(Long viewerId, int offset, int limit);
 
+  List<NoteEntity> federated(Long viewerId, int offset, int limit);
+
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
   List<NoteEntity> replies(Long noteId, Long viewerId, int limit);

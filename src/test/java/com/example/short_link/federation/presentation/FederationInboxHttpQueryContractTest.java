@@ -300,6 +300,13 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         202);
     Long noteId = jdbc.queryForObject("SELECT id FROM note WHERE uri = ?", Long.class, status);
 
+    List<Long> federated = new ArrayList<>();
+    body(call("notes-federated", "GET", "/api/v1/notes/federated", null, strangerToken, 200))
+        .path("items")
+        .forEach(item -> federated.add(item.path("id").asLong()));
+    assertThat(federated).contains(noteId);
+    call("notes-federated-anonymous", "GET", "/api/v1/notes/federated", null, null, 401);
+
     var following =
         body(call("notes-following-remote", "GET", "/api/v1/notes/following", null, token, 200));
     var first = following.path("items").get(0);
