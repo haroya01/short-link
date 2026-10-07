@@ -235,7 +235,8 @@ public class NoteCommandService {
         false,
         mentioned.stream().map(NoteAuthor::username).toList(),
         note.getContentWarning(),
-        note.isSensitive());
+        note.isSensitive(),
+        false);
   }
 
   private static List<NoteAuthor> members(Map<Long, NoteAuthor> found, List<String> handles) {
@@ -307,6 +308,28 @@ public class NoteCommandService {
       events.publishEvent(new NoteLinkPreviewRequested(noteId, after));
     }
     return views.of(List.of(note), userId).getFirst();
+  }
+
+  // As on Mastodon: only the author pins, only their own top-level notes, at most five; the
+  // newest pin shows first.
+  @Transactional
+  public PinStatus setPin(Long userId, Long noteId, boolean on) {
+    NoteEntity note = owned(userId, noteId);
+    if (!on) {
+      note.unpin();
+      return new PinStatus(false);
+    }
+    if (note.isPinned()) {
+      return new PinStatus(true);
+    }
+    if (note.getInReplyToId() != null) {
+      throw new NoteException(NoteErrorCode.NOTE_PIN_REPLY);
+    }
+    if (notes.countPinned(userId) >= NoteEntity.MAX_PINS) {
+      throw new NoteException(NoteErrorCode.NOTE_PIN_LIMIT, NoteEntity.MAX_PINS);
+    }
+    note.pin(clock.instant().truncatedTo(ChronoUnit.MICROS));
+    return new PinStatus(true);
   }
 
   @Transactional
@@ -435,4 +458,6 @@ public class NoteCommandService {
   public record RepostStatus(boolean reposted, long repostCount) {}
 
   public record BookmarkStatus(boolean bookmarked) {}
+
+  public record PinStatus(boolean pinned) {}
 }

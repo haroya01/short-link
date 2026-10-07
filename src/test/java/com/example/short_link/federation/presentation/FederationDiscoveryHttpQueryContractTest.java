@@ -86,6 +86,13 @@ class FederationDiscoveryHttpQueryContractTest extends AccountHttpJourneySupport
         null,
         ACTIVITY_JSON,
         200);
+    callWithHeaders(
+        "federation-actor-featured",
+        "GET",
+        "/ap/actors/" + publicId + "/featured",
+        null,
+        ACTIVITY_JSON,
+        200);
     callWithHeaders("federation-host-meta", "GET", "/.well-known/host-meta", null, Map.of(), 200);
     callWithHeaders(
         "federation-nodeinfo-discovery", "GET", "/.well-known/nodeinfo", null, Map.of(), 200);

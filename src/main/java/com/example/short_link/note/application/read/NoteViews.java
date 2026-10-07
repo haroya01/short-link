@@ -108,7 +108,8 @@ public class NoteViews {
               viewerId == null ? null : marks.bookmarked().contains(note.getId()),
               Mentions.of(note.getBody()).stream().filter(members::contains).toList(),
               note.getContentWarning(),
-              note.isSensitive()));
+              note.isSensitive(),
+              note.isPinned()));
     }
     return views;
   }

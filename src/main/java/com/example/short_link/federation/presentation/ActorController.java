@@ -33,7 +33,8 @@ public class ActorController {
           Map.of(
               "manuallyApprovesFollowers", "as:manuallyApprovesFollowers",
               "toot", "http://joinmastodon.org/ns#",
-              "discoverable", "toot:discoverable"));
+              "discoverable", "toot:discoverable",
+              "featured", Map.of("@id", "toot:featured", "@type", "@id")));
 
   private final FederationActorService actors;
   private final FederationUrls urls;
@@ -84,6 +85,27 @@ public class ActorController {
         .orElseGet(() -> ResponseEntity.notFound().build());
   }
 
+  // Pinned notes, newest pin first, as Mastodon reads them for the profile. Items are note ids;
+  // the remote fetches each one it does not know yet.
+  @GetMapping("/featured")
+  public ResponseEntity<OrderedCollectionResponse> featured(@PathVariable String publicId) {
+    return actors
+        .byPublicId(publicId)
+        .map(
+            actor -> {
+              List<Object> items =
+                  notes.pinnedIds(actor.user().id()).stream().<Object>map(urls::note).toList();
+              return collection(
+                  new OrderedCollectionResponse(
+                      ActivityPubMedia.CONTEXT,
+                      urls.featured(publicId),
+                      "OrderedCollection",
+                      items.size(),
+                      items));
+            })
+        .orElseGet(() -> ResponseEntity.notFound().build());
+  }
+
   private ResponseEntity<OrderedCollectionResponse> hiddenCount(String publicId, String id) {
     return actors
         .byPublicId(publicId)
@@ -116,6 +138,7 @@ public class ActorController {
         urls.outbox(actor.publicId()),
         urls.followers(actor.publicId()),
         urls.following(actor.publicId()),
+        urls.featured(actor.publicId()),
         new ActorResponse.Endpoints(urls.sharedInbox()),
         false,
         true,

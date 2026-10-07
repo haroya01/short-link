@@ -28,7 +28,8 @@ public record NoteView(
     Boolean bookmarkedByMe,
     List<String> mentions,
     String contentWarning,
-    boolean sensitive) {
+    boolean sensitive,
+    boolean pinned) {
 
   public NoteView(
       Long id,
@@ -67,6 +68,7 @@ public record NoteView(
         null,
         List.of(),
         null,
+        false,
         false);
   }
 
@@ -105,6 +107,7 @@ public record NoteView(
         bookmarkedByMe,
         mentions,
         contentWarning,
-        sensitive);
+        sensitive,
+        pinned);
   }
 }

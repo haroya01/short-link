@@ -480,6 +480,34 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void anAuthorPinsUpToFiveTopLevelNotesAndPinningAgainKeepsTheFirstPin() {
+    NoteEntity mine = note(1L, 7L, "pin me");
+    when(notes.findById(1L)).thenReturn(Optional.of(mine));
+    when(notes.countPinned(7L)).thenReturn(4L);
+
+    assertThat(service().setPin(7L, 1L, true).pinned()).isTrue();
+    assertThat(mine.getPinnedAt()).isEqualTo(Instant.parse("2026-10-06T00:00:00.123456Z"));
+    assertThat(service().setPin(7L, 1L, true).pinned()).isTrue();
+    assertThat(service().setPin(7L, 1L, false).pinned()).isFalse();
+    assertThat(mine.isPinned()).isFalse();
+
+    when(notes.countPinned(7L)).thenReturn(5L);
+    assertThatThrownBy(() -> service().setPin(7L, 1L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_LIMIT));
+
+    NoteEntity reply = new NoteEntity(7L, "reply", 9L, null);
+    ReflectionTestUtils.setField(reply, "id", 2L);
+    when(notes.findById(2L)).thenReturn(Optional.of(reply));
+    assertThatThrownBy(() -> service().setPin(7L, 2L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_REPLY));
+    assertThatThrownBy(() -> service().setPin(8L, 1L, true)).isInstanceOf(NoteException.class);
+  }
+
+  @Test
   void onlyTheAuthorEditsAndTheEditIsStampedToMicroseconds() {
     NoteEntity mine = note(1L, 7L, "old");
     when(notes.findById(1L)).thenReturn(Optional.of(mine));

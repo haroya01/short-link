@@ -12,6 +12,8 @@ public interface NoteSnapshotReader {
 
   long countByAuthor(Long authorId);
 
+  List<Long> pinnedIds(Long authorId);
+
   record NoteSnapshot(
       Long id,
       Long authorId,

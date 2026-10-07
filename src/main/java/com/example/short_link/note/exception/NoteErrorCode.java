@@ -8,6 +8,8 @@ public enum NoteErrorCode {
   NOTE_BODY_REQUIRED(HttpStatus.BAD_REQUEST, "note body or an image is required"),
   NOTE_BODY_TOO_LONG(HttpStatus.BAD_REQUEST, "note body exceeds %s characters"),
   NOTE_WARNING_TOO_LONG(HttpStatus.BAD_REQUEST, "content warning exceeds %s characters"),
+  NOTE_PIN_LIMIT(HttpStatus.BAD_REQUEST, "at most %s notes can be pinned"),
+  NOTE_PIN_REPLY(HttpStatus.BAD_REQUEST, "a reply cannot be pinned"),
   NOTE_TOO_MANY_IMAGES(HttpStatus.BAD_REQUEST, "a note holds at most %s images"),
   NOTE_ALT_TEXT_TOO_LONG(HttpStatus.BAD_REQUEST, "alt text exceeds %s characters"),
   NOTE_IMAGE_INVALID(HttpStatus.BAD_REQUEST, "%s"),

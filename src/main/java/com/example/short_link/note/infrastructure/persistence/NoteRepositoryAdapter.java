@@ -67,7 +67,8 @@ class NoteRepositoryAdapter implements NoteRepository {
     }
     return em.createQuery(
             "select n from NoteEntity n where n.userId in :authors and n.inReplyToId is null"
-                + " order by n.id desc",
+                + " order by case when n.pinnedAt is null then 1 else 0 end,"
+                + " n.pinnedAt desc, n.id desc",
             NoteEntity.class)
         .setParameter("authors", authorIds)
         .setFirstResult(offset)
@@ -286,6 +287,25 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setParameter("note", noteId)
         .executeUpdate();
     tag(noteId, tags);
+  }
+
+  @Override
+  public long countPinned(Long userId) {
+    return em.createQuery(
+            "select count(n) from NoteEntity n where n.userId = :userId and n.pinnedAt is not null",
+            Long.class)
+        .setParameter("userId", userId)
+        .getSingleResult();
+  }
+
+  @Override
+  public List<Long> pinnedIds(Long userId) {
+    return em.createQuery(
+            "select n.id from NoteEntity n where n.userId = :userId and n.pinnedAt is not null"
+                + " order by n.pinnedAt desc",
+            Long.class)
+        .setParameter("userId", userId)
+        .getResultList();
   }
 
   @Override
