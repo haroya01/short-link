@@ -17,6 +17,12 @@ public enum NoteErrorCode {
   NOTE_LIST_MEMBER_LIMIT(HttpStatus.BAD_REQUEST, "a list holds at most %s people"),
   NOTE_LIST_TITLE_INVALID(HttpStatus.BAD_REQUEST, "a list title is 1 to %s characters"),
   NOTE_LIST_SELF(HttpStatus.BAD_REQUEST, "you are not added to your own list"),
+  NOTE_FILTER_NOT_FOUND(HttpStatus.NOT_FOUND, "filter not found: %s"),
+  NOTE_FILTER_LIMIT(HttpStatus.BAD_REQUEST, "at most %s filters"),
+  NOTE_FILTER_INVALID(
+      HttpStatus.BAD_REQUEST,
+      "a filter has a phrase of 1 to 100 characters, at least one context, warn or hide, and lasts"
+          + " a minute to a year or forever"),
   NOTE_POLL_INVALID(
       HttpStatus.BAD_REQUEST,
       "a poll has 2 to 4 different options of up to 50 characters and lasts 5 minutes to a month"),

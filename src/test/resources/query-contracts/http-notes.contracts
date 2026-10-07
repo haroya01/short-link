@@ -157,3 +157,11 @@
 @junit | note-reply-muted | 7 | 1 | 0 | 0 | 8
 @junit | note-thread-muted | 6 | 0 | 0 | 0 | 6
 @junit | user-unmute | 2 | 0 | 0 | 1 | 3
+# Keyword filters (Mastodon's) are stored for the owner's apps, which apply them, so no feed reads
+# them. Create counts the owner's filters (at most a hundred) then inserts; every other call first
+# finds the filter by id and owner, which is where a stranger gets 404.
+@junit | note-filter-create | 1 | 1 | 0 | 0 | 2
+@junit | note-filters | 1 | 0 | 0 | 0 | 1
+@junit | note-filter-update | 1 | 0 | 1 | 0 | 2
+@junit | note-filter-update-stranger | 1 | 0 | 0 | 0 | 1
+@junit | note-filter-delete | 1 | 0 | 0 | 1 | 2

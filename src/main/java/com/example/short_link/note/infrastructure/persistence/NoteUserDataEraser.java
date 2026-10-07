@@ -51,6 +51,9 @@ class NoteUserDataEraser implements UserDataEraser {
     em.createNativeQuery("DELETE FROM note_poll_vote WHERE user_id = :userId")
         .setParameter("userId", userId)
         .executeUpdate();
+    em.createNativeQuery("DELETE FROM note_filter WHERE user_id = :userId")
+        .setParameter("userId", userId)
+        .executeUpdate();
     if (!storage.isConfigured()) {
       return;
     }
