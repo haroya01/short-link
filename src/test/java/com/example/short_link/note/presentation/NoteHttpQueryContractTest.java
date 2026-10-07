@@ -598,6 +598,19 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(count("note_filter", "user_id = ?", owner.id())).isZero();
   }
 
+  @Test
+  void anyoneFindsPublicNotesByWordsInThem() throws Exception {
+    Actor writer = actor("search-writer", false);
+    long found = noteAt(writer, "검색되는 헥사고날 포트 이야기", 1);
+    long quiet = post("note-search-seed-private", writer, "팔로워만 보는 헥사고날 포트", "private");
+
+    var hits = step("note-search", "GET", "/api/v1/public/notes/search?q=헥사고날", null, null, 200);
+    assertThat(only(hits, List.of(found, quiet))).containsExactly(found);
+    var short_ =
+        step("note-search-short", "GET", "/api/v1/public/notes/search?q=포", null, null, 200);
+    assertThat(only(short_, List.of(found, quiet))).containsExactly(found);
+  }
+
   private long post(String id, Actor author, String body, String visibility) throws Exception {
     return step(
             id,

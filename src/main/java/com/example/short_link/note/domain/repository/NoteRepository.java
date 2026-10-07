@@ -45,6 +45,8 @@ public interface NoteRepository {
 
   List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit);
 
+  List<NoteEntity> search(String match, String like, Long viewerId, int offset, int limit);
+
   long countPinned(Long userId);
 
   void recordVersion(Long noteId, NoteVersion version);

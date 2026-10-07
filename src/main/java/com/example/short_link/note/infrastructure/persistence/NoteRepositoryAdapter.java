@@ -390,6 +390,27 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> search(String match, String like, Long viewerId, int offset, int limit) {
+    String term =
+        match != null
+            ? "MATCH(n.body) AGAINST(:term IN BOOLEAN MODE)"
+            : "LOWER(n.body) LIKE :term ESCAPE '!'";
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.visibility = 'PUBLIC' AND "
+                + term
+                + heard("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("term", match != null ? match : like)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
   // INSERT IGNORE: the column's collation folds more than lower-casing does (accents, widths), so
   // two tags the extractor keeps apart can still be one key here.
   @Override

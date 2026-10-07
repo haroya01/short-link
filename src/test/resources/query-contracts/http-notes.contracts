@@ -165,3 +165,9 @@
 @junit | note-filter-update | 1 | 0 | 1 | 0 | 2
 @junit | note-filter-update-stranger | 1 | 0 | 0 | 0 | 1
 @junit | note-filter-delete | 1 | 0 | 0 | 1 | 2
+# Note search reads public notes newest first in one query (the body's ngram FULLTEXT index, or LIKE
+# for a query the index cannot hold) under the same block and mute rules as every shared list, then
+# builds the page as usual.
+@junit | note-search-seed-private | 3 | 1 | 0 | 0 | 4
+@junit | note-search | 4 | 0 | 0 | 0 | 4
+@junit | note-search-short | 4 | 0 | 0 | 0 | 4
