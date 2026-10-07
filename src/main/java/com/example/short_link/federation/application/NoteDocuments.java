@@ -27,24 +27,33 @@ public class NoteDocuments {
 
   private final FederationUrls urls;
 
+  // Someone on another server the note addresses: the author it answers, or a person it names.
+  public record Addressee(String actorUri, String handle, String profileUrl) {}
+
   public Map<String, Object> note(NoteSnapshot note, String actorPublicId) {
-    return note(note, actorPublicId, null);
+    return note(note, actorPublicId, null, List.of());
   }
 
   public Map<String, Object> note(
       NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
+    return note(note, actorPublicId, parent, List.of());
+  }
+
+  public Map<String, Object> note(
+      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
+    List<Addressee> addressed = addressed(parent, named);
     Map<String, Object> object = new LinkedHashMap<>();
     object.put("id", urls.note(note.id()));
     object.put("type", note.poll() == null ? "Note" : "Question");
     object.put("attributedTo", urls.actor(actorPublicId));
-    object.put("content", content(note));
+    object.put("content", content(note, named));
     object.put("published", note.createdAt().truncatedTo(ChronoUnit.SECONDS).toString());
     if (note.editedAt() != null) {
       object.put("updated", note.editedAt().truncatedTo(ChronoUnit.SECONDS).toString());
     }
     object.put("url", urls.notePage(note.authorUsername(), note.id()));
-    object.put("to", to(note, actorPublicId, parent));
-    object.put("cc", cc(note, actorPublicId, parent));
+    object.put("to", to(note, actorPublicId, addressed));
+    object.put("cc", cc(note, actorPublicId, addressed));
     object.put(
         "inReplyTo",
         parent != null
@@ -69,11 +78,11 @@ public class NoteDocuments {
     }
     object.put("attachment", attachments);
     List<Map<String, Object>> tags = new ArrayList<>();
-    if (parent != null) {
+    for (Addressee person : addressed) {
       Map<String, Object> mention = new LinkedHashMap<>();
       mention.put("type", "Mention");
-      mention.put("href", parent.actorUri());
-      mention.put("name", parent.handle());
+      mention.put("href", person.actorUri());
+      mention.put("name", person.handle());
       tags.add(mention);
     }
     for (String name : Hashtags.of(note.body())) {
@@ -119,18 +128,30 @@ public class NoteDocuments {
   }
 
   public Map<String, Object> create(NoteSnapshot note, String actorPublicId) {
-    return create(note, actorPublicId, null);
+    return create(note, actorPublicId, null, List.of());
   }
 
   public Map<String, Object> create(
-      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
+      NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent, List<Addressee> named) {
+    List<Addressee> addressed = addressed(parent, named);
     String noteUri = urls.note(note.id());
     Map<String, Object> activity = activity(noteUri + "/activity", "Create", actorPublicId);
     activity.put("published", note.createdAt().truncatedTo(ChronoUnit.SECONDS).toString());
-    activity.put("to", to(note, actorPublicId, parent));
-    activity.put("cc", cc(note, actorPublicId, parent));
-    activity.put("object", note(note, actorPublicId, parent));
+    activity.put("to", to(note, actorPublicId, addressed));
+    activity.put("cc", cc(note, actorPublicId, addressed));
+    activity.put("object", note(note, actorPublicId, parent, named));
     return activity;
+  }
+
+  private static List<Addressee> addressed(RemoteParents.Parent parent, List<Addressee> named) {
+    Map<String, Addressee> byActor = new LinkedHashMap<>();
+    if (parent != null) {
+      byActor.put(parent.actorUri(), new Addressee(parent.actorUri(), parent.handle(), null));
+    }
+    for (Addressee person : named) {
+      byActor.putIfAbsent(person.actorUri(), person);
+    }
+    return List.copyOf(byActor.values());
   }
 
   // Mastodon's addressing: public is to everyone and copied to followers; unlisted is to followers
@@ -138,12 +159,12 @@ public class NoteDocuments {
   // alone. Direct notes leave only as a reply to someone elsewhere, addressed to that person alone;
   // any other reply to them copies them in.
   private List<String> to(NoteSnapshot note, String actorPublicId) {
-    return to(note, actorPublicId, null);
+    return to(note, actorPublicId, List.of());
   }
 
-  private List<String> to(NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
-    if (parent != null && note.visibility() == NoteSnapshotReader.Visibility.DIRECT) {
-      return List.of(parent.actorUri());
+  private List<String> to(NoteSnapshot note, String actorPublicId, List<Addressee> addressed) {
+    if (!addressed.isEmpty() && note.visibility() == NoteSnapshotReader.Visibility.DIRECT) {
+      return addressed.stream().map(Addressee::actorUri).toList();
     }
     return note.visibility() == NoteSnapshotReader.Visibility.PUBLIC
         ? List.of(ActivityStreams.PUBLIC)
@@ -151,10 +172,10 @@ public class NoteDocuments {
   }
 
   private List<String> cc(NoteSnapshot note, String actorPublicId) {
-    return cc(note, actorPublicId, null);
+    return cc(note, actorPublicId, List.of());
   }
 
-  private List<String> cc(NoteSnapshot note, String actorPublicId, RemoteParents.Parent parent) {
+  private List<String> cc(NoteSnapshot note, String actorPublicId, List<Addressee> addressed) {
     List<String> cc =
         new ArrayList<>(
             switch (note.visibility()) {
@@ -162,8 +183,8 @@ public class NoteDocuments {
               case UNLISTED -> List.of(ActivityStreams.PUBLIC);
               case PRIVATE, DIRECT -> List.<String>of();
             });
-    if (parent != null && note.visibility() != NoteSnapshotReader.Visibility.DIRECT) {
-      cc.add(parent.actorUri());
+    if (note.visibility() != NoteSnapshotReader.Visibility.DIRECT) {
+      addressed.forEach(person -> cc.add(person.actorUri()));
     }
     return cc;
   }
@@ -261,14 +282,34 @@ public class NoteDocuments {
   }
 
   String content(NoteSnapshot note) {
+    return content(note, List.of());
+  }
+
+  // A named account becomes Mastodon's h-card mention link, so its server shows it as a mention.
+  String content(NoteSnapshot note, List<Addressee> named) {
     StringBuilder html = new StringBuilder();
     for (String paragraph : note.body().strip().split("\\n\\s*\\n")) {
       if (paragraph.isBlank()) {
         continue;
       }
-      html.append("<p>")
-          .append(linkify(HtmlUtils.htmlEscape(paragraph.strip())).replace("\n", "<br>"))
-          .append("</p>");
+      String escaped = linkify(HtmlUtils.htmlEscape(paragraph.strip()));
+      for (Addressee person : named) {
+        if (person.profileUrl() == null) {
+          continue;
+        }
+        String handle = HtmlUtils.htmlEscape(person.handle());
+        String user =
+            HtmlUtils.htmlEscape(person.handle().substring(1, person.handle().indexOf('@', 1)));
+        escaped =
+            escaped.replace(
+                handle,
+                "<span class=\"h-card\"><a href=\""
+                    + HtmlUtils.htmlEscape(person.profileUrl())
+                    + "\" class=\"u-url mention\">@<span>"
+                    + user
+                    + "</span></a></span>");
+      }
+      html.append("<p>").append(escaped.replace("\n", "<br>")).append("</p>");
     }
     if (note.quote() != null) {
       String href = urls.blogPost(note.quote().authorUsername(), note.quote().slug());

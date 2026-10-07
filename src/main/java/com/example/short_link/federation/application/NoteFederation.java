@@ -1,10 +1,12 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteSnapshotReader.Visibility;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
+import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
 import java.time.Clock;
@@ -27,6 +29,7 @@ public class NoteFederation {
 
   private final NoteSnapshotReader notes;
   private final RemoteParents remoteParents;
+  private final RemoteAccountFinder finder;
   private final FederationActorService localActors;
   private final FederationSettings settings;
   private final FederationActorRepository actors;
@@ -95,32 +98,52 @@ public class NoteFederation {
     deliver(authorId, publicId -> Optional.of(documents.delete(noteId, publicId)));
   }
 
-  // A reply to a note from another server goes to its author's server too, even when the writer
-  // has no followers there; a direct reply goes only there.
+  // A note that answers a note from another server, or names someone there, reaches those servers
+  // too, even when the writer has no followers on them; a direct note goes only to them. Handles
+  // that resolve to no one are left as text, and a note that reaches no one elsewhere takes the
+  // usual path.
   @Transactional
-  public void repliedToRemote(Long noteId, Long authorId) {
+  public void createdElsewhere(Long noteId, Long authorId) {
     Optional<LocalActor> actor = localActors.byUserId(authorId);
-    if (actor.isEmpty()) {
+    Optional<NoteSnapshot> found = actor.isEmpty() ? Optional.empty() : notes.find(noteId);
+    if (found.isEmpty()) {
       return;
     }
-    notes
-        .find(noteId)
-        .ifPresent(
-            note ->
-                remoteParents
-                    .of(note.inReplyToId())
-                    .ifPresent(
-                        parent -> {
-                          List<String> inboxes = new ArrayList<>();
-                          if (note.visibility() != Visibility.DIRECT) {
-                            inboxes.addAll(followers.deliveryInboxes(authorId));
-                          }
-                          inboxes.add(parent.inbox());
-                          send(
-                              authorId,
-                              documents.create(note, actor.get().publicId(), parent),
-                              inboxes);
-                        }));
+    NoteSnapshot note = found.get();
+    RemoteParents.Parent parent = remoteParents.of(note.inReplyToId()).orElse(null);
+    List<RemoteActorEntity> named = new ArrayList<>();
+    for (String handle : Mentions.remote(note.body())) {
+      finder.find(handle).ifPresent(named::add);
+    }
+    if (parent == null && named.isEmpty()) {
+      created(noteId, authorId);
+      return;
+    }
+    List<String> inboxes = new ArrayList<>();
+    if (note.visibility() != Visibility.DIRECT) {
+      inboxes.addAll(followers.deliveryInboxes(authorId));
+    }
+    if (parent != null) {
+      inboxes.add(parent.inbox());
+    }
+    named.forEach(person -> inboxes.add(person.deliveryInbox()));
+    send(
+        authorId,
+        documents.create(
+            note,
+            actor.get().publicId(),
+            parent,
+            named.stream()
+                .map(
+                    person ->
+                        new NoteDocuments.Addressee(
+                            person.getActorUri(),
+                            "@" + person.getUsername() + "@" + person.getDomain(),
+                            person.getProfileUrl() == null
+                                ? person.getActorUri()
+                                : person.getProfileUrl()))
+                .toList()),
+        inboxes);
   }
 
   @Transactional

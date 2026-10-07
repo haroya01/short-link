@@ -361,6 +361,16 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aNoteNamingSomeoneElsewhereIsMarkedToReachTheirServer() {
+    saving();
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    service().create(7L, new NoteDraft("hi @bob@mastodon.social", null, null, null));
+
+    verify(events).publishEvent(new NotePublishedEvent(100L, 7L, true));
+  }
+
+  @Test
   void aNoteWithAnAddressAsksForItsCardButPhotosAndQuotesAlreadyCarryOne() {
     saving();
     service().create(7L, new NoteDraft("see https://example.com/a.", null, null, null));

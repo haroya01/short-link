@@ -44,6 +44,7 @@ class NoteFederationTest {
 
   @Mock private NoteSnapshotReader notes;
   @Mock private RemoteParents remoteParents;
+  @Mock private RemoteAccountFinder finder;
   @Mock private FederationActorService localActors;
   @Mock private FederationSettings settings;
   @Mock private FederationActorRepository actors;
@@ -54,6 +55,7 @@ class NoteFederationTest {
     return new NoteFederation(
         notes,
         remoteParents,
+        finder,
         localActors,
         settings,
         actors,
@@ -208,7 +210,7 @@ class NoteFederationTest {
     when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
     when(followers.deliveryInboxes(7L)).thenReturn(List.of());
 
-    service().repliedToRemote(43L, 7L);
+    service().createdElsewhere(43L, 7L);
 
     ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
     verify(deliveries)
@@ -230,8 +232,8 @@ class NoteFederationTest {
     when(notes.find(43L)).thenReturn(Optional.of(reply(NoteSnapshotReader.Visibility.DIRECT)));
     when(remoteParents.of(41L)).thenReturn(Optional.of(ALICE_NOTE));
 
-    service().repliedToRemote(43L, 7L);
-    service().repliedToRemote(43L, 7L);
+    service().createdElsewhere(43L, 7L);
+    service().createdElsewhere(43L, 7L);
 
     ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
     verify(deliveries)
@@ -334,5 +336,109 @@ class NoteFederationTest {
     service().repostedRemote(5L, 41L, 9L, true);
 
     verifyNoInteractions(deliveries);
+  }
+
+  private static com.example.short_link.federation.domain.RemoteActorEntity bob() {
+    return new com.example.short_link.federation.domain.RemoteActorEntity(
+        new com.example.short_link.federation.domain.RemoteActorDocument(
+            "https://b.example/users/bob",
+            "https://b.example/users/bob#main-key",
+            "pem",
+            "https://b.example/users/bob/inbox",
+            "https://b.example/inbox",
+            "bob",
+            "b.example",
+            "https://b.example/@bob",
+            null,
+            null),
+        Instant.parse("2026-10-07T00:00:00Z"));
+  }
+
+  private static NoteSnapshot naming(NoteSnapshotReader.Visibility visibility) {
+    return new NoteSnapshot(
+        44L,
+        7L,
+        "yuki",
+        "hello @bob@b.example and @ghost@nowhere.example",
+        Instant.parse("2026-10-06T00:00:00Z"),
+        null,
+        null,
+        null,
+        List.of(),
+        null,
+        null,
+        false,
+        visibility);
+  }
+
+  @Test
+  void aNoteNamingSomeoneElsewhereMentionsThemAndReachesTheirServer() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(remoteParents.of(null)).thenReturn(Optional.empty());
+    when(finder.find("bob@b.example")).thenReturn(Optional.of(bob()));
+    when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
+    when(followers.deliveryInboxes(7L)).thenReturn(List.of("https://a.example/inbox"));
+
+    service().createdElsewhere(44L, 7L);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/notes/44/activity"),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(
+                List.of("https://a.example/inbox", "https://b.example/inbox")));
+    var create = JSON.readTree(body.getValue());
+    assertThat(create.path("cc").toString()).contains("https://b.example/users/bob");
+    var tag = create.path("object").path("tag").get(0);
+    assertThat(tag.path("type").asString()).isEqualTo("Mention");
+    assertThat(tag.path("name").asString()).isEqualTo("@bob@b.example");
+    assertThat(create.path("object").path("content").asString())
+        .contains(
+            "<span class=\"h-card\"><a href=\"https://b.example/@bob\" class=\"u-url mention\">@<span>bob</span></a></span>")
+        .contains("@ghost@nowhere.example");
+  }
+
+  @Test
+  void aDirectNoteNamingSomeoneElsewhereGoesToThemAlone() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.DIRECT)));
+    when(remoteParents.of(null)).thenReturn(Optional.empty());
+    when(finder.find("bob@b.example")).thenReturn(Optional.of(bob()));
+    when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
+
+    service().createdElsewhere(44L, 7L);
+
+    ArgumentCaptor<String> body = ArgumentCaptor.forClass(String.class);
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            any(),
+            body.capture(),
+            org.mockito.ArgumentMatchers.eq(List.of("https://b.example/inbox")));
+    assertThat(JSON.readTree(body.getValue()).path("to").toString())
+        .isEqualTo("[\"https://b.example/users/bob\"]");
+    verify(followers, never()).deliveryInboxes(any());
+  }
+
+  @Test
+  void aNoteWhoseHandlesResolveToNoOneTakesTheUsualPath() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(remoteParents.of(null)).thenReturn(Optional.empty());
+    when(finder.find(any())).thenReturn(Optional.empty());
+    federating();
+
+    service().createdElsewhere(44L, 7L);
+
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/notes/44/activity"),
+            any(),
+            org.mockito.ArgumentMatchers.eq(
+                List.of("https://a.example/inbox", "https://b.example/inbox")));
   }
 }

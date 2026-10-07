@@ -28,8 +28,8 @@ public class NoteFederationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onPublished(NotePublishedEvent event) {
-    if (event.replyToRemote()) {
-      notes.repliedToRemote(event.noteId(), event.authorId());
+    if (event.reachesElsewhere()) {
+      notes.createdElsewhere(event.noteId(), event.authorId());
     } else {
       notes.created(event.noteId(), event.authorId());
     }

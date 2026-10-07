@@ -45,7 +45,7 @@ class NoteFederationListenerTest {
     listener.onUnreposted(new NoteUnrepostedEvent(901L, 3L, 8L, true));
     listener.onRemoteNoteLiked(new RemoteNoteLikedEvent(3L, 8L, true));
 
-    verify(notes).repliedToRemote(2L, 7L);
+    verify(notes).createdElsewhere(2L, 7L);
     verify(notes).repostedRemote(901L, 3L, 8L, true);
     verify(notes).repostedRemote(901L, 3L, 8L, false);
     verify(notes).likedRemote(3L, 8L, true);

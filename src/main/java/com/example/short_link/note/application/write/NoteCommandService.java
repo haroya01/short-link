@@ -226,7 +226,10 @@ public class NoteCommandService {
     media.saveAll(rows);
     notes.tag(note.getId(), Hashtags.of(body));
     events.publishEvent(
-        new NotePublishedEvent(note.getId(), userId, parent != null && parent.isRemote()));
+        new NotePublishedEvent(
+            note.getId(),
+            userId,
+            (parent != null && parent.isRemote()) || !Mentions.remote(body).isEmpty()));
     if (parent != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
     }
