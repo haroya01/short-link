@@ -27,7 +27,10 @@ public class RemoteParents {
         .target(noteId)
         .flatMap(
             target ->
-                remoteActors.findById(target.remoteActorId()).map(actor -> parent(target, actor)));
+                remoteActors
+                    .findById(target.remoteActorId())
+                    .filter(actor -> !actor.onSuspendedServer())
+                    .map(actor -> parent(target, actor)));
   }
 
   private static Parent parent(RemoteNotes.Target target, RemoteActorEntity actor) {

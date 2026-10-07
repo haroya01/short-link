@@ -243,6 +243,9 @@ public class InboxService {
       }
       case InboxVerifier.Result.Verified verified -> actor = verified.actor();
     }
+    if (actor.onSuspendedServer()) {
+      return InboxOutcome.ignored("server-suspended");
+    }
     if (!actor.getActorUri().equals(actorUri)) {
       return InboxOutcome.ignored("actor-mismatch");
     }

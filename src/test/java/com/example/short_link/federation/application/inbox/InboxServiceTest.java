@@ -273,6 +273,18 @@ class InboxServiceTest {
   }
 
   @Test
+  void aSuspendedServerIsHeardAndIgnored() {
+    when(localActors.byPublicId("owner1")).thenReturn(Optional.of(OWNER));
+    RemoteActorEntity suspended = remote(ALICE, "mastodon.example");
+    org.springframework.test.util.ReflectionTestUtils.setField(suspended, "serverBlock", "SUSPEND");
+    verifiedAs(suspended);
+
+    assertThat(service().receive(request(follow("https://mastodon.example/f/1", OWNER_URI)), null))
+        .isEqualTo(InboxOutcome.ignored("server-suspended"));
+    verifyNoInteractions(followers);
+  }
+
+  @Test
   void anActivityIdOnAnotherHostIsNotTrusted() {
     when(localActors.byPublicId("owner1")).thenReturn(Optional.of(OWNER));
     verifiedAs(ALICE_ACTOR);

@@ -796,6 +796,132 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         .isZero();
   }
 
+  @Test
+  void moderatorsLimitThenSuspendAServer() throws Exception {
+    String me = urls.actor(target.publicId());
+    String host = URI.create(remote).getHost();
+    String admin = jwt.createAccessToken(createUser().getId(), "ADMIN");
+    String tag = "srv" + UUID.randomUUID().toString().substring(0, 8);
+    Long aliceId =
+        jdbc.queryForObject(
+            "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
+    jdbc.update(
+        "INSERT INTO federation_follower (user_id, remote_actor_id, follow_activity_id,"
+            + " created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6))",
+        owner.getId(),
+        aliceId,
+        remote + "/follows/9");
+    jdbc.update(
+        "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+        owner.getId(),
+        aliceId,
+        me + "#follows/9");
+    jdbc.update(
+        "INSERT INTO notification (recipient_user_id, type, actor_remote_id, created_at)"
+            + " VALUES (?, 'REMOTE_FOLLOW', ?, NOW(6))",
+        owner.getId(),
+        aliceId);
+    jdbc.update(
+        "INSERT INTO note (remote_actor_id, uri, body, created_at, marked_sensitive, visibility,"
+            + " poll_multiple) VALUES (?, ?, ?, NOW(6), FALSE, 'PUBLIC', FALSE)",
+        aliceId,
+        alice + "/statuses/77",
+        "#" + tag);
+    Long theirs =
+        jdbc.queryForObject(
+            "SELECT id FROM note WHERE uri = ?", Long.class, alice + "/statuses/77");
+    jdbc.update("INSERT INTO note_tag (note_id, tag) VALUES (?, ?)", theirs, tag);
+    try {
+      var limited =
+          body(
+              call(
+                  "admin-server-limit",
+                  "PUT",
+                  "/api/v1/admin/federation/servers/" + host,
+                  Map.of("severity", "LIMIT", "reason", "spam"),
+                  admin,
+                  200));
+      assertThat(limited.path("severity").asString()).isEqualTo("LIMIT");
+      assertThat(taggedIds("notes-tag-limited-server-stranger", tag, strangerToken))
+          .doesNotContain(theirs);
+      assertThat(taggedIds("notes-tag-limited-server-follower", tag, token)).contains(theirs);
+
+      var suspended =
+          body(
+              call(
+                  "admin-server-suspend",
+                  "PUT",
+                  "/api/v1/admin/federation/servers/" + host.toUpperCase(),
+                  Map.of("severity", "SUSPEND"),
+                  admin,
+                  200));
+      assertThat(suspended.path("severity").asString()).isEqualTo("SUSPEND");
+      assertThat(suspended.path("reason").isNull()).isTrue();
+      assertThat(
+              count("SELECT COUNT(*) FROM federation_following WHERE user_id = ?", owner.getId()))
+          .isZero();
+      assertThat(count("SELECT COUNT(*) FROM federation_follower WHERE user_id = ?", owner.getId()))
+          .isZero();
+      assertThat(
+              count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
+          .isZero();
+
+      post(
+          "federation-inbox-suspended-server",
+          "/ap/actors/" + target.publicId() + "/inbox",
+          activity(remote + "/follows/10", "Follow", me),
+          202);
+      assertThat(count("SELECT COUNT(*) FROM federation_follower WHERE user_id = ?", owner.getId()))
+          .isZero();
+      call(
+          "federation-account-suspended-server",
+          "GET",
+          "/api/v1/federation/accounts/" + aliceId,
+          null,
+          token,
+          404);
+      assertThat(taggedIds("notes-tag-suspended-server", tag, token)).doesNotContain(theirs);
+      call(
+          "notes-thread-suspended-server",
+          "GET",
+          "/api/v1/public/notes/" + theirs,
+          null,
+          token,
+          404);
+
+      var listed =
+          body(call("admin-servers", "GET", "/api/v1/admin/federation/servers", null, admin, 200));
+      List<String> domains = new ArrayList<>();
+      listed.forEach(row -> domains.add(row.path("domain").asString()));
+      assertThat(domains).contains(host);
+      call("admin-servers-member", "GET", "/api/v1/admin/federation/servers", null, token, 403);
+
+      call(
+          "admin-server-unblock",
+          "DELETE",
+          "/api/v1/admin/federation/servers/" + host,
+          null,
+          admin,
+          204);
+      assertThat(count("SELECT COUNT(*) FROM federation_domain_block WHERE domain = ?", host))
+          .isZero();
+      assertThat(taggedIds("notes-tag-unblocked-server", tag, token)).contains(theirs);
+    } finally {
+      jdbc.update("DELETE FROM federation_domain_block WHERE domain = ?", host);
+      jdbc.update("DELETE FROM note_tag WHERE note_id = ?", theirs);
+      jdbc.update("DELETE FROM note WHERE id = ?", theirs);
+    }
+  }
+
+  private List<Long> taggedIds(String id, String tag, String auth) throws Exception {
+    List<Long> ids = new ArrayList<>();
+    body(call(id, "GET", "/api/v1/public/notes/tags/" + tag, null, auth, 200))
+        .path("items")
+        .forEach(item -> ids.add(item.path("id").asLong()));
+    return ids;
+  }
+
   private List<Long> trendingIds(String id) throws Exception {
     List<Long> ids = new ArrayList<>();
     body(call(id, "GET", "/api/v1/public/notes?sort=trending&size=50", null, null, 200))

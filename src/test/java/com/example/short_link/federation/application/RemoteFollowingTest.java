@@ -165,6 +165,20 @@ class RemoteFollowingTest {
   }
 
   @Test
+  void anAccountOnASuspendedServerIsNotFoundToLookUpOpenOrFollow() {
+    ReflectionTestUtils.setField(alice, "serverBlock", "SUSPEND");
+    when(finder.find("alice@mastodon.example")).thenReturn(Optional.of(alice));
+
+    assertThatThrownBy(() -> following().lookup(7L, "alice@mastodon.example"))
+        .isInstanceOfSatisfying(
+            FederationException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND));
+    assertThatThrownBy(() -> following().account(7L, 42L)).isInstanceOf(FederationException.class);
+    assertThatThrownBy(() -> following().follow(7L, 42L)).isInstanceOf(FederationException.class);
+    verifyNoInteractions(deliveries);
+  }
+
+  @Test
   void anUnknownAccountIdIs404() {
     when(remoteActors.findById(99L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> following().account(7L, 99L)).isInstanceOf(FederationException.class);

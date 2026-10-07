@@ -519,4 +519,26 @@ class NoteFederationTest {
             org.mockito.ArgumentMatchers.eq(
                 List.of("https://a.example/inbox", "https://b.example/inbox")));
   }
+
+  @Test
+  void someoneNamedOnASuspendedServerIsNotReached() {
+    var suspended = bob();
+    org.springframework.test.util.ReflectionTestUtils.setField(suspended, "serverBlock", "SUSPEND");
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(WRITER));
+    when(notes.find(44L)).thenReturn(Optional.of(naming(NoteSnapshotReader.Visibility.PUBLIC)));
+    when(remoteParents.of(null)).thenReturn(Optional.empty());
+    when(finder.find("bob@b.example")).thenReturn(Optional.of(suspended));
+    when(finder.find("ghost@nowhere.example")).thenReturn(Optional.empty());
+    federating();
+
+    service().createdElsewhere(44L, 7L);
+
+    verify(deliveries)
+        .enqueue(
+            org.mockito.ArgumentMatchers.eq(7L),
+            org.mockito.ArgumentMatchers.eq("https://kurl.me/ap/notes/44/activity"),
+            any(),
+            org.mockito.ArgumentMatchers.eq(
+                List.of("https://a.example/inbox", "https://b.example/inbox")));
+  }
 }

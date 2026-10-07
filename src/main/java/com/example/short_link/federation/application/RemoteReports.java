@@ -32,6 +32,7 @@ public class RemoteReports {
             note ->
                 remoteActors
                     .findById(note.remoteActorId())
+                    .filter(actor -> !actor.onSuspendedServer())
                     .map(
                         actor -> {
                           String id = urls.instance() + "#flags/" + UUID.randomUUID();

@@ -1,6 +1,7 @@
 package com.example.short_link.notification.infrastructure.event;
 
 import com.example.short_link.common.event.RemoteDomainBlockedEvent;
+import com.example.short_link.common.event.ServerSuspendedEvent;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
@@ -21,5 +22,12 @@ public class RemoteDomainNotificationListener {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onDomainBlocked(RemoteDomainBlockedEvent event) {
     notifications.deleteFromDomain(event.userId(), event.domain());
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void onServerSuspended(ServerSuspendedEvent event) {
+    notifications.deleteFromServer(event.domain());
   }
 }
