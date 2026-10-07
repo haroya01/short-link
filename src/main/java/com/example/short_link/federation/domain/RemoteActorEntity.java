@@ -11,6 +11,7 @@ import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.Formula;
 
 @Entity
 @Table(name = "federation_remote_actor")
@@ -55,6 +56,13 @@ public class RemoteActorEntity extends BaseTimeEntity {
   @Column(name = "fetched_at", nullable = false)
   private Instant fetchedAt;
 
+  // The moderators' decision about this account's server rides along with every load of the
+  // account, so the inbox, lookups and follows need no query of their own.
+  @Formula(
+      "(SELECT b.severity FROM federation_domain_block b WHERE b.domain = domain"
+          + " OR domain LIKE CONCAT('%.', b.domain) ORDER BY b.severity DESC LIMIT 1)")
+  private String serverBlock;
+
   public RemoteActorEntity(RemoteActorDocument document, Instant fetchedAt) {
     this.actorUri = document.actorUri();
     refresh(document, fetchedAt);
@@ -71,6 +79,10 @@ public class RemoteActorEntity extends BaseTimeEntity {
     this.displayName = document.displayName();
     this.avatarUrl = document.avatarUrl();
     this.fetchedAt = fetchedAt;
+  }
+
+  public boolean onSuspendedServer() {
+    return ServerBlockSeverity.SUSPEND.name().equals(serverBlock);
   }
 
   public String deliveryInbox() {

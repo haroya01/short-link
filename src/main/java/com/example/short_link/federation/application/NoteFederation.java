@@ -206,7 +206,7 @@ public class NoteFederation {
     RemoteParents.Parent parent = remoteParents.of(inReplyToId).orElse(null);
     List<RemoteActorEntity> named = new ArrayList<>();
     for (String handle : handles) {
-      finder.find(handle).ifPresent(named::add);
+      finder.find(handle).filter(person -> !person.onSuspendedServer()).ifPresent(named::add);
     }
     return new Reach(parent, named);
   }

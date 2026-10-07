@@ -86,6 +86,19 @@ class RemoteReportsTest {
   }
 
   @Test
+  void aSuspendedServerIsNotSentReports() {
+    RemoteActorEntity alice = alice();
+    ReflectionTestUtils.setField(alice, "serverBlock", "SUSPEND");
+    when(remoteNotes.target(9L))
+        .thenReturn(Optional.of(new RemoteNotes.Target("https://m.example/s/1", 42L, true)));
+    when(remoteActors.findById(42L)).thenReturn(Optional.of(alice));
+
+    reports().forward(9L, "광고 계정");
+
+    verifyNoInteractions(deliveries);
+  }
+
+  @Test
   void aMembersNoteIsNotForwardedAnywhere() {
     when(remoteNotes.target(9L)).thenReturn(Optional.empty());
 

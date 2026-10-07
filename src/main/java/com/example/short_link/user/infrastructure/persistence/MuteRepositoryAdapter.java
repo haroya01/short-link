@@ -1,5 +1,6 @@
 package com.example.short_link.user.infrastructure.persistence;
 
+import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.user.domain.UserMuteEntity;
 import com.example.short_link.user.domain.repository.MuteRepository;
 import jakarta.persistence.EntityManager;
@@ -74,6 +75,8 @@ class MuteRepositoryAdapter implements MuteRepository {
           "EXISTS (SELECT 1 FROM user_domain_block d"
               + " JOIN federation_remote_actor a ON a.domain = d.domain"
               + " WHERE d.user_id = :recipient AND a.id = :remote)");
+      checks.add(ServerBlockSql.suspended(":remote"));
+      checks.add(ServerBlockSql.limitedFor(":remote", ":recipient"));
     }
     if (conversationId != null) {
       checks.add(

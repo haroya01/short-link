@@ -3,6 +3,7 @@ package com.example.short_link.federation.application;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import java.net.URI;
 import java.time.Clock;
@@ -28,24 +29,31 @@ public class RemoteActorResolver {
   private final FederationHttp http;
   private final SigningKeys signingKeys;
   private final RemoteActorRepository actors;
+  private final FederationDomainBlockRepository serverBlocks;
   private final JsonMapper json;
   private final Clock clock;
 
   @Autowired
   public RemoteActorResolver(
-      FederationHttp http, SigningKeys signingKeys, RemoteActorRepository actors, JsonMapper json) {
-    this(http, signingKeys, actors, json, Clock.systemUTC());
+      FederationHttp http,
+      SigningKeys signingKeys,
+      RemoteActorRepository actors,
+      FederationDomainBlockRepository serverBlocks,
+      JsonMapper json) {
+    this(http, signingKeys, actors, serverBlocks, json, Clock.systemUTC());
   }
 
   RemoteActorResolver(
       FederationHttp http,
       SigningKeys signingKeys,
       RemoteActorRepository actors,
+      FederationDomainBlockRepository serverBlocks,
       JsonMapper json,
       Clock clock) {
     this.http = http;
     this.signingKeys = signingKeys;
     this.actors = actors;
+    this.serverBlocks = serverBlocks;
     this.json = json;
     this.clock = clock;
   }
@@ -94,7 +102,11 @@ public class RemoteActorResolver {
     return fresh(cached) ? Optional.of(cached) : byActorUri(cached.getActorUri());
   }
 
+  // A suspended server is never asked for anything.
   private Optional<JsonNode> fetch(URI uri) {
+    if (serverBlocks.suspends(uri.getHost())) {
+      return Optional.empty();
+    }
     return switch (http.get(uri, signingKeys.forInstance())) {
       case FederationHttp.Result.Ok ok -> {
         try {

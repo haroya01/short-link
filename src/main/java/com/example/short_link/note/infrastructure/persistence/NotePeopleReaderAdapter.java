@@ -1,5 +1,6 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import jakarta.persistence.EntityManager;
@@ -64,7 +65,8 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
     return rows.stream().findFirst().map(row -> author((Object[]) row));
   }
 
-  // Keyed by the remote actor id. An account without a username shows as its server.
+  // Keyed by the remote actor id. An account without a username shows as its server. An account on
+  // a suspended server is left out, and a note without its author is shown nowhere.
   @Override
   public Map<Long, NoteAuthor> remoteAuthors(Collection<Long> remoteActorIds) {
     Map<Long, NoteAuthor> authors = new HashMap<>();
@@ -74,8 +76,9 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
     for (Object raw :
         em.createNativeQuery(
                 "SELECT id, username, domain, avatar_url, display_name,"
-                    + " COALESCE(profile_url, actor_uri) FROM federation_remote_actor"
-                    + " WHERE id IN (:ids)")
+                    + " COALESCE(profile_url, actor_uri) FROM federation_remote_actor ra"
+                    + " WHERE ra.id IN (:ids) AND NOT "
+                    + ServerBlockSql.suspended("ra.id"))
             .setParameter("ids", remoteActorIds)
             .getResultList()) {
       Object[] columns = (Object[]) raw;

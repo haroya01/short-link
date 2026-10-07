@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class RemoteParentsTest {
@@ -66,6 +67,28 @@ class RemoteParentsTest {
     assertThat(parent.inbox()).isEqualTo(ALICE + "/inbox");
     assertThat(parent.handle()).isEqualTo("@@m.example");
     assertThat(parent.shareable()).isFalse();
+  }
+
+  @Test
+  void aNoteFromASuspendedServerIsNeverAddressed() {
+    RemoteActorEntity suspended = actor("alice", "https://m.example/inbox");
+    ReflectionTestUtils.setField(suspended, "serverBlock", "SUSPEND");
+    when(remoteNotes.target(5L))
+        .thenReturn(Optional.of(new RemoteNotes.Target(ALICE + "/statuses/1", 42L, true)));
+    when(remoteActors.findById(42L)).thenReturn(Optional.of(suspended));
+
+    assertThat(parents().of(5L)).isEmpty();
+  }
+
+  @Test
+  void aLimitedServerIsStillAddressed() {
+    RemoteActorEntity limited = actor("alice", "https://m.example/inbox");
+    ReflectionTestUtils.setField(limited, "serverBlock", "LIMIT");
+    when(remoteNotes.target(5L))
+        .thenReturn(Optional.of(new RemoteNotes.Target(ALICE + "/statuses/1", 42L, true)));
+    when(remoteActors.findById(42L)).thenReturn(Optional.of(limited));
+
+    assertThat(parents().of(5L)).isPresent();
   }
 
   @Test

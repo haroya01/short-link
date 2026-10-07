@@ -92,6 +92,7 @@ public class RemoteFollowing {
     RemoteActorEntity actor =
         finder
             .find(handle)
+            .filter(found -> !found.onSuspendedServer())
             .orElseThrow(
                 () ->
                     new FederationException(
@@ -251,6 +252,7 @@ public class RemoteFollowing {
   private RemoteActorEntity remote(Long remoteActorId) {
     return remoteActors
         .findById(remoteActorId)
+        .filter(found -> !found.onSuspendedServer())
         .orElseThrow(
             () ->
                 new FederationException(

@@ -135,6 +135,26 @@
 @junit | federation-inbox-reply-blocked-domain | 10 | 1 | 0 | 0 | 11
 @junit | notes-thread-blocked-domain | 6 | 0 | 0 | 0 | 6
 @junit | federation-domain-unblock | 0 | 0 | 0 | 1 | 1
+# Moderators block a whole server (Mastodon's limit and suspend). Limiting: the block row only.
+@junit | admin-server-limit | 1 | 1 | 0 | 0 | 2
+# A limited server's tagged note stays out for someone who does not follow the account and shows
+# for someone who does, inside the same tag statement.
+@junit | notes-tag-limited-server-stranger | 1 | 0 | 0 | 0 | 1
+@junit | notes-tag-limited-server-follower | 5 | 0 | 0 | 0 | 5
+# Suspending: the row changes, then follows both ways and activities still waiting to go there end
+# (three deletes), and after commit its notices go (one delete).
+@junit | admin-server-suspend | 1 | 0 | 1 | 4 | 6
+# From a suspended server: the usual checks up to its account, whose server comes with it — then
+# nothing is done.
+@junit | federation-inbox-suspended-server | 4 | 0 | 0 | 0 | 4
+@junit | federation-account-suspended-server | 1 | 0 | 0 | 0 | 1
+@junit | notes-tag-suspended-server | 1 | 0 | 0 | 0 | 1
+# Its note's thread: the note, replies and authors, its author left out, so the note is not found.
+@junit | notes-thread-suspended-server | 3 | 0 | 0 | 0 | 3
+@junit | admin-servers | 1 | 0 | 0 | 0 | 1
+@junit | admin-servers-member | 0 | 0 | 0 | 0 | 0
+@junit | admin-server-unblock | 0 | 0 | 0 | 1 | 1
+@junit | notes-tag-unblocked-server | 5 | 0 | 0 | 0 | 5
 # Notes from an account a member follows. Before the key: is anyone following it. Then the key,
 # INSERT IGNORE on the note's uri, its id, and its image (the address stays on its server).
 @junit | federation-inbox-remote-note | 3 | 2 | 0 | 0 | 5

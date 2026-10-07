@@ -61,11 +61,16 @@ public class DomainBlocks {
   }
 
   private String normalize(String raw) {
+    return normalize(raw, urls.domain());
+  }
+
+  // A server as people type it (any case, a leading @), never this one.
+  static String normalize(String raw, String ownDomain) {
     String domain = raw == null ? "" : raw.strip().toLowerCase(Locale.ROOT);
     if (domain.startsWith("@")) {
       domain = domain.substring(1);
     }
-    if (!DOMAIN.matcher(domain).matches() || domain.equals(urls.domain())) {
+    if (!DOMAIN.matcher(domain).matches() || domain.equals(ownDomain)) {
       throw new FederationException(FederationErrorCode.REMOTE_DOMAIN_INVALID);
     }
     return domain;

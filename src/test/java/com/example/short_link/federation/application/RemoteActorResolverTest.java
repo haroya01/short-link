@@ -12,6 +12,7 @@ import com.example.short_link.federation.application.signature.Signer;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -37,6 +38,7 @@ class RemoteActorResolverTest {
   @Mock private FederationHttp http;
   @Mock private SigningKeys signingKeys;
   @Mock private RemoteActorRepository actors;
+  @Mock private FederationDomainBlockRepository serverBlocks;
 
   private final Signer instance = new Signer("https://kurl.me/ap/instance#main-key", null);
 
@@ -48,7 +50,12 @@ class RemoteActorResolverTest {
 
   private RemoteActorResolver resolver() {
     return new RemoteActorResolver(
-        http, signingKeys, actors, JsonMapper.builder().build(), Clock.fixed(NOW, ZoneOffset.UTC));
+        http,
+        signingKeys,
+        actors,
+        serverBlocks,
+        JsonMapper.builder().build(),
+        Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private static FederationHttp.Result ok(String body) {
@@ -76,6 +83,15 @@ class RemoteActorResolverTest {
     when(actors.findByKeyId(MASTODON_KEY)).thenReturn(Optional.of(cached(NOW.minusSeconds(60))));
 
     assertThat(resolver().byKeyId(MASTODON_KEY, false)).isPresent();
+    verify(http, never()).get(any(), any());
+  }
+
+  @Test
+  void aSuspendedServerIsNeverAsked() {
+    when(actors.findByKeyId(MASTODON_KEY)).thenReturn(Optional.empty());
+    when(serverBlocks.suspends("mastodon.example")).thenReturn(true);
+
+    assertThat(resolver().byKeyId(MASTODON_KEY, false)).isEmpty();
     verify(http, never()).get(any(), any());
   }
 
