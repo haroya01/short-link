@@ -45,7 +45,11 @@ public enum NoteErrorCode {
   NOTE_QUOTE_CONFLICT(HttpStatus.BAD_REQUEST, "a note quotes a post or a note, not both"),
   NOTE_REPLY_BLOCKED(HttpStatus.FORBIDDEN, "cannot reply to this note"),
   NOTE_INTERACTION_BLOCKED(HttpStatus.FORBIDDEN, "cannot repost or quote this note"),
-  NOTE_REMOTE_UNSUPPORTED(HttpStatus.BAD_REQUEST, "notes from other servers cannot be quoted yet");
+  NOTE_REMOTE_UNSUPPORTED(HttpStatus.BAD_REQUEST, "notes from other servers cannot be quoted yet"),
+  NOTE_SCHEDULE_TOO_SOON(
+      HttpStatus.UNPROCESSABLE_ENTITY, "schedule a note at least 5 minutes ahead"),
+  NOTE_SCHEDULE_LIMIT(HttpStatus.UNPROCESSABLE_ENTITY, "too many scheduled notes: %s"),
+  NOTE_SCHEDULE_NOT_FOUND(HttpStatus.NOT_FOUND, "scheduled note not found: %s");
 
   private final HttpStatus status;
   private final String template;

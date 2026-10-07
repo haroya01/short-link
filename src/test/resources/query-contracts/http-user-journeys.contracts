@@ -21,7 +21,7 @@
 @junit | account-banner-cross-user-commit-rejected | 0 | 0 | 0 | 0 | 0
 @junit | account-banner-presign | 0 | 0 | 0 | 0 | 0
 @junit | account-data-export | 3 | 0 | 0 | 0 | 3
-@junit | account-delete | 3 | 1 | 1 | 0 | 5
+@junit | account-delete | 3 | 1 | 1 | 1 | 6
 @junit | account-deleted-me-rejected | 1 | 0 | 0 | 0 | 1
 @junit | account-dev-login | 2 | 1 | 0 | 0 | 3
 @junit | account-me-read | 1 | 0 | 0 | 0 | 1
