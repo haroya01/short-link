@@ -735,6 +735,31 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aTakeDownDeletesAMembersNoteForEveryoneAndANoteFromElsewhereOnlyHere() {
+    NoteEntity mine = note(1L, 7L, "x");
+    NoteEntity remote = note(2L, null, "y");
+    ReflectionTestUtils.setField(remote, "remoteActorId", 42L);
+    when(notes.findById(1L)).thenReturn(Optional.of(mine));
+    when(notes.findById(2L)).thenReturn(Optional.of(remote));
+    when(notes.findById(3L)).thenReturn(Optional.empty());
+    when(media.findByNoteIds(List.of(1L)))
+        .thenReturn(List.of(new NoteMediaEntity(1L, 0, "k1", "https://cdn/k1", "image/png", null)));
+    when(media.findByNoteIds(List.of(2L)))
+        .thenReturn(
+            List.of(new NoteMediaEntity(2L, 0, "", "https://elsewhere/a.png", "image/png", null)));
+
+    service().takeDown(1L);
+    service().takeDown(2L);
+    service().takeDown(3L);
+
+    verify(notes).delete(mine);
+    verify(notes).delete(remote);
+    verify(likes).deleteAllByNoteId(2L);
+    verify(events).publishEvent(new NoteDeletedEvent(1L, 7L, List.of("k1")));
+    verify(events, never()).publishEvent(new NoteDeletedEvent(2L, null, List.of()));
+  }
+
+  @Test
   void aBookmarkIsTheReadersOwnAndQuiet() {
     when(notes.findById(1L)).thenReturn(Optional.of(note(1L, 7L, "x")));
 

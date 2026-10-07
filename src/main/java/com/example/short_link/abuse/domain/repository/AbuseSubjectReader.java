@@ -15,6 +15,8 @@ public interface AbuseSubjectReader {
 
   List<LinkSubjectSnapshot> findLinkSubjectSnapshots(Collection<Long> linkIds);
 
+  List<NoteSubjectSnapshot> findNoteSubjectSnapshots(Collection<Long> noteIds);
+
   Optional<Long> findLinkIdByShortCode(String shortCode);
 
   boolean subjectExists(AbuseSubjectType subjectType, Long subjectId);
@@ -39,6 +41,14 @@ public interface AbuseSubjectReader {
     String getAuthorHandle();
 
     Long getDeleted();
+  }
+
+  interface NoteSubjectSnapshot {
+    Long getSubjectId();
+
+    String getExcerpt();
+
+    String getAuthorHandle();
   }
 
   interface LinkSubjectSnapshot {

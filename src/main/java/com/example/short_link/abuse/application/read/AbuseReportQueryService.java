@@ -8,6 +8,7 @@ import com.example.short_link.abuse.domain.repository.AbuseReportRepository;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.CommentSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.LinkSubjectSnapshot;
+import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.NoteSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.PostSubjectSnapshot;
 import com.example.short_link.abuse.domain.repository.AbuseSubjectReader.UserSubjectSnapshot;
 import com.example.short_link.common.web.PostPublicUrlBuilder;
@@ -47,8 +48,9 @@ public class AbuseReportQueryService {
     Map<Long, CommentSubjectSnapshot> comments = byCommentId(reports);
     Map<Long, UserSubjectSnapshot> users = byUserId(reports);
     Map<Long, LinkSubjectSnapshot> links = byLinkId(reports);
+    Map<Long, NoteSubjectSnapshot> notes = byNoteId(reports);
     return reports.stream()
-        .map(r -> AbuseReportView.of(r, snapshotFor(r, posts, comments, users, links)))
+        .map(r -> AbuseReportView.of(r, snapshotFor(r, posts, comments, users, links, notes)))
         .toList();
   }
 
@@ -84,6 +86,14 @@ public class AbuseReportQueryService {
             .collect(Collectors.toMap(LinkSubjectSnapshot::getSubjectId, Function.identity()));
   }
 
+  private Map<Long, NoteSubjectSnapshot> byNoteId(List<AbuseReportEntity> reports) {
+    List<Long> ids = subjectIds(reports, AbuseSubjectType.NOTE);
+    return ids.isEmpty()
+        ? Map.of()
+        : subjects.findNoteSubjectSnapshots(ids).stream()
+            .collect(Collectors.toMap(NoteSubjectSnapshot::getSubjectId, Function.identity()));
+  }
+
   private static List<Long> subjectIds(List<AbuseReportEntity> reports, AbuseSubjectType type) {
     return reports.stream()
         .filter(r -> r.getSubjectType() == type)
@@ -97,13 +107,15 @@ public class AbuseReportQueryService {
       Map<Long, PostSubjectSnapshot> posts,
       Map<Long, CommentSubjectSnapshot> comments,
       Map<Long, UserSubjectSnapshot> users,
-      Map<Long, LinkSubjectSnapshot> links) {
+      Map<Long, LinkSubjectSnapshot> links,
+      Map<Long, NoteSubjectSnapshot> notes) {
     Long subjectId = report.getSubjectId();
     return switch (report.getSubjectType()) {
       case POST -> fromPost(posts.get(subjectId));
       case COMMENT -> fromComment(comments.get(subjectId));
       case USER -> fromUser(users.get(subjectId));
       case LINK -> fromLink(links.get(subjectId));
+      case NOTE -> fromNote(notes.get(subjectId));
     };
   }
 
@@ -128,6 +140,15 @@ public class AbuseReportQueryService {
     String url = postPublicUrlBuilder.build(snapshot.getAuthorHandle(), snapshot.getSlug());
     boolean removed = POST_UNPUBLISHED.equals(snapshot.getStatus());
     return new SubjectSnapshot(snapshot.getTitle(), snapshot.getAuthorHandle(), url, null, removed);
+  }
+
+  // A note taken down is gone (notes are deleted, not hidden), so a missing row reads as removed.
+  private static SubjectSnapshot fromNote(NoteSubjectSnapshot snapshot) {
+    if (snapshot == null) {
+      return new SubjectSnapshot(null, null, null, null, true);
+    }
+    return new SubjectSnapshot(
+        null, snapshot.getAuthorHandle(), null, snapshot.getExcerpt(), false);
   }
 
   private SubjectSnapshot fromComment(CommentSubjectSnapshot snapshot) {

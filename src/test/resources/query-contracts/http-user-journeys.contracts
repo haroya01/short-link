@@ -543,3 +543,10 @@
 @junit | workspace-favorite-remove | 2 | 0 | 1 | 0 | 3
 @junit | workspace-selected-links | 6 | 0 | 0 | 0 | 6
 @junit | workspace-overview | 9 | 0 | 0 | 0 | 9
+# A note report: the note exists, no open report of it from this reader, insert. The open backlog
+# reads its notes in one statement (author or user@server). Taking it down deletes it as its author
+# would (images, likes, collection blocks, the row; Delete to followers' servers after commit) and
+# answers with the report, whose note now reads as removed.
+@junit | ops-submit-note-abuse | 2 | 1 | 0 | 0 | 3
+@junit | ops-note-abuse-backlog | 2 | 0 | 0 | 0 | 2
+@junit | ops-resolve-note-abuse | 5 | 0 | 1 | 3 | 9

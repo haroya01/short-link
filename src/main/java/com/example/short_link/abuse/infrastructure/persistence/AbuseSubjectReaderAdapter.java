@@ -34,6 +34,11 @@ class AbuseSubjectReaderAdapter implements AbuseSubjectReader {
   }
 
   @Override
+  public List<NoteSubjectSnapshot> findNoteSubjectSnapshots(Collection<Long> noteIds) {
+    return jpa.findNoteSubjectSnapshots(noteIds);
+  }
+
+  @Override
   public Optional<Long> findLinkIdByShortCode(String shortCode) {
     return jpa.findLinkIdByShortCode(shortCode);
   }
@@ -48,6 +53,7 @@ class AbuseSubjectReaderAdapter implements AbuseSubjectReader {
       case COMMENT -> jpa.countCommentById(subjectId) > 0;
       case USER -> jpa.countUserById(subjectId) > 0;
       case LINK -> jpa.countLinkById(subjectId) > 0;
+      case NOTE -> jpa.countNoteById(subjectId) > 0;
     };
   }
 }
