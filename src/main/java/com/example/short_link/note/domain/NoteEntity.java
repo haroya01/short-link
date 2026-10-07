@@ -30,6 +30,7 @@ public class NoteEntity extends BaseCreatedEntity {
   // MySQL VARCHAR(500) counts code points, so length checks use codePointCount, not length().
   public static final int MAX_BODY_LENGTH = 500;
   public static final int MAX_WARNING_LENGTH = 100;
+  public static final int MAX_PINS = 5;
   private static final int EXCERPT_LENGTH = 80;
 
   @Id
@@ -60,6 +61,9 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(name = "marked_sensitive", nullable = false)
   private boolean sensitive;
 
+  @Column(name = "pinned_at")
+  private Instant pinnedAt;
+
   public NoteEntity(Long userId, String body, Long inReplyToId, Long quotedPostId) {
     this(userId, body, inReplyToId, quotedPostId, null);
   }
@@ -89,6 +93,20 @@ public class NoteEntity extends BaseCreatedEntity {
   public void markContent(String warning, boolean sensitive) {
     this.contentWarning = warning;
     this.sensitive = sensitive || warning != null;
+  }
+
+  public void pin(Instant at) {
+    if (pinnedAt == null) {
+      pinnedAt = at;
+    }
+  }
+
+  public void unpin() {
+    pinnedAt = null;
+  }
+
+  public boolean isPinned() {
+    return pinnedAt != null;
   }
 
   public void edit(String body, Instant at) {

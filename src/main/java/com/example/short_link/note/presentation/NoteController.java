@@ -161,6 +161,18 @@ public class NoteController {
     return query.quotes(id, page, size, viewerId);
   }
 
+  @PutMapping("/api/v1/notes/{id}/pin")
+  public NoteCommandService.PinStatus pin(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setPin(userId, id, true);
+  }
+
+  @DeleteMapping("/api/v1/notes/{id}/pin")
+  public NoteCommandService.PinStatus unpin(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setPin(userId, id, false);
+  }
+
   @GetMapping("/api/v1/notes/feed-preferences")
   public NoteFeedSettingsService.FeedPreferences feedPreferences(
       @AuthenticationPrincipal Long userId) {

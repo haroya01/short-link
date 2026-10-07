@@ -235,6 +235,31 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(edited.path("contentWarning").isNull()).isTrue();
   }
 
+  @Test
+  void anAuthorPinsANoteToTheTopOfTheirProfile() throws Exception {
+    Actor writer = actor("pin-writer", false);
+    long older = noteAt(writer, "먼저 쓴 노트", 10);
+    long newer = noteAt(writer, "나중에 쓴 노트", 1);
+
+    var pinned = step("note-pin", "PUT", "/api/v1/notes/" + older + "/pin", writer, null, 200);
+    assertThat(pinned.path("pinned").asBoolean()).isTrue();
+
+    var profile =
+        step(
+            "note-profile-pinned",
+            "GET",
+            "/api/v1/public/profiles/" + writer.username() + "/notes",
+            null,
+            null,
+            200);
+    assertThat(ids(profile)).containsExactly(older, newer);
+    assertThat(profile.path("items").get(0).path("pinned").asBoolean()).isTrue();
+
+    var unpinned =
+        step("note-unpin", "DELETE", "/api/v1/notes/" + older + "/pin", writer, null, 200);
+    assertThat(unpinned.path("pinned").asBoolean()).isFalse();
+  }
+
   private static List<Long> ids(JsonNode feed) {
     List<Long> ids = new ArrayList<>();
     feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));

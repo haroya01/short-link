@@ -17,6 +17,7 @@ public record ActorResponse(
     String outbox,
     String followers,
     String following,
+    String featured,
     Endpoints endpoints,
     boolean manuallyApprovesFollowers,
     boolean discoverable,

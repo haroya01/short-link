@@ -37,6 +37,7 @@ public class InstanceActorController {
                 id + "/outbox",
                 null,
                 null,
+                null,
                 new ActorResponse.Endpoints(urls.sharedInbox()),
                 true,
                 false,

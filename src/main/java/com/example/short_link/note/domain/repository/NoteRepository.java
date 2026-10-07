@@ -37,6 +37,10 @@ public interface NoteRepository {
 
   List<NoteEntity> tagged(String tag, int offset, int limit);
 
+  long countPinned(Long userId);
+
+  List<Long> pinnedIds(Long userId);
+
   void tag(Long noteId, List<String> tags);
 
   void retag(Long noteId, List<String> tags);

@@ -69,6 +69,11 @@
 # its one update.
 @junit | note-create-warning | 3 | 1 | 0 | 0 | 4
 @junit | note-edit-warning | 7 | 0 | 1 | 0 | 8
+# Pins: the note, how many the author already pinned (at most five), the update. The profile list
+# orders pins first inside its one query, so a pinned profile costs the same.
+@junit | note-pin | 2 | 0 | 1 | 0 | 3
+@junit | note-unpin | 1 | 0 | 1 | 0 | 2
+@junit | note-profile-pinned | 5 | 0 | 0 | 0 | 5
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
 @junit | note-trending | 6 | 0 | 0 | 0 | 6

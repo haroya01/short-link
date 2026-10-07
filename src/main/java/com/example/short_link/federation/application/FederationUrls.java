@@ -54,6 +54,10 @@ public class FederationUrls {
     return actor(publicId) + "/followers";
   }
 
+  public String featured(String publicId) {
+    return actor(publicId) + "/featured";
+  }
+
   public String following(String publicId) {
     return actor(publicId) + "/following";
   }

@@ -80,4 +80,10 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
   public long countByAuthor(Long authorId) {
     return notes.countByAuthor(authorId);
   }
+
+  @Override
+  @Transactional(readOnly = true)
+  public List<Long> pinnedIds(Long authorId) {
+    return notes.pinnedIds(authorId);
+  }
 }
