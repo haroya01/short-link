@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.domain.CommentEntity;
@@ -21,6 +22,7 @@ public class CreateCommentUseCase {
   private final CommentRepository commentRepository;
   private final UserRepository userRepository;
   private final CommentNotifications notifications;
+  private final CommentMentions mentions;
 
   @Transactional
   public CommentView execute(CreateCommentCommand cmd) {
@@ -50,6 +52,7 @@ public class CreateCommentUseCase {
         author == null ? null : PublicAuthorView.from(author),
         saved.getBody(),
         saved.getCreatedAt(),
-        0L);
+        0L,
+        mentions.of(saved.getBody()));
   }
 }

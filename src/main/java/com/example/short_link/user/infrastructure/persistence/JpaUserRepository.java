@@ -3,6 +3,7 @@ package com.example.short_link.user.infrastructure.persistence;
 import com.example.short_link.user.domain.UserEntity;
 import jakarta.persistence.LockModeType;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,8 @@ public interface JpaUserRepository extends JpaRepository<UserEntity, Long> {
   Optional<UserEntity> findByEmail(String email);
 
   Optional<UserEntity> findByUsername(String username);
+
+  List<UserEntity> findAllByUsernameInAndDeletedAtIsNull(Collection<String> usernames);
 
   long countByCreatedAtAfter(Instant since);
 

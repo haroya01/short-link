@@ -283,13 +283,15 @@ class PublicPostDiscoveryControllersTest {
                     1L,
                     null,
                     new PublicAuthorView(2L, "lee", null, null),
-                    "nice post",
+                    "nice post @kim",
                     Instant.parse("2026-01-01T00:00:00Z"),
-                    0L)));
+                    0L,
+                    List.of("kim"))));
 
     mvc.perform(get("/api/v1/public/posts/5/comments"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$[0].body").value("nice post"))
+        .andExpect(jsonPath("$[0].body").value("nice post @kim"))
+        .andExpect(jsonPath("$[0].mentions[0]").value("kim"))
         .andExpect(jsonPath("$[0].author.username").value("lee"));
   }
 }

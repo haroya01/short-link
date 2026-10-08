@@ -123,7 +123,8 @@ class PostInteractionControllersTest {
                 new PublicAuthorView(USER_ID, "kim", null, null),
                 "hi there",
                 Instant.parse("2026-01-01T00:00:00Z"),
-                0L));
+                0L,
+                List.of()));
 
     mvc.perform(
             post("/api/v1/posts/3/comments")
