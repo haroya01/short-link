@@ -553,7 +553,7 @@
 @junit | reader-public-curator-collections | 7 | 0 | 0 | 0 | 7
 @junit | reader-public-highlight-replies | 4 | 0 | 0 | 0 | 4
 @junit | reader-public-markdown-download | 6 | 0 | 0 | 0 | 6
-@junit | reader-public-note-feed | 4 | 0 | 0 | 0 | 4
+@junit | reader-public-note-feed | 5 | 0 | 0 | 0 | 5
 @junit | reader-public-path-detail | 8 | 0 | 0 | 0 | 8
 @junit | reader-public-post-highlights | 4 | 0 | 0 | 0 | 4
 @junit | reader-public-post-series-navigation | 6 | 0 | 0 | 0 | 6

@@ -9,6 +9,7 @@ import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.TrendingLink;
 import com.example.short_link.note.domain.TrendingTag;
 import com.example.short_link.note.domain.repository.NoteRepository;
@@ -356,6 +357,38 @@ class NoteRepositoryAdapter implements NoteRepository {
         .setParameter("now", Instant.now())
         .setMaxResults(limit)
         .getResultList();
+  }
+
+  // The anchor's parent column is the root itself only to fix the column's type; depth 0 is
+  // dropped.
+  @Override
+  public List<SelfReply> selfReplies(Collection<Long> rootIds, int depth) {
+    if (rootIds.isEmpty()) {
+      return List.of();
+    }
+    List<?> rows =
+        em.createNativeQuery(
+                "WITH RECURSIVE chain (root_id, parent_id, id, user_id, remote_actor_id, depth) AS ("
+                    + "SELECT n.id, n.id, n.id, n.user_id, n.remote_actor_id, 0 FROM note n"
+                    + " WHERE n.id IN (:ids)"
+                    + " UNION ALL SELECT c.root_id, c.id, r.id, r.user_id, r.remote_actor_id,"
+                    + " c.depth + 1 FROM note r JOIN chain c ON r.in_reply_to_id = c.id"
+                    + " AND r.user_id <=> c.user_id AND r.remote_actor_id <=> c.remote_actor_id"
+                    + " WHERE c.depth < :depth)"
+                    + " SELECT root_id, parent_id, id FROM chain WHERE depth > 0")
+            .setParameter("ids", rootIds)
+            .setParameter("depth", depth)
+            .getResultList();
+    List<SelfReply> replies = new ArrayList<>(rows.size());
+    for (Object raw : rows) {
+      Object[] cols = (Object[]) raw;
+      replies.add(
+          new SelfReply(
+              ((Number) cols[0]).longValue(),
+              ((Number) cols[1]).longValue(),
+              ((Number) cols[2]).longValue()));
+    }
+    return replies;
   }
 
   // Replies, likes, reposts and quotes of a page in one statement; likes and boosts from other

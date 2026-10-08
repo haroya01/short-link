@@ -6,6 +6,7 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.RemoteNoteRow;
+import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.TrendingLink;
 import com.example.short_link.note.domain.TrendingTag;
 import java.time.Instant;
@@ -42,6 +43,8 @@ public interface NoteRepository {
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
   List<NoteEntity> replies(Long noteId, Long viewerId, int limit);
+
+  List<SelfReply> selfReplies(Collection<Long> rootIds, int depth);
 
   Map<Long, NoteStats> stats(Collection<Long> noteIds);
 
