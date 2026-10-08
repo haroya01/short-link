@@ -15,6 +15,7 @@ import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -59,7 +60,8 @@ class CreateCommentUseCaseTest {
                 blockChecker),
             commentRepository,
             userRepository,
-            new CommentNotifications(userRepository, postRepository, events, muteReader));
+            new CommentNotifications(userRepository, postRepository, events, muteReader),
+            new CommentMentions(userRepository));
   }
 
   private PostEntity publishedPost() {
@@ -215,8 +217,11 @@ class CreateCommentUseCaseTest {
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(userWithId(5L, "bob")));
+    when(userRepository.findActiveByUsernameIn(java.util.Set.of("bob")))
+        .thenReturn(List.of(userWithId(5L, "bob")));
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, null, "hey @bob nice post"));
+    CommentView created =
+        useCase.execute(new CreateCommentCommand(9L, 42L, null, "hey @bob nice post"));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
@@ -230,6 +235,7 @@ class CreateCommentUseCaseTest {
     assertThat(mention.actorUserId()).isEqualTo(9L);
     assertThat(mention.postAuthorUsername()).isEqualTo("olivia");
     assertThat(mention.commentId()).isEqualTo(90L);
+    assertThat(created.mentions()).containsExactly("bob");
   }
 
   @Test

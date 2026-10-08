@@ -32,7 +32,8 @@ class PublicHighlightReplyControllerTest {
                     10L,
                     new PublicAuthorView(1L, "alice", null, null),
                     "좋은 지적이에요",
-                    Instant.parse("2026-06-12T00:00:00Z"))));
+                    Instant.parse("2026-06-12T00:00:00Z"),
+                    List.of())));
 
     mvc.perform(get("/api/v1/public/highlights/5/replies"))
         .andExpect(status().isOk())

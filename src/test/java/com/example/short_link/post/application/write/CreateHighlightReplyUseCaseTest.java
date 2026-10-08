@@ -14,6 +14,7 @@ import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -62,7 +63,8 @@ class CreateHighlightReplyUseCaseTest {
                 blocks),
             replyRepository,
             userRepository,
-            new CommentNotifications(userRepository, postRepository, events, muteReader));
+            new CommentNotifications(userRepository, postRepository, events, muteReader),
+            new CommentMentions(userRepository));
   }
 
   private PostHighlightEntity highlight(long authorId) {

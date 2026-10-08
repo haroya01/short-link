@@ -28,6 +28,8 @@ public interface UserRepository {
 
   Optional<UserEntity> findByUsername(String username);
 
+  List<UserEntity> findActiveByUsernameIn(Collection<String> usernames);
+
   long countByCreatedAtAfter(Instant since);
 
   long countByUsernameIsNotNullAndDeletedAtIsNull();

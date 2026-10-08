@@ -24,6 +24,7 @@ public class PostCommentQueryService {
   private final CommentLikeRepository commentLikeRepository;
   private final UserRepository userRepository;
   private final PostRepository postRepository;
+  private final CommentMentions mentions;
 
   public List<CommentView> listForPost(Long postId) {
     // 미발행 글의 댓글은 공개 목록에 노출하지 않는다.
@@ -38,6 +39,9 @@ public class PostCommentQueryService {
     Map<Long, UserEntity> authors =
         userRepository.findAllByIdIn(authorIds).stream()
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Function<String, List<String>> mentioned =
+        mentions.in(
+            comments.stream().filter(c -> !c.isDeleted()).map(CommentEntity::getBody).toList());
 
     return comments.stream()
         .map(
@@ -48,7 +52,8 @@ public class PostCommentQueryService {
                     authorView(authors.get(c.getUserId())),
                     c.getBody(),
                     c.getCreatedAt(),
-                    likeCounts.getOrDefault(c.getId(), 0L)))
+                    likeCounts.getOrDefault(c.getId(), 0L),
+                    c.isDeleted() ? List.of() : mentioned.apply(c.getBody())))
         .toList();
   }
 

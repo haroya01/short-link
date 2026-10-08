@@ -41,7 +41,8 @@ class HighlightReplyControllerTest {
                 10L,
                 new PublicAuthorView(USER_ID, "kim", null, null),
                 "동의합니다",
-                Instant.parse("2026-06-12T00:00:00Z")));
+                Instant.parse("2026-06-12T00:00:00Z"),
+                java.util.List.of()));
 
     mvc.perform(
             post("/api/v1/highlights/5/replies")

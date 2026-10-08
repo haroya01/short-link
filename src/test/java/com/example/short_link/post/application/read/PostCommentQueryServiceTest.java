@@ -35,7 +35,11 @@ class PostCommentQueryServiceTest {
   void setUp() {
     service =
         new PostCommentQueryService(
-            commentRepository, commentLikeRepository, userRepository, postRepository);
+            commentRepository,
+            commentLikeRepository,
+            userRepository,
+            postRepository,
+            new CommentMentions(userRepository));
   }
 
   private UserEntity user(long id, String username) {
@@ -81,6 +85,36 @@ class PostCommentQueryServiceTest {
     assertThat(views.get(0).body()).isEqualTo("first");
     assertThat(views.get(1).parentId()).isEqualTo(10L);
     assertThat(views.get(1).author().username()).isEqualTo("bob");
+  }
+
+  @Test
+  void linksOnlyMentionsOfMembersAndNoneInRemovedComments() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost(42L)));
+    CommentEntity live = comment(1L, 42L, 1L, null, "@bob 맞아요, @ghost 도 봤을까");
+    CommentEntity removed = comment(2L, 42L, 1L, null, "@bob 지운 말");
+    removed.softDelete();
+    when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(42L))
+        .thenReturn(List.of(live, removed));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+    when(userRepository.findActiveByUsernameIn(java.util.Set.of("bob", "ghost")))
+        .thenReturn(List.of(user(2L, "bob")));
+
+    List<CommentView> views = service.listForPost(42L);
+
+    assertThat(views.get(0).mentions()).containsExactly("bob");
+    assertThat(views.get(1).mentions()).isEmpty();
+  }
+
+  @Test
+  void commentsWithoutMentionsLookUpNoOne() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost(42L)));
+    when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(42L))
+        .thenReturn(List.of(comment(1L, 42L, 1L, null, "mail me at a@b.com")));
+    when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
+
+    assertThat(service.listForPost(42L).get(0).mentions()).isEmpty();
+    org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never())
+        .findActiveByUsernameIn(org.mockito.ArgumentMatchers.any());
   }
 
   @Test

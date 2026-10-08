@@ -66,6 +66,11 @@ class UserRepositoryAdapter implements UserRepository {
   }
 
   @Override
+  public List<UserEntity> findActiveByUsernameIn(Collection<String> usernames) {
+    return jpa.findAllByUsernameInAndDeletedAtIsNull(usernames);
+  }
+
+  @Override
   public long countByCreatedAtAfter(Instant since) {
     return jpa.countByCreatedAtAfter(since);
   }

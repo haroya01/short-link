@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
 
 // Ignores handles inside email addresses. Returns distinct handles in first-seen order, capped to
 // prevent unbounded notification fan-out.
-final class MentionParser {
+public final class MentionParser {
 
   static final int MAX_MENTIONS = 10;
 
@@ -17,7 +17,7 @@ final class MentionParser {
 
   private MentionParser() {}
 
-  static List<String> parse(String body) {
+  public static List<String> parse(String body) {
     if (body == null || body.isBlank()) {
       return List.of();
     }

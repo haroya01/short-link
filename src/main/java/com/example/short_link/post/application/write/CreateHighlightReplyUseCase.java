@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -19,6 +20,7 @@ public class CreateHighlightReplyUseCase {
   private final PostHighlightReplyRepository replyRepository;
   private final UserRepository userRepository;
   private final CommentNotifications notifications;
+  private final CommentMentions mentions;
 
   @Transactional
   public HighlightReplyView execute(CreateHighlightReplyCommand cmd) {
@@ -36,6 +38,7 @@ public class CreateHighlightReplyUseCase {
         saved.getId(),
         author == null ? null : PublicAuthorView.from(author),
         saved.getBody(),
-        saved.getCreatedAt());
+        saved.getCreatedAt(),
+        mentions.of(saved.getBody()));
   }
 }

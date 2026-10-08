@@ -25,6 +25,7 @@ public class PostHighlightReplyQueryService {
   private final PostHighlightRepository highlightRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
+  private final CommentMentions mentions;
 
   public List<HighlightReplyView> listForHighlight(Long highlightId) {
     // 미발행 글의 하이라이트 답글은 공개 목록에 노출하지 않는다.
@@ -41,6 +42,8 @@ public class PostHighlightReplyQueryService {
     Map<Long, UserEntity> authors =
         userRepository.findAllByIdIn(authorIds).stream()
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Function<String, List<String>> mentioned =
+        mentions.in(replies.stream().map(PostHighlightReplyEntity::getBody).toList());
 
     return replies.stream()
         .map(
@@ -50,7 +53,8 @@ public class PostHighlightReplyQueryService {
                   r.getId(),
                   author == null ? null : PublicAuthorView.from(author),
                   r.getBody(),
-                  r.getCreatedAt());
+                  r.getCreatedAt(),
+                  mentioned.apply(r.getBody()));
             })
         .toList();
   }
