@@ -1,18 +1,23 @@
 package com.example.short_link.notification.infrastructure.event;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.BlogInteractionType;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.dto.NotificationSeriesRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -25,43 +30,63 @@ class BlogInteractionNotificationListenerTest {
   private static final Instant AT = Instant.parse("2026-06-07T00:00:00Z");
 
   @Mock private RecordBlogNotificationUseCase recordUseCase;
+  @Mock private UserBlockChecker blocks;
 
   private BlogInteractionNotificationListener listener() {
-    return new BlogInteractionNotificationListener(recordUseCase);
+    return new BlogInteractionNotificationListener(recordUseCase, blocks);
   }
 
   @Test
-  void likeRecordsNotificationWithPostReference() {
+  void likesOfOnePostGroupByDayLikeNoteLikes() {
     listener().onBlogInteraction(BlogInteractionEvent.like(9L, 2L, 10L, "my-post", "Hi", AT));
 
     ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
-    verify(recordUseCase).record(eq(9L), eq(NotificationType.LIKE), eq(2L), post.capture());
-    org.assertj.core.api.Assertions.assertThat(post.getValue().slug()).isEqualTo("my-post");
+    verify(recordUseCase)
+        .record(
+            eq(9L),
+            eq(NotificationType.LIKE),
+            eq(2L),
+            isNull(),
+            post.capture(),
+            eq("LIKE:10:" + LocalDate.now(ZoneOffset.UTC)));
+    assertThat(post.getValue().slug()).isEqualTo("my-post");
   }
 
   @Test
-  void commentRecordsNotificationPointingAtTheComment() {
+  void commentRecordsNotificationPointingAtTheCommentOnItsOwn() {
     listener()
         .onBlogInteraction(BlogInteractionEvent.comment(9L, 2L, 10L, "my-post", "Hi", 55L, AT));
 
     ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
-    verify(recordUseCase).record(eq(9L), eq(NotificationType.COMMENT), eq(2L), post.capture());
-    org.assertj.core.api.Assertions.assertThat(post.getValue().commentId()).isEqualTo(55L);
-    org.assertj.core.api.Assertions.assertThat(post.getValue().slug()).isEqualTo("my-post");
+    verify(recordUseCase)
+        .record(eq(9L), eq(NotificationType.COMMENT), eq(2L), isNull(), post.capture(), isNull());
+    assertThat(post.getValue().commentId()).isEqualTo(55L);
+    assertThat(post.getValue().slug()).isEqualTo("my-post");
   }
 
   @Test
   void followRecordsNotificationWithoutPost() {
     listener().onBlogInteraction(BlogInteractionEvent.follow(9L, 2L, AT));
 
-    verify(recordUseCase).record(eq(9L), eq(NotificationType.FOLLOW), eq(2L), isNull());
+    verify(recordUseCase)
+        .record(eq(9L), eq(NotificationType.FOLLOW), eq(2L), isNull(), isNull(), isNull());
   }
 
   @Test
   void selfActionIsSkipped() {
     listener().onBlogInteraction(BlogInteractionEvent.like(9L, 9L, 10L, "s", "t", AT));
 
-    verify(recordUseCase, never()).record(any(), any(), any(), any());
+    verifyNoInteractions(recordUseCase);
+  }
+
+  @Test
+  void aMemberMutedWithTheirNoticesIsHeardOnPostsAsLittleAsOnNotes() {
+    when(blocks.silences(9L, 2L)).thenReturn(true);
+
+    listener().onBlogInteraction(BlogInteractionEvent.like(9L, 2L, 10L, "s", "t", AT));
+    listener().onBlogInteraction(BlogInteractionEvent.follow(9L, 2L, AT));
+
+    verifyNoInteractions(recordUseCase);
   }
 
   @Test
@@ -73,8 +98,14 @@ class BlogInteractionNotificationListenerTest {
     ArgumentCaptor<NotificationSeriesRef> series =
         ArgumentCaptor.forClass(NotificationSeriesRef.class);
     verify(recordUseCase)
-        .record(eq(9L), eq(NotificationType.SERIES_SUBSCRIBE), eq(2L), series.capture());
-    org.assertj.core.api.Assertions.assertThat(series.getValue().slug()).isEqualTo("my-series");
+        .record(
+            eq(9L),
+            eq(NotificationType.SERIES_SUBSCRIBE),
+            eq(2L),
+            isNull(),
+            series.capture(),
+            isNull());
+    assertThat(series.getValue().slug()).isEqualTo("my-series");
   }
 
   @Test
@@ -85,6 +116,7 @@ class BlogInteractionNotificationListenerTest {
 
     listener().onBlogInteraction(event);
 
-    verify(recordUseCase, never()).record(any(), any(), any(), any());
+    verifyNoInteractions(recordUseCase);
+    verify(blocks, org.mockito.Mockito.never()).silences(any(), any());
   }
 }

@@ -9,6 +9,7 @@ import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
+import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
@@ -316,12 +317,20 @@ public class NoteCommandService {
     if (quotedNote != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));
     }
+    boolean quotesPostPublicly = quoted != null && note.getVisibility().shareable();
+    if (quotesPostPublicly) {
+      events.publishEvent(
+          new PostQuotedEvent(quoted.authorId(), userId, note.getId(), note.excerpt()));
+    }
     Set<Long> toldOtherwise = new HashSet<>(Set.of(userId));
     if (parent != null) {
       toldOtherwise.add(parent.getUserId());
     }
     if (quotedNote != null) {
       toldOtherwise.add(quotedNote.getUserId());
+    }
+    if (quotesPostPublicly) {
+      toldOtherwise.add(quoted.authorId());
     }
     List<NoteAuthor> mentioned = members(authors, handles);
     if (note.getVisibility().restricted()) {

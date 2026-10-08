@@ -1,5 +1,6 @@
 package com.example.short_link.notification.domain.repository;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface NotificationFollowerReader {
@@ -9,4 +10,6 @@ public interface NotificationFollowerReader {
   List<Long> noteSubscribersOf(Long authorUserId);
 
   List<Long> noteSharersOf(Long noteId, Long authorUserId, Long authorRemoteId);
+
+  List<Long> shareableNoteAuthorsOf(Collection<Long> noteIds);
 }
