@@ -13,6 +13,10 @@
 # already in today's group, the insert, then the recipient's and the actor's names for the push.
 # Reply: moderation, parent note, a block check each way, insert, author.
 @junit | note-reply | 10 | 2 | 0 | 0 | 12
+# A thread posts its notes in one transaction, each as a reply to the one before: per note the same
+# work as a single create (authors, insert, and after commit the federation and bell checks), the
+# first note's moderation check once, and for every later note the block check each way.
+@junit | note-thread-create | 9 | 2 | 0 | 0 | 11
 # Liking or reposting answers with the note's public counts in one statement, whoever asks.
 @junit | note-like | 8 | 2 | 0 | 0 | 10
 # Repost: note, moderation, a block check each way, the existing row, insert, then the after-commit

@@ -38,6 +38,7 @@ public enum NoteErrorCode {
   NOTE_NOT_SHAREABLE(
       HttpStatus.BAD_REQUEST, "only public and unlisted notes can be reposted or quoted"),
   NOTE_TOO_MANY_IMAGES(HttpStatus.BAD_REQUEST, "a note holds at most %s images"),
+  NOTE_THREAD_SIZE(HttpStatus.BAD_REQUEST, "a thread holds 2 to %s notes"),
   NOTE_ALT_TEXT_TOO_LONG(HttpStatus.BAD_REQUEST, "alt text exceeds %s characters"),
   NOTE_IMAGE_INVALID(HttpStatus.BAD_REQUEST, "%s"),
   NOTE_IMAGES_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "image storage is not configured"),

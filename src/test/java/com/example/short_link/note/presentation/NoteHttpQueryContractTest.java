@@ -1216,5 +1216,17 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
         .isEqualTo("An essay");
     assertThat(linked.path("note").path("linkPreview").path("image").asText())
         .isEqualTo("https://example.com/cover.png");
+
+    var posted =
+        step(
+            "note-thread-create",
+            "POST",
+            "/api/v1/notes/threads",
+            writer,
+            Map.of("notes", List.of(Map.of("body", "이어 쓰기 하나"), Map.of("body", "이어 쓰기 둘"))),
+            201);
+    assertThat(posted).hasSize(2);
+    assertThat(posted.get(1).path("inReplyToId").asLong())
+        .isEqualTo(posted.get(0).path("id").asLong());
   }
 }
