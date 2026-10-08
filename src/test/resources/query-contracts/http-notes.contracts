@@ -34,6 +34,7 @@
 @junit | note-thread | 7 | 0 | 0 | 0 | 7
 # Quotes of a note: the notes quoting it, then the page as usual (anonymous, so no reader marks).
 @junit | note-quotes | 5 | 0 | 0 | 0 | 5
+@junit | post-note-quotes | 6 | 0 | 0 | 0 | 6
 # Bookmarks are the reader's own: the note, the existing row, insert or delete. The list reads the
 # reader's bookmark ids newest first, those notes, then the page as usual.
 @junit | note-bookmark | 2 | 1 | 0 | 0 | 3

@@ -69,6 +69,10 @@ public interface NoteRepository {
 
   List<NoteEntity> quotesOf(Long noteId, Long viewerId, int offset, int limit);
 
+  List<NoteEntity> quotesOfPost(Long postId, Long viewerId, int offset, int limit);
+
+  long countQuotesOfPost(Long postId, Long viewerId);
+
   List<NoteEntity> tagged(String tag, Long viewerId, int offset, int limit);
 
   List<TrendingTag> trendingTags(Instant now, int days, int minAccounts, int limit);

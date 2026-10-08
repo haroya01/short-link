@@ -163,6 +163,18 @@ public class NoteQueryService {
         page, size, viewerId, (offset, limit) -> notes.quotesOf(noteId, viewerId, offset, limit));
   }
 
+  @Transactional(readOnly = true)
+  public PostQuotesView postQuotes(Long postId, int page, int size, Long viewerId) {
+    NoteFeedView feed =
+        page(
+            page,
+            size,
+            viewerId,
+            (offset, limit) -> notes.quotesOfPost(postId, viewerId, offset, limit));
+    return new PostQuotesView(
+        feed.items(), feed.page(), feed.hasNext(), notes.countQuotesOfPost(postId, viewerId));
+  }
+
   private List<NoteEntity> inOrder(List<Long> ids) {
     Map<Long, NoteEntity> found =
         notes.findAllByIdIn(ids).stream()

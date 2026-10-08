@@ -1082,6 +1082,16 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(note.path("media").get(0).path("altText").asText()).isEqualTo("창밖 풍경");
     assertThat(note.path("quotedPost").path("slug").asText()).isEqualTo("quoted");
     assertThat(note.path("likeCount").asLong()).isZero();
+    var postQuotes =
+        step(
+            "post-note-quotes",
+            "GET",
+            "/api/v1/public/posts/" + postId + "/quotes",
+            null,
+            null,
+            200);
+    assertThat(postQuotes.path("total").asLong()).isEqualTo(1);
+    assertThat(postQuotes.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
     verify(objectStorage).applyImmutableCacheControl(key);
 
     long replyId =
