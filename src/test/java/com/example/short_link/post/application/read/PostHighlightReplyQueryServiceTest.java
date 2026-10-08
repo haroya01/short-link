@@ -36,7 +36,11 @@ class PostHighlightReplyQueryServiceTest {
   void setUp() {
     service =
         new PostHighlightReplyQueryService(
-            replyRepository, highlightRepository, postRepository, userRepository);
+            replyRepository,
+            highlightRepository,
+            postRepository,
+            userRepository,
+            new CommentMentions(userRepository));
   }
 
   private PostHighlightReplyEntity reply(long id, long userId, String body) {
@@ -63,6 +67,19 @@ class PostHighlightReplyQueryServiceTest {
     u.claimUsername(username);
     ReflectionTestUtils.setField(u, "id", id);
     return u;
+  }
+
+  @Test
+  void aReplyLinksOnlyTheMembersItMentions() {
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(50L, 60L)));
+    when(postRepository.findById(60L)).thenReturn(Optional.of(post(60L, true)));
+    when(replyRepository.findAllByHighlightIdOrderByCreatedAtAsc(50L))
+        .thenReturn(List.of(reply(10L, 1L, "@bob 이 문장 @ghost 도")));
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
+    when(userRepository.findActiveByUsernameIn(java.util.Set.of("bob", "ghost")))
+        .thenReturn(List.of(user(2L, "bob")));
+
+    assertThat(service.listForHighlight(50L).get(0).mentions()).containsExactly("bob");
   }
 
   @Test
