@@ -78,7 +78,13 @@ public record NoteDraft(
     this(body, images, quotedPostId, inReplyToId, quotedNoteId, contentWarning, sensitive, null);
   }
 
-  public record Image(String key, String altText) {}
+  // Width and height are the picture as the poster's device shows it (EXIF orientation applied);
+  // the server never opens the upload, so they are trusted only for layout.
+  public record Image(String key, String altText, Integer width, Integer height) {
+    public Image(String key, String altText) {
+      this(key, altText, null, null);
+    }
+  }
 
   public record Poll(List<String> options, Long expiresIn, boolean multiple) {}
 }

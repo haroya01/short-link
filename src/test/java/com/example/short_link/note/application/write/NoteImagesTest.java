@@ -77,6 +77,17 @@ class NoteImagesTest {
   }
 
   @Test
+  void theSizeTheDeviceShowedTravelsWithTheUpload() {
+    when(storage.objectSize("note-images/7/c.jpg")).thenReturn(Optional.of(50L));
+
+    NoteImages.StoredImage stored =
+        images.verify(7L, new NoteDraft.Image("note-images/7/c.jpg", null, 1200, 1600));
+
+    assertThat(stored.width()).isEqualTo(1200);
+    assertThat(stored.height()).isEqualTo(1600);
+  }
+
+  @Test
   void someoneElsesKeyAnUnknownTypeOrAMissingUploadIsRefused() {
     for (String key : new String[] {"note-images/8/a.png", "note-images/7/a.svg", null}) {
       assertThatThrownBy(() -> images.verify(7L, new NoteDraft.Image(key, null)))

@@ -24,7 +24,11 @@ public interface RemoteNotes {
       List<Media> media,
       String language) {}
 
-  record Media(String url, String altText, String contentType) {}
+  record Media(String url, String altText, String contentType, Integer width, Integer height) {
+    public Media(String url, String altText, String contentType) {
+      this(url, altText, contentType, null, null);
+    }
+  }
 
   record Target(String uri, Long remoteActorId, boolean shareable) {}
 

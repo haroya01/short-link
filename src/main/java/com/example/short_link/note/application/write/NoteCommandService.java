@@ -272,7 +272,14 @@ public class NoteCommandService {
       NoteImages.StoredImage image = stored.get(i);
       rows.add(
           new NoteMediaEntity(
-              note.getId(), i, image.key(), image.url(), image.contentType(), image.altText()));
+              note.getId(),
+              i,
+              image.key(),
+              image.url(),
+              image.contentType(),
+              image.altText(),
+              image.width(),
+              image.height()));
     }
     media.saveAll(rows);
     notes.tag(note.getId(), Hashtags.of(body));
@@ -317,9 +324,7 @@ public class NoteCommandService {
         0L,
         false,
         authors.get(userId),
-        stored.stream()
-            .map(image -> new NoteView.Media(image.url(), image.altText(), image.contentType()))
-            .toList(),
+        rows.stream().map(NoteView.Media::of).toList(),
         quoted,
         parentId,
         0L,
@@ -412,11 +417,7 @@ public class NoteCommandService {
         quoted.getBody(),
         quoted.getCreatedAt(),
         author,
-        media.findByNoteIds(List.of(quoted.getId())).stream()
-            .map(
-                image ->
-                    new NoteView.Media(image.getUrl(), image.getAltText(), image.getContentType()))
-            .toList(),
+        media.findByNoteIds(List.of(quoted.getId())).stream().map(NoteView.Media::of).toList(),
         quoted.getContentWarning(),
         quoted.isSensitive());
   }

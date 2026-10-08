@@ -269,10 +269,22 @@ public class RemoteNoteParser {
       String type = mediaType(attachment);
       String url = link(attachment.get("url"));
       if (type != null && url != null && url.startsWith("https://") && url.length() <= 512) {
-        media.add(new RemoteNotes.Media(url, text(attachment.get("name")), type));
+        media.add(
+            new RemoteNotes.Media(
+                url,
+                text(attachment.get("name")),
+                type,
+                side(attachment.get("width")),
+                side(attachment.get("height"))));
       }
     }
     return media;
+  }
+
+  private static Integer side(JsonNode node) {
+    return node != null && node.canConvertToInt() && node.isIntegralNumber()
+        ? node.intValue()
+        : null;
   }
 
   // Pictures, video (Mastodon's GIFs arrive as silent mp4) and audio stay on their server and play

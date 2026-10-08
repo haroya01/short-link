@@ -189,7 +189,9 @@ class RemoteNoteRecorder implements RemoteNotes {
               "",
               image.url(),
               contentType(image.contentType()),
-              cut(image.altText(), NoteMediaEntity.MAX_ALT_TEXT_LENGTH)));
+              cut(image.altText(), NoteMediaEntity.MAX_ALT_TEXT_LENGTH),
+              image.width(),
+              image.height()));
     }
     media.saveAll(rows);
   }
