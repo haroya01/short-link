@@ -276,6 +276,20 @@ class NoteQueryServiceTest {
   }
 
   @Test
+  void aPostsQuotingNotesComeWithHowManyThereAre() {
+    NoteEntity quoting = note(3L, null);
+    when(notes.quotesOfPost(40L, 9L, 0, 21)).thenReturn(List.of(quoting));
+    when(notes.countQuotesOfPost(40L, 9L)).thenReturn(1L);
+    when(views.of(List.of(quoting), 9L)).thenReturn(List.of(view(3L, null, 0L)));
+
+    PostQuotesView quotes = service.postQuotes(40L, 0, 20, 9L);
+
+    assertThat(quotes.items()).extracting(NoteView::id).containsExactly(3L);
+    assertThat(quotes.total()).isEqualTo(1L);
+    assertThat(quotes.hasNext()).isFalse();
+  }
+
+  @Test
   void aSearchWithNothingToLookForAsksNothingAndOtherwisePagesTheMatches() {
     assertThat(service.search("  ", 0, 20, null).items()).isEmpty();
     assertThat(service.search("가".repeat(101), 0, 20, null).items()).isEmpty();

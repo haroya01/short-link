@@ -5,6 +5,7 @@ import com.example.short_link.note.application.read.NoteHistoryView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
+import com.example.short_link.note.application.read.PostQuotesView;
 import com.example.short_link.note.application.read.TrendingLinkView;
 import com.example.short_link.note.application.read.TrendingTagView;
 import com.example.short_link.note.application.write.NoteCommandService;
@@ -232,6 +233,15 @@ public class NoteController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     return query.bookmarks(userId, page, size);
+  }
+
+  @GetMapping("/api/v1/public/posts/{id}/quotes")
+  public PostQuotesView postQuotes(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable Long id,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.postQuotes(id, page, size, viewerId);
   }
 
   @GetMapping("/api/v1/public/notes/{id}/quotes")

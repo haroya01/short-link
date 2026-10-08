@@ -567,6 +567,37 @@ class NoteRepositoryAdapter implements NoteRepository {
         .getResultList();
   }
 
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> quotesOfPost(Long postId, Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.quoted_post_id = :postId"
+                + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+                + heardNote("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("postId", postId)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  public long countQuotesOfPost(Long postId, Long viewerId) {
+    return ((Number)
+            em.createNativeQuery(
+                    "SELECT COUNT(*) FROM note n WHERE n.quoted_post_id = :postId"
+                        + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+                        + heardNote("n"))
+                .setParameter("postId", postId)
+                .setParameter("viewer", viewer(viewerId))
+                .setParameter("now", Instant.now())
+                .getSingleResult())
+        .longValue();
+  }
+
   // Trending hashtags in one statement: public notes of the window, from members or — as with
   // trending notes — from elsewhere once a member touched them, never from a limited or suspended
   // server. Ranked by how many accounts used the tag; each day's count rides along.
