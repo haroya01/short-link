@@ -139,7 +139,7 @@ class NoteViewsTest {
     when(media.findByNoteIds(List.of(1L, 2L)))
         .thenReturn(List.of(new NoteMediaEntity(2L, 0, "k", "https://cdn/k", "image/png", "alt")));
     when(quotedPosts.publishedByIds(Set.of(5L)))
-        .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "me")));
+        .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "me", 1L)));
     when(notes.stats(List.of(1L, 2L)))
         .thenReturn(Map.of(1L, new NoteStats(0, 5, 1, 0), 2L, new NoteStats(4, 2, 0, 0)));
     when(notes.viewerMarks(7L, List.of(1L, 2L)))

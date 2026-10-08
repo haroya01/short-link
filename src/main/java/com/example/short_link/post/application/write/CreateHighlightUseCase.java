@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.event.PostHighlightedEvent;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -10,6 +11,7 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class CreateHighlightUseCase {
   private final PostHighlightRepository highlightRepository;
   private final PostHighlightReplyRepository replyRepository;
   private final CollectionConnectionCleaner connectionCleaner;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public HighlightRef execute(CreateHighlightCommand cmd) {
@@ -44,6 +47,16 @@ public class CreateHighlightUseCase {
                 cmd.endOffset(),
                 quote,
                 note));
+    if (!post.getUserId().equals(cmd.userId())) {
+      events.publishEvent(
+          new PostHighlightedEvent(
+              post.getUserId(),
+              cmd.userId(),
+              post.getId(),
+              post.getSlug(),
+              post.getTitle(),
+              saved.getId()));
+    }
 
     return new HighlightRef(
         saved.getId(),

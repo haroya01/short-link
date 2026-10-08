@@ -4,7 +4,9 @@ import com.example.short_link.post.domain.repository.PostNoteQuoteRepository;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -19,6 +21,13 @@ class PostNoteQuoteRepositoryAdapter implements PostNoteQuoteRepository {
   public void replace(Long postId, Collection<Long> noteIds) {
     jdbcTemplate.update("DELETE FROM post_note_quote WHERE post_id = ?", postId);
     add(postId, noteIds);
+  }
+
+  @Override
+  public Set<Long> noteIds(Long postId) {
+    return new HashSet<>(
+        jdbcTemplate.queryForList(
+            "SELECT note_id FROM post_note_quote WHERE post_id = ?", Long.class, postId));
   }
 
   @Override

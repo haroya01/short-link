@@ -12,6 +12,7 @@ import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
+import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
@@ -205,5 +206,29 @@ class NoteNotificationListenerTest {
 
     verify(recordUseCase).record(2L, NotificationType.FOLLOW_REQUEST, null, 7L, null, null);
     org.mockito.Mockito.verifyNoMoreInteractions(recordUseCase);
+  }
+
+  @Test
+  void aNoteQuotingAPostTellsThePostsAuthorAndOpensTheQuotingNote() {
+    listener().onPostQuoted(new PostQuotedEvent(9L, 2L, 300L, "이 글 좋다"));
+
+    verify(recordUseCase)
+        .record(
+            9L,
+            NotificationType.POST_QUOTE,
+            2L,
+            null,
+            new NotificationNoteRef(300L, "이 글 좋다", null, null),
+            null);
+  }
+
+  @Test
+  void selfAndMutedPostQuotesAreSkipped() {
+    when(blocks.silences(9L, 3L)).thenReturn(true);
+
+    listener().onPostQuoted(new PostQuotedEvent(9L, 9L, 300L, "x"));
+    listener().onPostQuoted(new PostQuotedEvent(9L, 3L, 300L, "x"));
+
+    verifyNoInteractions(recordUseCase);
   }
 }

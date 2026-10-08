@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.event.NotesEmbeddedEvent;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -17,13 +18,14 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 // Notes a post quotes as cards: a kurl note URL on its own line (an EMBED block). Kept only for
 // posts that are or were public, so draft autosaves stay at their usual statements and a first
-// publish has nothing to clear.
+// publish has nothing to clear. Only quotes a public post newly gains reach the notes' authors.
 @Component
 public class PostNoteQuotes {
 
@@ -31,16 +33,19 @@ public class PostNoteQuotes {
   private static final int MAX = 50;
 
   private final PostNoteQuoteRepository quotes;
+  private final ApplicationEventPublisher events;
   private final JsonMapper json;
   private final Set<String> hosts;
 
   public PostNoteQuotes(
       PostNoteQuoteRepository quotes,
+      ApplicationEventPublisher events,
       JsonMapper json,
       @Value("${short-link.base-url}") String baseUrl,
       @Value("${short-link.frontend-base-url}") String frontendBaseUrl,
       @Value("${short-link.blog-base-url}") String blogBaseUrl) {
     this.quotes = quotes;
+    this.events = events;
     this.json = json;
     this.hosts =
         Stream.of(baseUrl, frontendBaseUrl, blogBaseUrl)
@@ -53,11 +58,32 @@ public class PostNoteQuotes {
     if (post.getStatus() != PostStatus.PUBLISHED && post.getStatus() != PostStatus.UNPUBLISHED) {
       return;
     }
-    quotes.replace(post.getId(), noteIds(blocks));
+    Set<Long> ids = noteIds(blocks);
+    Set<Long> gained = new LinkedHashSet<>();
+    if (post.getStatus() == PostStatus.PUBLISHED && !ids.isEmpty()) {
+      gained.addAll(ids);
+      gained.removeAll(quotes.noteIds(post.getId()));
+    }
+    quotes.replace(post.getId(), ids);
+    announce(post, gained);
   }
 
   public void indexFirstPublish(PostEntity post, List<PostBlockEntity> blocks) {
-    quotes.add(post.getId(), noteIds(blocks));
+    Set<Long> ids = noteIds(blocks);
+    quotes.add(post.getId(), ids);
+    announce(post, ids);
+  }
+
+  private void announce(PostEntity post, Set<Long> noteIds) {
+    if (!noteIds.isEmpty()) {
+      events.publishEvent(
+          new NotesEmbeddedEvent(
+              post.getUserId(),
+              post.getId(),
+              post.getSlug(),
+              post.getTitle(),
+              Set.copyOf(noteIds)));
+    }
   }
 
   Set<Long> noteIds(List<PostBlockEntity> blocks) {

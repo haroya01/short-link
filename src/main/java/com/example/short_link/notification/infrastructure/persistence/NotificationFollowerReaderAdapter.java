@@ -4,6 +4,7 @@ import com.example.short_link.notification.domain.repository.NotificationFollowe
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import org.springframework.stereotype.Repository;
 
@@ -80,6 +81,20 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
       query.setParameter("remote", authorRemoteId);
     }
     List<?> rows = query.getResultList();
+    return rows.stream().map(raw -> ((Number) raw).longValue()).toList();
+  }
+
+  @Override
+  public List<Long> shareableNoteAuthorsOf(Collection<Long> noteIds) {
+    if (noteIds.isEmpty()) {
+      return List.of();
+    }
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT DISTINCT n.user_id FROM note n WHERE n.id IN (:ids)"
+                    + " AND n.user_id IS NOT NULL AND n.visibility IN ('PUBLIC', 'UNLISTED')")
+            .setParameter("ids", noteIds)
+            .getResultList();
     return rows.stream().map(raw -> ((Number) raw).longValue()).toList();
   }
 }

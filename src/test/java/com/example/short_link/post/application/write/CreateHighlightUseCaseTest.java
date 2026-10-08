@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
+import com.example.short_link.common.event.PostHighlightedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.HighlightRef;
@@ -31,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,6 +44,7 @@ class CreateHighlightUseCaseTest {
   @Mock private CollectionConnectionCleaner connectionCleaner;
   @Mock private UserModerationGuard moderation;
   @Mock private UserBlockChecker blocks;
+  @Mock private ApplicationEventPublisher events;
 
   private CreateHighlightUseCase useCase;
 
@@ -57,7 +60,8 @@ class CreateHighlightUseCaseTest {
                 blocks),
             highlightRepository,
             replyRepository,
-            connectionCleaner);
+            connectionCleaner,
+            events);
   }
 
   private PostEntity publishedPost(long id, long authorId) {
@@ -92,6 +96,23 @@ class CreateHighlightUseCaseTest {
     assertThat(ref.endBlockOrder()).isEqualTo(2);
     assertThat(ref.quote()).isEqualTo("hello");
     assertThat(ref.note()).isEqualTo("메모");
+    verify(events, never()).publishEvent(any(Object.class));
+  }
+
+  @Test
+  void highlightingSomeoneElsesPostTellsItsAuthor() {
+    when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
+    when(highlightRepository.save(any()))
+        .thenAnswer(
+            inv -> {
+              PostHighlightEntity e = inv.getArgument(0);
+              ReflectionTestUtils.setField(e, "id", 99L);
+              return e;
+            });
+
+    useCase.execute(new CreateHighlightCommand(4L, 5L, 2, null, 3, 10, "hello", null));
+
+    verify(events).publishEvent(new PostHighlightedEvent(1L, 4L, 5L, "slug-5", "Title", 99L));
   }
 
   @Test

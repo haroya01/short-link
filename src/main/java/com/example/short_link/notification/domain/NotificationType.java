@@ -23,10 +23,17 @@ public enum NotificationType {
   NOTE_POLL,
   NOTE_POST,
   NOTE_EDIT,
-  FOLLOW_REQUEST;
+  FOLLOW_REQUEST,
+  POST_QUOTE,
+  NOTE_EMBED,
+  COMMENT_LIKE,
+  HIGHLIGHT;
 
   public boolean grouped() {
-    return this == NOTE_LIKE || this == NOTE_REPOST;
+    return switch (this) {
+      case LIKE, COMMENT_LIKE, HIGHLIGHT, NOTE_EMBED, NOTE_LIKE, NOTE_REPOST -> true;
+      default -> false;
+    };
   }
 
   // Notices a person causes, which the notification policy may keep aside or drop (Mastodon's
@@ -46,7 +53,11 @@ public enum NotificationType {
               NOTE_QUOTE,
               REMOTE_FOLLOW,
               NOTE_MENTION,
-              FOLLOW_REQUEST ->
+              FOLLOW_REQUEST,
+              POST_QUOTE,
+              NOTE_EMBED,
+              COMMENT_LIKE,
+              HIGHLIGHT ->
           true;
       case NEW_POST, CONNECTED, PATH_GREW, NOTE_POLL, NOTE_POST, NOTE_EDIT -> false;
     };

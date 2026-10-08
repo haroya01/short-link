@@ -5,14 +5,13 @@ import com.example.short_link.common.event.NoteBroadcastEvent;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NotePollEndedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
+import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationNoteRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
-import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.scheduling.annotation.Async;
@@ -21,7 +20,7 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 // Likes and reposts of one note group by UTC day, so a burst from other servers reads as one row
-// that grows instead of a screen of copies.
+// that grows instead of a screen of copies. Posts group the same way.
 @Component
 @RequiredArgsConstructor
 public class NoteNotificationListener {
@@ -58,7 +57,24 @@ public class NoteNotificationListener {
         event.actorRemoteId(),
         new NotificationNoteRef(
             event.noteId(), event.noteExcerpt(), event.sourceNoteId(), event.sourceExcerpt()),
-        type.grouped() ? groupKey(type, event.noteId()) : null);
+        NotificationGroupKey.of(type, event.noteId()));
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onPostQuoted(PostQuotedEvent event) {
+    if (event.isSelfAction()
+        || event.recipientUserId() == null
+        || blocks.silences(event.recipientUserId(), event.actorUserId())) {
+      return;
+    }
+    recordUseCase.record(
+        event.recipientUserId(),
+        NotificationType.POST_QUOTE,
+        event.actorUserId(),
+        null,
+        new NotificationNoteRef(event.noteId(), event.noteExcerpt(), null, null),
+        null);
   }
 
   @Async("webhookExecutor")
@@ -128,9 +144,5 @@ public class NoteNotificationListener {
             .filter(voter -> !blocks.silences(voter, event.authorId()))
             .toList();
     recordUseCase.recordForEach(voters, NotificationType.NOTE_POLL, event.authorId(), note);
-  }
-
-  static String groupKey(NotificationType type, Long noteId) {
-    return type.name() + ":" + noteId + ":" + LocalDate.now(ZoneOffset.UTC);
   }
 }

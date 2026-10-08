@@ -22,14 +22,21 @@ class QuotedPostReaderAdapter implements QuotedPostReader {
     }
     for (Object raw :
         em.createNativeQuery(
-                "SELECT p.id, p.title, p.slug, u.username FROM posts p JOIN users u"
+                "SELECT p.id, p.title, p.slug, u.username, p.user_id FROM posts p JOIN users u"
                     + " ON u.id = p.user_id WHERE p.id IN (:ids) AND p.status = 'PUBLISHED'"
                     + " AND u.deleted_at IS NULL AND u.username IS NOT NULL")
             .setParameter("ids", postIds)
             .getResultList()) {
       Object[] row = (Object[]) raw;
       Long id = ((Number) row[0]).longValue();
-      posts.put(id, new QuotedPost(id, (String) row[1], (String) row[2], (String) row[3]));
+      posts.put(
+          id,
+          new QuotedPost(
+              id,
+              (String) row[1],
+              (String) row[2],
+              (String) row[3],
+              ((Number) row[4]).longValue()));
     }
     return posts;
   }

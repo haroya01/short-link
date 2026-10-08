@@ -6,7 +6,9 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.NotesEmbeddedEvent;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -19,6 +21,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -26,6 +29,7 @@ import tools.jackson.databind.json.JsonMapper;
 class PostNoteQuotesTest {
 
   @Mock private PostNoteQuoteRepository repository;
+  @Mock private ApplicationEventPublisher events;
 
   private PostNoteQuotes quotes;
 
@@ -34,6 +38,7 @@ class PostNoteQuotesTest {
     quotes =
         new PostNoteQuotes(
             repository,
+            events,
             JsonMapper.builder().build(),
             "https://api.kurl.me",
             "https://app.kurl.me",
@@ -97,12 +102,38 @@ class PostNoteQuotesTest {
   }
 
   @Test
-  void aPublicPostReplacesWhatItQuotes() {
+  void aPublicPostReplacesWhatItQuotesAndTellsOnlyTheNewlyQuotedNotes() {
     PostEntity post = post(true);
+    when(repository.noteIds(42L)).thenReturn(Set.of(11L));
+
+    quotes.index(
+        post,
+        List.of(
+            embed("https://blog.kurl.me/@alice/notes/11"),
+            embed("https://blog.kurl.me/@bob/notes/12")));
+
+    verify(repository).replace(42L, Set.of(11L, 12L));
+    verify(events).publishEvent(new NotesEmbeddedEvent(7L, 42L, "my-post", "My Post", Set.of(12L)));
+  }
+
+  @Test
+  void anEditThatQuotesNothingNewStaysQuiet() {
+    PostEntity post = post(true);
+    when(repository.noteIds(42L)).thenReturn(Set.of(11L));
 
     quotes.index(post, List.of(embed("https://blog.kurl.me/@alice/notes/11")));
 
     verify(repository).replace(42L, Set.of(11L));
+    verifyNoInteractions(events);
+  }
+
+  @Test
+  void aPostWithoutNoteCardsSkipsTheLookup() {
+    quotes.index(post(true), List.of());
+
+    verify(repository, never()).noteIds(anyLong());
+    verify(repository).replace(42L, Set.of());
+    verifyNoInteractions(events);
   }
 
   @Test
@@ -110,9 +141,11 @@ class PostNoteQuotesTest {
     PostEntity post = post(true);
     post.unpublish();
 
-    quotes.index(post, List.of());
+    quotes.index(post, List.of(embed("https://blog.kurl.me/@alice/notes/11")));
 
-    verify(repository).replace(42L, Set.of());
+    verify(repository).replace(42L, Set.of(11L));
+    verify(repository, never()).noteIds(anyLong());
+    verifyNoInteractions(events);
   }
 
   @Test
@@ -130,6 +163,7 @@ class PostNoteQuotesTest {
 
     verify(repository).add(42L, Set.of(11L));
     verify(repository, never()).replace(anyLong(), any());
+    verify(events).publishEvent(new NotesEmbeddedEvent(7L, 42L, "my-post", "My Post", Set.of(11L)));
   }
 
   @Test
@@ -137,6 +171,7 @@ class PostNoteQuotesTest {
     PostNoteQuotes odd =
         new PostNoteQuotes(
             repository,
+            events,
             JsonMapper.builder().build(),
             "not a url",
             "mailto:x",
