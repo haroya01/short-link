@@ -58,6 +58,21 @@ public record NoteDraft(
         null);
   }
 
+  // The next note of a thread answers the one before it and keeps that note's visibility.
+  NoteDraft continuing(Long previousId) {
+    return new NoteDraft(
+        body,
+        images,
+        quotedPostId,
+        previousId,
+        quotedNoteId,
+        contentWarning,
+        sensitive,
+        null,
+        poll,
+        language);
+  }
+
   public NoteDraft(String body, List<Image> images, Long quotedPostId, Long inReplyToId) {
     this(body, images, quotedPostId, inReplyToId, null);
   }

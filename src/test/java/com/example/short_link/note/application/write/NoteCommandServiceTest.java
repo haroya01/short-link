@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -45,10 +46,13 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -109,6 +113,53 @@ class NoteCommandServiceTest {
               ReflectionTestUtils.setField(note, "id", 100L);
               return note;
             });
+  }
+
+  @Test
+  void aThreadPostsEachNoteAsAReplyToTheOneBeforeItAndKeepsTheFirstsVisibility() {
+    AtomicLong ids = new AtomicLong(100L);
+    Map<Long, NoteEntity> saved = new HashMap<>();
+    when(notes.save(any()))
+        .thenAnswer(
+            inv -> {
+              NoteEntity note = inv.getArgument(0);
+              long id = ids.getAndIncrement();
+              ReflectionTestUtils.setField(note, "id", id);
+              saved.put(id, note);
+              return note;
+            });
+    when(notes.findById(anyLong()))
+        .thenAnswer(inv -> Optional.ofNullable(saved.get(inv.<Long>getArgument(0))));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    List<NoteView> thread =
+        service()
+            .createThread(
+                7L,
+                List.of(
+                    new NoteDraft("첫째", List.of(), null, null, null, null, false, "unlisted"),
+                    new NoteDraft("둘째", List.of(), null, 999L, null, null, false, "public"),
+                    new NoteDraft("셋째", List.of(), null, null)));
+
+    assertThat(thread).extracting(NoteView::id).containsExactly(100L, 101L, 102L);
+    assertThat(saved.get(100L).getInReplyToId()).isNull();
+    assertThat(saved.get(101L).getInReplyToId()).isEqualTo(100L);
+    assertThat(saved.get(102L).getInReplyToId()).isEqualTo(101L);
+    assertThat(thread).extracting(NoteView::visibility).containsOnly("unlisted");
+  }
+
+  @Test
+  void aThreadHoldsTwoToTenNotes() {
+    NoteDraft one = new NoteDraft("하나", List.of(), null, null);
+    for (List<NoteDraft> drafts :
+        List.of(List.of(one), Collections.nCopies(NoteCommandService.MAX_THREAD_NOTES + 1, one))) {
+      assertThatThrownBy(() -> service().createThread(7L, drafts))
+          .isInstanceOfSatisfying(
+              NoteException.class,
+              e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_THREAD_SIZE));
+    }
+    assertThatThrownBy(() -> service().createThread(7L, null)).isInstanceOf(NoteException.class);
+    verify(notes, never()).save(any());
   }
 
   @Test

@@ -11,6 +11,7 @@ import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteImages;
 import com.example.short_link.note.presentation.request.CreateNoteRequest;
+import com.example.short_link.note.presentation.request.CreateNoteThreadRequest;
 import com.example.short_link.note.presentation.request.EditNoteRequest;
 import com.example.short_link.note.presentation.request.NoteFeedPreferencesRequest;
 import com.example.short_link.note.presentation.request.NoteImagePresignRequest;
@@ -154,6 +155,13 @@ public class NoteController {
   public NoteView create(
       @AuthenticationPrincipal Long userId, @Valid @RequestBody CreateNoteRequest request) {
     return command.create(userId, request.toDraft());
+  }
+
+  @PostMapping("/api/v1/notes/threads")
+  @ResponseStatus(HttpStatus.CREATED)
+  public List<NoteView> createThread(
+      @AuthenticationPrincipal Long userId, @Valid @RequestBody CreateNoteThreadRequest request) {
+    return command.createThread(userId, request.toDrafts());
   }
 
   @PatchMapping("/api/v1/notes/{id}")
