@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
@@ -83,7 +84,8 @@ class RemoteNoteRecorderTest {
                     null,
                     List.of(),
                     List.of(
-                        new RemoteNotes.Media("https://m.example/1.png", " a cat ", "image/png"),
+                        new RemoteNotes.Media(
+                            "https://m.example/1.png", " a cat ", "image/png", 1200, 900),
                         new RemoteNotes.Media("https://m.example/2", null, null)),
                     null));
 
@@ -104,6 +106,9 @@ class RemoteNoteRecorderTest {
     assertThat(images.getValue())
         .extracting(NoteMediaEntity::getContentType)
         .containsExactly("image/png", "image/jpeg");
+    assertThat(images.getValue())
+        .extracting(NoteMediaEntity::getWidth, NoteMediaEntity::getHeight)
+        .containsExactly(tuple(1200, 900), tuple(null, null));
     verify(notes, never()).addRecipients(any(), anyCollection());
     verifyNoInteractions(events);
   }

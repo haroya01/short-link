@@ -77,6 +77,10 @@ public class NoteDocuments {
       attachment.put("mediaType", image.contentType());
       attachment.put("url", image.url());
       attachment.put("name", image.altText());
+      if (image.width() != null && image.height() != null) {
+        attachment.put("width", image.width());
+        attachment.put("height", image.height());
+      }
       attachments.add(attachment);
     }
     object.put("attachment", attachments);

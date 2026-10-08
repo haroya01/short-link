@@ -98,8 +98,8 @@ class RemoteNoteParserTest {
              "tag":[{"type":"Mention","href":"https://kurl.me/ap/actors/other"},
                     {"type":"Hashtag","href":"https://m.example/tags/x"}],
              "attachment":[
-               {"type":"Document","mediaType":"image/png","url":"https://files.m.example/1.png","name":"a cat"},
-               {"type":"Document","mediaType":"video/mp4","url":"https://files.m.example/2.mp4"},
+               {"type":"Document","mediaType":"image/png","url":"https://files.m.example/1.png","name":"a cat","width":1200,"height":900},
+               {"type":"Document","mediaType":"video/mp4","url":"https://files.m.example/2.mp4","width":"720","height":1280.5},
                {"type":"Image","url":{"href":"https://files.m.example/3.jpg"}},
                {"type":"Document","mediaType":"image/png","url":"http://insecure.example/4.png"},
                {"type":"Audio","url":"https://files.m.example/5.mp3"},
@@ -121,7 +121,7 @@ class RemoteNoteParserTest {
         .isNull();
     assertThat(parsed.media())
         .containsExactly(
-            new RemoteNotes.Media("https://files.m.example/1.png", "a cat", "image/png"),
+            new RemoteNotes.Media("https://files.m.example/1.png", "a cat", "image/png", 1200, 900),
             new RemoteNotes.Media("https://files.m.example/2.mp4", null, "video/mp4"),
             new RemoteNotes.Media("https://files.m.example/3.jpg", null, "image/jpeg"),
             new RemoteNotes.Media("https://files.m.example/5.mp3", null, "audio/mpeg"));

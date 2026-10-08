@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.read;
 
 import com.example.short_link.note.domain.NoteAuthor;
+import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.QuotedPost;
 import java.time.Instant;
 import java.util.List;
@@ -133,7 +134,21 @@ public record NoteView(
         null);
   }
 
-  public record Media(String url, String altText, String contentType) {}
+  public record Media(
+      String url, String altText, String contentType, Integer width, Integer height) {
+    public Media(String url, String altText, String contentType) {
+      this(url, altText, contentType, null, null);
+    }
+
+    public static Media of(NoteMediaEntity image) {
+      return new Media(
+          image.getUrl(),
+          image.getAltText(),
+          image.getContentType(),
+          image.getWidth(),
+          image.getHeight());
+    }
+  }
 
   // Mastodon's poll: counts are public, and voted is true for the author, who sees results and does
   // not vote. voted and ownVotes are null for anonymous readers.

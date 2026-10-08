@@ -1,0 +1,3 @@
+ALTER TABLE note_media
+  ADD COLUMN width  INT NULL,
+  ADD COLUMN height INT NULL;

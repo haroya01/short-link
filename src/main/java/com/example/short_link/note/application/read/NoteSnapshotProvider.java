@@ -64,7 +64,14 @@ class NoteSnapshotProvider implements NoteSnapshotReader {
     }
     List<Image> images =
         media.findByNoteIds(List.of(noteId)).stream()
-            .map(image -> new Image(image.getUrl(), image.getContentType(), image.getAltText()))
+            .map(
+                image ->
+                    new Image(
+                        image.getUrl(),
+                        image.getContentType(),
+                        image.getAltText(),
+                        image.getWidth(),
+                        image.getHeight()))
             .toList();
     return Optional.of(
         new NoteSnapshot(

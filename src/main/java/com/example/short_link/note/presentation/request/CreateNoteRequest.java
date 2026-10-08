@@ -17,7 +17,7 @@ public record CreateNoteRequest(
     PollRequest poll,
     String language) {
 
-  public record ImageRequest(String key, String altText) {}
+  public record ImageRequest(String key, String altText, Integer width, Integer height) {}
 
   public record PollRequest(List<String> options, Long expiresIn, Boolean multiple) {}
 
@@ -27,7 +27,10 @@ public record CreateNoteRequest(
         images == null
             ? List.of()
             : images.stream()
-                .map(image -> new NoteDraft.Image(image.key(), image.altText()))
+                .map(
+                    image ->
+                        new NoteDraft.Image(
+                            image.key(), image.altText(), image.width(), image.height()))
                 .toList(),
         quotedPostId,
         inReplyToId,

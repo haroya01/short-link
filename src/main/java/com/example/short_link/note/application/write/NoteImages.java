@@ -74,7 +74,12 @@ public class NoteImages {
     }
     storage.applyImmutableCacheControl(key);
     return new StoredImage(
-        key, publicUrls.forKey(key), contentType, alt == null || alt.isEmpty() ? null : alt);
+        key,
+        publicUrls.forKey(key),
+        contentType,
+        alt == null || alt.isEmpty() ? null : alt,
+        image.width(),
+        image.height());
   }
 
   void deleteQuietly(String key) {
@@ -103,5 +108,10 @@ public class NoteImages {
 
   public record PresignedImage(String uploadUrl, String key, String publicUrl, long maxBytes) {}
 
-  record StoredImage(String key, String url, String contentType, String altText) {}
+  record StoredImage(
+      String key, String url, String contentType, String altText, Integer width, Integer height) {
+    StoredImage(String key, String url, String contentType, String altText) {
+      this(key, url, contentType, altText, null, null);
+    }
+  }
 }

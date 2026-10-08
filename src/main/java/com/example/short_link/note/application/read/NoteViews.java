@@ -225,7 +225,7 @@ public class NoteViews {
     for (NoteMediaEntity image : media.findByNoteIds(noteIds)) {
       byNote
           .computeIfAbsent(image.getNoteId(), id -> new ArrayList<>())
-          .add(new NoteView.Media(image.getUrl(), image.getAltText(), image.getContentType()));
+          .add(NoteView.Media.of(image));
     }
     return byNote;
   }

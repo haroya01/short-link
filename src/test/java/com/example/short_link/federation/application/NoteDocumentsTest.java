@@ -232,6 +232,26 @@ class NoteDocumentsTest {
 
   @Test
   @SuppressWarnings("unchecked")
+  void aPictureWithAKnownSizeSaysItSoOthersCanLayItOutBeforeLoading() {
+    Map<String, Object> create =
+        documents.create(
+            note(
+                "hello",
+                null,
+                List.of(
+                    new Image("https://cdn/a.png", "image/png", "cat", 1200, 900),
+                    new Image("https://cdn/b.png", "image/png", null)),
+                null),
+            "pid");
+
+    List<Map<String, Object>> attachments =
+        (List<Map<String, Object>>) ((Map<String, Object>) create.get("object")).get("attachment");
+    assertThat(attachments.get(0)).containsEntry("width", 1200).containsEntry("height", 900);
+    assertThat(attachments.get(1)).doesNotContainKeys("width", "height");
+  }
+
+  @Test
+  @SuppressWarnings("unchecked")
   void createCarriesTheNoteAddressedToThePublicAndFollowers() {
     Map<String, Object> create =
         documents.create(

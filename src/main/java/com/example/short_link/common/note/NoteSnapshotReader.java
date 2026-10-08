@@ -163,7 +163,11 @@ public interface NoteSnapshotReader {
 
   record QuotedNote(Long id, String authorUsername) {}
 
-  record Image(String url, String contentType, String altText) {}
+  record Image(String url, String contentType, String altText, Integer width, Integer height) {
+    public Image(String url, String contentType, String altText) {
+      this(url, contentType, altText, null, null);
+    }
+  }
 
   record Poll(
       List<PollOption> options, Instant endTime, boolean multiple, long voters, boolean closed) {}
