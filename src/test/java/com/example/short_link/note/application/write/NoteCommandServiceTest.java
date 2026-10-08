@@ -20,6 +20,7 @@ import com.example.short_link.common.event.NotePublishedEvent;
 import com.example.short_link.common.event.NoteRepostedEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
+import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
@@ -165,7 +166,7 @@ class NoteCommandServiceTest {
   @Test
   void aNoteWithImagesAndAQuoteIsStoredInOrderAndAnnounced() {
     saving();
-    QuotedPost quoted = new QuotedPost(5L, "Essay", "essay", "writer");
+    QuotedPost quoted = new QuotedPost(5L, "Essay", "essay", "writer", 3L);
     when(quotedPosts.publishedByIds(Set.of(5L))).thenReturn(Map.of(5L, quoted));
     when(images.verify(7L, new NoteDraft.Image("k1", "first")))
         .thenReturn(new NoteImages.StoredImage("k1", "https://cdn/k1", "image/png", "first"));
@@ -193,6 +194,7 @@ class NoteCommandServiceTest {
             org.assertj.core.groups.Tuple.tuple(0, "k1"),
             org.assertj.core.groups.Tuple.tuple(1, "k2"));
     verify(events).publishEvent(new NotePublishedEvent(100L, 7L));
+    verify(events).publishEvent(new PostQuotedEvent(3L, 7L, 100L, "hello"));
     assertThat(view.body()).isEqualTo("hello");
     assertThat(view.quotedPost()).isEqualTo(quoted);
     assertThat(view.author()).isEqualTo(WRITER);
@@ -200,6 +202,18 @@ class NoteCommandServiceTest {
     assertThat(view.media())
         .extracting(NoteView.Media::url)
         .containsExactly("https://cdn/k1", "https://cdn/k2");
+  }
+
+  @Test
+  void aPrivateNoteQuotingAPostLeavesItsAuthorUntold() {
+    saving();
+    when(quotedPosts.publishedByIds(Set.of(5L)))
+        .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "writer", 3L)));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    service().create(7L, new NoteDraft("only us", null, 5L, null, null, null, false, "PRIVATE"));
+
+    verify(events, never()).publishEvent(any(PostQuotedEvent.class));
   }
 
   @Test

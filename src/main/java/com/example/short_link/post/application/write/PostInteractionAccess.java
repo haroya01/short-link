@@ -51,15 +51,19 @@ public class PostInteractionAccess {
         posts.findByIdForUpdate(postId), postId, actorId, PostErrorCode.POST_INTERACTION_BLOCKED);
   }
 
-  public void requireLikeableComment(Long actorId, Long commentId) {
+  public LikeableComment requireLikeableComment(Long actorId, Long commentId) {
     moderation.requireCanWrite(actorId);
     CommentEntity comment =
         comments
             .findById(commentId)
             .filter(value -> !value.isDeleted())
             .orElseThrow(() -> new PostException(PostErrorCode.COMMENT_NOT_FOUND, commentId));
-    publishedPost(comment.getPostId(), actorId, PostErrorCode.POST_INTERACTION_BLOCKED);
+    return new LikeableComment(
+        comment,
+        publishedPost(comment.getPostId(), actorId, PostErrorCode.POST_INTERACTION_BLOCKED));
   }
+
+  public record LikeableComment(CommentEntity comment, PostEntity post) {}
 
   private PostEntity publishedPost(Long postId, Long actorId, PostErrorCode blockedCode) {
     return publishedPost(posts.findById(postId), postId, actorId, blockedCode);

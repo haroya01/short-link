@@ -231,6 +231,7 @@ public class RecordBlogNotificationUseCase {
                   type == NotificationType.NOTE_POLL
                           || type == NotificationType.NOTE_POST
                           || type == NotificationType.NOTE_EDIT
+                          || type == NotificationType.POST_QUOTE
                       ? actorUsername
                       : recipientUsername,
                   null,

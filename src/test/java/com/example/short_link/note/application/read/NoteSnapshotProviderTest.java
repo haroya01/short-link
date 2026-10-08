@@ -52,7 +52,7 @@ class NoteSnapshotProviderTest {
     when(notes.findById(42L)).thenReturn(Optional.of(note(5L)));
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "yuki", null)));
     when(quotedPosts.publishedByIds(Set.of(5L)))
-        .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "yuki")));
+        .thenReturn(Map.of(5L, new QuotedPost(5L, "Essay", "essay", "yuki", 1L)));
     when(media.findByNoteIds(List.of(42L)))
         .thenReturn(List.of(new NoteMediaEntity(42L, 0, "k", "https://cdn/k", "image/png", "alt")));
 

@@ -12,11 +12,11 @@
 # Interaction access: normal HTTP setup and delivered notifications are included.
 @junit | interaction-access-author-block | 2 | 1 | 0 | 0 | 3
 @junit | interaction-access-body-write | 3 | 2 | 1 | 1 | 7
-@junit | interaction-access-comment-create | 8 | 2 | 0 | 0 | 10
-@junit | interaction-access-existing-comment-like | 5 | 1 | 0 | 0 | 6
-@junit | interaction-access-existing-post-like | 8 | 2 | 1 | 0 | 11
-@junit | interaction-access-existing-reply | 9 | 2 | 0 | 0 | 11
-@junit | interaction-access-highlight-create | 3 | 1 | 0 | 0 | 4
+@junit | interaction-access-comment-create | 9 | 2 | 0 | 0 | 11
+@junit | interaction-access-existing-comment-like | 11 | 2 | 0 | 0 | 13
+@junit | interaction-access-existing-post-like | 10 | 2 | 1 | 0 | 13
+@junit | interaction-access-existing-reply | 10 | 2 | 0 | 0 | 12
+@junit | interaction-access-highlight-create | 8 | 2 | 0 | 0 | 10
 @junit | interaction-access-post-create | 2 | 1 | 0 | 0 | 3
 @junit | interaction-access-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | interaction-access-post-unpublish | 3 | 0 | 1 | 0 | 4
@@ -61,7 +61,7 @@
 # A real like creates a notification; account deletion preserves it but removes actor display data.
 @junit | notification-actor-account-delete | 3 | 1 | 1 | 1 | 6
 @junit | notification-actor-anonymous | 2 | 0 | 0 | 0 | 2
-@junit | notification-actor-like | 8 | 2 | 1 | 0 | 11
+@junit | notification-actor-like | 10 | 2 | 1 | 0 | 13
 @junit | notification-actor-post-create | 2 | 1 | 0 | 0 | 3
 @junit | notification-actor-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | notification-actor-visible | 2 | 0 | 0 | 0 | 2

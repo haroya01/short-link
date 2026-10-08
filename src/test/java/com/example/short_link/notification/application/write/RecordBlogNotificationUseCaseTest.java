@@ -344,7 +344,11 @@ class RecordBlogNotificationUseCaseTest {
             Map.entry(NotificationType.NOTE_POLL, "투표가 끝났습니다. 결과를 확인해 보세요"),
             Map.entry(NotificationType.NOTE_POST, "yuki님이 새 노트를 올렸습니다"),
             Map.entry(NotificationType.NOTE_EDIT, "yuki님이 리포스트하거나 인용한 노트를 수정했습니다"),
-            Map.entry(NotificationType.FOLLOW_REQUEST, "yuki님이 팔로우를 요청했습니다"));
+            Map.entry(NotificationType.FOLLOW_REQUEST, "yuki님이 팔로우를 요청했습니다"),
+            Map.entry(NotificationType.POST_QUOTE, "yuki님이 노트에서 회원님의 글을 인용했습니다"),
+            Map.entry(NotificationType.NOTE_EMBED, "yuki님이 글에서 회원님의 노트를 인용했습니다"),
+            Map.entry(NotificationType.COMMENT_LIKE, "yuki님이 댓글을 좋아합니다"),
+            Map.entry(NotificationType.HIGHLIGHT, "yuki님이 글에 하이라이트를 남겼습니다"));
 
     NotificationPostRef ref = new NotificationPostRef(10L, "my-post", "글 제목", null);
     for (NotificationType type : NotificationType.values()) {
@@ -436,6 +440,42 @@ class RecordBlogNotificationUseCaseTest {
         .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
     assertThat(pushed.getValue().route())
         .isEqualTo(new PushRoute("yuki", "mika", "their-post", null, null, null, 41L));
+  }
+
+  @Test
+  void quotesAcrossPostsAndNotesOpenTheActorsWork() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(2L))
+        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ko")));
+
+    useCase()
+        .record(
+            9L,
+            NotificationType.POST_QUOTE,
+            2L,
+            null,
+            new NotificationNoteRef(300L, "이 글 좋다", null, null),
+            null);
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_EMBED,
+            2L,
+            null,
+            new NotificationPostRef(10L, "their-post", "Yo", "yuki", null, null),
+            "NOTE_EMBED:10:2026-10-08");
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(2))
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getAllValues())
+        .extracting(PushSender.PushMessage::route)
+        .containsExactly(
+            new PushRoute("yuki", "yuki", null, null, null, null, null, 300L),
+            new PushRoute("yuki", "yuki", "their-post", null, null, null, null));
   }
 
   @Test

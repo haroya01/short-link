@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import com.example.short_link.common.event.CommentLikedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.CommentLikeStatus;
@@ -20,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class LikeCommentUseCaseTest {
@@ -27,6 +29,7 @@ class LikeCommentUseCaseTest {
   @Mock private CommentRepository commentRepository;
   @Mock private CommentLikeRepository commentLikeRepository;
   @Mock private PostRepository postRepository;
+  @Mock private ApplicationEventPublisher events;
 
   private LikeCommentUseCase useCase;
 
@@ -41,7 +44,8 @@ class LikeCommentUseCaseTest {
                 commentRepository,
                 Mockito.mock(PostHighlightRepository.class),
                 Mockito.mock(UserModerationGuard.class),
-                Mockito.mock(UserBlockChecker.class)));
+                Mockito.mock(UserBlockChecker.class)),
+            events);
   }
 
   private CommentEntity comment() {
@@ -61,6 +65,8 @@ class LikeCommentUseCaseTest {
 
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(4L);
+    Mockito.verify(events)
+        .publishEvent(new CommentLikedEvent(7L, 9L, null, "post", "Title", 5L, 10L));
   }
 
   @Test
@@ -76,6 +82,7 @@ class LikeCommentUseCaseTest {
 
     assertThat(status.liked()).isTrue();
     assertThat(status.likeCount()).isEqualTo(4L);
+    Mockito.verifyNoInteractions(events);
   }
 
   @Test
