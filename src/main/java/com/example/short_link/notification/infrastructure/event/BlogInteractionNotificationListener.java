@@ -38,7 +38,16 @@ public class BlogInteractionNotificationListener {
         event.actorUserId(),
         null,
         payloadOf(event),
-        NotificationGroupKey.of(type, event.postId()));
+        groupKey(type, event));
+  }
+
+  private static String groupKey(NotificationType type, BlogInteractionEvent event) {
+    return switch (type) {
+      case FOLLOW -> NotificationGroupKey.perActor(type, event.actorUserId(), null);
+      case SERIES_SUBSCRIBE ->
+          NotificationGroupKey.perActor(type, event.actorUserId(), event.seriesId());
+      default -> NotificationGroupKey.of(type, event.postId());
+    };
   }
 
   private static NotificationTarget payloadOf(BlogInteractionEvent event) {

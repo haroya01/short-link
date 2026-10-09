@@ -65,11 +65,17 @@ class BlogInteractionNotificationListenerTest {
   }
 
   @Test
-  void followRecordsNotificationWithoutPost() {
+  void aFollowIsHeardOncePerPersonAndDayWithoutFoldingPeopleTogether() {
     listener().onBlogInteraction(BlogInteractionEvent.follow(9L, 2L, AT));
 
     verify(recordUseCase)
-        .record(eq(9L), eq(NotificationType.FOLLOW), eq(2L), isNull(), isNull(), isNull());
+        .record(
+            eq(9L),
+            eq(NotificationType.FOLLOW),
+            eq(2L),
+            isNull(),
+            isNull(),
+            eq("FOLLOW:2:null:" + LocalDate.now(ZoneOffset.UTC)));
   }
 
   @Test
@@ -104,7 +110,7 @@ class BlogInteractionNotificationListenerTest {
             eq(2L),
             isNull(),
             series.capture(),
-            isNull());
+            eq("SERIES_SUBSCRIBE:2:4:" + LocalDate.now(ZoneOffset.UTC)));
     assertThat(series.getValue().slug()).isEqualTo("my-series");
   }
 

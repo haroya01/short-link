@@ -83,7 +83,7 @@
 @junit | author-draft-public-hidden | 2 | 0 | 0 | 0 | 2
 @junit | author-drafts-list | 2 | 0 | 0 | 0 | 2
 @junit | author-first-publish | 7 | 2 | 1 | 0 | 10
-@junit | author-follow-highlight-curator | 10 | 2 | 0 | 0 | 12
+@junit | author-follow-highlight-curator | 11 | 2 | 0 | 0 | 13
 @junit | author-followed-highlight-feed | 5 | 0 | 0 | 0 | 5
 @junit | author-highlight-reply-create | 9 | 2 | 0 | 0 | 11
 @junit | author-highlight-reply-delete | 1 | 0 | 0 | 1 | 2
@@ -381,8 +381,8 @@
 # the same statement.
 @junit | notification-policy-read | 1 | 0 | 0 | 0 | 1
 @junit | notification-policy-update | 1 | 1 | 0 | 0 | 2
-@junit | notification-policy-filtered-follow | 8 | 2 | 0 | 0 | 10
-@junit | notification-policy-filtered-follow-second | 8 | 2 | 0 | 0 | 10
+@junit | notification-policy-filtered-follow | 9 | 2 | 0 | 0 | 11
+@junit | notification-policy-filtered-follow-second | 9 | 2 | 0 | 0 | 11
 @junit | notification-policy-inbox-without | 1 | 0 | 0 | 0 | 1
 @junit | notification-policy-unread-without | 1 | 0 | 0 | 0 | 1
 # Kept notices grouped by sender, then the senders' names (members here; another server adds one).
@@ -391,7 +391,9 @@
 @junit | notification-policy-accept | 0 | 1 | 1 | 0 | 2
 @junit | notification-policy-inbox-with | 2 | 0 | 0 | 0 | 2
 @junit | notification-policy-accepted-unfollow | 4 | 0 | 0 | 1 | 5
-@junit | notification-policy-accepted-refollow | 10 | 2 | 0 | 0 | 12
+# A follow is heard once per person and day: the same person following again that day stops at the
+# one check and writes nothing.
+@junit | notification-policy-accepted-refollow | 9 | 1 | 0 | 0 | 10
 @junit | notification-policy-dismiss | 0 | 0 | 0 | 1 | 1
 @junit | notification-policy-accept-nobody | 0 | 0 | 0 | 0 | 0
 @junit | ops-abuse-backlog | 2 | 0 | 0 | 0 | 2
@@ -522,8 +524,8 @@
 @junit | reader-feed-preference-reload | 1 | 0 | 0 | 0 | 1
 @junit | reader-feed-preference-select | 2 | 1 | 0 | 0 | 3
 @junit | reader-feed-preferences-default | 1 | 0 | 0 | 0 | 1
-@junit | reader-follow-author | 10 | 2 | 0 | 0 | 12
-@junit | reader-follow-curator | 10 | 2 | 0 | 0 | 12
+@junit | reader-follow-author | 11 | 2 | 0 | 0 | 13
+@junit | reader-follow-curator | 11 | 2 | 0 | 0 | 13
 @junit | reader-follow-status | 4 | 0 | 0 | 0 | 4
 @junit | reader-following-feed | 7 | 0 | 0 | 0 | 7
 # With a subscribed series the page is cut from posts and that series' notes together: the page and
@@ -581,7 +583,7 @@
 # in one query whatever the number of cards.
 @junit | reader-series-discovery | 4 | 0 | 0 | 0 | 4
 @junit | reader-series-discovery-with-note | 4 | 0 | 0 | 0 | 4
-@junit | reader-series-subscribe | 7 | 2 | 0 | 0 | 9
+@junit | reader-series-subscribe | 8 | 2 | 0 | 0 | 10
 @junit | reader-series-subscription-ids | 1 | 0 | 0 | 0 | 1
 @junit | reader-series-subscription-status | 2 | 0 | 0 | 0 | 2
 @junit | reader-series-unsubscribe | 2 | 0 | 0 | 1 | 3
@@ -614,7 +616,7 @@
 @junit | schedule-follower-marks-notification-read | 0 | 0 | 1 | 0 | 1
 @junit | schedule-follower-receives-new-post | 2 | 0 | 0 | 0 | 2
 @junit | schedule-reader-cannot-open-draft | 2 | 0 | 0 | 0 | 2
-@junit | schedule-reader-follows-author | 10 | 2 | 0 | 0 | 12
+@junit | schedule-reader-follows-author | 11 | 2 | 0 | 0 | 13
 @junit | schedule-reader-opens-published-post | 4 | 0 | 0 | 0 | 4
 @junit | schedule-worker-before-due-time | 1 | 0 | 0 | 0 | 1
 # Candidates are read once; each publication then locks and rechecks its own row/transaction.
