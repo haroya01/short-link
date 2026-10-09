@@ -31,6 +31,8 @@ public class JwtTokenService {
   public static final Duration CHALLENGE_TTL = Duration.ofMinutes(5);
 
   private static final String CLAIM_TYPE = "type";
+
+  private static final String CLAIM_SESSION = "sid";
   private static final String TYPE_ACCESS = "access";
   private static final String TYPE_REFRESH = "refresh";
   private static final String TYPE_TWOFA_CHALLENGE = "twofa_challenge";
@@ -62,30 +64,34 @@ public class JwtTokenService {
   }
 
   public String createAccessToken(Long userId, String role) {
-    Instant now = Instant.now();
-    return Jwts.builder()
-        .subject(String.valueOf(userId))
-        .issuedAt(Date.from(now))
-        .expiration(Date.from(now.plus(accessTtl)))
-        .claim(CLAIM_TYPE, TYPE_ACCESS)
-        .claim("role", role)
-        .signWith(privateKey, Jwts.SIG.RS256)
-        .compact();
+    return createAccessToken(userId, role, null);
   }
 
-  public RefreshToken createRefreshToken(Long userId) {
+  public String createAccessToken(Long userId, String role, String sessionId) {
+    Instant now = Instant.now();
+    var builder =
+        Jwts.builder()
+            .subject(String.valueOf(userId))
+            .issuedAt(Date.from(now))
+            .expiration(Date.from(now.plus(accessTtl)))
+            .claim(CLAIM_TYPE, TYPE_ACCESS)
+            .claim("role", role);
+    if (sessionId != null) builder.claim(CLAIM_SESSION, sessionId);
+    return builder.signWith(privateKey, Jwts.SIG.RS256).compact();
+  }
+
+  public RefreshToken createRefreshToken(Long userId, String sessionId) {
     Instant now = Instant.now();
     String jti = UUID.randomUUID().toString();
-    String token =
+    var builder =
         Jwts.builder()
             .subject(String.valueOf(userId))
             .id(jti)
             .issuedAt(Date.from(now))
             .expiration(Date.from(now.plus(refreshTtl)))
-            .claim(CLAIM_TYPE, TYPE_REFRESH)
-            .signWith(privateKey, Jwts.SIG.RS256)
-            .compact();
-    return new RefreshToken(token, jti);
+            .claim(CLAIM_TYPE, TYPE_REFRESH);
+    if (sessionId != null) builder.claim(CLAIM_SESSION, sessionId);
+    return new RefreshToken(builder.signWith(privateKey, Jwts.SIG.RS256).compact(), jti);
   }
 
   public ParsedAccess parseAccessTokenDetailed(String token) {
@@ -94,7 +100,10 @@ public class JwtTokenService {
       throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected access token");
     }
     String role = claims.get("role", String.class);
-    return new ParsedAccess(Long.valueOf(claims.getSubject()), role == null ? "USER" : role);
+    return new ParsedAccess(
+        Long.valueOf(claims.getSubject()),
+        role == null ? "USER" : role,
+        claims.get(CLAIM_SESSION, String.class));
   }
 
   public ParsedRefresh parseRefreshToken(String token) {
@@ -102,7 +111,8 @@ public class JwtTokenService {
     if (!TYPE_REFRESH.equals(claims.get(CLAIM_TYPE))) {
       throw new UserException(UserErrorCode.INVALID_TOKEN_TYPE, "expected refresh token");
     }
-    return new ParsedRefresh(Long.valueOf(claims.getSubject()), claims.getId());
+    return new ParsedRefresh(
+        Long.valueOf(claims.getSubject()), claims.getId(), claims.get(CLAIM_SESSION, String.class));
   }
 
   // Issued after primary authentication for 2FA users. Its distinct type claim prevents use as an

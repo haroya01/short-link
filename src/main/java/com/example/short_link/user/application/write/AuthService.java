@@ -7,11 +7,14 @@ import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.application.twofactor.TwoFactorService;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -28,6 +31,8 @@ public class AuthService {
   private final MobileExchangeCodeStore exchangeCodes;
   private final TwoFactorService twoFactor;
   private final JwtProperties jwtProperties;
+  private final DeviceTokenRepository deviceTokens;
+  private final Clock clock;
 
   // Bump when the Terms/Privacy materially change so new sign-ups record the version they accepted.
   private static final String TERMS_VERSION = "2026-07-21";
@@ -149,7 +154,7 @@ public class AuthService {
     return issue(user);
   }
 
-  @Transactional(readOnly = true)
+  @Transactional
   public IssuedTokens refresh(String refreshToken) {
     ParsedRefresh parsed;
     try {
@@ -160,12 +165,12 @@ public class AuthService {
     // Only the request that consumed the token rotates it. The marker left behind keeps a
     // shared-cookie race from being mistaken for theft.
     if (refreshStore.consume(parsed.userId(), parsed.jti(), jwtProperties.refreshRotationGrace())) {
-      return issue(loadActiveUser(parsed.userId()));
+      return continueSession(parsed);
     }
     if (refreshStore.wasRecentlyRotated(parsed.userId(), parsed.jti())) {
       // Tolerate shared-cookie races within the grace window by issuing a fresh pair.
       log.debug("refresh within rotation grace for userId={}, reissuing", parsed.userId());
-      return issue(loadActiveUser(parsed.userId()));
+      return continueSession(parsed);
     }
     // Reject only the stale or unknown token: a dropped rotation does not invalidate other live
     // sessions.
@@ -191,22 +196,40 @@ public class AuthService {
     logout(refreshToken);
   }
 
+  // Logging out ends the session, and with it the pushes to the devices it registered.
   public void logout(String refreshToken) {
     try {
       ParsedRefresh parsed = jwt.parseRefreshToken(refreshToken);
       refreshStore.delete(parsed.userId(), parsed.jti());
+      if (parsed.sessionId() != null) {
+        deviceTokens.endSession(parsed.userId(), parsed.sessionId());
+      }
     } catch (Exception ignored) {
     }
   }
 
+  // A rotation keeps the session id (a refresh token from before sessions starts one) and moves the
+  // session's devices' end along with the new refresh token's.
+  private IssuedTokens continueSession(ParsedRefresh parsed) {
+    String sessionId =
+        parsed.sessionId() != null ? parsed.sessionId() : UUID.randomUUID().toString();
+    IssuedTokens tokens = issue(loadActiveUser(parsed.userId()), sessionId);
+    deviceTokens.extendSession(parsed.userId(), sessionId, clock.instant().plus(jwt.refreshTtl()));
+    return tokens;
+  }
+
   private IssuedTokens issue(UserEntity user) {
+    return issue(user, UUID.randomUUID().toString());
+  }
+
+  private IssuedTokens issue(UserEntity user, String sessionId) {
     // 모든 세션 발급에서 BANNED를 거부한다. SUSPENDED는 상태 확인·소명을 위해 로그인을 허용하고
     // 콘텐츠 생성만 UserModerationGuard에서 막는다.
     if (user.isBanned()) {
       throw new UserException(UserErrorCode.ACCOUNT_BANNED);
     }
-    String access = jwt.createAccessToken(user.getId(), user.getRole().name());
-    RefreshToken refresh = jwt.createRefreshToken(user.getId());
+    String access = jwt.createAccessToken(user.getId(), user.getRole().name(), sessionId);
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), sessionId);
     refreshStore.save(user.getId(), refresh.jti(), jwt.refreshTtl());
     return new IssuedTokens(access, refresh.token());
   }

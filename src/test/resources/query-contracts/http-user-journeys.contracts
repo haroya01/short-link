@@ -41,7 +41,8 @@
 @junit | import-start-unknown | 0 | 0 | 0 | 0 | 0
 @junit | import-list-running | 1 | 0 | 0 | 0 | 1
 @junit | import-list-finished | 1 | 0 | 0 | 0 | 1
-@junit | account-delete | 3 | 1 | 1 | 1 | 6
+# Deleting the account ends every session, so its devices go in one delete.
+@junit | account-delete | 3 | 1 | 1 | 2 | 7
 @junit | account-deleted-me-rejected | 1 | 0 | 0 | 0 | 1
 @junit | account-dev-login | 2 | 1 | 0 | 0 | 3
 @junit | account-me-read | 1 | 0 | 0 | 0 | 1
@@ -49,8 +50,10 @@
 @junit | account-mobile-exchange | 1 | 0 | 0 | 0 | 1
 @junit | account-mobile-exchange-replay-rejected | 0 | 0 | 0 | 0 | 0
 @junit | account-mobile-logged-out-refresh-rejected | 0 | 0 | 0 | 0 | 0
-@junit | account-mobile-logout | 0 | 0 | 0 | 0 | 0
-@junit | account-mobile-refresh | 1 | 0 | 0 | 0 | 1
+# Devices belong to the login session that registered them: logging out deletes that session's
+# devices, and each refresh moves their end along with the new refresh token's.
+@junit | account-mobile-logout | 0 | 0 | 0 | 1 | 1
+@junit | account-mobile-refresh | 1 | 0 | 1 | 0 | 2
 @junit | account-mobile-start | 0 | 0 | 0 | 0 | 0
 @junit | account-preferences-update | 1 | 0 | 1 | 0 | 2
 @junit | account-two-factor-confirm | 1 | 0 | 1 | 0 | 2
@@ -64,8 +67,8 @@
 @junit | account-two-factor-web-challenge | 3 | 0 | 0 | 0 | 3
 @junit | account-two-factor-web-complete | 2 | 0 | 1 | 0 | 3
 @junit | account-web-logged-out-refresh-rejected | 0 | 0 | 0 | 0 | 0
-@junit | account-web-logout | 0 | 0 | 0 | 0 | 0
-@junit | account-web-refresh | 1 | 0 | 0 | 0 | 1
+@junit | account-web-logout | 0 | 0 | 0 | 1 | 1
+@junit | account-web-refresh | 1 | 0 | 1 | 0 | 2
 @junit | author-analytics-overview | 7 | 0 | 0 | 0 | 7
 @junit | author-analytics-post-table | 3 | 0 | 0 | 0 | 3
 @junit | author-block-reader | 2 | 1 | 0 | 0 | 3

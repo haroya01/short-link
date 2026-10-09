@@ -56,7 +56,7 @@ class AuthServiceRefreshConcurrencyTest {
   @Test
   void concurrentRefreshesOfOneTokenRotateOnceAndServeTheOtherThroughGrace() throws Exception {
     for (int round = 0; round < ROUNDS; round++) {
-      RefreshToken token = jwt.createRefreshToken(userId);
+      RefreshToken token = jwt.createRefreshToken(userId, null);
       refreshStore.save(userId, token.jti(), jwt.refreshTtl());
       CyclicBarrier bothAtConsume = new CyclicBarrier(2);
       List<Boolean> consumed = new CopyOnWriteArrayList<>();
