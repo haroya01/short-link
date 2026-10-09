@@ -191,12 +191,12 @@
 # rule (note, author, images, user, preference, actor), then the key, the parent, the insert and its
 # id; the author hears of it (muted conversation, preference, notification, recipient, remote
 # actor).
-@junit | federation-inbox-remote-reply | 13 | 2 | 0 | 0 | 15
+@junit | federation-inbox-remote-reply | 14 | 2 | 0 | 0 | 16
 @junit | notes-thread-remote-reply | 8 | 0 | 0 | 0 | 8
 # Edits and deletes first ask whether we kept that note, so others never cost a key fetch. The
 # edit updates that note by the id the question found; the member who boosted it hears of the edit
 # (who shared it, preference, insert, their name and the remote author's for the push).
-@junit | federation-inbox-remote-update | 6 | 1 | 1 | 0 | 8
+@junit | federation-inbox-remote-update | 7 | 1 | 1 | 0 | 9
 @junit | federation-inbox-remote-delete | 2 | 0 | 0 | 1 | 3
 # A note no member follows, answers or is named in: one question, then nothing.
 @junit | federation-inbox-remote-unsolicited | 1 | 0 | 0 | 0 | 1
