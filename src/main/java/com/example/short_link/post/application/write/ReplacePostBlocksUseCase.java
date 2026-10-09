@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.read.PostBlockView;
+import com.example.short_link.post.application.read.PostBodyView;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
@@ -14,21 +16,23 @@ import org.springframework.transaction.annotation.Transactional;
 public class ReplacePostBlocksUseCase {
 
   private final PostOwnership postOwnership;
+  private final PostEditGuard editGuard;
   private final PostBlockRepository postBlockRepository;
   private final PostSearchTextUpdater searchTextUpdater;
   private final PostNoteQuotes noteQuotes;
 
   @Transactional
-  public List<PostBlockEntity> execute(ReplacePostBlocksCommand cmd) {
+  public PostBodyView execute(ReplacePostBlocksCommand cmd) {
     // 본문만 교체해도 last_edited_at이 바뀌도록 부모 글에 편집 시각을 기록한다.
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
+    editGuard.check(post, cmd.baseVersion(), cmd.overwrite());
     post.markEdited();
     postBlockRepository.deleteAllByPostId(cmd.postId());
     if (cmd.blocks().isEmpty()) {
       // 본문이 비었어도 검색 컬럼은 제목·요약·태그로 다시 채워야 한다(예전 본문 잔재가 남지 않게).
       searchTextUpdater.refresh(post, List.of());
       noteQuotes.index(post, List.of());
-      return List.of();
+      return new PostBodyView(post.getContentVersion(), List.of());
     }
     List<PostBlockEntity> entities = new ArrayList<>(cmd.blocks().size());
     int order = 0;
@@ -41,6 +45,7 @@ public class ReplacePostBlocksUseCase {
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId());
     searchTextUpdater.refresh(post, persisted);
     noteQuotes.index(post, persisted);
-    return persisted;
+    return new PostBodyView(
+        post.getContentVersion(), persisted.stream().map(PostBlockView::from).toList());
   }
 }

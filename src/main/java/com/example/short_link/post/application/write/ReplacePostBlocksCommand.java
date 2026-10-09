@@ -5,7 +5,8 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
 
-public record ReplacePostBlocksCommand(Long userId, Long postId, List<BlockInput> blocks) {
+public record ReplacePostBlocksCommand(
+    Long userId, Long postId, List<BlockInput> blocks, Long baseVersion, boolean overwrite) {
 
   public ReplacePostBlocksCommand {
     if (userId == null) throw new IllegalArgumentException("userId required");

@@ -41,6 +41,15 @@ public class PostQueryService {
 
   public List<PostBlockView> listBlocks(Long userId, Long postId) {
     postOwnership.requireOwned(userId, postId);
+    return blocksOf(postId);
+  }
+
+  public PostBodyView readBody(Long userId, Long postId) {
+    PostEntity post = postOwnership.requireOwned(userId, postId);
+    return new PostBodyView(post.getContentVersion(), blocksOf(postId));
+  }
+
+  private List<PostBlockView> blocksOf(Long postId) {
     return postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(postId).stream()
         .map(PostBlockView::from)
         .toList();
