@@ -67,7 +67,9 @@ public interface LinkRepository {
 
   List<LinkEntity> findAllByUserIdAndProfileHighlightedIsTrue(Long userId);
 
-  Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);
+  // A link is unrestricted when every visitor reaches originalUrl: no expiry, password, view limit,
+  // country block, opening time, moderation hold or enabled alternative destination.
+  List<LinkEntity> findUnrestrictedByUserIdAndOriginalUrl(Long userId, String originalUrl);
 
   List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(Collection<String> claimTokens);
 

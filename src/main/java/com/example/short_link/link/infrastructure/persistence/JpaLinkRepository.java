@@ -112,7 +112,27 @@ public interface JpaLinkRepository
 
   List<LinkEntity> findAllByUserIdAndProfileHighlightedIsTrue(Long userId);
 
-  Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl);
+  @Query(
+      """
+      SELECT l FROM LinkEntity l
+      LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
+      LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id
+      LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
+      WHERE l.userId = :userId
+        AND l.originalUrl = :originalUrl
+        AND l.expiresAt IS NULL
+        AND COALESCE(acl.passwordHash, l.passwordHash) IS NULL
+        AND COALESCE(acl.maxViews, l.maxViews) IS NULL
+        AND COALESCE(policy.blockedCountries, l.blockedCountries) IS NULL
+        AND visit.opensAt IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM LinkModerationEntity moderation WHERE moderation.linkId = l.id)
+        AND NOT EXISTS (
+          SELECT 1 FROM LinkDestinationEntity d WHERE d.linkId = l.id AND d.enabled = true)
+      ORDER BY l.id ASC
+      """)
+  List<LinkEntity> findUnrestrictedByUserIdAndOriginalUrl(
+      @Param("userId") Long userId, @Param("originalUrl") String originalUrl);
 
   List<LinkEntity> findAllByClaimTokenInAndUserIdIsNull(Collection<String> claimTokens);
 

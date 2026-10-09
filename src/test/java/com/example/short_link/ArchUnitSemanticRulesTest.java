@@ -43,7 +43,7 @@ import org.springframework.transaction.annotation.Transactional;
 class ArchUnitSemanticRulesTest {
 
   // Existing direct wall-clock reads in domain/application; the number may only go down.
-  private static final int WALL_CLOCK_BASELINE = 76;
+  private static final int WALL_CLOCK_BASELINE = 75;
 
   // Existing public setters on JPA entities; the number may only go down.
   private static final int ENTITY_SETTER_BASELINE = 9;
