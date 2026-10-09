@@ -8,8 +8,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 // Members' handles follow the username rule (3–16 of a-z, 0-9, _). A handle followed by another @
-// names an account on another server and is not a member. The web and iOS clients link the same
-// tokens; keep the three in step.
+// names an account on another server and is not a member. A link is read before handles, so the @
+// in a link's path names no one. The web and iOS clients link the same tokens; keep the three in
+// step.
 public final class Mentions {
 
   public static final int MAX_MENTIONS = 10;
@@ -23,7 +24,13 @@ public final class Mentions {
           "(?<![A-Za-z0-9_@])@([A-Za-z0-9_][A-Za-z0-9_.-]{0,63})@([A-Za-z0-9-]+(?:\\.[A-Za-z0-9-]+)+)"
               + "(?![A-Za-z0-9_-])");
 
+  private static final Pattern LINK = Pattern.compile("https?://[^\\s<]+");
+
   private Mentions() {}
+
+  private static String outsideLinks(String text) {
+    return LINK.matcher(text).replaceAll(" ");
+  }
 
   // Accounts elsewhere, as user@server in lower case. A trailing full stop ends the sentence, not
   // the server name.
@@ -32,7 +39,7 @@ public final class Mentions {
       return List.of();
     }
     Set<String> handles = new LinkedHashSet<>();
-    Matcher matcher = REMOTE.matcher(text);
+    Matcher matcher = REMOTE.matcher(outsideLinks(text));
     while (matcher.find() && handles.size() < MAX_MENTIONS) {
       String user = matcher.group(1);
       if (user.endsWith(".")) {
@@ -48,7 +55,7 @@ public final class Mentions {
       return List.of();
     }
     Set<String> handles = new LinkedHashSet<>();
-    Matcher matcher = LOCAL.matcher(text);
+    Matcher matcher = LOCAL.matcher(outsideLinks(text));
     while (matcher.find() && handles.size() < MAX_MENTIONS) {
       handles.add(matcher.group(1).toLowerCase(Locale.ROOT));
     }

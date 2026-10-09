@@ -38,4 +38,16 @@ class MentionsTest {
     assertThat(Mentions.remote(null)).isEmpty();
     assertThat(Mentions.of("@bob@mastodon.social")).isEmpty();
   }
+
+  @Test
+  void anAtInALinksPathNamesNoOne() {
+    String body =
+        "@bob 이 채널 봐 https://youtube.com/@cooking 그리고 https://mastodon.social/@ann@misskey.io"
+            + " (https://kurl.me/@yuki) 끝 @mina";
+
+    assertThat(Mentions.of(body)).containsExactly("bob", "mina");
+    assertThat(Mentions.remote(body)).isEmpty();
+    assertThat(Mentions.remote("http://x.example/@a@b.example @c@d.example"))
+        .containsExactly("c@d.example");
+  }
 }
