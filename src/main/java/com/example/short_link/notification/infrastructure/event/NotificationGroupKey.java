@@ -13,4 +13,10 @@ final class NotificationGroupKey {
         ? type.name() + ":" + subjectId + ":" + LocalDate.now(ZoneOffset.UTC)
         : null;
   }
+
+  // One notice per person, subject and day, keyed by the actor too so the inbox never folds
+  // different people into one row: following, unfollowing and following again says it once.
+  static String perActor(NotificationType type, Long actorId, Long subjectId) {
+    return type.name() + ":" + actorId + ":" + subjectId + ":" + LocalDate.now(ZoneOffset.UTC);
+  }
 }
