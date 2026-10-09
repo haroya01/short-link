@@ -48,10 +48,10 @@ class RedisWindowCounterTest {
     String key = key("pwd-attempt:" + code + ":" + ip);
 
     for (int i = 0; i < 10; i++) {
-      limiter.recordFailure(code, ip);
+      limiter.tryAttempt(code, ip);
     }
 
-    assertThat(limiter.isLockedOut(code, ip)).isTrue();
+    assertThat(limiter.tryAttempt(code, ip)).isFalse();
     assertThat(redis.getExpire(key)).isPositive();
   }
 
@@ -66,14 +66,14 @@ class RedisWindowCounterTest {
   }
 
   @Test
-  void aLockoutLeftWithoutExpiryByTheOldCodeExpiresOnTheNextCheck() {
+  void aLockoutLeftWithoutExpiryByTheOldCodeExpiresOnTheNextAttempt() {
     LinkPasswordAttemptLimiter limiter = new LinkPasswordAttemptLimiter(counter);
     String code = "p" + UUID.randomUUID().toString().substring(0, 8);
     String ip = "203.0.113.10";
     String key = key("pwd-attempt:" + code + ":" + ip);
     redis.opsForValue().set(key, "10");
 
-    assertThat(limiter.isLockedOut(code, ip)).isTrue();
+    assertThat(limiter.tryAttempt(code, ip)).isFalse();
 
     assertThat(redis.getExpire(key)).isBetween(1L, Duration.ofMinutes(15).toSeconds());
   }
@@ -99,18 +99,18 @@ class RedisWindowCounterTest {
   }
 
   @Test
-  void checkingTheCounterDoesNotPushTheWindowBack() {
+  void attemptsDuringALockoutDoNotPushTheWindowBack() {
     LinkPasswordAttemptLimiter limiter = new LinkPasswordAttemptLimiter(counter);
     String code = "p" + UUID.randomUUID().toString().substring(0, 8);
     String ip = "203.0.113.11";
     String key = key("pwd-attempt:" + code + ":" + ip);
     for (int i = 0; i < 10; i++) {
-      limiter.recordFailure(code, ip);
+      limiter.tryAttempt(code, ip);
     }
     redis.expire(key, Duration.ofSeconds(10));
 
     for (int i = 0; i < 5; i++) {
-      assertThat(limiter.isLockedOut(code, ip)).isTrue();
+      assertThat(limiter.tryAttempt(code, ip)).isFalse();
     }
 
     assertThat(redis.getExpire(key, TimeUnit.MILLISECONDS)).isBetween(1L, 10_000L);

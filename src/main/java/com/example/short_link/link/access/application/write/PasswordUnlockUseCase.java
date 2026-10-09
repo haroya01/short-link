@@ -32,7 +32,7 @@ public class PasswordUnlockUseCase {
       return new PasswordUnlockResult.Rejected(CAPTCHA_FAILED);
     }
     String clientIp = visit.clientIp();
-    if (attemptLimiter.isLockedOut(shortCode.value(), clientIp)) {
+    if (!attemptLimiter.tryAttempt(shortCode.value(), clientIp)) {
       return new PasswordUnlockResult.Rejected(LOCKED_OUT);
     }
     CachedLink link = lookup.findActiveLink(shortCode);
@@ -41,7 +41,6 @@ public class PasswordUnlockUseCase {
             .findEntity(shortCode)
             .orElseThrow(() -> new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode));
     if (entity.hasPassword() && !protectionService.checkPassword(entity, password)) {
-      attemptLimiter.recordFailure(shortCode.value(), clientIp);
       return new PasswordUnlockResult.Rejected(WRONG_PASSWORD);
     }
     attemptLimiter.reset(shortCode.value(), clientIp);
