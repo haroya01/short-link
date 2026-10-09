@@ -153,6 +153,52 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aThreadKeepsTheWarningAndSensitiveMarkOfTheNoteEachPartAnswersUnlessItHasItsOwn() {
+    AtomicLong ids = new AtomicLong(100L);
+    Map<Long, NoteEntity> saved = new HashMap<>();
+    when(notes.save(any()))
+        .thenAnswer(
+            inv -> {
+              NoteEntity note = inv.getArgument(0);
+              long id = ids.getAndIncrement();
+              ReflectionTestUtils.setField(note, "id", id);
+              saved.put(id, note);
+              return note;
+            });
+    when(notes.findById(anyLong()))
+        .thenAnswer(inv -> Optional.ofNullable(saved.get(inv.<Long>getArgument(0))));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    List<NoteView> thread =
+        service()
+            .createThread(
+                7L,
+                List.of(
+                    new NoteDraft("첫째", List.of(), null, null, null, "결말 포함", false),
+                    new NoteDraft("둘째", List.of(), null, null, null, " ", false),
+                    new NoteDraft("셋째", List.of(), null, null, null, "다른 경고", false),
+                    new NoteDraft("넷째", List.of(), null, null)));
+
+    assertThat(thread)
+        .extracting(NoteView::contentWarning)
+        .containsExactly("결말 포함", "결말 포함", "다른 경고", "다른 경고");
+    assertThat(thread).extracting(NoteView::sensitive).containsOnly(true);
+    assertThat(saved.values()).extracting(NoteEntity::isSensitive).containsOnly(true);
+
+    ids.set(200L);
+    List<NoteView> marked =
+        service()
+            .createThread(
+                7L,
+                List.of(
+                    new NoteDraft("사진", List.of(), null, null, null, null, true),
+                    new NoteDraft("이어서", List.of(), null, null)));
+
+    assertThat(marked).extracting(NoteView::contentWarning).containsOnly((String) null);
+    assertThat(marked).extracting(NoteView::sensitive).containsExactly(true, true);
+  }
+
+  @Test
   void aThreadHoldsTwoToTenNotes() {
     NoteDraft one = new NoteDraft("하나", List.of(), null, null);
     for (List<NoteDraft> drafts :
@@ -678,6 +724,11 @@ class NoteCommandServiceTest {
     NoteEntity reply = new NoteEntity(7L, "reply", 9L, null);
     ReflectionTestUtils.setField(reply, "id", 2L);
     when(notes.findById(2L)).thenReturn(Optional.of(reply));
+    assertThatThrownBy(() -> service().setPin(7L, 2L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_REPLY));
+    ReflectionTestUtils.setField(reply, "inReplyToId", null);
     assertThatThrownBy(() -> service().setPin(7L, 2L, true))
         .isInstanceOfSatisfying(
             NoteException.class,

@@ -5,7 +5,6 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -96,6 +95,7 @@ class RemoteNoteRecorderTest {
     assertThat(row.getValue().language()).isEqualTo("en");
     assertThat(row.getValue().createdAt()).isEqualTo(Instant.parse("2026-10-07T01:00:00.123456Z"));
     assertThat(row.getValue().inReplyToId()).isNull();
+    assertThat(row.getValue().reply()).isFalse();
     assertThat(row.getValue().sensitive()).isFalse();
     @SuppressWarnings("unchecked")
     ArgumentCaptor<List<NoteMediaEntity>> images = ArgumentCaptor.forClass(List.class);
@@ -125,6 +125,7 @@ class RemoteNoteRecorderTest {
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(notes).insertRemote(row.capture());
     assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
+    assertThat(row.getValue().reply()).isTrue();
     assertThat(row.getValue().createdAt()).isEqualTo(NOW);
     assertThat(row.getValue().contentWarning()).isEqualTo("cw");
     assertThat(row.getValue().sensitive()).isTrue();
@@ -194,21 +195,146 @@ class RemoteNoteRecorderTest {
     verifyNoInteractions(media, events);
   }
 
+  private static NoteEntity kept(String body, Instant editedAt) {
+    NoteEntity note = new NoteEntity(null, body, null, null);
+    ReflectionTestUtils.setField(note, "id", 900L);
+    ReflectionTestUtils.setField(note, "remoteActorId", 42L);
+    ReflectionTestUtils.setField(note, "editedAt", editedAt);
+    note.writeIn("en");
+    return note;
+  }
+
+  private static NoteMediaEntity image(String url, String alt) {
+    return new NoteMediaEntity(900L, 0, "", url, "image/png", alt, 1200, 900);
+  }
+
+  @Test
+  void anUpdateRewritesTextWarningLanguageAndMediaAndTellsWhoSharedTheNote() {
+    NoteEntity note = kept("hello #cats", null);
+    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(media.findByNoteIds(List.of(900L)))
+        .thenReturn(List.of(image("https://m.example/1.png", "a cat")));
+
+    boolean revised =
+        recorder()
+            .revise(
+                42L,
+                900L,
+                new RemoteNotes.Revision(
+                    "edited #dogs",
+                    "x".repeat(150),
+                    false,
+                    Instant.parse("2026-10-07T02:00:00.123456789Z"),
+                    List.of(
+                        new RemoteNotes.Media(
+                            "https://m.example/1.png", "a cat", "image/png", 1200, 900),
+                        new RemoteNotes.Media("https://m.example/2.png", "a dog", "image/png")),
+                    "ja"));
+
+    assertThat(revised).isTrue();
+    assertThat(note.getBody()).isEqualTo("edited #dogs");
+    assertThat(note.getContentWarning()).isEqualTo("x".repeat(99) + "…");
+    assertThat(note.isSensitive()).isTrue();
+    assertThat(note.getLanguage()).isEqualTo("ja");
+    assertThat(note.getEditedAt()).isEqualTo(Instant.parse("2026-10-07T02:00:00.123456Z"));
+    verify(notes).retag(900L, List.of("dogs"));
+    verify(media).deleteAllByNoteId(900L);
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<NoteMediaEntity>> images = ArgumentCaptor.forClass(List.class);
+    verify(media).saveAll(images.capture());
+    assertThat(images.getValue())
+        .extracting(NoteMediaEntity::getUrl, NoteMediaEntity::getPosition)
+        .containsExactly(tuple("https://m.example/1.png", 0), tuple("https://m.example/2.png", 1));
+    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "edited #dogs"));
+  }
+
+  @Test
+  void anOlderUpdateOrTheSameContentAgainIsNoEditAndTellsNoOne() {
+    Instant edited = Instant.parse("2026-10-07T02:00:00Z");
+    NoteEntity note = kept("hello #cats", edited);
+    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(media.findByNoteIds(List.of(900L)))
+        .thenReturn(List.of(image("https://m.example/1.png", "a cat")));
+    List<RemoteNotes.Media> sameImage =
+        List.of(
+            new RemoteNotes.Media("https://m.example/1.png", " a cat ", "image/png", 1200, 900));
+
+    assertThat(
+            recorder()
+                .revise(
+                    42L,
+                    900L,
+                    new RemoteNotes.Revision(
+                        "an older text", null, false, edited.minusSeconds(60), sameImage, "ja")))
+        .isTrue();
+    assertThat(note.getBody()).isEqualTo("hello #cats");
+    assertThat(note.getLanguage()).isEqualTo("en");
+
+    assertThat(
+            recorder()
+                .revise(
+                    42L,
+                    900L,
+                    new RemoteNotes.Revision(
+                        "hello #cats", " ", false, edited.plusSeconds(60), sameImage, "ja")))
+        .isTrue();
+    assertThat(note.getEditedAt()).isEqualTo(edited);
+    assertThat(note.getLanguage()).isEqualTo("ja");
+
+    verify(notes, never()).retag(any(), any());
+    verify(media, never()).deleteAllByNoteId(any());
+    verify(media, never()).saveAll(any());
+    verifyNoInteractions(events);
+  }
+
   @Test
   void editsAndDeletesTouchOnlyTheSendersNote() {
-    when(notes.reviseRemote(42L, 900L, "edited", "x".repeat(99) + "…", true, NOW)).thenReturn(1);
-    when(notes.reviseRemote(42L, 900L, "again", null, false, NOW.minusSeconds(5))).thenReturn(0);
+    when(notes.findRemoteForUpdate(43L, 900L)).thenReturn(Optional.empty());
     when(notes.deleteRemote(42L, URI)).thenReturn(1, 0);
     when(notes.idByUri(URI)).thenReturn(Optional.of(900L));
 
-    assertThat(recorder().revise(42L, 900L, "edited", "x".repeat(150), false, null)).isTrue();
-    assertThat(recorder().revise(42L, 900L, "again", " ", false, NOW.minusSeconds(5))).isFalse();
-    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "edited"));
-    verify(events, times(1)).publishEvent(any(NoteRevisedEvent.class));
+    assertThat(
+            recorder()
+                .revise(
+                    43L,
+                    900L,
+                    new RemoteNotes.Revision("edited", null, false, null, List.of(), null)))
+        .isFalse();
+    verifyNoInteractions(media, events);
     assertThat(recorder().retract(42L, URI)).isTrue();
     assertThat(recorder().retract(42L, URI)).isFalse();
     assertThat(recorder().exists(URI)).isTrue();
     assertThat(recorder().exists(null)).isFalse();
+  }
+
+  @Test
+  void aNoteFromElsewhereIsFiledUnderItsTagsAndAReplyToANoteThatNeverArrivedStaysAReply() {
+    when(notes.idByUri("https://m.example/s/404")).thenReturn(Optional.empty());
+    when(notes.insertRemote(any())).thenReturn(Optional.of(903L));
+
+    recorder()
+        .receive(
+            new RemoteNotes.Received(
+                42L,
+                URI,
+                null,
+                "answering #Cats and #dogs",
+                null,
+                false,
+                "public",
+                null,
+                null,
+                "https://m.example/s/404",
+                List.of(),
+                List.of(),
+                null));
+
+    ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
+    verify(notes).insertRemote(row.capture());
+    assertThat(row.getValue().inReplyToId()).isNull();
+    assertThat(row.getValue().conversationId()).isNull();
+    assertThat(row.getValue().reply()).isTrue();
+    verify(notes).tag(903L, List.of("Cats", "dogs"));
   }
 
   @Test

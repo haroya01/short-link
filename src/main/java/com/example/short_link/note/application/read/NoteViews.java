@@ -158,8 +158,7 @@ public class NoteViews {
   // part, so the feed can show the first two parts joined. One query walks every chain on the page,
   // and the next parts are viewed in the same batch as the page.
   public List<NoteView> ofFeed(List<NoteEntity> page, Long viewerId) {
-    List<Long> roots =
-        page.stream().filter(note -> note.getInReplyToId() == null).map(NoteEntity::getId).toList();
+    List<Long> roots = page.stream().filter(NoteEntity::isTopLevel).map(NoteEntity::getId).toList();
     Map<Long, List<Long>> chains =
         roots.isEmpty()
             ? Map.of()

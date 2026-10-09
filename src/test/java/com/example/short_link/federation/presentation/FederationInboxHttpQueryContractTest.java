@@ -406,6 +406,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         aliceId,
         urls.actor(target.publicId()) + "#follows/seed");
     String status = alice + "/statuses/1";
+    String tag = "cats" + UUID.randomUUID().toString().substring(0, 6);
     Map<String, Object> note = new LinkedHashMap<>();
     note.put("id", status);
     note.put("type", "Note");
@@ -415,7 +416,11 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         "content",
         "<p>hello <a href=\""
             + remote
-            + "/tags/cats\" class=\"mention hashtag\">#<span>cats</span></a></p>");
+            + "/tags/"
+            + tag
+            + "\" class=\"mention hashtag\">#<span>"
+            + tag
+            + "</span></a></p>");
     note.put("published", "2026-10-07T00:00:00Z");
     note.put("to", List.of("https://www.w3.org/ns/activitystreams#Public"));
     note.put("cc", List.of(alice + "/followers"));
@@ -433,19 +438,36 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         activity(status + "/activity", "Create", note),
         202);
     Long noteId = jdbc.queryForObject("SELECT id FROM note WHERE uri = ?", Long.class, status);
+    assertThat(taggedIds("notes-tag-remote", tag, strangerToken)).containsExactly(noteId);
+
+    Map<String, Object> stray = new LinkedHashMap<>(note);
+    stray.put("id", alice + "/statuses/stray");
+    stray.put("inReplyTo", remote + "/users/bob/statuses/404");
+    stray.put("content", "<p>answering a note this server never saw</p>");
+    stray.remove("attachment");
+    post(
+        "federation-inbox-remote-orphan-reply",
+        "/ap/inbox",
+        activity(alice + "/statuses/stray/activity", "Create", stray),
+        202);
+    Long strayId =
+        jdbc.queryForObject(
+            "SELECT id FROM note WHERE uri = ? AND in_reply_to_id IS NULL AND reply",
+            Long.class,
+            alice + "/statuses/stray");
 
     List<Long> federated = new ArrayList<>();
     body(call("notes-federated", "GET", "/api/v1/notes/federated", null, strangerToken, 200))
         .path("items")
         .forEach(item -> federated.add(item.path("id").asLong()));
-    assertThat(federated).contains(noteId);
+    assertThat(federated).contains(noteId).doesNotContain(strayId);
     call("notes-federated-anonymous", "GET", "/api/v1/notes/federated", null, null, 401);
 
     var following =
         body(call("notes-following-remote", "GET", "/api/v1/notes/following", null, token, 200));
     var first = following.path("items").get(0);
     assertThat(first.path("id").asLong()).isEqualTo(noteId);
-    assertThat(first.path("body").asString()).isEqualTo("hello #cats");
+    assertThat(first.path("body").asString()).isEqualTo("hello #" + tag);
     assertThat(first.path("author").path("username").asString()).isEqualTo("alice@" + host);
     assertThat(first.path("author").path("remoteId").asLong()).isEqualTo(aliceId);
     assertThat(first.path("media").get(0).path("altText").asString()).isEqualTo("a cat");
@@ -593,11 +615,51 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
 
     Map<String, Object> edited = new LinkedHashMap<>(note);
     edited.put("content", "<p>hello again</p>");
+    edited.put("contentMap", Map.of("ja", "<p>hello again</p>"));
     edited.put("updated", "2026-10-07T01:00:00Z");
+    edited.put(
+        "attachment",
+        List.of(
+            Map.of(
+                "type", "Document",
+                "mediaType", "image/png",
+                "url", remote + "/media/1.png",
+                "name", "a sleeping cat")));
     post(
         "federation-inbox-remote-update",
         "/ap/inbox",
         activity(status + "#updates/1", "Update", edited),
+        202);
+    assertThat(jdbc.queryForObject("SELECT body FROM note WHERE id = ?", String.class, noteId))
+        .isEqualTo("hello again");
+    assertThat(jdbc.queryForObject("SELECT language FROM note WHERE id = ?", String.class, noteId))
+        .isEqualTo("ja");
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT alt_text FROM note_media WHERE note_id = ?", String.class, noteId))
+        .isEqualTo("a sleeping cat");
+    assertThat(count("SELECT COUNT(*) FROM note_tag WHERE note_id = ?", noteId)).isZero();
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?"
+                    + " AND type = 'NOTE_EDIT' AND actor_remote_id = ?",
+                owner.getId(),
+                aliceId))
+        .isEqualTo(1);
+
+    post(
+        "federation-inbox-remote-update-again",
+        "/ap/inbox",
+        activity(status + "#updates/2", "Update", edited),
+        202);
+    Map<String, Object> stale = new LinkedHashMap<>(edited);
+    stale.put("content", "<p>an older draft</p>");
+    stale.remove("contentMap");
+    stale.put("updated", "2026-10-07T00:30:00Z");
+    post(
+        "federation-inbox-remote-update-stale",
+        "/ap/inbox",
+        activity(status + "#updates/0", "Update", stale),
         202);
     assertThat(jdbc.queryForObject("SELECT body FROM note WHERE id = ?", String.class, noteId))
         .isEqualTo("hello again");
@@ -615,6 +677,22 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         activity(status + "#delete", "Delete", Map.of("id", status, "type", "Tombstone")),
         202);
     assertThat(count("SELECT COUNT(*) FROM note WHERE id = ?", noteId)).isZero();
+
+    String late = alice + "/statuses/4";
+    post(
+        "federation-inbox-delete-before-create",
+        "/ap/inbox",
+        activity(late + "#delete", "Delete", Map.of("id", late, "type", "Tombstone")),
+        202);
+    Map<String, Object> deleted = new LinkedHashMap<>(note);
+    deleted.put("id", late);
+    deleted.remove("attachment");
+    post(
+        "federation-inbox-create-after-delete",
+        "/ap/inbox",
+        activity(late + "/activity", "Create", deleted),
+        202);
+    assertThat(count("SELECT COUNT(*) FROM note WHERE uri = ?", late)).isZero();
 
     jdbc.update("DELETE FROM federation_following WHERE user_id = ?", owner.getId());
     Map<String, Object> unasked = new LinkedHashMap<>(note);
@@ -798,6 +876,81 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         202);
     assertThat(count("SELECT COUNT(*) FROM note_remote_reaction WHERE note_id = ?", noteId))
         .isZero();
+  }
+
+  @Test
+  void aFollowersOnlyOrDirectNoteTakesLikesBoostsAndRepliesOnlyFromThoseWhoMayReadIt()
+      throws Exception {
+    String me = urls.actor(target.publicId());
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at, visibility)"
+            + " VALUES (?, 'for followers', NOW(6), 'PRIVATE')",
+        owner.getId());
+    Long forFollowers =
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, owner.getId());
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at, visibility)"
+            + " VALUES (?, 'just us', NOW(6), 'DIRECT')",
+        owner.getId());
+    Long direct =
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, owner.getId());
+
+    post(
+        "federation-inbox-like-followers-only-stranger",
+        "/ap/inbox",
+        activity(alice + "#likes/1", "Like", urls.note(forFollowers)),
+        202);
+    post(
+        "federation-inbox-announce-followers-only",
+        "/ap/inbox",
+        activity(alice + "/statuses/1/activity", "Announce", urls.note(forFollowers)),
+        202);
+    assertThat(count("SELECT COUNT(*) FROM note_remote_reaction WHERE note_id = ?", forFollowers))
+        .isZero();
+
+    Map<String, Object> reply = new LinkedHashMap<>();
+    reply.put("id", alice + "/statuses/2");
+    reply.put("type", "Note");
+    reply.put("attributedTo", alice);
+    reply.put("inReplyTo", urls.note(direct));
+    reply.put("content", "<p>what did I miss?</p>");
+    reply.put("published", "2026-10-07T00:00:00Z");
+    reply.put("to", List.of(me));
+    reply.put("tag", List.of(Map.of("type", "Mention", "href", me)));
+    post(
+        "federation-inbox-reply-direct-unseen",
+        "/ap/inbox",
+        activity(alice + "/statuses/2/activity", "Create", reply),
+        202);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM note WHERE uri = ? AND in_reply_to_id IS NULL AND reply",
+                alice + "/statuses/2"))
+        .isEqualTo(1);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? AND type = 'NOTE_REPLY'",
+                owner.getId()))
+        .isZero();
+
+    jdbc.update(
+        "INSERT INTO federation_follower (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) SELECT ?, id, ?, NOW(6), NOW(6), NOW(6)"
+            + " FROM federation_remote_actor WHERE actor_uri = ?",
+        owner.getId(),
+        remote + "/follows/7",
+        alice);
+    post(
+        "federation-inbox-like-followers-only-follower",
+        "/ap/inbox",
+        activity(alice + "#likes/2", "Like", urls.note(forFollowers)),
+        202);
+    assertThat(count("SELECT COUNT(*) FROM note_remote_reaction WHERE note_id = ?", forFollowers))
+        .isEqualTo(1);
+    jdbc.update("DELETE FROM note WHERE uri = ?", alice + "/statuses/2");
+    jdbc.update("DELETE FROM note WHERE id IN (?, ?)", forFollowers, direct);
   }
 
   @Test
