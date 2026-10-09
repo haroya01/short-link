@@ -168,7 +168,7 @@ class SeriesItemPersistenceIntegrationTest {
     place(otherSeriesId, SeriesItemType.NOTE, b1, SeriesItemType.NOTE, b2);
 
     List<SeriesActivity> active =
-        seriesItemReader.activeSeries(2, 1000).stream()
+        seriesItemReader.activeSeries(null, 2, 1000).stream()
             .filter(a -> a.seriesId().equals(seriesId) || a.seriesId().equals(otherSeriesId))
             .toList();
 
@@ -199,13 +199,14 @@ class SeriesItemPersistenceIntegrationTest {
         hidden);
     postRepository.flush();
 
-    assertThat(followingFeedReader.page(List.of(), List.of(seriesId), List.of(), 0, 10))
+    assertThat(followingFeedReader.page(null, List.of(), List.of(seriesId), List.of(), 0, 10))
         .containsExactly(
             new FollowingFeedRef(SeriesItemType.NOTE, note, seriesId),
             new FollowingFeedRef(SeriesItemType.POST, older, null));
-    assertThat(followingFeedReader.page(List.of(), List.of(seriesId), List.of(), 1, 10))
+    assertThat(followingFeedReader.page(null, List.of(), List.of(seriesId), List.of(), 1, 10))
         .containsExactly(new FollowingFeedRef(SeriesItemType.POST, older, null));
-    assertThat(followingFeedReader.count(List.of(), List.of(seriesId), List.of())).isEqualTo(2);
+    assertThat(followingFeedReader.count(null, List.of(), List.of(seriesId), List.of()))
+        .isEqualTo(2);
     assertThat(seriesItemReader.feedNotes(List.of(note, hidden)))
         .containsOnlyKeys(note)
         .hasEntrySatisfying(
@@ -217,7 +218,8 @@ class SeriesItemPersistenceIntegrationTest {
             });
     assertThat(seriesItemReader.feedNotes(List.of())).isEmpty();
     assertThat(
-            followingFeedReader.count(List.of(authorId), List.of(otherSeriesId), List.of("sit701")))
+            followingFeedReader.count(
+                null, List.of(authorId), List.of(otherSeriesId), List.of("sit701")))
         .isGreaterThanOrEqualTo(1);
   }
 

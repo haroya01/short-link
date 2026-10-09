@@ -4,6 +4,7 @@ import com.example.short_link.post.application.read.PublicFeedQueryService;
 import com.example.short_link.post.application.read.TrendingTagSection;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -21,10 +22,11 @@ public class PublicTrendingController {
 
   @GetMapping("/trending-by-tag")
   public List<TrendingTagSection> trendingByTag(
+      @AuthenticationPrincipal Long viewerId,
       @RequestParam(defaultValue = "6") int tagLimit,
       @RequestParam(defaultValue = "8") int perTag) {
     int safeTagLimit = Math.min(Math.max(tagLimit, 1), MAX_TAGS);
     int safePerTag = Math.min(Math.max(perTag, 1), MAX_PER_TAG);
-    return publicFeedQueryService.trendingByTag(safeTagLimit, safePerTag);
+    return publicFeedQueryService.trendingByTag(viewerId, safeTagLimit, safePerTag);
   }
 }

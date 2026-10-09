@@ -4,6 +4,7 @@ import com.example.short_link.post.application.read.PublicFeedQueryService;
 import com.example.short_link.post.application.read.PublicFeedView;
 import com.example.short_link.post.presentation.request.PublicFeedRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -18,6 +19,7 @@ public class PublicFeedController {
 
   @GetMapping
   public PublicFeedView feed(
+      @AuthenticationPrincipal Long viewerId,
       @RequestParam(required = false) String sort,
       @RequestParam(required = false) String tag,
       @RequestParam(required = false) String q,
@@ -26,6 +28,6 @@ public class PublicFeedController {
       @RequestParam(defaultValue = "20") int size) {
     PublicFeedRequest request =
         PublicFeedRequest.builder().sort(sort).tag(tag).q(q).lang(lang).build();
-    return publicFeedQueryService.feed(request.toQuery(page, size));
+    return publicFeedQueryService.feed(viewerId, request.toQuery(page, size));
   }
 }

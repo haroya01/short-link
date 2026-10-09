@@ -40,40 +40,47 @@ public class PublicFeedQueryService {
   private final FollowingFeedReader followingFeedReader;
   private final SeriesItemReader seriesItemReader;
 
-  public PublicFeedView feed(PublicFeedQuery query) {
+  public PublicFeedView feed(Long viewerId, PublicFeedQuery query) {
     return switch (query.selection()) {
-      case PublicFeedQuery.Search search -> search(search, query.page(), query.size());
-      case PublicFeedQuery.Tagged tagged -> tagged(tagged, query.page(), query.size());
-      case PublicFeedQuery.Browse browse -> browse(browse, query.page(), query.size());
+      case PublicFeedQuery.Search search -> search(viewerId, search, query.page(), query.size());
+      case PublicFeedQuery.Tagged tagged -> tagged(viewerId, tagged, query.page(), query.size());
+      case PublicFeedQuery.Browse browse -> browse(viewerId, browse, query.page(), query.size());
     };
   }
 
-  private PublicFeedView browse(PublicFeedQuery.Browse browse, int page, int size) {
+  private PublicFeedView browse(Long viewerId, PublicFeedQuery.Browse browse, int page, int size) {
     String language = browse.language();
     List<PostEntity> posts =
         switch (browse.order()) {
-          case RECENT -> postRepository.findPublishedRecent(language, page, size);
-          case TRENDING -> postRepository.findPublishedTrending(language, page, size);
+          case RECENT -> postRepository.findPublishedRecent(viewerId, language, page, size);
+          case TRENDING -> postRepository.findPublishedTrending(viewerId, language, page, size);
         };
-    return assemble(posts, postRepository.countPublished(language), page, size);
+    return assemble(posts, postRepository.countPublished(viewerId, language), page, size);
   }
 
-  private PublicFeedView tagged(PublicFeedQuery.Tagged tagged, int page, int size) {
+  private PublicFeedView tagged(Long viewerId, PublicFeedQuery.Tagged tagged, int page, int size) {
     String tag = tagged.tag();
-    List<PostEntity> posts = postRepository.findPublishedByTag(tag, page, size);
-    return assemble(posts, postRepository.countPublishedByTag(tag), page, size);
+    List<PostEntity> posts =
+        switch (tagged.order()) {
+          case RECENT -> postRepository.findPublishedByTag(viewerId, tag, page, size);
+          case TRENDING -> postRepository.findPublishedTrendingByTag(viewerId, tag, page, size);
+        };
+    return assemble(posts, postRepository.countPublishedByTag(viewerId, tag), page, size);
   }
 
-  private PublicFeedView search(PublicFeedQuery.Search search, int page, int size) {
+  private PublicFeedView search(Long viewerId, PublicFeedQuery.Search search, int page, int size) {
     String text = search.text();
     String language = search.language();
     List<PostEntity> posts =
         switch (search.order()) {
-          case RELEVANCE -> postRepository.searchPublishedByRelevance(text, language, page, size);
-          case RECENT -> postRepository.searchPublished(text, language, page, size);
-          case TRENDING -> postRepository.searchPublishedTrending(text, language, page, size);
+          case RELEVANCE ->
+              postRepository.searchPublishedByRelevance(viewerId, text, language, page, size);
+          case RECENT -> postRepository.searchPublished(viewerId, text, language, page, size);
+          case TRENDING ->
+              postRepository.searchPublishedTrending(viewerId, text, language, page, size);
         };
-    return assemble(posts, postRepository.countSearchPublished(text, language), page, size);
+    return assemble(
+        posts, postRepository.countSearchPublished(viewerId, text, language), page, size);
   }
 
   public List<TagCount> popularTags(int limit) {
@@ -81,8 +88,8 @@ public class PublicFeedQueryService {
   }
 
   // Over-fetches to allow for deleted authors being removed, then preserves ranking when trimming.
-  public List<SuggestedAuthorView> suggestedAuthors(int limit) {
-    List<AuthorPostStats> ranked = postRepository.findTopAuthorStats(limit * 2);
+  public List<SuggestedAuthorView> suggestedAuthors(Long viewerId, int limit) {
+    List<AuthorPostStats> ranked = postRepository.findTopAuthorStats(viewerId, limit * 2);
     Map<Long, UserEntity> authors =
         userRepository
             .findAllByIdIn(ranked.stream().map(AuthorPostStats::authorId).toList())
@@ -116,10 +123,10 @@ public class PublicFeedQueryService {
     if (subscribedSeriesIds.isEmpty()) {
       List<PostEntity> posts =
           postRepository.findPublishedByAuthorsSeriesOrTags(
-              followingIds, subscribedSeriesIds, followedTags, page, size);
+              userId, followingIds, subscribedSeriesIds, followedTags, page, size);
       long total =
           postRepository.countPublishedByAuthorsSeriesOrTags(
-              followingIds, subscribedSeriesIds, followedTags);
+              userId, followingIds, subscribedSeriesIds, followedTags);
       return new PublicFeedView(
           annotate(posts, following), page, size, (long) (page + 1) * size < total);
     }
@@ -127,8 +134,8 @@ public class PublicFeedQueryService {
     // A subscribed series can hold notes as well, so the page is cut from posts and notes together.
     List<FollowingFeedRef> refs =
         followingFeedReader.page(
-            followingIds, subscribedSeriesIds, followedTags, page * size, size);
-    long total = followingFeedReader.count(followingIds, subscribedSeriesIds, followedTags);
+            userId, followingIds, subscribedSeriesIds, followedTags, page * size, size);
+    long total = followingFeedReader.count(userId, followingIds, subscribedSeriesIds, followedTags);
     List<Long> postIds =
         refs.stream()
             .filter(r -> r.type() == SeriesItemType.POST)
@@ -200,11 +207,12 @@ public class PublicFeedQueryService {
         .toList();
   }
 
-  public List<TrendingTagSection> trendingByTag(int tagLimit, int perTag) {
+  public List<TrendingTagSection> trendingByTag(Long viewerId, int tagLimit, int perTag) {
     List<TrendingTagSection> sections = new ArrayList<>();
     for (TagCount tag : postRepository.findPopularTags(tagLimit)) {
       List<PublicFeedItem> posts =
-          feedItemAssembler.assemble(postRepository.findPublishedByTag(tag.tag(), 0, perTag));
+          feedItemAssembler.assemble(
+              postRepository.findPublishedByTag(viewerId, tag.tag(), 0, perTag));
       if (!posts.isEmpty()) {
         sections.add(new TrendingTagSection(tag.tag(), tag.count(), posts));
       }

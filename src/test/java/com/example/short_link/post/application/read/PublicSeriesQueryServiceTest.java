@@ -99,7 +99,7 @@ class PublicSeriesQueryServiceTest {
     Instant mid = Instant.parse("2026-05-20T09:00:00Z");
     Instant old = Instant.parse("2026-05-10T09:00:00Z");
 
-    when(seriesItemReader.activeSeries(2, 12))
+    when(seriesItemReader.activeSeries(null, 2, 12))
         .thenReturn(
             List.of(
                 new SeriesActivity(10L, 4, recent),
@@ -123,7 +123,7 @@ class PublicSeriesQueryServiceTest {
                 30L,
                 List.of(noteEntry(41L, "first", old), noteEntry(42L, "second", old))));
 
-    List<PublicSeriesCard> cards = service.discoverSeries(6);
+    List<PublicSeriesCard> cards = service.discoverSeries(null, 6);
 
     assertThat(cards).extracting(PublicSeriesCard::slug).containsExactly("deep-dive", "side-log");
     PublicSeriesCard first = cards.get(0);
@@ -147,8 +147,8 @@ class PublicSeriesQueryServiceTest {
 
   @Test
   void discoverSeriesEmptyWhenNoneActive() {
-    when(seriesItemReader.activeSeries(2, 12)).thenReturn(List.of());
-    assertThat(service.discoverSeries(6)).isEmpty();
+    when(seriesItemReader.activeSeries(null, 2, 12)).thenReturn(List.of());
+    assertThat(service.discoverSeries(null, 6)).isEmpty();
   }
 
   @Test

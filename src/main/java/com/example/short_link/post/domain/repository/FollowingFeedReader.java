@@ -10,11 +10,16 @@ import java.util.List;
 public interface FollowingFeedReader {
 
   List<FollowingFeedRef> page(
+      Long viewerId,
       Collection<Long> authorIds,
       Collection<Long> seriesIds,
       Collection<String> tags,
       int offset,
       int limit);
 
-  long count(Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags);
+  long count(
+      Long viewerId,
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags);
 }

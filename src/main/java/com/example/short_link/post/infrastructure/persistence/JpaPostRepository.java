@@ -79,127 +79,151 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   // LEFT JOIN으로 최근 조회가 없는 글도 포함한다. 누적 view_count는 순위에 사용하지 않는다.
   // MySQL에서는 기본키로 GROUP BY하면 p.*를 선택할 수 있다.
+  String RECENT_HUMAN_VIEWS =
+      "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
+          + "AND e.is_bot = FALSE AND e.visitor_hash IS NOT NULL ";
+
+  String TRENDING_ORDER =
+      "GROUP BY p.id ORDER BY COUNT(DISTINCT e.visitor_hash) DESC, p.published_at DESC";
+
+  String BROWSE_PREDICATE =
+      "WHERE p.status = 'PUBLISHED' AND (:lang IS NULL OR p.language_tag = :lang) "
+          + "AND p.body_text_length >= :minBody"
+          + HeardSql.POST_AUTHOR
+          + " AND (p.series_id IS NULL OR NOT EXISTS (SELECT 1 FROM posts q "
+          + "WHERE q.series_id = p.series_id AND q.status = 'PUBLISHED' "
+          + "AND q.body_text_length >= :minBody "
+          + "AND (:lang IS NULL OR q.language_tag = :lang) "
+          + "AND (q.published_at > p.published_at "
+          + "OR (q.published_at = p.published_at AND q.id > p.id)))) ";
+
   @Query(
       nativeQuery = true,
-      value =
-          "SELECT p.* FROM posts p "
-              + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
-              + "WHERE p.status = 'PUBLISHED' AND (:lang IS NULL OR p.language_tag = :lang) "
-              + "AND p.body_text_length >= :minBody "
-              + "AND (p.series_id IS NULL OR NOT EXISTS (SELECT 1 FROM posts q "
-              + "WHERE q.series_id = p.series_id AND q.status = 'PUBLISHED' "
-              + "AND q.body_text_length >= :minBody "
-              + "AND (:lang IS NULL OR q.language_tag = :lang) "
-              + "AND (q.published_at > p.published_at "
-              + "OR (q.published_at = p.published_at AND q.id > p.id)))) "
-              + "GROUP BY p.id "
-              + "ORDER BY COUNT(e.id) DESC, p.published_at DESC")
+      value = "SELECT p.* FROM posts p " + RECENT_HUMAN_VIEWS + BROWSE_PREDICATE + TRENDING_ORDER)
   List<PostEntity> findPublishedTrendingSince(
       @Param("since") Instant since,
       @Param("lang") String lang,
       @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
       Pageable pageable);
 
   @Query(
-      "select p from PostEntity p where p.status = :status "
-          + "and (:lang is null or p.languageTag = :lang) "
-          + "and p.bodyTextLength >= :minBody "
-          + "and (p.seriesId is null or not exists (select 1 from PostEntity q "
-          + "where q.seriesId = p.seriesId and q.status = :status "
-          + "and q.bodyTextLength >= :minBody "
-          + "and (:lang is null or q.languageTag = :lang) "
-          + "and (q.publishedAt > p.publishedAt "
-          + "or (q.publishedAt = p.publishedAt and q.id > p.id)))) "
-          + "order by p.publishedAt desc")
+      nativeQuery = true,
+      value = "SELECT p.* FROM posts p " + BROWSE_PREDICATE + "ORDER BY p.published_at DESC")
   List<PostEntity> findPublishedRecent(
-      @Param("status") PostStatus status,
       @Param("lang") String lang,
       @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
       Pageable pageable);
 
-  @Query(
-      "select count(p) from PostEntity p where p.status = :status "
-          + "and (:lang is null or p.languageTag = :lang) "
-          + "and p.bodyTextLength >= :minBody "
-          + "and (p.seriesId is null or not exists (select 1 from PostEntity q "
-          + "where q.seriesId = p.seriesId and q.status = :status "
-          + "and q.bodyTextLength >= :minBody "
-          + "and (:lang is null or q.languageTag = :lang) "
-          + "and (q.publishedAt > p.publishedAt "
-          + "or (q.publishedAt = p.publishedAt and q.id > p.id)))) ")
+  @Query(nativeQuery = true, value = "SELECT COUNT(*) FROM posts p " + BROWSE_PREDICATE)
   long countPublishedByLang(
-      @Param("status") PostStatus status,
       @Param("lang") String lang,
-      @Param("minBody") int minBody);
+      @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now);
+
+  String TAGGED = "JOIN post_tag t ON t.post_id = p.id ";
+
+  String TAG_PREDICATE =
+      "WHERE LOWER(t.tag) = LOWER(:tag) AND p.status = 'PUBLISHED' "
+          + "AND p.body_text_length >= :minBody"
+          + HeardSql.POST_AUTHOR
+          + " ";
 
   @Query(
-      "select p from PostEntity p join p.tags t "
-          + "where lower(t) = lower(:tag) and p.status = :status "
-          + "and p.bodyTextLength >= :minBody "
-          + "order by p.publishedAt desc")
+      nativeQuery = true,
+      value = "SELECT p.* FROM posts p " + TAGGED + TAG_PREDICATE + "ORDER BY p.published_at DESC")
   List<PostEntity> findPublishedByTag(
       @Param("tag") String tag,
-      @Param("status") PostStatus status,
       @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
       Pageable pageable);
 
   @Query(
-      "select count(p) from PostEntity p join p.tags t "
-          + "where lower(t) = lower(:tag) and p.status = :status "
-          + "and p.bodyTextLength >= :minBody")
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p " + TAGGED + RECENT_HUMAN_VIEWS + TAG_PREDICATE + TRENDING_ORDER)
+  List<PostEntity> findPublishedTrendingByTagSince(
+      @Param("tag") String tag,
+      @Param("since") Instant since,
+      @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
+      Pageable pageable);
+
+  @Query(nativeQuery = true, value = "SELECT COUNT(*) FROM posts p " + TAGGED + TAG_PREDICATE)
   long countPublishedByTag(
-      @Param("tag") String tag, @Param("status") PostStatus status, @Param("minBody") int minBody);
+      @Param("tag") String tag,
+      @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now);
 
   // 태그가 없는 작가·시리즈 글도 포함하려고 LEFT JOIN한다. DISTINCT는 여러 태그의 중복을 제거한다.
   // 빈 IN 인수는 어댑터가 매칭되지 않는 값으로 변환한다.
+  String FOLLOWED_PREDICATE =
+      "LEFT JOIN post_tag t ON t.post_id = p.id "
+          + "WHERE p.status = 'PUBLISHED' "
+          + "AND (p.user_id IN (:authorIds) OR p.series_id IN (:seriesIds) "
+          + "OR LOWER(t.tag) IN (:tags))"
+          + HeardSql.POST_AUTHOR
+          + " ";
+
   @Query(
-      "select distinct p from PostEntity p left join p.tags t "
-          + "where p.status = :status "
-          + "and (p.userId in :authorIds or p.seriesId in :seriesIds or lower(t) in :tags) "
-          + "order by p.publishedAt desc")
+      nativeQuery = true,
+      value =
+          "SELECT DISTINCT p.* FROM posts p " + FOLLOWED_PREDICATE + "ORDER BY p.published_at DESC")
   List<PostEntity> findPublishedByAuthorsSeriesOrTags(
       @Param("authorIds") Collection<Long> authorIds,
       @Param("seriesIds") Collection<Long> seriesIds,
       @Param("tags") Collection<String> tags,
-      @Param("status") PostStatus status,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
       Pageable pageable);
 
   @Query(
-      "select count(distinct p) from PostEntity p left join p.tags t "
-          + "where p.status = :status "
-          + "and (p.userId in :authorIds or p.seriesId in :seriesIds or lower(t) in :tags)")
+      nativeQuery = true,
+      value = "SELECT COUNT(DISTINCT p.id) FROM posts p " + FOLLOWED_PREDICATE)
   long countPublishedByAuthorsSeriesOrTags(
       @Param("authorIds") Collection<Long> authorIds,
       @Param("seriesIds") Collection<Long> seriesIds,
       @Param("tags") Collection<String> tags,
-      @Param("status") PostStatus status);
+      @Param("viewer") long viewer,
+      @Param("now") Instant now);
 
   // DISTINCT로 다중 태그의 중복을 제거한다. 빈 NOT IN 인수는 어댑터가 변환한다.
+  String FOR_YOU_PREDICATE =
+      "JOIN post_tag t ON t.post_id = p.id "
+          + "WHERE p.status = 'PUBLISHED' AND p.user_id <> :viewer "
+          + "AND LOWER(t.tag) IN (:tags) AND p.id NOT IN (:excludeIds) "
+          + "AND p.body_text_length >= :minBody"
+          + HeardSql.POST_AUTHOR
+          + " ";
+
   @Query(
-      "select distinct p from PostEntity p join p.tags t "
-          + "where p.status = :status and p.userId <> :userId "
-          + "and lower(t) in :tags and p.id not in :excludeIds "
-          + "and p.bodyTextLength >= :minBody "
-          + "order by p.publishedAt desc")
+      nativeQuery = true,
+      value =
+          "SELECT DISTINCT p.* FROM posts p " + FOR_YOU_PREDICATE + "ORDER BY p.published_at DESC")
   List<PostEntity> findForYouCandidates(
-      @Param("userId") Long userId,
+      @Param("viewer") long viewer,
       @Param("tags") Collection<String> tags,
       @Param("excludeIds") Collection<Long> excludeIds,
-      @Param("status") PostStatus status,
       @Param("minBody") int minBody,
+      @Param("now") Instant now,
       Pageable pageable);
 
   @Query(
-      "select count(distinct p) from PostEntity p join p.tags t "
-          + "where p.status = :status and p.userId <> :userId "
-          + "and lower(t) in :tags and p.id not in :excludeIds "
-          + "and p.bodyTextLength >= :minBody")
+      nativeQuery = true,
+      value = "SELECT COUNT(DISTINCT p.id) FROM posts p " + FOR_YOU_PREDICATE)
   long countForYouCandidates(
-      @Param("userId") Long userId,
+      @Param("viewer") long viewer,
       @Param("tags") Collection<String> tags,
       @Param("excludeIds") Collection<Long> excludeIds,
-      @Param("status") PostStatus status,
-      @Param("minBody") int minBody);
+      @Param("minBody") int minBody,
+      @Param("now") Instant now);
 
   @Query(
       "select t, count(p) from PostEntity p join p.tags t "
@@ -223,7 +247,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           + "OR LOWER(COALESCE(p.excerpt, '')) LIKE :titleLike ESCAPE '!') "
           + "AND (:titleWord IS NULL "
           + "OR REGEXP_LIKE(LOWER(CONCAT(p.title, ' ', COALESCE(p.excerpt, ''))), :titleWord)))) "
-          + "AND (:lang IS NULL OR p.language_tag = :lang) ";
+          + "AND (:lang IS NULL OR p.language_tag = :lang)"
+          + HeardSql.POST_AUTHOR
+          + " ";
 
   @Query(
       nativeQuery = true,
@@ -238,6 +264,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("titleLike") String titleLike,
       @Param("titleWord") String titleWord,
       @Param("lang") String lang,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
       Pageable pageable);
 
   // 핸들·제목·요약 폴백으로만 매칭된 글은 관련성 점수가 0이어도 결과에 포함한다.
@@ -255,6 +283,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("titleLike") String titleLike,
       @Param("titleWord") String titleWord,
       @Param("lang") String lang,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
       Pageable pageable);
 
   @Query(
@@ -262,10 +292,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       value =
           "SELECT p.* FROM posts p "
               + "LEFT JOIN post_search_text s ON s.post_id = p.id "
-              + "LEFT JOIN post_view_event e ON e.post_id = p.id AND e.viewed_at >= :since "
+              + RECENT_HUMAN_VIEWS
               + SEARCH_PREDICATE
-              + "GROUP BY p.id "
-              + "ORDER BY COUNT(DISTINCT e.id) DESC, p.published_at DESC")
+              + TRENDING_ORDER)
   List<PostEntity> searchPublishedTrendingSince(
       @Param("match") String match,
       @Param("like") String like,
@@ -273,6 +302,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("titleWord") String titleWord,
       @Param("since") Instant since,
       @Param("lang") String lang,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
       Pageable pageable);
 
   @Query(
@@ -286,14 +317,23 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("like") String like,
       @Param("titleLike") String titleLike,
       @Param("titleWord") String titleWord,
-      @Param("lang") String lang);
+      @Param("lang") String lang,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now);
 
   @Query(
-      "select p.userId, count(p), coalesce(sum(p.viewCount), 0) from PostEntity p "
-          + "where p.status = :status and p.bodyTextLength >= :minBody group by p.userId "
-          + "order by count(p) desc, coalesce(sum(p.viewCount), 0) desc")
+      nativeQuery = true,
+      value =
+          "SELECT p.user_id, COUNT(*), COALESCE(SUM(p.view_count), 0) FROM posts p "
+              + "WHERE p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+              + HeardSql.POST_AUTHOR
+              + " GROUP BY p.user_id "
+              + "ORDER BY COUNT(*) DESC, COALESCE(SUM(p.view_count), 0) DESC")
   List<Object[]> findTopAuthorIds(
-      @Param("status") PostStatus status, @Param("minBody") int minBody, Pageable pageable);
+      @Param("minBody") int minBody,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
+      Pageable pageable);
 
   @Query(
       nativeQuery = true,
