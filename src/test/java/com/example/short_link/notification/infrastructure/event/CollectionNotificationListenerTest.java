@@ -3,11 +3,14 @@ package com.example.short_link.notification.infrastructure.event;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.CollectionConnectedEvent;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
@@ -25,9 +28,24 @@ class CollectionNotificationListenerTest {
   private static final Instant AT = Instant.parse("2026-07-10T00:00:00Z");
 
   @Mock private RecordBlogNotificationUseCase recordUseCase;
+  @Mock private UserBlockChecker blocks;
 
   private CollectionNotificationListener listener() {
-    return new CollectionNotificationListener(recordUseCase);
+    return new CollectionNotificationListener(recordUseCase, blocks);
+  }
+
+  @Test
+  void aCuratorTheAuthorOrAContributorSilencedIsNotHeardFrom() {
+    when(blocks.silences(anyLong(), eq(2L)))
+        .thenAnswer(call -> List.of(5L, 8L).contains(call.<Long>getArgument(0)));
+
+    listener()
+        .onCollectionConnected(
+            new CollectionConnectedEvent(2L, 42L, "c", 10L, 5L, List.of(7L, 8L), AT));
+
+    verify(recordUseCase, never()).record(eq(5L), any(), any(), any());
+    verify(recordUseCase)
+        .recordForEach(eq(List.of(7L)), eq(NotificationType.PATH_GREW), eq(2L), any());
   }
 
   @Test

@@ -1,6 +1,7 @@
 package com.example.short_link.notification.infrastructure.event;
 
 import com.example.short_link.common.event.CollectionConnectedEvent;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationCollectionRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
 import com.example.short_link.notification.domain.NotificationType;
@@ -17,6 +18,7 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class CollectionNotificationListener {
 
   private final RecordBlogNotificationUseCase recordUseCase;
+  private final UserBlockChecker blocks;
 
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -27,7 +29,8 @@ public class CollectionNotificationListener {
 
     // A null author denotes a self-connection or curator-owned note.
     if (event.connectedAuthorUserId() != null
-        && !event.connectedAuthorUserId().equals(event.actorUserId())) {
+        && !event.connectedAuthorUserId().equals(event.actorUserId())
+        && !blocks.silences(event.connectedAuthorUserId(), event.actorUserId())) {
       recordUseCase.record(
           event.connectedAuthorUserId(),
           NotificationType.CONNECTED,
@@ -37,7 +40,9 @@ public class CollectionNotificationListener {
 
     // The producer deduplicates prior contributors and excludes the connected author and curator.
     recordUseCase.recordForEach(
-        event.priorContributorUserIds(),
+        event.priorContributorUserIds().stream()
+            .filter(contributor -> !blocks.silences(contributor, event.actorUserId()))
+            .toList(),
         NotificationType.PATH_GREW,
         event.actorUserId(),
         collection);
