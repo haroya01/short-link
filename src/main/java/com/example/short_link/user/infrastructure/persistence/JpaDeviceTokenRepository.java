@@ -2,6 +2,7 @@ package com.example.short_link.user.infrastructure.persistence;
 
 import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.DeviceTokenEntity;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -19,13 +20,32 @@ public interface JpaDeviceTokenRepository extends JpaRepository<DeviceTokenEntit
 
   @Query(
       "select new com.example.short_link.user.domain.DeviceTarget(d.token, d.topic) "
-          + "from DeviceTokenEntity d where d.userId = :userId")
-  List<DeviceTarget> targetsForUser(Long userId);
+          + "from DeviceTokenEntity d where d.userId = :userId "
+          + "and (d.sessionExpiresAt is null or d.sessionExpiresAt > :now)")
+  List<DeviceTarget> targetsForUser(Long userId, Instant now);
 
   @Query(
       "select new com.example.short_link.user.domain.DeviceTarget(d.token, d.topic) "
-          + "from DeviceTokenEntity d where d.userId in :userIds")
-  List<DeviceTarget> targetsForUsers(Collection<Long> userIds);
+          + "from DeviceTokenEntity d where d.userId in :userIds "
+          + "and (d.sessionExpiresAt is null or d.sessionExpiresAt > :now)")
+  List<DeviceTarget> targetsForUsers(Collection<Long> userIds, Instant now);
+
+  @Transactional
+  @Modifying
+  @Query(
+      "update DeviceTokenEntity d set d.sessionExpiresAt = :expiresAt "
+          + "where d.userId = :userId and d.sessionId = :sessionId")
+  int extendSession(Long userId, String sessionId, Instant expiresAt);
+
+  @Transactional
+  @Modifying
+  @Query("delete from DeviceTokenEntity d where d.userId = :userId and d.sessionId = :sessionId")
+  int endSession(Long userId, String sessionId);
+
+  @Transactional
+  @Modifying
+  @Query("delete from DeviceTokenEntity d where d.userId = :userId")
+  int deleteByUserId(Long userId);
 
   @Transactional
   @Modifying

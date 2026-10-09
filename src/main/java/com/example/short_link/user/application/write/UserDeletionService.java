@@ -9,6 +9,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
+import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.MuteRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -38,6 +39,7 @@ public class UserDeletionService {
   private final WebPushSubscriptionRepository webPushSubscriptionRepository;
   private final List<UserDataEraser> userDataErasers;
   private final RefreshTokenStore refreshTokenStore;
+  private final DeviceTokenRepository deviceTokens;
   private final MeterRegistry meterRegistry;
   private final AuditLogService auditLogService;
   private final ApplicationEventPublisher events;
@@ -53,6 +55,8 @@ public class UserDeletionService {
     }
     user.softDelete();
     refreshTokenStore.deleteAllForUser(userId);
+    // Every session just ended, so no device keeps hearing this account.
+    deviceTokens.deleteByUserId(userId);
     events.publishEvent(new AccountDeletedEvent(userId));
 
     long ownedLinks = linkRepository.countByUserId(userId);
