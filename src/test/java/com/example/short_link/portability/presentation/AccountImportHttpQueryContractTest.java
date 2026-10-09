@@ -56,6 +56,9 @@ class AccountImportHttpQueryContractTest extends AccountHttpJourneySupport {
         .isFalse();
 
     assertThat(imports.processBatch(100)).isEqualTo(3);
+    // Imported follows notify asynchronously; let that settle so it is not measured as the next
+    // step.
+    awaitAsyncWork();
     assertThat(
             count(
                 "SELECT COUNT(*) FROM user_follow WHERE follower_id = ? AND following_id IN (?, ?)",
@@ -82,6 +85,7 @@ class AccountImportHttpQueryContractTest extends AccountHttpJourneySupport {
         token,
         201);
     imports.processBatch(100);
+    awaitAsyncWork();
     assertThat(count("SELECT COUNT(*) FROM user_domain_block WHERE user_id = ?", owner.getId()))
         .isEqualTo(2);
 
