@@ -9,6 +9,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesEntry;
 import com.example.short_link.post.domain.SeriesItemEntity;
 import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.SeriesNote;
@@ -80,6 +81,15 @@ class PublicSeriesQueryServiceTest {
     return s;
   }
 
+  private static SeriesEntry postEntry(long id, String slug, Instant at) {
+    return new SeriesEntry(
+        SeriesItemType.POST, id, slug, slug.toUpperCase(), "https://img/" + slug, at);
+  }
+
+  private static SeriesEntry noteEntry(long id, String excerpt, Instant at) {
+    return new SeriesEntry(SeriesItemType.NOTE, id, null, excerpt, null, at);
+  }
+
   @Test
   void discoverSeriesRanksHydratesAndDropsDeletedAuthors() {
     UserEntity alice = author(1L, "alice");
@@ -89,7 +99,7 @@ class PublicSeriesQueryServiceTest {
     Instant mid = Instant.parse("2026-05-20T09:00:00Z");
     Instant old = Instant.parse("2026-05-10T09:00:00Z");
 
-    when(postRepository.findActiveSeries(2, 12))
+    when(seriesItemReader.activeSeries(2, 12))
         .thenReturn(
             List.of(
                 new SeriesActivity(10L, 4, recent),
@@ -102,27 +112,42 @@ class PublicSeriesQueryServiceTest {
                 series(20L, 2L, "ghost", "Ghost"),
                 series(30L, 1L, "side-log", "Side Log")));
     when(userRepository.findAllByIdIn(any())).thenReturn(List.of(alice, bob));
-    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(10L, PostStatus.PUBLISHED))
+    when(seriesItemReader.readableEntries(List.of(10L, 30L)))
         .thenReturn(
-            List.of(
-                new PostEntity(1L, "dd-1", "DD One", "ko"),
-                new PostEntity(1L, "dd-2", "DD Two", "ko")));
+            Map.of(
+                10L,
+                List.of(
+                    postEntry(1L, "dd-1", old),
+                    noteEntry(40L, "an aside", recent),
+                    postEntry(2L, "dd-2", mid)),
+                30L,
+                List.of(noteEntry(41L, "first", old), noteEntry(42L, "second", old))));
 
     List<PublicSeriesCard> cards = service.discoverSeries(6);
 
     assertThat(cards).extracting(PublicSeriesCard::slug).containsExactly("deep-dive", "side-log");
     PublicSeriesCard first = cards.get(0);
     assertThat(first.title()).isEqualTo("Deep Dive");
-    assertThat(first.postCount()).isEqualTo(4);
+    assertThat(first.postCount()).isEqualTo(2);
+    assertThat(first.itemCount()).isEqualTo(3);
     assertThat(first.lastPublishedAt()).isEqualTo(recent);
     assertThat(first.author().username()).isEqualTo("alice");
     assertThat(first.posts()).extracting(SeriesPostRef::slug).containsExactly("dd-1", "dd-2");
-    assertThat(first.posts().get(0).title()).isEqualTo("DD One");
+    assertThat(first.posts().get(0).ogImageUrl()).isEqualTo("https://img/dd-1");
+    assertThat(first.items())
+        .containsExactly(
+            new SeriesItemPreview("POST", "dd-1", null, "DD-1", "https://img/dd-1"),
+            new SeriesItemPreview("NOTE", null, 40L, "an aside", null),
+            new SeriesItemPreview("POST", "dd-2", null, "DD-2", "https://img/dd-2"));
+    PublicSeriesCard notesOnly = cards.get(1);
+    assertThat(notesOnly.postCount()).isZero();
+    assertThat(notesOnly.posts()).isEmpty();
+    assertThat(notesOnly.itemCount()).isEqualTo(2);
   }
 
   @Test
   void discoverSeriesEmptyWhenNoneActive() {
-    when(postRepository.findActiveSeries(2, 12)).thenReturn(List.of());
+    when(seriesItemReader.activeSeries(2, 12)).thenReturn(List.of());
     assertThat(service.discoverSeries(6)).isEmpty();
   }
 
@@ -257,27 +282,39 @@ class PublicSeriesQueryServiceTest {
   }
 
   @Test
-  void subscribedSeriesHydratesCardsSkipsEmptyAndDeletedAuthor() {
+  void subscribedSeriesHydratesCardsSkipsEmptyAndDeletedAuthorNewestFirst() {
     UserEntity alice = author(1L, "alice");
     UserEntity ghost = author(2L, "ghost");
     ghost.softDelete();
-    when(subscriptionRepository.findSubscribedSeriesIds(7L)).thenReturn(List.of(10L, 20L, 30L));
+    when(subscriptionRepository.findSubscribedSeriesIds(7L))
+        .thenReturn(List.of(10L, 20L, 30L, 40L));
     SeriesEntity s10 = series(10L, 1L, "guide", "Guide");
     SeriesEntity s20 = series(20L, 1L, "empty", "Empty");
     SeriesEntity s30 = series(30L, 2L, "gone", "Gone");
-    when(seriesRepository.findAllByIdIn(List.of(10L, 20L, 30L))).thenReturn(List.of(s10, s20, s30));
+    SeriesEntity s40 = series(40L, 1L, "asides", "Asides");
+    when(seriesRepository.findAllByIdIn(List.of(10L, 20L, 30L, 40L)))
+        .thenReturn(List.of(s10, s20, s30, s40));
     when(userRepository.findAllByIdIn(any())).thenReturn(List.of(alice, ghost));
-    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(10L, PostStatus.PUBLISHED))
-        .thenReturn(List.of(publishedPost(1L, "g1", "G1"), publishedPost(1L, "g2", "G2")));
-    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(20L, PostStatus.PUBLISHED))
-        .thenReturn(List.of());
+    Instant older = Instant.parse("2026-05-10T09:00:00Z");
+    Instant newer = Instant.parse("2026-05-30T09:00:00Z");
+    when(seriesItemReader.readableEntries(List.of(10L, 20L, 30L, 40L)))
+        .thenReturn(
+            Map.of(
+                10L,
+                List.of(postEntry(1L, "g1", older), postEntry(2L, "g2", older)),
+                30L,
+                List.of(postEntry(3L, "x", newer)),
+                40L,
+                List.of(noteEntry(50L, "a note", newer))));
 
     List<PublicSeriesCard> cards = service.subscribedSeries(7L);
 
-    assertThat(cards).hasSize(1);
-    assertThat(cards.get(0).id()).isEqualTo(10L);
-    assertThat(cards.get(0).postCount()).isEqualTo(2);
-    assertThat(cards.get(0).posts()).hasSize(2);
-    assertThat(cards.get(0).author().username()).isEqualTo("alice");
+    assertThat(cards).extracting(PublicSeriesCard::id).containsExactly(40L, 10L);
+    assertThat(cards.get(0).postCount()).isZero();
+    assertThat(cards.get(0).itemCount()).isEqualTo(1);
+    assertThat(cards.get(0).lastPublishedAt()).isEqualTo(newer);
+    assertThat(cards.get(1).postCount()).isEqualTo(2);
+    assertThat(cards.get(1).posts()).hasSize(2);
+    assertThat(cards.get(1).author().username()).isEqualTo("alice");
   }
 }

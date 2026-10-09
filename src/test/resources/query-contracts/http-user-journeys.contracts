@@ -526,6 +526,10 @@
 @junit | reader-follow-curator | 10 | 2 | 0 | 0 | 12
 @junit | reader-follow-status | 4 | 0 | 0 | 0 | 4
 @junit | reader-following-feed | 7 | 0 | 0 | 0 | 7
+# With a subscribed series the page is cut from posts and that series' notes together: the page and
+# its count, the page's posts by id and their cards, then its notes with their author and series in
+# one read.
+@junit | reader-following-feed-series-note | 10 | 0 | 0 | 0 | 10
 @junit | reader-foreign-bookmark-folder-denied | 1 | 0 | 0 | 0 | 1
 @junit | reader-global-highlight-feed | 4 | 0 | 0 | 0 | 4
 @junit | reader-highlight-containing-paths | 5 | 0 | 0 | 0 | 5
@@ -573,7 +577,10 @@
 @junit | reader-restored-public-body | 6 | 0 | 0 | 0 | 6
 @junit | reader-saved-library | 4 | 0 | 0 | 0 | 4
 @junit | reader-scheduled-post-hidden | 2 | 0 | 0 | 0 | 2
+# Discovery ranks series by posts and readable notes together, then reads the chosen series' items
+# in one query whatever the number of cards.
 @junit | reader-series-discovery | 4 | 0 | 0 | 0 | 4
+@junit | reader-series-discovery-with-note | 4 | 0 | 0 | 0 | 4
 @junit | reader-series-subscribe | 7 | 2 | 0 | 0 | 9
 @junit | reader-series-subscription-ids | 1 | 0 | 0 | 0 | 1
 @junit | reader-series-subscription-status | 2 | 0 | 0 | 0 | 2

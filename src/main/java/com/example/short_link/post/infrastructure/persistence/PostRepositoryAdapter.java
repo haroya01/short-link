@@ -5,7 +5,6 @@ import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostPerformanceSort;
 import com.example.short_link.post.domain.PostStatus;
-import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.TagCount;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.time.Duration;
@@ -399,22 +398,6 @@ class PostRepositoryAdapter implements PostRepository {
                     ((Number) row[0]).longValue(),
                     ((Number) row[1]).longValue(),
                     ((Number) row[2]).longValue()))
-        .toList();
-  }
-
-  @Override
-  public List<SeriesActivity> findActiveSeries(int minPosts, int limit) {
-    return jpa
-        .findActiveSeries(
-            PostStatus.PUBLISHED,
-            minPosts,
-            DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
-            PageRequest.of(0, limit))
-        .stream()
-        .map(
-            row ->
-                new SeriesActivity(
-                    ((Number) row[0]).longValue(), ((Number) row[1]).longValue(), (Instant) row[2]))
         .toList();
   }
 

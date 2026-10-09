@@ -1,18 +1,26 @@
 package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.SeriesFeedNote;
+import com.example.short_link.post.domain.SeriesItemType;
+import com.example.short_link.post.domain.repository.FollowingFeedReader;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemReader;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,6 +37,8 @@ class PublicFeedQueryServiceTest {
   @Mock private FollowRepository followRepository;
   @Mock private SeriesSubscriptionRepository seriesSubscriptionRepository;
   @Mock private TagPrefQueryService tagPrefQueryService;
+  @Mock private FollowingFeedReader followingFeedReader;
+  @Mock private SeriesItemReader seriesItemReader;
 
   private PublicFeedQueryService service;
 
@@ -41,7 +51,9 @@ class PublicFeedQueryServiceTest {
             followRepository,
             seriesSubscriptionRepository,
             tagPrefQueryService,
-            new PostFeedItemAssembler(userRepository, seriesRepository));
+            new PostFeedItemAssembler(userRepository, seriesRepository),
+            followingFeedReader,
+            seriesItemReader);
   }
 
   private UserEntity user(long id, String username) {
@@ -185,21 +197,77 @@ class PublicFeedQueryServiceTest {
   }
 
   @Test
-  void followingFeedDrawsFromSubscribedSeriesWhenFollowingNoAuthors() {
+  void aSubscribedSeriesCutsThePageFromPostsAndItsNotesTogether() {
+    when(followRepository.findFollowingIds(9L)).thenReturn(List.of(3L));
+    when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of(7L));
+    when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
+    PostEntity inSeries = post(2L, "a");
+    inSeries.assignToSeries(7L, 0);
+    PostEntity byFollowed = post(3L, "b");
+    when(followingFeedReader.page(List.of(3L), List.of(7L), List.of(), 20, 20))
+        .thenReturn(
+            List.of(
+                new FollowingFeedRef(SeriesItemType.NOTE, 40L, 7L),
+                new FollowingFeedRef(SeriesItemType.POST, byFollowed.getId(), null),
+                new FollowingFeedRef(SeriesItemType.NOTE, 41L, 7L),
+                new FollowingFeedRef(SeriesItemType.NOTE, 42L, 7L),
+                new FollowingFeedRef(SeriesItemType.POST, inSeries.getId(), null)));
+    when(followingFeedReader.count(List.of(3L), List.of(7L), List.of())).thenReturn(45L);
+    when(postRepository.findAllByIdIn(List.of(byFollowed.getId(), inSeries.getId())))
+        .thenReturn(List.of(inSeries, byFollowed));
+    Instant at = Instant.parse("2026-10-09T00:00:00Z");
+    when(seriesItemReader.feedNotes(List.of(40L, 41L, 42L)))
+        .thenReturn(
+            Map.of(
+                40L,
+                new SeriesFeedNote(
+                    40L,
+                    "body",
+                    "spoilers",
+                    at,
+                    new SeriesFeedNote.Author(2L, "bob", null, null, "Bob"),
+                    7L,
+                    "s7",
+                    "Series 7")));
+    when(userRepository.findAllByIdIn(List.of(3L, 2L)))
+        .thenReturn(List.of(user(2L, "bob"), user(3L, "carol")));
+
+    PublicFeedView view = service.feedFollowing(9L, 1, 20);
+
+    assertThat(view.items()).extracting(PublicFeedItem::slug).containsExactly("b", "a");
+    assertThat(view.items().get(0).followReason()).isEqualTo(FollowReason.author());
+    assertThat(view.items().get(1).followReason()).isEqualTo(FollowReason.series());
+    assertThat(view.hasNext()).isTrue();
+    assertThat(view.seriesNotes()).hasSize(1);
+    FeedSeriesNote note = view.seriesNotes().get(0);
+    assertThat(note.id()).isEqualTo(40L);
+    assertThat(note.author().username()).isEqualTo("bob");
+    assertThat(note.author().displayName()).isEqualTo("Bob");
+    assertThat(note.excerpt()).isEqualTo("spoilers");
+    assertThat(note.series()).isEqualTo(new FeedSeriesNote.SeriesRef(7L, "s7", "Series 7"));
+    verify(postRepository, never())
+        .findPublishedByAuthorsSeriesOrTags(
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.anyInt(),
+            org.mockito.ArgumentMatchers.anyInt());
+  }
+
+  @Test
+  void aPageOfOnlySeriesNotesReadsNoPosts() {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of(7L));
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
-    when(postRepository.findPublishedByAuthorsSeriesOrTags(
-            List.of(), List.of(7L), List.of(), 0, 20))
-        .thenReturn(List.of(post(2L, "a")));
-    when(postRepository.countPublishedByAuthorsSeriesOrTags(List.of(), List.of(7L), List.of()))
-        .thenReturn(1L);
-    when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
+    when(followingFeedReader.page(List.of(), List.of(7L), List.of(), 0, 20)).thenReturn(List.of());
+    when(followingFeedReader.count(List.of(), List.of(7L), List.of())).thenReturn(0L);
 
     PublicFeedView view = service.feedFollowing(9L, 0, 20);
 
-    assertThat(view.items()).hasSize(1);
-    assertThat(view.items().get(0).author().username()).isEqualTo("bob");
+    assertThat(view.items()).isEmpty();
+    assertThat(view.seriesNotes()).isEmpty();
+    assertThat(view.hasNext()).isFalse();
+    verify(postRepository, never()).findAllByIdIn(org.mockito.ArgumentMatchers.any());
   }
 
   @Test

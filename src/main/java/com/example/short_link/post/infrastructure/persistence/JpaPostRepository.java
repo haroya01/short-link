@@ -296,19 +296,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("status") PostStatus status, @Param("minBody") int minBody, Pageable pageable);
 
   @Query(
-      "select p.seriesId, count(p), max(p.publishedAt) from PostEntity p "
-          + "where p.status = :status and p.seriesId is not null "
-          + "and p.bodyTextLength >= :minBody "
-          + "group by p.seriesId "
-          + "having count(p) >= :minPosts "
-          + "order by max(p.publishedAt) desc")
-  List<Object[]> findActiveSeries(
-      @Param("status") PostStatus status,
-      @Param("minPosts") long minPosts,
-      @Param("minBody") int minBody,
-      Pageable pageable);
-
-  @Query(
       nativeQuery = true,
       value =
           "SELECT p.* FROM post_note_quote q JOIN posts p ON p.id = q.post_id "

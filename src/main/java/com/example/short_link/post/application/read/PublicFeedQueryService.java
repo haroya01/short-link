@@ -1,9 +1,14 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.AuthorPostStats;
+import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.SeriesFeedNote;
+import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.TagCount;
+import com.example.short_link.post.domain.repository.FollowingFeedReader;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemReader;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -13,6 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -31,6 +37,8 @@ public class PublicFeedQueryService {
   private final SeriesSubscriptionRepository seriesSubscriptionRepository;
   private final TagPrefQueryService tagPrefQueryService;
   private final PostFeedItemAssembler feedItemAssembler;
+  private final FollowingFeedReader followingFeedReader;
+  private final SeriesItemReader seriesItemReader;
 
   public PublicFeedView feed(PublicFeedQuery query) {
     return switch (query.selection()) {
@@ -102,43 +110,94 @@ public class PublicFeedQueryService {
     if (followingIds.isEmpty() && subscribedSeriesIds.isEmpty() && followedTags.isEmpty()) {
       return new PublicFeedView(List.of(), page, size, false);
     }
-    List<PostEntity> posts =
-        postRepository.findPublishedByAuthorsSeriesOrTags(
-            followingIds, subscribedSeriesIds, followedTags, page, size);
-    long total =
-        postRepository.countPublishedByAuthorsSeriesOrTags(
-            followingIds, subscribedSeriesIds, followedTags);
-
-    // Key reasons by post ID: the assembler can remove deleted-author posts and shift positions.
-    Set<Long> followingSet = Set.copyOf(followingIds);
-    Set<Long> seriesSet = Set.copyOf(subscribedSeriesIds);
-    Set<String> tagSet = Set.copyOf(followedTags);
-    // Absent reasons leave cards unannotated; Collectors.toMap rejects null values.
-    Map<Long, FollowReason> reasonById = new HashMap<>();
-    for (PostEntity p : posts) {
-      FollowReason reason = followReason(p, followingSet, seriesSet, tagSet);
-      if (reason != null) reasonById.put(p.getId(), reason);
+    Following following =
+        new Following(
+            Set.copyOf(followingIds), Set.copyOf(subscribedSeriesIds), Set.copyOf(followedTags));
+    if (subscribedSeriesIds.isEmpty()) {
+      List<PostEntity> posts =
+          postRepository.findPublishedByAuthorsSeriesOrTags(
+              followingIds, subscribedSeriesIds, followedTags, page, size);
+      long total =
+          postRepository.countPublishedByAuthorsSeriesOrTags(
+              followingIds, subscribedSeriesIds, followedTags);
+      return new PublicFeedView(
+          annotate(posts, following), page, size, (long) (page + 1) * size < total);
     }
 
-    boolean hasNext = (long) (page + 1) * size < total;
-    List<PublicFeedItem> items =
-        feedItemAssembler.assemble(posts).stream()
-            .map(it -> it.withFollowReason(reasonById.get(it.id())))
+    // A subscribed series can hold notes as well, so the page is cut from posts and notes together.
+    List<FollowingFeedRef> refs =
+        followingFeedReader.page(
+            followingIds, subscribedSeriesIds, followedTags, page * size, size);
+    long total = followingFeedReader.count(followingIds, subscribedSeriesIds, followedTags);
+    List<Long> postIds =
+        refs.stream()
+            .filter(r -> r.type() == SeriesItemType.POST)
+            .map(FollowingFeedRef::id)
             .toList();
-    return new PublicFeedView(items, page, size, hasNext);
+    Map<Long, PostEntity> loaded =
+        postIds.isEmpty()
+            ? Map.of()
+            : postRepository.findAllByIdIn(postIds).stream()
+                .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
+    List<PostEntity> posts = postIds.stream().map(loaded::get).filter(Objects::nonNull).toList();
+    return new PublicFeedView(
+        annotate(posts, following),
+        page,
+        size,
+        (long) (page + 1) * size < total,
+        seriesNotes(refs.stream().filter(r -> r.type() == SeriesItemType.NOTE).toList()));
   }
 
-  private FollowReason followReason(
-      PostEntity post, Set<Long> followingSet, Set<Long> seriesSet, Set<String> tagSet) {
-    if (followingSet.contains(post.getUserId())) return FollowReason.author();
-    if (post.getSeriesId() != null && seriesSet.contains(post.getSeriesId())) {
+  private record Following(Set<Long> authors, Set<Long> series, Set<String> tags) {}
+
+  // Key reasons by post ID: the assembler can remove deleted-author posts and shift positions.
+  // Absent reasons leave cards unannotated; Collectors.toMap rejects null values.
+  private List<PublicFeedItem> annotate(List<PostEntity> posts, Following following) {
+    Map<Long, FollowReason> reasonById = new HashMap<>();
+    for (PostEntity p : posts) {
+      FollowReason reason = followReason(p, following);
+      if (reason != null) reasonById.put(p.getId(), reason);
+    }
+    return feedItemAssembler.assemble(posts).stream()
+        .map(it -> it.withFollowReason(reasonById.get(it.id())))
+        .toList();
+  }
+
+  private FollowReason followReason(PostEntity post, Following following) {
+    if (following.authors().contains(post.getUserId())) return FollowReason.author();
+    if (post.getSeriesId() != null && following.series().contains(post.getSeriesId())) {
       return FollowReason.series();
     }
     return post.getTags().stream()
-        .filter(t -> tagSet.contains(t.toLowerCase(Locale.ROOT)))
+        .filter(t -> following.tags().contains(t.toLowerCase(Locale.ROOT)))
         .findFirst()
         .map(FollowReason::topic)
         .orElse(null);
+  }
+
+  private List<FeedSeriesNote> seriesNotes(List<FollowingFeedRef> refs) {
+    if (refs.isEmpty()) return List.of();
+    Map<Long, SeriesFeedNote> notes =
+        seriesItemReader.feedNotes(refs.stream().map(FollowingFeedRef::id).toList());
+    return refs.stream()
+        .map(ref -> notes.get(ref.id()))
+        .filter(Objects::nonNull)
+        .map(
+            n ->
+                new FeedSeriesNote(
+                    n.id(),
+                    new PublicAuthorView(
+                        n.author().id(),
+                        n.author().username(),
+                        n.author().bio(),
+                        n.author().avatarUrl(),
+                        n.author().displayName()),
+                    n.body(),
+                    n.contentWarning(),
+                    n.excerpt(),
+                    n.createdAt(),
+                    new FeedSeriesNote.SeriesRef(n.seriesId(), n.seriesSlug(), n.seriesTitle())))
+        .toList();
   }
 
   public List<TrendingTagSection> trendingByTag(int tagLimit, int perTag) {
