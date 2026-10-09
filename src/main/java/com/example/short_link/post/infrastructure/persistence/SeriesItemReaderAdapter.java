@@ -137,16 +137,16 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
   public List<SeriesActivity> activeSeries(int minItems, int limit) {
     List<Object[]> rows =
         em.createNativeQuery(
-                "SELECT x.series_id, COUNT(*) AS item_count, MAX(x.item_at) AS last_at FROM ("
-                    + " SELECT p.series_id, p.published_at AS item_at FROM posts p"
-                    + " WHERE p.status = 'PUBLISHED' AND p.series_id IS NOT NULL"
-                    + " AND p.body_text_length >= :minBody"
-                    + " UNION ALL"
-                    + " SELECT i.series_id, n.created_at FROM series_item i"
-                    + " JOIN note n ON n.id = i.ref_id"
-                    + " WHERE i.item_type = 'NOTE' AND n.visibility IN ('PUBLIC', 'UNLISTED')"
-                    + ") x GROUP BY x.series_id HAVING COUNT(*) >= :minItems"
-                    + " ORDER BY last_at DESC, x.series_id DESC LIMIT :limit")
+                "SELECT i.series_id, COUNT(*) AS item_count,"
+                    + " MAX(COALESCE(p.published_at, n.created_at)) AS last_at"
+                    + " FROM series_item i"
+                    + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id"
+                    + " AND p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+                    + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
+                    + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+                    + " WHERE p.id IS NOT NULL OR n.id IS NOT NULL"
+                    + " GROUP BY i.series_id HAVING COUNT(*) >= :minItems"
+                    + " ORDER BY last_at DESC, i.series_id DESC LIMIT :limit")
             .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
             .setParameter("minItems", minItems)
             .setParameter("limit", limit)

@@ -4,11 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesItemEntity;
+import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,6 +32,7 @@ class PublicSeriesDiscoveryIntegrationTest {
   @Autowired private PostRepository postRepository;
   @Autowired private SeriesRepository seriesRepository;
   @Autowired private UserRepository userRepository;
+  @Autowired private SeriesItemRepository seriesItemRepository;
 
   private long author(String handle) {
     UserEntity u = userRepository.save(new UserEntity(handle + "@x.com", "google", "g-" + handle));
@@ -40,12 +45,21 @@ class PublicSeriesDiscoveryIntegrationTest {
     return seriesRepository.save(new SeriesEntity(userId, slug, title)).getId();
   }
 
-  private void publishInSeries(long userId, String slug, long seriesId, int order) {
+  private long publishInSeries(long userId, String slug, long seriesId, int order) {
     PostEntity p = new PostEntity(userId, slug, slug, "ko");
     p.assignToSeries(seriesId, order);
     DiscoverableBodies.discoverable(p);
     p.publish();
-    postRepository.save(p);
+    return postRepository.save(p).getId();
+  }
+
+  // The series' order lives in series_item; the write use case keeps it beside posts.series_id.
+  private void order(long seriesId, long... postIds) {
+    List<SeriesItemEntity> rows = new ArrayList<>();
+    for (long postId : postIds) {
+      rows.add(new SeriesItemEntity(seriesId, SeriesItemType.POST, postId, rows.size()));
+    }
+    seriesItemRepository.replace(seriesId, rows);
   }
 
   @Test
@@ -53,14 +67,15 @@ class PublicSeriesDiscoveryIntegrationTest {
     long a = author("seriesauthor");
 
     long deep = createSeries(a, "deep-dive", "Deep Dive");
-    publishInSeries(a, "dd-1", deep, 0);
-    publishInSeries(a, "dd-2", deep, 1);
+    long dd1 = publishInSeries(a, "dd-1", deep, 0);
+    long dd2 = publishInSeries(a, "dd-2", deep, 1);
     PostEntity draft = new PostEntity(a, "dd-3-draft", "dd3", "ko");
     draft.assignToSeries(deep, 2);
-    postRepository.save(draft);
+    long dd3 = postRepository.save(draft).getId();
+    order(deep, dd1, dd2, dd3);
 
     long thin = createSeries(a, "thin", "Thin");
-    publishInSeries(a, "thin-1", thin, 0);
+    order(thin, publishInSeries(a, "thin-1", thin, 0));
 
     List<PublicSeriesCard> cards = service.discoverSeries(10);
 
