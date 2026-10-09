@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -34,6 +35,12 @@ public class DeviceTokenEntity extends BaseCreatedEntity {
   @Column(length = 100)
   private String topic;
 
+  @Column(name = "session_id", length = 36)
+  private String sessionId;
+
+  @Column(name = "session_expires_at")
+  private Instant sessionExpiresAt;
+
   public DeviceTokenEntity(Long userId, String token, String platform, String topic) {
     this.userId = userId;
     this.token = token;
@@ -44,5 +51,11 @@ public class DeviceTokenEntity extends BaseCreatedEntity {
   public void reassign(Long newUserId, String topic) {
     this.userId = newUserId;
     if (topic != null) this.topic = topic;
+  }
+
+  // A token registered outside a session (no session id) stays unbound and is always sent to.
+  public void bindTo(String sessionId, Instant expiresAt) {
+    this.sessionId = sessionId;
+    this.sessionExpiresAt = sessionId == null ? null : expiresAt;
   }
 }

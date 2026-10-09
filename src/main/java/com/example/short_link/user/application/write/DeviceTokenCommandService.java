@@ -1,8 +1,10 @@
 package com.example.short_link.user.application.write;
 
+import com.example.short_link.user.application.properties.JwtProperties;
 import com.example.short_link.user.domain.DeviceTokenEntity;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.i18n.LocaleContextHolder;
 import org.springframework.stereotype.Service;
@@ -14,15 +16,24 @@ public class DeviceTokenCommandService {
 
   private final DeviceTokenRepository deviceTokens;
   private final UserRepository userRepository;
+  private final JwtProperties jwtProperties;
+  private final Clock clock;
 
   // 같은 기기에 다른 계정이 로그인하면 소유자를 갈아끼운다 — 이전 계정으로의 오발송 방지.
+  // 토큰은 등록한 로그인 세션에 묶인다 — 그 세션이 끝나면(로그아웃·만료) 이 기기로 보내지 않는다.
   @Transactional
-  public void register(Long userId, String token, String platform, String topic) {
-    deviceTokens
-        .findByToken(token)
-        .ifPresentOrElse(
-            existing -> existing.reassign(userId, topic),
-            () -> deviceTokens.save(new DeviceTokenEntity(userId, token, platform, topic)));
+  public void register(Long userId, String token, String platform, String topic, String sessionId) {
+    DeviceTokenEntity device =
+        deviceTokens
+            .findByToken(token)
+            .map(
+                existing -> {
+                  existing.reassign(userId, topic);
+                  return existing;
+                })
+            .orElseGet(
+                () -> deviceTokens.save(new DeviceTokenEntity(userId, token, platform, topic)));
+    device.bindTo(sessionId, clock.instant().plus(jwtProperties.refreshTtl()));
     // 이 기기의 언어를 사용자 로케일로 — 서버조합 푸시를 그 언어로 낸다(Accept-Language).
     userRepository
         .findById(userId)
