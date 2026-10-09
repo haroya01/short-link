@@ -86,4 +86,9 @@ class FollowRepositoryAdapter implements FollowRepository {
   public int deleteAllInvolving(Long userId) {
     return jpa.deleteAllInvolving(userId);
   }
+
+  @Override
+  public int deleteBetween(Long a, Long b) {
+    return jpa.deleteBetween(a, b);
+  }
 }
