@@ -80,10 +80,11 @@
 # A followers-only note: a boost stops at the note document's rule before the key; a like from an
 # account that does not follow the author stops after the key at the follower row, and one from an
 # accepted follower goes on as any like. A reply to a direct note that does not name its sender is
-# kept without the parent: no reply notice, the member named in it hears of a mention.
+# kept without the parent: no reply notice, the member named in it hears of a mention (silence
+# check, policy, keyword filters, insert).
 @junit | federation-inbox-like-followers-only-stranger | 8 | 0 | 0 | 0 | 8
 @junit | federation-inbox-announce-followers-only | 6 | 0 | 0 | 0 | 6
-@junit | federation-inbox-reply-direct-unseen | 9 | 3 | 0 | 0 | 12
+@junit | federation-inbox-reply-direct-unseen | 10 | 3 | 0 | 0 | 13
 @junit | federation-inbox-like-followers-only-follower | 14 | 2 | 0 | 0 | 16
 # A member likes the same note: the like and the author's notice joining today's group.
 @junit | federation-note-member-like | 8 | 2 | 0 | 0 | 10
