@@ -3,7 +3,9 @@ package com.example.short_link.notification.application.write;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
+import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -22,10 +24,16 @@ public class NotificationFanoutWriter {
       NotificationType type,
       Long actorUserId,
       Long actorRemoteId,
-      String json) {
+      String json,
+      Set<Long> hidden,
+      Instant at) {
     for (Long recipientUserId : recipientUserIds) {
-      repository.save(
-          new NotificationEntity(recipientUserId, type, actorUserId, actorRemoteId, json, null));
+      NotificationEntity notice =
+          new NotificationEntity(recipientUserId, type, actorUserId, actorRemoteId, json, null);
+      if (hidden.contains(recipientUserId)) {
+        notice.markRead(at);
+      }
+      repository.save(notice);
     }
   }
 }
