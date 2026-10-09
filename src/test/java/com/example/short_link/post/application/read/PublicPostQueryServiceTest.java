@@ -160,10 +160,10 @@ class PublicPostQueryServiceTest {
     when(seriesItemReader.readableEntries(5L))
         .thenReturn(
             List.of(
-                new SeriesEntry(SeriesItemType.POST, 1L, "part-1", "Part 1"),
-                new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note"),
-                new SeriesEntry(SeriesItemType.POST, 2L, "part-2", "Part 2"),
-                new SeriesEntry(SeriesItemType.NOTE, 41L, null, "another note")));
+                new SeriesEntry(SeriesItemType.POST, 1L, "part-1", "Part 1", null, null),
+                new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note", null, null),
+                new SeriesEntry(SeriesItemType.POST, 2L, "part-2", "Part 2", null, null),
+                new SeriesEntry(SeriesItemType.NOTE, 41L, null, "another note", null, null)));
 
     PublicPostSeriesNav nav = service.findPublicPost("john", "part-2").series();
 
@@ -187,9 +187,9 @@ class PublicPostQueryServiceTest {
     when(seriesItemReader.readableEntries(5L))
         .thenReturn(
             List.of(
-                new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note"),
-                new SeriesEntry(SeriesItemType.POST, 2L, "part-2", "Part 2"),
-                new SeriesEntry(SeriesItemType.POST, 3L, "part-3", "Part 3")));
+                new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note", null, null),
+                new SeriesEntry(SeriesItemType.POST, 2L, "part-2", "Part 2", null, null),
+                new SeriesEntry(SeriesItemType.POST, 3L, "part-3", "Part 3", null, null)));
 
     PublicPostSeriesNav nav = service.findPublicPost("john", "part-2").series();
 
@@ -204,7 +204,7 @@ class PublicPostQueryServiceTest {
     UserEntity author = authorWithUsername("john");
     publishedSeriesPost(author, 2L);
     when(seriesItemReader.readableEntries(5L))
-        .thenReturn(List.of(new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note")));
+        .thenReturn(List.of(new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note", null, null)));
 
     assertThat(service.findPublicPost("john", "part-2").series()).isNull();
   }

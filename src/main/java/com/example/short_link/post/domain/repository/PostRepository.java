@@ -4,7 +4,6 @@ import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostPerformanceSort;
 import com.example.short_link.post.domain.PostStatus;
-import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.TagCount;
 import java.time.Instant;
 import java.util.Collection;
@@ -105,6 +104,4 @@ public interface PostRepository {
   List<TagCount> findPopularTags(int limit);
 
   List<AuthorPostStats> findTopAuthorStats(int limit);
-
-  List<SeriesActivity> findActiveSeries(int minPosts, int limit);
 }

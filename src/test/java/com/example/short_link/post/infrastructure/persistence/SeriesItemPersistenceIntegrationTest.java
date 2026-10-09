@@ -10,24 +10,30 @@ import com.example.short_link.note.domain.NoteSeries;
 import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteSeriesReader;
+import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesEntry;
 import com.example.short_link.post.domain.SeriesItemEntity;
 import com.example.short_link.post.domain.SeriesItemType;
+import com.example.short_link.post.domain.repository.FollowingFeedReader;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.SeriesItemReader;
 import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 @SpringBootTest
@@ -43,6 +49,7 @@ class SeriesItemPersistenceIntegrationTest {
   @Autowired private SeriesItemReader seriesItemReader;
   @Autowired private NoteSeriesReader noteSeriesReader;
   @Autowired private SeriesItemCleaner seriesItemCleaner;
+  @Autowired private FollowingFeedReader followingFeedReader;
 
   private Long authorId;
   private Long seriesId;
@@ -113,10 +120,13 @@ class SeriesItemPersistenceIntegrationTest {
             new SeriesItemEntity(seriesId, SeriesItemType.NOTE, warned, 4)));
 
     assertThat(seriesItemReader.readableEntries(seriesId))
+        .extracting(SeriesEntry::type, SeriesEntry::refId, SeriesEntry::slug, SeriesEntry::title)
         .containsExactly(
-            new SeriesEntry(SeriesItemType.NOTE, open, null, "an open note"),
-            new SeriesEntry(SeriesItemType.POST, published, "sit701-live", "SIT701-LIVE"),
-            new SeriesEntry(SeriesItemType.NOTE, warned, null, "ending spoilers"));
+            tuple(SeriesItemType.NOTE, open, null, "an open note"),
+            tuple(SeriesItemType.POST, published, "sit701-live", "SIT701-LIVE"),
+            tuple(SeriesItemType.NOTE, warned, null, "ending spoilers"));
+    assertThat(seriesItemReader.readableEntries(List.of(seriesId, otherSeriesId)))
+        .containsOnlyKeys(seriesId);
     assertThat(seriesItemReader.notes(List.of(open, followersOnly)))
         .hasEntrySatisfying(open, n -> assertThat(n.shared()).isTrue())
         .hasEntrySatisfying(followersOnly, n -> assertThat(n.shared()).isFalse());
@@ -134,6 +144,81 @@ class SeriesItemPersistenceIntegrationTest {
             tuple("NOTE", open, "an open note"),
             tuple("POST", published, "SIT701-LIVE"),
             tuple("NOTE", warned, "ending spoilers"));
+  }
+
+  private void place(Long series, Object... typeAndIds) {
+    List<SeriesItemEntity> rows = new ArrayList<>();
+    for (int i = 0; i < typeAndIds.length; i += 2) {
+      rows.add(
+          new SeriesItemEntity(
+              series, (SeriesItemType) typeAndIds[i], (Long) typeAndIds[i + 1], rows.size()));
+    }
+    seriesItemRepository.replace(series, rows);
+  }
+
+  @Test
+  void discoveryCountsReadableNotesAndPostsPastTheFloorOnly() {
+    Long shortPost = post("sit701-short", true);
+    Long a1 = note("first aside", NoteVisibility.PUBLIC, null);
+    Long a2 = note("second aside", NoteVisibility.UNLISTED, null);
+    place(
+        seriesId, SeriesItemType.POST, shortPost, SeriesItemType.NOTE, a1, SeriesItemType.NOTE, a2);
+    Long b1 = note("open", NoteVisibility.PUBLIC, null);
+    Long b2 = note("followers only", NoteVisibility.PRIVATE, null);
+    place(otherSeriesId, SeriesItemType.NOTE, b1, SeriesItemType.NOTE, b2);
+
+    List<SeriesActivity> active =
+        seriesItemReader.activeSeries(2, 1000).stream()
+            .filter(a -> a.seriesId().equals(seriesId) || a.seriesId().equals(otherSeriesId))
+            .toList();
+
+    assertThat(active).extracting(SeriesActivity::seriesId).containsExactly(seriesId);
+    assertThat(active.get(0).itemCount()).isEqualTo(2);
+    assertThat(active.get(0).lastActiveAt())
+        .isCloseTo(
+            noteRepository.findById(a2).orElseThrow().getCreatedAt(),
+            within(1, ChronoUnit.SECONDS));
+  }
+
+  @Test
+  void theSubscriptionFeedInterleavesSeriesNotesWithPostsNewestFirst() {
+    Long older = post("sit701-older", true);
+    ReflectionTestUtils.setField(
+        postRepository.findById(older).orElseThrow(),
+        "publishedAt",
+        Instant.now().minus(1, ChronoUnit.DAYS));
+    Long note = note("a series note", NoteVisibility.PUBLIC, null);
+    Long hidden = note("followers only", NoteVisibility.PRIVATE, null);
+    place(
+        seriesId,
+        SeriesItemType.POST,
+        older,
+        SeriesItemType.NOTE,
+        note,
+        SeriesItemType.NOTE,
+        hidden);
+    postRepository.flush();
+
+    assertThat(followingFeedReader.page(List.of(), List.of(seriesId), List.of(), 0, 10))
+        .containsExactly(
+            new FollowingFeedRef(SeriesItemType.NOTE, note, seriesId),
+            new FollowingFeedRef(SeriesItemType.POST, older, null));
+    assertThat(followingFeedReader.page(List.of(), List.of(seriesId), List.of(), 1, 10))
+        .containsExactly(new FollowingFeedRef(SeriesItemType.POST, older, null));
+    assertThat(followingFeedReader.count(List.of(), List.of(seriesId), List.of())).isEqualTo(2);
+    assertThat(seriesItemReader.feedNotes(List.of(note, hidden)))
+        .containsOnlyKeys(note)
+        .hasEntrySatisfying(
+            note,
+            n -> {
+              assertThat(n.author().username()).isEqualTo("sit701");
+              assertThat(n.seriesSlug()).isEqualTo("sit701-a");
+              assertThat(n.excerpt()).isEqualTo("a series note");
+            });
+    assertThat(seriesItemReader.feedNotes(List.of())).isEmpty();
+    assertThat(
+            followingFeedReader.count(List.of(authorId), List.of(otherSeriesId), List.of("sit701")))
+        .isGreaterThanOrEqualTo(1);
   }
 
   @Test

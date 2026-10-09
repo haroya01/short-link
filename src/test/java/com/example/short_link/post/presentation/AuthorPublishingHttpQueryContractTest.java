@@ -308,6 +308,15 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
     assertThat(nav.path("position").asInt()).isEqualTo(2);
     assertThat(nav.path("total").asInt()).isEqualTo(3);
     assertThat(nav.path("next").path("slug").asText()).isEqualTo("second-story");
+    JsonNode following = get("reader-following-feed-series-note", "/api/v1/feed/following", reader);
+    assertThat(following.path("items").size()).isEqualTo(2);
+    assertThat(following.path("seriesNotes").get(0).path("id").asLong()).isEqualTo(note);
+    assertThat(following.path("seriesNotes").get(0).path("series").path("slug").asText())
+        .isEqualTo("engineering");
+    JsonNode card = get("reader-series-discovery-with-note", "/api/v1/public/series", null).get(0);
+    assertThat(card.path("postCount").asInt()).isEqualTo(2);
+    assertThat(card.path("itemCount").asInt()).isEqualTo(3);
+    assertThat(card.path("items").get(1).path("noteId").asLong()).isEqualTo(note);
     return note;
   }
 

@@ -4,6 +4,7 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesEntry;
 import com.example.short_link.post.domain.SeriesItemEntity;
 import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.SeriesNote;
@@ -20,6 +21,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -36,7 +38,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PublicSeriesQueryService {
 
-  private static final int MIN_POSTS = 2;
+  private static final int MIN_ITEMS = 2;
 
   private static final int PREVIEW_POSTS = 4;
 
@@ -54,56 +56,25 @@ public class PublicSeriesQueryService {
     Map<Long, SeriesEntity> series =
         seriesRepository.findAllByIdIn(ids).stream()
             .collect(Collectors.toMap(SeriesEntity::getId, Function.identity()));
-    Map<Long, UserEntity> authors =
-        userRepository
-            .findAllByIdIn(
-                series.values().stream().map(SeriesEntity::getUserId).distinct().toList())
-            .stream()
-            .filter(u -> !u.isDeleted())
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserEntity> authors = liveAuthorsOf(series.values());
+    Map<Long, List<SeriesEntry>> entries = seriesItemReader.readableEntries(ids);
 
     return ids.stream()
         .map(series::get)
         .filter(Objects::nonNull)
         .filter(s -> authors.containsKey(s.getUserId()))
-        .map(s -> subscribedCard(s, authors.get(s.getUserId())))
-        .filter(Objects::nonNull)
+        .filter(s -> entries.containsKey(s.getId()))
+        .map(s -> card(s, authors.get(s.getUserId()), entries.get(s.getId())))
         .sorted(
             Comparator.comparing(
                 PublicSeriesCard::lastPublishedAt, Comparator.nullsLast(Comparator.reverseOrder())))
         .toList();
   }
 
-  private PublicSeriesCard subscribedCard(SeriesEntity s, UserEntity author) {
-    List<PostEntity> published =
-        postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-            s.getId(), PostStatus.PUBLISHED);
-    if (published.isEmpty()) return null;
-    Instant last =
-        published.stream()
-            .map(PostEntity::getPublishedAt)
-            .filter(Objects::nonNull)
-            .max(Comparator.naturalOrder())
-            .orElse(null);
-    List<SeriesPostRef> previews =
-        published.stream()
-            .limit(PREVIEW_POSTS)
-            .map(p -> new SeriesPostRef(p.getSlug(), p.getTitle(), p.getOgImageUrl()))
-            .toList();
-    return new PublicSeriesCard(
-        s.getId(),
-        PublicAuthorView.from(author),
-        s.getSlug(),
-        s.getTitle(),
-        published.size(),
-        last,
-        previews);
-  }
-
   // 삭제 작성자를 제외해도 요청 수를 채울 수 있도록 후보를 더 조회한다.
   public List<PublicSeriesCard> discoverSeries(int limit) {
     int safeLimit = Math.max(limit, 1);
-    List<SeriesActivity> ranked = postRepository.findActiveSeries(MIN_POSTS, safeLimit * 2);
+    List<SeriesActivity> ranked = seriesItemReader.activeSeries(MIN_ITEMS, safeLimit * 2);
     if (ranked.isEmpty()) return List.of();
 
     Map<Long, SeriesEntity> series =
@@ -111,52 +82,56 @@ public class PublicSeriesQueryService {
             .findAllByIdIn(ranked.stream().map(SeriesActivity::seriesId).toList())
             .stream()
             .collect(Collectors.toMap(SeriesEntity::getId, Function.identity()));
-    Map<Long, UserEntity> authors =
-        userRepository
-            .findAllByIdIn(
-                series.values().stream().map(SeriesEntity::getUserId).distinct().toList())
-            .stream()
-            .filter(u -> !u.isDeleted())
-            .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
+    Map<Long, UserEntity> authors = liveAuthorsOf(series.values());
 
-    // 제외될 시리즈의 미리보기를 조회하지 않도록 작성자 검사와 개수 제한을 먼저 적용한다.
-    return ranked.stream()
-        .map(a -> resolve(a, series.get(a.seriesId()), authors))
-        .filter(Objects::nonNull)
-        .limit(safeLimit)
-        .map(this::toCard)
+    // 제외될 시리즈의 항목을 읽지 않도록 작성자 검사와 개수 제한을 먼저 적용한다.
+    List<SeriesEntity> chosen =
+        ranked.stream()
+            .map(a -> series.get(a.seriesId()))
+            .filter(Objects::nonNull)
+            .filter(s -> authors.containsKey(s.getUserId()))
+            .limit(safeLimit)
+            .toList();
+    Map<Long, List<SeriesEntry>> entries =
+        seriesItemReader.readableEntries(chosen.stream().map(SeriesEntity::getId).toList());
+    return chosen.stream()
+        .filter(s -> entries.containsKey(s.getId()))
+        .map(s -> card(s, authors.get(s.getUserId()), entries.get(s.getId())))
         .toList();
   }
 
-  private Resolved resolve(
-      SeriesActivity activity, SeriesEntity series, Map<Long, UserEntity> authors) {
-    if (series == null) return null;
-    UserEntity author = authors.get(series.getUserId());
-    if (author == null) return null;
-    return new Resolved(activity, series, author);
-  }
-
-  private PublicSeriesCard toCard(Resolved r) {
-    return new PublicSeriesCard(
-        r.series().getId(),
-        PublicAuthorView.from(r.author()),
-        r.series().getSlug(),
-        r.series().getTitle(),
-        (int) r.activity().postCount(),
-        r.activity().lastPublishedAt(),
-        memberPreviews(r.series().getId()));
-  }
-
-  private List<SeriesPostRef> memberPreviews(Long seriesId) {
-    return postRepository
-        .findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, PostStatus.PUBLISHED)
+  private Map<Long, UserEntity> liveAuthorsOf(Collection<SeriesEntity> series) {
+    return userRepository
+        .findAllByIdIn(series.stream().map(SeriesEntity::getUserId).distinct().toList())
         .stream()
-        .limit(PREVIEW_POSTS)
-        .map(p -> new SeriesPostRef(p.getSlug(), p.getTitle(), p.getOgImageUrl()))
-        .toList();
+        .filter(u -> !u.isDeleted())
+        .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
   }
 
-  private record Resolved(SeriesActivity activity, SeriesEntity series, UserEntity author) {}
+  private static PublicSeriesCard card(
+      SeriesEntity series, UserEntity author, List<SeriesEntry> entries) {
+    List<SeriesEntry> posts =
+        entries.stream().filter(e -> e.type() == SeriesItemType.POST).toList();
+    Instant last =
+        entries.stream()
+            .map(SeriesEntry::at)
+            .filter(Objects::nonNull)
+            .max(Comparator.naturalOrder())
+            .orElse(null);
+    return new PublicSeriesCard(
+        series.getId(),
+        PublicAuthorView.from(author),
+        series.getSlug(),
+        series.getTitle(),
+        posts.size(),
+        last,
+        posts.stream()
+            .limit(PREVIEW_POSTS)
+            .map(p -> new SeriesPostRef(p.slug(), p.title(), p.ogImageUrl()))
+            .toList(),
+        entries.size(),
+        entries.stream().limit(PREVIEW_POSTS).map(SeriesItemPreview::of).toList());
+  }
 
   public PublicSeriesListView listPublicSeries(String username) {
     UserEntity author = resolveAuthor(username);
