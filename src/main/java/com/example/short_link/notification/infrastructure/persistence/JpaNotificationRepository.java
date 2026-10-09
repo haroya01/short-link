@@ -12,6 +12,6 @@ public interface JpaNotificationRepository extends JpaRepository<NotificationEnt
   @Modifying
   @Query(
       "update NotificationEntity n set n.readAt = :at "
-          + "where n.recipientUserId = :recipientUserId and n.readAt is null")
+          + "where n.recipientUserId = :recipientUserId and n.readAt is null and n.filtered = false")
   int markAllRead(@Param("recipientUserId") Long recipientUserId, @Param("at") Instant at);
 }

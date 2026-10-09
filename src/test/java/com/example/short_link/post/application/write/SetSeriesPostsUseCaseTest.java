@@ -84,4 +84,20 @@ class SetSeriesPostsUseCaseTest {
 
     verify(setSeriesItems).write(series, 7L, List.of(note(40L)));
   }
+
+  @Test
+  void aPostLeavingTheSeriesTakesItsOwnPlaceAndTheRestStayAroundTheNotes() {
+    when(seriesItemRepository.findBySeriesId(5L))
+        .thenReturn(
+            List.of(
+                row(SeriesItemType.POST, 1L, 0),
+                row(SeriesItemType.NOTE, 40L, 1),
+                row(SeriesItemType.POST, 2L, 2),
+                row(SeriesItemType.NOTE, 41L, 3),
+                row(SeriesItemType.POST, 3L, 4)));
+
+    useCase.execute(new SetSeriesPostsCommand(7L, 5L, List.of(2L, 3L)));
+
+    verify(setSeriesItems).write(series, 7L, List.of(note(40L), post(2L), note(41L), post(3L)));
+  }
 }

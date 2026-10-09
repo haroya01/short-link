@@ -71,7 +71,7 @@
 @junit | account-web-refresh | 1 | 0 | 1 | 0 | 2
 @junit | author-analytics-overview | 7 | 0 | 0 | 0 | 7
 @junit | author-analytics-post-table | 3 | 0 | 0 | 0 | 3
-@junit | author-block-reader | 2 | 1 | 0 | 0 | 3
+@junit | author-block-reader | 2 | 1 | 0 | 3 | 6
 @junit | author-blocked-users-list | 2 | 0 | 0 | 0 | 2
 @junit | author-comment-like | 11 | 2 | 0 | 0 | 13
 @junit | author-comment-reply | 9 | 2 | 0 | 0 | 11
