@@ -6,8 +6,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.request;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.observability.OutcomeResolver;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.application.ClickFlusher;
@@ -54,6 +56,18 @@ class RedirectControllerTest {
         .andExpect(header().string("Location", "https://example.com/destination"))
         .andExpect(header().string("Cache-Control", "private, max-age=90"))
         .andExpect(header().string("X-Robots-Tag", "noindex, nofollow"));
+  }
+
+  @Test
+  void redirectsWhenTheShortUrlEndsWithASlash() throws Exception {
+    repository.save(new LinkEntity("https://example.com/slash", "slash01"));
+
+    mvc.perform(get("/slash01/"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "https://example.com/slash"));
+    mvc.perform(get("/slash01/?src=qr"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "https://example.com/slash"));
   }
 
   @Test
@@ -170,5 +184,26 @@ class RedirectControllerTest {
         .andExpect(status().isGone())
         .andExpect(content().contentTypeCompatibleWith(MediaType.TEXT_HTML))
         .andExpect(content().string(Matchers.containsString("더 이상 열 수 없")));
+  }
+
+  @Test
+  void anEndedCampaignLinkSendsVisitorsToItsFollowUpPage() throws Exception {
+    LinkEntity link =
+        repository.save(new LinkEntity("https://example.com/launch", "endred1", null, null));
+    link.applyCampaignExpiration(
+        Instant.now().minus(1, ChronoUnit.MINUTES), "https://example.com/next", null);
+    repository.save(link);
+
+    mvc.perform(get("/endred1"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "https://example.com/next"))
+        .andExpect(header().string("X-Robots-Tag", "noindex, nofollow"))
+        .andExpect(request().attribute(OutcomeResolver.ATTRIBUTE, "expired"));
+    mvc.perform(get("/endred1").header("User-Agent", "Slackbot-LinkExpanding 1.0"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "https://example.com/next"));
+
+    clickFlusher.flush();
+    assertThat(clickEventRepository.countByLinkId(link.linkId().value())).isZero();
   }
 }

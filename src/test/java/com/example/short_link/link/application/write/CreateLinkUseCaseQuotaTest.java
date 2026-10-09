@@ -23,7 +23,7 @@ import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import jakarta.persistence.EntityManager;
 import java.lang.reflect.Field;
 import java.time.Instant;
-import java.util.Optional;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -35,7 +35,7 @@ class LinkCreationServiceQuotaTest {
   void throwsWhenAuthenticatedUserAtQuota() {
     LinkRepository repo = mock(LinkRepository.class);
     when(repo.countByUserId(42L)).thenReturn(200L);
-    when(repo.findFirstByUserIdAndOriginalUrl(any(), any())).thenReturn(Optional.empty());
+    when(repo.findUnrestrictedByUserIdAndOriginalUrl(any(), any())).thenReturn(List.of());
 
     UrlSafetyChecker safety = mock(UrlSafetyChecker.class);
     when(safety.isSafe(any())).thenReturn(true);
@@ -53,6 +53,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            linkId -> false,
             new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
@@ -87,6 +88,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            linkId -> false,
             new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
@@ -102,8 +104,8 @@ class LinkCreationServiceQuotaTest {
   void deduplicatesExistingActiveLinkForAuthUser() {
     LinkRepository repo = mock(LinkRepository.class);
     LinkEntity existing = withId(new LinkEntity("https://example.com/x", "exist01", 99L, null), 7L);
-    when(repo.findFirstByUserIdAndOriginalUrl(99L, "https://example.com/x"))
-        .thenReturn(Optional.of(existing));
+    when(repo.findUnrestrictedByUserIdAndOriginalUrl(99L, "https://example.com/x"))
+        .thenReturn(List.of(existing));
 
     UrlSafetyChecker safety = mock(UrlSafetyChecker.class);
     when(safety.isSafe(any())).thenReturn(true);
@@ -121,6 +123,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            linkId -> false,
             new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
@@ -152,6 +155,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            linkId -> false,
             new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
@@ -164,15 +168,11 @@ class LinkCreationServiceQuotaTest {
   }
 
   @Test
-  void doesNotDeduplicateWhenExistingIsExpired() {
+  void doesNotReuseALinkAnotherFeatureCreatedForItself() {
     LinkRepository repo = mock(LinkRepository.class);
-    LinkEntity existing =
-        withId(
-            new LinkEntity(
-                "https://example.com/x", "expired1", 99L, Instant.now().minusSeconds(3600)),
-            8L);
-    when(repo.findFirstByUserIdAndOriginalUrl(99L, "https://example.com/x"))
-        .thenReturn(Optional.of(existing));
+    LinkEntity existing = withId(new LinkEntity("https://example.com/x", "batch01", 99L, null), 8L);
+    when(repo.findUnrestrictedByUserIdAndOriginalUrl(99L, "https://example.com/x"))
+        .thenReturn(List.of(existing));
     when(repo.countByUserId(99L)).thenReturn(0L);
 
     ShortCodeGenerator gen = mock(ShortCodeGenerator.class);
@@ -195,6 +195,7 @@ class LinkCreationServiceQuotaTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            linkId -> linkId.value() == 8L,
             new BCryptPasswordEncoder(4),
             noopTx(),
             200L);
@@ -202,6 +203,42 @@ class LinkCreationServiceQuotaTest {
     LinkCreated created =
         svc.execute(CreateLinkCommand.of("https://example.com/x", 99L, null, null));
     assertThat(created.shortCode().value()).isEqualTo("newcode");
+  }
+
+  @Test
+  void aRequestedExpiryNeverLooksForALinkToReuse() {
+    LinkRepository repo = mock(LinkRepository.class);
+    ShortCodeGenerator gen = mock(ShortCodeGenerator.class);
+    when(gen.generate()).thenReturn("expires");
+    when(repo.save(any(LinkEntity.class))).thenAnswer(i -> withId(i.getArgument(0), 10L));
+    UrlSafetyChecker safety = mock(UrlSafetyChecker.class);
+    when(safety.isSafe(any())).thenReturn(true);
+
+    CreateLinkUseCase svc =
+        new CreateLinkUseCase(
+            repo,
+            gen,
+            new SimpleMeterRegistry(),
+            event -> {},
+            mock(AuditLogService.class),
+            new CreateLinkValidator(
+                (BlockedDomainChecker) mockBlockedDomainService(),
+                safety,
+                (MeterRegistry) new SimpleMeterRegistry(),
+                "http://localhost:8080"),
+            new LinkSidecarPersister(mock(EntityManager.class)),
+            linkId -> false,
+            new BCryptPasswordEncoder(4),
+            noopTx(),
+            200L);
+
+    LinkCreated created =
+        svc.execute(
+            CreateLinkCommand.of(
+                "https://example.com/x", 99L, null, Instant.parse("2030-01-01T00:00:00Z")));
+
+    assertThat(created.shortCode().value()).isEqualTo("expires");
+    verify(repo, never()).findUnrestrictedByUserIdAndOriginalUrl(any(), any());
   }
 
   private static BlockedDomainQueryService mockBlockedDomainService() {

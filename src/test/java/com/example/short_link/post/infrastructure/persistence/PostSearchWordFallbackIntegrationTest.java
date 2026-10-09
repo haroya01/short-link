@@ -35,7 +35,7 @@ class PostSearchWordFallbackIntegrationTest {
   }
 
   private List<String> titlesFor(String query) {
-    return postRepository.searchPublished(query, null, 0, 500).stream()
+    return postRepository.searchPublished(null, query, null, 0, 500).stream()
         .map(PostEntity::getTitle)
         .filter(t -> t.contains("swf648"))
         .toList();

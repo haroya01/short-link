@@ -1,15 +1,15 @@
-package com.example.short_link.portability.application;
+package com.example.short_link.common.csv;
 
 import java.util.ArrayList;
 import java.util.List;
 
-// RFC 4180, as Mastodon writes its exports: fields split by commas, a quoted field may hold commas,
-// line breaks and doubled quotes. Blank lines are skipped and a leading byte-order mark ignored.
-final class ImportCsv {
+// RFC 4180: fields split by commas, a quoted field may hold commas, line breaks and doubled quotes.
+// Cells are trimmed, blank lines are skipped and a leading byte-order mark ignored.
+public final class CsvRows {
 
-  private ImportCsv() {}
+  private CsvRows() {}
 
-  static List<List<String>> parse(String text) {
+  public static List<List<String>> parse(String text) {
     String content = text.startsWith("﻿") ? text.substring(1) : text;
     List<List<String>> rows = new ArrayList<>();
     List<String> row = new ArrayList<>();

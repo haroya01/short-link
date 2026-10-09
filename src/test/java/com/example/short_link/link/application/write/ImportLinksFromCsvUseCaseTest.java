@@ -5,6 +5,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.link.application.dto.BulkImportResult;
 import com.example.short_link.link.application.dto.BulkImportRow;
+import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.exception.LinkException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -23,6 +25,7 @@ class ImportLinksFromCsvUseCaseTest {
 
   @Autowired private ImportLinksFromCsvUseCase useCase;
   @Autowired private UserRepository userRepository;
+  @Autowired private LinkRepository linkRepository;
 
   @Test
   void importsAllValidRows() throws Exception {
@@ -164,6 +167,29 @@ class ImportLinksFromCsvUseCaseTest {
 
     assertThat(result.ok()).isZero();
     assertThat(result.failed()).isEqualTo(2);
+  }
+
+  @Test
+  void aQuotedUrlKeepsItsCommasAndQuotes() throws Exception {
+    UserEntity user = userRepository.save(new UserEntity("bulkq@example.com", "google", "g-bulkq"));
+    String csv =
+        "\uFEFFurl,custom_code\r\n"
+            + "\"https://example.com/search?tags=a,b&q=\"\"x\"\"\",quoted1\r\n"
+            + "https://example.com/plain,quoted2\r\n";
+
+    BulkImportResult result =
+        useCase.execute(
+            new ImportLinksFromCsvCommand(
+                user.getId(), new ByteArrayInputStream(csv.getBytes(StandardCharsets.UTF_8))));
+
+    assertThat(result.ok()).isEqualTo(2);
+    assertThat(result.rows())
+        .extracting(BulkImportRow::url)
+        .containsExactly(
+            "https://example.com/search?tags=a,b&q=\"x\"", "https://example.com/plain");
+    assertThat(
+            linkRepository.findByShortCode(new ShortCode("quoted1")).orElseThrow().getOriginalUrl())
+        .isEqualTo("https://example.com/search?tags=a,b&q=\"x\"");
   }
 
   @Test

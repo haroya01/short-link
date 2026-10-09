@@ -1,5 +1,6 @@
 package com.example.short_link.portability.application;
 
+import com.example.short_link.common.csv.CsvRows;
 import com.example.short_link.portability.domain.AccountImportEntity;
 import com.example.short_link.portability.domain.AccountImportRowEntity;
 import com.example.short_link.portability.domain.ImportKind;
@@ -74,7 +75,7 @@ public class AccountImportService {
     if (imports.running(userId)) {
       throw new PortabilityException(PortabilityErrorCode.IMPORT_RUNNING);
     }
-    List<List<String>> lines = ImportCsv.parse(csv == null ? "" : csv);
+    List<List<String>> lines = CsvRows.parse(csv == null ? "" : csv);
     if (!lines.isEmpty()
         && kind.header() != null
         && kind.header().equalsIgnoreCase(lines.get(0).get(0))) {

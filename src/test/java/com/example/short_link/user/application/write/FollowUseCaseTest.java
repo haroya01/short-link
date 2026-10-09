@@ -108,6 +108,21 @@ class FollowUseCaseTest {
   }
 
   @Test
+  void anAccountWaitingOutItsDeletionCannotBeFollowed() {
+    UserEntity leaving = user(2L, "bob");
+    leaving.softDelete();
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(leaving));
+
+    assertThatThrownBy(() -> useCase.follow(9L, "bob", null))
+        .isInstanceOf(UserException.class)
+        .extracting(e -> ((UserException) e).errorCode())
+        .isEqualTo(UserErrorCode.USER_NOT_FOUND);
+    verify(followRepository, never()).save(any());
+    verify(followRequests, never()).save(any());
+    verifyNoInteractions(events);
+  }
+
+  @Test
   void followRejectedWhenTargetBlockedFollower() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
     when(blockRepository.existsByBlockerIdAndBlockedId(2L, 9L)).thenReturn(true);

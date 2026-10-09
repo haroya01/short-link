@@ -16,20 +16,34 @@ public interface JpaFollowRepository extends JpaRepository<FollowEntity, Long> {
 
   Optional<FollowEntity> findByFollowerIdAndFollowingId(Long followerId, Long followingId);
 
-  long countByFollowingId(Long followingId);
+  String LIVE = " and u.deletedAt is null and u.username is not null";
 
-  long countByFollowerId(Long followerId);
+  @Query(
+      "select count(f) from FollowEntity f join UserEntity u on u.id = f.followerId"
+          + " where f.followingId = :id"
+          + LIVE)
+  long countLiveFollowers(@Param("id") Long followingId);
+
+  @Query(
+      "select count(f) from FollowEntity f join UserEntity u on u.id = f.followingId"
+          + " where f.followerId = :id"
+          + LIVE)
+  long countLiveFollowing(@Param("id") Long followerId);
 
   @Query("select f.followingId from FollowEntity f where f.followerId = :followerId")
   List<Long> findFollowingIds(@Param("followerId") Long followerId);
 
   @Query(
-      "select f.followerId from FollowEntity f where f.followingId = :id"
+      "select f.followerId from FollowEntity f join UserEntity u on u.id = f.followerId"
+          + " where f.followingId = :id"
+          + LIVE
           + " order by f.createdAt desc, f.id desc")
   List<Long> findFollowerIdsPaged(@Param("id") Long followingId, Pageable pageable);
 
   @Query(
-      "select f.followingId from FollowEntity f where f.followerId = :id"
+      "select f.followingId from FollowEntity f join UserEntity u on u.id = f.followingId"
+          + " where f.followerId = :id"
+          + LIVE
           + " order by f.createdAt desc, f.id desc")
   List<Long> findFollowingIdsPaged(@Param("id") Long followerId, Pageable pageable);
 
@@ -39,8 +53,10 @@ public interface JpaFollowRepository extends JpaRepository<FollowEntity, Long> {
   List<Long> findFollowedAmong(@Param("viewer") Long viewerId, @Param("ids") Collection<Long> ids);
 
   @Query(
-      "select f.followingId, count(f) from FollowEntity f"
-          + " where f.followingId in :ids group by f.followingId")
+      "select f.followingId, count(f) from FollowEntity f join UserEntity u on u.id = f.followerId"
+          + " where f.followingId in :ids"
+          + LIVE
+          + " group by f.followingId")
   List<Object[]> countFollowersByIdIn(@Param("ids") Collection<Long> ids);
 
   @Modifying

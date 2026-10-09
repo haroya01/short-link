@@ -101,7 +101,10 @@ class PublicFeedSearchIntegrationTest {
   }
 
   private List<String> slugs(String query) {
-    return service.feed(PublicFeedQuery.from(query, null, "recent", null, 0, 20)).items().stream()
+    return service
+        .feed(null, PublicFeedQuery.from(query, null, "recent", null, 0, 20))
+        .items()
+        .stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -171,7 +174,7 @@ class PublicFeedSearchIntegrationTest {
     publish(alice, "a2", "Two", "x", List.of());
     publish(bob, "b1", "Three", "x", List.of());
 
-    List<SuggestedAuthorView> suggested = service.suggestedAuthors(5);
+    List<SuggestedAuthorView> suggested = service.suggestedAuthors(null, 5);
 
     assertThat(suggested).extracting(s -> s.author().username()).containsExactly("alice", "bob");
     assertThat(suggested.get(0).postCount()).isEqualTo(2);
@@ -183,7 +186,7 @@ class PublicFeedSearchIntegrationTest {
     PostEntity draft = new PostEntity(alice, "d", "Draft", "ko");
     postRepository.save(draft);
 
-    assertThat(service.suggestedAuthors(5)).isEmpty();
+    assertThat(service.suggestedAuthors(null, 5)).isEmpty();
   }
 
   private long publishReturningId(
@@ -197,12 +200,16 @@ class PublicFeedSearchIntegrationTest {
     return id;
   }
 
-  private void view(long postId, Instant at) {
-    postViewEventRepository.save(new PostViewEventEntity(postId, at));
+  private void view(long postId, Instant at, String visitor) {
+    postViewEventRepository.save(
+        PostViewEventEntity.builder().postId(postId).viewedAt(at).visitorHash(visitor).build());
   }
 
   private List<String> trendingSlugs(String query) {
-    return service.feed(PublicFeedQuery.from(query, null, "trending", null, 0, 20)).items().stream()
+    return service
+        .feed(null, PublicFeedQuery.from(query, null, "trending", null, 0, 20))
+        .items()
+        .stream()
         .map(PublicFeedItem::slug)
         .toList();
   }
@@ -216,13 +223,13 @@ class PublicFeedSearchIntegrationTest {
 
     // 세 글 모두 제목이 kotlin과 맞으니 trending 정렬은 누적 view_count가 아니라 최근 구간 조회수를 따라야 한다.
     long stale = publishReturningId(a, "kotlin-stale", "Kotlin deep dive", List.of(), 800);
-    for (int i = 0; i < 6; i++) view(stale, outOfWindow); // big lifetime count, but all old
+    for (int i = 0; i < 6; i++) view(stale, outOfWindow, "stale-" + i);
 
     long fresh = publishReturningId(a, "kotlin-fresh", "Kotlin coroutines", List.of(), 1);
-    for (int i = 0; i < 4; i++) view(fresh, inWindow);
+    for (int i = 0; i < 4; i++) view(fresh, inWindow, "fresh-" + i);
 
     long mild = publishReturningId(a, "kotlin-mild", "Kotlin DSLs", List.of(), 0);
-    view(mild, inWindow);
+    view(mild, inWindow, "mild");
 
     assertThat(trendingSlugs("kotlin"))
         .containsExactly("kotlin-fresh", "kotlin-mild", "kotlin-stale");
@@ -230,7 +237,7 @@ class PublicFeedSearchIntegrationTest {
 
   private List<String> relevanceSlugs(String query) {
     return service
-        .feed(PublicFeedQuery.from(query, null, "relevance", null, 0, 20))
+        .feed(null, PublicFeedQuery.from(query, null, "relevance", null, 0, 20))
         .items()
         .stream()
         .map(PublicFeedItem::slug)

@@ -105,9 +105,9 @@ class ForYouQueryServiceTest {
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
     when(postReadRepository.findByUserIdOrderByReadAtDesc(9L, 0, 200)).thenReturn(List.of());
     when(postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(9L)).thenReturn(List.of());
-    when(postRepository.findPublishedTrending(null, 0, 20))
+    when(postRepository.findPublishedTrending(9L, null, 0, 20))
         .thenReturn(List.of(post(7L, 2L, List.of("anything"))));
-    when(postRepository.countPublished(null)).thenReturn(1L);
+    when(postRepository.countPublished(9L, null)).thenReturn(1L);
     when(feedItemAssembler.assemble(anyList())).thenReturn(List.of(item(7L, List.of("anything"))));
 
     PublicFeedView view = service.feedForYou(9L, 0, 20);
@@ -123,9 +123,9 @@ class ForYouQueryServiceTest {
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
     when(postReadRepository.findByUserIdOrderByReadAtDesc(9L, 0, 200)).thenReturn(List.of());
     when(postLikeRepository.findAllByUserIdOrderByCreatedAtDesc(9L)).thenReturn(List.of());
-    when(postRepository.findPublishedTrending(null, 0, 20))
+    when(postRepository.findPublishedTrending(9L, null, 0, 20))
         .thenReturn(List.of(post(7L, 2L, List.of("anything"))));
-    when(postRepository.countPublished(null)).thenReturn(50L); // (0+1)*20 < 50 -> hasNext
+    when(postRepository.countPublished(9L, null)).thenReturn(50L); // (0+1)*20 < 50 -> hasNext
     when(feedItemAssembler.assemble(anyList())).thenReturn(List.of(item(7L, List.of("anything"))));
 
     assertThat(service.feedForYou(9L, 0, 20).hasNext()).isTrue();

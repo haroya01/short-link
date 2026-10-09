@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.write;
 
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.ClaimResult;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -17,6 +18,7 @@ public class ClaimAnonymousLinksUseCase {
 
   private final LinkRepository repository;
   private final MeterRegistry meterRegistry;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
   public ClaimResult execute(ClaimAnonymousLinksCommand command) {
@@ -30,6 +32,7 @@ public class ClaimAnonymousLinksUseCase {
       link.claim(command.userId());
       claimed++;
     }
+    linkCacheEviction.evictAllAfterCommit(matches.stream().map(LinkEntity::getShortCode).toList());
     int skipped = bounded.size() - claimed;
     meterRegistry.counter("link.claim", "result", "ok").increment(claimed);
     meterRegistry.counter("link.claim", "result", "skipped").increment(skipped);

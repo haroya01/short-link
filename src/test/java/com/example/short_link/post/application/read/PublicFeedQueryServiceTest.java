@@ -79,11 +79,12 @@ class PublicFeedQueryServiceTest {
     PostEntity p1 = post(1L, "a");
     ReflectionTestUtils.setField(p1, "id", 42L);
     PostEntity p2 = post(2L, "b");
-    when(postRepository.findPublishedRecent(null, 0, 20)).thenReturn(List.of(p1, p2));
+    when(postRepository.findPublishedRecent(null, null, 0, 20)).thenReturn(List.of(p1, p2));
     when(userRepository.findAllByIdIn(List.of(1L, 2L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countPublished(null)).thenReturn(1L);
+    when(postRepository.countPublished(null, null)).thenReturn(1L);
 
-    PublicFeedView view = service.feed(PublicFeedQuery.from(null, null, "recent", null, 0, 20));
+    PublicFeedView view =
+        service.feed(null, PublicFeedQuery.from(null, null, "recent", null, 0, 20));
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).id()).isEqualTo(42L);
@@ -94,12 +95,13 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void hasNextWhenMorePagesRemain() {
-    when(postRepository.findPublishedRecent(null, 0, 2))
+    when(postRepository.findPublishedRecent(null, null, 0, 2))
         .thenReturn(List.of(post(1L, "a"), post(1L, "b")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countPublished(null)).thenReturn(10L);
+    when(postRepository.countPublished(null, null)).thenReturn(10L);
 
-    PublicFeedView view = service.feed(PublicFeedQuery.from(null, null, "recent", null, 0, 2));
+    PublicFeedView view =
+        service.feed(null, PublicFeedQuery.from(null, null, "recent", null, 0, 2));
 
     assertThat(view.items()).hasSize(2);
     assertThat(view.hasNext()).isTrue();
@@ -107,11 +109,13 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void feedByTagUsesTagQuery() {
-    when(postRepository.findPublishedByTag("spring", 0, 20)).thenReturn(List.of(post(1L, "a")));
+    when(postRepository.findPublishedByTag(null, "spring", 0, 20))
+        .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countPublishedByTag("spring")).thenReturn(1L);
+    when(postRepository.countPublishedByTag(null, "spring")).thenReturn(1L);
 
-    PublicFeedView view = service.feed(PublicFeedQuery.from(null, "spring", null, null, 0, 20));
+    PublicFeedView view =
+        service.feed(null, PublicFeedQuery.from(null, "spring", null, null, 0, 20));
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).slug()).isEqualTo("a");
@@ -120,62 +124,110 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void searchUsesRelevanceQueryByDefault() {
-    when(postRepository.searchPublishedByRelevance("spring", null, 0, 20))
+    when(postRepository.searchPublishedByRelevance(null, "spring", null, 0, 20))
         .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
+    when(postRepository.countSearchPublished(null, "spring", null)).thenReturn(1L);
 
     PublicFeedView view =
-        service.feed(PublicFeedQuery.from("spring", null, "relevance", null, 0, 20));
+        service.feed(null, PublicFeedQuery.from("spring", null, "relevance", null, 0, 20));
 
     assertThat(view.items()).hasSize(1);
     assertThat(view.items().get(0).slug()).isEqualTo("a");
-    verify(postRepository).searchPublishedByRelevance("spring", null, 0, 20);
+    verify(postRepository).searchPublishedByRelevance(null, "spring", null, 0, 20);
   }
 
   @Test
   void searchUsesRecentQueryWhenSortRecent() {
-    when(postRepository.searchPublished("spring", null, 0, 20)).thenReturn(List.of(post(1L, "a")));
+    when(postRepository.searchPublished(null, "spring", null, 0, 20))
+        .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
+    when(postRepository.countSearchPublished(null, "spring", null)).thenReturn(1L);
 
-    service.feed(PublicFeedQuery.from("spring", null, "recent", null, 0, 20));
+    service.feed(null, PublicFeedQuery.from("spring", null, "recent", null, 0, 20));
 
-    verify(postRepository).searchPublished("spring", null, 0, 20);
+    verify(postRepository).searchPublished(null, "spring", null, 0, 20);
   }
 
   @Test
   void searchUsesTrendingQueryWhenSorted() {
-    when(postRepository.searchPublishedTrending("spring", null, 0, 20))
+    when(postRepository.searchPublishedTrending(null, "spring", null, 0, 20))
         .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countSearchPublished("spring", null)).thenReturn(1L);
+    when(postRepository.countSearchPublished(null, "spring", null)).thenReturn(1L);
 
-    service.feed(PublicFeedQuery.from("spring", null, "trending", null, 0, 20));
+    service.feed(null, PublicFeedQuery.from("spring", null, "trending", null, 0, 20));
 
-    verify(postRepository).searchPublishedTrending("spring", null, 0, 20);
+    verify(postRepository).searchPublishedTrending(null, "spring", null, 0, 20);
   }
 
   @Test
   void combinedSearchAndTagUsesOnlyTheSearchRepositoryQueries() {
-    when(postRepository.searchPublishedTrending("spring", " ko ", 2, 8)).thenReturn(List.of());
+    when(postRepository.searchPublishedTrending(null, "spring", " ko ", 2, 8))
+        .thenReturn(List.of());
 
-    service.feed(PublicFeedQuery.from(" spring ", "java", "TRENDING", " ko ", 2, 8));
+    service.feed(null, PublicFeedQuery.from(" spring ", "java", "TRENDING", " ko ", 2, 8));
 
-    verify(postRepository).searchPublishedTrending("spring", " ko ", 2, 8);
-    verify(postRepository).countSearchPublished("spring", " ko ");
+    verify(postRepository).searchPublishedTrending(null, "spring", " ko ", 2, 8);
+    verify(postRepository).countSearchPublished(null, "spring", " ko ");
     verifyNoMoreInteractions(postRepository);
   }
 
   @Test
-  void taggedFeedIgnoresSortAndLanguageAndUsesTheSameTagForRowsAndCount() {
-    when(postRepository.findPublishedByTag("java", 0, 20)).thenReturn(List.of());
+  void taggedFeedHonorsTrendingSortIgnoresLanguageAndCountsTheSameTag() {
+    when(postRepository.findPublishedTrendingByTag(null, "java", 0, 20)).thenReturn(List.of());
 
-    service.feed(PublicFeedQuery.from("  ", " java ", "trending", "ja", 0, 20));
+    service.feed(null, PublicFeedQuery.from("  ", " java ", "trending", "ja", 0, 20));
 
-    verify(postRepository).findPublishedByTag("java", 0, 20);
-    verify(postRepository).countPublishedByTag("java");
+    verify(postRepository).findPublishedTrendingByTag(null, "java", 0, 20);
+    verify(postRepository).countPublishedByTag(null, "java");
     verifyNoMoreInteractions(postRepository);
+  }
+
+  @Test
+  void taggedFeedWithoutTrendingSortStaysNewestFirst() {
+    when(postRepository.findPublishedByTag(null, "java", 0, 20)).thenReturn(List.of());
+
+    service.feed(null, PublicFeedQuery.from(null, "java", "recent", null, 0, 20));
+
+    verify(postRepository).findPublishedByTag(null, "java", 0, 20);
+    verify(postRepository).countPublishedByTag(null, "java");
+    verifyNoMoreInteractions(postRepository);
+  }
+
+  @Test
+  void aSignedInViewerScopesEveryPublicFeedRead() {
+    service.feed(7L, PublicFeedQuery.from(null, null, "recent", null, 0, 20));
+    service.feed(7L, PublicFeedQuery.from(null, null, "trending", null, 0, 20));
+    service.feed(7L, PublicFeedQuery.from(null, "java", "recent", null, 0, 20));
+    service.feed(7L, PublicFeedQuery.from(null, "java", "trending", null, 0, 20));
+    service.feed(7L, PublicFeedQuery.from("kotlin", null, "relevance", null, 0, 20));
+    service.feed(7L, PublicFeedQuery.from("kotlin", null, "recent", null, 0, 20));
+    service.feed(7L, PublicFeedQuery.from("kotlin", null, "trending", null, 0, 20));
+
+    verify(postRepository).findPublishedRecent(7L, null, 0, 20);
+    verify(postRepository).findPublishedTrending(7L, null, 0, 20);
+    verify(postRepository, org.mockito.Mockito.times(2)).countPublished(7L, null);
+    verify(postRepository).findPublishedByTag(7L, "java", 0, 20);
+    verify(postRepository).findPublishedTrendingByTag(7L, "java", 0, 20);
+    verify(postRepository, org.mockito.Mockito.times(2)).countPublishedByTag(7L, "java");
+    verify(postRepository).searchPublishedByRelevance(7L, "kotlin", null, 0, 20);
+    verify(postRepository).searchPublished(7L, "kotlin", null, 0, 20);
+    verify(postRepository).searchPublishedTrending(7L, "kotlin", null, 0, 20);
+    verify(postRepository, org.mockito.Mockito.times(3)).countSearchPublished(7L, "kotlin", null);
+    verifyNoMoreInteractions(postRepository);
+  }
+
+  @Test
+  void suggestedAuthorsAndTopicSectionsAreScopedToTheViewer() {
+    when(postRepository.findPopularTags(6))
+        .thenReturn(List.of(new com.example.short_link.post.domain.TagCount("spring", 3L)));
+
+    service.suggestedAuthors(7L, 5);
+    service.trendingByTag(7L, 6, 8);
+
+    verify(postRepository).findTopAuthorStats(7L, 10);
+    verify(postRepository).findPublishedTrendingByTag(7L, "spring", 0, 8);
   }
 
   @Test
@@ -184,9 +236,10 @@ class PublicFeedQueryServiceTest {
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
     when(postRepository.findPublishedByAuthorsSeriesOrTags(
-            List.of(2L, 3L), List.of(), List.of(), 0, 20))
+            9L, List.of(2L, 3L), List.of(), List.of(), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
-    when(postRepository.countPublishedByAuthorsSeriesOrTags(List.of(2L, 3L), List.of(), List.of()))
+    when(postRepository.countPublishedByAuthorsSeriesOrTags(
+            9L, List.of(2L, 3L), List.of(), List.of()))
         .thenReturn(1L);
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
 
@@ -204,7 +257,7 @@ class PublicFeedQueryServiceTest {
     PostEntity inSeries = post(2L, "a");
     inSeries.assignToSeries(7L, 0);
     PostEntity byFollowed = post(3L, "b");
-    when(followingFeedReader.page(List.of(3L), List.of(7L), List.of(), 20, 20))
+    when(followingFeedReader.page(9L, List.of(3L), List.of(7L), List.of(), 20, 20))
         .thenReturn(
             List.of(
                 new FollowingFeedRef(SeriesItemType.NOTE, 40L, 7L),
@@ -212,7 +265,7 @@ class PublicFeedQueryServiceTest {
                 new FollowingFeedRef(SeriesItemType.NOTE, 41L, 7L),
                 new FollowingFeedRef(SeriesItemType.NOTE, 42L, 7L),
                 new FollowingFeedRef(SeriesItemType.POST, inSeries.getId(), null)));
-    when(followingFeedReader.count(List.of(3L), List.of(7L), List.of())).thenReturn(45L);
+    when(followingFeedReader.count(9L, List.of(3L), List.of(7L), List.of())).thenReturn(45L);
     when(postRepository.findAllByIdIn(List.of(byFollowed.getId(), inSeries.getId())))
         .thenReturn(List.of(inSeries, byFollowed));
     Instant at = Instant.parse("2026-10-09T00:00:00Z");
@@ -250,6 +303,7 @@ class PublicFeedQueryServiceTest {
             org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any(),
             org.mockito.ArgumentMatchers.anyInt(),
             org.mockito.ArgumentMatchers.anyInt());
   }
@@ -259,8 +313,9 @@ class PublicFeedQueryServiceTest {
     when(followRepository.findFollowingIds(9L)).thenReturn(List.of());
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of(7L));
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of(), List.of()));
-    when(followingFeedReader.page(List.of(), List.of(7L), List.of(), 0, 20)).thenReturn(List.of());
-    when(followingFeedReader.count(List.of(), List.of(7L), List.of())).thenReturn(0L);
+    when(followingFeedReader.page(9L, List.of(), List.of(7L), List.of(), 0, 20))
+        .thenReturn(List.of());
+    when(followingFeedReader.count(9L, List.of(), List.of(7L), List.of())).thenReturn(0L);
 
     PublicFeedView view = service.feedFollowing(9L, 0, 20);
 
@@ -276,10 +331,10 @@ class PublicFeedQueryServiceTest {
     when(seriesSubscriptionRepository.findSubscribedSeriesIds(9L)).thenReturn(List.of());
     when(tagPrefQueryService.get(9L)).thenReturn(new TagPrefsView(List.of("Spring"), List.of()));
     when(postRepository.findPublishedByAuthorsSeriesOrTags(
-            List.of(), List.of(), List.of("spring"), 0, 20))
+            9L, List.of(), List.of(), List.of("spring"), 0, 20))
         .thenReturn(List.of(post(2L, "a")));
     when(postRepository.countPublishedByAuthorsSeriesOrTags(
-            List.of(), List.of(), List.of("spring")))
+            9L, List.of(), List.of(), List.of("spring")))
         .thenReturn(1L);
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
 
@@ -318,13 +373,14 @@ class PublicFeedQueryServiceTest {
 
   @Test
   void trendingUsesTrendingQuery() {
-    when(postRepository.findPublishedTrending(null, 0, 20)).thenReturn(List.of(post(1L, "a")));
+    when(postRepository.findPublishedTrending(null, null, 0, 20))
+        .thenReturn(List.of(post(1L, "a")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
-    when(postRepository.countPublished(null)).thenReturn(1L);
+    when(postRepository.countPublished(null, null)).thenReturn(1L);
 
-    service.feed(PublicFeedQuery.from(null, null, "trending", null, 0, 20));
+    service.feed(null, PublicFeedQuery.from(null, null, "trending", null, 0, 20));
 
-    verify(postRepository).findPublishedTrending(null, 0, 20);
+    verify(postRepository).findPublishedTrending(null, null, 0, 20);
   }
 
   @Test
@@ -334,11 +390,13 @@ class PublicFeedQueryServiceTest {
             List.of(
                 new com.example.short_link.post.domain.TagCount("spring", 3L),
                 new com.example.short_link.post.domain.TagCount("rag", 2L)));
-    when(postRepository.findPublishedByTag("spring", 0, 8)).thenReturn(List.of(post(1L, "a")));
-    when(postRepository.findPublishedByTag("rag", 0, 8)).thenReturn(List.of(post(1L, "b")));
+    when(postRepository.findPublishedTrendingByTag(null, "spring", 0, 8))
+        .thenReturn(List.of(post(1L, "a")));
+    when(postRepository.findPublishedTrendingByTag(null, "rag", 0, 8))
+        .thenReturn(List.of(post(1L, "b")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
 
-    List<TrendingTagSection> sections = service.trendingByTag(6, 8);
+    List<TrendingTagSection> sections = service.trendingByTag(null, 6, 8);
 
     assertThat(sections).hasSize(2);
     assertThat(sections.get(0).tag()).isEqualTo("spring");
@@ -351,41 +409,42 @@ class PublicFeedQueryServiceTest {
   void trendingByTagSkipsTagsWhoseAuthorsAreAllMissing() {
     when(postRepository.findPopularTags(6))
         .thenReturn(List.of(new com.example.short_link.post.domain.TagCount("ghost", 1L)));
-    when(postRepository.findPublishedByTag("ghost", 0, 8)).thenReturn(List.of(post(9L, "x")));
+    when(postRepository.findPublishedTrendingByTag(null, "ghost", 0, 8))
+        .thenReturn(List.of(post(9L, "x")));
     when(userRepository.findAllByIdIn(List.of(9L))).thenReturn(List.of());
 
-    assertThat(service.trendingByTag(6, 8)).isEmpty();
+    assertThat(service.trendingByTag(null, 6, 8)).isEmpty();
   }
 
   @Test
   void recentFeedPassesLanguageFilterToRepository() {
-    when(postRepository.findPublishedRecent("ko", 0, 20)).thenReturn(List.of());
-    when(postRepository.countPublished("ko")).thenReturn(0L);
+    when(postRepository.findPublishedRecent(null, "ko", 0, 20)).thenReturn(List.of());
+    when(postRepository.countPublished(null, "ko")).thenReturn(0L);
 
-    service.feed(PublicFeedQuery.from(null, null, "recent", "ko", 0, 20));
+    service.feed(null, PublicFeedQuery.from(null, null, "recent", "ko", 0, 20));
 
-    verify(postRepository).findPublishedRecent("ko", 0, 20);
-    verify(postRepository).countPublished("ko");
+    verify(postRepository).findPublishedRecent(null, "ko", 0, 20);
+    verify(postRepository).countPublished(null, "ko");
   }
 
   @Test
   void trendingFeedPassesLanguageFilterToRepository() {
-    when(postRepository.findPublishedTrending("ja", 0, 20)).thenReturn(List.of());
-    when(postRepository.countPublished("ja")).thenReturn(0L);
+    when(postRepository.findPublishedTrending(null, "ja", 0, 20)).thenReturn(List.of());
+    when(postRepository.countPublished(null, "ja")).thenReturn(0L);
 
-    service.feed(PublicFeedQuery.from(null, null, "trending", "ja", 0, 20));
+    service.feed(null, PublicFeedQuery.from(null, null, "trending", "ja", 0, 20));
 
-    verify(postRepository).findPublishedTrending("ja", 0, 20);
+    verify(postRepository).findPublishedTrending(null, "ja", 0, 20);
   }
 
   @Test
   void searchPassesLanguageFilterToRepository() {
-    when(postRepository.searchPublished("rust", "en", 0, 20)).thenReturn(List.of());
-    when(postRepository.countSearchPublished("rust", "en")).thenReturn(0L);
+    when(postRepository.searchPublished(null, "rust", "en", 0, 20)).thenReturn(List.of());
+    when(postRepository.countSearchPublished(null, "rust", "en")).thenReturn(0L);
 
-    service.feed(PublicFeedQuery.from("rust", null, "recent", "en", 0, 20));
+    service.feed(null, PublicFeedQuery.from("rust", null, "recent", "en", 0, 20));
 
-    verify(postRepository).searchPublished("rust", "en", 0, 20);
-    verify(postRepository).countSearchPublished("rust", "en");
+    verify(postRepository).searchPublished(null, "rust", "en", 0, 20);
+    verify(postRepository).countSearchPublished(null, "rust", "en");
   }
 }

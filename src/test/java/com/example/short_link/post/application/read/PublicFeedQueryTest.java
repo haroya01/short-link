@@ -25,10 +25,18 @@ class PublicFeedQueryTest {
   }
 
   @Test
-  void tagAfterBlankSearchHasNeitherLanguageFilteringNorAnAlternateSort() {
+  void tagAfterBlankSearchKeepsTheTrendingSortButNoLanguageFilter() {
     var query = PublicFeedQuery.from("  ", " java ", "trending", "ja", 0, 20);
 
-    assertThat(query.selection()).isEqualTo(new Tagged("java"));
+    assertThat(query.selection()).isEqualTo(new Tagged("java", BrowseOrder.TRENDING));
+  }
+
+  @ParameterizedTest
+  @MethodSource("browseOrders")
+  void aTagFollowsTheBrowseSortFallback(String input, BrowseOrder expected) {
+    var query = PublicFeedQuery.from(null, "java", input, null, 0, 20);
+
+    assertThat(query.selection()).isEqualTo(new Tagged("java", expected));
   }
 
   @Test

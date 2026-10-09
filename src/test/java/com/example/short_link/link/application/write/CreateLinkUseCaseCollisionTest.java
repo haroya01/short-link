@@ -1,5 +1,6 @@
 package com.example.short_link.link.application.write;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
@@ -52,6 +53,7 @@ class LinkCreationServiceCollisionTest {
                 (MeterRegistry) new SimpleMeterRegistry(),
                 "http://localhost:8080"),
             new LinkSidecarPersister(mock(EntityManager.class)),
+            linkId -> false,
             new BCryptPasswordEncoder(4),
             noopTransactionManager(),
             200L);
@@ -62,6 +64,48 @@ class LinkCreationServiceCollisionTest {
 
     verify(generator, times(5)).generate();
     verify(repository, times(5)).save(any());
+  }
+
+  @Test
+  void aCollidingCodeIsRolledBackAndTheNextCodeGetsAFreshTransaction() {
+    LinkRepository repository = mock(LinkRepository.class);
+    ShortCodeGenerator generator = mock(ShortCodeGenerator.class);
+    when(generator.generate()).thenReturn("taken01", "fresh01");
+    when(repository.save(any(LinkEntity.class)))
+        .thenThrow(new DataIntegrityViolationException("unique"))
+        .thenAnswer(invocation -> invocation.getArgument(0));
+    UrlSafetyChecker safetyChecker = mock(UrlSafetyChecker.class);
+    when(safetyChecker.isSafe(any())).thenReturn(true);
+    var blockedDomain = mock(BlockedDomainQueryService.class);
+    PlatformTransactionManager transactions = noopTransactionManager();
+    CreateLinkUseCase service =
+        new CreateLinkUseCase(
+            repository,
+            generator,
+            new SimpleMeterRegistry(),
+            event -> {},
+            mock(AuditLogService.class),
+            new CreateLinkValidator(
+                (BlockedDomainChecker) blockedDomain,
+                safetyChecker,
+                (MeterRegistry) new SimpleMeterRegistry(),
+                "http://localhost:8080"),
+            new LinkSidecarPersister(mock(EntityManager.class)),
+            linkId -> false,
+            new BCryptPasswordEncoder(4),
+            transactions,
+            200L);
+
+    assertThat(
+            service
+                .execute(CreateLinkCommand.of("https://example.com", null, null, null))
+                .shortCode()
+                .value())
+        .isEqualTo("fresh01");
+
+    verify(transactions, times(2)).getTransaction(any());
+    verify(transactions, times(1)).rollback(any());
+    verify(transactions, times(1)).commit(any());
   }
 
   static PlatformTransactionManager noopTransactionManager() {

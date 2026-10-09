@@ -1,6 +1,7 @@
 package com.example.short_link.post.presentation;
 
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -22,6 +23,7 @@ import com.example.short_link.post.application.read.PublicSeriesQueryService;
 import com.example.short_link.post.application.read.SuggestedAuthorView;
 import com.example.short_link.post.application.read.TrendingTagSection;
 import com.example.short_link.testsupport.KurlWebMvcTest;
+import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
@@ -54,62 +56,62 @@ class PublicPostDiscoveryControllersTest {
   @Test
   void feedDefaultUsesRecentSort() throws Exception {
     var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.hasNext").value(false))
         .andExpect(jsonPath("$.items.length()").value(0));
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void feedWithQueryDefaultsToRelevanceSort() throws Exception {
     var query = new PublicFeedQuery(new Search("hello", SearchOrder.RELEVANCE, null), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("q", " hello ")).andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void feedWithQueryHonorsExplicitSort() throws Exception {
     var query = new PublicFeedQuery(new Search("hello", SearchOrder.RECENT, null), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("q", "hello").param("sort", "recent"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void feedWithTagRoutesToFeedByTag() throws Exception {
-    var query = new PublicFeedQuery(new Tagged("java"), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    var query = new PublicFeedQuery(new Tagged("java", BrowseOrder.RECENT), 0, 20);
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("tag", " java ")).andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void feedClampsOversizedPageSizeTo50() throws Exception {
     var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 50);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("size", "999").param("page", "-3"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void searchTakesPriorityOverTagAndKeepsTheLanguageFilter() throws Exception {
     var query = new PublicFeedQuery(new Search("hello", SearchOrder.TRENDING, " ko "), 2, 8);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(
             get("/api/v1/public/posts")
@@ -121,13 +123,13 @@ class PublicPostDiscoveryControllersTest {
                 .param("size", "8"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
-  void blankSearchAllowsTagWhichIgnoresLanguageAndSort() throws Exception {
-    var query = new PublicFeedQuery(new Tagged("java"), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+  void blankSearchAllowsTagWhichIgnoresLanguageButKeepsTheSort() throws Exception {
+    var query = new PublicFeedQuery(new Tagged("java", BrowseOrder.TRENDING), 0, 20);
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(
             get("/api/v1/public/posts")
@@ -137,13 +139,13 @@ class PublicPostDiscoveryControllersTest {
                 .param("lang", "ja"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void blankFiltersBrowseAndClampNonPositiveSize() throws Exception {
     var query = new PublicFeedQuery(new Browse(BrowseOrder.TRENDING, "  "), 0, 1);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(
             get("/api/v1/public/posts")
@@ -154,24 +156,24 @@ class PublicPostDiscoveryControllersTest {
                 .param("size", "0"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void emptyPageParametersUseTheHttpDefaults() throws Exception {
     var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(get("/api/v1/public/posts").param("page", "").param("size", ""))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void feedFiltersComeFromParametersAndIgnoreSameNamedHeaders() throws Exception {
     var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(
             get("/api/v1/public/posts")
@@ -181,13 +183,13 @@ class PublicPostDiscoveryControllersTest {
                 .header("lang", "ja"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void formDefaultPrefixesDoNotSupplyMissingFeedFilters() throws Exception {
     var query = new PublicFeedQuery(new Browse(BrowseOrder.RECENT, null), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(
             get("/api/v1/public/posts")
@@ -197,14 +199,14 @@ class PublicPostDiscoveryControllersTest {
                 .param("!lang", "ja"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @ParameterizedTest
   @ValueSource(strings = {"q", "q[]"})
   void repeatedSearchParametersRetainTheirCommaJoinedString(String parameter) throws Exception {
     var query = new PublicFeedQuery(new Search("spring,java", SearchOrder.RECENT, "ko"), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(
             get("/api/v1/public/posts")
@@ -213,13 +215,13 @@ class PublicPostDiscoveryControllersTest {
                 .param("lang[]", "ko"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
   }
 
   @Test
   void emptyNamedSearchTakesPriorityOverItsArrayAlias() throws Exception {
-    var query = new PublicFeedQuery(new Tagged("java"), 0, 20);
-    when(publicFeedQueryService.feed(query)).thenReturn(emptyFeed());
+    var query = new PublicFeedQuery(new Tagged("java", BrowseOrder.RECENT), 0, 20);
+    when(publicFeedQueryService.feed(null, query)).thenReturn(emptyFeed());
 
     mvc.perform(
             get("/api/v1/public/posts")
@@ -228,7 +230,33 @@ class PublicPostDiscoveryControllersTest {
                 .param("tag", "java"))
         .andExpect(status().isOk());
 
-    verify(publicFeedQueryService).feed(query);
+    verify(publicFeedQueryService).feed(null, query);
+  }
+
+  @Test
+  void aSignedInReaderIsPassedToEveryDiscoveryRead() throws Exception {
+    var query = new PublicFeedQuery(new Tagged("java", BrowseOrder.TRENDING), 0, 20);
+    when(publicFeedQueryService.feed(7L, query)).thenReturn(emptyFeed());
+
+    mvc.perform(
+            get("/api/v1/public/posts")
+                .param("tag", "java")
+                .param("sort", "trending")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, 7L))
+        .andExpect(status().isOk());
+    mvc.perform(get("/api/v1/public/authors").header(WebMvcSecurityTestConfig.USER_ID_HEADER, 7L))
+        .andExpect(status().isOk());
+    mvc.perform(
+            get("/api/v1/public/feed/trending-by-tag")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, 7L))
+        .andExpect(status().isOk());
+    mvc.perform(get("/api/v1/public/series").header(WebMvcSecurityTestConfig.USER_ID_HEADER, 7L))
+        .andExpect(status().isOk());
+
+    verify(publicFeedQueryService).feed(7L, query);
+    verify(publicFeedQueryService).suggestedAuthors(7L, 5);
+    verify(publicFeedQueryService).trendingByTag(7L, 6, 8);
+    verify(publicSeriesQueryService).discoverSeries(7L, 6);
   }
 
   @ParameterizedTest
@@ -242,7 +270,7 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void trendingByTagClampsAndReturnsSections() throws Exception {
-    when(publicFeedQueryService.trendingByTag(6, 8))
+    when(publicFeedQueryService.trendingByTag(null, 6, 8))
         .thenReturn(List.of(new TrendingTagSection("java", 3, List.of())));
 
     mvc.perform(get("/api/v1/public/feed/trending-by-tag"))
@@ -253,7 +281,7 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void suggestedAuthorsReturnsList() throws Exception {
-    when(publicFeedQueryService.suggestedAuthors(3))
+    when(publicFeedQueryService.suggestedAuthors(null, 3))
         .thenReturn(
             List.of(
                 new SuggestedAuthorView(
@@ -267,7 +295,7 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void discoverSeriesReturnsList() throws Exception {
-    when(publicSeriesQueryService.discoverSeries(anyInt())).thenReturn(List.of());
+    when(publicSeriesQueryService.discoverSeries(isNull(), anyInt())).thenReturn(List.of());
 
     mvc.perform(get("/api/v1/public/series"))
         .andExpect(status().isOk())
