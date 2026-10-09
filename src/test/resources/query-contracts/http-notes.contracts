@@ -19,7 +19,7 @@
 @junit | note-thread-create | 14 | 3 | 0 | 0 | 17
 # Reading that thread: its first note lists the later parts in order apart from other replies, and
 # the public feed carries the second part under the first.
-@junit | note-thread-parts | 7 | 0 | 0 | 0 | 7
+@junit | note-thread-parts | 8 | 0 | 0 | 0 | 8
 @junit | note-everyone-thread | 7 | 0 | 0 | 0 | 7
 # Liking or reposting answers with the note's public counts in one statement, whoever asks.
 @junit | note-like | 8 | 2 | 0 | 0 | 10
@@ -37,7 +37,9 @@
 # replies under the top-level notes in one recursive statement (a thread written in parts) and, when
 # there are parts, read the next ones in one more query and view them with the page.
 @junit | note-reposts | 8 | 0 | 0 | 0 | 8
-@junit | note-thread | 8 | 0 | 0 | 0 | 8
+# A shared note's thread also reads the series it belongs to, with that series' readable items, in
+# one statement.
+@junit | note-thread | 9 | 0 | 0 | 0 | 9
 # Quotes of a note: the notes quoting it, then the page as usual (anonymous, so no reader marks).
 @junit | note-quotes | 6 | 0 | 0 | 0 | 6
 @junit | post-note-quotes | 7 | 0 | 0 | 0 | 7
@@ -76,7 +78,7 @@
 # writing nor reading a note with mentions adds a query. Each mentioned member is told after commit
 # like any other note notice: block check, preference, insert, then both names for the push.
 @junit | note-create-mention | 8 | 2 | 0 | 0 | 10
-@junit | note-thread-mention | 6 | 0 | 0 | 0 | 6
+@junit | note-thread-mention | 7 | 0 | 0 | 0 | 7
 # A content warning and the sensitive mark are columns on the note: they ride in its one insert and
 # its one update (the edit also keeps the version it replaces).
 @junit | note-create-warning | 4 | 1 | 0 | 0 | 5
@@ -104,13 +106,14 @@
 # the reader's quote is still up, so they hear of it: preference, insert, names for the push.
 @junit | note-edit | 12 | 2 | 1 | 0 | 15
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
-# Delete: note, its image keys, then likes, collection blocks and the note (images cascade).
-@junit | note-delete | 3 | 0 | 0 | 3 | 6
+# Delete: note, its image keys, then likes, collection blocks, its place in a series and the note
+# (images cascade).
+@junit | note-delete | 3 | 0 | 0 | 4 | 7
 @junit | note-thread-gone | 1 | 0 | 0 | 0 | 1
 # A note with an address: the card is fetched after commit off the request thread and stored with
 # one upsert. Reading it back adds one card query, and only for pages that have an address at all.
 @junit | note-create-link | 4 | 2 | 0 | 0 | 6
-@junit | note-thread-link | 7 | 0 | 0 | 0 | 7
+@junit | note-thread-link | 8 | 0 | 0 | 0 | 8
 # Visibility (Mastodon's four). Restricted notes (followers-only, direct) record the members they
 # mention as recipients in one insert; they still get their mention notices. Shared feeds (everyone,
 # tags) filter public inside their one query. A page with restricted notes by someone else asks once
@@ -167,7 +170,7 @@
 @junit | note-poll-vote-again | 3 | 1 | 0 | 0 | 4
 @junit | note-poll-vote-own | 1 | 0 | 0 | 0 | 1
 @junit | note-poll-vote-ended | 1 | 0 | 0 | 0 | 1
-@junit | note-thread-poll | 7 | 0 | 0 | 0 | 7
+@junit | note-thread-poll | 8 | 0 | 0 | 0 | 8
 # Mutes (Mastodon's, account-level like blocks). Muting reads the person and the existing row, then
 # inserts or updates; unmuting deletes it. Shared lists (all notes, trending, tags, the following
 # feed, lists, a thread's replies, quotes) keep out authors blocked either way or muted, inside
@@ -178,7 +181,7 @@
 @junit | user-mutes | 2 | 0 | 0 | 0 | 2
 @junit | note-everyone-muted | 8 | 0 | 0 | 0 | 8
 @junit | note-reply-muted | 7 | 1 | 0 | 0 | 8
-@junit | note-thread-muted | 7 | 0 | 0 | 0 | 7
+@junit | note-thread-muted | 8 | 0 | 0 | 0 | 8
 @junit | user-unmute | 2 | 0 | 0 | 1 | 3
 # Keyword filters (Mastodon's) are stored for the owner's apps, which apply them, so no feed reads
 # them. Create counts the owner's filters (at most a hundred) then inserts; every other call first
@@ -199,7 +202,7 @@
 # the reader's marks pick it up in the same statement as likes, reposts and bookmarks.
 @junit | note-reply-before-mute | 10 | 2 | 0 | 0 | 12
 @junit | note-conversation-mute | 1 | 1 | 0 | 0 | 2
-@junit | note-thread-conversation-muted | 7 | 0 | 0 | 0 | 7
+@junit | note-thread-conversation-muted | 8 | 0 | 0 | 0 | 8
 # A reply or a like in the muted thread stops at the one silence check (block, mute, conversation).
 @junit | note-reply-conversation-muted | 7 | 1 | 0 | 0 | 8
 @junit | note-like-conversation-muted | 4 | 1 | 0 | 0 | 5

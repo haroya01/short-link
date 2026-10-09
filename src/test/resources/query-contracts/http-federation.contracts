@@ -86,8 +86,8 @@
 @junit | notification-note-unread | 1 | 0 | 0 | 0 | 1
 @junit | notification-note-group-read | 0 | 0 | 1 | 0 | 1
 # Counts are public: the author and anyone else read the same one count statement for the page.
-@junit | federation-note-remote-counts | 7 | 0 | 0 | 0 | 7
-@junit | federation-note-remote-counts-stranger | 7 | 0 | 0 | 0 | 7
+@junit | federation-note-remote-counts | 8 | 0 | 0 | 0 | 8
+@junit | federation-note-remote-counts-stranger | 8 | 0 | 0 | 0 | 8
 # Undo of an embedded Like deletes by note, actor and kind; a bare activity id clears a follow or a
 # reaction with that id.
 @junit | federation-inbox-undo-like | 1 | 0 | 0 | 1 | 2
@@ -102,7 +102,7 @@
 @junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
 @junit | federation-note-create | 10 | 3 | 0 | 0 | 13
 @junit | federation-note-edit | 14 | 2 | 1 | 1 | 18
-@junit | federation-note-delete | 6 | 1 | 0 | 3 | 10
+@junit | federation-note-delete | 6 | 1 | 0 | 4 | 11
 # The note document: note, author, images, then the author's actor (user, preference, actor).
 @junit | federation-note-document | 6 | 0 | 0 | 0 | 6
 @junit | federation-note-page | 6 | 0 | 0 | 0 | 6
@@ -152,7 +152,7 @@
 # A reply from there is kept for its thread, but the author's notice stops at the one silence
 # check (server block OR muted conversation), and the thread leaves it out in its one query.
 @junit | federation-inbox-reply-blocked-domain | 10 | 1 | 0 | 0 | 11
-@junit | notes-thread-blocked-domain | 7 | 0 | 0 | 0 | 7
+@junit | notes-thread-blocked-domain | 8 | 0 | 0 | 0 | 8
 @junit | federation-domain-unblock | 0 | 0 | 0 | 1 | 1
 # Moderators block a whole server (Mastodon's limit and suspend). Limiting: the block row only.
 @junit | admin-server-limit | 1 | 1 | 0 | 0 | 2
@@ -192,7 +192,7 @@
 # id; the author hears of it (muted conversation, preference, notification, recipient, remote
 # actor).
 @junit | federation-inbox-remote-reply | 13 | 2 | 0 | 0 | 15
-@junit | notes-thread-remote-reply | 7 | 0 | 0 | 0 | 7
+@junit | notes-thread-remote-reply | 8 | 0 | 0 | 0 | 8
 # Edits and deletes first ask whether we kept that note, so others never cost a key fetch. The
 # edit updates that note by the id the question found; the member who boosted it hears of the edit
 # (who shared it, preference, insert, their name and the remote author's for the push).
@@ -221,4 +221,4 @@
 # account, follower inboxes, then the delivery. The delete carries what the reply answered, since
 # the row is gone by then; the edit also asks who shared it.
 @junit | federation-remote-reply-edit | 17 | 2 | 1 | 0 | 20
-@junit | federation-remote-reply-delete | 9 | 1 | 0 | 3 | 13
+@junit | federation-remote-reply-delete | 9 | 1 | 0 | 4 | 14

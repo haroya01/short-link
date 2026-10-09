@@ -9,8 +9,11 @@ import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesEntry;
+import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemReader;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -41,6 +44,7 @@ public class PublicPostQueryService {
   private final PostRepository postRepository;
   private final PostBlockRepository postBlockRepository;
   private final SeriesRepository seriesRepository;
+  private final SeriesItemReader seriesItemReader;
   private final CtaRepository ctaRepository;
   private final ShortLinkUrlBuilder shortLinkUrlBuilder;
 
@@ -118,26 +122,40 @@ public class PublicPostQueryService {
     if (post.getSeriesId() == null) return null;
     SeriesEntity series = seriesRepository.findById(post.getSeriesId()).orElse(null);
     if (series == null) return null;
-    List<PostEntity> siblings =
-        postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-            series.getId(), PostStatus.PUBLISHED);
-    int index = -1;
-    for (int i = 0; i < siblings.size(); i++) {
-      if (siblings.get(i).getId().equals(post.getId())) {
-        index = i;
-        break;
-      }
-    }
-    if (index < 0) return null;
-    PublicPostSeriesNav.NavLink prev = index > 0 ? navLink(siblings.get(index - 1)) : null;
-    PublicPostSeriesNav.NavLink next =
-        index < siblings.size() - 1 ? navLink(siblings.get(index + 1)) : null;
+    List<SeriesEntry> items = seriesItemReader.readableEntries(series.getId());
+    List<SeriesEntry> posts = items.stream().filter(e -> e.type() == SeriesItemType.POST).toList();
+    int index = indexOf(posts, post.getId());
+    int itemIndex = indexOf(items, post.getId());
+    if (index < 0 || itemIndex < 0) return null;
     return new PublicPostSeriesNav(
-        series.getSlug(), series.getTitle(), index + 1, siblings.size(), prev, next);
+        series.getSlug(),
+        series.getTitle(),
+        index + 1,
+        posts.size(),
+        index > 0 ? navLink(posts.get(index - 1)) : null,
+        index < posts.size() - 1 ? navLink(posts.get(index + 1)) : null,
+        itemIndex + 1,
+        items.size(),
+        itemIndex > 0 ? itemLink(items.get(itemIndex - 1)) : null,
+        itemIndex < items.size() - 1 ? itemLink(items.get(itemIndex + 1)) : null);
   }
 
-  private PublicPostSeriesNav.NavLink navLink(PostEntity post) {
-    return new PublicPostSeriesNav.NavLink(post.getSlug(), post.getTitle());
+  private static int indexOf(List<SeriesEntry> entries, Long postId) {
+    for (int i = 0; i < entries.size(); i++) {
+      SeriesEntry entry = entries.get(i);
+      if (entry.type() == SeriesItemType.POST && entry.refId().equals(postId)) return i;
+    }
+    return -1;
+  }
+
+  private static PublicPostSeriesNav.NavLink navLink(SeriesEntry post) {
+    return new PublicPostSeriesNav.NavLink(post.slug(), post.title());
+  }
+
+  private static PublicPostSeriesNav.ItemLink itemLink(SeriesEntry entry) {
+    return entry.type() == SeriesItemType.POST
+        ? new PublicPostSeriesNav.ItemLink(entry.type().name(), entry.slug(), null, entry.title())
+        : new PublicPostSeriesNav.ItemLink(entry.type().name(), null, entry.refId(), entry.title());
   }
 
   private Map<Long, CtaEntity> hydrateCtas(List<PostBlockEntity> entities) {

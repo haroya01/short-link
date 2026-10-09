@@ -10,6 +10,7 @@ import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Instant;
@@ -39,6 +40,7 @@ public class NoteQueryService {
   private final NoteBookmarkRepository bookmarks;
   private final NotePeopleReader people;
   private final NoteViews views;
+  private final NoteSeriesReader noteSeries;
 
   @Transactional(readOnly = true)
   public NoteFeedView everyone(int page, int size, Long viewerId) {
@@ -290,7 +292,17 @@ public class NoteQueryService {
             .filter(view -> noteId.equals(view.inReplyToId()))
             .filter(view -> !parts.contains(view.id()))
             .toList();
-    return new NoteThreadView(main, parent, replies, continuation);
+    return new NoteThreadView(main, parent, replies, continuation, seriesNav(note));
+  }
+
+  private NoteSeriesNavView seriesNav(NoteEntity note) {
+    if (note.isRemote() || note.getVisibility().restricted()) {
+      return null;
+    }
+    return noteSeries
+        .containing(note.getId())
+        .map(series -> NoteSeriesNavView.of(series, note.getId()))
+        .orElse(null);
   }
 
   @Transactional(readOnly = true)

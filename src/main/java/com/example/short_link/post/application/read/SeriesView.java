@@ -4,14 +4,21 @@ import com.example.short_link.post.domain.SeriesEntity;
 import java.time.Instant;
 
 public record SeriesView(
-    Long id, String slug, String title, int postCount, Instant createdAt, Instant updatedAt) {
+    Long id,
+    String slug,
+    String title,
+    int postCount,
+    int itemCount,
+    Instant createdAt,
+    Instant updatedAt) {
 
-  public static SeriesView from(SeriesEntity series, int postCount) {
+  public static SeriesView from(SeriesEntity series, int postCount, int itemCount) {
     return new SeriesView(
         series.getId(),
         series.getSlug(),
         series.getTitle(),
         postCount,
+        itemCount,
         series.getCreatedAt(),
         series.getUpdatedAt());
   }

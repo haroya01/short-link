@@ -73,7 +73,7 @@
 @junit | author-comment-like | 11 | 2 | 0 | 0 | 13
 @junit | author-comment-reply | 9 | 2 | 0 | 0 | 11
 @junit | author-comment-unlike | 3 | 0 | 0 | 1 | 4
-@junit | author-delete-post-with-live-reader-data | 3 | 0 | 0 | 11 | 14
+@junit | author-delete-post-with-live-reader-data | 3 | 0 | 0 | 12 | 15
 @junit | author-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | author-draft-detail | 2 | 0 | 0 | 0 | 2
 @junit | author-draft-markdown-read | 2 | 0 | 0 | 0 | 2
@@ -95,7 +95,7 @@
 @junit | author-note-liked-ids | 1 | 0 | 0 | 0 | 1
 @junit | author-note-unlike | 3 | 0 | 0 | 1 | 4
 @junit | author-post-analytics-detail | 7 | 0 | 0 | 0 | 7
-@junit | author-post-delete | 3 | 0 | 0 | 10 | 13
+@junit | author-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | author-post-pin | 1 | 0 | 1 | 0 | 2
 @junit | author-post-reader-stats | 18 | 0 | 0 | 0 | 18
 @junit | author-post-republish | 5 | 1 | 1 | 0 | 7
@@ -110,17 +110,23 @@
 @junit | author-schedule-cancel | 2 | 0 | 1 | 0 | 3
 @junit | author-second-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | author-second-draft-markdown-write | 3 | 2 | 1 | 1 | 7
-@junit | author-second-post-delete | 3 | 0 | 0 | 10 | 13
+@junit | author-second-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | author-second-publish | 7 | 2 | 1 | 0 | 10
 @junit | author-series-analytics-detail | 7 | 0 | 0 | 0 | 7
 @junit | author-series-analytics-list | 3 | 0 | 0 | 0 | 3
-@junit | author-series-create | 3 | 1 | 0 | 0 | 4
-@junit | author-series-delete | 2 | 0 | 2 | 1 | 5
-@junit | author-series-detail | 3 | 0 | 0 | 0 | 3
-@junit | author-series-edit | 3 | 0 | 1 | 0 | 4
-@junit | author-series-list | 2 | 0 | 0 | 0 | 2
-# Lock the series and its complete affected post set in two reads, then assemble the response.
-@junit | author-series-order-posts | 5 | 0 | 2 | 0 | 7
+@junit | author-series-create | 4 | 1 | 0 | 0 | 5
+@junit | author-series-delete | 2 | 0 | 2 | 2 | 6
+@junit | author-series-detail | 4 | 0 | 0 | 0 | 4
+@junit | author-series-edit | 4 | 0 | 1 | 0 | 5
+@junit | author-series-list | 3 | 0 | 0 | 0 | 3
+@junit | author-series-note-create | 4 | 1 | 0 | 0 | 5
+@junit | author-series-note-delete | 3 | 0 | 0 | 4 | 7
+# Lock the series and the affected posts, check the notes, then replace the items: one delete for the
+# series, one per type for refs leaving another series, one insert per item.
+@junit | author-series-order-items | 8 | 3 | 1 | 3 | 15
+# The posts-only route first reads the items so the series' notes keep their places.
+@junit | author-series-order-posts | 7 | 2 | 2 | 2 | 13
+@junit | author-series-order-posts-keeps-notes | 9 | 3 | 2 | 3 | 17
 @junit | author-series-reader-stats | 19 | 0 | 0 | 0 | 19
 @junit | author-unblock-reader | 2 | 0 | 0 | 1 | 3
 # A post taken down still keeps the notes its body carries current for a republish (one delete).
@@ -178,7 +184,7 @@
 @junit | curation-connect-note | 8 | 2 | 0 | 0 | 10
 @junit | curation-connect-post | 6 | 2 | 0 | 0 | 8
 @junit | curation-delete-highlight-purges-connection | 1 | 0 | 0 | 3 | 4
-@junit | curation-delete-note-purges-connection | 3 | 0 | 0 | 3 | 6
+@junit | curation-delete-note-purges-connection | 3 | 0 | 0 | 4 | 7
 @junit | curation-disconnect-post | 2 | 0 | 0 | 1 | 3
 @junit | curation-my-collections | 8 | 0 | 0 | 0 | 8
 @junit | curation-my-collections-connected-status | 9 | 0 | 0 | 0 | 9
@@ -195,7 +201,7 @@
 @junit | curation-source-body-write | 3 | 2 | 1 | 1 | 7
 @junit | curation-source-highlight-create | 8 | 2 | 0 | 0 | 10
 @junit | curation-source-post-create | 2 | 1 | 0 | 0 | 3
-@junit | curation-source-post-delete | 3 | 0 | 0 | 10 | 13
+@junit | curation-source-post-delete | 3 | 0 | 0 | 11 | 14
 @junit | curation-source-post-publish | 7 | 2 | 1 | 0 | 10
 @junit | curation-unlist-path | 2 | 0 | 1 | 0 | 3
 @junit | custom-domain-delete | 1 | 0 | 0 | 1 | 2
@@ -393,7 +399,7 @@
 @junit | ops-block-domain | 2 | 1 | 0 | 0 | 3
 @junit | ops-blog-metrics | 5 | 0 | 0 | 0 | 5
 @junit | ops-cohort | 2 | 0 | 0 | 0 | 2
-@junit | ops-delete-post | 3 | 0 | 0 | 10 | 13
+@junit | ops-delete-post | 3 | 0 | 0 | 11 | 14
 @junit | ops-denies-author-moderation | 0 | 0 | 0 | 0 | 0
 @junit | ops-denies-member | 0 | 0 | 0 | 0 | 0
 @junit | ops-denies-member-link-enable | 0 | 0 | 0 | 0 | 0
@@ -533,6 +539,7 @@
 @junit | reader-my-comment-history | 4 | 0 | 0 | 0 | 4
 @junit | reader-my-highlight-library | 3 | 0 | 0 | 0 | 3
 @junit | reader-my-liked-posts | 4 | 0 | 0 | 0 | 4
+@junit | reader-note-series-navigation | 7 | 0 | 0 | 0 | 7
 @junit | reader-own-following | 6 | 0 | 0 | 0 | 6
 @junit | reader-personal-connection-following | 7 | 0 | 0 | 0 | 7
 @junit | reader-personal-connection-forced-global | 6 | 0 | 0 | 0 | 6
@@ -557,8 +564,9 @@
 @junit | reader-public-path-detail | 8 | 0 | 0 | 0 | 8
 @junit | reader-public-post-highlights | 4 | 0 | 0 | 0 | 4
 @junit | reader-public-post-series-navigation | 6 | 0 | 0 | 0 | 6
-@junit | reader-public-series-detail | 4 | 0 | 0 | 0 | 4
-@junit | reader-public-series-list | 4 | 0 | 0 | 0 | 4
+@junit | reader-public-series-detail | 5 | 0 | 0 | 0 | 5
+@junit | reader-public-series-detail-with-note | 6 | 0 | 0 | 0 | 6
+@junit | reader-public-series-list | 5 | 0 | 0 | 0 | 5
 @junit | reader-reading-history | 4 | 0 | 0 | 0 | 4
 @junit | reader-related-highlight-connections | 6 | 0 | 0 | 0 | 6
 @junit | reader-related-post-connections | 6 | 0 | 0 | 0 | 6
@@ -571,7 +579,7 @@
 @junit | reader-series-subscription-status | 2 | 0 | 0 | 0 | 2
 @junit | reader-series-unsubscribe | 2 | 0 | 0 | 1 | 3
 @junit | reader-short-note-create | 4 | 1 | 0 | 0 | 5
-@junit | reader-short-note-delete | 3 | 0 | 0 | 3 | 6
+@junit | reader-short-note-delete | 3 | 0 | 0 | 4 | 7
 @junit | reader-subscribed-series-cards | 4 | 0 | 0 | 0 | 4
 @junit | reader-tag-follow | 2 | 1 | 0 | 0 | 3
 @junit | reader-tag-follow-again | 2 | 1 | 0 | 0 | 3
@@ -626,4 +634,4 @@
 # answers with the report, whose note now reads as removed.
 @junit | ops-submit-note-abuse | 2 | 1 | 0 | 0 | 3
 @junit | ops-note-abuse-backlog | 2 | 0 | 0 | 0 | 2
-@junit | ops-resolve-note-abuse | 5 | 0 | 1 | 3 | 9
+@junit | ops-resolve-note-abuse | 5 | 0 | 1 | 4 | 10

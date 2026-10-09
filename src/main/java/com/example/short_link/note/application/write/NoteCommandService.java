@@ -13,6 +13,7 @@ import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
+import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NotePolls;
@@ -70,6 +71,7 @@ public class NoteCommandService {
   private final UserModerationGuard moderation;
   private final UserBlockChecker blocks;
   private final CollectionConnectionCleaner connections;
+  private final SeriesItemCleaner seriesItems;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
@@ -87,6 +89,7 @@ public class NoteCommandService {
       UserModerationGuard moderation,
       UserBlockChecker blocks,
       CollectionConnectionCleaner connections,
+      SeriesItemCleaner seriesItems,
       ApplicationEventPublisher events) {
     this(
         notes,
@@ -101,6 +104,7 @@ public class NoteCommandService {
         moderation,
         blocks,
         connections,
+        seriesItems,
         events,
         Clock.systemUTC());
   }
@@ -118,6 +122,7 @@ public class NoteCommandService {
       UserModerationGuard moderation,
       UserBlockChecker blocks,
       CollectionConnectionCleaner connections,
+      SeriesItemCleaner seriesItems,
       ApplicationEventPublisher events,
       Clock clock) {
     this.notes = notes;
@@ -132,6 +137,7 @@ public class NoteCommandService {
     this.moderation = moderation;
     this.blocks = blocks;
     this.connections = connections;
+    this.seriesItems = seriesItems;
     this.events = events;
     this.clock = clock;
   }
@@ -544,6 +550,7 @@ public class NoteCommandService {
             .toList();
     likes.deleteAllByNoteId(noteId);
     connections.purgeForNote(noteId);
+    seriesItems.purgeForNote(noteId);
     notes.delete(note);
     if (!note.isRemote()) {
       events.publishEvent(

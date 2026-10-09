@@ -4,7 +4,12 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesItemEntity;
+import com.example.short_link.post.domain.SeriesItemType;
+import com.example.short_link.post.domain.SeriesNote;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemReader;
+import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -14,6 +19,7 @@ import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
@@ -38,6 +44,8 @@ public class PublicSeriesQueryService {
   private final SeriesRepository seriesRepository;
   private final PostRepository postRepository;
   private final SeriesSubscriptionRepository subscriptionRepository;
+  private final SeriesItemRepository seriesItemRepository;
+  private final SeriesItemReader seriesItemReader;
 
   public List<PublicSeriesCard> subscribedSeries(Long userId) {
     List<Long> ids = subscriptionRepository.findSubscribedSeriesIds(userId);
@@ -153,13 +161,18 @@ public class PublicSeriesQueryService {
   public PublicSeriesListView listPublicSeries(String username) {
     UserEntity author = resolveAuthor(username);
     List<SeriesEntity> all = seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId());
+    List<Long> ids = all.stream().map(SeriesEntity::getId).toList();
     Map<Long, List<PostEntity>> publishedBySeries =
-        postRepository
-            .findAllBySeriesIdInOrderBySeriesOrderAsc(
-                all.stream().map(SeriesEntity::getId).toList())
-            .stream()
+        postRepository.findAllBySeriesIdInOrderBySeriesOrderAsc(ids).stream()
             .filter(p -> p.getStatus() == PostStatus.PUBLISHED)
             .collect(Collectors.groupingBy(PostEntity::getSeriesId));
+    List<SeriesItemEntity> rows = seriesItemRepository.findBySeriesIdIn(ids);
+    Map<Long, SeriesNote> notes = seriesItemReader.notes(noteIds(rows));
+    Map<Long, Long> sharedNotes =
+        rows.stream()
+            .filter(r -> r.getType() == SeriesItemType.NOTE)
+            .filter(r -> notes.containsKey(r.getRefId()) && notes.get(r.getRefId()).shared())
+            .collect(Collectors.groupingBy(SeriesItemEntity::getSeriesId, Collectors.counting()));
     List<PublicSeriesListItem> series =
         all.stream()
             .map(
@@ -170,9 +183,10 @@ public class PublicSeriesQueryService {
                       s.getSlug(),
                       s.getTitle(),
                       published.size(),
+                      published.size() + sharedNotes.getOrDefault(s.getId(), 0L).intValue(),
                       distinctTags(published));
                 })
-            .filter(s -> s.postCount() > 0)
+            .filter(s -> s.itemCount() > 0)
             .toList();
     return new PublicSeriesListView(PublicAuthorView.from(author), series);
   }
@@ -190,16 +204,38 @@ public class PublicSeriesQueryService {
     List<PostEntity> members =
         postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
             series.getId(), PostStatus.PUBLISHED);
-    List<PublicPostListItem> posts = members.stream().map(PublicPostListItem::from).toList();
+    Map<Long, PostEntity> published =
+        members.stream().collect(Collectors.toMap(PostEntity::getId, Function.identity()));
+    List<SeriesItemEntity> rows = seriesItemRepository.findBySeriesId(series.getId());
+    Map<Long, SeriesNote> notes = seriesItemReader.notes(noteIds(rows));
+    List<PublicSeriesItem> items = new ArrayList<>(rows.size());
+    for (SeriesItemEntity row : rows) {
+      PostEntity post = row.getType() == SeriesItemType.POST ? published.get(row.getRefId()) : null;
+      SeriesNote note = row.getType() == SeriesItemType.NOTE ? notes.get(row.getRefId()) : null;
+      if (post != null) {
+        items.add(new PublicSeriesItem(row.getType().name(), PublicPostListItem.from(post), null));
+      } else if (note != null && note.shared()) {
+        items.add(new PublicSeriesItem(row.getType().name(), null, SeriesNoteView.from(note)));
+      }
+    }
     return new PublicSeriesDetail(
         PublicAuthorView.from(author),
         new PublicSeriesListItem(
             series.getId(),
             series.getSlug(),
             series.getTitle(),
-            posts.size(),
+            members.size(),
+            items.size(),
             distinctTags(members)),
-        posts);
+        members.stream().map(PublicPostListItem::from).toList(),
+        items);
+  }
+
+  private static List<Long> noteIds(List<SeriesItemEntity> rows) {
+    return rows.stream()
+        .filter(r -> r.getType() == SeriesItemType.NOTE)
+        .map(SeriesItemEntity::getRefId)
+        .toList();
   }
 
   private UserEntity resolveAuthor(String username) {

@@ -61,6 +61,9 @@ class PostUserDataEraser implements UserDataEraser {
         "DELETE FROM post_revision WHERE post_id IN (SELECT id FROM posts WHERE user_id = :userId)",
         userId);
     execute("DELETE FROM posts WHERE user_id = :userId", userId);
+    execute(
+        "DELETE FROM series_item WHERE series_id IN (SELECT id FROM series WHERE user_id = :userId)",
+        userId);
     execute("DELETE FROM series WHERE user_id = :userId", userId);
   }
 
