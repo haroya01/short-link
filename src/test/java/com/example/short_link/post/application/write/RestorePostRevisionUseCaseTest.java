@@ -80,6 +80,7 @@ class RestorePostRevisionUseCaseTest {
     PostView restored = useCase.execute(new RestorePostRevisionCommand(7L, 42L, 2));
 
     assertThat(restored.title()).isEqualTo("Restored");
+    assertThat(restored.contentVersion()).isEqualTo(1L);
     assertThat(restored.excerpt()).isEqualTo("Old excerpt");
     assertThat(restored.ogImageUrl()).isEqualTo("https://cdn/og.png");
     assertThat(restored.languageTag()).isEqualTo("ja");

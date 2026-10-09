@@ -11,7 +11,9 @@ public record UpdatePostMetadataCommand(
     String ogImageUrl,
     String ogImageKey,
     String languageTag,
-    List<String> tags) {
+    List<String> tags,
+    Long baseVersion,
+    boolean overwrite) {
 
   public UpdatePostMetadataCommand {
     if (userId == null) throw new IllegalArgumentException("userId required");

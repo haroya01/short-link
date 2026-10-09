@@ -261,14 +261,18 @@ class ScheduledPublicationTransactionIntegrationTest {
                   updateMetadata
                       .execute(
                           new UpdatePostMetadataCommand(
-                              userId, postId, "Edited", null, null, null, null, null, null))
+                              userId, postId, "Edited", null, null, null, null, null, null, null,
+                              false))
                       .title())
               .isEqualTo("Edited");
       case ADMIN_METADATA ->
           assertThat(updateMetadata.adminExecute(userId, postId, "Edited", null).title())
               .isEqualTo("Edited");
       case BODY ->
-          assertThat(replaceBlocks.execute(new ReplacePostBlocksCommand(userId, postId, List.of())))
+          assertThat(
+                  replaceBlocks
+                      .execute(new ReplacePostBlocksCommand(userId, postId, List.of(), null, false))
+                      .blocks())
               .isEmpty();
       case RESTORE ->
           assertThat(

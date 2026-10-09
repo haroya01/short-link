@@ -1,5 +1,6 @@
 package com.example.short_link.post.presentation.request;
 
+import jakarta.validation.constraints.PositiveOrZero;
 import jakarta.validation.constraints.Size;
 import java.util.List;
 
@@ -11,4 +12,6 @@ public record UpdatePostRequest(
     @Size(max = 512) String ogImageUrl,
     @Size(max = 256) String ogImageKey,
     @Size(max = 16) String languageTag,
-    @Size(max = 100) List<@Size(max = 80) String> tags) {}
+    @Size(max = 100) List<@Size(max = 80) String> tags,
+    @PositiveOrZero Long baseVersion,
+    Boolean overwrite) {}

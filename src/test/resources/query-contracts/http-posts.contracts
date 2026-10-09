@@ -15,6 +15,18 @@
 # A note carried as a card (its URL on a line of its own). A draft keeps no record of it, so an
 # autosave is the same seven statements as any replace.
 @junit | post-blocks-replace-draft-quote | 3 | 2 | 1 | 1 | 7
+# Saving from the current content version is the same replace: the version rides in the post update
+# it already makes.
+@junit | post-edit-blocks-current-version | 3 | 2 | 1 | 1 | 7
+# Saving from an older version stops at the locked post read; nothing is written.
+@junit | post-edit-blocks-stale-version | 1 | 0 | 0 | 0 | 1
+@junit | post-edit-metadata-stale-version | 1 | 0 | 0 | 0 | 1
+# Metadata from the current version: locked post + body + tags for the search text; its upsert; the
+# post update.
+@junit | post-edit-metadata-current-version | 3 | 1 | 1 | 0 | 5
+# Overwrite first keeps the replaced post as a revision (its blocks, the latest revision number, one
+# insert), then replaces the body as usual.
+@junit | post-edit-markdown-overwrite | 5 | 3 | 1 | 1 | 10
 # Publishing for the first time: the usual first publish plus one insert of the notes it carries;
 # nothing was kept before, so nothing is cleared.
 @junit | post-publish-quoting-note | 14 | 4 | 1 | 0 | 19

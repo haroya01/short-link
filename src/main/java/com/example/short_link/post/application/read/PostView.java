@@ -21,7 +21,8 @@ public record PostView(
     Integer seriesOrder,
     Integer pinOrder,
     Instant createdAt,
-    Instant updatedAt) {
+    Instant updatedAt,
+    long contentVersion) {
 
   public static PostView from(PostEntity post) {
     return new PostView(
@@ -41,6 +42,7 @@ public record PostView(
         post.getSeriesOrder(),
         post.getPinOrder(),
         post.getCreatedAt(),
-        post.getUpdatedAt());
+        post.getUpdatedAt(),
+        post.getContentVersion());
   }
 }
