@@ -87,6 +87,16 @@ class SecurityConfigCorsTest {
   }
 
   @Test
+  void shortCodeRegexAcceptsOneTrailingSlash() {
+    Pattern p = Pattern.compile(SecurityConfig.SHORT_CODE_REGEX);
+    assertThat(p.matcher("/abc123/").matches()).isTrue();
+    assertThat(p.matcher("/abc123/?src=qr").matches()).isTrue();
+    assertThat(p.matcher("/abc123//").matches()).isFalse();
+    assertThat(p.matcher("/abc123/og.png").matches()).isFalse();
+    assertThat(p.matcher("/api/v1").matches()).isFalse();
+  }
+
+  @Test
   void ogCardRegexToleratesQueryString() {
     Pattern p = Pattern.compile(SecurityConfig.OG_CARD_REGEX);
     assertThat(p.matcher("/abc123/og.png").matches()).isTrue();

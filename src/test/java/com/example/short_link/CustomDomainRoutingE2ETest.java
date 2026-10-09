@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.customdomain.domain.CustomDomainEntity;
 import com.example.short_link.customdomain.infrastructure.persistence.JpaCustomDomainRepository;
+import com.example.short_link.link.domain.LinkEntity;
+import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
@@ -33,6 +35,7 @@ class CustomDomainRoutingE2ETest {
   @Autowired private MockMvc mvc;
   @Autowired private UserRepository userRepository;
   @Autowired private JpaCustomDomainRepository customDomainRepository;
+  @Autowired private LinkRepository linkRepository;
   @Autowired private JwtTokenService jwt;
   @Autowired private CacheManager cacheManager;
 
@@ -80,6 +83,27 @@ class CustomDomainRoutingE2ETest {
     mvc.perform(get("/cd0other").header("Host", "kurl.me"))
         .andExpect(status().isFound())
         .andExpect(header().string("Location", "https://other.com"));
+  }
+
+  @Test
+  void customDomainHost_doesNotForwardAnotherUsersEndedLink() throws Exception {
+    UserEntity owner = userRepository.save(new UserEntity("cd-end@x.com", "google", "g-cd-end"));
+    UserEntity other = userRepository.save(new UserEntity("cd-end2@x.com", "google", "g-cd-end2"));
+    LinkEntity ended =
+        linkRepository.save(new LinkEntity("https://other.com", "cd0ended", other.getId(), null));
+    ended.applyCampaignExpiration(Instant.now().minusSeconds(60), "https://other.com/next", null);
+    linkRepository.save(ended);
+    String domain = "go.brand-end.example.com";
+    CustomDomainEntity verified =
+        new CustomDomainEntity(owner.getId(), domain, "kurl-verify=ignored");
+    TestEntities.setField(verified, "createdAt", Instant.now());
+    verified.markVerified();
+    customDomainRepository.saveAndFlush(verified);
+
+    mvc.perform(get("/cd0ended").header("Host", domain)).andExpect(status().isNotFound());
+    mvc.perform(get("/cd0ended").header("Host", "kurl.me"))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "https://other.com/next"));
   }
 
   @Test
