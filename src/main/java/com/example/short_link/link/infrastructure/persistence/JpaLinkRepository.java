@@ -135,6 +135,20 @@ public interface JpaLinkRepository
 
   @Query(
       """
+      SELECT l.shortCode AS shortCode FROM LinkEntity l
+      WHERE l.shortCode IN :shortCodes
+        AND l.maxViews IS NOT NULL
+        AND l.viewCount >= l.maxViews
+      """)
+  List<ShortCodeRow> findShortCodesWithViewLimitReached(
+      @Param("shortCodes") Collection<ShortCode> shortCodes);
+
+  interface ShortCodeRow {
+    ShortCode getShortCode();
+  }
+
+  @Query(
+      """
       SELECT l FROM LinkEntity l
       LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
       LEFT JOIN LinkExpirationPolicyEntity policy ON policy.linkId = l.id

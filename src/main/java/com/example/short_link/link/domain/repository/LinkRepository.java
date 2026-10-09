@@ -70,6 +70,8 @@ public interface LinkRepository {
   // Profile links in profile order, leaving out links an administrator or Safe Browsing disabled.
   List<ProfileLinkRow> findPublicProfileLinks(Long userId);
 
+  List<ShortCode> findShortCodesWithViewLimitReached(Collection<ShortCode> shortCodes);
+
   // A link is unrestricted when every visitor reaches originalUrl: no expiry, password, view limit,
   // country block, opening time, moderation hold or enabled alternative destination.
   List<LinkEntity> findUnrestrictedByUserIdAndOriginalUrl(Long userId, String originalUrl);

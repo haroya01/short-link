@@ -30,6 +30,7 @@ import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -181,15 +182,22 @@ class PublicProfileLoaderTest {
   }
 
   @Test
-  void linksThatOpenOrExpireCarryTheirWindowForServeTime() {
+  void linksThatOpenExpireOrCountViewsCarryTheirWindowForServeTime() {
     alice();
     LinkEntity expiring = new LinkEntity("https://a", "exp0001", 7L, NOW.plusSeconds(30));
     TestEntities.withId(expiring, 1L);
     expiring.setProfileOrder(1);
     LinkEntity opening = profileLink(2L, "opn0001", 2);
+    LinkEntity counted = profileLink(3L, "cnt0001", 3);
+    counted.setMaxViews(5);
+    LinkEntity plain = profileLink(4L, "pln0001", 4);
     when(linkRepository.findPublicProfileLinks(7L))
         .thenReturn(
-            List.of(new Row(expiring, null, false), new Row(opening, NOW.plusSeconds(60), false)));
+            List.of(
+                new Row(expiring, null, false),
+                new Row(opening, NOW.plusSeconds(60), false),
+                new Row(counted, null, false),
+                new Row(plain, null, false)));
     when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L)).thenReturn(List.of());
     when(clickRepository.countsByLinkIds(any())).thenReturn(List.of());
     when(urlBuilder.build(any())).thenAnswer(i -> "https://kurl.me/" + i.getArgument(0));
@@ -198,13 +206,15 @@ class PublicProfileLoaderTest {
 
     assertThat(snapshot.linkWindows())
         .containsExactly(
-            new LinkWindow(new ShortCode("exp0001"), null, NOW.plusSeconds(30)),
-            new LinkWindow(new ShortCode("opn0001"), NOW.plusSeconds(60), null));
-    assertThat(snapshot.visibleAt(NOW).entries())
+            new LinkWindow(new ShortCode("exp0001"), null, NOW.plusSeconds(30), false),
+            new LinkWindow(new ShortCode("opn0001"), NOW.plusSeconds(60), null, false),
+            new LinkWindow(new ShortCode("cnt0001"), null, null, true));
+    assertThat(snapshot.viewLimitedLinks()).containsExactly(new ShortCode("cnt0001"));
+    assertThat(snapshot.visibleAt(NOW, Set.of()).entries())
         .extracting(e -> e.shortCode().value())
-        .containsExactly("exp0001");
-    assertThat(snapshot.visibleAt(NOW.plusSeconds(60)).entries())
+        .containsExactly("exp0001", "cnt0001", "pln0001");
+    assertThat(snapshot.visibleAt(NOW.plusSeconds(60), Set.of(new ShortCode("cnt0001"))).entries())
         .extracting(e -> e.shortCode().value())
-        .containsExactly("opn0001");
+        .containsExactly("opn0001", "pln0001");
   }
 }

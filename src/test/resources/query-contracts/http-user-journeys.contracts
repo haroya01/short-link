@@ -485,6 +485,8 @@
 @junit | profile-link-cross-user-highlight-rejected | 1 | 0 | 0 | 0 | 1
 @junit | profile-link-hide | 3 | 0 | 2 | 0 | 5
 @junit | profile-link-highlight | 5 | 0 | 2 | 0 | 7
+@junit | profile-link-limit-once | 4 | 1 | 1 | 0 | 6
+@junit | profile-link-limit-twice | 4 | 1 | 1 | 0 | 6
 # Protecting a link shown on the profile also reads the owner's username to drop the cached profile.
 @junit | profile-link-protect | 4 | 1 | 1 | 0 | 6
 @junit | profile-link-show | 6 | 1 | 1 | 0 | 8
@@ -519,6 +521,12 @@
 @junit | profile-public-protected-link | 5 | 0 | 0 | 0 | 5
 # A deleted account's profile is not cached: the username and its history miss.
 @junit | profile-public-after-account-delete | 2 | 0 | 0 | 0 | 2
+# A profile showing view-limited links reads their counts on every request, cached or not, so a
+# link drops off as soon as its last view is spent; the second read is a cache hit plus that read.
+@junit | profile-public-with-limited-links | 6 | 0 | 0 | 0 | 6
+@junit | profile-limited-link-visit | 4 | 0 | 1 | 0 | 5
+@junit | profile-limited-link-visit-room-left | 3 | 0 | 1 | 0 | 4
+@junit | profile-public-after-limit-spent | 1 | 0 | 0 | 0 | 1
 @junit | profile-second-block-create | 3 | 1 | 0 | 0 | 4
 @junit | profile-stats-visibility-enable | 1 | 0 | 1 | 0 | 2
 @junit | profile-stats-visibility-read | 1 | 0 | 0 | 0 | 1
