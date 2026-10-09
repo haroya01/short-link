@@ -10,6 +10,7 @@ import com.example.short_link.link.stats.domain.ClickEventEntity;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.link.stats.infrastructure.persistence.JpaClickEventRepository;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
 import jakarta.persistence.EntityManager;
@@ -33,6 +34,8 @@ class UserDeletionServiceTest {
   @Autowired private ClickEventRepository clickEventRepository;
   @Autowired private JpaClickEventRepository jpaClickEventRepository;
   @Autowired private RefreshTokenStore refreshTokenStore;
+  @Autowired private DeviceTokenCommandService devices;
+  @Autowired private DeviceTokenRepository deviceTokens;
   @Autowired private JdbcTemplate jdbc;
   @PersistenceContext private EntityManager em;
 
@@ -45,12 +48,14 @@ class UserDeletionServiceTest {
         clickEventRepository.save(
             ClickEventEntity.builder().linkId(link.linkId()).bot(false).build());
     refreshTokenStore.save(user.getId(), "jti-1", Duration.ofMinutes(5));
+    devices.register(user.getId(), "del-phone", "ios", null, "del-session");
 
     // deleteAccount is a soft delete — it just flags the row and revokes refresh tokens.
     // hardDelete is what the scheduled cleanup eventually runs to actually purge data.
     deletionService.deleteAccount(user.getId());
     assertThat(userRepository.findById(user.getId())).isPresent();
     assertThat(refreshTokenStore.exists(user.getId(), "jti-1")).isFalse();
+    assertThat(deviceTokens.findByToken("del-phone")).isEmpty();
 
     deletionService.hardDelete(user.getId());
     assertThat(userRepository.findById(user.getId())).isEmpty();

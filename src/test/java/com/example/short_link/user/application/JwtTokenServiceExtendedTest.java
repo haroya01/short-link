@@ -41,7 +41,7 @@ class JwtTokenServiceExtendedTest {
   @Test
   void parseAccessTokenDetailedRejectsRefreshToken() throws Exception {
     JwtTokenService svc = freshService();
-    String refresh = svc.createRefreshToken(42L).token();
+    String refresh = svc.createRefreshToken(42L, null).token();
     assertThatThrownBy(() -> svc.parseAccessTokenDetailed(refresh))
         .isInstanceOf(UserException.class)
         .extracting(e -> ((UserException) e).errorCode())

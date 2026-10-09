@@ -8,6 +8,8 @@ import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,26 +44,24 @@ class DeviceTokenTopicPersistenceTest extends DockerHttpTest {
     new TransactionTemplate(transactionManager)
         .executeWithoutResult(
             transaction -> {
-              deviceTokens
-                  .targetsForUser(userId)
-                  .forEach(t -> deviceTokens.deleteByToken(t.token()));
+              deviceTokens.deleteByUserId(userId);
               users.deleteById(userId);
             });
   }
 
   @Test
   void registeredTopicIsReadBackAndLegacyTokensLearnTheirTopic() {
-    commands.register(userId, "links-token", "ios", "focustime.kurl.links");
-    commands.register(userId, "legacy-token", "ios", null);
+    commands.register(userId, "links-token", "ios", "focustime.kurl.links", null);
+    commands.register(userId, "legacy-token", "ios", null, null);
 
-    assertThat(deviceTokens.targetsForUser(userId))
+    assertThat(deviceTokens.targetsForUser(userId, Instant.now()))
         .containsExactlyInAnyOrder(
             new DeviceTarget("links-token", "focustime.kurl.links"),
             new DeviceTarget("legacy-token", null));
 
     deviceTokens.updateTopic("legacy-token", "focustime.kurl");
 
-    assertThat(deviceTokens.targetsForUsers(List.of(userId)))
+    assertThat(deviceTokens.targetsForUsers(List.of(userId), Instant.now()))
         .containsExactlyInAnyOrder(
             new DeviceTarget("links-token", "focustime.kurl.links"),
             new DeviceTarget("legacy-token", "focustime.kurl"));
@@ -69,10 +69,36 @@ class DeviceTokenTopicPersistenceTest extends DockerHttpTest {
 
   @Test
   void reRegisteringWithoutTopicKeepsTheKnownOne() {
-    commands.register(userId, "links-token", "ios", "focustime.kurl.links");
-    commands.register(userId, "links-token", "ios", null);
+    commands.register(userId, "links-token", "ios", "focustime.kurl.links", null);
+    commands.register(userId, "links-token", "ios", null, null);
 
-    assertThat(deviceTokens.targetsForUser(userId))
+    assertThat(deviceTokens.targetsForUser(userId, Instant.now()))
         .containsExactly(new DeviceTarget("links-token", "focustime.kurl.links"));
+  }
+
+  @Test
+  void aDeviceHearsTheAccountOnlyWhileTheSessionThatRegisteredItLives() {
+    commands.register(userId, "phone", "ios", null, "session-a");
+    commands.register(userId, "tablet", "ios", null, "session-b");
+    commands.register(userId, "old-install", "ios", null, null);
+
+    assertThat(deviceTokens.targetsForUser(userId, Instant.now()))
+        .extracting(DeviceTarget::token)
+        .containsExactlyInAnyOrder("phone", "tablet", "old-install");
+
+    deviceTokens.endSession(userId, "session-a");
+    deviceTokens.extendSession(userId, "session-b", Instant.now().minusSeconds(60));
+
+    assertThat(deviceTokens.targetsForUsers(List.of(userId), Instant.now()))
+        .extracting(DeviceTarget::token)
+        .containsExactly("old-install");
+
+    deviceTokens.extendSession(userId, "session-b", Instant.now().plus(Duration.ofDays(14)));
+    assertThat(deviceTokens.targetsForUser(userId, Instant.now()))
+        .extracting(DeviceTarget::token)
+        .containsExactlyInAnyOrder("tablet", "old-install");
+
+    deviceTokens.deleteByUserId(userId);
+    assertThat(deviceTokens.targetsForUser(userId, Instant.now())).isEmpty();
   }
 }

@@ -11,6 +11,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Executor;
@@ -82,13 +83,13 @@ public class ApnsPushSender implements PushSender {
   @Override
   public void send(Long recipientUserId, PushMessage message) {
     if (!tokenProvider.configured()) return;
-    dispatch(deviceTokens.targetsForUser(recipientUserId), message);
+    dispatch(deviceTokens.targetsForUser(recipientUserId, Instant.now()), message);
   }
 
   @Override
   public void sendToAll(Collection<Long> recipientUserIds, PushMessage message) {
     if (!tokenProvider.configured() || recipientUserIds.isEmpty()) return;
-    dispatch(deviceTokens.targetsForUsers(recipientUserIds), message);
+    dispatch(deviceTokens.targetsForUsers(recipientUserIds, Instant.now()), message);
   }
 
   private void dispatch(List<DeviceTarget> targets, PushMessage message) {

@@ -22,6 +22,9 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
   private static final String BEARER = "Bearer ";
 
+  // The login session the bearer token belongs to, for endpoints that bind state to it (devices).
+  public static final String SESSION_ATTRIBUTE = "kurl.sessionId";
+
   private final JwtTokenService jwt;
 
   @Override
@@ -36,6 +39,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         var authorities = List.of(new SimpleGrantedAuthority("ROLE_" + parsed.role()));
         var auth = new UsernamePasswordAuthenticationToken(parsed.userId(), null, authorities);
         SecurityContextHolder.getContext().setAuthentication(auth);
+        if (parsed.sessionId() != null) req.setAttribute(SESSION_ATTRIBUTE, parsed.sessionId());
         MDC.put("userId", String.valueOf(parsed.userId()));
       } catch (Exception ignored) {
       }

@@ -2,6 +2,7 @@ package com.example.short_link.notification.infrastructure;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -65,8 +66,8 @@ class ApnsPushSenderTest {
   @Test
   void sendWithoutRegisteredDevicesDispatchesNothing() {
     when(tokenProvider.configured()).thenReturn(true);
-    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of());
-    when(deviceTokens.targetsForUsers(List.of(1L, 2L))).thenReturn(List.of());
+    when(deviceTokens.targetsForUser(eq(1L), any())).thenReturn(List.of());
+    when(deviceTokens.targetsForUsers(eq(List.of(1L, 2L)), any())).thenReturn(List.of());
 
     ApnsPushSender sender = sender();
     sender.send(1L, new PushSender.PushMessage("kurl", "제목", "본문"));
@@ -80,7 +81,7 @@ class ApnsPushSenderTest {
   @Test
   void dispatchSerializesOnePayloadBeforeQueuingEachDevice() {
     when(tokenProvider.configured()).thenReturn(true);
-    when(deviceTokens.targetsForUser(1L))
+    when(deviceTokens.targetsForUser(eq(1L), any()))
         .thenReturn(
             List.of(new DeviceTarget("device-one", null), new DeviceTarget("device-two", null)));
     JsonMapper mapper = mock(JsonMapper.class);
@@ -109,7 +110,7 @@ class ApnsPushSenderTest {
       int status, String reason, int expectedDeletions) throws Exception {
     when(tokenProvider.configured()).thenReturn(true);
     when(tokenProvider.token()).thenReturn("provider-token");
-    when(deviceTokens.targetsForUser(1L))
+    when(deviceTokens.targetsForUser(eq(1L), any()))
         .thenReturn(List.of(new DeviceTarget("device-one", "focustime.kurl")));
     when(response.statusCode()).thenReturn(status);
     if (status >= 400 && status != 410) when(response.body()).thenReturn(reason);
@@ -137,7 +138,7 @@ class ApnsPushSenderTest {
   void transportFailureDoesNotRetryOrDiscardTheDevice() throws Exception {
     when(tokenProvider.configured()).thenReturn(true);
     when(tokenProvider.token()).thenReturn("provider-token");
-    when(deviceTokens.targetsForUser(1L))
+    when(deviceTokens.targetsForUser(eq(1L), any()))
         .thenReturn(List.of(new DeviceTarget("device-one", "focustime.kurl")));
     when(http.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenThrow(new IOException("offline"));
@@ -153,7 +154,7 @@ class ApnsPushSenderTest {
   void interruptedDeliveryRestoresTheThreadInterruptFlag() throws Exception {
     when(tokenProvider.configured()).thenReturn(true);
     when(tokenProvider.token()).thenReturn("provider-token");
-    when(deviceTokens.targetsForUser(1L))
+    when(deviceTokens.targetsForUser(eq(1L), any()))
         .thenReturn(List.of(new DeviceTarget("device-one", "focustime.kurl")));
     when(http.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
         .thenThrow(new InterruptedException("cancelled"));
@@ -312,7 +313,7 @@ class ApnsPushSenderTest {
   @Test
   void linkNotificationsGoToTheLinksAppTopic() throws Exception {
     respond(200, "");
-    when(deviceTokens.targetsForUser(1L))
+    when(deviceTokens.targetsForUser(eq(1L), any()))
         .thenReturn(List.of(new DeviceTarget("links-device", "focustime.kurl.links")));
 
     sender().send(1L, linkMessage());
@@ -324,7 +325,7 @@ class ApnsPushSenderTest {
   @Test
   void devicesOfTheOtherAppAreSkipped() {
     when(tokenProvider.configured()).thenReturn(true);
-    when(deviceTokens.targetsForUser(1L))
+    when(deviceTokens.targetsForUser(eq(1L), any()))
         .thenReturn(List.of(new DeviceTarget("blog-device", "focustime.kurl")));
 
     sender().send(1L, linkMessage());
@@ -335,7 +336,7 @@ class ApnsPushSenderTest {
   @Test
   void everyDeliveryOutcomeIsLoggedWithItsReason(CapturedOutput output) throws Exception {
     respond(400, "{\"reason\":\"TopicDisallowed\"}");
-    when(deviceTokens.targetsForUser(1L))
+    when(deviceTokens.targetsForUser(eq(1L), any()))
         .thenReturn(List.of(new DeviceTarget("device-abcdef", "focustime.kurl.links")));
 
     sender().send(1L, linkMessage());
@@ -349,7 +350,7 @@ class ApnsPushSenderTest {
   @Test
   void recipientWithoutDeviceIsLogged(CapturedOutput output) {
     when(tokenProvider.configured()).thenReturn(true);
-    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of());
+    when(deviceTokens.targetsForUser(eq(1L), any())).thenReturn(List.of());
 
     sender().send(1L, linkMessage());
 
@@ -359,7 +360,8 @@ class ApnsPushSenderTest {
   @Test
   void legacyDeviceLearnsItsTopicOnSuccess() throws Exception {
     respond(200, "");
-    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of(new DeviceTarget("old-device", null)));
+    when(deviceTokens.targetsForUser(eq(1L), any()))
+        .thenReturn(List.of(new DeviceTarget("old-device", null)));
 
     sender().send(1L, linkMessage());
 
@@ -371,7 +373,8 @@ class ApnsPushSenderTest {
   @Test
   void legacyDeviceOfTheOtherAppIsRecordedAsThatApp() throws Exception {
     respond(400, "{\"reason\":\"DeviceTokenNotForTopic\"}");
-    when(deviceTokens.targetsForUser(1L)).thenReturn(List.of(new DeviceTarget("old-device", null)));
+    when(deviceTokens.targetsForUser(eq(1L), any()))
+        .thenReturn(List.of(new DeviceTarget("old-device", null)));
 
     sender().send(1L, new PushSender.PushMessage("kurl", "글 제목", "좋아합니다"));
 
