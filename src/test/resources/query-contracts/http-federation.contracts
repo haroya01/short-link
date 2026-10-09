@@ -22,7 +22,7 @@
 # A soft-deleted account stops resolving. After commit it leaves: actor, the accounts it follows
 # elsewhere (none here), follower inboxes (none here), then the follower rows are cleared. Its
 # scheduled notes are dropped after commit too, so none posts for a deleted account.
-@junit | federation-account-delete | 5 | 1 | 1 | 2 | 9
+@junit | federation-account-delete | 5 | 1 | 1 | 3 | 10
 @junit | federation-webfinger-after-delete | 1 | 0 | 0 | 0 | 1
 @junit | federation-actor-after-delete | 2 | 0 | 0 | 0 | 2
 # The instance actor (signs fetches): first request creates its key, later ones only read it.
@@ -117,7 +117,7 @@
 @junit | federation-settings-off | 6 | 1 | 1 | 1 | 9
 @junit | federation-webfinger-opted-out | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-on | 2 | 0 | 1 | 0 | 3
-@junit | federation-account-delete-leaves | 6 | 2 | 1 | 2 | 11
+@junit | federation-account-delete-leaves | 6 | 2 | 1 | 3 | 12
 # A vote from another server is a Create of a Note named after the option, replying to the Question.
 # The target check is the like's (the note snapshot, which reads the poll's tally too, and the
 # author's actor), then the key, the note and one INSERT IGNORE: a single-choice poll keeps the first

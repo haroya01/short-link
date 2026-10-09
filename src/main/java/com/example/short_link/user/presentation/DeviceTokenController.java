@@ -2,12 +2,14 @@ package com.example.short_link.user.presentation;
 
 import com.example.short_link.user.application.write.DeviceTokenCommandService;
 import com.example.short_link.user.presentation.request.RegisterDeviceRequest;
+import com.example.short_link.user.presentation.security.JwtAuthenticationFilter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -23,8 +25,11 @@ public class DeviceTokenController {
   @PostMapping
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void register(
-      @AuthenticationPrincipal Long userId, @Valid @RequestBody RegisterDeviceRequest request) {
-    deviceTokens.register(userId, request.token(), request.platform(), request.topic());
+      @AuthenticationPrincipal Long userId,
+      @RequestAttribute(name = JwtAuthenticationFilter.SESSION_ATTRIBUTE, required = false)
+          String sessionId,
+      @Valid @RequestBody RegisterDeviceRequest request) {
+    deviceTokens.register(userId, request.token(), request.platform(), request.topic(), sessionId);
   }
 
   @DeleteMapping

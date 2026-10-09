@@ -33,7 +33,7 @@ class JwtTokenServiceTest {
 
   @Test
   void parseAccessTokenRejectsRefreshToken() {
-    String refresh = service.createRefreshToken(42L).token();
+    String refresh = service.createRefreshToken(42L, null).token();
 
     assertThatThrownBy(() -> service.parseAccessTokenDetailed(refresh))
         .isInstanceOf(UserException.class)
@@ -43,7 +43,7 @@ class JwtTokenServiceTest {
 
   @Test
   void parseRefreshTokenReturnsUserIdAndJti() {
-    RefreshToken refresh = service.createRefreshToken(42L);
+    RefreshToken refresh = service.createRefreshToken(42L, null);
 
     ParsedRefresh parsed = service.parseRefreshToken(refresh.token());
 

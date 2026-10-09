@@ -87,7 +87,7 @@ class MobileAuthControllerTest {
   @Test
   void refreshAcceptsTokenInBody() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("m@example.com", "google", "g-m3"));
-    RefreshToken refresh = jwt.createRefreshToken(user.getId());
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
 
     mvc.perform(
@@ -120,7 +120,7 @@ class MobileAuthControllerTest {
   @Test
   void logoutKillsExactlyThePresentedSession() throws Exception {
     UserEntity user = userRepository.save(new UserEntity("m@example.com", "google", "g-m4"));
-    RefreshToken refresh = jwt.createRefreshToken(user.getId());
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
     refreshStore.save(user.getId(), refresh.jti(), Duration.ofDays(14));
     String body = "{\"refreshToken\":\"" + refresh.token() + "\"}";
 

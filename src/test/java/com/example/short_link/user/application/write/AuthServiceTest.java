@@ -6,10 +6,13 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.application.dto.IssuedTokens;
 import com.example.short_link.user.application.dto.ParsedRefresh;
+import com.example.short_link.user.domain.DeviceTarget;
 import com.example.short_link.user.domain.RefreshToken;
 import com.example.short_link.user.domain.UserEntity;
+import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -25,6 +28,52 @@ class AuthServiceTest {
   @Autowired private UserRepository userRepository;
   @Autowired private RefreshTokenStore refreshStore;
   @Autowired private JwtTokenService jwt;
+  @Autowired private DeviceTokenCommandService devices;
+  @Autowired private DeviceTokenRepository deviceTokens;
+
+  @Test
+  void aSessionKeepsItsIdAcrossRotationsAndTakesItsDevicesWithItWhenItEnds() {
+    IssuedTokens login =
+        ((AuthService.TokenLoginResult.Tokens)
+                authService.loginWithOAuth("sess@example.com", "google", "g-sess"))
+            .issued();
+    String sessionId = jwt.parseAccessTokenDetailed(login.accessToken()).sessionId();
+    assertThat(sessionId).isNotBlank();
+    assertThat(jwt.parseRefreshToken(login.refreshToken()).sessionId()).isEqualTo(sessionId);
+    Long userId = jwt.parseAccessTokenDetailed(login.accessToken()).userId();
+    devices.register(userId, "sess-phone", "ios", null, sessionId);
+    devices.register(userId, "sess-old-install", "ios", null, null);
+
+    IssuedTokens rotated = authService.refresh(login.refreshToken());
+
+    assertThat(jwt.parseRefreshToken(rotated.refreshToken()).sessionId()).isEqualTo(sessionId);
+    assertThat(jwt.parseAccessTokenDetailed(rotated.accessToken()).sessionId())
+        .isEqualTo(sessionId);
+    assertThat(deviceTokens.targetsForUser(userId, Instant.now()))
+        .extracting(DeviceTarget::token)
+        .containsExactlyInAnyOrder("sess-phone", "sess-old-install");
+
+    authService.logout(rotated.refreshToken());
+
+    assertThat(deviceTokens.targetsForUser(userId, Instant.now()))
+        .extracting(DeviceTarget::token)
+        .containsExactly("sess-old-install");
+  }
+
+  @Test
+  void aRefreshTokenFromBeforeSessionsStartsOne() {
+    UserEntity user = userRepository.save(new UserEntity("legacy@example.com", "google", "g-leg"));
+    RefreshToken legacy = jwt.createRefreshToken(user.getId(), null);
+    refreshStore.save(user.getId(), legacy.jti(), jwt.refreshTtl());
+    assertThat(jwt.parseRefreshToken(legacy.token()).sessionId()).isNull();
+
+    IssuedTokens rotated = authService.refresh(legacy.token());
+
+    String sessionId = jwt.parseRefreshToken(rotated.refreshToken()).sessionId();
+    assertThat(sessionId).isNotBlank();
+    assertThat(jwt.parseAccessTokenDetailed(rotated.accessToken()).sessionId())
+        .isEqualTo(sessionId);
+  }
 
   @Test
   void loginWithOAuthCreatesNewUser() {
@@ -61,7 +110,7 @@ class AuthServiceTest {
   @Test
   void refreshRotatesToken() {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
-    RefreshToken initial = jwt.createRefreshToken(user.getId());
+    RefreshToken initial = jwt.createRefreshToken(user.getId(), null);
     refreshStore.save(user.getId(), initial.jti(), jwt.refreshTtl());
 
     IssuedTokens rotated = authService.refresh(initial.token());
@@ -75,7 +124,7 @@ class AuthServiceTest {
   @Test
   void refreshThrowsForUnknownJti() {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
-    RefreshToken refresh = jwt.createRefreshToken(user.getId());
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
 
     assertThatThrownBy(() -> authService.refresh(refresh.token()))
         .isInstanceOf(UserException.class);
@@ -89,12 +138,12 @@ class AuthServiceTest {
   @Test
   void refreshWithUnknownTokenPastGraceRejectsTokenButKeepsOtherSessions() {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-theft"));
-    RefreshToken otherSession = jwt.createRefreshToken(user.getId());
+    RefreshToken otherSession = jwt.createRefreshToken(user.getId(), null);
     refreshStore.save(user.getId(), otherSession.jti(), jwt.refreshTtl());
     // A token the server has no live session for and never just rotated (no grace marker) — a stale
     // or replayed token. It must be rejected, but the user's OTHER live sessions stay intact:
     // wiping everything over one stale token logged the owner out on every device.
-    RefreshToken stale = jwt.createRefreshToken(user.getId());
+    RefreshToken stale = jwt.createRefreshToken(user.getId(), null);
 
     assertThatThrownBy(() -> authService.refresh(stale.token())).isInstanceOf(UserException.class);
 
@@ -104,8 +153,8 @@ class AuthServiceTest {
   @Test
   void replayWithinRotationGraceReissuesWithoutWipingSessions() {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-grace"));
-    RefreshToken initial = jwt.createRefreshToken(user.getId());
-    RefreshToken otherSession = jwt.createRefreshToken(user.getId());
+    RefreshToken initial = jwt.createRefreshToken(user.getId(), null);
+    RefreshToken otherSession = jwt.createRefreshToken(user.getId(), null);
     refreshStore.save(user.getId(), initial.jti(), jwt.refreshTtl());
     refreshStore.save(user.getId(), otherSession.jti(), jwt.refreshTtl());
 
@@ -124,7 +173,7 @@ class AuthServiceTest {
   @Test
   void logoutDeletesRefresh() {
     UserEntity user = userRepository.save(new UserEntity("u@example.com", "google", "g-u"));
-    RefreshToken refresh = jwt.createRefreshToken(user.getId());
+    RefreshToken refresh = jwt.createRefreshToken(user.getId(), null);
     refreshStore.save(user.getId(), refresh.jti(), jwt.refreshTtl());
 
     authService.logout(user.getId(), refresh.token());
