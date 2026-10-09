@@ -16,7 +16,11 @@
 # A thread posts its notes in one transaction, each as a reply to the one before: per note the same
 # work as a single create (authors, insert, and after commit the federation and bell checks), the
 # first note's moderation check once, and for every later note the block check each way.
-@junit | note-thread-create | 9 | 2 | 0 | 0 | 11
+@junit | note-thread-create | 14 | 3 | 0 | 0 | 17
+# Reading that thread: its first note lists the later parts in order apart from other replies, and
+# the public feed carries the second part under the first.
+@junit | note-thread-parts | 7 | 0 | 0 | 0 | 7
+@junit | note-everyone-thread | 7 | 0 | 0 | 0 | 7
 # Liking or reposting answers with the note's public counts in one statement, whoever asks.
 @junit | note-like | 8 | 2 | 0 | 0 | 10
 # Repost: note, moderation, a block check each way, the existing row, insert, then the after-commit
@@ -29,48 +33,50 @@
 # A page of notes costs one query per kind of data: notes, quoted notes (only when one quotes),
 # authors, images, quoted posts, one statement for the page's reply, like, repost and quote counts
 # (public, likes and boosts from other servers included) and, for a signed-in reader, one statement
-# for what they liked, reposted and bookmarked.
-@junit | note-reposts | 7 | 0 | 0 | 0 | 7
-@junit | note-thread | 7 | 0 | 0 | 0 | 7
+# for what they liked, reposted and bookmarked. Feeds and a note's thread also walk the author's own
+# replies under the top-level notes in one recursive statement (a thread written in parts) and, when
+# there are parts, read the next ones in one more query and view them with the page.
+@junit | note-reposts | 8 | 0 | 0 | 0 | 8
+@junit | note-thread | 8 | 0 | 0 | 0 | 8
 # Quotes of a note: the notes quoting it, then the page as usual (anonymous, so no reader marks).
-@junit | note-quotes | 5 | 0 | 0 | 0 | 5
-@junit | post-note-quotes | 6 | 0 | 0 | 0 | 6
+@junit | note-quotes | 6 | 0 | 0 | 0 | 6
+@junit | post-note-quotes | 7 | 0 | 0 | 0 | 7
 # Bookmarks are the reader's own: the note, the existing row, insert or delete. The list reads the
 # reader's bookmark ids newest first, those notes, then the page as usual.
 @junit | note-bookmark | 2 | 1 | 0 | 0 | 3
-@junit | note-bookmarks | 7 | 0 | 0 | 0 | 7
+@junit | note-bookmarks | 8 | 0 | 0 | 0 | 8
 @junit | note-unbookmark | 2 | 0 | 0 | 1 | 3
-@junit | note-profile | 7 | 0 | 0 | 0 | 7
-@junit | note-following | 8 | 0 | 0 | 0 | 8
+@junit | note-profile | 8 | 0 | 0 | 0 | 8
+@junit | note-following | 9 | 0 | 0 | 0 | 9
 # The following feed takes reposts too: follows, then one query that unions the authors' top-level
 # notes with their reposts, keeps each note once at its newest activity (ROW_NUMBER), leaves out
 # reposts of people the reader blocked either way or hid, and returns the note rows; then the reposters'
 # names, and the page is built like any other.
-@junit | note-following-reposts | 7 | 0 | 0 | 0 | 7
+@junit | note-following-reposts | 8 | 0 | 0 | 0 | 8
 # Hiding reposts changes only what the reader sees. Per person: the username, then the row (insert
 # ignore, select or delete). The feed filters both settings inside the same union query, so hiding
 # costs it nothing; with every repost off there are no reposter names to read.
 @junit | note-hide-reposts | 1 | 1 | 0 | 0 | 2
 @junit | note-repost-visibility | 2 | 0 | 0 | 0 | 2
 @junit | note-show-reposts | 1 | 0 | 0 | 1 | 2
-@junit | note-following-hidden-reposts | 7 | 0 | 0 | 0 | 7
+@junit | note-following-hidden-reposts | 8 | 0 | 0 | 0 | 8
 @junit | note-feed-preferences | 1 | 0 | 0 | 0 | 1
 @junit | note-feed-preferences-update | 1 | 1 | 0 | 0 | 2
-@junit | note-following-no-reposts | 6 | 0 | 0 | 0 | 6
-@junit | note-everyone | 6 | 0 | 0 | 0 | 6
+@junit | note-following-no-reposts | 7 | 0 | 0 | 0 | 7
+@junit | note-everyone | 7 | 0 | 0 | 0 | 7
 # Hashtags: a note's tags go in with one multi-row insert after the note (none when it has no tags).
 # An edit rewrites them (delete, insert) only when the set of tags changed. The tag page reads the
 # tagged notes newest first, then builds the page as usual. Notes under a tag the reader follows join
 # the following feed inside its one union query.
 @junit | note-create-tagged | 4 | 2 | 0 | 0 | 6
-@junit | note-tagged | 4 | 0 | 0 | 0 | 4
-@junit | note-following-tags | 6 | 0 | 0 | 0 | 6
+@junit | note-tagged | 5 | 0 | 0 | 0 | 5
+@junit | note-following-tags | 7 | 0 | 0 | 0 | 7
 @junit | note-edit-retag | 8 | 2 | 1 | 1 | 12
 # Mentions: the mentioned handles ride in the authors query (id IN … OR username IN …), so neither
 # writing nor reading a note with mentions adds a query. Each mentioned member is told after commit
 # like any other note notice: block check, preference, insert, then both names for the push.
 @junit | note-create-mention | 8 | 2 | 0 | 0 | 10
-@junit | note-thread-mention | 5 | 0 | 0 | 0 | 5
+@junit | note-thread-mention | 6 | 0 | 0 | 0 | 6
 # A content warning and the sensitive mark are columns on the note: they ride in its one insert and
 # its one update (the edit also keeps the version it replaces).
 @junit | note-create-warning | 4 | 1 | 0 | 0 | 5
@@ -83,17 +89,17 @@
 # orders pins first inside its one query, so a pinned profile costs the same.
 @junit | note-pin | 2 | 0 | 1 | 0 | 3
 @junit | note-unpin | 1 | 0 | 1 | 0 | 2
-@junit | note-profile-pinned | 5 | 0 | 0 | 0 | 5
+@junit | note-profile-pinned | 6 | 0 | 0 | 0 | 6
 # Trending ranks the week's top-level notes in one query (reaction counts are correlated
 # subqueries inside it), then builds the page like the public feed.
-@junit | note-trending | 6 | 0 | 0 | 0 | 6
+@junit | note-trending | 7 | 0 | 0 | 0 | 7
 # Trending hashtags (Mastodon's): one statement — a week of public notes grouped by tag, the
 # accounts and the notes per day counted in it, blocked servers left out.
 @junit | note-trending-tags | 1 | 0 | 0 | 0 | 1
 # Trending links rank link cards the same way, in one statement. A link's notes read like a tag's
 # (notes, authors, media, stats) plus the batch of their link cards, which these notes carry.
 @junit | note-trending-links | 1 | 0 | 0 | 0 | 1
-@junit | note-linked-notes | 5 | 0 | 0 | 0 | 5
+@junit | note-linked-notes | 6 | 0 | 0 | 0 | 6
 # After commit an edit asks once who reposted or quoted the note (Mastodon's update notice). Here
 # the reader's quote is still up, so they hear of it: preference, insert, names for the push.
 @junit | note-edit | 12 | 2 | 1 | 0 | 15
@@ -104,7 +110,7 @@
 # A note with an address: the card is fetched after commit off the request thread and stored with
 # one upsert. Reading it back adds one card query, and only for pages that have an address at all.
 @junit | note-create-link | 4 | 2 | 0 | 0 | 6
-@junit | note-thread-link | 6 | 0 | 0 | 0 | 6
+@junit | note-thread-link | 7 | 0 | 0 | 0 | 7
 # Visibility (Mastodon's four). Restricted notes (followers-only, direct) record the members they
 # mention as recipients in one insert; they still get their mention notices. Shared feeds (everyone,
 # tags) filter public inside their one query. A page with restricted notes by someone else asks once
@@ -117,21 +123,21 @@
 # A direct mention from someone the recipient doesn't follow is an unsolicited private mention,
 # which the default notification policy keeps aside: stored filtered, no push (its two lookups go).
 @junit | note-vis-create-direct | 5 | 4 | 0 | 0 | 9
-@junit | note-vis-everyone | 5 | 0 | 0 | 0 | 5
-@junit | note-vis-tagged | 4 | 0 | 0 | 0 | 4
-@junit | note-vis-profile-anonymous | 5 | 0 | 0 | 0 | 5
-@junit | note-vis-profile-follower | 7 | 0 | 0 | 0 | 7
-@junit | note-vis-profile-mentioned | 7 | 0 | 0 | 0 | 7
-@junit | note-vis-profile-author | 6 | 0 | 0 | 0 | 6
-@junit | note-vis-thread-private-stranger | 4 | 0 | 0 | 0 | 4
-@junit | note-vis-thread-private-follower | 7 | 0 | 0 | 0 | 7
-@junit | note-vis-thread-direct-follower | 4 | 0 | 0 | 0 | 4
-@junit | note-vis-thread-direct-mentioned | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-everyone | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-tagged | 5 | 0 | 0 | 0 | 5
+@junit | note-vis-profile-anonymous | 6 | 0 | 0 | 0 | 6
+@junit | note-vis-profile-follower | 8 | 0 | 0 | 0 | 8
+@junit | note-vis-profile-mentioned | 8 | 0 | 0 | 0 | 8
+@junit | note-vis-profile-author | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-thread-private-stranger | 5 | 0 | 0 | 0 | 5
+@junit | note-vis-thread-private-follower | 8 | 0 | 0 | 0 | 8
+@junit | note-vis-thread-direct-follower | 5 | 0 | 0 | 0 | 5
+@junit | note-vis-thread-direct-mentioned | 8 | 0 | 0 | 0 | 8
 @junit | note-vis-history-private-anonymous | 2 | 0 | 0 | 0 | 2
-@junit | note-vis-direct-mentioned | 6 | 0 | 0 | 0 | 6
+@junit | note-vis-direct-mentioned | 7 | 0 | 0 | 0 | 7
 @junit | note-vis-direct-follower | 1 | 0 | 0 | 0 | 1
-@junit | note-vis-following-follower | 7 | 0 | 0 | 0 | 7
-@junit | note-vis-following-mentioned | 7 | 0 | 0 | 0 | 7
+@junit | note-vis-following-follower | 8 | 0 | 0 | 0 | 8
+@junit | note-vis-following-mentioned | 8 | 0 | 0 | 0 | 8
 @junit | note-vis-like-private-stranger | 2 | 0 | 0 | 0 | 2
 @junit | note-vis-repost-private-follower | 2 | 0 | 0 | 0 | 2
 @junit | note-vis-reply-direct-follower | 3 | 0 | 0 | 0 | 3
@@ -146,7 +152,7 @@
 @junit | note-list-mine | 1 | 0 | 0 | 0 | 1
 @junit | note-list-members | 3 | 0 | 0 | 0 | 3
 @junit | note-list-membership | 2 | 0 | 0 | 0 | 2
-@junit | note-list-feed | 6 | 0 | 0 | 0 | 6
+@junit | note-list-feed | 7 | 0 | 0 | 0 | 7
 @junit | note-list-feed-stranger | 1 | 0 | 0 | 0 | 1
 @junit | note-list-rename | 2 | 0 | 1 | 0 | 3
 @junit | note-list-remove | 2 | 0 | 0 | 1 | 3
@@ -161,7 +167,7 @@
 @junit | note-poll-vote-again | 3 | 1 | 0 | 0 | 4
 @junit | note-poll-vote-own | 1 | 0 | 0 | 0 | 1
 @junit | note-poll-vote-ended | 1 | 0 | 0 | 0 | 1
-@junit | note-thread-poll | 6 | 0 | 0 | 0 | 6
+@junit | note-thread-poll | 7 | 0 | 0 | 0 | 7
 # Mutes (Mastodon's, account-level like blocks). Muting reads the person and the existing row, then
 # inserts or updates; unmuting deletes it. Shared lists (all notes, trending, tags, the following
 # feed, lists, a thread's replies, quotes) keep out authors blocked either way or muted, inside
@@ -170,9 +176,9 @@
 @junit | user-mute | 2 | 1 | 0 | 0 | 3
 @junit | user-mute-status | 2 | 0 | 0 | 0 | 2
 @junit | user-mutes | 2 | 0 | 0 | 0 | 2
-@junit | note-everyone-muted | 6 | 0 | 0 | 0 | 6
+@junit | note-everyone-muted | 8 | 0 | 0 | 0 | 8
 @junit | note-reply-muted | 7 | 1 | 0 | 0 | 8
-@junit | note-thread-muted | 6 | 0 | 0 | 0 | 6
+@junit | note-thread-muted | 7 | 0 | 0 | 0 | 7
 @junit | user-unmute | 2 | 0 | 0 | 1 | 3
 # Keyword filters (Mastodon's) are stored for the owner's apps, which apply them, so no feed reads
 # them. Create counts the owner's filters (at most a hundred) then inserts; every other call first
@@ -186,14 +192,14 @@
 # for a query the index cannot hold) under the same block and mute rules as every shared list, then
 # builds the page as usual.
 @junit | note-search-seed-private | 4 | 1 | 0 | 0 | 5
-@junit | note-search | 4 | 0 | 0 | 0 | 4
-@junit | note-search-short | 4 | 0 | 0 | 0 | 4
+@junit | note-search | 5 | 0 | 0 | 0 | 5
+@junit | note-search-short | 5 | 0 | 0 | 0 | 5
 # Mastodon's mute conversation. A reply joins its thread's root (no extra write: a top-level note is
 # its own conversation). Muting reads the note for its conversation and INSERT IGNOREs the mute;
 # the reader's marks pick it up in the same statement as likes, reposts and bookmarks.
 @junit | note-reply-before-mute | 10 | 2 | 0 | 0 | 12
 @junit | note-conversation-mute | 1 | 1 | 0 | 0 | 2
-@junit | note-thread-conversation-muted | 6 | 0 | 0 | 0 | 6
+@junit | note-thread-conversation-muted | 7 | 0 | 0 | 0 | 7
 # A reply or a like in the muted thread stops at the one silence check (block, mute, conversation).
 @junit | note-reply-conversation-muted | 7 | 1 | 0 | 0 | 8
 @junit | note-like-conversation-muted | 4 | 1 | 0 | 0 | 5
@@ -229,4 +235,4 @@
 # alone). All notes asks the choice inside its one query, so the page costs what it did.
 @junit | note-create-language | 4 | 1 | 0 | 0 | 5
 @junit | note-feed-languages | 1 | 1 | 0 | 0 | 2
-@junit | note-everyone-languages | 5 | 0 | 0 | 0 | 5
+@junit | note-everyone-languages | 6 | 0 | 0 | 0 | 6

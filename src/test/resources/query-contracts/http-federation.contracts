@@ -86,8 +86,8 @@
 @junit | notification-note-unread | 1 | 0 | 0 | 0 | 1
 @junit | notification-note-group-read | 0 | 0 | 1 | 0 | 1
 # Counts are public: the author and anyone else read the same one count statement for the page.
-@junit | federation-note-remote-counts | 6 | 0 | 0 | 0 | 6
-@junit | federation-note-remote-counts-stranger | 6 | 0 | 0 | 0 | 6
+@junit | federation-note-remote-counts | 7 | 0 | 0 | 0 | 7
+@junit | federation-note-remote-counts-stranger | 7 | 0 | 0 | 0 | 7
 # Undo of an embedded Like deletes by note, actor and kind; a bare activity id clears a follow or a
 # reaction with that id.
 @junit | federation-inbox-undo-like | 1 | 0 | 0 | 1 | 2
@@ -152,14 +152,14 @@
 # A reply from there is kept for its thread, but the author's notice stops at the one silence
 # check (server block OR muted conversation), and the thread leaves it out in its one query.
 @junit | federation-inbox-reply-blocked-domain | 10 | 1 | 0 | 0 | 11
-@junit | notes-thread-blocked-domain | 6 | 0 | 0 | 0 | 6
+@junit | notes-thread-blocked-domain | 7 | 0 | 0 | 0 | 7
 @junit | federation-domain-unblock | 0 | 0 | 0 | 1 | 1
 # Moderators block a whole server (Mastodon's limit and suspend). Limiting: the block row only.
 @junit | admin-server-limit | 1 | 1 | 0 | 0 | 2
 # A limited server's tagged note stays out for someone who does not follow the account and shows
 # for someone who does, inside the same tag statement.
 @junit | notes-tag-limited-server-stranger | 1 | 0 | 0 | 0 | 1
-@junit | notes-tag-limited-server-follower | 5 | 0 | 0 | 0 | 5
+@junit | notes-tag-limited-server-follower | 6 | 0 | 0 | 0 | 6
 # Suspending: the row changes, then follows both ways and activities still waiting to go there end
 # (three deletes), and after commit its notices go (one delete).
 @junit | admin-server-suspend | 1 | 0 | 1 | 4 | 6
@@ -169,11 +169,11 @@
 @junit | federation-account-suspended-server | 1 | 0 | 0 | 0 | 1
 @junit | notes-tag-suspended-server | 1 | 0 | 0 | 0 | 1
 # Its note's thread: the note, replies and authors, its author left out, so the note is not found.
-@junit | notes-thread-suspended-server | 3 | 0 | 0 | 0 | 3
+@junit | notes-thread-suspended-server | 4 | 0 | 0 | 0 | 4
 @junit | admin-servers | 1 | 0 | 0 | 0 | 1
 @junit | admin-servers-member | 0 | 0 | 0 | 0 | 0
 @junit | admin-server-unblock | 0 | 0 | 0 | 1 | 1
-@junit | notes-tag-unblocked-server | 5 | 0 | 0 | 0 | 5
+@junit | notes-tag-unblocked-server | 6 | 0 | 0 | 0 | 6
 # Notes from an account a member follows. Before the key: is anyone following it. Then the key,
 # INSERT IGNORE on the note's uri, its id, and its image (the address stays on its server).
 @junit | federation-inbox-remote-note | 3 | 2 | 0 | 0 | 5
@@ -181,18 +181,18 @@
 # Mastodon's live feed of other servers, for members: the one page statement (server blocks,
 # limits, the reader's blocks and languages inside it), then the page's remote authors, media,
 # stats and the reader's marks. Anonymous readers are turned away before any query.
-@junit | notes-federated | 5 | 0 | 0 | 0 | 5
+@junit | notes-federated | 6 | 0 | 0 | 0 | 6
 @junit | notes-federated-anonymous | 0 | 0 | 0 | 0 | 0
-@junit | notes-following-remote | 6 | 0 | 0 | 0 | 6
-@junit | federation-remote-notes | 5 | 0 | 0 | 0 | 5
+@junit | notes-following-remote | 7 | 0 | 0 | 0 | 7
+@junit | federation-remote-notes | 6 | 0 | 0 | 0 | 6
 # All notes stays kurl's own (remote_actor_id IS NULL), the same four queries as before.
-@junit | notes-everyone-without-remote | 4 | 0 | 0 | 0 | 4
+@junit | notes-everyone-without-remote | 5 | 0 | 0 | 0 | 5
 # A reply to a member's note is wanted from anyone: the target is checked with the note document's
 # rule (note, author, images, user, preference, actor), then the key, the parent, the insert and its
 # id; the author hears of it (muted conversation, preference, notification, recipient, remote
 # actor).
 @junit | federation-inbox-remote-reply | 13 | 2 | 0 | 0 | 15
-@junit | notes-thread-remote-reply | 6 | 0 | 0 | 0 | 6
+@junit | notes-thread-remote-reply | 7 | 0 | 0 | 0 | 7
 # Edits and deletes first ask whether we kept that note, so others never cost a key fetch. The
 # edit updates that note by the id the question found; the member who boosted it hears of the edit
 # (who shared it, preference, insert, their name and the remote author's for the push).
@@ -206,7 +206,7 @@
 @junit | federation-remote-note-report | 5 | 2 | 0 | 0 | 7
 # Trending before any member touched a note from elsewhere: the one ranking statement, then the
 # page's local authors, media and stats; no account from elsewhere is read, the note is not there.
-@junit | notes-trending-remote-untouched | 4 | 0 | 0 | 0 | 4
+@junit | notes-trending-remote-untouched | 5 | 0 | 0 | 0 | 5
 # A member likes, boosts and answers a note from elsewhere; each reaches its author's server. After
 # the member's own work: their actor (user, preference, actor), the note and its account, then the
 # delivery (dedupe check, insert). A boost and a reply also go to the member's followers' servers.
@@ -215,7 +215,7 @@
 @junit | federation-remote-note-reply | 13 | 2 | 0 | 0 | 15
 # Once members liked, boosted and answered it, the same ranking statement brings it in, and its
 # account from elsewhere joins the page's authors.
-@junit | notes-trending-remote | 5 | 0 | 0 | 0 | 5
+@junit | notes-trending-remote | 6 | 0 | 0 | 0 | 6
 # Editing and deleting that reply reach the server it answered as well as the member's followers:
 # after the member's own work, their actor (user, preference, actor), the reply and its parent's
 # account, follower inboxes, then the delivery. The delete carries what the reply answered, since

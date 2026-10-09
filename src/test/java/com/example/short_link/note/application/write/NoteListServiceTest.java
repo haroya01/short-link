@@ -141,13 +141,13 @@ class NoteListServiceTest {
     NoteEntity first = mock(NoteEntity.class);
     NoteEntity second = mock(NoteEntity.class);
     when(lists.feed(4L, 7L, 0, 2)).thenReturn(List.of(first, second));
-    when(views.of(List.of(first), 7L)).thenReturn(List.of());
+    when(views.ofFeed(List.of(first), 7L)).thenReturn(List.of());
 
     NoteFeedView page = service().feed(7L, 4L, -1, 1);
 
     assertThat(page.page()).isZero();
     assertThat(page.hasNext()).isTrue();
-    verify(views).of(List.of(first), 7L);
+    verify(views).ofFeed(List.of(first), 7L);
 
     when(lists.feed(4L, 7L, 50, 51)).thenReturn(List.of(first));
     assertThat(service().feed(7L, 4L, 1, 500).hasNext()).isFalse();

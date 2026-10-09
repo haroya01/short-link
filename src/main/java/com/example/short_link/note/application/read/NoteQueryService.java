@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.Hashtags;
+import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
@@ -13,6 +14,7 @@ import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -199,8 +201,8 @@ public class NoteQueryService {
     Map<Long, NoteAuthor> reposters =
         reposterIds.isEmpty() ? Map.of() : people.activeAuthors(reposterIds);
     Map<Long, NoteView> byId =
-        views.of(current.stream().map(NoteFeedRow::note).toList(), viewerId).stream()
-            .collect(Collectors.toMap(NoteView::id, Function.identity()));
+        views.ofFeed(current.stream().map(NoteFeedRow::note).toList(), viewerId).stream()
+            .collect(Collectors.toMap(NoteView::id, Function.identity(), (first, again) -> first));
     List<NoteView> items = new ArrayList<>(current.size());
     for (NoteFeedRow row : current) {
       NoteView view = byId.get(row.note().getId());
@@ -256,6 +258,15 @@ public class NoteQueryService {
       notes.findById(note.getInReplyToId()).ifPresent(batch::add);
     }
     batch.addAll(notes.replies(noteId, viewerId, MAX_REPLIES));
+    List<Long> chain =
+        NoteViews.chains(
+                notes.selfReplies(List.of(noteId), NoteCommandService.MAX_THREAD_NOTES - 1))
+            .getOrDefault(noteId, List.of());
+    Set<Long> inBatch = batch.stream().map(NoteEntity::getId).collect(Collectors.toSet());
+    List<Long> missing = chain.stream().filter(id -> !inBatch.contains(id)).toList();
+    if (!missing.isEmpty()) {
+      batch.addAll(notes.findAllByIdIn(missing));
+    }
     List<NoteView> loaded = views.of(batch, viewerId);
     NoteView main =
         loaded.stream()
@@ -269,9 +280,17 @@ public class NoteQueryService {
                 .filter(view -> view.id().equals(note.getInReplyToId()))
                 .findFirst()
                 .orElse(null);
+    Map<Long, NoteView> byId = new HashMap<>();
+    loaded.forEach(view -> byId.putIfAbsent(view.id(), view));
+    List<NoteView> continuation =
+        chain.stream().map(byId::get).takeWhile(Objects::nonNull).toList();
+    Set<Long> parts = continuation.stream().map(NoteView::id).collect(Collectors.toSet());
     List<NoteView> replies =
-        loaded.stream().filter(view -> noteId.equals(view.inReplyToId())).toList();
-    return new NoteThreadView(main, parent, replies);
+        loaded.stream()
+            .filter(view -> noteId.equals(view.inReplyToId()))
+            .filter(view -> !parts.contains(view.id()))
+            .toList();
+    return new NoteThreadView(main, parent, replies, continuation);
   }
 
   @Transactional(readOnly = true)
@@ -286,6 +305,6 @@ public class NoteQueryService {
     List<NoteEntity> rows = fetch.apply(safePage * safeSize, safeSize + 1);
     boolean hasNext = rows.size() > safeSize;
     List<NoteEntity> current = hasNext ? rows.subList(0, safeSize) : rows;
-    return new NoteFeedView(views.of(current, viewerId), safePage, hasNext);
+    return new NoteFeedView(views.ofFeed(current, viewerId), safePage, hasNext);
   }
 }

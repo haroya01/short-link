@@ -35,7 +35,65 @@ public record NoteView(
     String visibility,
     Poll poll,
     Boolean conversationMuted,
-    String language) {
+    String language,
+    SelfThread thread) {
+
+  public NoteView(
+      Long id,
+      String body,
+      Instant createdAt,
+      Instant editedAt,
+      Long likeCount,
+      Boolean likedByMe,
+      NoteAuthor author,
+      List<Media> media,
+      QuotedPost quotedPost,
+      Long inReplyToId,
+      long replyCount,
+      Long repostCount,
+      Boolean repostedByMe,
+      QuotedNote quotedNote,
+      LinkPreview linkPreview,
+      NoteAuthor repostedBy,
+      long quoteCount,
+      Boolean bookmarkedByMe,
+      List<String> mentions,
+      String contentWarning,
+      boolean sensitive,
+      boolean pinned,
+      String visibility,
+      Poll poll,
+      Boolean conversationMuted,
+      String language) {
+    this(
+        id,
+        body,
+        createdAt,
+        editedAt,
+        likeCount,
+        likedByMe,
+        author,
+        media,
+        quotedPost,
+        inReplyToId,
+        replyCount,
+        repostCount,
+        repostedByMe,
+        quotedNote,
+        linkPreview,
+        repostedBy,
+        quoteCount,
+        bookmarkedByMe,
+        mentions,
+        contentWarning,
+        sensitive,
+        pinned,
+        visibility,
+        poll,
+        conversationMuted,
+        language,
+        null);
+  }
 
   public NoteView(
       Long id,
@@ -166,6 +224,10 @@ public record NoteView(
 
   public record LinkPreview(String url, String title, String description, String image) {}
 
+  // A thread the author wrote in parts: how many parts there are, counting this one, and the parts
+  // a feed shows right under it.
+  public record SelfThread(int total, List<NoteView> preview) {}
+
   public record QuotedNote(
       Long id,
       String body,
@@ -202,6 +264,38 @@ public record NoteView(
         visibility,
         poll,
         conversationMuted,
-        language);
+        language,
+        thread);
+  }
+
+  NoteView withThread(SelfThread selfThread) {
+    return new NoteView(
+        id,
+        body,
+        createdAt,
+        editedAt,
+        likeCount,
+        likedByMe,
+        author,
+        media,
+        quotedPost,
+        inReplyToId,
+        replyCount,
+        repostCount,
+        repostedByMe,
+        quotedNote,
+        linkPreview,
+        repostedBy,
+        quoteCount,
+        bookmarkedByMe,
+        mentions,
+        contentWarning,
+        sensitive,
+        pinned,
+        visibility,
+        poll,
+        conversationMuted,
+        language,
+        selfThread);
   }
 }

@@ -95,7 +95,7 @@ public class NoteListService {
     List<NoteEntity> rows = lists.feed(listId, userId, safePage * safeSize, safeSize + 1);
     boolean hasNext = rows.size() > safeSize;
     List<NoteEntity> current = hasNext ? rows.subList(0, safeSize) : rows;
-    return new NoteFeedView(views.of(current, userId), safePage, hasNext);
+    return new NoteFeedView(views.ofFeed(current, userId), safePage, hasNext);
   }
 
   private NoteListEntity owned(Long userId, Long listId) {

@@ -1233,10 +1233,36 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
             "POST",
             "/api/v1/notes/threads",
             writer,
-            Map.of("notes", List.of(Map.of("body", "이어 쓰기 하나"), Map.of("body", "이어 쓰기 둘"))),
+            Map.of(
+                "notes",
+                List.of(
+                    Map.of("body", "이어 쓰기 하나"),
+                    Map.of("body", "이어 쓰기 둘"),
+                    Map.of("body", "이어 쓰기 셋"))),
             201);
-    assertThat(posted).hasSize(2);
-    assertThat(posted.get(1).path("inReplyToId").asLong())
-        .isEqualTo(posted.get(0).path("id").asLong());
+    assertThat(posted).hasSize(3);
+    long first = posted.get(0).path("id").asLong();
+    long second = posted.get(1).path("id").asLong();
+    long third = posted.get(2).path("id").asLong();
+    assertThat(posted.get(1).path("inReplyToId").asLong()).isEqualTo(first);
+
+    var parts = step("note-thread-parts", "GET", "/api/v1/public/notes/" + first, null, null, 200);
+    List<Long> continuation = new ArrayList<>();
+    parts.path("continuation").forEach(part -> continuation.add(part.path("id").asLong()));
+    assertThat(continuation).containsExactly(second, third);
+    List<Long> replies = new ArrayList<>();
+    parts.path("replies").forEach(reply -> replies.add(reply.path("id").asLong()));
+    assertThat(replies).doesNotContain(second);
+
+    var feed = step("note-everyone-thread", "GET", "/api/v1/public/notes?size=50", null, null, 200);
+    JsonNode head = null;
+    for (JsonNode item : feed.path("items")) {
+      if (item.path("id").asLong() == first) {
+        head = item;
+      }
+    }
+    assertThat(head).isNotNull();
+    assertThat(head.path("thread").path("total").asInt()).isEqualTo(3);
+    assertThat(head.path("thread").path("preview").get(0).path("id").asLong()).isEqualTo(second);
   }
 }

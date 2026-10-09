@@ -16,6 +16,7 @@ import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.QuotedPost;
+import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
@@ -282,5 +283,28 @@ class NoteViewsTest {
 
     assertThat(views.of(List.of(note(1L, 8L, null)), 8L).getFirst().poll()).isNull();
     verifyNoInteractions(polls);
+  }
+
+  @Test
+  void aThreadFollowsTheAuthorsOwnRepliesInTheOrderTheyWereWritten() {
+    var chains =
+        NoteViews.chains(
+            List.of(
+                new SelfReply(1L, 1L, 2L), new SelfReply(1L, 2L, 3L), new SelfReply(9L, 9L, 10L)));
+
+    assertThat(chains).containsEntry(1L, List.of(2L, 3L)).containsEntry(9L, List.of(10L));
+  }
+
+  @Test
+  void whenTheAuthorAnsweredOnePartTwiceTheEarlierAnswerCarriesTheThread() {
+    var chains =
+        NoteViews.chains(
+            List.of(
+                new SelfReply(1L, 1L, 5L),
+                new SelfReply(1L, 1L, 2L),
+                new SelfReply(1L, 5L, 6L),
+                new SelfReply(1L, 2L, 3L)));
+
+    assertThat(chains).containsEntry(1L, List.of(2L, 3L));
   }
 }

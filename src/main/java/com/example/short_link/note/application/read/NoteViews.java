@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.Mentions;
+import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
@@ -9,6 +10,7 @@ import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.QuotedPost;
+import com.example.short_link.note.domain.SelfReply;
 import com.example.short_link.note.domain.repository.NoteLinkPreviewRepository;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
@@ -150,6 +152,62 @@ public class NoteViews {
               note.getLanguage()));
     }
     return views;
+  }
+
+  // A feed page: each top-level note that the author went on in their own replies carries the next
+  // part, so the feed can show the first two parts joined. One query walks every chain on the page,
+  // and the next parts are viewed in the same batch as the page.
+  public List<NoteView> ofFeed(List<NoteEntity> page, Long viewerId) {
+    List<Long> roots =
+        page.stream().filter(note -> note.getInReplyToId() == null).map(NoteEntity::getId).toList();
+    Map<Long, List<Long>> chains =
+        roots.isEmpty()
+            ? Map.of()
+            : chains(notes.selfReplies(roots, NoteCommandService.MAX_THREAD_NOTES - 1));
+    if (chains.isEmpty()) {
+      return of(page, viewerId);
+    }
+    List<NoteEntity> batch = new ArrayList<>(page);
+    batch.addAll(notes.findAllByIdIn(chains.values().stream().map(List::getFirst).toList()));
+    Map<Long, NoteView> byId = new HashMap<>();
+    of(batch, viewerId).forEach(view -> byId.putIfAbsent(view.id(), view));
+    List<NoteView> views = new ArrayList<>(page.size());
+    for (NoteEntity note : page) {
+      NoteView view = byId.get(note.getId());
+      if (view == null) {
+        continue;
+      }
+      List<Long> chain = chains.get(note.getId());
+      NoteView next = chain == null ? null : byId.get(chain.getFirst());
+      views.add(
+          next == null
+              ? view
+              : view.withThread(new NoteView.SelfThread(chain.size() + 1, List.of(next))));
+    }
+    return views;
+  }
+
+  // Each root's parts in order. When the author answered the same part twice, the earlier answer
+  // carries the thread on, as on Threads and X.
+  static Map<Long, List<Long>> chains(List<SelfReply> replies) {
+    Map<Long, Map<Long, Long>> firstAnswer = new HashMap<>();
+    for (SelfReply reply : replies) {
+      firstAnswer
+          .computeIfAbsent(reply.rootId(), root -> new HashMap<>())
+          .merge(reply.parentId(), reply.id(), Math::min);
+    }
+    Map<Long, List<Long>> chains = new HashMap<>();
+    firstAnswer.forEach(
+        (root, answers) -> {
+          List<Long> chain = new ArrayList<>();
+          for (Long next = answers.get(root); next != null; next = answers.get(next)) {
+            chain.add(next);
+          }
+          if (!chain.isEmpty()) {
+            chains.put(root, chain);
+          }
+        });
+    return chains;
   }
 
   // Like link cards, a page without a poll costs no query.

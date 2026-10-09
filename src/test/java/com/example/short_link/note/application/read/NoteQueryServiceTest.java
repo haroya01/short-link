@@ -56,7 +56,7 @@ class NoteQueryServiceTest {
   void pagesFetchOneExtraRowToKnowIfMoreFollow() {
     List<NoteEntity> three = LongStream.of(3, 2, 1).mapToObj(id -> note(id, null)).toList();
     when(notes.topLevel(7L, 2, 3)).thenReturn(three);
-    when(views.of(three.subList(0, 2), 7L))
+    when(views.ofFeed(three.subList(0, 2), 7L))
         .thenReturn(List.of(view(3L, null, 4L), view(2L, null, 0L)));
 
     NoteFeedView feed = service.everyone(1, 2, 7L);
@@ -70,7 +70,7 @@ class NoteQueryServiceTest {
   void trendingPagesLikeThePublicFeed() {
     List<NoteEntity> two = LongStream.of(5, 9).mapToObj(id -> note(id, null)).toList();
     when(notes.trending(null, 0, 21)).thenReturn(two);
-    when(views.of(two, null)).thenReturn(List.of(view(5L, null, 3L), view(9L, null, 0L)));
+    when(views.ofFeed(two, null)).thenReturn(List.of(view(5L, null, 3L), view(9L, null, 0L)));
 
     NoteFeedView feed = service.trending(0, 20, null);
 
@@ -83,7 +83,7 @@ class NoteQueryServiceTest {
   void theFeedOfOtherServersPagesLikeThePublicFeed() {
     List<NoteEntity> two = LongStream.of(7, 8).mapToObj(id -> note(id, null)).toList();
     when(notes.federated(3L, 0, 21)).thenReturn(two);
-    when(views.of(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
+    when(views.ofFeed(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
 
     NoteFeedView feed = service.federated(3L, 0, 20);
 
@@ -128,7 +128,7 @@ class NoteQueryServiceTest {
   void theNotesOfALinkPageLikeAnyFeedAndABlankLinkHasNone() {
     List<NoteEntity> two = LongStream.of(7, 8).mapToObj(id -> note(id, null)).toList();
     when(notes.linked("https://e.com", 3L, 0, 21)).thenReturn(two);
-    when(views.of(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
+    when(views.ofFeed(two, 3L)).thenReturn(List.of(view(7L, null, 0L), view(8L, null, 1L)));
 
     assertThat(service.linked("https://e.com", 0, 20, 3L).items())
         .extracting(NoteView::id)
@@ -139,7 +139,7 @@ class NoteQueryServiceTest {
   @Test
   void pageAndSizeAreClamped() {
     when(notes.topLevel(null, 0, NoteQueryService.MAX_PAGE_SIZE + 1)).thenReturn(List.of());
-    when(views.of(List.of(), null)).thenReturn(List.of());
+    when(views.ofFeed(List.of(), null)).thenReturn(List.of());
 
     NoteFeedView feed = service.everyone(-3, 10_000, null);
 
@@ -159,7 +159,7 @@ class NoteQueryServiceTest {
   void profileAndFollowingReadTheRightAuthors() {
     when(people.activeByUsername("me")).thenReturn(Optional.of(ME));
     when(notes.topLevelByAuthor(7L, 9L, 0, 21)).thenReturn(List.of());
-    when(views.of(anyList(), eq(9L))).thenReturn(List.of());
+    when(views.ofFeed(anyList(), eq(9L))).thenReturn(List.of());
     service.byAuthor("me", 0, 20, 9L);
 
     when(people.followingIds(9L)).thenReturn(List.of(7L, 8L));
@@ -180,7 +180,7 @@ class NoteQueryServiceTest {
                 new NoteFeedRow(orphaned, 6L),
                 new NoteFeedRow(own, null)));
     when(people.activeAuthors(Set.of(8L, 6L))).thenReturn(Map.of(8L, ME));
-    when(views.of(List.of(reposted, orphaned, own), 9L))
+    when(views.ofFeed(List.of(reposted, orphaned, own), 9L))
         .thenReturn(List.of(view(2L, null, null), view(3L, null, null), view(1L, null, null)));
 
     List<NoteView> items = service.following(9L, 0, 20).items();
@@ -197,7 +197,7 @@ class NoteQueryServiceTest {
     NoteEntity two = note(2L, null);
     NoteEntity five = note(5L, null);
     when(notes.findAllByIdIn(List.of(5L, 9L, 2L))).thenReturn(List.of(two, five));
-    when(views.of(List.of(five, two), 9L))
+    when(views.ofFeed(List.of(five, two), 9L))
         .thenReturn(List.of(view(5L, null, null), view(2L, null, null)));
 
     NoteFeedView feed = service.reposts("me", 0, 20, 9L);
@@ -261,7 +261,7 @@ class NoteQueryServiceTest {
     NoteEntity five = note(5L, null);
     when(bookmarks.recentNoteIdsByUser(9L, 0, 21)).thenReturn(List.of(5L, 2L));
     when(notes.findAllByIdIn(List.of(5L, 2L))).thenReturn(List.of(two, five));
-    when(views.of(List.of(five, two), 9L))
+    when(views.ofFeed(List.of(five, two), 9L))
         .thenReturn(List.of(view(5L, null, 0L), view(2L, null, 0L)));
 
     assertThat(service.bookmarks(9L, 0, 20).items())
@@ -269,7 +269,7 @@ class NoteQueryServiceTest {
         .containsExactly(5L, 2L);
 
     when(notes.quotesOf(7L, null, 0, 21)).thenReturn(List.of(two));
-    when(views.of(List.of(two), null)).thenReturn(List.of(view(2L, null, 0L)));
+    when(views.ofFeed(List.of(two), null)).thenReturn(List.of(view(2L, null, 0L)));
     assertThat(service.quotes(7L, 0, 20, null).items())
         .extracting(NoteView::id)
         .containsExactly(2L);
@@ -280,7 +280,7 @@ class NoteQueryServiceTest {
     NoteEntity quoting = note(3L, null);
     when(notes.quotesOfPost(40L, 9L, 0, 21)).thenReturn(List.of(quoting));
     when(notes.countQuotesOfPost(40L, 9L)).thenReturn(1L);
-    when(views.of(List.of(quoting), 9L)).thenReturn(List.of(view(3L, null, 0L)));
+    when(views.ofFeed(List.of(quoting), 9L)).thenReturn(List.of(view(3L, null, 0L)));
 
     PostQuotesView quotes = service.postQuotes(40L, 0, 20, 9L);
 
@@ -297,13 +297,13 @@ class NoteQueryServiceTest {
 
     NoteEntity hit = note(4L, null);
     when(notes.search("헥사고날", null, 7L, 0, 21)).thenReturn(List.of(hit));
-    when(views.of(List.of(hit), 7L)).thenReturn(List.of(view(4L, null, 0L)));
+    when(views.ofFeed(List.of(hit), 7L)).thenReturn(List.of(view(4L, null, 0L)));
     assertThat(service.search(" 헥사고날 ", 0, 20, 7L).items())
         .extracting(NoteView::id)
         .containsExactly(4L);
 
     when(notes.search(null, "%밥%", null, 0, 21)).thenReturn(List.of());
-    when(views.of(List.of(), null)).thenReturn(List.of());
+    when(views.ofFeed(List.of(), null)).thenReturn(List.of());
     assertThat(service.search("밥", 0, 20, null).items()).isEmpty();
   }
 }
