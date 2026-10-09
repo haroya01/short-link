@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import lombok.Builder;
 
-@Builder
+@Builder(toBuilder = true)
 public record LinkStats(
     ShortCode shortCode,
     String timezone,
@@ -104,7 +104,12 @@ public record LinkStats(
       double returnRatio) {}
 
   public record DestinationClick(
-      Long destinationId, String url, String label, int weight, boolean enabled, long count) {}
+      Long destinationId, String url, String label, int weight, boolean enabled, long count) {
+
+    public DestinationClick withoutUrl() {
+      return new DestinationClick(destinationId, null, label, weight, enabled, count);
+    }
+  }
 
   public record CountryClick(String country, long count) {}
 

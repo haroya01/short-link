@@ -2,9 +2,12 @@ package com.example.short_link.link.stats.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
 
 import com.example.short_link.link.access.application.LinkVisibilityService;
 import com.example.short_link.link.application.dto.LinkStats;
+import com.example.short_link.link.destination.domain.LinkDestinationEntity;
+import com.example.short_link.link.destination.domain.repository.LinkDestinationRepository;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
@@ -27,6 +30,7 @@ class LinkStatsQueryServiceIntegrationTest {
 
   @Autowired private LinkStatsQueryService service;
   @Autowired private LinkRepository linkRepository;
+  @Autowired private LinkDestinationRepository destinationRepository;
   @Autowired private ClickEventRepository clickRepository;
   @Autowired private UserRepository userRepository;
   @Autowired private LinkVisibilityService visibilityService;
@@ -97,6 +101,48 @@ class LinkStatsQueryServiceIntegrationTest {
 
     LinkStats stats = service.publicStats(new ShortCode("pst0002"));
     assertThat(stats).isNotNull();
+  }
+
+  @Test
+  void publicStatsKeepDestinationLabelsAndCountsButNotTheirUrls() {
+    UserEntity owner = userRepository.save(new UserEntity("o@x.com", "google", "g-pst3"));
+    LinkEntity link =
+        linkRepository.save(
+            new LinkEntity("https://secret.example.com/plan", "pst0003", owner.getId(), null));
+    LinkDestinationEntity variant =
+        destinationRepository.save(
+            new LinkDestinationEntity(
+                link.linkId(), "https://secret.example.com/variant", 1, "Variant", null));
+    destinationClick(link, null);
+    destinationClick(link, variant.getId());
+    destinationClick(link, variant.getId());
+    visibilityService.setStatsPublic(owner.getId(), new ShortCode("pst0003"), true);
+
+    LinkStats ownerView = service.stats(owner.getId(), new ShortCode("pst0003"));
+    LinkStats publicView = service.publicStats(new ShortCode("pst0003"));
+
+    assertThat(ownerView.destinationClicks())
+        .extracting(LinkStats.DestinationClick::url)
+        .containsExactlyInAnyOrder(
+            "https://secret.example.com/plan", "https://secret.example.com/variant");
+    assertThat(publicView.destinationClicks())
+        .extracting(
+            LinkStats.DestinationClick::url,
+            LinkStats.DestinationClick::label,
+            LinkStats.DestinationClick::count)
+        .containsExactlyInAnyOrder(tuple(null, "default", 1L), tuple(null, "Variant", 2L));
+  }
+
+  private void destinationClick(LinkEntity link, Long destinationId) {
+    clickRepository.save(
+        ClickEventEntity.builder()
+            .linkId(link.linkId())
+            .destinationId(destinationId)
+            .userAgent("ua")
+            .clientIp("9.9.9.9")
+            .deviceClass("mobile")
+            .bot(false)
+            .build());
   }
 
   @Test

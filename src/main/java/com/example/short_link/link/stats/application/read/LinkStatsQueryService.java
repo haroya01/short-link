@@ -42,7 +42,11 @@ public class LinkStatsQueryService {
     if (!link.isStatsPublic()) {
       throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, shortCode);
     }
-    return reportAssembler.assemble(link, ownerZone(link.getUserId()));
+    LinkStats stats = reportAssembler.assemble(link, ownerZone(link.getUserId()));
+    return stats.toBuilder()
+        .destinationClicks(
+            stats.destinationClicks().stream().map(LinkStats.DestinationClick::withoutUrl).toList())
+        .build();
   }
 
   // Caller must enforce ADMIN access; this path intentionally skips ownership checks and reports in
