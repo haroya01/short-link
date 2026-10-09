@@ -3,6 +3,7 @@ package com.example.short_link.link.infrastructure.persistence;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository.CachedLinkRow;
+import com.example.short_link.link.domain.repository.LinkRepository.ProfileLinkRow;
 import com.example.short_link.link.domain.repository.LinkRepository.SafetyRescanRow;
 import java.time.Instant;
 import java.util.Collection;
@@ -111,6 +112,26 @@ public interface JpaLinkRepository
   List<LinkEntity> findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(Long userId);
 
   List<LinkEntity> findAllByUserIdAndProfileHighlightedIsTrue(Long userId);
+
+  @Query(
+      """
+      SELECT
+        l AS link,
+        visit.opensAt AS opensAt,
+        CASE
+          WHEN COALESCE(acl.passwordHash, l.passwordHash) IS NULL THEN false
+          ELSE true
+        END AS passwordRequired
+      FROM LinkEntity l
+      LEFT JOIN LinkAccessControlEntity acl ON acl.linkId = l.id
+      LEFT JOIN LinkVisitOptionEntity visit ON visit.linkId = l.id
+      WHERE l.userId = :userId
+        AND l.profileOrder IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM LinkModerationEntity moderation WHERE moderation.linkId = l.id)
+      ORDER BY l.profileOrder ASC
+      """)
+  List<ProfileLinkRow> findPublicProfileLinks(@Param("userId") Long userId);
 
   @Query(
       """

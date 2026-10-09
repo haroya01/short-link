@@ -46,7 +46,7 @@ public class LinkModerationService {
         .map(
             moderation -> {
               moderations.delete(moderation);
-              linkCacheEviction.evictAfterCommit(link.getShortCode());
+              linkCacheEviction.evictAfterCommit(link);
               return true;
             })
         .orElse(false);
@@ -58,7 +58,7 @@ public class LinkModerationService {
     }
     moderations.insert(
         new LinkModerationEntity(link.getId(), reason, adminUserId, clock.instant()));
-    linkCacheEviction.evictAfterCommit(link.getShortCode());
+    linkCacheEviction.evictAfterCommit(link);
     return true;
   }
 

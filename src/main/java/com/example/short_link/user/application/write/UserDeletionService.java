@@ -2,6 +2,7 @@ package com.example.short_link.user.application.write;
 
 import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.user.UserDataEraser;
 import com.example.short_link.link.application.LinkCacheEviction;
@@ -45,6 +46,7 @@ public class UserDeletionService {
   private final AuditLogService auditLogService;
   private final ApplicationEventPublisher events;
   private final LinkCacheEviction linkCacheEviction;
+  private final ProfileCacheInvalidator profileCache;
 
   @Transactional
   public void deleteAccount(Long userId) {
@@ -56,6 +58,7 @@ public class UserDeletionService {
       return;
     }
     user.softDelete();
+    profileCache.evictByUsername(user.getUsername());
     refreshTokenStore.deleteAllForUser(userId);
     // Every session just ended, so no device keeps hearing this account.
     deviceTokens.deleteByUserId(userId);

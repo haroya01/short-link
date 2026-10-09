@@ -10,6 +10,7 @@ import com.example.short_link.campaign.application.read.CampaignQueryService;
 import com.example.short_link.campaign.domain.CampaignBatchEntity;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.common.audit.AuditLogService;
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksCommand;
 import com.example.short_link.link.application.write.ClaimAnonymousLinksUseCase;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
@@ -20,6 +21,7 @@ import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
 import com.example.short_link.user.application.write.RefreshTokenStore;
 import com.example.short_link.user.application.write.UserDeletionService;
+import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.DeviceTokenRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -54,14 +56,15 @@ class LinkCacheEvictingWritesTest {
     CampaignBatchEntity batch =
         new CampaignBatchEntity(5L, new LinkId(3L), "Station", null, null, 1, null);
     when(batches.findById(4L)).thenReturn(Optional.of(batch));
-    when(links.findById(3L)).thenReturn(Optional.of(link(3L, "batch03", 9L)));
+    LinkEntity batchLink = link(3L, "batch03", 9L);
+    when(links.findById(3L)).thenReturn(Optional.of(batchLink));
     CampaignBatchService service =
         new CampaignBatchService(
             batches, links, mock(CreateLinkUseCase.class), mock(CampaignQueryService.class), cache);
 
     service.delete(5L, 4L, 9L);
 
-    verify(cache).evictAfterCommit(new ShortCode("batch03"));
+    verify(cache).evictAfterCommit(batchLink);
   }
 
   @Test
@@ -86,12 +89,43 @@ class LinkCacheEvictingWritesTest {
             new SimpleMeterRegistry(),
             mock(AuditLogService.class),
             event -> {},
-            cache);
+            cache,
+            mock(ProfileCacheInvalidator.class));
 
     deletion.hardDelete(9L);
 
     verify(links).deleteByUserId(9L);
     verify(cache).evictAllAfterCommit(List.of(new ShortCode("owned06"), new ShortCode("owned07")));
+  }
+
+  @Test
+  void softDeletingAnAccountDropsItsPublicProfile() {
+    UserRepository users = mock(UserRepository.class);
+    UserEntity account = withId(new UserEntity("gone@example.com", "google", "g-gone"), 9L);
+    account.claimUsername("gone");
+    when(users.findById(9L)).thenReturn(Optional.of(account));
+    ProfileCacheInvalidator profiles = mock(ProfileCacheInvalidator.class);
+    UserDeletionService deletion =
+        new UserDeletionService(
+            users,
+            links,
+            mock(ClickEventRepository.class),
+            mock(FollowRepository.class),
+            mock(BlockRepository.class),
+            mock(MuteRepository.class),
+            mock(WebPushSubscriptionRepository.class),
+            List.of(),
+            mock(RefreshTokenStore.class),
+            mock(DeviceTokenRepository.class),
+            new SimpleMeterRegistry(),
+            mock(AuditLogService.class),
+            event -> {},
+            cache,
+            profiles);
+
+    deletion.deleteAccount(9L);
+
+    verify(profiles).evictByUsername("gone");
   }
 
   private static LinkEntity link(Long id, String code, Long owner) {

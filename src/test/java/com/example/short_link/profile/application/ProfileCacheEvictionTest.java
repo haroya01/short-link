@@ -25,7 +25,7 @@ class ProfileCacheEvictionTest {
   @Test
   void evictByUsernameNormalizesToLowerCase() {
     Cache cache = mock(Cache.class);
-    when(cacheManager.getCache("public-profile")).thenReturn(cache);
+    when(cacheManager.getCache(ProfileCacheEviction.CACHE_NAME)).thenReturn(cache);
 
     eviction.evictByUsername("  Alice  ");
 
@@ -41,13 +41,13 @@ class ProfileCacheEvictionTest {
 
   @Test
   void evictByUsernameNoOpsWhenCacheMissing() {
-    when(cacheManager.getCache("public-profile")).thenReturn(null);
+    when(cacheManager.getCache(ProfileCacheEviction.CACHE_NAME)).thenReturn(null);
     eviction.evictByUsername("alice");
   }
 
   @Test
   void cacheLookupFailureDoesNotFailTheProfileWrite() {
-    when(cacheManager.getCache("public-profile"))
+    when(cacheManager.getCache(ProfileCacheEviction.CACHE_NAME))
         .thenThrow(new IllegalStateException("cache unavailable"));
 
     assertThatNoException().isThrownBy(() -> eviction.evictByUsername("alice"));
@@ -56,7 +56,7 @@ class ProfileCacheEvictionTest {
   @Test
   void cacheEvictionFailureDoesNotFailTheProfileWrite() {
     Cache cache = mock(Cache.class);
-    when(cacheManager.getCache("public-profile")).thenReturn(cache);
+    when(cacheManager.getCache(ProfileCacheEviction.CACHE_NAME)).thenReturn(cache);
     doThrow(new IllegalStateException("cache unavailable")).when(cache).evictIfPresent("alice");
 
     assertThatNoException().isThrownBy(() -> eviction.evictByUsername("alice"));
@@ -67,7 +67,7 @@ class ProfileCacheEvictionTest {
   @Test
   void evictByUserIdLooksUpAndDelegates() {
     Cache cache = mock(Cache.class);
-    when(cacheManager.getCache("public-profile")).thenReturn(cache);
+    when(cacheManager.getCache(ProfileCacheEviction.CACHE_NAME)).thenReturn(cache);
     UserEntity user = mock(UserEntity.class);
     when(user.getUsername()).thenReturn("bob");
     when(userRepository.findById(42L)).thenReturn(Optional.of(user));

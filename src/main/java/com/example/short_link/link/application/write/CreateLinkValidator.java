@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 // Validation runs outside the creation transaction so Safe Browsing HTTP calls do not hold a JDBC
 // connection.
 @Component
-class CreateLinkValidator {
+public class CreateLinkValidator {
 
   private final BlockedDomainChecker blockedDomainChecker;
   private final UrlSafetyChecker urlSafetyChecker;
@@ -34,7 +34,7 @@ class CreateLinkValidator {
     this.shortLinkHost = canonicalHost(baseUrl);
   }
 
-  void validateUrl(String url) {
+  public void validateUrl(String url) {
     validateUrl(url, false);
   }
 

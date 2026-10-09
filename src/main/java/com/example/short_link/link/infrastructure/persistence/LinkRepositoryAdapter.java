@@ -161,6 +161,11 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<ProfileLinkRow> findPublicProfileLinks(Long userId) {
+    return jpa.findPublicProfileLinks(userId);
+  }
+
+  @Override
   public List<LinkEntity> findUnrestrictedByUserIdAndOriginalUrl(Long userId, String originalUrl) {
     return jpa.findUnrestrictedByUserIdAndOriginalUrl(userId, originalUrl);
   }

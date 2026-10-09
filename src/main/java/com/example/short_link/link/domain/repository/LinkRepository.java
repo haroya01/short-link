@@ -67,6 +67,9 @@ public interface LinkRepository {
 
   List<LinkEntity> findAllByUserIdAndProfileHighlightedIsTrue(Long userId);
 
+  // Profile links in profile order, leaving out links an administrator or Safe Browsing disabled.
+  List<ProfileLinkRow> findPublicProfileLinks(Long userId);
+
   // A link is unrestricted when every visitor reaches originalUrl: no expiry, password, view limit,
   // country block, opening time, moderation hold or enabled alternative destination.
   List<LinkEntity> findUnrestrictedByUserIdAndOriginalUrl(Long userId, String originalUrl);
@@ -83,6 +86,14 @@ public interface LinkRepository {
   int deleteByUserId(Long userId);
 
   List<SafetyRescanRow> findSafetyRescanBatch(Long afterId, Instant now, int limit);
+
+  interface ProfileLinkRow {
+    LinkEntity getLink();
+
+    Instant getOpensAt();
+
+    Boolean getPasswordRequired();
+  }
 
   interface SafetyRescanRow {
     Long getLinkId();

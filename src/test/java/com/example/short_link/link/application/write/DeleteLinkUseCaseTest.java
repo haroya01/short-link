@@ -34,7 +34,7 @@ class DeleteLinkUseCaseTest {
     useCase.execute(new DeleteLinkCommand(42L, new ShortCode("abc1234")));
 
     verify(repository).delete(link);
-    verify(linkCacheEviction).evictAfterCommit(new ShortCode("abc1234"));
+    verify(linkCacheEviction).evictAfterCommit(link);
   }
 
   @Test
@@ -55,6 +55,6 @@ class DeleteLinkUseCaseTest {
     assertThatThrownBy(() -> useCase.execute(new DeleteLinkCommand(42L, new ShortCode("nope0001"))))
         .isInstanceOf(LinkException.class);
     verify(repository, never()).delete(any(LinkEntity.class));
-    verify(linkCacheEviction, never()).evictAfterCommit(any());
+    verify(linkCacheEviction, never()).evictAfterCommit(any(LinkEntity.class));
   }
 }

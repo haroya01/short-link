@@ -2,28 +2,21 @@ package com.example.short_link.profile.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.Mockito.when;
 
-import com.example.short_link.common.post.PublishedPostCountReader;
-import com.example.short_link.link.application.ShortLinkUrlBuilder;
-import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
-import com.example.short_link.link.domain.repository.LinkRepository;
-import com.example.short_link.link.stats.domain.repository.ClickTotalsReadRepository;
 import com.example.short_link.profile.application.MyProfile;
 import com.example.short_link.profile.application.PublicProfile;
-import com.example.short_link.profile.domain.ProfileBlockEntity;
-import com.example.short_link.profile.domain.ProfileBlockType;
-import com.example.short_link.profile.domain.UsernameHistoryEntity;
-import com.example.short_link.profile.domain.repository.ProfileBlockRepository;
-import com.example.short_link.profile.domain.repository.UsernameHistoryRepository;
-import com.example.short_link.profile.exception.ProfileException;
+import com.example.short_link.profile.application.PublicProfileSnapshot;
+import com.example.short_link.profile.application.PublicProfileSnapshot.LinkWindow;
 import com.example.short_link.support.TestEntities;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
+import java.time.Clock;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
@@ -35,13 +28,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class ProfileQueryServiceTest {
 
+  private static final Instant NOW = Instant.parse("2026-10-10T00:00:00Z");
+
   @Mock private UserRepository userRepository;
-  @Mock private LinkRepository linkRepository;
-  @Mock private ClickTotalsReadRepository clickRepository;
-  @Mock private UsernameHistoryRepository usernameHistoryRepository;
-  @Mock private ProfileBlockRepository profileBlockRepository;
-  @Mock private PublishedPostCountReader postCountReader;
-  @Mock private ShortLinkUrlBuilder urlBuilder;
+  @Mock private PublicProfileLoader publicProfiles;
   @Mock private PublicHandleReader publicHandles;
 
   private ProfileQueryService service;
@@ -51,13 +41,9 @@ class ProfileQueryServiceTest {
     service =
         new ProfileQueryService(
             userRepository,
-            linkRepository,
-            clickRepository,
-            usernameHistoryRepository,
-            profileBlockRepository,
-            postCountReader,
-            urlBuilder,
+            publicProfiles,
             publicHandles,
+            Clock.fixed(NOW, ZoneOffset.UTC),
             "https://kurl.app/u/");
   }
 
@@ -93,73 +79,57 @@ class ProfileQueryServiceTest {
   }
 
   @Test
-  void findByUsernameNotFoundThrows() {
-    when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
-    when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
-            any(), any(Instant.class)))
-        .thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.findByUsername("ghost")).isInstanceOf(ProfileException.class);
-  }
-
-  @Test
-  void findByUsernameSkipsDeletedAccount() {
-    UserEntity u = userWithId(7L);
-    u.softDelete();
-    when(userRepository.findByUsername("alice")).thenReturn(Optional.of(u));
-    when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
-            any(), any(Instant.class)))
-        .thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.findByUsername("alice")).isInstanceOf(ProfileException.class);
-  }
-
-  @Test
-  void findByUsernameNullArgumentReturnsNotFound() {
-    when(userRepository.findByUsername("")).thenReturn(Optional.empty());
-    when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
-            any(), any(Instant.class)))
-        .thenReturn(Optional.empty());
-    assertThatThrownBy(() -> service.findByUsername(null)).isInstanceOf(ProfileException.class);
-  }
-
-  @Test
-  void findByUsernameResolvesByHistory() {
-    UserEntity u = userWithId(7L);
-    u.claimUsername("now");
-    when(userRepository.findByUsername("old")).thenReturn(Optional.empty());
-    when(usernameHistoryRepository.findFirstByOldUsernameAndExpiresAtAfter(
-            any(), any(Instant.class)))
+  void aServedProfileHidesLinksOutsideTheirWindowAtThatMoment() {
+    PublicProfile profile =
+        new PublicProfile(
+            "alice",
+            null,
+            null,
+            null,
+            null,
+            List.of(),
+            List.of(
+                PublicProfile.ProfileEntry.link(
+                    new ShortCode("open1"),
+                    "https://kurl/open1",
+                    "https://a",
+                    null,
+                    null,
+                    0,
+                    false),
+                PublicProfile.ProfileEntry.link(
+                    new ShortCode("later"),
+                    "https://kurl/later",
+                    "https://b",
+                    null,
+                    null,
+                    0,
+                    false),
+                PublicProfile.ProfileEntry.link(
+                    new ShortCode("gone1"),
+                    "https://kurl/gone1",
+                    "https://c",
+                    null,
+                    null,
+                    0,
+                    false),
+                PublicProfile.ProfileEntry.text(9L, "hello")),
+            0L,
+            false);
+    when(publicProfiles.load("alice"))
         .thenReturn(
-            Optional.of(new UsernameHistoryEntity(7L, "old", Instant.now().plusSeconds(60))));
-    when(userRepository.findById(7L)).thenReturn(Optional.of(u));
-    when(linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(7L))
-        .thenReturn(List.of());
-    when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L)).thenReturn(List.of());
-    PublicProfile p = service.findByUsername("old");
-    assertThat(p.username()).isEqualTo("now");
-  }
+            new PublicProfileSnapshot(
+                profile,
+                List.of(
+                    new LinkWindow(
+                        new ShortCode("open1"), NOW.minusSeconds(1), NOW.plusSeconds(60)),
+                    new LinkWindow(new ShortCode("later"), NOW.plusSeconds(1), null),
+                    new LinkWindow(new ShortCode("gone1"), null, NOW))));
 
-  @Test
-  void findByUsernameRendersLinkAndBlockEntries() {
-    UserEntity u = userWithId(7L);
-    u.claimUsername("alice");
-    LinkEntity link = new LinkEntity("https://example.com", "abc", 7L, null);
-    TestEntities.withId(link, 1L);
-    link.setProfileOrder(1);
-    ProfileBlockEntity divider = new ProfileBlockEntity(7L, ProfileBlockType.DIVIDER, null, 2);
-    TestEntities.withId(divider, 11L);
-    ProfileBlockEntity textBlock = new ProfileBlockEntity(7L, ProfileBlockType.TEXT, "hello", 3);
-    TestEntities.withId(textBlock, 12L);
-    when(userRepository.findByUsername("alice")).thenReturn(Optional.of(u));
-    when(linkRepository.findAllByUserIdAndProfileOrderIsNotNullOrderByProfileOrderAsc(7L))
-        .thenReturn(List.of(link));
-    when(profileBlockRepository.findAllByUserIdOrderByProfileOrderAsc(7L))
-        .thenReturn(List.of(divider, textBlock));
-    when(clickRepository.countsByLinkIds(any())).thenReturn(List.of());
-    when(urlBuilder.build(new ShortCode("abc"))).thenReturn("https://kurl/abc");
-    PublicProfile p = service.findByUsername("alice");
-    assertThat(p.entries()).hasSize(3);
-    assertThat(p.entries().get(0).kind()).isEqualTo("LINK");
-    assertThat(p.entries().get(1).kind()).isEqualTo("DIVIDER");
-    assertThat(p.entries().get(2).kind()).isEqualTo("TEXT");
+    PublicProfile served = service.findByUsername("alice");
+
+    assertThat(served.entries())
+        .extracting(PublicProfile.ProfileEntry::kind, e -> String.valueOf(e.shortCode()))
+        .containsExactly(tuple("LINK", "open1"), tuple("TEXT", "null"));
   }
 }

@@ -29,7 +29,7 @@ public class BulkDeleteLinksUseCase {
             command.userId());
     if (owned.isEmpty()) return 0;
     repository.deleteAll(owned);
-    linkCacheEviction.evictAllAfterCommit(owned.stream().map(LinkEntity::getShortCode).toList());
+    linkCacheEviction.evictLinksAfterCommit(owned);
     for (LinkEntity link : owned) {
       auditLogService.record(
           AuditAction.LINK_DELETED,

@@ -3,10 +3,14 @@ package com.example.short_link.link.destination.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.link.application.LinkCacheEviction;
+import com.example.short_link.link.application.write.CreateLinkValidator;
 import com.example.short_link.link.destination.application.dto.DestinationSummary;
 import com.example.short_link.link.destination.domain.DestinationPolicy;
 import com.example.short_link.link.destination.domain.LinkDestinationEntity;
@@ -15,9 +19,14 @@ import com.example.short_link.link.destination.exception.DestinationException;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.link.exception.LinkErrorCode;
+import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.lang.reflect.Field;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionStatus;
+import org.springframework.transaction.support.TransactionTemplate;
 
 class AddDestinationUseCaseTest {
 
@@ -25,8 +34,16 @@ class AddDestinationUseCaseTest {
   private final LinkCacheEviction linkCacheEviction = mock(LinkCacheEviction.class);
   private final LinkDestinationRepository repository = mock(LinkDestinationRepository.class);
   private final SimpleMeterRegistry registry = new SimpleMeterRegistry();
+  private final CreateLinkValidator urlValidator = mock(CreateLinkValidator.class);
   private final AddDestinationUseCase useCase =
-      new AddDestinationUseCase(ownership, repository, registry, linkCacheEviction);
+      new AddDestinationUseCase(
+          ownership, repository, registry, linkCacheEviction, urlValidator, transaction());
+
+  private static TransactionTemplate transaction() {
+    PlatformTransactionManager manager = mock(PlatformTransactionManager.class);
+    when(manager.getTransaction(any())).thenReturn(mock(TransactionStatus.class));
+    return new TransactionTemplate(manager);
+  }
 
   @Test
   void isValidUrlAcceptsHttps() {
@@ -143,5 +160,28 @@ class AddDestinationUseCaseTest {
       throw new AssertionError(e);
     }
     return entity;
+  }
+
+  @Test
+  void anUnsafeUrlIsRejectedBeforeAnythingIsSaved() {
+    doThrow(new LinkException(LinkErrorCode.MALICIOUS_URL, "hash"))
+        .when(urlValidator)
+        .validateUrl("https://phish.example.com");
+
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
+                    7L,
+                    new ShortCode("abc"),
+                    "https://phish.example.com",
+                    50,
+                    "B",
+                    null,
+                    null,
+                    null))
+        .isInstanceOf(LinkException.class);
+
+    verify(ownership, never()).ownedLink(any(), any());
+    verify(repository, never()).save(any());
   }
 }

@@ -28,6 +28,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -134,7 +135,16 @@ public class RedirectController {
       String crawler = crawlerDetector.crawlerName(userAgent);
       if (crawler != null) {
         return handlePreview(
-            shortCode, link, referrer, userAgent, acceptLanguage, src, crawler, req, false);
+            shortCode,
+            link,
+            lookup.findEntity(shortCode).orElse(null),
+            referrer,
+            userAgent,
+            acceptLanguage,
+            src,
+            crawler,
+            req,
+            LinkPreviewRenderer.Scope.WITHOUT_DESTINATION_URL);
       }
       return html.notYetOpenPageResponse(locale, link.visitOptions().opensAt());
     }
@@ -145,8 +155,36 @@ public class RedirectController {
     }
     String crawlerLabel = crawlerDetector.crawlerName(userAgent);
     if (crawlerLabel != null) {
+      LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
+      if (!link.limitsVisitors()) {
+        return handlePreview(
+            shortCode,
+            link,
+            entity,
+            referrer,
+            userAgent,
+            acceptLanguage,
+            src,
+            crawlerLabel,
+            req,
+            LinkPreviewRenderer.Scope.DESTINATION);
+      }
+      Optional<RedirectOutcome> refused =
+          flow.refuseCrawler(link, entity, LinkRedirectSupport.clientIp(req));
+      if (refused.isPresent()) {
+        return render(refused.get(), userAgent, locale);
+      }
       return handlePreview(
-          shortCode, link, referrer, userAgent, acceptLanguage, src, crawlerLabel, req, true);
+          shortCode,
+          link,
+          entity,
+          referrer,
+          userAgent,
+          acceptLanguage,
+          src,
+          crawlerLabel,
+          req,
+          LinkPreviewRenderer.Scope.KURL_CARD_ONLY);
     }
     return render(
         flow.execute(
@@ -188,6 +226,7 @@ public class RedirectController {
       case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
+      case RedirectOutcome.PrefetchDeclined pd -> handoff.prefetchDeclined();
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException(
               "PasswordRequired decided at controller before flow.execute()");
@@ -197,13 +236,14 @@ public class RedirectController {
   private ResponseEntity<?> handlePreview(
       ShortCode shortCode,
       CachedLink link,
+      LinkEntity entity,
       String referrer,
       String userAgent,
       String acceptLanguage,
       String src,
       String crawlerLabel,
       HttpServletRequest req,
-      boolean revealDestination) {
+      LinkPreviewRenderer.Scope scope) {
     meterRegistry.counter("short_link.preview").increment();
     clickRecorder.recordPreview(
         ClickContext.of(
@@ -216,7 +256,7 @@ public class RedirectController {
             .withSourceChannel(src)
             .withFetchSite(LinkRedirectSupport.fetchSite(req)),
         crawlerLabel);
-    LinkEntity entity = lookup.findEntity(shortCode).orElse(null);
+    boolean revealDestination = scope == LinkPreviewRenderer.Scope.DESTINATION;
     if (entity == null && !revealDestination) {
       return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
     }
@@ -227,8 +267,7 @@ public class RedirectController {
           .build();
     }
     long clicks = lookup.countHumanClicks(link.linkId());
-    String html =
-        previewRenderer.render(entity, urlBuilder.build(shortCode), clicks, revealDestination);
+    String html = previewRenderer.render(entity, urlBuilder.build(shortCode), clicks, scope);
     byte[] body = html.getBytes(StandardCharsets.UTF_8);
     return ResponseEntity.ok()
         .contentType(MediaType.parseMediaType("text/html; charset=utf-8"))

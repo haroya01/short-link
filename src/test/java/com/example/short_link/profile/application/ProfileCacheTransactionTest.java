@@ -22,7 +22,7 @@ class ProfileCacheTransactionTest {
   @Test
   void cachedProfileSurvivesUntilItsWriteCommits() {
     String username = UUID.randomUUID().toString();
-    Cache cache = cacheManager.getCache("public-profile");
+    Cache cache = cacheManager.getCache(ProfileCacheEviction.CACHE_NAME);
     assertThat(cache.putIfAbsent(username, "before")).isNull();
     try {
       new TransactionTemplate(transactionManager)
@@ -40,7 +40,7 @@ class ProfileCacheTransactionTest {
   @Test
   void rollbackKeepsTheCachedCommittedProfile() {
     String username = UUID.randomUUID().toString();
-    Cache cache = cacheManager.getCache("public-profile");
+    Cache cache = cacheManager.getCache(ProfileCacheEviction.CACHE_NAME);
     assertThat(cache.putIfAbsent(username, "before")).isNull();
     try {
       new TransactionTemplate(transactionManager)

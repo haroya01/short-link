@@ -26,4 +26,6 @@ public sealed interface RedirectOutcome {
   record ExpiredWithMessage(String message) implements RedirectOutcome {}
 
   record NotYetOpen(Instant opensAt) implements RedirectOutcome {}
+
+  record PrefetchDeclined() implements RedirectOutcome {}
 }

@@ -74,6 +74,7 @@ public class PasswordUnlockController {
             case RedirectOutcome.DomainBlocked db -> "blocked";
             case RedirectOutcome.ExpiredWithMessage em -> "expired";
             case RedirectOutcome.NotYetOpen n -> "not_open";
+            case RedirectOutcome.PrefetchDeclined pd -> "preview";
             default -> "redirect";
           };
       return response;
@@ -104,6 +105,7 @@ public class PasswordUnlockController {
       case RedirectOutcome.DomainBlocked db -> html.domainBlockedPageResponse(locale);
       case RedirectOutcome.ExpiredWithMessage em -> html.expiredPageResponse(locale, em.message());
       case RedirectOutcome.NotYetOpen n -> html.notYetOpenPageResponse(locale, n.opensAt());
+      case RedirectOutcome.PrefetchDeclined pd -> handoff.prefetchDeclined();
       case RedirectOutcome.PasswordRequired pr ->
           throw new IllegalStateException("PasswordRequired not reachable from unlock flow");
     };
