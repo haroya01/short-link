@@ -100,4 +100,8 @@ public class NotificationEntity extends BaseCreatedEntity {
   public boolean isRead() {
     return readAt != null;
   }
+
+  public void markRead(Instant at) {
+    this.readAt = at;
+  }
 }

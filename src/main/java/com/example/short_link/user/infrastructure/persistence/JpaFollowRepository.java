@@ -46,4 +46,10 @@ public interface JpaFollowRepository extends JpaRepository<FollowEntity, Long> {
   @Modifying
   @Query("delete from FollowEntity f where f.followerId = :userId or f.followingId = :userId")
   int deleteAllInvolving(@Param("userId") Long userId);
+
+  @Modifying
+  @Query(
+      "delete from FollowEntity f where (f.followerId = :a and f.followingId = :b)"
+          + " or (f.followerId = :b and f.followingId = :a)")
+  int deleteBetween(@Param("a") Long a, @Param("b") Long b);
 }

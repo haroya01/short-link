@@ -132,7 +132,7 @@ class NotificationRepositoryAdapter implements NotificationRepository {
                 + " ON target.id = :id AND target.recipient_user_id = :recipient"
                 + " SET n.read_at = :at"
                 + " WHERE n.recipient_user_id = :recipient AND n.read_at IS NULL"
-                + " AND (n.id = target.id OR n.group_key = target.group_key)")
+                + " AND (n.id = target.id OR (n.group_key = target.group_key AND NOT n.filtered))")
         .setParameter("id", id)
         .setParameter("recipient", recipientUserId)
         .setParameter("at", at)

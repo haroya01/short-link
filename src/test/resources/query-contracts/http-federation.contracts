@@ -204,7 +204,7 @@
 # rule (note, author, images, user, preference, actor), then the key, the parent, the insert and its
 # id; the author hears of it (muted conversation, preference, notification, recipient, remote
 # actor).
-@junit | federation-inbox-remote-reply | 13 | 2 | 0 | 0 | 15
+@junit | federation-inbox-remote-reply | 14 | 2 | 0 | 0 | 16
 @junit | notes-thread-remote-reply | 8 | 0 | 0 | 0 | 8
 # Edits and deletes first ask whether we kept that note, so others never cost a key fetch. The
 # edit locks that note by the id the question found and reads its images; the changed text,
@@ -212,7 +212,7 @@
 # the member who boosted it hears of the edit (who shared it, preference, insert, their name and the
 # remote author's for the push). The same Update again stops after the images compare equal, and an
 # Update older than the kept edit stops at the locked row.
-@junit | federation-inbox-remote-update | 8 | 2 | 1 | 2 | 13
+@junit | federation-inbox-remote-update | 9 | 2 | 1 | 2 | 14
 @junit | federation-inbox-remote-update-again | 4 | 0 | 0 | 0 | 4
 @junit | federation-inbox-remote-update-stale | 3 | 0 | 0 | 0 | 3
 @junit | federation-inbox-remote-delete | 2 | 0 | 0 | 1 | 3
