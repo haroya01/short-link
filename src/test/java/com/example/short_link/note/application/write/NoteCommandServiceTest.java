@@ -759,7 +759,20 @@ class NoteCommandServiceTest {
   }
 
   @Test
-  void aReplyKeepsItsParentsVisibilityAndARestrictedNoteRecordsWhomItMentions() {
+  void aRestrictedQuoteTellsTheQuotedAuthorOnlyWhenTheyMayReadIt() {
+    saving();
+    NoteAuthor other = new NoteAuthor(8L, "other", null);
+    when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
+    when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER, 8L, other));
+    when(notes.visibleTo(8L, List.of(100L))).thenReturn(Set.of());
+
+    service().create(7L, new NoteDraft("우리끼리 얘기", null, null, null, 50L, null, false, "PRIVATE"));
+
+    verify(events, never()).publishEvent(any(NoteInteractionEvent.class));
+  }
+
+  @Test
+  void aReplyKeepsItsParentsVisibilityAndARestrictedReplyReachesWhomItMentionsAndAnswers() {
     saving();
     NoteEntity parent = note(5L, 9L, "followers only");
     parent.showTo(NoteVisibility.PRIVATE);
@@ -772,7 +785,7 @@ class NoteCommandServiceTest {
     NoteView reply = service().create(7L, new NoteDraft("@mina 같이 봐요", List.of(), null, 5L));
 
     assertThat(reply.visibility()).isEqualTo("private");
-    verify(notes).addRecipients(100L, List.of(11L));
+    verify(notes).addRecipients(100L, Set.of(11L, 9L));
   }
 
   @Test

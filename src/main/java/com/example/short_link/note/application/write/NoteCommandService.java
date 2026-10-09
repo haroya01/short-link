@@ -43,6 +43,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -319,6 +320,15 @@ public class NoteCommandService {
             note.getId(),
             userId,
             (parent != null && parent.isRemote()) || !Mentions.remote(body).isEmpty()));
+    List<NoteAuthor> mentioned = members(authors, handles);
+    boolean restricted = note.getVisibility().restricted();
+    if (restricted) {
+      Set<Long> recipients = new LinkedHashSet<>(recipients(mentioned, userId));
+      if (parent != null && parent.getUserId() != null && !parent.getUserId().equals(userId)) {
+        recipients.add(parent.getUserId());
+      }
+      notes.addRecipients(note.getId(), recipients);
+    }
     if (parent != null) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.REPLY, parent, userId, note));
     }
@@ -326,7 +336,13 @@ public class NoteCommandService {
         && (parent == null || userId.equals(parent.getUserId()))) {
       events.publishEvent(new NoteBroadcastEvent(note.getId(), userId, note.excerpt()));
     }
-    if (quotedNote != null) {
+    boolean quoteSeen =
+        quotedNote != null
+            && (!restricted
+                || notes
+                    .visibleTo(quotedNote.getUserId(), List.of(note.getId()))
+                    .contains(note.getId()));
+    if (quoteSeen) {
       events.publishEvent(interaction(NoteInteractionEvent.Type.QUOTE, quotedNote, userId, note));
     }
     boolean quotesPostPublicly = quoted != null && note.getVisibility().shareable();
@@ -338,15 +354,11 @@ public class NoteCommandService {
     if (parent != null) {
       toldOtherwise.add(parent.getUserId());
     }
-    if (quotedNote != null) {
+    if (quoteSeen) {
       toldOtherwise.add(quotedNote.getUserId());
     }
     if (quotesPostPublicly) {
       toldOtherwise.add(quoted.authorId());
-    }
-    List<NoteAuthor> mentioned = members(authors, handles);
-    if (note.getVisibility().restricted()) {
-      notes.addRecipients(note.getId(), recipients(mentioned, userId));
     }
     mention(note, userId, mentioned, toldOtherwise);
     String previewUrl =
