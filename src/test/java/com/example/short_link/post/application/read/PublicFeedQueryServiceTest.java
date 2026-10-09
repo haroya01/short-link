@@ -227,7 +227,7 @@ class PublicFeedQueryServiceTest {
     service.trendingByTag(7L, 6, 8);
 
     verify(postRepository).findTopAuthorStats(7L, 10);
-    verify(postRepository).findPublishedByTag(7L, "spring", 0, 8);
+    verify(postRepository).findPublishedTrendingByTag(7L, "spring", 0, 8);
   }
 
   @Test
@@ -390,9 +390,10 @@ class PublicFeedQueryServiceTest {
             List.of(
                 new com.example.short_link.post.domain.TagCount("spring", 3L),
                 new com.example.short_link.post.domain.TagCount("rag", 2L)));
-    when(postRepository.findPublishedByTag(null, "spring", 0, 8))
+    when(postRepository.findPublishedTrendingByTag(null, "spring", 0, 8))
         .thenReturn(List.of(post(1L, "a")));
-    when(postRepository.findPublishedByTag(null, "rag", 0, 8)).thenReturn(List.of(post(1L, "b")));
+    when(postRepository.findPublishedTrendingByTag(null, "rag", 0, 8))
+        .thenReturn(List.of(post(1L, "b")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
 
     List<TrendingTagSection> sections = service.trendingByTag(null, 6, 8);
@@ -408,7 +409,8 @@ class PublicFeedQueryServiceTest {
   void trendingByTagSkipsTagsWhoseAuthorsAreAllMissing() {
     when(postRepository.findPopularTags(6))
         .thenReturn(List.of(new com.example.short_link.post.domain.TagCount("ghost", 1L)));
-    when(postRepository.findPublishedByTag(null, "ghost", 0, 8)).thenReturn(List.of(post(9L, "x")));
+    when(postRepository.findPublishedTrendingByTag(null, "ghost", 0, 8))
+        .thenReturn(List.of(post(9L, "x")));
     when(userRepository.findAllByIdIn(List.of(9L))).thenReturn(List.of());
 
     assertThat(service.trendingByTag(null, 6, 8)).isEmpty();

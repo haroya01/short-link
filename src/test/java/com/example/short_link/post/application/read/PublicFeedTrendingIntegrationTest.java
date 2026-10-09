@@ -136,20 +136,48 @@ class PublicFeedTrendingIntegrationTest {
     long a = author("trendtopic");
     Instant inWindow = Instant.now().minus(1, ChronoUnit.HOURS);
 
-    long older = publish(a, "topic-read-older", 0);
-    postRepository.findById(older).orElseThrow().updateTags(List.of("trend-topic"));
-    ReflectionTestUtils.setField(
-        postRepository.findById(older).orElseThrow(),
-        "publishedAt",
-        Instant.now().minus(2, ChronoUnit.DAYS));
+    long older = inTopic(publish(a, "topic-read-older", 0), "trend-topic", 2);
     for (int i = 0; i < 3; i++) view(older, inWindow, "topic-reader-" + i);
-
-    long newer = publish(a, "topic-unread-newer", 0);
-    postRepository.findById(newer).orElseThrow().updateTags(List.of("trend-topic"));
+    inTopic(publish(a, "topic-unread-newer", 0), "trend-topic", 0);
     postRepository.flush();
 
     assertThat(topicSlugs("trending")).containsExactly("topic-read-older", "topic-unread-newer");
     assertThat(topicSlugs("recent")).containsExactly("topic-unread-newer", "topic-read-older");
+  }
+
+  @Test
+  void aTopicSectionListsItsMostReadPostsFirstNotItsNewest() {
+    long a = author("trendsection");
+    Instant inWindow = Instant.now().minus(1, ChronoUnit.HOURS);
+
+    long read = inTopic(publish(a, "section-read-older", 0), "section-topic", 2);
+    for (int i = 0; i < 3; i++) view(read, inWindow, "section-reader-" + i);
+    long crawled = inTopic(publish(a, "section-crawled", 0), "section-topic", 1);
+    for (int i = 0; i < 6; i++) view(crawled, inWindow, "section-crawler-" + i, true);
+    inTopic(publish(a, "section-unread-newest", 0), "section-topic", 0);
+    postRepository.flush();
+
+    assertThat(sectionSlugs(3))
+        .containsExactly("section-read-older", "section-unread-newest", "section-crawled");
+    assertThat(sectionSlugs(1)).containsExactly("section-read-older");
+  }
+
+  private List<String> sectionSlugs(int perTag) {
+    return service.trendingByTag(null, 20, perTag).stream()
+        .filter(section -> section.tag().equals("section-topic"))
+        .flatMap(section -> section.posts().stream())
+        .map(PublicFeedItem::slug)
+        .toList();
+  }
+
+  private long inTopic(long postId, String tag, int daysAgo) {
+    PostEntity post = postRepository.findById(postId).orElseThrow();
+    post.updateTags(List.of(tag));
+    if (daysAgo > 0) {
+      ReflectionTestUtils.setField(
+          post, "publishedAt", Instant.now().minus(daysAgo, ChronoUnit.DAYS));
+    }
+    return postId;
   }
 
   private List<String> topicSlugs(String sort) {

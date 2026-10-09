@@ -212,7 +212,7 @@ public class PublicFeedQueryService {
     for (TagCount tag : postRepository.findPopularTags(tagLimit)) {
       List<PublicFeedItem> posts =
           feedItemAssembler.assemble(
-              postRepository.findPublishedByTag(viewerId, tag.tag(), 0, perTag));
+              postRepository.findPublishedTrendingByTag(viewerId, tag.tag(), 0, perTag));
       if (!posts.isEmpty()) {
         sections.add(new TrendingTagSection(tag.tag(), tag.count(), posts));
       }
