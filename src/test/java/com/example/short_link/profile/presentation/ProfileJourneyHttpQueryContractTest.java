@@ -10,9 +10,15 @@ import static org.springframework.test.web.client.response.MockRestResponseCreat
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
+import com.example.short_link.link.moderation.application.LinkModerationService;
+import com.example.short_link.link.moderation.domain.LinkDisableReason;
+import com.example.short_link.link.visit.application.LinkVisitOptionService;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,10 +30,13 @@ import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.client.MockRestServiceServer;
 import org.springframework.web.client.RestClient;
+import tools.jackson.databind.JsonNode;
 
 @TestPropertySource(properties = "short-link.avatar.public-base-url=https://cdn.example.test")
 class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
   @Autowired private LinkRepository links;
+  @Autowired private LinkModerationService moderation;
+  @Autowired private LinkVisitOptionService visitOptions;
   @MockitoBean private ObjectStorage storage;
 
   @MockitoBean(name = "oembedRestClient")
@@ -150,6 +159,66 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
     var afterDelete =
         body(call("profile-public-read-after-delete", "GET", publicPath, null, null, 200));
     assertThat(afterDelete.path("entries").size()).isEqualTo(1);
+  }
+
+  @Test
+  void aPasswordLinkStaysOnTheProfileWithoutItsDestinationAndUnavailableLinksDropOut()
+      throws Exception {
+    LinkEntity open = profileLink("https://example.com/open", "po", null);
+    LinkEntity secret = profileLink("https://secret.example.com/plan", "ps", null);
+    LinkEntity disabled = profileLink("https://example.com/disabled", "pd", null);
+    LinkEntity later = profileLink("https://example.com/later", "pl", null);
+    profileLink("https://example.com/ended", "pe", Instant.now().minus(1, ChronoUnit.MINUTES));
+    moderation.disable(disabled.getShortCode(), LinkDisableReason.ADMIN, null);
+    visitOptions.update(
+        owner.getId(),
+        later.getShortCode(),
+        null,
+        null,
+        Instant.now().plus(1, ChronoUnit.DAYS),
+        false);
+    String publicPath = "/api/v1/public/profiles/" + owner.getUsername();
+
+    var listed =
+        body(call("profile-public-unavailable-hidden", "GET", publicPath, null, null, 200));
+    assertThat(shortCodes(listed))
+        .containsExactly(open.getShortCode().value(), secret.getShortCode().value());
+
+    call(
+        "profile-link-protect",
+        "PATCH",
+        "/api/v1/links/" + secret.getShortCode().value() + "/protection",
+        Map.of("password", "open-sesame"),
+        token,
+        200);
+    var protectedRead = call("profile-public-protected-link", "GET", publicPath, null, null, 200);
+    assertThat(protectedRead.body()).doesNotContain("secret.example.com");
+    var entries = body(protectedRead).path("entries");
+    assertThat(entries.get(0).path("protected").asBoolean()).isFalse();
+    assertThat(entries.get(0).path("originalUrl").asText()).isEqualTo("https://example.com/open");
+    assertThat(entries.get(1).path("protected").asBoolean()).isTrue();
+    assertThat(entries.get(1).path("originalUrl").isNull()).isTrue();
+    assertThat(entries.get(1).path("ogImage").isNull()).isTrue();
+    assertThat(entries.get(1).path("shortUrl").asText())
+        .endsWith("/" + secret.getShortCode().value());
+
+    call("profile-owner-account-delete", "DELETE", "/api/v1/users/me", null, token, 204);
+    call("profile-public-after-account-delete", "GET", publicPath, null, null, 404);
+  }
+
+  private LinkEntity profileLink(String url, String prefix, Instant expiresAt) {
+    return transactions.execute(
+        status -> {
+          LinkEntity link = new LinkEntity(url, prefix + owner.getId(), owner.getId(), expiresAt);
+          link.setProfileOrder(links.findAllByUserIdOrderByCreatedAtDesc(owner.getId()).size());
+          return links.save(link);
+        });
+  }
+
+  private static List<String> shortCodes(JsonNode profile) {
+    List<String> codes = new ArrayList<>();
+    profile.path("entries").forEach(entry -> codes.add(entry.path("shortCode").asText()));
+    return codes;
   }
 
   @Test

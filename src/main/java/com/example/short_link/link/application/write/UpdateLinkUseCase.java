@@ -78,7 +78,7 @@ public class UpdateLinkUseCase {
             urlChanged,
             "expiresAtChanged",
             command.expiresAt() != null || command.clearExpiresAt()));
-    linkCacheEviction.evictAfterCommit(command.shortCode());
+    linkCacheEviction.evictAfterCommit(link);
     return linkReader.read(link);
   }
 }

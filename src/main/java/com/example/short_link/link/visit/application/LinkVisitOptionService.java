@@ -61,7 +61,7 @@ public class LinkVisitOptionService {
       }
       option.changeOpensAt(opensAt);
     }
-    linkCacheEviction.evictAfterCommit(shortCode);
+    linkCacheEviction.evictAfterCommit(link);
     return options.save(option);
   }
 }

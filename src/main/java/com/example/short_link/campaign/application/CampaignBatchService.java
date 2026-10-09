@@ -107,7 +107,7 @@ public class CampaignBatchService {
     BatchWithLink current = detail(campaignId, batchId, ownerId);
     batchRepository.delete(current.batch());
     linkRepository.delete(current.link());
-    linkCacheEviction.evictAfterCommit(current.link().getShortCode());
+    linkCacheEviction.evictAfterCommit(current.link());
   }
 
   private BatchWithLink pairWithLink(CampaignBatchEntity batch) {

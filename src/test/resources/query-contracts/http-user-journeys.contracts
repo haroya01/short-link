@@ -485,10 +485,13 @@
 @junit | profile-link-cross-user-highlight-rejected | 1 | 0 | 0 | 0 | 1
 @junit | profile-link-hide | 3 | 0 | 2 | 0 | 5
 @junit | profile-link-highlight | 5 | 0 | 2 | 0 | 7
+# Protecting a link shown on the profile also reads the owner's username to drop the cached profile.
+@junit | profile-link-protect | 4 | 1 | 1 | 0 | 6
 @junit | profile-link-show | 6 | 1 | 1 | 0 | 8
 @junit | profile-oembed-cached | 0 | 0 | 0 | 0 | 0
 @junit | profile-oembed-fetch | 0 | 0 | 0 | 0 | 0
 @junit | profile-oembed-unsupported-rejected | 0 | 0 | 0 | 0 | 0
+@junit | profile-owner-account-delete | 3 | 1 | 1 | 2 | 7
 @junit | profile-owner-read | 1 | 0 | 0 | 0 | 1
 @junit | profile-owner-stats | 17 | 0 | 0 | 0 | 17
 @junit | profile-owner-stats-summary | 4 | 0 | 0 | 0 | 4
@@ -511,6 +514,11 @@
 @junit | profile-public-stats-read | 17 | 0 | 0 | 0 | 17
 @junit | profile-public-with-featured-block | 5 | 0 | 0 | 0 | 5
 @junit | profile-public-with-link | 5 | 0 | 0 | 0 | 5
+# Disabled links are left out in the profile-links read; unopened and expired ones when served.
+@junit | profile-public-unavailable-hidden | 5 | 0 | 0 | 0 | 5
+@junit | profile-public-protected-link | 5 | 0 | 0 | 0 | 5
+# A deleted account's profile is not cached: the username and its history miss.
+@junit | profile-public-after-account-delete | 2 | 0 | 0 | 0 | 2
 @junit | profile-second-block-create | 3 | 1 | 0 | 0 | 4
 @junit | profile-stats-visibility-enable | 1 | 0 | 1 | 0 | 2
 @junit | profile-stats-visibility-read | 1 | 0 | 0 | 0 | 1
