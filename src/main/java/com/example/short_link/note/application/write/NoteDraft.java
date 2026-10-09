@@ -58,16 +58,17 @@ public record NoteDraft(
         null);
   }
 
-  // The next note of a thread answers the one before it and keeps that note's visibility.
-  NoteDraft continuing(Long previousId) {
+  // The next note of a thread answers the one before it and keeps that note's visibility, warning
+  // and sensitive mark, unless it carries a warning of its own.
+  NoteDraft continuing(Long previousId, String previousWarning, boolean previousSensitive) {
     return new NoteDraft(
         body,
         images,
         quotedPostId,
         previousId,
         quotedNoteId,
-        contentWarning,
-        sensitive,
+        contentWarning == null || contentWarning.isBlank() ? previousWarning : contentWarning,
+        sensitive || previousSensitive,
         null,
         poll,
         language);

@@ -127,7 +127,8 @@ class NoteListRepositoryAdapter implements NoteListRepository {
     return em.createNativeQuery(
             "SELECT n.* FROM note n JOIN note_list_member m"
                 + " ON m.member_id = n.user_id AND m.list_id = :list"
-                + " WHERE n.in_reply_to_id IS NULL"
+                + " WHERE "
+                + NoteRepositoryAdapter.notReply("n")
                 + " AND (n.visibility IN ('PUBLIC', 'UNLISTED')"
                 + " OR (n.visibility = 'PRIVATE' AND EXISTS (SELECT 1 FROM user_follow f"
                 + " WHERE f.follower_id = :viewer AND f.following_id = n.user_id))"

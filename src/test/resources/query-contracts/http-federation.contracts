@@ -77,6 +77,15 @@
 @junit | federation-inbox-like-again | 7 | 1 | 1 | 0 | 9
 @junit | federation-inbox-announce | 13 | 2 | 0 | 0 | 15
 @junit | federation-inbox-like-before-delete | 11 | 1 | 0 | 0 | 12
+# A followers-only note: a boost stops at the note document's rule before the key; a like from an
+# account that does not follow the author stops after the key at the follower row, and one from an
+# accepted follower goes on as any like. A reply to a direct note that does not name its sender is
+# kept without the parent: no reply notice, the member named in it hears of a mention (silence
+# check, policy, keyword filters, insert).
+@junit | federation-inbox-like-followers-only-stranger | 8 | 0 | 0 | 0 | 8
+@junit | federation-inbox-announce-followers-only | 6 | 0 | 0 | 0 | 6
+@junit | federation-inbox-reply-direct-unseen | 10 | 3 | 0 | 0 | 13
+@junit | federation-inbox-like-followers-only-follower | 14 | 2 | 0 | 0 | 16
 # A member likes the same note: the like and the author's notice joining today's group.
 @junit | federation-note-member-like | 8 | 2 | 0 | 0 | 10
 # The author's inbox reads groups, not rows: each group's newest row with its size and unread sum
@@ -175,8 +184,13 @@
 @junit | admin-server-unblock | 0 | 0 | 0 | 1 | 1
 @junit | notes-tag-unblocked-server | 6 | 0 | 0 | 0 | 6
 # Notes from an account a member follows. Before the key: is anyone following it. Then the key,
-# INSERT IGNORE on the note's uri, its id, and its image (the address stays on its server).
-@junit | federation-inbox-remote-note | 3 | 2 | 0 | 0 | 5
+# INSERT IGNORE on the note's uri, its id, its image (the address stays on its server) and its
+# hashtag, which files it under the tag page in that page's one statement.
+@junit | federation-inbox-remote-note | 3 | 3 | 0 | 0 | 6
+@junit | notes-tag-remote | 6 | 0 | 0 | 0 | 6
+# A reply to a note this server never received is kept as a reply with no parent: the parent asked
+# for by uri before the key and again when storing, the insert and its id. Feeds leave it out.
+@junit | federation-inbox-remote-orphan-reply | 5 | 1 | 0 | 0 | 6
 # The following feed carries it: a page of only remote notes reads their accounts, never users.
 # Mastodon's live feed of other servers, for members: the one page statement (server blocks,
 # limits, the reader's blocks and languages inside it), then the page's remote authors, media,
@@ -194,10 +208,20 @@
 @junit | federation-inbox-remote-reply | 14 | 2 | 0 | 0 | 16
 @junit | notes-thread-remote-reply | 8 | 0 | 0 | 0 | 8
 # Edits and deletes first ask whether we kept that note, so others never cost a key fetch. The
-# edit updates that note by the id the question found; the member who boosted it hears of the edit
-# (who shared it, preference, insert, their name and the remote author's for the push).
-@junit | federation-inbox-remote-update | 7 | 1 | 1 | 0 | 9
+# edit locks that note by the id the question found and reads its images; the changed text,
+# language and image replace the old (the dropped tag and image rows go, the new image goes in) and
+# the member who boosted it hears of the edit (who shared it, preference, insert, their name and the
+# remote author's for the push). The same Update again stops after the images compare equal, and an
+# Update older than the kept edit stops at the locked row.
+@junit | federation-inbox-remote-update | 9 | 2 | 1 | 2 | 14
+@junit | federation-inbox-remote-update-again | 4 | 0 | 0 | 0 | 4
+@junit | federation-inbox-remote-update-stale | 3 | 0 | 0 | 0 | 3
 @junit | federation-inbox-remote-delete | 2 | 0 | 0 | 1 | 3
+# A Delete of a note from that account's server that we never kept is checked against the cached
+# key only and remembered in Redis for six hours, so the Create that arrives after it is dropped
+# after the key: no insert.
+@junit | federation-inbox-delete-before-create | 2 | 0 | 0 | 0 | 2
+@junit | federation-inbox-create-after-delete | 2 | 0 | 0 | 0 | 2
 # A note no member follows, answers or is named in: one question, then nothing.
 @junit | federation-inbox-remote-unsolicited | 1 | 0 | 0 | 0 | 1
 # Reporting a note from elsewhere with forwarding on: the report as usual (subject, open report,

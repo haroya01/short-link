@@ -67,6 +67,9 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(name = "conversation_id")
   private Long conversationId;
 
+  @Column(nullable = false)
+  private boolean reply;
+
   @Column(name = "quoted_post_id")
   private Long quotedPostId;
 
@@ -114,12 +117,17 @@ public class NoteEntity extends BaseCreatedEntity {
     this.userId = userId;
     this.body = body;
     this.inReplyToId = inReplyToId;
+    this.reply = inReplyToId != null;
     this.quotedPostId = quotedPostId;
     this.quotedNoteId = quotedNoteId;
   }
 
   public boolean isOwnedBy(Long viewerId) {
     return userId != null && userId.equals(viewerId);
+  }
+
+  public boolean isTopLevel() {
+    return inReplyToId == null && !reply;
   }
 
   public boolean isRemote() {

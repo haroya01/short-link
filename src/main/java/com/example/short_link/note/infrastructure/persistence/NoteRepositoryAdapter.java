@@ -111,12 +111,19 @@ class NoteRepositoryAdapter implements NoteRepository {
     return viewerId == null ? -1L : viewerId;
   }
 
+  // A reply whose parent is gone, or never reached this server, keeps reply set; the parent column
+  // stays in the condition for idx_note_reply_created.
+  static String notReply(String alias) {
+    return alias + ".in_reply_to_id IS NULL AND NOT " + alias + ".reply";
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> topLevel(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.in_reply_to_id IS NULL AND n.visibility = 'PUBLIC'"
-                + " AND n.remote_actor_id IS NULL"
+            "SELECT n.* FROM note n WHERE "
+                + notReply("n")
+                + " AND n.visibility = 'PUBLIC' AND n.remote_actor_id IS NULL"
                 + heard("n")
                 + inLanguages("n")
                 + " ORDER BY n.id DESC",
@@ -134,8 +141,9 @@ class NoteRepositoryAdapter implements NoteRepository {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> federated(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.in_reply_to_id IS NULL AND n.visibility = 'PUBLIC'"
-                + " AND n.remote_actor_id IS NOT NULL"
+            "SELECT n.* FROM note n WHERE "
+                + notReply("n")
+                + " AND n.visibility = 'PUBLIC' AND n.remote_actor_id IS NOT NULL"
                 + heardNote("n")
                 + unlimited("n")
                 + inLanguages("n")
@@ -154,7 +162,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> topLevelByAuthor(Long authorId, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.user_id = :author AND n.in_reply_to_id IS NULL"
+            "SELECT n.* FROM note n WHERE n.user_id = :author AND "
+                + notReply("n")
                 + " AND (n.user_id = :viewer OR n.visibility IN ('PUBLIC', 'UNLISTED')"
                 + " OR (n.visibility = 'PRIVATE' AND ("
                 + "EXISTS (SELECT 1 FROM user_follow f"
@@ -245,8 +254,9 @@ class NoteRepositoryAdapter implements NoteRepository {
   public List<NoteEntity> trending(Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM note n"
-                + " WHERE n.in_reply_to_id IS NULL AND n.visibility = 'PUBLIC'"
-                + " AND n.created_at >= :since"
+                + " WHERE "
+                + notReply("n")
+                + " AND n.visibility = 'PUBLIC' AND n.created_at >= :since"
                 + " AND (n.remote_actor_id IS NULL"
                 + " OR EXISTS (SELECT 1 FROM note_like ml WHERE ml.note_id = n.id)"
                 + " OR EXISTS (SELECT 1 FROM note_repost mr WHERE mr.note_id = n.id)"
@@ -294,7 +304,8 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + "PARTITION BY t.note_id ORDER BY t.at DESC, t.reposter_id IS NULL DESC"
                     + ") AS position FROM ("
                     + "SELECT o.id AS note_id, o.created_at AS at, NULL AS reposter_id FROM note o"
-                    + " WHERE o.user_id IN (:authors) AND o.in_reply_to_id IS NULL"
+                    + " WHERE o.user_id IN (:authors) AND "
+                    + notReply("o")
                     + heard("o")
                     + " AND (o.visibility <> 'DIRECT' OR o.user_id = :viewer"
                     + " OR EXISTS (SELECT 1 FROM note_recipient dr"
@@ -302,8 +313,8 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " UNION ALL"
                     + " SELECT d.id, d.created_at, NULL FROM note_recipient dn"
                     + " JOIN note d ON d.id = dn.note_id"
-                    + " WHERE dn.user_id = :viewer AND d.visibility = 'DIRECT'"
-                    + " AND d.in_reply_to_id IS NULL"
+                    + " WHERE dn.user_id = :viewer AND d.visibility = 'DIRECT' AND "
+                    + notReply("d")
                     + " UNION ALL"
                     + " SELECT r.note_id, r.created_at, r.user_id FROM note_repost r"
                     + " JOIN note s ON s.id = r.note_id"
@@ -318,12 +329,15 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " SELECT ro.id, ro.created_at, NULL FROM federation_following ff"
                     + " JOIN note ro ON ro.remote_actor_id = ff.remote_actor_id"
                     + " WHERE ff.user_id = :viewer AND ff.accepted_at IS NOT NULL"
-                    + " AND ro.in_reply_to_id IS NULL AND ro.visibility <> 'DIRECT'"
+                    + " AND "
+                    + notReply("ro")
+                    + " AND ro.visibility <> 'DIRECT'"
                     + " UNION ALL"
                     + " SELECT g.note_id, gn.created_at, NULL FROM user_tag_pref f"
                     + " JOIN note_tag g ON g.tag = f.tag"
                     + " JOIN note gn ON gn.id = g.note_id"
-                    + " WHERE f.user_id = :viewer AND f.kind = 'FOLLOW' AND gn.in_reply_to_id IS NULL"
+                    + " WHERE f.user_id = :viewer AND f.kind = 'FOLLOW' AND "
+                    + notReply("gn")
                     + " AND gn.visibility = 'PUBLIC'"
                     + heardNote("gn")
                     + ") t) y WHERE y.position = 1"
@@ -479,7 +493,8 @@ class NoteRepositoryAdapter implements NoteRepository {
   @SuppressWarnings("unchecked")
   public List<NoteEntity> byRemoteActor(Long remoteActorId, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.remote_actor_id = :actor AND n.in_reply_to_id IS NULL"
+            "SELECT n.* FROM note n WHERE n.remote_actor_id = :actor AND "
+                + notReply("n")
                 + " AND (n.visibility IN ('PUBLIC', 'UNLISTED')"
                 + " OR (n.visibility = 'PRIVATE' AND EXISTS (SELECT 1 FROM federation_following ff"
                 + " WHERE ff.user_id = :viewer AND ff.remote_actor_id = n.remote_actor_id"
@@ -515,9 +530,9 @@ class NoteRepositoryAdapter implements NoteRepository {
         em.createNativeQuery(
                 "INSERT IGNORE INTO note (remote_actor_id, uri, remote_url, body, created_at,"
                     + " content_warning, marked_sensitive, visibility, in_reply_to_id,"
-                    + " conversation_id, poll_multiple, language) VALUES (:actor, :uri, :url,"
-                    + " :body, :createdAt, :warning, :sensitive, :visibility, :parent,"
-                    + " :conversation, FALSE, :language)")
+                    + " conversation_id, reply, poll_multiple, language) VALUES (:actor, :uri,"
+                    + " :url, :body, :createdAt, :warning, :sensitive, :visibility, :parent,"
+                    + " :conversation, :reply, FALSE, :language)")
             .setParameter("actor", row.remoteActorId())
             .setParameter("uri", row.uri())
             .setParameter("url", row.url())
@@ -528,30 +543,15 @@ class NoteRepositoryAdapter implements NoteRepository {
             .setParameter("visibility", row.visibility().name())
             .setParameter("parent", row.inReplyToId())
             .setParameter("conversation", row.conversationId())
+            .setParameter("reply", row.reply())
             .setParameter("language", row.language())
             .executeUpdate();
     return inserted == 0 ? Optional.empty() : idByUri(row.uri());
   }
 
   @Override
-  public int reviseRemote(
-      Long remoteActorId,
-      Long noteId,
-      String body,
-      String contentWarning,
-      boolean sensitive,
-      Instant editedAt) {
-    return em.createNativeQuery(
-            "UPDATE note SET body = :body, content_warning = :warning,"
-                + " marked_sensitive = :sensitive, edited_at = :editedAt"
-                + " WHERE id = :id AND remote_actor_id = :actor")
-        .setParameter("body", body)
-        .setParameter("warning", contentWarning)
-        .setParameter("sensitive", sensitive)
-        .setParameter("editedAt", editedAt)
-        .setParameter("id", noteId)
-        .setParameter("actor", remoteActorId)
-        .executeUpdate();
+  public Optional<NoteEntity> findRemoteForUpdate(Long remoteActorId, Long noteId) {
+    return jpa.findRemoteForUpdate(noteId, remoteActorId);
   }
 
   @Override

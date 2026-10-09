@@ -254,11 +254,17 @@ public class NoteCommandService {
       throw new NoteException(NoteErrorCode.NOTE_THREAD_SIZE, MAX_THREAD_NOTES);
     }
     List<NoteView> created = new ArrayList<>(drafts.size());
-    Long previous = null;
+    NoteView previous = null;
     for (NoteDraft draft : drafts) {
-      NoteView note = create(userId, previous == null ? draft : draft.continuing(previous));
+      NoteView note =
+          create(
+              userId,
+              previous == null
+                  ? draft
+                  : draft.continuing(
+                      previous.id(), previous.contentWarning(), previous.sensitive()));
       created.add(note);
-      previous = note.id();
+      previous = note;
     }
     return created;
   }
@@ -528,7 +534,7 @@ public class NoteCommandService {
     if (note.isPinned()) {
       return new PinStatus(true);
     }
-    if (note.getInReplyToId() != null) {
+    if (!note.isTopLevel()) {
       throw new NoteException(NoteErrorCode.NOTE_PIN_REPLY);
     }
     if (note.getVisibility() == NoteVisibility.DIRECT) {
