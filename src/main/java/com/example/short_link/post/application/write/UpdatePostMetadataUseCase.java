@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class UpdatePostMetadataUseCase {
 
   private final PostOwnership postOwnership;
+  private final PostEditGuard editGuard;
   private final PostRepository postRepository;
   private final PostSearchTextUpdater searchTextUpdater;
   private final PostWriteViewAssembler writeViews;
@@ -24,6 +25,7 @@ public class UpdatePostMetadataUseCase {
   @Transactional
   public PostView execute(UpdatePostMetadataCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
+    editGuard.check(post, cmd.baseVersion(), cmd.overwrite());
 
     if (cmd.slug() != null && !cmd.slug().equals(post.getSlug())) {
       if (postRepository.existsByUserIdAndSlug(cmd.userId(), cmd.slug())) {

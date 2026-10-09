@@ -281,4 +281,42 @@ class PostEntityTest {
     p.updateTags(null);
     assertThat(p.getTags()).isEmpty();
   }
+
+  @Test
+  void contentVersionIgnoresStatusViewsAndLikes() {
+    PostEntity p = newPost();
+    p.publish();
+    p.unpublish();
+    p.republish();
+    p.incrementViewCount();
+    p.incrementLikeCount();
+    p.pinAt(0);
+    p.assignToSeries(3L, 1);
+    assertThat(p.getContentVersion()).isZero();
+  }
+
+  @Test
+  void markEditedAdvancesTheContentVersion() {
+    PostEntity p = newPost();
+    p.markEdited();
+    p.markEdited();
+    assertThat(p.getContentVersion()).isEqualTo(2L);
+    assertThat(p.getLastEditedAt()).isNotNull();
+  }
+
+  @Test
+  void contentVersionRefusesAnotherBase() {
+    PostEntity p = newPost();
+    p.markEdited();
+    p.requireContentVersion(1L);
+
+    assertThatThrownBy(() -> p.requireContentVersion(0L))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            e -> {
+              assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_EDIT_CONFLICT);
+              assertThat(e.properties()).containsEntry("contentVersion", 1L);
+            });
+    assertThat(p.getContentVersion()).isEqualTo(1L);
+  }
 }

@@ -110,6 +110,10 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "body_text_length", nullable = false)
   private int bodyTextLength = 0;
 
+  // markEdited()로만 오른다. 비교와 증가가 원자적이려면 findByIdForUpdate로 잠근 엔티티여야 한다.
+  @Column(name = "content_version", nullable = false)
+  private long contentVersion = 0L;
+
   public PostEntity(Long userId, String slug, String title, String languageTag) {
     this.userId = userId;
     this.slug = slug;
@@ -174,6 +178,14 @@ public class PostEntity extends BaseTimeEntity {
 
   public void markEdited() {
     this.lastEditedAt = Instant.now();
+    this.contentVersion++;
+  }
+
+  public void requireContentVersion(long baseVersion) {
+    if (baseVersion != contentVersion) {
+      throw new PostException(PostErrorCode.POST_EDIT_CONFLICT, contentVersion)
+          .with("contentVersion", contentVersion);
+    }
   }
 
   public void measureBody(String bodyText) {

@@ -2,7 +2,7 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import com.example.short_link.post.domain.PostBlockEntity;
+import com.example.short_link.post.application.read.PostBlockView;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -44,17 +44,19 @@ class ReplacePostBlocksBatchQueryAuditTest {
     for (int i = 0; i < 6; i++) {
       blocks.add(new ReplacePostBlocksCommand.BlockInput(PostBlockType.PARAGRAPH, "para " + i));
     }
-    List<PostBlockEntity> saved =
-        replaceBlocks.execute(new ReplacePostBlocksCommand(userId, postId, blocks));
+    List<PostBlockView> saved =
+        replaceBlocks
+            .execute(new ReplacePostBlocksCommand(userId, postId, blocks, null, false))
+            .blocks();
     em.flush();
 
     // The multi-row INSERT returns no generated keys, so the use case re-reads — callers still get
     // the persisted blocks with ids in order. This guards the "계약 보존" choice, not just the count.
     assertThat(saved).hasSize(6);
-    assertThat(saved).allSatisfy(block -> assertThat(block.getId()).isNotNull());
-    assertThat(saved).extracting(PostBlockEntity::getBlockOrder).containsExactly(0, 1, 2, 3, 4, 5);
+    assertThat(saved).allSatisfy(block -> assertThat(block.id()).isNotNull());
+    assertThat(saved).extracting(PostBlockView::blockOrder).containsExactly(0, 1, 2, 3, 4, 5);
     assertThat(saved)
-        .extracting(PostBlockEntity::getContent)
+        .extracting(PostBlockView::content)
         .containsExactly("para 0", "para 1", "para 2", "para 3", "para 4", "para 5");
   }
 }

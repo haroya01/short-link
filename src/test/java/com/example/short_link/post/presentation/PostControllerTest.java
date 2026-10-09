@@ -1,17 +1,22 @@
 package com.example.short_link.post.presentation;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.catchThrowableOfType;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.example.short_link.post.application.read.PostBlockView;
+import com.example.short_link.post.application.read.PostBodyView;
 import com.example.short_link.post.application.read.PostQueryService;
 import com.example.short_link.post.application.read.PostRevisionView;
 import com.example.short_link.post.application.read.PostView;
@@ -50,6 +55,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -196,6 +202,55 @@ class PostControllerTest {
   }
 
   @Test
+  void patchCarriesBaseVersionAndAnswersWithTheAdvancedVersion() throws Exception {
+    PostEntity updated = new PostEntity(USER_ID, "my-post", "Updated Title", "ko");
+    for (int i = 0; i < 4; i++) updated.markEdited();
+    when(updatePostMetadata.execute(any(UpdatePostMetadataCommand.class)))
+        .thenReturn(PostView.from(updated));
+
+    mvc.perform(
+            patch("/api/v1/posts/42")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"Updated Title\",\"baseVersion\":3}"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.contentVersion").value(4));
+    ArgumentCaptor<UpdatePostMetadataCommand> command =
+        ArgumentCaptor.forClass(UpdatePostMetadataCommand.class);
+    verify(updatePostMetadata).execute(command.capture());
+    assertThat(command.getValue().baseVersion()).isEqualTo(3L);
+    assertThat(command.getValue().overwrite()).isFalse();
+  }
+
+  @Test
+  void staleBaseVersionReturns409WithTheCurrentVersion() throws Exception {
+    PostEntity current = new PostEntity(USER_ID, "my-post", "Elsewhere", "ko");
+    for (int i = 0; i < 6; i++) current.markEdited();
+    PostException conflict =
+        catchThrowableOfType(PostException.class, () -> current.requireContentVersion(2L));
+    when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class))).thenThrow(conflict);
+
+    mvc.perform(
+            put("/api/v1/posts/42/blocks")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"blocks\":[],\"baseVersion\":2}"))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("POST_EDIT_CONFLICT"))
+        .andExpect(jsonPath("$.contentVersion").value(6));
+  }
+
+  @Test
+  void negativeBaseVersionIs400() throws Exception {
+    mvc.perform(
+            patch("/api/v1/posts/42")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"T\",\"baseVersion\":-1}"))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
   void patchSlugFrozenReturns409() throws Exception {
     when(updatePostMetadata.execute(any(UpdatePostMetadataCommand.class)))
         .thenThrow(new PostException(PostErrorCode.SLUG_FROZEN, "original-slug"));
@@ -295,21 +350,24 @@ class PostControllerTest {
         PostBlockView.from(new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0));
     PostBlockView b2 =
         PostBlockView.from(new PostBlockEntity(42L, PostBlockType.IMAGE, "{\"url\":\"x\"}", 1));
-    when(postQueryService.listBlocks(USER_ID, 42L)).thenReturn(List.of(b1, b2));
+    when(postQueryService.readBody(USER_ID, 42L)).thenReturn(new PostBodyView(3L, List.of(b1, b2)));
 
     mvc.perform(
             get("/api/v1/posts/42/blocks").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Content-Version", "3"))
         .andExpect(jsonPath("$[0].type").value("PARAGRAPH"))
         .andExpect(jsonPath("$[1].type").value("IMAGE"));
   }
 
   @Test
   void replaceBlocksAcceptsList() throws Exception {
-    PostBlockEntity saved1 = new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0);
-    PostBlockEntity saved2 = new PostBlockEntity(42L, PostBlockType.DIVIDER, null, 1);
+    PostBlockView saved1 =
+        PostBlockView.from(new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0));
+    PostBlockView saved2 =
+        PostBlockView.from(new PostBlockEntity(42L, PostBlockType.DIVIDER, null, 1));
     when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class)))
-        .thenReturn(List.of(saved1, saved2));
+        .thenReturn(new PostBodyView(1L, List.of(saved1, saved2)));
 
     mvc.perform(
             put("/api/v1/posts/42/blocks")
@@ -321,13 +379,20 @@ class PostControllerTest {
                         + "{\"type\":\"DIVIDER\"}"
                         + "]}"))
         .andExpect(status().isOk())
+        .andExpect(header().string("X-Content-Version", "1"))
         .andExpect(jsonPath("$[0].type").value("PARAGRAPH"))
         .andExpect(jsonPath("$[1].type").value("DIVIDER"));
+    ArgumentCaptor<ReplacePostBlocksCommand> command =
+        ArgumentCaptor.forClass(ReplacePostBlocksCommand.class);
+    verify(replacePostBlocks).execute(command.capture());
+    assertThat(command.getValue().baseVersion()).isNull();
+    assertThat(command.getValue().overwrite()).isFalse();
   }
 
   @Test
   void replaceBlocksAcceptsEmpty() throws Exception {
-    when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class))).thenReturn(List.of());
+    when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class)))
+        .thenReturn(new PostBodyView(1L, List.of()));
 
     mvc.perform(
             put("/api/v1/posts/42/blocks")
@@ -345,14 +410,15 @@ class PostControllerTest {
   @Test
   void markdownSerializesOwnBlocks() throws Exception {
     List<PostBlockView> views = List.of(new PostBlockView(1L, "H1", "Hello", 0));
-    when(postQueryService.listBlocks(USER_ID, 42L)).thenReturn(views);
+    when(postQueryService.readBody(USER_ID, 42L)).thenReturn(new PostBodyView(5L, views));
     when(markdownBlocks.toMarkdown(views)).thenReturn("# Hello");
 
     mvc.perform(
             get("/api/v1/posts/42/markdown")
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.markdown").value("# Hello"));
+        .andExpect(jsonPath("$.markdown").value("# Hello"))
+        .andExpect(jsonPath("$.contentVersion").value(5));
   }
 
   @Test
@@ -360,17 +426,25 @@ class PostControllerTest {
     List<ReplacePostBlocksCommand.BlockInput> inputs =
         List.of(new ReplacePostBlocksCommand.BlockInput(PostBlockType.H1, "Hello"));
     when(markdownBlocks.toBlocks("# Hello")).thenReturn(inputs);
-    PostBlockEntity saved = new PostBlockEntity(42L, PostBlockType.H1, "Hello", 0);
-    when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class))).thenReturn(List.of(saved));
+    PostBlockView saved =
+        PostBlockView.from(new PostBlockEntity(42L, PostBlockType.H1, "Hello", 0));
+    when(replacePostBlocks.execute(any(ReplacePostBlocksCommand.class)))
+        .thenReturn(new PostBodyView(8L, List.of(saved)));
     when(markdownBlocks.toMarkdown(any())).thenReturn("# Hello");
 
     mvc.perform(
             put("/api/v1/posts/42/markdown")
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"markdown\":\"# Hello\"}"))
+                .content("{\"markdown\":\"# Hello\",\"baseVersion\":7,\"overwrite\":true}"))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.markdown").value("# Hello"));
+        .andExpect(jsonPath("$.markdown").value("# Hello"))
+        .andExpect(jsonPath("$.contentVersion").value(8));
+    ArgumentCaptor<ReplacePostBlocksCommand> command =
+        ArgumentCaptor.forClass(ReplacePostBlocksCommand.class);
+    verify(replacePostBlocks).execute(command.capture());
+    assertThat(command.getValue().baseVersion()).isEqualTo(7L);
+    assertThat(command.getValue().overwrite()).isTrue();
   }
 
   @Test

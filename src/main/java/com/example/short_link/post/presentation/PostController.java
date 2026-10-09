@@ -1,6 +1,7 @@
 package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.read.PostBlockView;
+import com.example.short_link.post.application.read.PostBodyView;
 import com.example.short_link.post.application.read.PostExportQueryService;
 import com.example.short_link.post.application.read.PostQueryService;
 import com.example.short_link.post.application.read.PostRevisionView;
@@ -60,6 +61,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/v1/posts")
 @RequiredArgsConstructor
 public class PostController {
+
+  static final String CONTENT_VERSION_HEADER = "X-Content-Version";
 
   private final CreatePostUseCase createPost;
   private final MarkdownBlocksConverter markdownBlocks;
@@ -124,7 +127,9 @@ public class PostController {
             request.ogImageUrl(),
             request.ogImageKey(),
             request.languageTag(),
-            request.tags()));
+            request.tags(),
+            request.baseVersion(),
+            Boolean.TRUE.equals(request.overwrite())));
   }
 
   @PostMapping("/{id}/publish")
@@ -162,13 +167,13 @@ public class PostController {
   }
 
   @GetMapping("/{id}/blocks")
-  public List<PostBlockView> listBlocks(
+  public ResponseEntity<List<PostBlockView>> listBlocks(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return postQueryService.listBlocks(userId, id);
+    return withContentVersion(postQueryService.readBody(userId, id));
   }
 
   @PutMapping("/{id}/blocks")
-  public List<PostBlockView> replaceBlocks(
+  public ResponseEntity<List<PostBlockView>> replaceBlocks(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @Valid @RequestBody ReplaceBlocksRequest request) {
@@ -179,16 +184,20 @@ public class PostController {
                     new ReplacePostBlocksCommand.BlockInput(
                         PostBlockType.valueOf(b.type().toUpperCase(Locale.ROOT)), b.content()))
             .toList();
-    return replacePostBlocks.execute(new ReplacePostBlocksCommand(userId, id, inputs)).stream()
-        .map(PostBlockView::from)
-        .toList();
+    return withContentVersion(
+        replacePostBlocks.execute(
+            new ReplacePostBlocksCommand(
+                userId,
+                id,
+                inputs,
+                request.baseVersion(),
+                Boolean.TRUE.equals(request.overwrite()))));
   }
 
   @GetMapping("/{id}/markdown")
   public PostMarkdownResponse markdown(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return new PostMarkdownResponse(
-        markdownBlocks.toMarkdown(postQueryService.listBlocks(userId, id)));
+    return toMarkdownResponse(postQueryService.readBody(userId, id));
   }
 
   // 클라이언트가 서버의 정규화된 표현을 사용하도록 저장 후 마크다운을 다시 반환한다.
@@ -197,11 +206,14 @@ public class PostController {
       @AuthenticationPrincipal Long userId,
       @PathVariable Long id,
       @Valid @RequestBody PostMarkdownRequest request) {
-    var saved =
+    return toMarkdownResponse(
         replacePostBlocks.execute(
-            new ReplacePostBlocksCommand(userId, id, markdownBlocks.toBlocks(request.markdown())));
-    return new PostMarkdownResponse(
-        markdownBlocks.toMarkdown(saved.stream().map(PostBlockView::from).toList()));
+            new ReplacePostBlocksCommand(
+                userId,
+                id,
+                markdownBlocks.toBlocks(request.markdown()),
+                request.baseVersion(),
+                Boolean.TRUE.equals(request.overwrite()))));
   }
 
   @GetMapping("/{id}/revisions")
@@ -222,5 +234,16 @@ public class PostController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     deletePost.execute(new DeletePostCommand(userId, id));
+  }
+
+  private static ResponseEntity<List<PostBlockView>> withContentVersion(PostBodyView body) {
+    return ResponseEntity.ok()
+        .header(CONTENT_VERSION_HEADER, String.valueOf(body.contentVersion()))
+        .body(body.blocks());
+  }
+
+  private PostMarkdownResponse toMarkdownResponse(PostBodyView body) {
+    return new PostMarkdownResponse(
+        markdownBlocks.toMarkdown(body.blocks()), body.contentVersion());
   }
 }

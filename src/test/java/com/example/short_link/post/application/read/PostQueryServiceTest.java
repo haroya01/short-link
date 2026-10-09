@@ -108,6 +108,21 @@ class PostQueryServiceTest {
   }
 
   @Test
+  void readBodyCarriesTheVersionOfThePostItWasReadWith() {
+    PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
+    post.markEdited();
+    post.markEdited();
+    when(postOwnership.requireOwned(7L, 42L)).thenReturn(post);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(42L))
+        .thenReturn(List.of(new PostBlockEntity(42L, PostBlockType.PARAGRAPH, "Hello", 0)));
+
+    PostBodyView body = service.readBody(7L, 42L);
+
+    assertThat(body.contentVersion()).isEqualTo(2L);
+    assertThat(body.blocks()).extracting(PostBlockView::content).containsExactly("Hello");
+  }
+
+  @Test
   void listBlocksEnforcesOwnership() {
     when(postOwnership.requireOwned(7L, 42L))
         .thenThrow(new PostException(PostErrorCode.PERMISSION_DENIED));

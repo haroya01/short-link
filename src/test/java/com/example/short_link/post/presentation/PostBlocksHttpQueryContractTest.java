@@ -120,12 +120,15 @@ class PostBlocksHttpQueryContractTest extends DockerHttpTest {
         new ReplaceBlocksRequest(
             contents.stream()
                 .map(content -> new ReplaceBlocksRequest.BlockItem("PARAGRAPH", content))
-                .toList());
+                .toList(),
+            null,
+            null);
 
     var captured =
         sendJson("post-blocks-replace-six", "PUT", blocksPath(fixture.postId()), request);
 
     List<PostBlockView> response = readBlockResponse(captured);
+    assertThat(captured.response().headers().firstValue("X-Content-Version")).hasValue("1");
     List<PostBlockView> committed = committedBlocks(fixture.postId());
     assertThat(committed).hasSize(6);
     assertThat(committed).extracting(PostBlockView::blockOrder).containsExactly(0, 1, 2, 3, 4, 5);
@@ -160,6 +163,7 @@ class PostBlocksHttpQueryContractTest extends DockerHttpTest {
         capture("post-blocks-read", authorizedRequest(blocksPath(fixture.postId())).GET().build());
 
     List<PostBlockView> response = readBlockResponse(captured);
+    assertThat(captured.response().headers().firstValue("X-Content-Version")).hasValue("0");
     List<PostBlockView> committed = committedBlocks(fixture.postId());
     assertThat(committed).hasSize(6).containsExactlyElementsOf(fixture.blocks());
     assertThat(response).containsExactlyElementsOf(committed);
