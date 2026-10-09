@@ -50,6 +50,13 @@ public class VisitHandoff {
     return new VisitPage(null, headers, HttpStatus.FOUND, "expired");
   }
 
+  // A non-2xx answer makes the browser drop the prefetch and send a real visit, which is counted.
+  public ResponseEntity<byte[]> prefetchDeclined() {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setCacheControl("no-store");
+    return new VisitPage(null, headers, HttpStatus.FORBIDDEN, "preview");
+  }
+
   public ResponseEntity<byte[]> unlocked(
       RedirectOutcome.Redirect redirect, String userAgent, Locale locale) {
     String next = nextHop(redirect, userAgent);

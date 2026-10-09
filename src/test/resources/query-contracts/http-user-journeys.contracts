@@ -613,6 +613,23 @@
 @junit | reader-unlisted-path-absent-from-profile | 2 | 0 | 0 | 0 | 2
 @junit | reader-unlisted-path-direct-link | 8 | 0 | 0 | 0 | 8
 @junit | reader-unpublished-post-gone | 2 | 0 | 0 | 0 | 2
+# Links with a view limit or country block: a crawler's card reads the link row and human clicks
+# but no event preview, spends no view, and is refused like a person once the limit is spent or its
+# country is blocked. A prefetch of a counted link stops at the custom-domain check.
+@junit | restricted-create-once | 5 | 6 | 2 | 0 | 13
+@junit | restricted-limit-views | 2 | 0 | 2 | 0 | 4
+@junit | restricted-crawler-preview | 5 | 0 | 0 | 0 | 5
+@junit | restricted-crawler-again | 3 | 0 | 0 | 0 | 3
+@junit | restricted-prefetch | 1 | 0 | 0 | 0 | 1
+@junit | restricted-person-visit | 1 | 0 | 1 | 0 | 2
+@junit | restricted-crawler-after-limit | 2 | 0 | 0 | 0 | 2
+@junit | restricted-create-blocked | 5 | 6 | 2 | 0 | 13
+@junit | restricted-block-japan | 2 | 0 | 2 | 0 | 4
+@junit | restricted-limit-blocked | 2 | 0 | 2 | 0 | 4
+@junit | restricted-blocked-person | 3 | 0 | 0 | 0 | 3
+@junit | restricted-blocked-crawler | 2 | 0 | 0 | 0 | 2
+@junit | restricted-create-open | 5 | 6 | 2 | 0 | 13
+@junit | open-crawler-preview | 6 | 0 | 0 | 0 | 6
 @junit | removal-live-bookmark | 1 | 1 | 0 | 0 | 2
 @junit | removal-live-comment | 9 | 2 | 0 | 0 | 11
 @junit | removal-live-comment-like | 11 | 2 | 0 | 0 | 13

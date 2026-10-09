@@ -196,6 +196,10 @@ public record CachedLink(
     return expiresAt != null && !now.isBefore(expiresAt);
   }
 
+  public boolean limitsVisitors() {
+    return maxViews != null || blockedCountries != null;
+  }
+
   public boolean isBlockedFor(String clientCountry) {
     if (blockedCountries == null || clientCountry == null) return false;
     String upper = clientCountry.toUpperCase(Locale.ROOT);

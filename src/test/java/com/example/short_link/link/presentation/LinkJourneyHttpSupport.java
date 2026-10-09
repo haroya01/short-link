@@ -122,6 +122,23 @@ public abstract class LinkJourneyHttpSupport extends DockerHttpTest {
         body == null
             ? HttpRequest.BodyPublishers.noBody()
             : HttpRequest.BodyPublishers.ofString(body));
+    return send(id, request, expectedStatus);
+  }
+
+  protected HttpResponse<byte[]> visit(
+      String id, String path, Map<String, String> headers, int expectedStatus) throws Exception {
+    HttpRequest.Builder request =
+        HttpRequest.newBuilder(URI.create("http://127.0.0.1:" + port + path))
+            .timeout(Duration.ofSeconds(30))
+            .header("User-Agent", "Mozilla/5.0 HTTP journey browser")
+            .header("X-Query-Contract-ID", id)
+            .GET();
+    headers.forEach(request::setHeader);
+    return send(id, request, expectedStatus);
+  }
+
+  private HttpResponse<byte[]> send(String id, HttpRequest.Builder request, int expectedStatus)
+      throws Exception {
     var captured =
         contracts.capture(
             id,
