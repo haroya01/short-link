@@ -234,6 +234,9 @@
 @junit | discovery-search-trending | 4 | 0 | 0 | 0 | 4
 @junit | discovery-suggested-authors | 2 | 0 | 0 | 0 | 2
 @junit | discovery-tag-feed | 4 | 0 | 0 | 0 | 4
+# A signed-in reader's topic on the trending tab: blocks and mutes ride inside the page and count
+# statements, so it stays the anonymous tag feed's four.
+@junit | discovery-tag-trending-signed-in | 4 | 0 | 0 | 0 | 4
 @junit | discovery-trending-feed | 4 | 0 | 0 | 0 | 4
 @junit | discovery-trending-tag-sections | 7 | 0 | 0 | 0 | 7
 @junit | event-alias-link | 6 | 7 | 2 | 0 | 15

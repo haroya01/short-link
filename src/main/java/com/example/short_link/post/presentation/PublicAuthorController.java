@@ -4,6 +4,7 @@ import com.example.short_link.post.application.read.PublicFeedQueryService;
 import com.example.short_link.post.application.read.SuggestedAuthorView;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,8 +20,9 @@ public class PublicAuthorController {
   private final PublicFeedQueryService publicFeedQueryService;
 
   @GetMapping
-  public List<SuggestedAuthorView> suggested(@RequestParam(defaultValue = "5") int limit) {
+  public List<SuggestedAuthorView> suggested(
+      @AuthenticationPrincipal Long viewerId, @RequestParam(defaultValue = "5") int limit) {
     int safeLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
-    return publicFeedQueryService.suggestedAuthors(safeLimit);
+    return publicFeedQueryService.suggestedAuthors(viewerId, safeLimit);
   }
 }

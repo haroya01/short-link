@@ -77,7 +77,7 @@ class PublicSeriesDiscoveryIntegrationTest {
     long thin = createSeries(a, "thin", "Thin");
     order(thin, publishInSeries(a, "thin-1", thin, 0));
 
-    List<PublicSeriesCard> cards = service.discoverSeries(10);
+    List<PublicSeriesCard> cards = service.discoverSeries(null, 10);
 
     assertThat(cards)
         .extracting(PublicSeriesCard::slug)

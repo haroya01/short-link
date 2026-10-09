@@ -4,6 +4,7 @@ import com.example.short_link.post.application.read.PublicSeriesCard;
 import com.example.short_link.post.application.read.PublicSeriesQueryService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -19,8 +20,9 @@ public class PublicSeriesDiscoveryController {
   private final PublicSeriesQueryService publicSeriesQueryService;
 
   @GetMapping
-  public List<PublicSeriesCard> discover(@RequestParam(defaultValue = "6") int limit) {
+  public List<PublicSeriesCard> discover(
+      @AuthenticationPrincipal Long viewerId, @RequestParam(defaultValue = "6") int limit) {
     int safeLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
-    return publicSeriesQueryService.discoverSeries(safeLimit);
+    return publicSeriesQueryService.discoverSeries(viewerId, safeLimit);
   }
 }

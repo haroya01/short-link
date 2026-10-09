@@ -6,6 +6,7 @@ import com.example.short_link.post.domain.repository.FollowingFeedReader;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.Query;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import org.hibernate.query.NativeQuery;
@@ -20,19 +21,22 @@ class FollowingFeedReaderAdapter implements FollowingFeedReader {
       "SELECT DISTINCT 'POST' AS item_type, p.id AS id, NULL AS series_id, p.published_at AS item_at"
           + " FROM posts p LEFT JOIN post_tag t ON t.post_id = p.id"
           + " WHERE p.status = 'PUBLISHED'"
-          + " AND (p.user_id IN (:authors) OR p.series_id IN (:series) OR LOWER(t.tag) IN (:tags))";
+          + " AND (p.user_id IN (:authors) OR p.series_id IN (:series) OR LOWER(t.tag) IN (:tags))"
+          + HeardSql.POST_AUTHOR;
 
   private static final String NOTES =
       "SELECT 'NOTE', n.id, i.series_id, n.created_at FROM series_item i"
           + " JOIN note n ON n.id = i.ref_id"
           + " WHERE i.item_type = 'NOTE' AND i.series_id IN (:series)"
-          + " AND n.visibility IN ('PUBLIC', 'UNLISTED')";
+          + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
+          + HeardSql.authoredBy("n");
 
   @PersistenceContext private EntityManager em;
 
   @Override
   @SuppressWarnings("unchecked")
   public List<FollowingFeedRef> page(
+      Long viewerId,
       Collection<Long> authorIds,
       Collection<Long> seriesIds,
       Collection<String> tags,
@@ -46,6 +50,7 @@ class FollowingFeedReaderAdapter implements FollowingFeedReader {
                         + " UNION ALL "
                         + NOTES
                         + ") u ORDER BY u.item_at DESC, u.id DESC LIMIT :limit OFFSET :offset"),
+                viewerId,
                 authorIds,
                 seriesIds,
                 tags)
@@ -68,11 +73,15 @@ class FollowingFeedReaderAdapter implements FollowingFeedReader {
 
   @Override
   public long count(
-      Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags) {
+      Long viewerId,
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags) {
     Object total =
         bind(
                 em.createNativeQuery(
                     "SELECT COUNT(*) FROM (" + POSTS + " UNION ALL " + NOTES + ") u"),
+                viewerId,
                 authorIds,
                 seriesIds,
                 tags)
@@ -82,10 +91,13 @@ class FollowingFeedReaderAdapter implements FollowingFeedReader {
 
   private static Query bind(
       Query query,
+      Long viewerId,
       Collection<Long> authorIds,
       Collection<Long> seriesIds,
       Collection<String> tags) {
     return query
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
         .setParameter("authors", authorIds.isEmpty() ? List.of(-1L) : authorIds)
         .setParameter("series", seriesIds.isEmpty() ? List.of(-1L) : seriesIds)
         .setParameter("tags", tags.isEmpty() ? List.of("\u0000") : tags);

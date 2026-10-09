@@ -134,20 +134,24 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
 
   @Override
   @SuppressWarnings("unchecked")
-  public List<SeriesActivity> activeSeries(int minItems, int limit) {
+  public List<SeriesActivity> activeSeries(Long viewerId, int minItems, int limit) {
     List<Object[]> rows =
         em.createNativeQuery(
                 "SELECT i.series_id, COUNT(*) AS item_count,"
                     + " MAX(COALESCE(p.published_at, n.created_at)) AS last_at"
                     + " FROM series_item i"
+                    + " JOIN series s ON s.id = i.series_id"
                     + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id"
                     + " AND p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
                     + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
                     + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
-                    + " WHERE p.id IS NOT NULL OR n.id IS NOT NULL"
+                    + " WHERE (p.id IS NOT NULL OR n.id IS NOT NULL)"
+                    + HeardSql.authoredBy("s")
                     + " GROUP BY i.series_id HAVING COUNT(*) >= :minItems"
                     + " ORDER BY last_at DESC, i.series_id DESC LIMIT :limit")
             .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)
+            .setParameter("viewer", HeardSql.viewer(viewerId))
+            .setParameter("now", Instant.now())
             .setParameter("minItems", minItems)
             .setParameter("limit", limit)
             .unwrap(NativeQuery.class)

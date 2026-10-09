@@ -64,29 +64,36 @@ public interface PostRepository {
   List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
       Long seriesId, PostStatus status);
 
-  List<PostEntity> findPublishedRecent(String lang, int page, int size);
+  // A viewer-scoped read leaves out authors the viewer blocked, who blocked the viewer, or whom the
+  // viewer muted until the mute ends; a null viewer is anonymous.
+  List<PostEntity> findPublishedRecent(Long viewerId, String lang, int page, int size);
 
-  List<PostEntity> findPublishedTrending(String lang, int page, int size);
+  List<PostEntity> findPublishedTrending(Long viewerId, String lang, int page, int size);
 
-  long countPublished(String lang);
+  long countPublished(Long viewerId, String lang);
 
   long countPublishedByUserId(Long userId);
 
-  List<PostEntity> findPublishedByTag(String tag, int page, int size);
+  List<PostEntity> findPublishedByTag(Long viewerId, String tag, int page, int size);
 
-  long countPublishedByTag(String tag);
+  List<PostEntity> findPublishedTrendingByTag(Long viewerId, String tag, int page, int size);
+
+  long countPublishedByTag(Long viewerId, String tag);
 
   List<PostEntity> findPublishedQuotingNote(Long noteId, int offset, int limit);
 
-  List<PostEntity> searchPublishedByRelevance(String query, String lang, int page, int size);
+  List<PostEntity> searchPublishedByRelevance(
+      Long viewerId, String query, String lang, int page, int size);
 
-  List<PostEntity> searchPublished(String query, String lang, int page, int size);
+  List<PostEntity> searchPublished(Long viewerId, String query, String lang, int page, int size);
 
-  List<PostEntity> searchPublishedTrending(String query, String lang, int page, int size);
+  List<PostEntity> searchPublishedTrending(
+      Long viewerId, String query, String lang, int page, int size);
 
-  long countSearchPublished(String query, String lang);
+  long countSearchPublished(Long viewerId, String query, String lang);
 
   List<PostEntity> findPublishedByAuthorsSeriesOrTags(
+      Long viewerId,
       Collection<Long> authorIds,
       Collection<Long> seriesIds,
       Collection<String> tags,
@@ -94,7 +101,10 @@ public interface PostRepository {
       int size);
 
   long countPublishedByAuthorsSeriesOrTags(
-      Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags);
+      Long viewerId,
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags);
 
   List<PostEntity> findForYouCandidates(
       Long userId, Collection<String> tags, Collection<Long> excludeIds, int page, int size);
@@ -103,5 +113,5 @@ public interface PostRepository {
 
   List<TagCount> findPopularTags(int limit);
 
-  List<AuthorPostStats> findTopAuthorStats(int limit);
+  List<AuthorPostStats> findTopAuthorStats(Long viewerId, int limit);
 }

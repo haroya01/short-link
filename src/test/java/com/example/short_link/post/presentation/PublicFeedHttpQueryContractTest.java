@@ -79,7 +79,7 @@ class PublicFeedHttpQueryContractTest extends DockerHttpTest {
                 });
 
     // This query runs after commit and outside the HTTP capture window.
-    assertThat(posts.countPublished(null)).isEqualTo(FIXTURE_POST_COUNT);
+    assertThat(posts.countPublished(null, null)).isEqualTo(FIXTURE_POST_COUNT);
   }
 
   @AfterEach

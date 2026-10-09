@@ -55,8 +55,8 @@ public class ForYouQueryService {
     List<String> interest = deriveInterestTags(prefs.followed(), recentReadIds, likedIds, hidden);
     if (interest.isEmpty()) {
       // No interest signal yet; use trending for the cold start.
-      List<PostEntity> trending = postRepository.findPublishedTrending(null, page, size);
-      boolean hasNext = (long) (page + 1) * size < postRepository.countPublished(null);
+      List<PostEntity> trending = postRepository.findPublishedTrending(userId, null, page, size);
+      boolean hasNext = (long) (page + 1) * size < postRepository.countPublished(userId, null);
       return new PublicFeedView(feedItemAssembler.assemble(trending), page, size, hasNext);
     }
 

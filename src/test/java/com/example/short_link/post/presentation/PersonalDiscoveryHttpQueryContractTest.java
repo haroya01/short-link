@@ -81,6 +81,16 @@ class PersonalDiscoveryHttpQueryContractTest extends ContentHttpJourneySupport {
                 .asLong())
         .isEqualTo(korean);
     assertThat(
+            get(
+                    "discovery-tag-trending-signed-in",
+                    "/api/v1/public/posts?tag=architecture&sort=trending",
+                    reader)
+                .path("items")
+                .get(0)
+                .path("id")
+                .asLong())
+        .isEqualTo(korean);
+    assertThat(
             get("discovery-search-relevance", "/api/v1/public/posts?q=Readable", null)
                 .path("items")
                 .size())

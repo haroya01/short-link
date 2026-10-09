@@ -72,9 +72,9 @@ public class PublicSeriesQueryService {
   }
 
   // 삭제 작성자를 제외해도 요청 수를 채울 수 있도록 후보를 더 조회한다.
-  public List<PublicSeriesCard> discoverSeries(int limit) {
+  public List<PublicSeriesCard> discoverSeries(Long viewerId, int limit) {
     int safeLimit = Math.max(limit, 1);
-    List<SeriesActivity> ranked = seriesItemReader.activeSeries(MIN_ITEMS, safeLimit * 2);
+    List<SeriesActivity> ranked = seriesItemReader.activeSeries(viewerId, MIN_ITEMS, safeLimit * 2);
     if (ranked.isEmpty()) return List.of();
 
     Map<Long, SeriesEntity> series =

@@ -156,25 +156,34 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findPublishedRecent(String lang, int page, int size) {
+  public List<PostEntity> findPublishedRecent(Long viewerId, String lang, int page, int size) {
     return jpa.findPublishedRecent(
-        PostStatus.PUBLISHED,
         normLang(lang),
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        HeardSql.viewer(viewerId),
+        Instant.now(),
         PageRequest.of(page, size));
   }
 
   @Override
-  public List<PostEntity> findPublishedTrending(String lang, int page, int size) {
-    Instant since = Instant.now().minus(TRENDING_WINDOW);
+  public List<PostEntity> findPublishedTrending(Long viewerId, String lang, int page, int size) {
+    Instant now = Instant.now();
     return jpa.findPublishedTrendingSince(
-        since, normLang(lang), DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(page, size));
+        now.minus(TRENDING_WINDOW),
+        normLang(lang),
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        HeardSql.viewer(viewerId),
+        now,
+        PageRequest.of(page, size));
   }
 
   @Override
-  public long countPublished(String lang) {
+  public long countPublished(Long viewerId, String lang) {
     return jpa.countPublishedByLang(
-        PostStatus.PUBLISHED, normLang(lang), DiscoveryQuality.MIN_BODY_TEXT_LENGTH);
+        normLang(lang),
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        HeardSql.viewer(viewerId),
+        Instant.now());
   }
 
   @Override
@@ -183,11 +192,25 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findPublishedByTag(String tag, int page, int size) {
+  public List<PostEntity> findPublishedByTag(Long viewerId, String tag, int page, int size) {
     return jpa.findPublishedByTag(
         tag,
-        PostStatus.PUBLISHED,
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        HeardSql.viewer(viewerId),
+        Instant.now(),
+        PageRequest.of(page, size));
+  }
+
+  @Override
+  public List<PostEntity> findPublishedTrendingByTag(
+      Long viewerId, String tag, int page, int size) {
+    Instant now = Instant.now();
+    return jpa.findPublishedTrendingByTagSince(
+        tag,
+        now.minus(TRENDING_WINDOW),
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        HeardSql.viewer(viewerId),
+        now,
         PageRequest.of(page, size));
   }
 
@@ -197,55 +220,65 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public long countPublishedByTag(String tag) {
+  public long countPublishedByTag(Long viewerId, String tag) {
     return jpa.countPublishedByTag(
-        tag, PostStatus.PUBLISHED, DiscoveryQuality.MIN_BODY_TEXT_LENGTH);
+        tag, DiscoveryQuality.MIN_BODY_TEXT_LENGTH, HeardSql.viewer(viewerId), Instant.now());
   }
 
   @Override
   public List<PostEntity> searchPublishedByRelevance(
-      String query, String lang, int page, int size) {
+      Long viewerId, String query, String lang, int page, int size) {
     return jpa.searchPublishedByRelevance(
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
         normLang(lang),
+        HeardSql.viewer(viewerId),
+        Instant.now(),
         PageRequest.of(page, size));
   }
 
   @Override
-  public List<PostEntity> searchPublished(String query, String lang, int page, int size) {
+  public List<PostEntity> searchPublished(
+      Long viewerId, String query, String lang, int page, int size) {
     return jpa.searchPublishedRecent(
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
         normLang(lang),
+        HeardSql.viewer(viewerId),
+        Instant.now(),
         PageRequest.of(page, size));
   }
 
   @Override
-  public List<PostEntity> searchPublishedTrending(String query, String lang, int page, int size) {
-    Instant since = Instant.now().minus(TRENDING_WINDOW);
+  public List<PostEntity> searchPublishedTrending(
+      Long viewerId, String query, String lang, int page, int size) {
+    Instant now = Instant.now();
     return jpa.searchPublishedTrendingSince(
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
-        since,
+        now.minus(TRENDING_WINDOW),
         normLang(lang),
+        HeardSql.viewer(viewerId),
+        now,
         PageRequest.of(page, size));
   }
 
   @Override
-  public long countSearchPublished(String query, String lang) {
+  public long countSearchPublished(Long viewerId, String query, String lang) {
     return jpa.countSearchPublished(
         booleanMatch(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
-        normLang(lang));
+        normLang(lang),
+        HeardSql.viewer(viewerId),
+        Instant.now());
   }
 
   private static String normLang(String lang) {
@@ -333,6 +366,7 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public List<PostEntity> findPublishedByAuthorsSeriesOrTags(
+      Long viewerId,
       Collection<Long> authorIds,
       Collection<Long> seriesIds,
       Collection<String> tags,
@@ -342,15 +376,23 @@ class PostRepositoryAdapter implements PostRepository {
         idsForIn(authorIds),
         idsForIn(seriesIds),
         tagsForIn(tags),
-        PostStatus.PUBLISHED,
+        HeardSql.viewer(viewerId),
+        Instant.now(),
         PageRequest.of(page, size));
   }
 
   @Override
   public long countPublishedByAuthorsSeriesOrTags(
-      Collection<Long> authorIds, Collection<Long> seriesIds, Collection<String> tags) {
+      Long viewerId,
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags) {
     return jpa.countPublishedByAuthorsSeriesOrTags(
-        idsForIn(authorIds), idsForIn(seriesIds), tagsForIn(tags), PostStatus.PUBLISHED);
+        idsForIn(authorIds),
+        idsForIn(seriesIds),
+        tagsForIn(tags),
+        HeardSql.viewer(viewerId),
+        Instant.now());
   }
 
   @Override
@@ -360,8 +402,8 @@ class PostRepositoryAdapter implements PostRepository {
         userId,
         tagsForIn(tags),
         idsForIn(excludeIds),
-        PostStatus.PUBLISHED,
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        Instant.now(),
         PageRequest.of(page, size));
   }
 
@@ -372,8 +414,8 @@ class PostRepositoryAdapter implements PostRepository {
         userId,
         tagsForIn(tags),
         idsForIn(excludeIds),
-        PostStatus.PUBLISHED,
-        DiscoveryQuality.MIN_BODY_TEXT_LENGTH);
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        Instant.now());
   }
 
   @Override
@@ -387,10 +429,13 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<AuthorPostStats> findTopAuthorStats(int limit) {
+  public List<AuthorPostStats> findTopAuthorStats(Long viewerId, int limit) {
     return jpa
         .findTopAuthorIds(
-            PostStatus.PUBLISHED, DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(0, limit))
+            DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+            HeardSql.viewer(viewerId),
+            Instant.now(),
+            PageRequest.of(0, limit))
         .stream()
         .map(
             row ->

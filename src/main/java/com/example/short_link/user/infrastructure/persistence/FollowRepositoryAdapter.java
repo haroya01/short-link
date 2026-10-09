@@ -39,12 +39,12 @@ class FollowRepositoryAdapter implements FollowRepository {
 
   @Override
   public long countByFollowingId(Long followingId) {
-    return jpa.countByFollowingId(followingId);
+    return jpa.countLiveFollowers(followingId);
   }
 
   @Override
   public long countByFollowerId(Long followerId) {
-    return jpa.countByFollowerId(followerId);
+    return jpa.countLiveFollowing(followerId);
   }
 
   @Override

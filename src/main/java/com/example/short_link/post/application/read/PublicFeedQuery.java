@@ -19,7 +19,7 @@ public record PublicFeedQuery(Selection selection, int page, int size) {
       return new Search(searchText.trim(), SearchOrder.from(sort), language);
     }
     if (hasText(tag)) {
-      return new Tagged(tag.trim());
+      return new Tagged(tag.trim(), BrowseOrder.from(sort));
     }
     return new Browse(BrowseOrder.from(sort), language);
   }
@@ -32,7 +32,7 @@ public record PublicFeedQuery(Selection selection, int page, int size) {
 
   public record Search(String text, SearchOrder order, String language) implements Selection {}
 
-  public record Tagged(String tag) implements Selection {}
+  public record Tagged(String tag, BrowseOrder order) implements Selection {}
 
   public record Browse(BrowseOrder order, String language) implements Selection {}
 

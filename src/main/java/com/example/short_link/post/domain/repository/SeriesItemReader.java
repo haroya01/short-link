@@ -22,5 +22,5 @@ public interface SeriesItemReader {
 
   // Series with at least minItems readable items, the most recently active first. Posts count only
   // past the discovery floor; notes count when anyone may read them.
-  List<SeriesActivity> activeSeries(int minItems, int limit);
+  List<SeriesActivity> activeSeries(Long viewerId, int minItems, int limit);
 }
