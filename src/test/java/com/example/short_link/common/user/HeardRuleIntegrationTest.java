@@ -20,6 +20,7 @@ import com.example.short_link.post.application.read.PostHighlightQueryService;
 import com.example.short_link.post.application.read.PostHighlightReplyQueryService;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.application.read.PublicFeedItem;
+import com.example.short_link.post.application.read.PublicPostListView;
 import com.example.short_link.post.application.read.PublicPostQueryService;
 import com.example.short_link.post.application.read.QuotingPostsQueryService;
 import com.example.short_link.post.collection.application.read.DiscoverConnectionView;
@@ -40,6 +41,8 @@ import com.example.short_link.post.domain.repository.PostHighlightReplyRepositor
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostNoteQuoteRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.exception.PostErrorCode;
+import com.example.short_link.post.exception.PostException;
 import com.example.short_link.support.DiscoverableBodies;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserBlockEntity;
@@ -65,14 +68,16 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 // One viewer and six writers: one the viewer hears, one whose mute has ended, one the viewer
-// blocked, one who blocked the viewer, one muted for good and one muted for another hour. Every
-// read below must keep the first two and leave out the other four, and show all six to anonymous.
+// blocked, one who blocked the viewer, one muted for good and one muted for another hour. Lists of
+// other people's writing keep the first two; opening a writer directly hides only the blocked two.
+// Anonymous sees all six.
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
 class HeardRuleIntegrationTest {
 
   private static final List<String> HEARD = List.of("hr-normal", "hr-expired");
+  private static final List<String> BLOCKED = List.of("hr-blocked", "hr-blocker");
   private static final List<String> UNHEARD =
       List.of("hr-blocked", "hr-blocker", "hr-muted", "hr-mutedlater");
 
@@ -234,62 +239,96 @@ class HeardRuleIntegrationTest {
   }
 
   @Test
-  void anUnheardWritersProfileListsNoPostsNotesOrReposts() {
+  void aProfileListsNothingAcrossABlockButStillListsForAMute() {
     Map<String, Long> ownNotes = new LinkedHashMap<>();
     for (String handle : all()) {
       publish(writer(handle), handle + "-own");
       ownNotes.put(handle, note(writer(handle), null));
-    }
-    long normalNote = ownNotes.get("hr-normal");
-    long mutedNote = ownNotes.get("hr-muted");
-    for (String handle : all()) {
-      repostRepository.addIfAbsent(normalNote, writer(handle));
+      repostRepository.addIfAbsent(ownNotes.get(handle), writer(handle));
     }
 
     for (String handle : all()) {
-      boolean heard = HEARD.contains(handle);
-      assertThat(profilePosts.listPublicPosts(handle, viewer).posts()).hasSize(heard ? 1 : 0);
-      assertThat(notes.byAuthor(handle, 0, 20, viewer).items()).hasSize(heard ? 1 : 0);
-      assertThat(notes.reposts(handle, 0, 20, viewer).items()).hasSize(heard ? 1 : 0);
-      assertThat(profilePosts.listPublicPosts(handle, null).posts()).hasSize(1);
+      int shown = BLOCKED.contains(handle) ? 0 : 1;
+      PublicPostListView posts = profilePosts.listPublicPosts(handle, viewer);
+      assertThat(posts.posts()).hasSize(shown);
+      assertThat(posts.author().username()).isEqualTo(handle);
+      assertThat(posts.blockedByViewer()).isEqualTo(handle.equals("hr-blocked"));
+      assertThat(posts.blocksViewer()).isEqualTo(handle.equals("hr-blocker"));
+      assertThat(notes.byAuthor(handle, 0, 20, viewer).items()).hasSize(shown);
+      assertThat(notes.reposts(handle, 0, 20, viewer).items()).hasSize(shown);
+
+      PublicPostListView anonymous = profilePosts.listPublicPosts(handle, null);
+      assertThat(anonymous.posts()).hasSize(1);
+      assertThat(anonymous.blockedByViewer()).isFalse();
+      assertThat(anonymous.blocksViewer()).isFalse();
       assertThat(notes.byAuthor(handle, 0, 20, null).items()).hasSize(1);
       assertThat(notes.reposts(handle, 0, 20, null).items()).hasSize(1);
     }
-
-    repostRepository.addIfAbsent(mutedNote, writer("hr-normal"));
-    assertThat(notes.reposts("hr-normal", 0, 20, viewer).items())
-        .extracting(NoteView::id)
-        .containsExactly(normalNote);
-    assertThat(notes.reposts("hr-normal", 0, 20, null).items())
-        .extracting(NoteView::id)
-        .containsExactly(mutedNote, normalNote);
   }
 
   @Test
-  void aThreadOfAnUnheardWritersNoteIsNotFoundAndAnUnheardParentStaysOut() {
+  void someoneElsesRepostsTabLeavesOutMutedAndBlockedWritersNotes() {
+    long normal = writer("hr-normal");
+    Map<String, Long> reposted = new LinkedHashMap<>();
+    for (String handle : all()) {
+      reposted.put(handle, note(writer(handle), null));
+    }
+    for (long noteId : reposted.values()) {
+      repostRepository.addIfAbsent(noteId, normal);
+    }
+
+    assertThat(notes.reposts("hr-normal", 0, 20, viewer).items())
+        .extracting(NoteView::id)
+        .containsExactlyInAnyOrder(reposted.get("hr-normal"), reposted.get("hr-expired"));
+    assertThat(notes.reposts("hr-normal", 0, 20, null).items()).hasSize(6);
+  }
+
+  @Test
+  void aBlockedWritersPostIsNotFoundButAMutedWritersPostOpens() {
+    for (String handle : all()) {
+      String slug = handle + "-detail";
+      publish(writer(handle), slug);
+      if (BLOCKED.contains(handle)) {
+        assertThatThrownBy(() -> profilePosts.findPublicPost(handle, slug, viewer))
+            .isInstanceOf(PostException.class)
+            .extracting(e -> ((PostException) e).errorCode())
+            .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+      } else {
+        assertThat(profilePosts.findPublicPost(handle, slug, viewer).post().slug()).isEqualTo(slug);
+      }
+      assertThat(profilePosts.findPublicPost(handle, slug, null).post().slug()).isEqualTo(slug);
+    }
+  }
+
+  @Test
+  void aThreadAcrossABlockIsNotFoundWhileAMutedWritersNoteAndParentStay() {
     for (String handle : all()) {
       long id = note(writer(handle), null);
-      if (HEARD.contains(handle)) {
-        assertThat(notes.thread(id, viewer).note().id()).isEqualTo(id);
-      } else {
+      if (BLOCKED.contains(handle)) {
         assertThatThrownBy(() -> notes.thread(id, viewer))
             .isInstanceOf(NoteException.class)
             .extracting(e -> ((NoteException) e).errorCode())
             .isEqualTo(NoteErrorCode.NOTE_NOT_FOUND);
+      } else {
+        assertThat(notes.thread(id, viewer).note().id()).isEqualTo(id);
       }
       assertThat(notes.thread(id, null).note().id()).isEqualTo(id);
     }
 
     long blockerParent = note(writer("hr-blocker"), null);
-    long reply = note(writer("hr-normal"), blockerParent);
-    long underReply = note(writer("hr-muted"), reply);
+    long underBlocker = note(writer("hr-normal"), blockerParent);
+    long mutedParent = note(writer("hr-muted"), null);
+    long underMuted = note(writer("hr-normal"), mutedParent);
+    long mutedReply = note(writer("hr-mutedlater"), underMuted);
 
-    NoteThreadView signedIn = notes.thread(reply, viewer);
-    assertThat(signedIn.parent()).isNull();
+    assertThat(notes.thread(underBlocker, viewer).parent()).isNull();
+    assertThat(notes.thread(underBlocker, null).parent().id()).isEqualTo(blockerParent);
+    NoteThreadView signedIn = notes.thread(underMuted, viewer);
+    assertThat(signedIn.parent().id()).isEqualTo(mutedParent);
     assertThat(signedIn.replies()).isEmpty();
-    NoteThreadView anonymous = notes.thread(reply, null);
-    assertThat(anonymous.parent().id()).isEqualTo(blockerParent);
-    assertThat(anonymous.replies()).extracting(NoteView::id).containsExactly(underReply);
+    assertThat(notes.thread(underMuted, null).replies())
+        .extracting(NoteView::id)
+        .containsExactly(mutedReply);
   }
 
   private long user(String handle) {

@@ -18,7 +18,8 @@ public interface PostRepository {
 
   List<PostEntity> findAllByIdIn(Collection<Long> ids);
 
-  Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
+  // Empty also when the viewer blocked the author or the author blocked the viewer.
+  Optional<PostEntity> findUnblockedByUserIdAndSlug(Long userId, String slug, Long viewerId);
 
   Optional<PostEntity> findByUserIdAndSlugForUpdate(Long userId, String slug);
 
@@ -40,8 +41,7 @@ public interface PostRepository {
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  // Empty when the viewer cannot hear the author.
-  List<PostEntity> findPublishedByAuthor(Long authorId, Long viewerId);
+  List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
   List<PostEntity> findUserAnalyticsPosts(
       Long userId, int page, int size, PostPerformanceSort sort);

@@ -19,6 +19,11 @@ class BlockRepositoryAdapter implements BlockRepository {
   }
 
   @Override
+  public List<UserBlockEntity> findBetween(Long a, Long b) {
+    return jpa.findBetween(a, b);
+  }
+
+  @Override
   public Optional<UserBlockEntity> findByBlockerIdAndBlockedId(Long blockerId, Long blockedId) {
     return jpa.findByBlockerIdAndBlockedId(blockerId, blockedId);
   }

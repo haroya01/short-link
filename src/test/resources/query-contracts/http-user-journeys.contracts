@@ -536,6 +536,9 @@
 @junit | reader-author-analytics-denied | 1 | 0 | 0 | 0 | 1
 @junit | reader-author-followers | 6 | 0 | 0 | 0 | 6
 @junit | reader-author-published-posts | 3 | 0 | 0 | 0 | 3
+# Signed in, one more read finds a block either way between the reader and the author, which empties
+# the list and is returned as blockedByViewer / blocksViewer.
+@junit | reader-author-published-posts-signed-in | 4 | 0 | 0 | 0 | 4
 @junit | reader-bookmark-file-in-folder | 2 | 0 | 1 | 0 | 3
 @junit | reader-bookmark-folder-create | 1 | 1 | 0 | 0 | 2
 @junit | reader-bookmark-folder-delete | 1 | 0 | 0 | 1 | 2

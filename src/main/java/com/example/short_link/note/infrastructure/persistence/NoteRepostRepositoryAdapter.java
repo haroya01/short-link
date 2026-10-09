@@ -47,8 +47,11 @@ class NoteRepostRepositoryAdapter implements NoteRepostRepository {
         em.createNativeQuery(
                 "SELECT r.note_id FROM note_repost r JOIN note n ON n.id = r.note_id"
                     + " WHERE r.user_id = :userId"
-                    + HeardSql.heard("r.user_id")
-                    + HeardSql.heard("n.user_id")
+                    + HeardSql.unblocked("r.user_id")
+                    + HeardSql.unblocked("n.user_id")
+                    + " AND (n.user_id = r.user_id OR NOT "
+                    + HeardSql.muted("n.user_id")
+                    + ")"
                     + " ORDER BY r.id DESC")
             .setParameter("userId", userId)
             .setParameter("viewer", HeardSql.viewer(viewerId))

@@ -27,14 +27,19 @@ public class PublicPostController {
   }
 
   @GetMapping("/{username}/posts/{slug}")
-  public PublicPostDetail findPublicPost(@PathVariable String username, @PathVariable String slug) {
-    return publicPostQueryService.findPublicPost(username, slug);
+  public PublicPostDetail findPublicPost(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String username,
+      @PathVariable String slug) {
+    return publicPostQueryService.findPublicPost(username, slug, viewerId);
   }
 
   @GetMapping(value = "/{username}/posts/{slug}/markdown", produces = "text/markdown;charset=UTF-8")
   public ResponseEntity<String> publicMarkdown(
-      @PathVariable String username, @PathVariable String slug) {
-    PublicPostDetail detail = publicPostQueryService.findPublicPost(username, slug);
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String username,
+      @PathVariable String slug) {
+    PublicPostDetail detail = publicPostQueryService.findPublicPost(username, slug, viewerId);
     String markdown = markdownBlocks.toMarkdown(detail.blocks());
     return ResponseEntity.ok()
         .header("Content-Disposition", "inline; filename=\"" + slug + ".md\"")

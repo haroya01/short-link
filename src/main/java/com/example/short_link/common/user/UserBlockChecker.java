@@ -5,6 +5,9 @@ public interface UserBlockChecker {
 
   boolean isBlocked(Long blockerId, Long blockedId);
 
+  // Both directions in one read; nothing for an anonymous viewer or the viewer themself.
+  BlockRelation between(Long viewerId, Long otherId);
+
   // The recipient blocked the actor, or muted them with their notices.
   boolean silences(Long recipientId, Long actorId);
 

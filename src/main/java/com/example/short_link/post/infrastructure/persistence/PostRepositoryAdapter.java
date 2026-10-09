@@ -44,8 +44,9 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug) {
-    return jpa.findByUserIdAndSlug(userId, slug);
+  public Optional<PostEntity> findUnblockedByUserIdAndSlug(
+      Long userId, String slug, Long viewerId) {
+    return jpa.findUnblockedByUserIdAndSlug(userId, slug, HeardSql.viewer(viewerId));
   }
 
   @Override
@@ -94,8 +95,9 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findPublishedByAuthor(Long authorId, Long viewerId) {
-    return jpa.findPublishedByAuthor(authorId, HeardSql.viewer(viewerId), Instant.now());
+  public List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(
+      Long userId, PostStatus status) {
+    return jpa.findAllByUserIdAndStatusOrderByPublishedAtDesc(userId, status);
   }
 
   private static final List<PostStatus> ANALYTICS_STATUSES =

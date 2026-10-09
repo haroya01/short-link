@@ -339,6 +339,14 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
                 .path("id")
                 .asLong())
         .isEqualTo(first);
+    JsonNode signedIn =
+        get(
+            "reader-author-published-posts-signed-in",
+            "/api/v1/public/profiles/" + author.username() + "/posts",
+            reader);
+    assertThat(signedIn.path("posts").get(0).path("id").asLong()).isEqualTo(first);
+    assertThat(signedIn.path("blockedByViewer").asBoolean()).isFalse();
+    assertThat(signedIn.path("blocksViewer").asBoolean()).isFalse();
     JsonNode nav =
         get("reader-public-post-series-navigation", publicPostPath("first-story"), null)
             .path("series");

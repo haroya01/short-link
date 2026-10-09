@@ -60,7 +60,9 @@ class PublicPostControllerTest {
                     null,
                     true),
                 new PublicPostListItem(
-                    2L, "post-2", "Post 2", null, null, "ja", List.of(), 0L, NOW, null, false)));
+                    2L, "post-2", "Post 2", null, null, "ja", List.of(), 0L, NOW, null, false)),
+            false,
+            false);
     when(publicPostQueryService.listPublicPosts("john", null)).thenReturn(response);
 
     mvc.perform(get("/api/v1/public/profiles/john/posts"))
@@ -92,7 +94,7 @@ class PublicPostControllerTest {
                 10L, "first-post", "First", "Excerpt", null, "ko", List.of(), 0L, NOW, null, false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)),
             null);
-    when(publicPostQueryService.findPublicPost("john", "first-post")).thenReturn(detail);
+    when(publicPostQueryService.findPublicPost("john", "first-post", null)).thenReturn(detail);
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/first-post"))
         .andExpect(status().isOk())
@@ -103,7 +105,7 @@ class PublicPostControllerTest {
 
   @Test
   void findDraftReturns404() throws Exception {
-    when(publicPostQueryService.findPublicPost("john", "draft"))
+    when(publicPostQueryService.findPublicPost("john", "draft", null))
         .thenThrow(new PostException(PostErrorCode.POST_NOT_FOUND, "draft"));
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/draft"))
@@ -113,7 +115,7 @@ class PublicPostControllerTest {
 
   @Test
   void findUnpublishedReturns410Gone() throws Exception {
-    when(publicPostQueryService.findPublicPost("john", "gone"))
+    when(publicPostQueryService.findPublicPost("john", "gone", null))
         .thenThrow(new PostException(PostErrorCode.POST_GONE, "gone"));
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/gone"))
@@ -130,7 +132,7 @@ class PublicPostControllerTest {
                 10L, "first-post", "First", "Excerpt", null, "ko", List.of(), 0L, NOW, null, false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello **world**", 0, null)),
             null);
-    when(publicPostQueryService.findPublicPost("john", "first-post")).thenReturn(detail);
+    when(publicPostQueryService.findPublicPost("john", "first-post", null)).thenReturn(detail);
     when(markdownBlocks.toMarkdown(anyList())).thenReturn("Hello **world**\n");
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/first-post/markdown"))
@@ -142,7 +144,7 @@ class PublicPostControllerTest {
 
   @Test
   void publicMarkdownForDraftReturns404() throws Exception {
-    when(publicPostQueryService.findPublicPost("john", "draft"))
+    when(publicPostQueryService.findPublicPost("john", "draft", null))
         .thenThrow(new PostException(PostErrorCode.POST_NOT_FOUND, "draft"));
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/draft/markdown"))

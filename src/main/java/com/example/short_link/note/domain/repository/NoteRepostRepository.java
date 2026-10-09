@@ -10,7 +10,7 @@ public interface NoteRepostRepository {
 
   Optional<NoteRepostEntity> delete(Long noteId, Long userId);
 
-  // Nothing when the viewer cannot hear the reposter, and no repost of a note whose author the
-  // viewer cannot hear.
+  // Nothing across a block with the reposter; no repost of a note whose author is blocked either
+  // way, or of someone else's note whose author the viewer muted.
   List<Long> recentNoteIdsByUser(Long userId, Long viewerId, int offset, int limit);
 }

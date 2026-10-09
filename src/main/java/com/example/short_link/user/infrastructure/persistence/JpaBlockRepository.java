@@ -15,6 +15,11 @@ public interface JpaBlockRepository extends JpaRepository<UserBlockEntity, Long>
   Optional<UserBlockEntity> findByBlockerIdAndBlockedId(Long blockerId, Long blockedId);
 
   @Query(
+      "select b from UserBlockEntity b where (b.blockerId = :a and b.blockedId = :b)"
+          + " or (b.blockerId = :b and b.blockedId = :a)")
+  List<UserBlockEntity> findBetween(@Param("a") Long a, @Param("b") Long b);
+
+  @Query(
       "select b.blockedId from UserBlockEntity b where b.blockerId = :id"
           + " order by b.createdAt desc, b.id desc")
   List<Long> findBlockedIds(@Param("id") Long blockerId);

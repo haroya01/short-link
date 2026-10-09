@@ -22,8 +22,8 @@ public interface NoteRepository {
 
   Optional<NoteEntity> findById(Long id);
 
-  // Empty also when the viewer cannot hear the note's author.
-  Optional<NoteEntity> findHeard(Long id, Long viewerId);
+  // Empty also when the viewer blocked the note's author or the author blocked the viewer.
+  Optional<NoteEntity> findUnblocked(Long id, Long viewerId);
 
   List<NoteEntity> findAllByIdIn(Collection<Long> ids);
 

@@ -37,7 +37,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       "update PostEntity p set p.likeCount = p.likeCount - 1 where p.id = :id and p.likeCount > 0")
   int decrementLikeCount(@Param("id") Long id);
 
-  Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p WHERE p.user_id = :userId AND p.slug = :slug"
+              + HeardSql.UNBLOCKED_POST_AUTHOR)
+  Optional<PostEntity> findUnblockedByUserIdAndSlug(
+      @Param("userId") Long userId, @Param("slug") String slug, @Param("viewer") long viewer);
 
   Optional<PostEntity> findByPreviewToken(String previewToken);
 
@@ -45,14 +51,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  @Query(
-      nativeQuery = true,
-      value =
-          "SELECT p.* FROM posts p WHERE p.user_id = :authorId AND p.status = 'PUBLISHED'"
-              + HeardSql.POST_AUTHOR
-              + " ORDER BY p.published_at DESC")
-  List<PostEntity> findPublishedByAuthor(
-      @Param("authorId") Long authorId, @Param("viewer") long viewer, @Param("now") Instant now);
+  List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
 
   // 지표가 같아도 페이지 순서가 안정되도록 어댑터에서 ID 내림차순을 추가한다.
   List<PostEntity> findByUserIdAndStatusIn(

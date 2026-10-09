@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
@@ -7,6 +9,7 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesEntry;
 import com.example.short_link.post.domain.SeriesItemType;
@@ -46,16 +49,24 @@ public class PublicPostQueryService {
   private final SeriesItemReader seriesItemReader;
   private final CtaRepository ctaRepository;
   private final ShortLinkUrlBuilder shortLinkUrlBuilder;
+  private final UserBlockChecker userBlocks;
 
   public PublicPostListView listPublicPosts(String username, Long viewerId) {
     UserEntity author = resolveAuthor(username);
+    BlockRelation blocks = userBlocks.between(viewerId, author.getId());
     // 안정 정렬이므로 고정되지 않은 글은 저장소의 발행 최신순을 유지한다.
     List<PublicPostListItem> posts =
-        postRepository.findPublishedByAuthor(author.getId(), viewerId).stream()
-            .sorted(PINNED_FIRST)
-            .map(PublicPostListItem::from)
-            .toList();
-    return new PublicPostListView(PublicAuthorView.from(author), posts);
+        blocks.any()
+            ? List.of()
+            : postRepository
+                .findAllByUserIdAndStatusOrderByPublishedAtDesc(
+                    author.getId(), PostStatus.PUBLISHED)
+                .stream()
+                .sorted(PINNED_FIRST)
+                .map(PublicPostListItem::from)
+                .toList();
+    return new PublicPostListView(
+        PublicAuthorView.from(author), posts, blocks.blockedByViewer(), blocks.blocksViewer());
   }
 
   private static final Comparator<PostEntity> PINNED_FIRST =
@@ -68,11 +79,11 @@ public class PublicPostQueryService {
         return 0;
       };
 
-  public PublicPostDetail findPublicPost(String username, String slug) {
+  public PublicPostDetail findPublicPost(String username, String slug, Long viewerId) {
     UserEntity author = resolveAuthor(username);
     PostEntity post =
         postRepository
-            .findByUserIdAndSlug(author.getId(), slug)
+            .findUnblockedByUserIdAndSlug(author.getId(), slug, viewerId)
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, slug));
 
     if (post.isUnpublished()) {

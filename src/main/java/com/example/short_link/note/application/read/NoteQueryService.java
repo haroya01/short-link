@@ -253,12 +253,12 @@ public class NoteQueryService {
   public NoteThreadView thread(Long noteId, Long viewerId) {
     NoteEntity note =
         notes
-            .findHeard(noteId, viewerId)
+            .findUnblocked(noteId, viewerId)
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
     List<NoteEntity> batch = new ArrayList<>();
     batch.add(note);
     if (note.getInReplyToId() != null) {
-      notes.findHeard(note.getInReplyToId(), viewerId).ifPresent(batch::add);
+      notes.findUnblocked(note.getInReplyToId(), viewerId).ifPresent(batch::add);
     }
     batch.addAll(notes.replies(noteId, viewerId, MAX_REPLIES));
     List<Long> chain =

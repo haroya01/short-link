@@ -1,6 +1,8 @@
 package com.example.short_link.user.application.moderation;
 
+import com.example.short_link.common.user.BlockRelation;
 import com.example.short_link.common.user.UserBlockChecker;
+import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.MuteRepository;
 import java.time.Clock;
@@ -23,6 +25,24 @@ class UserBlockCheckerAdapter implements UserBlockChecker {
       return false;
     }
     return blockRepository.existsByBlockerIdAndBlockedId(blockerId, blockedId);
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public BlockRelation between(Long viewerId, Long otherId) {
+    if (viewerId == null || otherId == null || viewerId.equals(otherId)) {
+      return BlockRelation.NONE;
+    }
+    boolean blockedByViewer = false;
+    boolean blocksViewer = false;
+    for (UserBlockEntity block : blockRepository.findBetween(viewerId, otherId)) {
+      if (block.getBlockerId().equals(viewerId)) {
+        blockedByViewer = true;
+      } else {
+        blocksViewer = true;
+      }
+    }
+    return new BlockRelation(blockedByViewer, blocksViewer);
   }
 
   @Override

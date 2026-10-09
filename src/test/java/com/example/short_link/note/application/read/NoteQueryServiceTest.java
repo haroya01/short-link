@@ -221,8 +221,8 @@ class NoteQueryServiceTest {
     NoteEntity main = note(2L, 1L);
     NoteEntity parent = note(1L, null);
     NoteEntity reply = note(3L, 2L);
-    when(notes.findHeard(2L, 9L)).thenReturn(Optional.of(main));
-    when(notes.findHeard(1L, 9L)).thenReturn(Optional.of(parent));
+    when(notes.findUnblocked(2L, 9L)).thenReturn(Optional.of(main));
+    when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(parent));
     when(notes.replies(2L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
     when(views.of(List.of(main, parent, reply), 9L))
         .thenReturn(List.of(view(2L, 1L, null), view(1L, null, null), view(3L, 2L, null)));
@@ -235,7 +235,7 @@ class NoteQueryServiceTest {
   }
 
   private NoteEntity threadOf(NoteEntity main) {
-    when(notes.findHeard(main.getId(), 9L)).thenReturn(Optional.of(main));
+    when(notes.findUnblocked(main.getId(), 9L)).thenReturn(Optional.of(main));
     when(notes.replies(main.getId(), 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
     when(views.of(List.of(main), 9L)).thenReturn(List.of(view(main.getId(), null, null)));
     return main;
@@ -289,9 +289,11 @@ class NoteQueryServiceTest {
   @Test
   void aThreadWhoseAuthorLeftIs404AndAMissingParentIsNull() {
     NoteEntity orphan = note(2L, 1L);
-    when(notes.findHeard(org.mockito.ArgumentMatchers.eq(2L), org.mockito.ArgumentMatchers.any()))
+    when(notes.findUnblocked(
+            org.mockito.ArgumentMatchers.eq(2L), org.mockito.ArgumentMatchers.any()))
         .thenReturn(Optional.of(orphan));
-    when(notes.findHeard(org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+    when(notes.findUnblocked(
+            org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
         .thenReturn(Optional.empty());
     when(notes.replies(
             org.mockito.ArgumentMatchers.eq(2L),
@@ -304,7 +306,7 @@ class NoteQueryServiceTest {
     when(views.of(List.of(orphan), 5L)).thenReturn(List.of());
     assertThatThrownBy(() -> service.thread(2L, 5L)).isInstanceOf(NoteException.class);
 
-    when(notes.findHeard(4L, null)).thenReturn(Optional.empty());
+    when(notes.findUnblocked(4L, null)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.thread(4L, null)).isInstanceOf(NoteException.class);
   }
 

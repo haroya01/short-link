@@ -54,12 +54,13 @@ class NoteRepositoryAdapter implements NoteRepository {
 
   @Override
   @SuppressWarnings("unchecked")
-  public Optional<NoteEntity> findHeard(Long id, Long viewerId) {
+  public Optional<NoteEntity> findUnblocked(Long id, Long viewerId) {
     return em
-        .createNativeQuery("SELECT n.* FROM note n WHERE n.id = :id" + heard("n"), NoteEntity.class)
+        .createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.id = :id" + HeardSql.unblocked("n.user_id"),
+            NoteEntity.class)
         .setParameter("id", id)
         .setParameter("viewer", viewer(viewerId))
-        .setParameter("now", Instant.now())
         .getResultList()
         .stream()
         .findFirst();
@@ -173,12 +174,11 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " WHERE f.follower_id = :viewer AND f.following_id = n.user_id)"
                 + " OR EXISTS (SELECT 1 FROM note_recipient r"
                 + " WHERE r.note_id = n.id AND r.user_id = :viewer))))"
-                + heard("n")
+                + HeardSql.unblocked("n.user_id")
                 + " ORDER BY n.pinned_at IS NULL, n.pinned_at DESC, n.id DESC",
             NoteEntity.class)
         .setParameter("author", authorId)
         .setParameter("viewer", viewer(viewerId))
-        .setParameter("now", Instant.now())
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();

@@ -2,8 +2,12 @@ package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.CtaPurpose;
 import com.example.short_link.cta.domain.CtaStyle;
@@ -11,6 +15,7 @@ import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesEntry;
 import com.example.short_link.post.domain.SeriesItemType;
@@ -42,6 +47,7 @@ class PublicPostQueryServiceTest {
   @Mock private SeriesRepository seriesRepository;
   @Mock private SeriesItemReader seriesItemReader;
   @Mock private CtaRepository ctaRepository;
+  @Mock private UserBlockChecker userBlocks;
 
   private PublicPostQueryService service;
 
@@ -55,7 +61,9 @@ class PublicPostQueryServiceTest {
             seriesRepository,
             seriesItemReader,
             ctaRepository,
-            new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me"));
+            new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me"),
+            userBlocks);
+    lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
   }
 
   private UserEntity authorWithUsername(String username) {
@@ -72,7 +80,9 @@ class PublicPostQueryServiceTest {
     p1.publish();
     PostEntity p2 = new PostEntity(author.getId(), "post-2", "Post 2", "ja");
     p2.publish();
-    when(postRepository.findPublishedByAuthor(author.getId(), null)).thenReturn(List.of(p1, p2));
+    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(
+            author.getId(), PostStatus.PUBLISHED))
+        .thenReturn(List.of(p1, p2));
 
     PublicPostListView response = service.listPublicPosts("john", null);
 
@@ -85,7 +95,9 @@ class PublicPostQueryServiceTest {
   void listNormalizesUsername() {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findPublishedByAuthor(author.getId(), null)).thenReturn(List.of());
+    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(
+            author.getId(), PostStatus.PUBLISHED))
+        .thenReturn(List.of());
 
     service.listPublicPosts("  JOHN  ", null);
 
@@ -115,18 +127,33 @@ class PublicPostQueryServiceTest {
   }
 
   @Test
+  void aBlockEitherWayListsNoPostsAndSaysWhich() {
+    UserEntity author = authorWithUsername("john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    when(userBlocks.between(9L, author.getId())).thenReturn(new BlockRelation(false, true));
+
+    PublicPostListView response = service.listPublicPosts("john", 9L);
+
+    assertThat(response.posts()).isEmpty();
+    assertThat(response.author().username()).isEqualTo("john");
+    assertThat(response.blockedByViewer()).isFalse();
+    assertThat(response.blocksViewer()).isTrue();
+    org.mockito.Mockito.verifyNoInteractions(postRepository);
+  }
+
+  @Test
   void findReturnsPublishedPostWithBlocks() {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "first-post", "First", "ko");
     post.publish();
-    when(postRepository.findByUserIdAndSlug(author.getId(), "first-post"))
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "first-post", null))
         .thenReturn(Optional.of(post));
     PostBlockEntity b1 = new PostBlockEntity(post.getId(), PostBlockType.PARAGRAPH, "Hello", 0);
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
         .thenReturn(List.of(b1));
 
-    PublicPostDetail detail = service.findPublicPost("john", "first-post");
+    PublicPostDetail detail = service.findPublicPost("john", "first-post", null);
 
     assertThat(detail.author().username()).isEqualTo("john");
     assertThat(detail.post().slug()).isEqualTo("first-post");
@@ -140,7 +167,7 @@ class PublicPostQueryServiceTest {
     post.publish();
     post.assignToSeries(5L, 2);
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findByUserIdAndSlug(author.getId(), "part-" + id))
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "part-" + id, null))
         .thenReturn(Optional.of(post));
     SeriesEntity series = new SeriesEntity(author.getId(), "guide", "Guide");
     ReflectionTestUtils.setField(series, "id", 5L);
@@ -160,7 +187,7 @@ class PublicPostQueryServiceTest {
                 new SeriesEntry(SeriesItemType.POST, 2L, "part-2", "Part 2", null, null),
                 new SeriesEntry(SeriesItemType.NOTE, 41L, null, "another note", null, null)));
 
-    PublicPostSeriesNav nav = service.findPublicPost("john", "part-2").series();
+    PublicPostSeriesNav nav = service.findPublicPost("john", "part-2", null).series();
 
     assertThat(nav.slug()).isEqualTo("guide");
     assertThat(nav.position()).isEqualTo(2);
@@ -186,7 +213,7 @@ class PublicPostQueryServiceTest {
                 new SeriesEntry(SeriesItemType.POST, 2L, "part-2", "Part 2", null, null),
                 new SeriesEntry(SeriesItemType.POST, 3L, "part-3", "Part 3", null, null)));
 
-    PublicPostSeriesNav nav = service.findPublicPost("john", "part-2").series();
+    PublicPostSeriesNav nav = service.findPublicPost("john", "part-2", null).series();
 
     assertThat(nav.position()).isEqualTo(1);
     assertThat(nav.prev()).isNull();
@@ -201,7 +228,7 @@ class PublicPostQueryServiceTest {
     when(seriesItemReader.readableEntries(5L))
         .thenReturn(List.of(new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note", null, null)));
 
-    assertThat(service.findPublicPost("john", "part-2").series()).isNull();
+    assertThat(service.findPublicPost("john", "part-2", null).series()).isNull();
   }
 
   @Test
@@ -209,10 +236,10 @@ class PublicPostQueryServiceTest {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "draft-post", "Draft", "ko");
-    when(postRepository.findByUserIdAndSlug(author.getId(), "draft-post"))
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "draft-post", null))
         .thenReturn(Optional.of(post));
 
-    assertThatThrownBy(() -> service.findPublicPost("john", "draft-post"))
+    assertThatThrownBy(() -> service.findPublicPost("john", "draft-post", null))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -276,10 +303,10 @@ class PublicPostQueryServiceTest {
     PostEntity post = new PostEntity(author.getId(), "gone-post", "Gone", "ko");
     post.publish();
     post.unpublish();
-    when(postRepository.findByUserIdAndSlug(author.getId(), "gone-post"))
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "gone-post", null))
         .thenReturn(Optional.of(post));
 
-    assertThatThrownBy(() -> service.findPublicPost("john", "gone-post"))
+    assertThatThrownBy(() -> service.findPublicPost("john", "gone-post", null))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_GONE);
@@ -291,7 +318,8 @@ class PublicPostQueryServiceTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "p", null))
+        .thenReturn(Optional.of(post));
     PostBlockEntity ctaBlock =
         new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0);
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
@@ -305,7 +333,7 @@ class PublicPostQueryServiceTest {
             CtaPurpose.BOOKING);
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p");
+    PublicPostDetail detail = service.findPublicPost("john", "p", null);
 
     assertThat(detail.blocks()).hasSize(1);
     PublicPostBlockView block = detail.blocks().get(0);
@@ -324,7 +352,8 @@ class PublicPostQueryServiceTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "p", null))
+        .thenReturn(Optional.of(post));
     PostBlockEntity ctaBlock =
         new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0);
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
@@ -339,7 +368,7 @@ class PublicPostQueryServiceTest {
     cta.trackVia("xy12ab");
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p");
+    PublicPostDetail detail = service.findPublicPost("john", "p", null);
 
     // Public response serves the tracked short link (not the raw external url) so clicks are
     // measured.
@@ -352,7 +381,8 @@ class PublicPostQueryServiceTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "p", null))
+        .thenReturn(Optional.of(post));
     PostBlockEntity ctaBlock =
         new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":42}", 0);
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
@@ -362,7 +392,7 @@ class PublicPostQueryServiceTest {
     cta.softDelete();
     when(ctaRepository.findById(42L)).thenReturn(Optional.of(cta));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p");
+    PublicPostDetail detail = service.findPublicPost("john", "p", null);
 
     assertThat(detail.blocks().get(0).cta()).isNotNull();
     assertThat(detail.blocks().get(0).cta().deleted()).isTrue();
@@ -374,14 +404,15 @@ class PublicPostQueryServiceTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "p", null))
+        .thenReturn(Optional.of(post));
     PostBlockEntity ctaBlock =
         new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "{\"ctaId\":99}", 0);
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
         .thenReturn(List.of(ctaBlock));
     when(ctaRepository.findById(99L)).thenReturn(Optional.empty());
 
-    PublicPostDetail detail = service.findPublicPost("john", "p");
+    PublicPostDetail detail = service.findPublicPost("john", "p", null);
 
     assertThat(detail.blocks()).hasSize(1);
     assertThat(detail.blocks().get(0).cta()).isNull();
@@ -393,13 +424,14 @@ class PublicPostQueryServiceTest {
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
     PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
     post.publish();
-    when(postRepository.findByUserIdAndSlug(author.getId(), "p")).thenReturn(Optional.of(post));
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "p", null))
+        .thenReturn(Optional.of(post));
     PostBlockEntity ctaBlock =
         new PostBlockEntity(post.getId(), PostBlockType.CTA_REF, "not-json", 0);
     when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId()))
         .thenReturn(List.of(ctaBlock));
 
-    PublicPostDetail detail = service.findPublicPost("john", "p");
+    PublicPostDetail detail = service.findPublicPost("john", "p", null);
 
     assertThat(detail.blocks()).hasSize(1);
     assertThat(detail.blocks().get(0).cta()).isNull();
@@ -409,9 +441,10 @@ class PublicPostQueryServiceTest {
   void findNonExistentSlugReturnsNotFound() {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findByUserIdAndSlug(author.getId(), "nope")).thenReturn(Optional.empty());
+    when(postRepository.findUnblockedByUserIdAndSlug(author.getId(), "nope", null))
+        .thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.findPublicPost("john", "nope"))
+    assertThatThrownBy(() -> service.findPublicPost("john", "nope", null))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -428,7 +461,8 @@ class PublicPostQueryServiceTest {
     pinned.pinAt(0);
     PostEntity oldest = new PostEntity(author.getId(), "oldest", "Oldest", "ko");
     oldest.publish();
-    when(postRepository.findPublishedByAuthor(author.getId(), null))
+    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(
+            author.getId(), PostStatus.PUBLISHED))
         .thenReturn(List.of(newest, pinned, oldest));
 
     PublicPostListView response = service.listPublicPosts("john", null);
