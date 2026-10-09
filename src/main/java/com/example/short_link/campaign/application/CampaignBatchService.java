@@ -10,6 +10,7 @@ import com.example.short_link.campaign.domain.CampaignEntity;
 import com.example.short_link.campaign.domain.repository.CampaignBatchRepository;
 import com.example.short_link.campaign.exception.CampaignErrorCode;
 import com.example.short_link.campaign.exception.CampaignException;
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.application.write.CreateLinkCommand;
 import com.example.short_link.link.application.write.CreateLinkUseCase;
@@ -29,6 +30,7 @@ public class CampaignBatchService {
   private final LinkRepository linkRepository;
   private final CreateLinkUseCase linkCreationService;
   private final CampaignQueryService campaignQuery;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
   public BatchWithLink create(Long campaignId, Long ownerId, CampaignBatchCreateCommand command) {
@@ -105,6 +107,7 @@ public class CampaignBatchService {
     BatchWithLink current = detail(campaignId, batchId, ownerId);
     batchRepository.delete(current.batch());
     linkRepository.delete(current.link());
+    linkCacheEviction.evictAfterCommit(current.link().getShortCode());
   }
 
   private BatchWithLink pairWithLink(CampaignBatchEntity batch) {
