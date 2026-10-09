@@ -32,7 +32,11 @@ public class FollowUseCase {
 
   @Transactional
   public FollowStatus follow(Long followerId, String targetUsername, Long sourcePostId) {
-    UserEntity target = requireUser(targetUsername);
+    UserEntity target =
+        userRepository
+            .findByUsername(targetUsername)
+            .filter(u -> !u.isDeleted())
+            .orElseThrow(() -> new UserException(UserErrorCode.USER_NOT_FOUND));
     if (target.getId().equals(followerId)) {
       throw new UserException(UserErrorCode.CANNOT_FOLLOW_SELF);
     }
