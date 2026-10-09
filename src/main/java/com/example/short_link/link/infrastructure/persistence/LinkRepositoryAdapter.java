@@ -161,8 +161,8 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
-  public Optional<LinkEntity> findFirstByUserIdAndOriginalUrl(Long userId, String originalUrl) {
-    return jpa.findFirstByUserIdAndOriginalUrl(userId, originalUrl);
+  public List<LinkEntity> findUnrestrictedByUserIdAndOriginalUrl(Long userId, String originalUrl) {
+    return jpa.findUnrestrictedByUserIdAndOriginalUrl(userId, originalUrl);
   }
 
   @Override

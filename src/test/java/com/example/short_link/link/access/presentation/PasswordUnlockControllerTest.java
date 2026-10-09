@@ -28,6 +28,7 @@ import com.example.short_link.link.redirect.application.RedirectOutcome;
 import com.example.short_link.link.redirect.presentation.helper.LinkHtmlRenderer;
 import com.example.short_link.link.redirect.presentation.helper.VisitHandoff;
 import java.util.Optional;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.MessageSource;
 import org.springframework.context.support.ResourceBundleMessageSource;
@@ -63,6 +64,11 @@ class PasswordUnlockControllerTest {
   }
 
   private static final ShortCode CODE = new ShortCode("abc123");
+
+  @BeforeEach
+  void allowAttempts() {
+    when(attemptLimiter.tryAttempt(any(), any())).thenReturn(true);
+  }
 
   private MockHttpServletRequest request() {
     return new MockHttpServletRequest("POST", "/abc123");
@@ -221,7 +227,7 @@ class PasswordUnlockControllerTest {
 
   @Test
   void lockedOutIpGets429WithoutCheckingPassword() {
-    when(attemptLimiter.isLockedOut(any(), any())).thenReturn(true);
+    when(attemptLimiter.tryAttempt(any(), any())).thenReturn(false);
 
     MockHttpServletRequest req = request();
     ResponseEntity<?> response = controller.unlock(CODE, "x", null, null, null, null, null, req);

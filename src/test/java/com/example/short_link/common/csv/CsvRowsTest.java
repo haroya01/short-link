@@ -1,16 +1,16 @@
-package com.example.short_link.portability.application;
+package com.example.short_link.common.csv;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
 import org.junit.jupiter.api.Test;
 
-class ImportCsvTest {
+class CsvRowsTest {
 
   @Test
   void readsMastodonsFollowingFile() {
     assertThat(
-            ImportCsv.parse(
+            CsvRows.parse(
                 "﻿Account address,Show boosts,Notify on new posts,Languages\r\n"
                     + "sori@kurl.me,true,false,\r\n\r\nalice@mastodon.social,false,true,en\n"))
         .containsExactly(
@@ -21,15 +21,15 @@ class ImportCsvTest {
 
   @Test
   void aQuotedFieldKeepsCommasQuotesAndLineBreaks() {
-    assertThat(ImportCsv.parse("\"friends, close\",sori@kurl.me\n\"say \"\"hi\"\"\nthere\",x"))
+    assertThat(CsvRows.parse("\"friends, close\",sori@kurl.me\n\"say \"\"hi\"\"\nthere\",x"))
         .containsExactly(
             List.of("friends, close", "sori@kurl.me"), List.of("say \"hi\"\nthere", "x"));
   }
 
   @Test
   void aLastLineWithoutABreakAndBlankLinesAreHandled() {
-    assertThat(ImportCsv.parse("spam.example\n\n  \nother.example"))
+    assertThat(CsvRows.parse("spam.example\n\n  \nother.example"))
         .containsExactly(List.of("spam.example"), List.of("other.example"));
-    assertThat(ImportCsv.parse("")).isEmpty();
+    assertThat(CsvRows.parse("")).isEmpty();
   }
 }

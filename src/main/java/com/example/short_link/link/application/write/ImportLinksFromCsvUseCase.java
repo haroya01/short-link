@@ -1,15 +1,14 @@
 package com.example.short_link.link.application.write;
 
+import com.example.short_link.common.csv.CsvRows;
 import com.example.short_link.link.application.dto.BulkImportResult;
 import com.example.short_link.link.application.dto.BulkImportRow;
 import com.example.short_link.link.application.dto.LinkCreated;
 import com.example.short_link.link.exception.LinkErrorCode;
 import com.example.short_link.link.exception.LinkException;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
@@ -74,22 +73,20 @@ public class ImportLinksFromCsvUseCase {
   }
 
   private List<BulkImportRow> parse(InputStream csv) throws IOException {
+    String text;
+    try (csv) {
+      text = new String(csv.readAllBytes(), StandardCharsets.UTF_8);
+    }
     List<BulkImportRow> rows = new ArrayList<>();
-    try (BufferedReader reader =
-        new BufferedReader(new InputStreamReader(csv, StandardCharsets.UTF_8))) {
-      String line;
-      Header header = null;
-      while ((line = reader.readLine()) != null) {
-        String trimmed = line.trim();
-        if (trimmed.isEmpty()) continue;
-        String[] cols = splitCsv(trimmed);
-        if (header == null) {
-          header = Header.detect(cols);
-          if (header.hasHeader()) continue;
-        }
-        rows.add(header.toRow(cols));
-        if (rows.size() > MAX_ROWS) break;
+    Header header = null;
+    for (List<String> cells : CsvRows.parse(text)) {
+      String[] cols = cells.toArray(String[]::new);
+      if (header == null) {
+        header = Header.detect(cols);
+        if (header.hasHeader()) continue;
       }
+      rows.add(header.toRow(cols));
+      if (rows.size() > MAX_ROWS) break;
     }
     return rows;
   }
@@ -107,10 +104,6 @@ public class ImportLinksFromCsvUseCase {
     if (s == null) return null;
     String t = s.trim();
     return t.isEmpty() ? null : t;
-  }
-
-  private static String[] splitCsv(String line) {
-    return line.split(",", -1);
   }
 
   private record Header(int urlIdx, int customCodeIdx, int expiresAtIdx, boolean hasHeader) {

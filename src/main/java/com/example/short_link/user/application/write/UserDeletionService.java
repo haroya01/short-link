@@ -4,6 +4,7 @@ import com.example.short_link.common.audit.AuditAction;
 import com.example.short_link.common.audit.AuditLogService;
 import com.example.short_link.common.event.AccountDeletedEvent;
 import com.example.short_link.common.user.UserDataEraser;
+import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.stats.domain.repository.ClickEventRepository;
@@ -43,6 +44,7 @@ public class UserDeletionService {
   private final MeterRegistry meterRegistry;
   private final AuditLogService auditLogService;
   private final ApplicationEventPublisher events;
+  private final LinkCacheEviction linkCacheEviction;
 
   @Transactional
   public void deleteAccount(Long userId) {
@@ -89,6 +91,7 @@ public class UserDeletionService {
       log.info("user {} hard-delete: {} click events removed", userId, deletedClicks);
     }
     int deletedLinks = linkRepository.deleteByUserId(userId);
+    linkCacheEviction.evictAllAfterCommit(links.stream().map(LinkEntity::getShortCode).toList());
     refreshTokenStore.deleteAllForUser(userId);
     userRepository.deleteById(userId);
     meterRegistry

@@ -57,7 +57,7 @@ public class RedirectController {
   private final VisitHandoff handoff;
   private final Clock clock;
 
-  @GetMapping("/{shortCode:[0-9A-Za-z]{3,16}}")
+  @GetMapping({"/{shortCode:[0-9A-Za-z]{3,16}}", "/{shortCode:[0-9A-Za-z]{3,16}}/"})
   public ResponseEntity<?> redirect(
       @PathVariable ShortCode shortCode,
       @RequestParam(value = "src", required = false) String src,
@@ -110,6 +110,9 @@ public class RedirectController {
     } catch (LinkException e) {
       if (e.errorCode() == LinkErrorCode.LINK_EXPIRED) {
         LinkEntity expired = lookup.findEntity(shortCode).orElse(null);
+        if (expired != null && expired.getExpiredRedirectUrl() != null) {
+          return afterExpiry(expired, req, locale);
+        }
         if (expired != null && expired.getExpiredMessage() != null) {
           return html.expiredPageResponse(locale, expired.getExpiredMessage());
         }
@@ -152,6 +155,18 @@ public class RedirectController {
             LinkRedirectSupport.visit(referrer, userAgent, acceptLanguage, src, post, req)),
         userAgent,
         locale);
+  }
+
+  private ResponseEntity<?> afterExpiry(LinkEntity expired, HttpServletRequest req, Locale locale) {
+    Long customOwner = customDomainService.resolveOwner(req.getHeader("Host"));
+    if (customOwner != null && !customOwner.equals(expired.getUserId())) {
+      throw new LinkException(LinkErrorCode.LINK_NOT_FOUND, expired.getShortCode());
+    }
+    if (blockedDomainChecker.isBlocked(expired.getExpiredRedirectUrl())) {
+      meterRegistry.counter("redirect.domain_blocked").increment();
+      return html.domainBlockedPageResponse(locale);
+    }
+    return handoff.afterExpiry(expired.getExpiredRedirectUrl());
   }
 
   private boolean anyDestinationBlocked(CachedLink link) {

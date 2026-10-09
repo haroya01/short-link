@@ -9,4 +9,6 @@ public interface JpaCampaignBatchRepository extends JpaRepository<CampaignBatchE
   List<CampaignBatchEntity> findByCampaignIdOrderByCreatedAtAsc(Long campaignId);
 
   long countByCampaignId(Long campaignId);
+
+  boolean existsByLinkId(Long linkId);
 }

@@ -39,6 +39,7 @@ public class CreateLinkUseCase {
   private final AuditLogService auditLogService;
   private final CreateLinkValidator validator;
   private final LinkDefaultsWriter defaultsWriter;
+  private final DedicatedLinks dedicatedLinks;
   private final PasswordEncoder passwordEncoder;
   private final TransactionTemplate tx;
   private final long quotaPerUser;
@@ -51,6 +52,7 @@ public class CreateLinkUseCase {
       AuditLogService auditLogService,
       CreateLinkValidator validator,
       LinkDefaultsWriter defaultsWriter,
+      DedicatedLinks dedicatedLinks,
       @Qualifier("linkPasswordEncoder") PasswordEncoder passwordEncoder,
       PlatformTransactionManager transactionManager,
       @Value("${short-link.link-quota.authenticated:200}") long quotaPerUser) {
@@ -61,6 +63,7 @@ public class CreateLinkUseCase {
     this.auditLogService = auditLogService;
     this.validator = validator;
     this.defaultsWriter = defaultsWriter;
+    this.dedicatedLinks = dedicatedLinks;
     this.passwordEncoder = passwordEncoder;
     this.tx = new TransactionTemplate(transactionManager);
     this.quotaPerUser = quotaPerUser;
@@ -81,35 +84,49 @@ public class CreateLinkUseCase {
             ? passwordEncoder.encode(command.password())
             : null;
 
-    return tx.execute(
-        status ->
-            persist(
-                url,
-                command.userId(),
-                code,
-                expiresAt,
-                command.deduplicate(),
-                authenticated,
-                passwordHash));
+    // 실패한 INSERT 는 트랜잭션을 rollback-only 로 만들어서 코드마다 트랜잭션을 따로 연다.
+    for (int i = 0; i < MAX_ATTEMPTS; i++) {
+      String candidate = code != null ? code : generator.generate();
+      if (code == null && ReservedShortCodes.isReserved(candidate)) {
+        continue;
+      }
+      try {
+        return tx.execute(
+            status ->
+                persist(
+                    url,
+                    command.userId(),
+                    candidate,
+                    code != null,
+                    expiresAt,
+                    command.deduplicate(),
+                    authenticated,
+                    passwordHash));
+      } catch (DataIntegrityViolationException collision) {
+        if (code != null) {
+          throw new LinkException(LinkErrorCode.DUPLICATE_SHORT_CODE, code);
+        }
+      }
+    }
+    throw new LinkException(LinkErrorCode.SHORT_CODE_EXHAUSTED);
   }
 
   private LinkCreated persist(
       String url,
       Long userId,
       String code,
+      boolean custom,
       Instant expiresAt,
       boolean deduplicate,
       boolean authenticated,
       String passwordHash) {
-    // 비밀번호를 건 요청이 이미 공유된 기존 링크를 돌려받으면 안 된다.
-    if (deduplicate && authenticated && code == null && passwordHash == null) {
-      Optional<LinkEntity> existing = repository.findFirstByUserIdAndOriginalUrl(userId, url);
+    // 비밀번호·만료를 건 요청이 이미 공유된 기존 링크를 돌려받으면 안 된다.
+    if (deduplicate && authenticated && !custom && passwordHash == null && expiresAt == null) {
+      Optional<LinkEntity> existing = reusableLink(userId, url);
       if (existing.isPresent()) {
         LinkEntity link = existing.get();
-        if (!link.isExpired(Instant.now())) {
-          recordCreated(true, false, "deduplicated");
-          return new LinkCreated(link.getShortCode(), null, link.hasPassword());
-        }
+        recordCreated(true, false, "deduplicated");
+        return new LinkCreated(link.getShortCode(), null, link.hasPassword());
       }
     }
 
@@ -121,32 +138,16 @@ public class CreateLinkUseCase {
       }
     }
 
-    if (code != null) {
-      try {
-        LinkEntity saved = saveWithCode(url, code, userId, expiresAt, authenticated, passwordHash);
-        recordCreated(true, true, "ok");
-        publishCreated(saved, userId, true);
-        return new LinkCreated(saved.getShortCode(), saved.getClaimToken(), saved.hasPassword());
-      } catch (DataIntegrityViolationException e) {
-        throw new LinkException(LinkErrorCode.DUPLICATE_SHORT_CODE, code);
-      }
-    }
+    LinkEntity saved = saveWithCode(url, code, userId, expiresAt, authenticated, passwordHash);
+    recordCreated(authenticated, custom, "ok");
+    publishCreated(saved, userId, custom);
+    return new LinkCreated(saved.getShortCode(), saved.getClaimToken(), saved.hasPassword());
+  }
 
-    for (int i = 0; i < MAX_ATTEMPTS; i++) {
-      String generated = generator.generate();
-      if (ReservedShortCodes.isReserved(generated)) {
-        continue;
-      }
-      try {
-        LinkEntity saved =
-            saveWithCode(url, generated, userId, expiresAt, authenticated, passwordHash);
-        recordCreated(authenticated, false, "ok");
-        publishCreated(saved, userId, false);
-        return new LinkCreated(saved.getShortCode(), saved.getClaimToken(), saved.hasPassword());
-      } catch (DataIntegrityViolationException ignored) {
-      }
-    }
-    throw new LinkException(LinkErrorCode.SHORT_CODE_EXHAUSTED);
+  private Optional<LinkEntity> reusableLink(Long userId, String url) {
+    return repository.findUnrestrictedByUserIdAndOriginalUrl(userId, url).stream()
+        .filter(link -> !dedicatedLinks.isDedicated(link.linkId()))
+        .findFirst();
   }
 
   private LinkEntity saveWithCode(

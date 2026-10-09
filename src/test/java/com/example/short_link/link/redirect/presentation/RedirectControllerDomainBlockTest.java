@@ -16,6 +16,7 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
 import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,20 @@ class RedirectControllerDomainBlockTest {
 
     mvc.perform(get("/dbk1234").header("Accept-Language", "ko-KR"))
         .andExpect(status().isForbidden())
+        .andExpect(content().string(Matchers.containsString("차단된 링크")));
+  }
+
+  @Test
+  void anEndedLinkDoesNotForwardToABlockedFollowUpPage() throws Exception {
+    LinkEntity link = repository.save(new LinkEntity("https://clean.example.com/x", "dbkend1"));
+    link.applyCampaignExpiration(
+        Instant.now().minusSeconds(60), "https://spam.example.com/after", null);
+    repository.save(link);
+    blockDomainNow("spam.example.com");
+
+    mvc.perform(get("/dbkend1").header("Accept-Language", "ko-KR"))
+        .andExpect(status().isForbidden())
+        .andExpect(header().doesNotExist("Location"))
         .andExpect(content().string(Matchers.containsString("차단된 링크")));
   }
 

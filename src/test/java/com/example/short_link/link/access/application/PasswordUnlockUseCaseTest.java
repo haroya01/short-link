@@ -48,30 +48,29 @@ class PasswordUnlockUseCaseTest {
 
   @Test
   void lockedOutVisitDoesNotReadLinkOrCheckPassword() {
-    when(attempts.isLockedOut(code.value(), visit.clientIp())).thenReturn(true);
+    when(attempts.tryAttempt(code.value(), visit.clientIp())).thenReturn(false);
 
     assertThat(useCase.execute(code, "password", null, visit))
         .isEqualTo(
             new PasswordUnlockResult.Rejected(PasswordUnlockResult.RejectionReason.LOCKED_OUT));
     verifyNoInteractions(lookup, passwords, flow);
-    verify(attempts, never()).recordFailure(any(), any());
     verify(attempts, never()).reset(any(), any());
   }
 
   @Test
-  void wrongPasswordRecordsFailureWithoutResetOrRedirect() {
+  void wrongPasswordIsCountedBeforeThePasswordCheckAndNotReset() {
     LinkEntity entity = loadPasswordLink();
+    when(attempts.tryAttempt(code.value(), visit.clientIp())).thenReturn(true);
     when(passwords.checkPassword(entity, "wrong")).thenReturn(false);
 
     assertThat(useCase.execute(code, "wrong", null, visit))
         .isEqualTo(
             new PasswordUnlockResult.Rejected(PasswordUnlockResult.RejectionReason.WRONG_PASSWORD));
     var order = inOrder(attempts, lookup, passwords);
-    order.verify(attempts).isLockedOut(code.value(), visit.clientIp());
+    order.verify(attempts).tryAttempt(code.value(), visit.clientIp());
     order.verify(lookup).findActiveLink(code);
     order.verify(lookup).findEntity(code);
     order.verify(passwords).checkPassword(entity, "wrong");
-    order.verify(attempts).recordFailure(code.value(), visit.clientIp());
     verify(attempts, never()).reset(any(), any());
     verifyNoInteractions(flow);
   }
@@ -79,17 +78,18 @@ class PasswordUnlockUseCaseTest {
   @Test
   void successfulPasswordResetsAttemptsBeforeRedirectEvenWhenViewLimitRejects() {
     LinkEntity entity = loadPasswordLink();
+    when(attempts.tryAttempt(code.value(), visit.clientIp())).thenReturn(true);
     when(passwords.checkPassword(entity, "correct")).thenReturn(true);
     when(flow.execute(any(), any(), any()))
         .thenThrow(new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, code));
 
     assertThatThrownBy(() -> useCase.execute(code, "correct", null, visit))
         .isInstanceOf(LinkException.class);
-    var order = inOrder(passwords, attempts, flow);
+    var order = inOrder(attempts, passwords, flow);
+    order.verify(attempts).tryAttempt(code.value(), visit.clientIp());
     order.verify(passwords).checkPassword(entity, "correct");
     order.verify(attempts).reset(code.value(), visit.clientIp());
     order.verify(flow).execute(any(), any(), any());
-    verify(attempts, never()).recordFailure(any(), any());
   }
 
   private LinkEntity loadPasswordLink() {

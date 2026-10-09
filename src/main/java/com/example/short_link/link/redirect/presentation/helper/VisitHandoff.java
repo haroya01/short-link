@@ -42,6 +42,14 @@ public class VisitHandoff {
         .build();
   }
 
+  public ResponseEntity<byte[]> afterExpiry(String destination) {
+    HttpHeaders headers = new HttpHeaders();
+    headers.setLocation(URI.create(destination));
+    headers.setCacheControl("private, max-age=90");
+    headers.set("X-Robots-Tag", "noindex, nofollow");
+    return new VisitPage(null, headers, HttpStatus.FOUND, "expired");
+  }
+
   public ResponseEntity<byte[]> unlocked(
       RedirectOutcome.Redirect redirect, String userAgent, Locale locale) {
     String next = nextHop(redirect, userAgent);
