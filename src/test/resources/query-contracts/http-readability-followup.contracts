@@ -10,7 +10,7 @@
 @junit | account-two-factor-totp-replay-rejected | 1 | 0 | 0 | 0 | 1
 
 # Interaction access: normal HTTP setup and delivered notifications are included.
-@junit | interaction-access-author-block | 2 | 1 | 0 | 0 | 3
+@junit | interaction-access-author-block | 2 | 1 | 0 | 3 | 6
 @junit | interaction-access-body-write | 3 | 2 | 1 | 1 | 7
 @junit | interaction-access-comment-create | 9 | 2 | 0 | 0 | 11
 @junit | interaction-access-existing-comment-like | 11 | 2 | 0 | 0 | 13

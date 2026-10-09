@@ -22,4 +22,9 @@ class NoteMediaRepositoryAdapter implements NoteMediaRepository {
   public List<NoteMediaEntity> findByNoteIds(Collection<Long> noteIds) {
     return noteIds.isEmpty() ? List.of() : jpa.findByNoteIdInOrderByNoteIdAscPositionAsc(noteIds);
   }
+
+  @Override
+  public void deleteAllByNoteId(Long noteId) {
+    jpa.deleteAllByNoteId(noteId);
+  }
 }

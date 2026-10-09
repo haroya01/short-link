@@ -153,6 +153,52 @@ class NoteCommandServiceTest {
   }
 
   @Test
+  void aThreadKeepsTheWarningAndSensitiveMarkOfTheNoteEachPartAnswersUnlessItHasItsOwn() {
+    AtomicLong ids = new AtomicLong(100L);
+    Map<Long, NoteEntity> saved = new HashMap<>();
+    when(notes.save(any()))
+        .thenAnswer(
+            inv -> {
+              NoteEntity note = inv.getArgument(0);
+              long id = ids.getAndIncrement();
+              ReflectionTestUtils.setField(note, "id", id);
+              saved.put(id, note);
+              return note;
+            });
+    when(notes.findById(anyLong()))
+        .thenAnswer(inv -> Optional.ofNullable(saved.get(inv.<Long>getArgument(0))));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    List<NoteView> thread =
+        service()
+            .createThread(
+                7L,
+                List.of(
+                    new NoteDraft("첫째", List.of(), null, null, null, "결말 포함", false),
+                    new NoteDraft("둘째", List.of(), null, null, null, " ", false),
+                    new NoteDraft("셋째", List.of(), null, null, null, "다른 경고", false),
+                    new NoteDraft("넷째", List.of(), null, null)));
+
+    assertThat(thread)
+        .extracting(NoteView::contentWarning)
+        .containsExactly("결말 포함", "결말 포함", "다른 경고", "다른 경고");
+    assertThat(thread).extracting(NoteView::sensitive).containsOnly(true);
+    assertThat(saved.values()).extracting(NoteEntity::isSensitive).containsOnly(true);
+
+    ids.set(200L);
+    List<NoteView> marked =
+        service()
+            .createThread(
+                7L,
+                List.of(
+                    new NoteDraft("사진", List.of(), null, null, null, null, true),
+                    new NoteDraft("이어서", List.of(), null, null)));
+
+    assertThat(marked).extracting(NoteView::contentWarning).containsOnly((String) null);
+    assertThat(marked).extracting(NoteView::sensitive).containsExactly(true, true);
+  }
+
+  @Test
   void aThreadHoldsTwoToTenNotes() {
     NoteDraft one = new NoteDraft("하나", List.of(), null, null);
     for (List<NoteDraft> drafts :
@@ -682,6 +728,11 @@ class NoteCommandServiceTest {
         .isInstanceOfSatisfying(
             NoteException.class,
             e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_REPLY));
+    ReflectionTestUtils.setField(reply, "inReplyToId", null);
+    assertThatThrownBy(() -> service().setPin(7L, 2L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PIN_REPLY));
     assertThatThrownBy(() -> service().setPin(8L, 1L, true)).isInstanceOf(NoteException.class);
   }
 
@@ -708,7 +759,20 @@ class NoteCommandServiceTest {
   }
 
   @Test
-  void aReplyKeepsItsParentsVisibilityAndARestrictedNoteRecordsWhomItMentions() {
+  void aRestrictedQuoteTellsTheQuotedAuthorOnlyWhenTheyMayReadIt() {
+    saving();
+    NoteAuthor other = new NoteAuthor(8L, "other", null);
+    when(notes.findById(50L)).thenReturn(Optional.of(note(50L, 8L, "original")));
+    when(people.activeAuthors(Set.of(7L, 8L))).thenReturn(Map.of(7L, WRITER, 8L, other));
+    when(notes.visibleTo(8L, List.of(100L))).thenReturn(Set.of());
+
+    service().create(7L, new NoteDraft("우리끼리 얘기", null, null, null, 50L, null, false, "PRIVATE"));
+
+    verify(events, never()).publishEvent(any(NoteInteractionEvent.class));
+  }
+
+  @Test
+  void aReplyKeepsItsParentsVisibilityAndARestrictedReplyReachesWhomItMentionsAndAnswers() {
     saving();
     NoteEntity parent = note(5L, 9L, "followers only");
     parent.showTo(NoteVisibility.PRIVATE);
@@ -721,7 +785,7 @@ class NoteCommandServiceTest {
     NoteView reply = service().create(7L, new NoteDraft("@mina 같이 봐요", List.of(), null, 5L));
 
     assertThat(reply.visibility()).isEqualTo("private");
-    verify(notes).addRecipients(100L, List.of(11L));
+    verify(notes).addRecipients(100L, Set.of(11L, 9L));
   }
 
   @Test

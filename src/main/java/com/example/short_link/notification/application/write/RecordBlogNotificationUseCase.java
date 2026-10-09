@@ -15,12 +15,17 @@ import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.NotificationUser;
+import com.example.short_link.notification.domain.policy.KeywordVerdict;
 import com.example.short_link.notification.domain.policy.NotificationPolicy;
 import com.example.short_link.notification.domain.policy.NotificationPolicyLevel;
 import com.example.short_link.notification.domain.repository.NotificationActorReader;
+import com.example.short_link.notification.domain.repository.NotificationKeywordFilterReader;
 import com.example.short_link.notification.domain.repository.NotificationPolicyRepository;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
+import java.time.Clock;
+import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -49,6 +54,8 @@ public class RecordBlogNotificationUseCase {
   private final NotificationFanoutWriter fanoutWriter;
   private final NotificationActorReader actorReader;
   private final NotificationPolicyRepository policies;
+  private final NotificationKeywordFilterReader keywordFilters;
+  private final Clock clock;
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void record(
@@ -89,10 +96,24 @@ public class RecordBlogNotificationUseCase {
     }
     String json = targetCodec.encode(payload);
     boolean filtered = verdict == NotificationPolicyLevel.FILTER;
-    repository.save(
+    KeywordVerdict keywords =
+        keywords(List.of(recipientUserId), type, actorUserId, payload)
+            .getOrDefault(recipientUserId, KeywordVerdict.CLEAN);
+    boolean hidden = keywords == KeywordVerdict.HIDE;
+    NotificationEntity notice =
         new NotificationEntity(
-            recipientUserId, type, actorUserId, actorRemoteId, json, groupKey, filtered));
-    if (filtered) {
+            recipientUserId,
+            type,
+            actorUserId,
+            actorRemoteId,
+            json,
+            hidden ? null : groupKey,
+            filtered);
+    if (hidden) {
+      notice.markRead(clock.instant());
+    }
+    repository.save(notice);
+    if (filtered || hidden) {
       return;
     }
     Optional<NotificationUser> recipient = userReader.findById(recipientUserId);
@@ -103,8 +124,39 @@ public class RecordBlogNotificationUseCase {
             actorUserId,
             actorRemoteId,
             payload,
+            keywords == KeywordVerdict.CLEAN,
             Locale.forLanguageTag(recipient.map(NotificationUser::locale).orElse("ko")),
             recipient.map(NotificationUser::username).orElse(null)));
+  }
+
+  private Map<Long, KeywordVerdict> keywords(
+      List<Long> recipientUserIds,
+      NotificationType type,
+      Long actorUserId,
+      NotificationTarget payload) {
+    String text = othersText(type, payload);
+    List<Long> others = recipientUserIds.stream().filter(id -> !id.equals(actorUserId)).toList();
+    if (text == null || text.isBlank() || others.isEmpty()) {
+      return Map.of();
+    }
+    Map<Long, KeywordVerdict> verdicts = new HashMap<>();
+    keywordFilters
+        .activeFor(others, clock.instant())
+        .forEach(
+            (recipientUserId, filters) ->
+                verdicts.put(recipientUserId, KeywordVerdict.of(filters, text)));
+    return verdicts;
+  }
+
+  private static String othersText(NotificationType type, NotificationTarget payload) {
+    if (!(payload instanceof NotificationNoteRef note)) {
+      return null;
+    }
+    return switch (type) {
+      case NOTE_REPLY, NOTE_QUOTE -> note.sourceExcerpt();
+      case NOTE_MENTION, POST_QUOTE, NOTE_POST, NOTE_EDIT, NOTE_POLL -> note.excerpt();
+      default -> null;
+    };
   }
 
   private NotificationPolicyLevel verdict(
@@ -149,23 +201,44 @@ public class RecordBlogNotificationUseCase {
       return;
     }
     String json = targetCodec.encode(payload);
+    Map<Long, KeywordVerdict> keywords = keywords(enabledRecipients, type, actorUserId, payload);
+    Set<Long> hidden =
+        keywords.entrySet().stream()
+            .filter(entry -> entry.getValue() == KeywordVerdict.HIDE)
+            .map(Map.Entry::getKey)
+            .collect(Collectors.toSet());
+    Instant now = clock.instant();
     for (int i = 0; i < enabledRecipients.size(); i += FANOUT_CHUNK) {
       List<Long> chunk =
           enabledRecipients.subList(i, Math.min(i + FANOUT_CHUNK, enabledRecipients.size()));
-      fanoutWriter.persistChunk(chunk, type, actorUserId, actorRemoteId, json);
+      fanoutWriter.persistChunk(chunk, type, actorUserId, actorRemoteId, json, hidden, now);
     }
-    Map<String, List<Long>> byLocale =
+    Map<String, Map<Boolean, List<Long>>> byLocale =
         userReader.findAllByIdIn(enabledRecipients).stream()
+            .filter(user -> !hidden.contains(user.id()))
             .collect(
                 Collectors.groupingBy(
                     NotificationUser::localeTag,
-                    Collectors.mapping(NotificationUser::id, Collectors.toList())));
+                    Collectors.partitioningBy(
+                        user -> keywords.get(user.id()) != KeywordVerdict.WARN,
+                        Collectors.mapping(NotificationUser::id, Collectors.toList()))));
     byLocale.forEach(
-        (tag, ids) ->
-            pushDelivery.sendToAll(
-                ids,
-                pushMessage(
-                    type, actorUserId, actorRemoteId, payload, Locale.forLanguageTag(tag), null)));
+        (tag, byQuote) ->
+            byQuote.forEach(
+                (quoted, ids) -> {
+                  if (!ids.isEmpty()) {
+                    pushDelivery.sendToAll(
+                        ids,
+                        pushMessage(
+                            type,
+                            actorUserId,
+                            actorRemoteId,
+                            payload,
+                            quoted,
+                            Locale.forLanguageTag(tag),
+                            null));
+                  }
+                }));
   }
 
   private PushSender.PushMessage pushMessage(
@@ -173,6 +246,7 @@ public class RecordBlogNotificationUseCase {
       Long actorUserId,
       Long actorRemoteId,
       NotificationTarget payload,
+      boolean quoted,
       Locale locale,
       String recipientUsername) {
     String actorUsername =
@@ -188,7 +262,7 @@ public class RecordBlogNotificationUseCase {
                 .orElse(null);
     String actor =
         actorUsername != null ? actorUsername : remoteHandle != null ? remoteHandle : "kurl";
-    String subtitle = payload == null ? null : payload.pushSubtitle();
+    String subtitle = payload == null || !quoted ? null : payload.pushSubtitle();
     String body =
         messageSource.getMessage("notification.push." + type.name(), new Object[] {actor}, locale);
     return new PushSender.PushMessage(

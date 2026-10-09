@@ -2,6 +2,7 @@ package com.example.short_link.note.application.write;
 
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
+import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
@@ -15,6 +16,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -100,12 +102,14 @@ class RemoteNoteRecorder implements RemoteNotes {
                 visibility,
                 parent == null ? null : parent.getId(),
                 parent == null ? null : parent.conversation(),
+                parent != null || received.inReplyToUri() != null,
                 received.language()));
     if (stored.isEmpty()) {
       return Optional.empty();
     }
     Long noteId = stored.get();
-    saveMedia(noteId, received.media());
+    media.saveAll(mediaRows(noteId, received.media()));
+    notes.tag(noteId, Hashtags.of(received.body()));
     Set<Long> addressed = new LinkedHashSet<>(received.addressedUserIds());
     if (visibility.restricted() && !addressed.isEmpty()) {
       notes.addRecipients(noteId, List.copyOf(addressed));
@@ -141,30 +145,48 @@ class RemoteNoteRecorder implements RemoteNotes {
     return stored;
   }
 
+  // As on Mastodon, an Update older than the edit already kept changes nothing, and only a change
+  // to the text, warning, sensitive mark or media is an edit that people who shared the note hear
+  // of. The row is locked so two Updates of one note apply in order.
   @Override
   @Transactional
-  public boolean revise(
-      Long remoteActorId,
-      Long noteId,
-      String body,
-      String contentWarning,
-      boolean sensitive,
-      Instant editedAt) {
-    String warning = warning(contentWarning);
-    boolean revised =
-        notes.reviseRemote(
-                remoteActorId,
-                noteId,
-                body,
-                warning,
-                sensitive || warning != null,
-                editedAt == null ? clock.instant() : editedAt)
-            > 0;
-    if (revised) {
-      events.publishEvent(
-          new NoteRevisedEvent(noteId, null, remoteActorId, NoteEntity.excerptOf(body)));
+  public boolean revise(Long remoteActorId, Long noteId, Revision revision) {
+    Optional<NoteEntity> found = notes.findRemoteForUpdate(remoteActorId, noteId);
+    if (found.isEmpty()) {
+      return false;
     }
-    return revised;
+    NoteEntity note = found.get();
+    Instant editedAt =
+        revision.editedAt() == null ? null : revision.editedAt().truncatedTo(ChronoUnit.MICROS);
+    if (editedAt != null && note.getEditedAt() != null && note.getEditedAt().isAfter(editedAt)) {
+      return true;
+    }
+    String warning = warning(revision.contentWarning());
+    boolean sensitive = revision.sensitive() || warning != null;
+    List<NoteMediaEntity> attached = mediaRows(noteId, revision.media());
+    boolean mediaChanged = !sameMedia(media.findByNoteIds(List.of(noteId)), attached);
+    note.writeIn(revision.language());
+    if (revision.body().equals(note.getBody())
+        && Objects.equals(warning, note.getContentWarning())
+        && sensitive == note.isSensitive()
+        && !mediaChanged) {
+      return true;
+    }
+    boolean retagged = !Hashtags.sameTags(note.getBody(), revision.body());
+    note.edit(
+        revision.body(),
+        editedAt == null ? clock.instant().truncatedTo(ChronoUnit.MICROS) : editedAt);
+    note.markContent(warning, sensitive);
+    if (retagged) {
+      notes.retag(noteId, Hashtags.of(revision.body()));
+    }
+    if (mediaChanged) {
+      media.deleteAllByNoteId(noteId);
+      media.saveAll(attached);
+    }
+    events.publishEvent(
+        new NoteRevisedEvent(noteId, null, remoteActorId, NoteEntity.excerptOf(revision.body())));
+    return true;
   }
 
   @Override
@@ -173,11 +195,11 @@ class RemoteNoteRecorder implements RemoteNotes {
     return notes.deleteRemote(remoteActorId, uri) > 0;
   }
 
-  private void saveMedia(Long noteId, List<Media> attached) {
-    if (attached == null || attached.isEmpty()) {
-      return;
-    }
+  private static List<NoteMediaEntity> mediaRows(Long noteId, List<Media> attached) {
     List<NoteMediaEntity> rows = new ArrayList<>();
+    if (attached == null) {
+      return rows;
+    }
     for (Media image : attached) {
       if (rows.size() == NoteMediaEntity.MAX_PER_NOTE) {
         break;
@@ -193,7 +215,25 @@ class RemoteNoteRecorder implements RemoteNotes {
               image.width(),
               image.height()));
     }
-    media.saveAll(rows);
+    return rows;
+  }
+
+  private static boolean sameMedia(List<NoteMediaEntity> kept, List<NoteMediaEntity> sent) {
+    if (kept.size() != sent.size()) {
+      return false;
+    }
+    for (int i = 0; i < kept.size(); i++) {
+      NoteMediaEntity a = kept.get(i);
+      NoteMediaEntity b = sent.get(i);
+      if (!a.getUrl().equals(b.getUrl())
+          || !a.getContentType().equals(b.getContentType())
+          || !Objects.equals(a.getAltText(), b.getAltText())
+          || !Objects.equals(a.getWidth(), b.getWidth())
+          || !Objects.equals(a.getHeight(), b.getHeight())) {
+        return false;
+      }
+    }
+    return true;
   }
 
   // A clock running ahead elsewhere must not pin a note to the top of the feed.

@@ -17,16 +17,22 @@ import com.example.short_link.notification.domain.NotificationActor;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.NotificationUser;
+import com.example.short_link.notification.domain.policy.KeywordFilter;
 import com.example.short_link.notification.domain.policy.NotificationPolicy;
 import com.example.short_link.notification.domain.policy.NotificationPolicyLevel;
 import com.example.short_link.notification.domain.policy.NotificationSender;
 import com.example.short_link.notification.domain.repository.NotificationActorReader;
+import com.example.short_link.notification.domain.repository.NotificationKeywordFilterReader;
 import com.example.short_link.notification.domain.repository.NotificationPolicyRepository;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import com.example.short_link.notification.domain.repository.NotificationUserReader;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -58,6 +64,11 @@ class RecordBlogNotificationUseCaseTest {
 
   @Mock(strictness = Mock.Strictness.LENIENT)
   private NotificationPolicyRepository policies;
+
+  @Mock(strictness = Mock.Strictness.LENIENT)
+  private NotificationKeywordFilterReader keywordFilters;
+
+  private static final Instant NOW = Instant.parse("2026-10-09T00:00:00Z");
 
   private final JsonMapper jsonMapper = JsonMapper.builder().build();
   private final MessageSource messageSource = pushMessages();
@@ -111,7 +122,9 @@ class RecordBlogNotificationUseCaseTest {
         preferenceService,
         fanoutWriter,
         actorReader,
-        policies);
+        policies,
+        keywordFilters,
+        Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private void keepAsideStrangers() {
@@ -563,7 +576,9 @@ class RecordBlogNotificationUseCaseTest {
             org.mockito.ArgumentMatchers.eq(NotificationType.NEW_POST),
             org.mockito.ArgumentMatchers.eq(2L),
             org.mockito.ArgumentMatchers.isNull(),
-            json.capture());
+            json.capture(),
+            org.mockito.ArgumentMatchers.eq(Set.of()),
+            org.mockito.ArgumentMatchers.any());
     assertThat(json.getValue()).contains("\"slug\":\"new-post\"");
     ArgumentCaptor<PushSender.PushMessage> pushed =
         ArgumentCaptor.forClass(PushSender.PushMessage.class);
@@ -651,7 +666,9 @@ class RecordBlogNotificationUseCaseTest {
             org.mockito.ArgumentMatchers.eq(NotificationType.NEW_POST),
             org.mockito.ArgumentMatchers.eq(2L),
             org.mockito.ArgumentMatchers.isNull(),
-            org.mockito.ArgumentMatchers.anyString());
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.eq(Set.of()),
+            org.mockito.ArgumentMatchers.any());
     org.mockito.Mockito.verify(pushSender)
         .sendToAll(
             org.mockito.ArgumentMatchers.eq(List.of(7L, 9L)),
@@ -721,7 +738,9 @@ class RecordBlogNotificationUseCaseTest {
             org.mockito.ArgumentMatchers.eq(NotificationType.PATH_GREW),
             org.mockito.ArgumentMatchers.eq(2L),
             org.mockito.ArgumentMatchers.isNull(),
-            json.capture());
+            json.capture(),
+            org.mockito.ArgumentMatchers.eq(Set.of()),
+            org.mockito.ArgumentMatchers.any());
     assertThat(json.getValue())
         .contains("\"collectionId\":42")
         .contains("\"collectionName\":\"긴 여름의 독서\"");
@@ -765,10 +784,141 @@ class RecordBlogNotificationUseCaseTest {
             org.mockito.ArgumentMatchers.eq(NotificationType.PATH_GREW),
             org.mockito.ArgumentMatchers.eq(2L),
             org.mockito.ArgumentMatchers.isNull(),
-            org.mockito.ArgumentMatchers.anyString());
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.eq(Set.of()),
+            org.mockito.ArgumentMatchers.any());
     org.mockito.Mockito.verify(pushSender)
         .sendToAll(
             org.mockito.ArgumentMatchers.eq(List.of(7L)),
             org.mockito.ArgumentMatchers.any(PushSender.PushMessage.class));
+  }
+
+  private void filtersOf(long userId, KeywordFilter... filters) {
+    when(keywordFilters.activeFor(List.of(userId), NOW))
+        .thenReturn(Map.of(userId, List.of(filters)));
+  }
+
+  private void replyFrom2To9(String replyText) {
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_REPLY,
+            2L,
+            null,
+            new NotificationNoteRef(5L, "내 노트", 12L, replyText),
+            "NOTE_REPLY:5:2026-10-09");
+  }
+
+  @Test
+  void aReplyTrippingAHideFilterArrivesReadOutsideItsGroupWithoutAPush() {
+    filtersOf(9L, new KeywordFilter("스포일러", false, true));
+
+    replyFrom2To9("결말 스포일러 있음");
+
+    ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
+    org.mockito.Mockito.verify(repository).save(saved.capture());
+    assertThat(saved.getValue().getReadAt()).isEqualTo(NOW);
+    assertThat(saved.getValue().getGroupKey()).isNull();
+    org.mockito.Mockito.verifyNoInteractions(pushSender);
+  }
+
+  @Test
+  void aReplyTrippingAWarnFilterIsPushedWithoutItsText() {
+    filtersOf(9L, new KeywordFilter("스포일러", false, false));
+    when(userRepository.findById(2L))
+        .thenReturn(Optional.of(new NotificationUser(2L, "yuki", "ko")));
+
+    replyFrom2To9("결말 스포일러 있음");
+
+    ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
+    org.mockito.Mockito.verify(repository).save(saved.capture());
+    assertThat(saved.getValue().isRead()).isFalse();
+    assertThat(saved.getValue().getGroupKey()).isEqualTo("NOTE_REPLY:5:2026-10-09");
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().subtitle()).isNull();
+    assertThat(pushed.getValue().body()).isEqualTo("yuki님이 노트에 답글을 남겼습니다");
+  }
+
+  @Test
+  void aReplyMissingEveryFilterKeepsItsTextAndGroup() {
+    filtersOf(9L, new KeywordFilter("cat", true, true));
+
+    replyFrom2To9("concatenate");
+
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().subtitle()).isEqualTo("concatenate");
+  }
+
+  @Test
+  void theReadersOwnNotesAndNoticesWithoutSomeoneElsesTextReadNoFilters() {
+    useCase()
+        .record(
+            2L,
+            NotificationType.NOTE_POLL,
+            2L,
+            null,
+            new NotificationNoteRef(5L, "스포일러 투표", null, null),
+            null);
+    useCase()
+        .record(
+            9L,
+            NotificationType.NOTE_LIKE,
+            2L,
+            null,
+            new NotificationNoteRef(5L, "스포일러", null, null),
+            null);
+    useCase()
+        .record(9L, NotificationType.LIKE, 2L, new NotificationPostRef(10L, "p", "스포일러", null));
+
+    org.mockito.Mockito.verifyNoInteractions(keywordFilters);
+    org.mockito.Mockito.verify(pushSender, org.mockito.Mockito.times(3))
+        .send(
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(PushSender.PushMessage.class));
+  }
+
+  @Test
+  void aFannedOutNoteIsHiddenWarnedOrQuotedPerSubscriber() {
+    when(keywordFilters.activeFor(List.of(7L, 8L, 9L), NOW))
+        .thenReturn(
+            Map.of(
+                7L, List.of(new KeywordFilter("스포일러", false, true)),
+                8L, List.of(new KeywordFilter("결말", false, false))));
+    when(userRepository.findAllByIdIn(org.mockito.ArgumentMatchers.anyCollection()))
+        .thenReturn(List.of(userWith(7L, "ko"), userWith(8L, "ko"), userWith(9L, "ko")));
+
+    useCase()
+        .recordForEach(
+            List.of(7L, 8L, 9L),
+            NotificationType.NOTE_POST,
+            2L,
+            new NotificationNoteRef(5L, "결말 스포일러", null, null));
+
+    org.mockito.Mockito.verify(fanoutWriter)
+        .persistChunk(
+            org.mockito.ArgumentMatchers.eq(List.of(7L, 8L, 9L)),
+            org.mockito.ArgumentMatchers.eq(NotificationType.NOTE_POST),
+            org.mockito.ArgumentMatchers.eq(2L),
+            org.mockito.ArgumentMatchers.isNull(),
+            org.mockito.ArgumentMatchers.anyString(),
+            org.mockito.ArgumentMatchers.eq(Set.of(7L)),
+            org.mockito.ArgumentMatchers.eq(NOW));
+    ArgumentCaptor<PushSender.PushMessage> warned =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(8L)), warned.capture());
+    assertThat(warned.getValue().subtitle()).isNull();
+    ArgumentCaptor<PushSender.PushMessage> quoted =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(9L)), quoted.capture());
+    assertThat(quoted.getValue().subtitle()).isEqualTo("결말 스포일러");
+    org.mockito.Mockito.verifyNoMoreInteractions(pushSender);
   }
 }

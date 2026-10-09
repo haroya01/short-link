@@ -6,14 +6,16 @@ import com.example.short_link.post.domain.SeriesItemEntity;
 import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 // Clients that only know posts send the posts alone; the series' notes keep their places and the
-// posts fill the post places in the order given, any extra ones joining at the end.
+// posts fill the places of posts that stay, in the order given, any extra ones joining at the end.
 @Service
 @RequiredArgsConstructor
 public class SetSeriesPostsUseCase {
@@ -25,12 +27,13 @@ public class SetSeriesPostsUseCase {
   @Transactional
   public void execute(SetSeriesPostsCommand cmd) {
     SeriesEntity series = seriesOwnership.requireOwnedForUpdate(cmd.userId(), cmd.seriesId());
+    Set<Long> staying = new HashSet<>(cmd.postIds());
     Iterator<Long> posts = cmd.postIds().iterator();
     List<Item> items = new ArrayList<>();
     for (SeriesItemEntity existing : seriesItemRepository.findBySeriesId(series.getId())) {
       if (existing.getType() == SeriesItemType.NOTE) {
         items.add(new Item(SeriesItemType.NOTE, existing.getRefId()));
-      } else if (posts.hasNext()) {
+      } else if (staying.contains(existing.getRefId()) && posts.hasNext()) {
         items.add(new Item(SeriesItemType.POST, posts.next()));
       }
     }

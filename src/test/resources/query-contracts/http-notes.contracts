@@ -12,7 +12,7 @@
 # blocked the actor, their preference for the type, for likes and reposts whether this actor is
 # already in today's group, the insert, then the recipient's and the actor's names for the push.
 # Reply: moderation, parent note, a block check each way, insert, author.
-@junit | note-reply | 10 | 2 | 0 | 0 | 12
+@junit | note-reply | 11 | 2 | 0 | 0 | 13
 # A thread posts its notes in one transaction, each as a reply to the one before: per note the same
 # work as a single create (authors, insert, and after commit the federation and bell checks), the
 # first note's moderation check once, and for every later note the block check each way.
@@ -29,7 +29,7 @@
 @junit | note-unrepost | 4 | 0 | 0 | 1 | 5
 # Quote: moderation, quoted note, a block check each way, both authors in one read, insert, the
 # quoted note's images.
-@junit | note-quote | 12 | 2 | 0 | 0 | 14
+@junit | note-quote | 13 | 2 | 0 | 0 | 15
 # A page of notes costs one query per kind of data: notes, quoted notes (only when one quotes),
 # authors, images, quoted posts, one statement for the page's reply, like, repost and quote counts
 # (public, likes and boosts from other servers included) and, for a signed-in reader, one statement
@@ -77,7 +77,7 @@
 # Mentions: the mentioned handles ride in the authors query (id IN … OR username IN …), so neither
 # writing nor reading a note with mentions adds a query. Each mentioned member is told after commit
 # like any other note notice: block check, preference, insert, then both names for the push.
-@junit | note-create-mention | 8 | 2 | 0 | 0 | 10
+@junit | note-create-mention | 9 | 2 | 0 | 0 | 11
 @junit | note-thread-mention | 7 | 0 | 0 | 0 | 7
 # A content warning and the sensitive mark are columns on the note: they ride in its one insert and
 # its one update (the edit also keeps the version it replaces).
@@ -104,12 +104,16 @@
 @junit | note-linked-notes | 6 | 0 | 0 | 0 | 6
 # After commit an edit asks once who reposted or quoted the note (Mastodon's update notice). Here
 # the reader's quote is still up, so they hear of it: preference, insert, names for the push.
-@junit | note-edit | 12 | 2 | 1 | 0 | 15
+@junit | note-edit | 13 | 2 | 1 | 0 | 16
 @junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
 # Delete: note, its image keys, then likes, collection blocks, its place in a series and the note
 # (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 4 | 7
 @junit | note-thread-gone | 1 | 0 | 0 | 0 | 1
+# A reply whose parent was deleted stays a reply: the replier's profile and trending leave it out
+# inside their one query, at the same cost as before.
+@junit | note-profile-orphan | 6 | 0 | 0 | 0 | 6
+@junit | note-trending-orphan | 5 | 0 | 0 | 0 | 5
 # A note with an address: the card is fetched after commit off the request thread and stored with
 # one upsert. Reading it back adds one card query, and only for pages that have an address at all.
 @junit | note-create-link | 4 | 2 | 0 | 0 | 6
@@ -122,10 +126,10 @@
 # and unlisted notes (its first read also creates the author's actor).
 @junit | note-vis-create-public | 4 | 2 | 0 | 0 | 6
 @junit | note-vis-create-unlisted | 4 | 2 | 0 | 0 | 6
-@junit | note-vis-create-private | 8 | 4 | 0 | 0 | 12
+@junit | note-vis-create-private | 9 | 4 | 0 | 0 | 13
 # A direct mention from someone the recipient doesn't follow is an unsolicited private mention,
 # which the default notification policy keeps aside: stored filtered, no push (its two lookups go).
-@junit | note-vis-create-direct | 5 | 4 | 0 | 0 | 9
+@junit | note-vis-create-direct | 6 | 4 | 0 | 0 | 10
 @junit | note-vis-everyone | 7 | 0 | 0 | 0 | 7
 @junit | note-vis-tagged | 5 | 0 | 0 | 0 | 5
 @junit | note-vis-profile-anonymous | 6 | 0 | 0 | 0 | 6
@@ -200,7 +204,7 @@
 # Mastodon's mute conversation. A reply joins its thread's root (no extra write: a top-level note is
 # its own conversation). Muting reads the note for its conversation and INSERT IGNOREs the mute;
 # the reader's marks pick it up in the same statement as likes, reposts and bookmarks.
-@junit | note-reply-before-mute | 10 | 2 | 0 | 0 | 12
+@junit | note-reply-before-mute | 11 | 2 | 0 | 0 | 13
 @junit | note-conversation-mute | 1 | 1 | 0 | 0 | 2
 @junit | note-thread-conversation-muted | 8 | 0 | 0 | 0 | 8
 # A reply or a like in the muted thread stops at the one silence check (block, mute, conversation).
@@ -214,16 +218,16 @@
 @junit | note-bell-follow-status | 4 | 0 | 0 | 0 | 4
 # A new note finds the bell-ringers in one query (blocks and notice mutes excluded), then records
 # their notices like other fan-outs: preferences in one read, the insert, names for the push.
-@junit | note-create-bell | 7 | 2 | 0 | 0 | 9
+@junit | note-create-bell | 8 | 2 | 0 | 0 | 10
 # A reply to someone else's note rings no bell; Mastodon tells of posts and self-threads only.
-@junit | note-reply-bell-elsewhere | 10 | 2 | 0 | 0 | 12
+@junit | note-reply-bell-elsewhere | 11 | 2 | 0 | 0 | 13
 @junit | note-bell-off | 2 | 0 | 1 | 0 | 3
 # Who shared a note hears of its edit, once each: a reposter and a quoter, never the author who
 # reposted their own note, nor anyone who blocked or muted them or the conversation (one query).
 @junit | note-repost-before-edit | 12 | 2 | 0 | 0 | 14
-@junit | note-quote-before-edit | 12 | 2 | 0 | 0 | 14
+@junit | note-quote-before-edit | 13 | 2 | 0 | 0 | 15
 @junit | note-repost-own-before-edit | 7 | 1 | 0 | 0 | 8
-@junit | note-edit-shared | 11 | 3 | 1 | 0 | 15
+@junit | note-edit-shared | 12 | 3 | 1 | 0 | 16
 # Mastodon's scheduled statuses. Scheduling asks the writer's load (waiting, and on that UTC day)
 # in one query, checks the draft as a post would (moderation, mentioned members), then stores it.
 # Too soon stops before any query. The job posts a due note and drops its row in one transaction.

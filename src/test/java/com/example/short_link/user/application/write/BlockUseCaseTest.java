@@ -6,9 +6,12 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.user.domain.UserBlockEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.BlockRepository;
+import com.example.short_link.user.domain.repository.FollowRepository;
+import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserException;
 import java.util.Optional;
@@ -17,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
@@ -24,12 +28,16 @@ class BlockUseCaseTest {
 
   @Mock private UserRepository userRepository;
   @Mock private BlockRepository blockRepository;
+  @Mock private FollowRepository followRepository;
+  @Mock private FollowRequestRepository followRequests;
+  @Mock private ApplicationEventPublisher events;
 
   private BlockUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new BlockUseCase(userRepository, blockRepository);
+    useCase =
+        new BlockUseCase(userRepository, blockRepository, followRepository, followRequests, events);
   }
 
   private UserEntity user(long id, String username) {
@@ -57,6 +65,19 @@ class BlockUseCaseTest {
     useCase.block(9L, "bob");
 
     verify(blockRepository, never()).save(any());
+  }
+
+  @Test
+  void blockEndsTheFollowAndAnyRequestEitherWay() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(followRequests.delete(9L, 2L)).thenReturn(0);
+    when(followRequests.delete(2L, 9L)).thenReturn(1);
+
+    useCase.block(9L, "bob");
+
+    verify(followRepository).deleteBetween(9L, 2L);
+    verify(events).publishEvent(new FollowRequestSettledEvent(9L, 2L, null));
+    verify(events, never()).publishEvent(new FollowRequestSettledEvent(2L, 9L, null));
   }
 
   @Test

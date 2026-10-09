@@ -31,4 +31,6 @@ public interface FollowRepository {
   Map<Long, Long> countFollowersByIdIn(Collection<Long> followingIds);
 
   int deleteAllInvolving(Long userId);
+
+  int deleteBetween(Long a, Long b);
 }

@@ -42,8 +42,12 @@ class FollowRequestRepositoryAdapter implements FollowRequestRepository {
   public int approveAll(Long followingId) {
     em.createNativeQuery(
             "INSERT IGNORE INTO user_follow (follower_id, following_id, created_at)"
-                + " SELECT follower_id, following_id, :now FROM follow_request"
-                + " WHERE following_id = :owner")
+                + " SELECT r.follower_id, r.following_id, :now FROM follow_request r"
+                + " JOIN users u ON u.id = r.follower_id AND u.deleted_at IS NULL"
+                + " WHERE r.following_id = :owner"
+                + " AND NOT EXISTS (SELECT 1 FROM user_block b"
+                + " WHERE (b.blocker_id = :owner AND b.blocked_id = r.follower_id)"
+                + " OR (b.blocker_id = r.follower_id AND b.blocked_id = :owner))")
         .setParameter("now", Instant.now())
         .setParameter("owner", followingId)
         .executeUpdate();
