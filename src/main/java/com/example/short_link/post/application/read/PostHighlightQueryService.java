@@ -30,12 +30,11 @@ public class PostHighlightQueryService {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
 
-  public List<HighlightView> listForPost(Long postId) {
+  public List<HighlightView> listForPost(Long postId, Long viewerId) {
     if (postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
       return List.of();
     }
-    List<PostHighlightEntity> highlights =
-        highlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(postId);
+    List<PostHighlightEntity> highlights = highlightRepository.findHeardByPostId(postId, viewerId);
     List<Long> userIds =
         highlights.stream().map(PostHighlightEntity::getUserId).distinct().toList();
     Map<Long, UserEntity> users =
@@ -100,24 +99,24 @@ public class PostHighlightQueryService {
   // 유지한다.
   public HighlightFeedView feed(Long userId, int page, int size, boolean forceGlobal) {
     if (forceGlobal) {
-      return globalFeed(page, size);
+      return globalFeed(userId, page, size);
     }
     List<Long> followingIds = followRepository.findFollowingIds(userId);
     if (followingIds.isEmpty()) {
-      return globalFeed(page, size);
+      return globalFeed(userId, page, size);
     }
 
     List<PostHighlightEntity> highlights =
-        highlightRepository.findByUserIdsOrderByCreatedAtDesc(followingIds, page, size);
+        highlightRepository.findByUserIdsOrderByCreatedAtDesc(followingIds, userId, page, size);
     if (highlights.isEmpty() && page == 0) {
-      return globalFeed(page, size);
+      return globalFeed(userId, page, size);
     }
     return assemble(highlights, page, size, HighlightFeedView.SOURCE_FOLLOWING);
   }
 
-  private HighlightFeedView globalFeed(int page, int size) {
+  private HighlightFeedView globalFeed(Long viewerId, int page, int size) {
     List<PostHighlightEntity> highlights =
-        highlightRepository.findRecentOnPublishedPosts(page, size);
+        highlightRepository.findRecentOnPublishedPosts(viewerId, page, size);
     return assemble(highlights, page, size, HighlightFeedView.SOURCE_GLOBAL);
   }
 

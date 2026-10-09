@@ -73,24 +73,24 @@ class PostHighlightReplyQueryServiceTest {
   void aReplyLinksOnlyTheMembersItMentions() {
     when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(50L, 60L)));
     when(postRepository.findById(60L)).thenReturn(Optional.of(post(60L, true)));
-    when(replyRepository.findAllByHighlightIdOrderByCreatedAtAsc(50L))
+    when(replyRepository.findHeardByHighlightId(50L, null))
         .thenReturn(List.of(reply(10L, 1L, "@bob 이 문장 @ghost 도")));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
     when(userRepository.findActiveByUsernameIn(java.util.Set.of("bob", "ghost")))
         .thenReturn(List.of(user(2L, "bob")));
 
-    assertThat(service.listForHighlight(50L).get(0).mentions()).containsExactly("bob");
+    assertThat(service.listForHighlight(50L, null).get(0).mentions()).containsExactly("bob");
   }
 
   @Test
   void listForHighlightAttributesRepliesAndNullsMissingAuthor() {
     when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(50L, 60L)));
     when(postRepository.findById(60L)).thenReturn(Optional.of(post(60L, true)));
-    when(replyRepository.findAllByHighlightIdOrderByCreatedAtAsc(50L))
+    when(replyRepository.findHeardByHighlightId(50L, null))
         .thenReturn(List.of(reply(10L, 1L, "동의해요"), reply(11L, 999L, "익명 답글")));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
 
-    List<HighlightReplyView> views = service.listForHighlight(50L);
+    List<HighlightReplyView> views = service.listForHighlight(50L, null);
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
@@ -104,7 +104,7 @@ class PostHighlightReplyQueryServiceTest {
     when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(50L, 60L)));
     when(postRepository.findById(60L)).thenReturn(Optional.of(post(60L, false)));
 
-    assertThat(service.listForHighlight(50L)).isEmpty();
+    assertThat(service.listForHighlight(50L, null)).isEmpty();
     verifyNoInteractions(replyRepository);
   }
 
@@ -113,7 +113,7 @@ class PostHighlightReplyQueryServiceTest {
   void emptyWhenHighlightMissing() {
     when(highlightRepository.findById(50L)).thenReturn(Optional.empty());
 
-    assertThat(service.listForHighlight(50L)).isEmpty();
+    assertThat(service.listForHighlight(50L, null)).isEmpty();
     verifyNoInteractions(replyRepository);
   }
 }

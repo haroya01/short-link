@@ -11,8 +11,6 @@ import org.springframework.data.repository.query.Param;
 public interface JpaPostHighlightReplyRepository
     extends JpaRepository<PostHighlightReplyEntity, Long> {
 
-  List<PostHighlightReplyEntity> findAllByHighlightIdOrderByCreatedAtAsc(Long highlightId);
-
   @Modifying
   @Query("delete from PostHighlightReplyEntity r where r.highlightId = :highlightId")
   int deleteAllByHighlightId(@Param("highlightId") Long highlightId);

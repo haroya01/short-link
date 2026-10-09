@@ -11,7 +11,6 @@ import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesEntry;
 import com.example.short_link.post.domain.SeriesItemType;
@@ -73,11 +72,9 @@ class PublicPostQueryServiceTest {
     p1.publish();
     PostEntity p2 = new PostEntity(author.getId(), "post-2", "Post 2", "ja");
     p2.publish();
-    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(
-            author.getId(), PostStatus.PUBLISHED))
-        .thenReturn(List.of(p1, p2));
+    when(postRepository.findPublishedByAuthor(author.getId(), null)).thenReturn(List.of(p1, p2));
 
-    PublicPostListView response = service.listPublicPosts("john");
+    PublicPostListView response = service.listPublicPosts("john", null);
 
     assertThat(response.author().username()).isEqualTo("john");
     assertThat(response.posts()).hasSize(2);
@@ -88,11 +85,9 @@ class PublicPostQueryServiceTest {
   void listNormalizesUsername() {
     UserEntity author = authorWithUsername("john");
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
-    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(
-            author.getId(), PostStatus.PUBLISHED))
-        .thenReturn(List.of());
+    when(postRepository.findPublishedByAuthor(author.getId(), null)).thenReturn(List.of());
 
-    service.listPublicPosts("  JOHN  ");
+    service.listPublicPosts("  JOHN  ", null);
 
     org.mockito.Mockito.verify(userRepository).findByUsername("john");
   }
@@ -101,7 +96,7 @@ class PublicPostQueryServiceTest {
   void listUnknownUsernameThrowsProfileNotFound() {
     when(userRepository.findByUsername("unknown")).thenReturn(Optional.empty());
 
-    assertThatThrownBy(() -> service.listPublicPosts("unknown"))
+    assertThatThrownBy(() -> service.listPublicPosts("unknown", null))
         .isInstanceOf(ProfileException.class)
         .extracting(e -> ((ProfileException) e).errorCode())
         .isEqualTo(ProfileErrorCode.PROFILE_NOT_FOUND);
@@ -113,7 +108,7 @@ class PublicPostQueryServiceTest {
     author.softDelete();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
 
-    assertThatThrownBy(() -> service.listPublicPosts("john"))
+    assertThatThrownBy(() -> service.listPublicPosts("john", null))
         .isInstanceOf(ProfileException.class)
         .extracting(e -> ((ProfileException) e).errorCode())
         .isEqualTo(ProfileErrorCode.PROFILE_NOT_FOUND);
@@ -433,11 +428,10 @@ class PublicPostQueryServiceTest {
     pinned.pinAt(0);
     PostEntity oldest = new PostEntity(author.getId(), "oldest", "Oldest", "ko");
     oldest.publish();
-    when(postRepository.findAllByUserIdAndStatusOrderByPublishedAtDesc(
-            author.getId(), PostStatus.PUBLISHED))
+    when(postRepository.findPublishedByAuthor(author.getId(), null))
         .thenReturn(List.of(newest, pinned, oldest));
 
-    PublicPostListView response = service.listPublicPosts("john");
+    PublicPostListView response = service.listPublicPosts("john", null);
 
     assertThat(response.posts())
         .extracting(PublicPostListItem::slug)

@@ -7,7 +7,6 @@ import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesEntry;
 import com.example.short_link.post.domain.SeriesItemType;
@@ -48,13 +47,11 @@ public class PublicPostQueryService {
   private final CtaRepository ctaRepository;
   private final ShortLinkUrlBuilder shortLinkUrlBuilder;
 
-  public PublicPostListView listPublicPosts(String username) {
+  public PublicPostListView listPublicPosts(String username, Long viewerId) {
     UserEntity author = resolveAuthor(username);
     // 안정 정렬이므로 고정되지 않은 글은 저장소의 발행 최신순을 유지한다.
     List<PublicPostListItem> posts =
-        postRepository
-            .findAllByUserIdAndStatusOrderByPublishedAtDesc(author.getId(), PostStatus.PUBLISHED)
-            .stream()
+        postRepository.findPublishedByAuthor(author.getId(), viewerId).stream()
             .sorted(PINNED_FIRST)
             .map(PublicPostListItem::from)
             .toList();

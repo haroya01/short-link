@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.repository.FollowingFeedReader;
@@ -29,7 +30,7 @@ class FollowingFeedReaderAdapter implements FollowingFeedReader {
           + " JOIN note n ON n.id = i.ref_id"
           + " WHERE i.item_type = 'NOTE' AND i.series_id IN (:series)"
           + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
-          + HeardSql.authoredBy("n");
+          + HeardSql.heard("n.user_id");
 
   @PersistenceContext private EntityManager em;
 

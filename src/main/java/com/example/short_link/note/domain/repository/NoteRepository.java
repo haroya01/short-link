@@ -22,6 +22,9 @@ public interface NoteRepository {
 
   Optional<NoteEntity> findById(Long id);
 
+  // Empty also when the viewer cannot hear the note's author.
+  Optional<NoteEntity> findHeard(Long id, Long viewerId);
+
   List<NoteEntity> findAllByIdIn(Collection<Long> ids);
 
   void delete(NoteEntity note);

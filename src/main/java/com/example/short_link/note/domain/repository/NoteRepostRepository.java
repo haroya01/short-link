@@ -10,5 +10,7 @@ public interface NoteRepostRepository {
 
   Optional<NoteRepostEntity> delete(Long noteId, Long userId);
 
-  List<Long> recentNoteIdsByUser(Long userId, int offset, int limit);
+  // Nothing when the viewer cannot hear the reposter, and no repost of a note whose author the
+  // viewer cannot hear.
+  List<Long> recentNoteIdsByUser(Long userId, Long viewerId, int offset, int limit);
 }

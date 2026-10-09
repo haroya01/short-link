@@ -304,7 +304,7 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void listCommentsReturnsComments() throws Exception {
-    when(postCommentQueryService.listForPost(5L))
+    when(postCommentQueryService.listForPost(5L, null))
         .thenReturn(
             List.of(
                 new CommentView(

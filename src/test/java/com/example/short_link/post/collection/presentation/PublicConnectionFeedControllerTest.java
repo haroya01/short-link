@@ -47,7 +47,7 @@ class PublicConnectionFeedControllerTest {
             null,
             null,
             null);
-    when(discoverFeedQuery.publicFeed(0, 20))
+    when(discoverFeedQuery.publicFeed(null, 0, 20))
         .thenReturn(new DiscoverFeedView(List.of(item), 0, 20, false, "global"));
 
     mvc.perform(get("/api/v1/public/feed/connections"))
@@ -63,29 +63,29 @@ class PublicConnectionFeedControllerTest {
 
   @Test
   void passesPagingParams() throws Exception {
-    when(discoverFeedQuery.publicFeed(2, 10))
+    when(discoverFeedQuery.publicFeed(null, 2, 10))
         .thenReturn(new DiscoverFeedView(List.of(), 2, 10, false, "global"));
 
     mvc.perform(get("/api/v1/public/feed/connections").param("page", "2").param("size", "10"))
         .andExpect(status().isOk());
 
-    verify(discoverFeedQuery).publicFeed(2, 10);
+    verify(discoverFeedQuery).publicFeed(null, 2, 10);
   }
 
   @Test
   void clampsOversizedPageSize() throws Exception {
-    when(discoverFeedQuery.publicFeed(0, 50))
+    when(discoverFeedQuery.publicFeed(null, 0, 50))
         .thenReturn(new DiscoverFeedView(List.of(), 0, 50, false, "global"));
 
     mvc.perform(get("/api/v1/public/feed/connections").param("size", "2000000"))
         .andExpect(status().isOk());
 
-    verify(discoverFeedQuery).publicFeed(0, 50);
+    verify(discoverFeedQuery).publicFeed(null, 0, 50);
   }
 
   @Test
   void emptyFeedReturnsEmptyItems() throws Exception {
-    when(discoverFeedQuery.publicFeed(0, 20))
+    when(discoverFeedQuery.publicFeed(null, 0, 20))
         .thenReturn(new DiscoverFeedView(List.of(), 0, 20, false, "global"));
 
     mvc.perform(get("/api/v1/public/feed/connections"))

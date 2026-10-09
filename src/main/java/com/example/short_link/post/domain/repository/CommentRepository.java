@@ -14,6 +14,9 @@ public interface CommentRepository {
 
   List<CommentEntity> findAllByPostIdOrderByCreatedAtAsc(Long postId);
 
+  // A reply stays out with its parent when the viewer cannot hear the parent's writer.
+  List<CommentEntity> findHeardByPostId(Long postId, Long viewerId);
+
   List<CommentEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
   List<CommentEntity> findAllByParentId(Long parentId);

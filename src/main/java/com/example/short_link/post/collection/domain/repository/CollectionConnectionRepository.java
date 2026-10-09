@@ -13,10 +13,12 @@ import java.util.Optional;
 
 public interface CollectionConnectionRepository {
 
+  // A connection stays out when the viewer cannot hear its curator or whoever wrote what it
+  // connects: a post's author, a highlight's writer and its post's author, a note's author.
   List<DiscoverConnectionRow> findPublicConnectionsByOwners(
-      Collection<Long> ownerIds, int page, int size);
+      Collection<Long> ownerIds, Long viewerId, int page, int size);
 
-  List<DiscoverConnectionRow> findRecentPublicConnections(int page, int size);
+  List<DiscoverConnectionRow> findRecentPublicConnections(Long viewerId, int page, int size);
 
   CollectionConnectionEntity save(CollectionConnectionEntity connection);
 

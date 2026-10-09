@@ -14,7 +14,8 @@ public interface PostHighlightReplyRepository {
 
   void delete(PostHighlightReplyEntity reply);
 
-  List<PostHighlightReplyEntity> findAllByHighlightIdOrderByCreatedAtAsc(Long highlightId);
+  // Empty when the viewer cannot hear the highlight's writer: replies stay out with their parent.
+  List<PostHighlightReplyEntity> findHeardByHighlightId(Long highlightId, Long viewerId);
 
   int deleteAllByHighlightId(Long highlightId);
 

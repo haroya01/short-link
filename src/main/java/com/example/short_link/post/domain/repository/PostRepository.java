@@ -40,7 +40,8 @@ public interface PostRepository {
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
+  // Empty when the viewer cannot hear the author.
+  List<PostEntity> findPublishedByAuthor(Long authorId, Long viewerId);
 
   List<PostEntity> findUserAnalyticsPosts(
       Long userId, int page, int size, PostPerformanceSort sort);
@@ -80,7 +81,7 @@ public interface PostRepository {
 
   long countPublishedByTag(Long viewerId, String tag);
 
-  List<PostEntity> findPublishedQuotingNote(Long noteId, int offset, int limit);
+  List<PostEntity> findPublishedQuotingNote(Long noteId, Long viewerId, int offset, int limit);
 
   List<PostEntity> searchPublishedByRelevance(
       Long viewerId, String query, String lang, int page, int size);

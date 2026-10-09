@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.PostEntity;
@@ -93,9 +94,8 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(
-      Long userId, PostStatus status) {
-    return jpa.findAllByUserIdAndStatusOrderByPublishedAtDesc(userId, status);
+  public List<PostEntity> findPublishedByAuthor(Long authorId, Long viewerId) {
+    return jpa.findPublishedByAuthor(authorId, HeardSql.viewer(viewerId), Instant.now());
   }
 
   private static final List<PostStatus> ANALYTICS_STATUSES =
@@ -215,8 +215,10 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findPublishedQuotingNote(Long noteId, int offset, int limit) {
-    return jpa.findPublishedQuotingNote(noteId, offset, limit);
+  public List<PostEntity> findPublishedQuotingNote(
+      Long noteId, Long viewerId, int offset, int limit) {
+    return jpa.findPublishedQuotingNote(
+        noteId, HeardSql.viewer(viewerId), Instant.now(), offset, limit);
   }
 
   @Override

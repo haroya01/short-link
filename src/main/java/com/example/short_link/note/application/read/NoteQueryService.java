@@ -147,7 +147,8 @@ public class NoteQueryService {
         page,
         size,
         viewerId,
-        (offset, limit) -> inOrder(reposts.recentNoteIdsByUser(author.id(), offset, limit)));
+        (offset, limit) ->
+            inOrder(reposts.recentNoteIdsByUser(author.id(), viewerId, offset, limit)));
   }
 
   // A repost shows under its reposter; if the reposter's account is gone the note leaves the feed
@@ -252,12 +253,12 @@ public class NoteQueryService {
   public NoteThreadView thread(Long noteId, Long viewerId) {
     NoteEntity note =
         notes
-            .findById(noteId)
+            .findHeard(noteId, viewerId)
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
     List<NoteEntity> batch = new ArrayList<>();
     batch.add(note);
     if (note.getInReplyToId() != null) {
-      notes.findById(note.getInReplyToId()).ifPresent(batch::add);
+      notes.findHeard(note.getInReplyToId(), viewerId).ifPresent(batch::add);
     }
     batch.addAll(notes.replies(noteId, viewerId, MAX_REPLIES));
     List<Long> chain =

@@ -61,7 +61,7 @@ class PublicPostControllerTest {
                     true),
                 new PublicPostListItem(
                     2L, "post-2", "Post 2", null, null, "ja", List.of(), 0L, NOW, null, false)));
-    when(publicPostQueryService.listPublicPosts("john")).thenReturn(response);
+    when(publicPostQueryService.listPublicPosts("john", null)).thenReturn(response);
 
     mvc.perform(get("/api/v1/public/profiles/john/posts"))
         .andExpect(status().isOk())
@@ -75,7 +75,7 @@ class PublicPostControllerTest {
 
   @Test
   void listUnknownUsernameReturns404() throws Exception {
-    when(publicPostQueryService.listPublicPosts("ghost"))
+    when(publicPostQueryService.listPublicPosts("ghost", null))
         .thenThrow(new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "ghost"));
 
     mvc.perform(get("/api/v1/public/profiles/ghost/posts"))

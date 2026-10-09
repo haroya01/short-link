@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import jakarta.persistence.LockModeType;
@@ -44,7 +45,14 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p WHERE p.user_id = :authorId AND p.status = 'PUBLISHED'"
+              + HeardSql.POST_AUTHOR
+              + " ORDER BY p.published_at DESC")
+  List<PostEntity> findPublishedByAuthor(
+      @Param("authorId") Long authorId, @Param("viewer") long viewer, @Param("now") Instant now);
 
   // 지표가 같아도 페이지 순서가 안정되도록 어댑터에서 ID 내림차순을 추가한다.
   List<PostEntity> findByUserIdAndStatusIn(
@@ -339,8 +347,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       nativeQuery = true,
       value =
           "SELECT p.* FROM post_note_quote q JOIN posts p ON p.id = q.post_id "
-              + "WHERE q.note_id = :noteId AND p.status = 'PUBLISHED' "
-              + "ORDER BY p.published_at DESC, p.id DESC LIMIT :limit OFFSET :offset")
+              + "WHERE q.note_id = :noteId AND p.status = 'PUBLISHED'"
+              + HeardSql.POST_AUTHOR
+              + " ORDER BY p.published_at DESC, p.id DESC LIMIT :limit OFFSET :offset")
   List<PostEntity> findPublishedQuotingNote(
-      @Param("noteId") Long noteId, @Param("offset") int offset, @Param("limit") int limit);
+      @Param("noteId") Long noteId,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
+      @Param("offset") int offset,
+      @Param("limit") int limit);
 }
