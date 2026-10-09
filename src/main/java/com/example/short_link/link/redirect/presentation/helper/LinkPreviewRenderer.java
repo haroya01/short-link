@@ -12,15 +12,24 @@ public class LinkPreviewRenderer {
 
   private final LinkPreviewQueryService previews;
 
-  public String render(LinkEntity link, String shortUrl, long clickCount) {
-    return render(link, shortUrl, clickCount, true);
+  public enum Scope {
+    DESTINATION,
+    WITHOUT_DESTINATION_URL,
+    KURL_CARD_ONLY
   }
 
-  public String render(
-      LinkEntity link, String shortUrl, long clickCount, boolean revealDestination) {
-    LinkPreviewData preview = previews.find(link, shortUrl, clickCount);
+  public String render(LinkEntity link, String shortUrl, long clickCount) {
+    return render(link, shortUrl, clickCount, Scope.DESTINATION);
+  }
+
+  public String render(LinkEntity link, String shortUrl, long clickCount, Scope scope) {
+    LinkPreviewData preview =
+        scope == Scope.KURL_CARD_ONLY
+            ? previews.findWithoutDestination(link, shortUrl, clickCount)
+            : previews.find(link, shortUrl, clickCount);
+    boolean revealDestination = scope == Scope.DESTINATION;
     String original = preview.originalUrl();
-    // 제목이 없을 때 목적지 주소로 대신 채우는데, 공개 전에는 그게 곧 누출이다.
+    // 제목이 없을 때 목적지 주소로 대신 채우는데, 목적지를 숨길 때는 그게 곧 누출이다.
     String title =
         !revealDestination && preview.title().equals(original) ? shortUrl : preview.title();
     String description = preview.description();

@@ -7,6 +7,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.application.dto.OgMetadata;
 import com.example.short_link.link.application.properties.OgFetchProperties;
@@ -45,7 +46,7 @@ class LinkOgFetchServiceTest {
             repository,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            new LinkCacheEviction(cacheManager),
+            new LinkCacheEviction(cacheManager, mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(3, 30, true));
 
     listener.fetchAfterCommit(new ShortCode("abc1234"), "https://example.com/x");
@@ -76,7 +77,7 @@ class LinkOgFetchServiceTest {
             repository,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            new LinkCacheEviction(new NoOpCacheManager()),
+            new LinkCacheEviction(new NoOpCacheManager(), mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(1, 30, true));
 
     listener.fetchAfterCommit(new ShortCode("zzz1234"), "https://example.com/none");
@@ -100,7 +101,7 @@ class LinkOgFetchServiceTest {
             repository,
             mock(LinkOgMetadataRepository.class),
             new SimpleMeterRegistry(),
-            new LinkCacheEviction(new NoOpCacheManager()),
+            new LinkCacheEviction(new NoOpCacheManager(), mock(ProfileCacheInvalidator.class)),
             new OgFetchProperties(3, 30, true));
 
     listener.fetchAfterCommit(new ShortCode("gone1234"), "https://example.com/x");

@@ -55,7 +55,7 @@ public class LinkProtectionService {
     link.setMaxViews(maxViews);
     access.changeMaxViews(maxViews);
     accessControlRepository.save(access);
-    linkCacheEviction.evictAfterCommit(shortCode);
+    linkCacheEviction.evictAfterCommit(link);
     return new LinkProtectionResult(
         link.getShortCode(), link.hasPassword(), link.getMaxViews(), link.getViewCount());
   }

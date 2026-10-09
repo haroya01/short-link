@@ -1,6 +1,8 @@
 package com.example.short_link.link.application;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.transaction.AfterCommit;
+import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.ShortCode;
 import java.util.Collection;
 import java.util.List;
@@ -20,10 +22,24 @@ public class LinkCacheEviction {
   static final String CACHE_NAME = "link";
 
   private final CacheManager cacheManager;
+  private final ProfileCacheInvalidator profiles;
 
   public void evictAfterCommit(ShortCode shortCode) {
     if (shortCode == null) return;
     evictAllAfterCommit(List.of(shortCode));
+  }
+
+  public void evictAfterCommit(LinkEntity link) {
+    evictLinksAfterCommit(List.of(link));
+  }
+
+  public void evictLinksAfterCommit(Collection<LinkEntity> links) {
+    evictAllAfterCommit(links.stream().map(LinkEntity::getShortCode).toList());
+    links.stream()
+        .filter(LinkEntity::isOnProfile)
+        .map(LinkEntity::getUserId)
+        .distinct()
+        .forEach(profiles::evictByUserId);
   }
 
   public void evictAllAfterCommit(Collection<ShortCode> shortCodes) {

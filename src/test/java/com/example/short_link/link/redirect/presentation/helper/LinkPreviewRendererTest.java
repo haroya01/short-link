@@ -58,14 +58,50 @@ class LinkPreviewRendererTest {
     LinkEntity titled = link("https://secret.example.com/launch");
     titled.applyOgMetadata("Spring drop", "Coming soon", null, Instant.now());
 
-    String bare = renderer.render(untitled, "https://kurl.me/abcdefg", 0L, false);
-    String card = renderer.render(titled, "https://kurl.me/abcdefg", 0L, false);
+    String bare =
+        renderer.render(
+            untitled,
+            "https://kurl.me/abcdefg",
+            0L,
+            LinkPreviewRenderer.Scope.WITHOUT_DESTINATION_URL);
+    String card =
+        renderer.render(
+            titled,
+            "https://kurl.me/abcdefg",
+            0L,
+            LinkPreviewRenderer.Scope.WITHOUT_DESTINATION_URL);
 
     assertThat(bare).doesNotContain("secret.example.com");
     assertThat(bare).contains("<meta property=\"og:title\" content=\"https://kurl.me/abcdefg\">");
     assertThat(card).doesNotContain("secret.example.com");
     assertThat(card).contains("<meta property=\"og:title\" content=\"Spring drop\">");
     assertThat(card).doesNotContain("http-equiv=\"refresh\"");
+  }
+
+  @Test
+  void aRestrictedLinksCardCarriesNothingFromTheDestination() {
+    LinkEntity scraped = link("https://secret.example.com/once");
+    scraped.applyOgMetadata(
+        "Secret page", "Secret description", "https://secret.example.com/og.jpg", Instant.now());
+    LinkEntity named = link("https://secret.example.com/once");
+    named.applyOgMetadata(
+        "Secret page", "Secret description", "https://secret.example.com/og.jpg", Instant.now());
+    named.changeOgOverride("Owner's title", null, null);
+
+    String bare =
+        renderer.render(
+            scraped, "https://kurl.me/once1", 4L, LinkPreviewRenderer.Scope.KURL_CARD_ONLY);
+    String titled =
+        renderer.render(
+            named, "https://kurl.me/once1", 4L, LinkPreviewRenderer.Scope.KURL_CARD_ONLY);
+
+    assertThat(bare)
+        .doesNotContain("secret.example.com", "Secret page", "Secret description", "refresh")
+        .contains("<meta property=\"og:title\" content=\"https://kurl.me/once1\">")
+        .contains("https://kurl.me/once1/og.png?c=4");
+    assertThat(titled)
+        .doesNotContain("secret.example.com", "Secret page", "Secret description")
+        .contains("<meta property=\"og:title\" content=\"Owner&#39;s title\">");
   }
 
   @Test

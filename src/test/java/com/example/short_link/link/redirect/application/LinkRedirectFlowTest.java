@@ -421,4 +421,74 @@ class LinkRedirectFlowTest {
 
     assertThat(outcome).isInstanceOf(RedirectOutcome.Redirect.class);
   }
+
+  @Test
+  void aBlockedCountryIsTurnedAwayBeforeAViewIsSpent() {
+    when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation("JP", null, null));
+    CachedLink link =
+        new CachedLink(
+            new LinkId(7L),
+            null,
+            7L,
+            "https://control",
+            null,
+            null,
+            null,
+            null,
+            "JP",
+            false,
+            1,
+            null,
+            List.of());
+
+    RedirectOutcome outcome =
+        flow.execute(link, null, LinkRedirectSupport.visit(null, null, null, null, null, req()));
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.Blocked.class);
+    verifyNoInteractions(incrementViewCount, clickRecorder);
+  }
+
+  @Test
+  void aPrefetchOfACountedLinkSpendsNothingAndGetsNoDestination() {
+    when(geoIpResolver.resolve(any())).thenReturn(new GeoLocation(null, null, null));
+
+    RedirectOutcome outcome =
+        flow.execute(
+            linkWithMaxViewsAndExpired(1, null),
+            null,
+            LinkRedirectSupport.visit(
+                null, null, null, null, null, reqWith("Sec-Purpose", "prefetch")));
+
+    assertThat(outcome).isInstanceOf(RedirectOutcome.PrefetchDeclined.class);
+    verifyNoInteractions(incrementViewCount, clickRecorder);
+  }
+
+  @Test
+  void aCrawlerIsRefusedWhereAPersonWouldBe() {
+    when(geoIpResolver.resolve("203.0.113.1")).thenReturn(new GeoLocation("JP", null, null));
+    when(geoIpResolver.resolve("198.51.100.1")).thenReturn(new GeoLocation("US", null, null));
+    CachedLink blocked = linkWithBlockList("JP");
+
+    assertThat(flow.refuseCrawler(blocked, null, "203.0.113.1"))
+        .containsInstanceOf(RedirectOutcome.Blocked.class);
+    assertThat(flow.refuseCrawler(blocked, null, "198.51.100.1")).isEmpty();
+
+    LinkEntity spent = new LinkEntity("https://control", "spent01", 7L, null);
+    spent.setMaxViews(1);
+    spent.incrementViewCount();
+    assertThatThrownBy(
+            () -> flow.refuseCrawler(linkWithMaxViewsAndExpired(1, null), spent, "198.51.100.1"))
+        .isInstanceOfSatisfying(
+            LinkException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED));
+    spent.updateExpiredMessage("Sold out");
+    assertThat(flow.refuseCrawler(linkWithMaxViewsAndExpired(1, null), spent, "198.51.100.1"))
+        .contains(new RedirectOutcome.ExpiredWithMessage("Sold out"));
+
+    LinkEntity fresh = new LinkEntity("https://control", "fresh01", 7L, null);
+    fresh.setMaxViews(1);
+    assertThat(flow.refuseCrawler(linkWithMaxViewsAndExpired(1, null), fresh, "198.51.100.1"))
+        .isEmpty();
+    verifyNoInteractions(incrementViewCount);
+  }
 }

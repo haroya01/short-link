@@ -15,7 +15,7 @@ import java.util.Map;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 @Service
 @RequiredArgsConstructor
@@ -29,14 +29,20 @@ public class UpdateLinkUseCase {
   private final CreateLinkValidator validator;
   private final MyLinkReader linkReader;
   private final LinkCacheEviction linkCacheEviction;
+  private final TransactionTemplate transaction;
 
-  @Transactional
   public MyLink execute(UpdateLinkCommand command) {
+    // Safe Browsing HTTP calls stay outside the transaction to avoid holding a JDBC connection.
+    if (command.originalUrl() != null) {
+      validator.validateUrl(command.originalUrl());
+    }
+    return transaction.execute(status -> apply(command));
+  }
+
+  private MyLink apply(UpdateLinkCommand command) {
     LinkEntity link = ownership.requireOwned(command.userId(), command.shortCode());
     boolean urlChanged = false;
     if (command.originalUrl() != null && !command.originalUrl().equals(link.getOriginalUrl())) {
-      // Safe Browsing HTTP calls stay outside this transaction to avoid holding a JDBC connection.
-      validator.rejectSelfReference(command.originalUrl());
       link.changeOriginalUrl(command.originalUrl());
       urlChanged = true;
     }
@@ -72,7 +78,7 @@ public class UpdateLinkUseCase {
             urlChanged,
             "expiresAtChanged",
             command.expiresAt() != null || command.clearExpiresAt()));
-    linkCacheEviction.evictAfterCommit(command.shortCode());
+    linkCacheEviction.evictAfterCommit(link);
     return linkReader.read(link);
   }
 }

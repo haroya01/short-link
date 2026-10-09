@@ -13,7 +13,6 @@ import com.example.short_link.campaign.domain.repository.CampaignBatchRepository
 import com.example.short_link.link.application.LinkCacheEviction;
 import com.example.short_link.link.domain.LinkEntity;
 import com.example.short_link.link.domain.LinkId;
-import com.example.short_link.link.domain.ShortCode;
 import com.example.short_link.link.domain.repository.LinkRepository;
 import com.example.short_link.link.expiration.domain.repository.LinkExpirationPolicyRepository;
 import java.time.Instant;
@@ -45,17 +44,17 @@ class BatchPolicyApplierTest {
 
     assertThat(first.getExpiredRedirectUrl()).isEqualTo("https://example.com/next");
     assertThat(second.getExpiresAt()).isEqualTo(END);
-    verify(cache).evictAllAfterCommit(List.of(new ShortCode("endone1"), new ShortCode("endtwo2")));
+    verify(cache).evictLinksAfterCommit(List.of(first, second));
   }
 
   @Test
   void anExpirePolicyDropsTheChangedLinkFromTheRedirectCache() {
     CampaignEntity campaign = campaign(CampaignPostEndAction.EXPIRE, null);
-    batchLink(campaign, 3L, "expire3");
+    LinkEntity expired = batchLink(campaign, 3L, "expire3");
 
     applier.apply(campaign, END);
 
-    verify(cache).evictAllAfterCommit(List.of(new ShortCode("expire3")));
+    verify(cache).evictLinksAfterCommit(List.of(expired));
   }
 
   @Test
@@ -66,7 +65,7 @@ class BatchPolicyApplierTest {
     applier.apply(campaign, END);
 
     assertThat(kept.getExpiresAt()).isNull();
-    verify(cache).evictAllAfterCommit(List.of());
+    verify(cache).evictLinksAfterCommit(List.of());
   }
 
   private CampaignEntity campaign(CampaignPostEndAction action, String redirectUrl) {

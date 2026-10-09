@@ -63,7 +63,7 @@ class LinkModerationServiceTest {
     assertThat(saved.getValue().getReason()).isEqualTo(LinkDisableReason.ABUSE_REPORT);
     assertThat(saved.getValue().getDisabledBy()).isEqualTo(1L);
     assertThat(saved.getValue().getDisabledAt()).isEqualTo(NOW);
-    verify(linkCacheEviction).evictAfterCommit(link.getShortCode());
+    verify(linkCacheEviction).evictAfterCommit(link);
   }
 
   @Test
@@ -76,7 +76,7 @@ class LinkModerationServiceTest {
     assertThat(service.disable(5L, LinkDisableReason.ADMIN, 1L)).isFalse();
 
     verify(moderations, never()).insert(any());
-    verify(linkCacheEviction, never()).evictAfterCommit(any());
+    verify(linkCacheEviction, never()).evictAfterCommit(any(LinkEntity.class));
   }
 
   @Test
@@ -103,7 +103,7 @@ class LinkModerationServiceTest {
     assertThat(service.enable(ShortCode.of("abc123"))).isTrue();
 
     verify(moderations).delete(moderation);
-    verify(linkCacheEviction).evictAfterCommit(link.getShortCode());
+    verify(linkCacheEviction).evictAfterCommit(link);
   }
 
   @Test

@@ -15,6 +15,7 @@ import com.example.short_link.link.stats.application.ClickRecorder;
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
 import java.util.Locale;
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -34,6 +35,16 @@ public class LinkRedirectFlow {
     if (link.visitOptions().opensLaterThan(clock.instant())) {
       return new RedirectOutcome.NotYetOpen(link.visitOptions().opensAt());
     }
+    String clientCountry = geoIpResolver.resolve(visit.clientIp()).countryCode();
+    if (link.isBlockedFor(clientCountry)) {
+      countBlocked(clientCountry);
+      return new RedirectOutcome.Blocked();
+    }
+    // Prefetch headers come from the client, so a prefetch that skips the count gets no
+    // destination.
+    if (visit.prefetch() && maxViews(link, entity) != null) {
+      return new RedirectOutcome.PrefetchDeclined();
+    }
     try {
       enforceViewLimit(link, entity);
     } catch (LinkException e) {
@@ -42,13 +53,6 @@ public class LinkRedirectFlow {
         return new RedirectOutcome.ExpiredWithMessage(expiredMessage);
       }
       throw e;
-    }
-    String clientCountry = geoIpResolver.resolve(visit.clientIp()).countryCode();
-    if (link.isBlockedFor(clientCountry)) {
-      meterRegistry
-          .counter("redirect.blocked", "country", clientCountry == null ? "unknown" : clientCountry)
-          .increment();
-      return new RedirectOutcome.Blocked();
     }
     UserAgentInfo ua = userAgentClassifier.classify(visit.userAgent());
     CachedLink.Picked picked = link.pick(clientCountry, normalizeOs(ua.osName()), ua.deviceClass());
@@ -79,6 +83,36 @@ public class LinkRedirectFlow {
     return new RedirectOutcome.Redirect(picked, link.visitOptions());
   }
 
+  // A crawler never spends a view, but once the limit is spent or its country is blocked it gets
+  // what a person would.
+  public Optional<RedirectOutcome> refuseCrawler(
+      CachedLink link, LinkEntity entity, String clientIp) {
+    if (link.blockedCountries() != null) {
+      String clientCountry = geoIpResolver.resolve(clientIp).countryCode();
+      if (link.isBlockedFor(clientCountry)) {
+        countBlocked(clientCountry);
+        return Optional.of(new RedirectOutcome.Blocked());
+      }
+    }
+    if (entity != null && entity.isViewLimitReached()) {
+      if (entity.getExpiredMessage() != null) {
+        return Optional.of(new RedirectOutcome.ExpiredWithMessage(entity.getExpiredMessage()));
+      }
+      throw new LinkException(LinkErrorCode.LINK_VIEW_LIMIT_EXCEEDED, entity.getShortCode());
+    }
+    return Optional.empty();
+  }
+
+  private void countBlocked(String clientCountry) {
+    meterRegistry
+        .counter("redirect.blocked", "country", clientCountry == null ? "unknown" : clientCountry)
+        .increment();
+  }
+
+  private static Integer maxViews(CachedLink link, LinkEntity entity) {
+    return entity == null ? link.maxViews() : entity.getMaxViews();
+  }
+
   private static String normalizeOs(String osName) {
     if (osName == null) return null;
     String lower = osName.toLowerCase(Locale.ROOT);
@@ -91,7 +125,7 @@ public class LinkRedirectFlow {
   }
 
   private void enforceViewLimit(CachedLink link, LinkEntity entity) {
-    Integer maxViews = entity == null ? link.maxViews() : entity.getMaxViews();
+    Integer maxViews = maxViews(link, entity);
     if (maxViews == null) return;
     int updated = incrementViewCount.execute(new IncrementViewCountCommand(link.linkId()));
     if (updated == 0) {
