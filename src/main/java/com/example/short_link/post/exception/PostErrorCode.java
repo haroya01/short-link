@@ -19,6 +19,9 @@ public enum PostErrorCode {
   SERIES_NOT_FOUND(HttpStatus.NOT_FOUND, "series not found: %s"),
   SERIES_SLUG_CONFLICT(HttpStatus.CONFLICT, "series slug already used: %s"),
   SERIES_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "series permission denied"),
+  SERIES_NOTE_NOT_FOUND(HttpStatus.NOT_FOUND, "note not found: %s"),
+  SERIES_NOTE_NOT_SHARED(
+      HttpStatus.CONFLICT, "only public or unlisted notes can join a series: %s"),
   COMMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "comment not found: %s"),
   COMMENT_PERMISSION_DENIED(HttpStatus.FORBIDDEN, "comment permission denied"),
   COMMENT_PARENT_INVALID(HttpStatus.BAD_REQUEST, "parent comment invalid"),

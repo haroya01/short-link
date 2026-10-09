@@ -4,16 +4,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
+import com.example.short_link.note.domain.NoteSeries;
+import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.repository.NoteBookmarkRepository;
 import com.example.short_link.note.domain.repository.NoteLikeRepository;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
+import com.example.short_link.note.domain.repository.NoteSeriesReader;
 import com.example.short_link.note.exception.NoteException;
 import java.util.List;
 import java.util.Map;
@@ -38,6 +43,7 @@ class NoteQueryServiceTest {
   @Mock private NoteBookmarkRepository bookmarks;
   @Mock private NotePeopleReader people;
   @Mock private NoteViews views;
+  @Mock private NoteSeriesReader noteSeries;
   @InjectMocks private NoteQueryService service;
 
   private static NoteEntity note(Long id, Long inReplyTo) {
@@ -226,6 +232,58 @@ class NoteQueryServiceTest {
     assertThat(thread.note().id()).isEqualTo(2L);
     assertThat(thread.parent().id()).isEqualTo(1L);
     assertThat(thread.replies()).extracting(NoteView::id).containsExactly(3L);
+  }
+
+  private NoteEntity threadOf(NoteEntity main) {
+    when(notes.findById(main.getId())).thenReturn(Optional.of(main));
+    when(notes.replies(main.getId(), 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
+    when(views.of(List.of(main), 9L)).thenReturn(List.of(view(main.getId(), null, null)));
+    return main;
+  }
+
+  @Test
+  void aThreadNamesItsSeriesAndWhatComesBeforeAndAfterTheNote() {
+    threadOf(note(2L, null));
+    when(noteSeries.containing(2L))
+        .thenReturn(
+            Optional.of(
+                new NoteSeries(
+                    5L,
+                    "guide",
+                    "Guide",
+                    List.of(
+                        new NoteSeries.Entry("POST", 10L, "intro", "Intro"),
+                        new NoteSeries.Entry("NOTE", 2L, null, "n2"),
+                        new NoteSeries.Entry("NOTE", 3L, null, "n3")))));
+
+    assertThat(service.thread(2L, 9L).series())
+        .isEqualTo(
+            new NoteSeriesNavView(
+                "guide",
+                "Guide",
+                2,
+                3,
+                new NoteSeriesNavView.ItemLink("POST", "intro", null, "Intro"),
+                new NoteSeriesNavView.ItemLink("NOTE", null, 3L, "n3")));
+  }
+
+  @Test
+  void aNoteOutsideAnySeriesOrHiddenFromItsReadersHasNoSeries() {
+    threadOf(note(2L, null));
+    when(noteSeries.containing(2L)).thenReturn(Optional.empty());
+    assertThat(service.thread(2L, 9L).series()).isNull();
+
+    NoteEntity unreadable = threadOf(note(4L, null));
+    unreadable.showTo(NoteVisibility.PRIVATE);
+    assertThat(service.thread(4L, 9L).series()).isNull();
+    verify(noteSeries, never()).containing(4L);
+
+    assertThat(
+            NoteSeriesNavView.of(
+                new NoteSeries(
+                    5L, "guide", "Guide", List.of(new NoteSeries.Entry("NOTE", 3L, null, "n3"))),
+                2L))
+        .isNull();
   }
 
   @Test

@@ -4,6 +4,7 @@ import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
@@ -12,6 +13,7 @@ import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostReadRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostRevisionRepository;
+import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
@@ -34,6 +36,7 @@ public class DeletePostUseCase {
   private final PostBookmarkRepository postBookmarkRepository;
   private final PostHighlightRepository postHighlightRepository;
   private final PostReadRepository postReadRepository;
+  private final SeriesItemRepository seriesItemRepository;
   private final ProfileCacheInvalidator cacheEviction;
   private final CollectionConnectionCleaner connectionCleaner;
 
@@ -71,6 +74,7 @@ public class DeletePostUseCase {
     postHighlightRepository.deleteAllByPostId(post.getId());
     postReadRepository.deleteAllByPostId(post.getId());
     connectionCleaner.purgeForPost(post.getId());
+    seriesItemRepository.deleteByRef(SeriesItemType.POST, post.getId());
     postRepository.delete(post);
     // 마지막 공개 글을 삭제하면 프로필의 블로그 진입점도 사라져야 한다.
     cacheEviction.evictByUserId(post.getUserId());

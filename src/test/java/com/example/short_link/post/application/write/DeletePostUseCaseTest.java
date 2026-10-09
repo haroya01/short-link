@@ -8,6 +8,7 @@ import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
@@ -16,6 +17,7 @@ import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostReadRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.domain.repository.PostRevisionRepository;
+import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import java.util.List;
@@ -39,6 +41,7 @@ class DeletePostUseCaseTest {
   @Mock private PostBookmarkRepository postBookmarkRepository;
   @Mock private PostHighlightRepository postHighlightRepository;
   @Mock private PostReadRepository postReadRepository;
+  @Mock private SeriesItemRepository seriesItemRepository;
   @Mock private ProfileCacheInvalidator cacheEviction;
   @Mock private CollectionConnectionCleaner connectionCleaner;
 
@@ -57,6 +60,7 @@ class DeletePostUseCaseTest {
             postBookmarkRepository,
             postHighlightRepository,
             postReadRepository,
+            seriesItemRepository,
             cacheEviction,
             connectionCleaner);
   }
@@ -81,6 +85,7 @@ class DeletePostUseCaseTest {
             connectionCleaner,
             postHighlightRepository,
             postReadRepository,
+            seriesItemRepository,
             postRepository);
     order.verify(postBlockRepository).deleteAllByPostId(42L);
     order.verify(postRevisionRepository).deleteAllByPostId(42L);
@@ -93,6 +98,7 @@ class DeletePostUseCaseTest {
     order.verify(postReadRepository).deleteAllByPostId(42L);
     // The post's own connections go before the post row.
     order.verify(connectionCleaner).purgeForPost(42L);
+    order.verify(seriesItemRepository).deleteByRef(SeriesItemType.POST, 42L);
     order.verify(postRepository).delete(post);
   }
 

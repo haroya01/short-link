@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipInputStream;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
 class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
 
@@ -22,9 +23,10 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
     writeSecondDraft(second);
     publish("author-second-publish", second);
     long series = organizeSeries(first, second);
+    long note = weaveANoteIntoTheSeries(series, first, second);
     readAndMeasure(first, series);
     reviseAndRestore(first);
-    removeSeriesAndPosts(series, first, second);
+    removeSeriesAndPosts(series, note, first, second);
     verifyContracts();
   }
 
@@ -254,6 +256,69 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
     return series;
   }
 
+  private long weaveANoteIntoTheSeries(long series, long first, long second) throws Exception {
+    long note =
+        step(
+                "author-series-note-create",
+                "POST",
+                "/api/v1/notes",
+                author,
+                Map.of("body", "An aside between the two stories"),
+                201)
+            .path("id")
+            .asLong();
+    step(
+        "author-series-order-items",
+        "PUT",
+        "/api/v1/series/" + series + "/items",
+        author,
+        Map.of(
+            "items",
+            List.of(
+                Map.of("type", "POST", "id", second),
+                Map.of("type", "NOTE", "id", note),
+                Map.of("type", "POST", "id", first))),
+        200);
+    assertThat(seriesItems(series))
+        .containsExactly("POST:" + second, "NOTE:" + note, "POST:" + first);
+    step(
+        "author-series-order-posts-keeps-notes",
+        "PUT",
+        "/api/v1/series/" + series + "/posts",
+        author,
+        Map.of("postIds", List.of(first, second)),
+        200);
+    assertThat(seriesItems(series))
+        .containsExactly("POST:" + first, "NOTE:" + note, "POST:" + second);
+    assertThat(
+            jdbc.queryForList(
+                "SELECT id FROM posts WHERE series_id = ? ORDER BY series_order",
+                Long.class,
+                series))
+        .containsExactly(first, second);
+    JsonNode detail =
+        get(
+            "reader-public-series-detail-with-note",
+            "/api/v1/public/profiles/" + author.username() + "/series/engineering",
+            null);
+    assertThat(detail.path("posts").size()).isEqualTo(2);
+    assertThat(detail.path("items").get(1).path("note").path("id").asLong()).isEqualTo(note);
+    JsonNode nav =
+        get("reader-note-series-navigation", "/api/v1/public/notes/" + note, null).path("series");
+    assertThat(nav.path("position").asInt()).isEqualTo(2);
+    assertThat(nav.path("total").asInt()).isEqualTo(3);
+    assertThat(nav.path("next").path("slug").asText()).isEqualTo("second-story");
+    return note;
+  }
+
+  private List<String> seriesItems(long series) {
+    return jdbc.queryForList(
+        "SELECT CONCAT(item_type, ':', ref_id) FROM series_item WHERE series_id = ?"
+            + " ORDER BY position",
+        String.class,
+        series);
+  }
+
   private void readAndMeasure(long first, long series) throws Exception {
     assertThat(
             get(
@@ -265,12 +330,13 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
                 .path("id")
                 .asLong())
         .isEqualTo(first);
-    assertThat(
-            get("reader-public-post-series-navigation", publicPostPath("first-story"), null)
-                .path("series")
-                .path("total")
-                .asInt())
-        .isEqualTo(2);
+    JsonNode nav =
+        get("reader-public-post-series-navigation", publicPostPath("first-story"), null)
+            .path("series");
+    assertThat(nav.path("total").asInt()).isEqualTo(2);
+    assertThat(nav.path("next").path("slug").asText()).isEqualTo("second-story");
+    assertThat(nav.path("itemTotal").asInt()).isEqualTo(3);
+    assertThat(nav.path("nextItem").path("type").asText()).isEqualTo("NOTE");
     assertThat(
             rawStep(
                 "reader-public-markdown-download",
@@ -375,7 +441,8 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
         .isEqualTo(2);
   }
 
-  private void removeSeriesAndPosts(long series, long first, long second) throws Exception {
+  private void removeSeriesAndPosts(long series, long note, long first, long second)
+      throws Exception {
     step(
         "reader-series-unsubscribe",
         "DELETE",
@@ -384,9 +451,12 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
         null,
         200);
     assertThat(count("series_subscription", "series_id = ?", series)).isZero();
+    step("author-series-note-delete", "DELETE", "/api/v1/notes/" + note, author, null, 204);
+    assertThat(count("series_item", "item_type = 'NOTE' AND ref_id = ?", note)).isZero();
     step("author-series-delete", "DELETE", "/api/v1/series/" + series, author, null, 204);
     assertThat(count("series", "id = ?", series)).isZero();
     assertThat(count("posts", "series_id = ?", series)).isZero();
+    assertThat(count("series_item", "series_id = ?", series)).isZero();
     step("author-post-delete", "DELETE", postPath(first), author, null, 204);
     assertThat(count("posts", "id = ?", first)).isZero();
     assertThat(count("post_block", "post_id = ?", first)).isZero();

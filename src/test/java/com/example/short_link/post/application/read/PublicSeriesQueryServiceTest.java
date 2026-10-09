@@ -9,7 +9,12 @@ import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesItemEntity;
+import com.example.short_link.post.domain.SeriesItemType;
+import com.example.short_link.post.domain.SeriesNote;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemReader;
+import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.domain.repository.SeriesSubscriptionRepository;
 import com.example.short_link.profile.exception.ProfileException;
@@ -17,6 +22,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -32,6 +38,8 @@ class PublicSeriesQueryServiceTest {
   @Mock private SeriesRepository seriesRepository;
   @Mock private PostRepository postRepository;
   @Mock private SeriesSubscriptionRepository subscriptionRepository;
+  @Mock private SeriesItemRepository seriesItemRepository;
+  @Mock private SeriesItemReader seriesItemReader;
 
   private PublicSeriesQueryService service;
 
@@ -39,7 +47,12 @@ class PublicSeriesQueryServiceTest {
   void setUp() {
     service =
         new PublicSeriesQueryService(
-            userRepository, seriesRepository, postRepository, subscriptionRepository);
+            userRepository,
+            seriesRepository,
+            postRepository,
+            subscriptionRepository,
+            seriesItemRepository,
+            seriesItemReader);
   }
 
   private PostEntity publishedPost(long userId, String slug, String title) {
@@ -134,6 +147,81 @@ class PublicSeriesQueryServiceTest {
     assertThat(view.series()).hasSize(1);
     assertThat(view.series().get(0).slug()).isEqualTo("filled");
     assertThat(view.series().get(0).postCount()).isEqualTo(1);
+    assertThat(view.series().get(0).itemCount()).isEqualTo(1);
+  }
+
+  private static SeriesNote seriesNote(long id, boolean shared) {
+    return new SeriesNote(
+        id, 1L, "note " + id, null, Instant.parse("2026-10-09T00:00:00Z"), shared);
+  }
+
+  @Test
+  void listKeepsASeriesOfNotesAloneButNotOneOfUnreadableNotes() {
+    UserEntity author = author("john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    SeriesEntity notesOnly = new SeriesEntity(author.getId(), "notes", "Notes");
+    ReflectionTestUtils.setField(notesOnly, "id", 1L);
+    SeriesEntity hidden = new SeriesEntity(author.getId(), "hidden", "Hidden");
+    ReflectionTestUtils.setField(hidden, "id", 2L);
+    when(seriesRepository.findAllByUserIdOrderByCreatedAtDesc(author.getId()))
+        .thenReturn(List.of(notesOnly, hidden));
+    when(postRepository.findAllBySeriesIdInOrderBySeriesOrderAsc(List.of(1L, 2L)))
+        .thenReturn(List.of());
+    when(seriesItemRepository.findBySeriesIdIn(List.of(1L, 2L)))
+        .thenReturn(
+            List.of(
+                new SeriesItemEntity(1L, SeriesItemType.NOTE, 40L, 0),
+                new SeriesItemEntity(1L, SeriesItemType.NOTE, 41L, 1),
+                new SeriesItemEntity(2L, SeriesItemType.NOTE, 42L, 0)));
+    when(seriesItemReader.notes(List.of(40L, 41L, 42L)))
+        .thenReturn(
+            Map.of(
+                40L,
+                seriesNote(40L, true),
+                41L,
+                seriesNote(41L, true),
+                42L,
+                seriesNote(42L, false)));
+
+    PublicSeriesListView view = service.listPublicSeries("john");
+
+    assertThat(view.series()).extracting(PublicSeriesListItem::slug).containsExactly("notes");
+    assertThat(view.series().get(0).postCount()).isZero();
+    assertThat(view.series().get(0).itemCount()).isEqualTo(2);
+  }
+
+  @Test
+  void detailListsPublishedPostsAndReadableNotesInOneOrder() {
+    UserEntity author = author(1L, "john");
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    SeriesEntity series = series(42L, author.getId(), "my-series", "My Series");
+    when(seriesRepository.findByUserIdAndSlug(author.getId(), "my-series"))
+        .thenReturn(Optional.of(series));
+    PostEntity published = publishedPost(author.getId(), "a", "A");
+    ReflectionTestUtils.setField(published, "id", 10L);
+    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
+            series.getId(), PostStatus.PUBLISHED))
+        .thenReturn(List.of(published));
+    when(seriesItemRepository.findBySeriesId(42L))
+        .thenReturn(
+            List.of(
+                new SeriesItemEntity(42L, SeriesItemType.NOTE, 40L, 0),
+                new SeriesItemEntity(42L, SeriesItemType.POST, 11L, 1),
+                new SeriesItemEntity(42L, SeriesItemType.POST, 10L, 2),
+                new SeriesItemEntity(42L, SeriesItemType.NOTE, 41L, 3),
+                new SeriesItemEntity(42L, SeriesItemType.NOTE, 43L, 4)));
+    when(seriesItemReader.notes(List.of(40L, 41L, 43L)))
+        .thenReturn(Map.of(40L, seriesNote(40L, true), 41L, seriesNote(41L, false)));
+
+    PublicSeriesDetail detail = service.findPublicSeries("john", "my-series");
+
+    assertThat(detail.items()).extracting(PublicSeriesItem::type).containsExactly("NOTE", "POST");
+    assertThat(detail.items().get(0).note().id()).isEqualTo(40L);
+    assertThat(detail.items().get(0).note().excerpt()).isEqualTo("note 40");
+    assertThat(detail.items().get(1).post().slug()).isEqualTo("a");
+    assertThat(detail.posts()).hasSize(1);
+    assertThat(detail.series().postCount()).isEqualTo(1);
+    assertThat(detail.series().itemCount()).isEqualTo(2);
   }
 
   @Test

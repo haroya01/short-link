@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -23,16 +24,19 @@ class DeleteSeriesUseCaseTest {
   @Mock private SeriesOwnership seriesOwnership;
   @Mock private SeriesRepository seriesRepository;
   @Mock private PostRepository postRepository;
+  @Mock private SeriesItemRepository seriesItemRepository;
 
   private DeleteSeriesUseCase useCase;
 
   @BeforeEach
   void setUp() {
-    useCase = new DeleteSeriesUseCase(seriesOwnership, seriesRepository, postRepository);
+    useCase =
+        new DeleteSeriesUseCase(
+            seriesOwnership, seriesRepository, postRepository, seriesItemRepository);
   }
 
   @Test
-  void detachesMembersThenDeletes() {
+  void detachesMembersAndDropsItemsThenDeletes() {
     SeriesEntity series = new SeriesEntity(7L, "s", "S");
     ReflectionTestUtils.setField(series, "id", 5L);
     when(seriesOwnership.requireOwnedForUpdate(7L, 5L)).thenReturn(series);
@@ -45,10 +49,12 @@ class DeleteSeriesUseCaseTest {
     useCase.execute(new DeleteSeriesCommand(7L, 5L));
 
     assertThat(member.getSeriesId()).isNull();
-    InOrder writes = inOrder(seriesOwnership, postRepository, seriesRepository);
+    InOrder writes =
+        inOrder(seriesOwnership, postRepository, seriesItemRepository, seriesRepository);
     writes.verify(seriesOwnership).requireOwnedForUpdate(7L, 5L);
     writes.verify(postRepository).findSeriesMembersAndRequestedForUpdate(5L, List.of());
     writes.verify(postRepository).save(member);
+    writes.verify(seriesItemRepository).deleteBySeriesId(5L);
     writes.verify(seriesRepository).delete(series);
     writes.verifyNoMoreInteractions();
   }

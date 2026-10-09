@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemRepository;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +17,7 @@ public class DeleteSeriesUseCase {
   private final SeriesOwnership seriesOwnership;
   private final SeriesRepository seriesRepository;
   private final PostRepository postRepository;
+  private final SeriesItemRepository seriesItemRepository;
 
   @Transactional
   public void execute(DeleteSeriesCommand cmd) {
@@ -26,6 +28,7 @@ public class DeleteSeriesUseCase {
       post.clearSeries();
       postRepository.save(post);
     }
+    seriesItemRepository.deleteBySeriesId(series.getId());
     seriesRepository.delete(series);
   }
 }

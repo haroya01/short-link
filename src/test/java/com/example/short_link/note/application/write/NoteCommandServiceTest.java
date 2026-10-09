@@ -22,6 +22,7 @@ import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
+import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.note.application.read.NoteView;
@@ -80,6 +81,7 @@ class NoteCommandServiceTest {
   @Mock private UserModerationGuard moderation;
   @Mock private UserBlockChecker blocks;
   @Mock private CollectionConnectionCleaner connections;
+  @Mock private SeriesItemCleaner seriesItems;
   @Mock private ApplicationEventPublisher events;
 
   private NoteCommandService service() {
@@ -96,6 +98,7 @@ class NoteCommandServiceTest {
         moderation,
         blocks,
         connections,
+        seriesItems,
         events,
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
@@ -818,6 +821,7 @@ class NoteCommandServiceTest {
 
     verify(likes).deleteAllByNoteId(1L);
     verify(connections).purgeForNote(1L);
+    verify(seriesItems).purgeForNote(1L);
     verify(notes).delete(mine);
     verify(events).publishEvent(new NoteDeletedEvent(1L, 7L, List.of("k")));
   }

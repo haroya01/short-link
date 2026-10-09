@@ -9,12 +9,15 @@ import com.example.short_link.post.application.write.CreateSeriesCommand;
 import com.example.short_link.post.application.write.CreateSeriesUseCase;
 import com.example.short_link.post.application.write.DeleteSeriesCommand;
 import com.example.short_link.post.application.write.DeleteSeriesUseCase;
+import com.example.short_link.post.application.write.SetSeriesItemsCommand;
+import com.example.short_link.post.application.write.SetSeriesItemsUseCase;
 import com.example.short_link.post.application.write.SetSeriesPostsCommand;
 import com.example.short_link.post.application.write.SetSeriesPostsUseCase;
 import com.example.short_link.post.application.write.UpdateSeriesCommand;
 import com.example.short_link.post.application.write.UpdateSeriesUseCase;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.presentation.request.CreateSeriesRequest;
+import com.example.short_link.post.presentation.request.SetSeriesItemsRequest;
 import com.example.short_link.post.presentation.request.SetSeriesPostsRequest;
 import com.example.short_link.post.presentation.request.UpdateSeriesRequest;
 import jakarta.validation.Valid;
@@ -42,6 +45,7 @@ public class SeriesController {
   private final UpdateSeriesUseCase updateSeries;
   private final DeleteSeriesUseCase deleteSeries;
   private final SetSeriesPostsUseCase setSeriesPosts;
+  private final SetSeriesItemsUseCase setSeriesItems;
   private final SeriesQueryService seriesQueryService;
   private final PostReadStatsService readStats;
 
@@ -84,6 +88,15 @@ public class SeriesController {
       @PathVariable Long id,
       @Valid @RequestBody SetSeriesPostsRequest request) {
     setSeriesPosts.execute(new SetSeriesPostsCommand(userId, id, request.postIds()));
+    return seriesQueryService.getMine(userId, id);
+  }
+
+  @PutMapping("/{id}/items")
+  public SeriesDetailView setItems(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @Valid @RequestBody SetSeriesItemsRequest request) {
+    setSeriesItems.execute(new SetSeriesItemsCommand(userId, id, request.toCommandItems()));
     return seriesQueryService.getMine(userId, id);
   }
 

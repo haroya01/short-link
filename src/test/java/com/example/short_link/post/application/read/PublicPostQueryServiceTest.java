@@ -12,8 +12,12 @@ import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.SeriesEntity;
+import com.example.short_link.post.domain.SeriesEntry;
+import com.example.short_link.post.domain.SeriesItemType;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
+import com.example.short_link.post.domain.repository.SeriesItemReader;
 import com.example.short_link.post.domain.repository.SeriesRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -28,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 @ExtendWith(MockitoExtension.class)
 class PublicPostQueryServiceTest {
@@ -36,6 +41,7 @@ class PublicPostQueryServiceTest {
   @Mock private PostRepository postRepository;
   @Mock private PostBlockRepository postBlockRepository;
   @Mock private SeriesRepository seriesRepository;
+  @Mock private SeriesItemReader seriesItemReader;
   @Mock private CtaRepository ctaRepository;
 
   private PublicPostQueryService service;
@@ -48,6 +54,7 @@ class PublicPostQueryServiceTest {
             postRepository,
             postBlockRepository,
             seriesRepository,
+            seriesItemReader,
             ctaRepository,
             new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me"));
   }
@@ -130,6 +137,76 @@ class PublicPostQueryServiceTest {
     assertThat(detail.post().slug()).isEqualTo("first-post");
     assertThat(detail.blocks()).hasSize(1);
     assertThat(detail.blocks().get(0).type()).isEqualTo("PARAGRAPH");
+  }
+
+  private PostEntity publishedSeriesPost(UserEntity author, long id) {
+    PostEntity post = new PostEntity(author.getId(), "part-" + id, "Part " + id, "ko");
+    ReflectionTestUtils.setField(post, "id", id);
+    post.publish();
+    post.assignToSeries(5L, 2);
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    when(postRepository.findByUserIdAndSlug(author.getId(), "part-" + id))
+        .thenReturn(Optional.of(post));
+    SeriesEntity series = new SeriesEntity(author.getId(), "guide", "Guide");
+    ReflectionTestUtils.setField(series, "id", 5L);
+    when(seriesRepository.findById(5L)).thenReturn(Optional.of(series));
+    return post;
+  }
+
+  @Test
+  void seriesNavWalksThePostsAloneAndTheItemsTogether() {
+    UserEntity author = authorWithUsername("john");
+    publishedSeriesPost(author, 2L);
+    when(seriesItemReader.readableEntries(5L))
+        .thenReturn(
+            List.of(
+                new SeriesEntry(SeriesItemType.POST, 1L, "part-1", "Part 1"),
+                new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note"),
+                new SeriesEntry(SeriesItemType.POST, 2L, "part-2", "Part 2"),
+                new SeriesEntry(SeriesItemType.NOTE, 41L, null, "another note")));
+
+    PublicPostSeriesNav nav = service.findPublicPost("john", "part-2").series();
+
+    assertThat(nav.slug()).isEqualTo("guide");
+    assertThat(nav.position()).isEqualTo(2);
+    assertThat(nav.total()).isEqualTo(2);
+    assertThat(nav.prev()).isEqualTo(new PublicPostSeriesNav.NavLink("part-1", "Part 1"));
+    assertThat(nav.next()).isNull();
+    assertThat(nav.itemPosition()).isEqualTo(3);
+    assertThat(nav.itemTotal()).isEqualTo(4);
+    assertThat(nav.prevItem())
+        .isEqualTo(new PublicPostSeriesNav.ItemLink("NOTE", null, 40L, "a note"));
+    assertThat(nav.nextItem())
+        .isEqualTo(new PublicPostSeriesNav.ItemLink("NOTE", null, 41L, "another note"));
+  }
+
+  @Test
+  void seriesNavLinksAPostItemBySlug() {
+    UserEntity author = authorWithUsername("john");
+    publishedSeriesPost(author, 2L);
+    when(seriesItemReader.readableEntries(5L))
+        .thenReturn(
+            List.of(
+                new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note"),
+                new SeriesEntry(SeriesItemType.POST, 2L, "part-2", "Part 2"),
+                new SeriesEntry(SeriesItemType.POST, 3L, "part-3", "Part 3")));
+
+    PublicPostSeriesNav nav = service.findPublicPost("john", "part-2").series();
+
+    assertThat(nav.position()).isEqualTo(1);
+    assertThat(nav.prev()).isNull();
+    assertThat(nav.nextItem())
+        .isEqualTo(new PublicPostSeriesNav.ItemLink("POST", "part-3", null, "Part 3"));
+  }
+
+  @Test
+  void seriesNavIsLeftOutWhenThePostIsNotReadableInItsSeries() {
+    UserEntity author = authorWithUsername("john");
+    publishedSeriesPost(author, 2L);
+    when(seriesItemReader.readableEntries(5L))
+        .thenReturn(List.of(new SeriesEntry(SeriesItemType.NOTE, 40L, null, "a note")));
+
+    assertThat(service.findPublicPost("john", "part-2").series()).isNull();
   }
 
   @Test
