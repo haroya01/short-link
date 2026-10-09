@@ -16,7 +16,8 @@ class PostLinkClickReaderAdapter implements PostLinkClickReader {
   @Override
   public long countByPostId(Long postId) {
     return ((Number)
-            em.createNativeQuery("SELECT COUNT(*) FROM click_event WHERE post_id = :postId")
+            em.createNativeQuery(
+                    "SELECT COUNT(*) FROM click_event WHERE post_id = :postId AND is_bot = FALSE")
                 .setParameter("postId", postId)
                 .getSingleResult())
         .longValue();
@@ -26,7 +27,8 @@ class PostLinkClickReaderAdapter implements PostLinkClickReader {
   public long countByPostIdSince(Long postId, Instant since) {
     return ((Number)
             em.createNativeQuery(
-                    "SELECT COUNT(*) FROM click_event WHERE post_id = :postId AND clicked_at >= :since")
+                    "SELECT COUNT(*) FROM click_event WHERE post_id = :postId AND is_bot = FALSE "
+                        + "AND clicked_at >= :since")
                 .setParameter("postId", postId)
                 .setParameter("since", since)
                 .getSingleResult())
@@ -38,7 +40,7 @@ class PostLinkClickReaderAdapter implements PostLinkClickReader {
     return ((Number)
             em.createNativeQuery(
                     "SELECT COUNT(*) FROM click_event c JOIN posts p ON p.id = c.post_id "
-                        + "WHERE p.user_id = :userId")
+                        + "WHERE p.user_id = :userId AND c.is_bot = FALSE")
                 .setParameter("userId", userId)
                 .getSingleResult())
         .longValue();
@@ -49,7 +51,7 @@ class PostLinkClickReaderAdapter implements PostLinkClickReader {
     return ((Number)
             em.createNativeQuery(
                     "SELECT COUNT(*) FROM click_event c JOIN posts p ON p.id = c.post_id "
-                        + "WHERE p.user_id = :userId AND c.clicked_at >= :since")
+                        + "WHERE p.user_id = :userId AND c.is_bot = FALSE AND c.clicked_at >= :since")
                 .setParameter("userId", userId)
                 .setParameter("since", since)
                 .getSingleResult())
@@ -63,7 +65,7 @@ class PostLinkClickReaderAdapter implements PostLinkClickReader {
         em.createNativeQuery(
                 "SELECT l.short_code, l.original_url, COUNT(*) AS clicks "
                     + "FROM click_event c JOIN link l ON l.id = c.link_id "
-                    + "WHERE c.post_id = :postId "
+                    + "WHERE c.post_id = :postId AND c.is_bot = FALSE "
                     + "GROUP BY l.id, l.short_code, l.original_url "
                     + "ORDER BY clicks DESC, l.id DESC")
             .setParameter("postId", postId)
