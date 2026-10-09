@@ -145,6 +145,10 @@ class CampaignLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
     assertThat(text("SELECT status FROM campaign WHERE id = ?", id)).isEqualTo("ENDED");
     assertThat(text("SELECT expired_redirect_url FROM link WHERE id = ?", linkId))
         .isEqualTo("https://example.com/next-launch");
+    String shortCode = first.path("shortCode").asText();
+    awaitStoredExpiry(linkId);
+    var ended = raw("campaign-ended-visit", null, "GET", "/" + shortCode, null, null, 302);
+    assertThat(ended.headers().firstValue("Location")).contains("https://example.com/next-launch");
     request(
         "campaign-ended-policy-update",
         owner,
@@ -159,10 +163,25 @@ class CampaignLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
     request("campaign-policy-reapply", owner, "POST", path + "/reapply-policy", null, 200);
     assertThat(text("SELECT expired_redirect_url FROM link WHERE id = ?", linkId))
         .isEqualTo("https://example.com/follow-up");
+    var reapplied = raw("campaign-reapplied-visit", null, "GET", "/" + shortCode, null, null, 302);
+    assertThat(reapplied.headers().firstValue("Location"))
+        .contains("https://example.com/follow-up");
     request("campaign-batch-delete", owner, "DELETE", path + "/batches/" + batchId, null, 204);
     assertThat(number("SELECT COUNT(*) FROM campaign_batch WHERE id = ?", batchId)).isZero();
+    raw("campaign-batch-deleted-visit", null, "GET", "/" + shortCode, null, null, 404);
     request("campaign-archive", owner, "DELETE", path, null, 200);
     assertThat(text("SELECT status FROM campaign WHERE id = ?", id)).isEqualTo("ARCHIVED");
+    var trailingSlash =
+        raw(
+            "campaign-ended-visit-trailing-slash",
+            null,
+            "GET",
+            "/" + bulk.get(0).path("shortCode").asText() + "/",
+            null,
+            null,
+            302);
+    assertThat(trailingSlash.headers().firstValue("Location"))
+        .contains("https://example.com/follow-up");
   }
 
   private long createCampaign(String contractId, String name) throws Exception {
@@ -186,6 +205,14 @@ class CampaignLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
             .asLong();
     assertThat(number("SELECT owner_id FROM campaign WHERE id = ?", id)).isEqualTo(owner.id());
     return id;
+  }
+
+  // TIMESTAMP(0) rounds the end instant, so the link stays open until that stored second passes.
+  private void awaitStoredExpiry(long linkId) throws InterruptedException {
+    long expiresAt = number("SELECT UNIX_TIMESTAMP(expires_at) FROM link WHERE id = ?", linkId);
+    while (Instant.now().getEpochSecond() < expiresAt) {
+      Thread.sleep(50);
+    }
   }
 
   private Map<String, Object> batch(String name, int quantity) {

@@ -139,6 +139,8 @@
 @junit | campaign-batch-bulk | 11 | 14 | 4 | 0 | 29
 @junit | campaign-batch-create | 7 | 7 | 2 | 0 | 16
 @junit | campaign-batch-delete | 3 | 0 | 0 | 2 | 5
+# The deleted batch's link left the redirect cache, so its code misses the cached-row read.
+@junit | campaign-batch-deleted-visit | 1 | 0 | 0 | 0 | 1
 @junit | campaign-batch-detail | 3 | 0 | 0 | 0 | 3
 @junit | campaign-batch-list | 5 | 0 | 0 | 0 | 5
 @junit | campaign-batch-qr | 3 | 0 | 0 | 0 | 3
@@ -153,9 +155,14 @@
 @junit | campaign-detail-foreign-denied | 1 | 0 | 0 | 0 | 1
 @junit | campaign-end | 9 | 0 | 7 | 0 | 16
 @junit | campaign-ended-policy-update | 2 | 0 | 1 | 0 | 3
+# An ended link: the cached row and destinations, the link row for its follow-up page, and the
+# custom-domain owner check before forwarding there.
+@junit | campaign-ended-visit | 4 | 0 | 0 | 0 | 4
+@junit | campaign-ended-visit-trailing-slash | 4 | 0 | 0 | 0 | 4
 @junit | campaign-list | 3 | 0 | 0 | 0 | 3
 @junit | campaign-policy-reapply | 9 | 0 | 6 | 0 | 15
 @junit | campaign-policy-update | 2 | 0 | 1 | 0 | 3
+@junit | campaign-reapplied-visit | 4 | 0 | 0 | 0 | 4
 @junit | campaign-recommendations | 10 | 0 | 0 | 0 | 10
 @junit | campaign-scheduled-activate-tick | 2 | 0 | 1 | 0 | 3
 @junit | campaign-scheduled-batch-create | 7 | 7 | 2 | 0 | 16
