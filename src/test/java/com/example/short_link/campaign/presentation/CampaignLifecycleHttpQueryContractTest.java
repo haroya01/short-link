@@ -142,11 +142,12 @@ class CampaignLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
         200);
     assertThat(text("SELECT post_end_action FROM campaign WHERE id = ?", id)).isEqualTo("REDIRECT");
     request("campaign-end", owner, "POST", path + "/end", null, 200);
+    Instant endReturnedAt = Instant.now();
     assertThat(text("SELECT status FROM campaign WHERE id = ?", id)).isEqualTo("ENDED");
     assertThat(text("SELECT expired_redirect_url FROM link WHERE id = ?", linkId))
         .isEqualTo("https://example.com/next-launch");
     String shortCode = first.path("shortCode").asText();
-    awaitStoredExpiry(linkId);
+    awaitPast(endReturnedAt.plusSeconds(1));
     var ended = raw("campaign-ended-visit", null, "GET", "/" + shortCode, null, null, 302);
     assertThat(ended.headers().firstValue("Location")).contains("https://example.com/next-launch");
     request(
@@ -207,10 +208,10 @@ class CampaignLifecycleHttpQueryContractTest extends LinkJourneyHttpSupport {
     return id;
   }
 
-  // TIMESTAMP(0) rounds the end instant, so the link stays open until that stored second passes.
-  private void awaitStoredExpiry(long linkId) throws InterruptedException {
-    long expiresAt = number("SELECT UNIX_TIMESTAMP(expires_at) FROM link WHERE id = ?", linkId);
-    while (Instant.now().getEpochSecond() < expiresAt) {
+  // link.expires_at is TIMESTAMP(0): the end instant is rounded to the second, up to half a second
+  // later, so the link can stay open briefly after the end request returns.
+  private static void awaitPast(Instant instant) throws InterruptedException {
+    while (Instant.now().isBefore(instant)) {
       Thread.sleep(50);
     }
   }
