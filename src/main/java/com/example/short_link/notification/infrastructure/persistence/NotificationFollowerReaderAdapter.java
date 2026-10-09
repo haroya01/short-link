@@ -14,30 +14,37 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
 
   @PersistenceContext private EntityManager em;
 
+  // A block either way, or the follower muting the author's notices, keeps a follow from hearing of
+  // new writing; a block does not end the follow itself. The time is bound from Java so a mute's
+  // end is compared in UTC.
+  private static final String HEARS_AUTHOR =
+      " AND NOT EXISTS (SELECT 1 FROM user_block b"
+          + " WHERE b.blocker_id = f.follower_id AND b.blocked_id = :id)"
+          + " AND NOT EXISTS (SELECT 1 FROM user_block b"
+          + " WHERE b.blocker_id = :id AND b.blocked_id = f.follower_id)"
+          + " AND NOT EXISTS (SELECT 1 FROM user_mute m"
+          + " WHERE m.user_id = f.follower_id AND m.muted_user_id = :id"
+          + " AND m.hide_notifications AND (m.expires_at IS NULL OR m.expires_at > :now))";
+
   @Override
   public List<Long> followerIdsOf(Long authorUserId) {
     if (authorUserId == null) {
       return List.of();
     }
-    List<?> rows =
-        em.createNativeQuery("SELECT follower_id FROM user_follow WHERE following_id = :id")
-            .setParameter("id", authorUserId)
-            .getResultList();
-    return rows.stream().map(raw -> ((Number) raw).longValue()).toList();
+    return followers(
+        "SELECT f.follower_id FROM user_follow f WHERE f.following_id = :id", authorUserId);
   }
 
-  // The time is bound from Java so a mute's end is compared in UTC.
   @Override
   public List<Long> noteSubscribersOf(Long authorUserId) {
+    return followers(
+        "SELECT f.follower_id FROM user_follow f WHERE f.following_id = :id AND f.notify_notes",
+        authorUserId);
+  }
+
+  private List<Long> followers(String select, Long authorUserId) {
     List<?> rows =
-        em.createNativeQuery(
-                "SELECT f.follower_id FROM user_follow f WHERE f.following_id = :id"
-                    + " AND f.notify_notes"
-                    + " AND NOT EXISTS (SELECT 1 FROM user_block b"
-                    + " WHERE b.blocker_id = f.follower_id AND b.blocked_id = :id)"
-                    + " AND NOT EXISTS (SELECT 1 FROM user_mute m"
-                    + " WHERE m.user_id = f.follower_id AND m.muted_user_id = :id"
-                    + " AND m.hide_notifications AND (m.expires_at IS NULL OR m.expires_at > :now))")
+        em.createNativeQuery(select + HEARS_AUTHOR)
             .setParameter("id", authorUserId)
             .setParameter("now", Instant.now())
             .getResultList();
