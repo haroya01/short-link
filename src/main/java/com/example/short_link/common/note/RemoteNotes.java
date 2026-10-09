@@ -30,6 +30,14 @@ public interface RemoteNotes {
     }
   }
 
+  record Revision(
+      String body,
+      String contentWarning,
+      boolean sensitive,
+      Instant editedAt,
+      List<Media> media,
+      String language) {}
+
   record Target(String uri, Long remoteActorId, boolean shareable) {}
 
   boolean exists(String uri);
@@ -40,13 +48,7 @@ public interface RemoteNotes {
 
   Optional<Long> receive(Received note);
 
-  boolean revise(
-      Long remoteActorId,
-      Long noteId,
-      String body,
-      String contentWarning,
-      boolean sensitive,
-      Instant editedAt);
+  boolean revise(Long remoteActorId, Long noteId, Revision revision);
 
   boolean retract(Long remoteActorId, String uri);
 }

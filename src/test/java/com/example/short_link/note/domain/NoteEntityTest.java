@@ -3,6 +3,7 @@ package com.example.short_link.note.domain;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class NoteEntityTest {
 
@@ -14,5 +15,16 @@ class NoteEntityTest {
     assertThat(new NoteEntity(1L, emoji, null, null).excerpt()).isEqualTo("😀".repeat(80) + "…");
     assertThat(new NoteEntity(1L, "😀".repeat(80), null, null).excerpt())
         .isEqualTo("😀".repeat(80));
+  }
+
+  @Test
+  void aReplyStaysOneWhenItsParentIsGone() {
+    NoteEntity reply = new NoteEntity(1L, "답글", 9L, null);
+    assertThat(reply.isReply()).isTrue();
+    assertThat(reply.isTopLevel()).isFalse();
+
+    ReflectionTestUtils.setField(reply, "inReplyToId", null);
+    assertThat(reply.isTopLevel()).isFalse();
+    assertThat(new NoteEntity(1L, "새 글", null, null).isTopLevel()).isTrue();
   }
 }

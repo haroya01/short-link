@@ -56,13 +56,7 @@ public interface NoteRepository {
 
   Optional<Long> insertRemote(RemoteNoteRow row);
 
-  int reviseRemote(
-      Long remoteActorId,
-      Long noteId,
-      String body,
-      String contentWarning,
-      boolean sensitive,
-      Instant editedAt);
+  Optional<NoteEntity> findRemoteForUpdate(Long remoteActorId, Long noteId);
 
   int deleteRemote(Long remoteActorId, String uri);
 

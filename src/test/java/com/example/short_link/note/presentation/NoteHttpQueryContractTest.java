@@ -1202,9 +1202,31 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     step("note-delete", "DELETE", "/api/v1/notes/" + noteId, writer, null, 204);
     verify(objectStorage, timeout(5_000)).delete(key);
     assertThat(count("note_media", "note_id = ?", noteId)).isZero();
-    assertThat(count("note", "id = ? AND in_reply_to_id IS NULL", replyId)).isEqualTo(1);
+    assertThat(count("note", "id = ? AND in_reply_to_id IS NULL AND reply", replyId)).isEqualTo(1);
     assertThat(count("note", "id = ? AND quoted_note_id IS NULL", quoteId)).isEqualTo(1);
     step("note-thread-gone", "GET", "/api/v1/public/notes/" + noteId, null, null, 404);
+    List<Long> readersNotes = new ArrayList<>();
+    step(
+            "note-profile-orphan",
+            "GET",
+            "/api/v1/public/profiles/" + reader.username() + "/notes",
+            null,
+            null,
+            200)
+        .path("items")
+        .forEach(item -> readersNotes.add(item.path("id").asLong()));
+    assertThat(readersNotes).containsExactly(quoteId);
+    List<Long> rankedAfter = new ArrayList<>();
+    step(
+            "note-trending-orphan",
+            "GET",
+            "/api/v1/public/notes?sort=trending&size=50",
+            null,
+            null,
+            200)
+        .path("items")
+        .forEach(item -> rankedAfter.add(item.path("id").asLong()));
+    assertThat(rankedAfter).contains(quoteId).doesNotContain(replyId);
 
     when(externalMetadata.fetch("https://example.com/essay"))
         .thenReturn(new OgMetadata("An essay", "Why links break", "https://example.com/cover.png"));
@@ -1236,7 +1258,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
             Map.of(
                 "notes",
                 List.of(
-                    Map.of("body", "이어 쓰기 하나"),
+                    Map.of("body", "이어 쓰기 하나", "contentWarning", "결말 포함"),
                     Map.of("body", "이어 쓰기 둘"),
                     Map.of("body", "이어 쓰기 셋"))),
             201);
@@ -1245,6 +1267,14 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     long second = posted.get(1).path("id").asLong();
     long third = posted.get(2).path("id").asLong();
     assertThat(posted.get(1).path("inReplyToId").asLong()).isEqualTo(first);
+    assertThat(
+            count(
+                "note",
+                "id IN (?, ?, ?) AND content_warning = '결말 포함' AND marked_sensitive",
+                first,
+                second,
+                third))
+        .isEqualTo(3);
 
     var parts = step("note-thread-parts", "GET", "/api/v1/public/notes/" + first, null, null, 200);
     List<Long> continuation = new ArrayList<>();
@@ -1260,6 +1290,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
       if (item.path("id").asLong() == first) {
         head = item;
       }
+      assertThat(item.path("id").asLong()).isNotEqualTo(replyId);
     }
     assertThat(head).isNotNull();
     assertThat(head.path("thread").path("total").asInt()).isEqualTo(3);

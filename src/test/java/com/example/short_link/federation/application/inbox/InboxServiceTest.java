@@ -60,6 +60,7 @@ class InboxServiceTest {
   @Mock private RemoteNoteReactions reactions;
   @Mock private RemoteNotePollVotes votes;
   @Mock private RemoteNotes remoteNotes;
+  @Mock private EarlyDeletes earlyDeletes;
   @Mock private FederationFollowingRepository followingRows;
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
@@ -78,6 +79,7 @@ class InboxServiceTest {
         reactions,
         votes,
         remoteNotes,
+        earlyDeletes,
         new RemoteNoteParser(URLS),
         followingRows,
         URLS,
@@ -418,6 +420,124 @@ class InboxServiceTest {
         .add(1L, 42L, Kind.ANNOUNCE, "https://mastodon.example/users/alice/statuses/5/activity");
   }
 
+  private static Optional<NoteSnapshotReader.NoteSnapshot> noteOne(
+      NoteSnapshotReader.Visibility visibility, String body) {
+    return Optional.of(
+        new NoteSnapshotReader.NoteSnapshot(
+            1L,
+            7L,
+            "haroya",
+            body,
+            Instant.parse("2026-10-06T00:00:00Z"),
+            null,
+            null,
+            null,
+            List.of(),
+            null,
+            null,
+            false,
+            visibility));
+  }
+
+  private void noteOneIs(NoteSnapshotReader.Visibility visibility, String body) {
+    when(notes.find(1L)).thenReturn(noteOne(visibility, body));
+  }
+
+  private static String like(String id) {
+    return activity(id, "Like", "\"" + NOTE_URI + "\"");
+  }
+
+  @Test
+  void onlyAPublicOrUnlistedNoteIsBoostedFromElsewhere() {
+    noteOneIs(NoteSnapshotReader.Visibility.PRIVATE, "for followers");
+    when(localActors.byUsername("haroya")).thenReturn(Optional.of(OWNER));
+
+    assertThat(
+            service()
+                .receive(
+                    request(
+                        activity(
+                            "https://mastodon.example/users/alice/statuses/5/activity",
+                            "Announce",
+                            "\"" + NOTE_URI + "\"")),
+                    null))
+        .isEqualTo(InboxOutcome.ignored("unknown-target"));
+    verifyNoInteractions(verifier, reactions);
+  }
+
+  @Test
+  void aFollowersOnlyNoteIsLikedOnlyByAnAcceptedFollowerOrSomeoneItNames() {
+    noteOneIs(NoteSnapshotReader.Visibility.PRIVATE, "for followers");
+    when(localActors.byUsername("haroya")).thenReturn(Optional.of(OWNER));
+    verifiedAs(ALICE_ACTOR);
+    when(followers.accepts(7L, 42L)).thenReturn(false, true);
+    InboxService service = service();
+
+    assertThat(service.receive(request(like(ALICE + "#likes/1")), null))
+        .isEqualTo(InboxOutcome.ignored("unknown-target"));
+    assertThat(service.receive(request(like(ALICE + "#likes/2")), null))
+        .isEqualTo(InboxOutcome.accepted("like"));
+
+    verify(reactions, times(1)).add(any(), any(), any(), any());
+    verify(reactions).add(1L, 42L, Kind.LIKE, ALICE + "#likes/2");
+  }
+
+  @Test
+  void aDirectNoteIsLikedOrVotedOnOnlyBySomeoneItNames() {
+    Optional<NoteSnapshotReader.NoteSnapshot> toBob =
+        noteOne(NoteSnapshotReader.Visibility.DIRECT, "just us @bob@mastodon.example");
+    when(notes.find(1L))
+        .thenReturn(
+            toBob,
+            toBob,
+            noteOne(NoteSnapshotReader.Visibility.DIRECT, "just us @Alice@Mastodon.example"));
+    when(localActors.byUsername("haroya")).thenReturn(Optional.of(OWNER));
+    verifiedAs(ALICE_ACTOR);
+    InboxService service = service();
+
+    assertThat(service.receive(request(like(ALICE + "#likes/1")), null))
+        .isEqualTo(InboxOutcome.ignored("unknown-target"));
+    assertThat(
+            service.receive(
+                request(vote("https://mastodon.example/users/alice#votes/1", "강남", NOTE_URI)),
+                null))
+        .isEqualTo(InboxOutcome.ignored("unknown-target"));
+    assertThat(service.receive(request(like(ALICE + "#likes/2")), null))
+        .isEqualTo(InboxOutcome.accepted("like"));
+
+    verify(reactions, times(1)).add(any(), any(), any(), any());
+    verifyNoInteractions(followers, votes);
+  }
+
+  @Test
+  void aReplyToANoteTheSenderMayNotReadIsKeptWithoutItsParent() {
+    noteOneIs(NoteSnapshotReader.Visibility.PRIVATE, "for followers");
+    verifiedAs(ALICE_ACTOR);
+    when(actorRows.findByPublicIds(Set.of("owner1")))
+        .thenReturn(List.of(new FederationActorEntity(7L, "owner1", "PUB", "enc")));
+    when(followers.accepts(7L, 42L)).thenReturn(false, true);
+    when(remoteNotes.receive(any())).thenReturn(Optional.of(502L), Optional.of(503L));
+    InboxService service = service();
+    String mentionsOwner =
+        ",\"inReplyTo\":\"%s\",\"tag\":[{\"type\":\"Mention\",\"href\":\"%s\"}]"
+            .formatted(NOTE_URI, OWNER_URI);
+
+    assertThat(service.receive(request(note(ALICE + "/statuses/12", mentionsOwner)), null))
+        .isEqualTo(InboxOutcome.accepted("note"));
+    assertThat(service.receive(request(note(ALICE + "/statuses/13", mentionsOwner)), null))
+        .isEqualTo(InboxOutcome.accepted("note"));
+
+    ArgumentCaptor<RemoteNotes.Received> received =
+        ArgumentCaptor.forClass(RemoteNotes.Received.class);
+    verify(remoteNotes, times(2)).receive(received.capture());
+    assertThat(received.getAllValues())
+        .extracting(RemoteNotes.Received::inReplyToLocalId)
+        .containsExactly(null, 1L);
+    assertThat(received.getAllValues())
+        .extracting(RemoteNotes.Received::inReplyToUri)
+        .containsOnly(NOTE_URI);
+  }
+
   @Test
   void reactionsToAnythingButAFederatedNoteAreIgnoredWithoutAKeyFetch() {
     InboxService service = service();
@@ -575,18 +695,45 @@ class InboxServiceTest {
   }
 
   @Test
-  void deletesOfOtherObjectsAreNotHandledYet() {
+  void aDeleteOfSomethingOnAnotherServerIsIgnoredWithoutAKeyFetch() {
     assertThat(
             service()
                 .receive(
                     request(
                         """
                         {"id":"https://mastodon.example/d/1","type":"Delete","actor":"%s",
-                         "object":"https://mastodon.example/statuses/1"}"""
+                         "object":"https://other.example/statuses/1"}"""
                             .formatted(ALICE)),
                     null))
         .isEqualTo(InboxOutcome.ignored("unsupported"));
-    verifyNoInteractions(verifier);
+    verifyNoInteractions(verifier, earlyDeletes);
+  }
+
+  @Test
+  void aDeleteBeforeItsNoteIsRememberedWithTheCachedKeySoTheLateCreateIsDropped() {
+    String uri = ALICE + "/statuses/14";
+    when(verifier.verify(any(), eq(true)))
+        .thenReturn(
+            new InboxVerifier.Result.Rejected("unknown-key"),
+            new InboxVerifier.Result.Verified(ALICE_ACTOR));
+    when(verifier.verify(any(), eq(false)))
+        .thenReturn(new InboxVerifier.Result.Verified(ALICE_ACTOR));
+    when(followingRows.anyAcceptedFollowOf(ALICE)).thenReturn(true);
+    when(earlyDeletes.remembered(42L, uri)).thenReturn(true);
+    InboxService service = service();
+    String delete =
+        activity(
+            uri + "#delete", "Delete", "{\"id\":\"%s\",\"type\":\"Tombstone\"}".formatted(uri));
+
+    assertThat(service.receive(request(delete), null))
+        .isEqualTo(InboxOutcome.ignored("unknown-note"));
+    assertThat(service.receive(request(delete), null))
+        .isEqualTo(InboxOutcome.accepted("delete-early"));
+    assertThat(service.receive(request(note(uri, "")), null))
+        .isEqualTo(InboxOutcome.ignored("deleted"));
+
+    verify(earlyDeletes, times(1)).remember(42L, uri);
+    verify(remoteNotes, never()).receive(any());
   }
 
   private static String vote(String id, String name, String inReplyTo) {
@@ -738,7 +885,17 @@ class InboxServiceTest {
     when(remoteNotes.exists(uri)).thenReturn(true);
     verifiedAs(ALICE_ACTOR);
     when(remoteNotes.revise(
-            42L, 900L, "edited", null, false, Instant.parse("2026-10-07T02:00:00Z")))
+            42L,
+            900L,
+            new RemoteNotes.Revision(
+                "edited",
+                null,
+                false,
+                Instant.parse("2026-10-07T02:00:00Z"),
+                List.of(
+                    new RemoteNotes.Media(
+                        "https://mastodon.example/m/1.png", "a cat", "image/png", null, null)),
+                "ja")))
         .thenReturn(true);
     when(remoteNotes.retract(42L, uri)).thenReturn(true, false);
     InboxService service = service();
@@ -747,7 +904,11 @@ class InboxServiceTest {
         activity(
             uri + "#updates/1",
             "Update",
-            "{\"id\":\"%s\",\"type\":\"Note\",\"attributedTo\":\"%s\",\"content\":\"<p>edited</p>\",\"updated\":\"2026-10-07T02:00:00Z\"}"
+            """
+            {"id":"%s","type":"Note","attributedTo":"%s","content":"<p>edited</p>",
+             "contentMap":{"ja":"<p>edited</p>"},"updated":"2026-10-07T02:00:00Z",
+             "attachment":[{"type":"Document","mediaType":"image/png",
+               "url":"https://mastodon.example/m/1.png","name":"a cat"}]}"""
                 .formatted(uri, ALICE));
     assertThat(service.receive(request(update), null)).isEqualTo(InboxOutcome.accepted("update"));
 

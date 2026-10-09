@@ -9,4 +9,6 @@ public interface NoteMediaRepository {
   List<NoteMediaEntity> saveAll(List<NoteMediaEntity> media);
 
   List<NoteMediaEntity> findByNoteIds(Collection<Long> noteIds);
+
+  void deleteAllByNoteId(Long noteId);
 }

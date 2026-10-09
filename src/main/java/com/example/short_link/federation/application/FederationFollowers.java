@@ -117,6 +117,11 @@ public class FederationFollowers {
   }
 
   @Transactional(readOnly = true)
+  public boolean accepts(Long userId, Long remoteActorId) {
+    return followers.find(userId, remoteActorId).filter(row -> !row.isPending()).isPresent();
+  }
+
+  @Transactional(readOnly = true)
   public List<RemoteFollowRequestView> pending(Long userId, int page) {
     return followers.pending(userId, Math.max(page, 0), REQUESTS_PAGE_SIZE).stream()
         .map(RemoteFollowRequestView::of)
