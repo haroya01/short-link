@@ -166,6 +166,13 @@ class LinkRepositoryAdapter implements LinkRepository {
   }
 
   @Override
+  public List<ShortCode> findShortCodesWithViewLimitReached(Collection<ShortCode> shortCodes) {
+    return jpa.findShortCodesWithViewLimitReached(shortCodes).stream()
+        .map(JpaLinkRepository.ShortCodeRow::getShortCode)
+        .toList();
+  }
+
+  @Override
   public List<LinkEntity> findUnrestrictedByUserIdAndOriginalUrl(Long userId, String originalUrl) {
     return jpa.findUnrestrictedByUserIdAndOriginalUrl(userId, originalUrl);
   }

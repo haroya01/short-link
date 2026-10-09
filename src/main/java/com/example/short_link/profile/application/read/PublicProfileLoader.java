@@ -135,11 +135,18 @@ public class PublicProfileLoader {
 
   private static List<LinkWindow> windows(List<ProfileLinkRow> links) {
     return links.stream()
-        .filter(row -> row.getOpensAt() != null || row.getLink().getExpiresAt() != null)
+        .filter(
+            row ->
+                row.getOpensAt() != null
+                    || row.getLink().getExpiresAt() != null
+                    || row.getLink().getMaxViews() != null)
         .map(
             row ->
                 new LinkWindow(
-                    row.getLink().getShortCode(), row.getOpensAt(), row.getLink().getExpiresAt()))
+                    row.getLink().getShortCode(),
+                    row.getOpensAt(),
+                    row.getLink().getExpiresAt(),
+                    row.getLink().getMaxViews() != null))
         .toList();
   }
 

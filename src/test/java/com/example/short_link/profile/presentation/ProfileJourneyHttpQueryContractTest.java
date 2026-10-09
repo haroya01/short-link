@@ -206,6 +206,40 @@ class ProfileJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
     call("profile-public-after-account-delete", "GET", publicPath, null, null, 404);
   }
 
+  @Test
+  void aViewLimitedLinkLeavesTheProfileAsSoonAsItsLastViewIsSpent() throws Exception {
+    LinkEntity once = profileLink("https://example.com/once", "pv", null);
+    LinkEntity twice = profileLink("https://example.com/twice", "pw", null);
+    String once1 = once.getShortCode().value();
+    String twice2 = twice.getShortCode().value();
+    call(
+        "profile-link-limit-once",
+        "PATCH",
+        "/api/v1/links/" + once1 + "/protection",
+        Map.of("maxViews", 1),
+        token,
+        200);
+    call(
+        "profile-link-limit-twice",
+        "PATCH",
+        "/api/v1/links/" + twice2 + "/protection",
+        Map.of("maxViews", 2),
+        token,
+        200);
+    String publicPath = "/api/v1/public/profiles/" + owner.getUsername();
+
+    var before =
+        body(call("profile-public-with-limited-links", "GET", publicPath, null, null, 200));
+    assertThat(shortCodes(before)).containsExactly(once1, twice2);
+    Map<String, String> browser = Map.of("User-Agent", "Mozilla/5.0 (Macintosh) Safari/605.1");
+    callWithHeaders("profile-limited-link-visit", "GET", "/" + once1, null, browser, 302);
+    callWithHeaders(
+        "profile-limited-link-visit-room-left", "GET", "/" + twice2, null, browser, 302);
+
+    var after = body(call("profile-public-after-limit-spent", "GET", publicPath, null, null, 200));
+    assertThat(shortCodes(after)).containsExactly(twice2);
+  }
+
   private LinkEntity profileLink(String url, String prefix, Instant expiresAt) {
     return transactions.execute(
         status -> {
