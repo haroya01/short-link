@@ -74,11 +74,11 @@ class PostCommentQueryServiceTest {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost(42L)));
     CommentEntity top = new CommentEntity(42L, 1L, null, "first");
     CommentEntity reply = new CommentEntity(42L, 2L, 10L, "reply");
-    when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(42L)).thenReturn(List.of(top, reply));
+    when(commentRepository.findHeardByPostId(42L, null)).thenReturn(List.of(top, reply));
     when(userRepository.findAllByIdIn(List.of(1L, 2L)))
         .thenReturn(List.of(user(1L, "alice"), user(2L, "bob")));
 
-    List<CommentView> views = service.listForPost(42L);
+    List<CommentView> views = service.listForPost(42L, null);
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
@@ -93,13 +93,12 @@ class PostCommentQueryServiceTest {
     CommentEntity live = comment(1L, 42L, 1L, null, "@bob 맞아요, @ghost 도 봤을까");
     CommentEntity removed = comment(2L, 42L, 1L, null, "@bob 지운 말");
     removed.softDelete();
-    when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(42L))
-        .thenReturn(List.of(live, removed));
+    when(commentRepository.findHeardByPostId(42L, null)).thenReturn(List.of(live, removed));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(userRepository.findActiveByUsernameIn(java.util.Set.of("bob", "ghost")))
         .thenReturn(List.of(user(2L, "bob")));
 
-    List<CommentView> views = service.listForPost(42L);
+    List<CommentView> views = service.listForPost(42L, null);
 
     assertThat(views.get(0).mentions()).containsExactly("bob");
     assertThat(views.get(1).mentions()).isEmpty();
@@ -108,11 +107,11 @@ class PostCommentQueryServiceTest {
   @Test
   void commentsWithoutMentionsLookUpNoOne() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost(42L)));
-    when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(42L))
+    when(commentRepository.findHeardByPostId(42L, null))
         .thenReturn(List.of(comment(1L, 42L, 1L, null, "mail me at a@b.com")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
 
-    assertThat(service.listForPost(42L).get(0).mentions()).isEmpty();
+    assertThat(service.listForPost(42L, null).get(0).mentions()).isEmpty();
     org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never())
         .findActiveByUsernameIn(org.mockito.ArgumentMatchers.any());
   }
@@ -120,7 +119,7 @@ class PostCommentQueryServiceTest {
   @Test
   void hidesCommentsOfUnpublishedOrMissingPost() {
     when(postRepository.findById(42L)).thenReturn(Optional.empty());
-    assertThat(service.listForPost(42L)).isEmpty();
+    assertThat(service.listForPost(42L, null)).isEmpty();
   }
 
   @Test
@@ -130,14 +129,14 @@ class PostCommentQueryServiceTest {
     com.example.short_link.post.domain.CommentEntity c =
         new com.example.short_link.post.domain.CommentEntity(5L, 1L, null, "hi");
     org.springframework.test.util.ReflectionTestUtils.setField(c, "id", 11L);
-    org.mockito.Mockito.when(commentRepository.findAllByPostIdOrderByCreatedAtAsc(5L))
+    org.mockito.Mockito.when(commentRepository.findHeardByPostId(5L, null))
         .thenReturn(java.util.List.of(c));
     org.mockito.Mockito.when(userRepository.findAllByIdIn(java.util.List.of(1L)))
         .thenReturn(java.util.List.of(user(1L, "kim")));
     org.mockito.Mockito.when(commentLikeRepository.countByCommentIds(java.util.List.of(11L)))
         .thenReturn(java.util.Map.of(11L, 4L));
 
-    java.util.List<CommentView> views = service.listForPost(5L);
+    java.util.List<CommentView> views = service.listForPost(5L, null);
 
     org.assertj.core.api.Assertions.assertThat(views).hasSize(1);
     org.assertj.core.api.Assertions.assertThat(views.get(0).likeCount()).isEqualTo(4L);

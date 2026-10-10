@@ -226,8 +226,8 @@ class PostModerationIntegrationTest {
 
   private void assertVisibleToReaders(Long postId, String token) {
     String slug = posts.findById(postId).orElseThrow().getSlug();
-    assertThat(publicPosts.findPublicPost(username, slug).post().id()).isEqualTo(postId);
-    assertThat(publicPosts.listPublicPosts(username).posts())
+    assertThat(publicPosts.findPublicPost(username, slug, null).post().id()).isEqualTo(postId);
+    assertThat(publicPosts.listPublicPosts(username, null).posts())
         .extracting(p -> p.id())
         .contains(postId);
     assertThat(taggedFeed()).contains(postId);
@@ -236,10 +236,10 @@ class PostModerationIntegrationTest {
 
   private void assertHiddenFromReaders(Long postId, String token) {
     String slug = posts.findById(postId).orElseThrow().getSlug();
-    assertThatThrownBy(() -> publicPosts.findPublicPost(username, slug))
+    assertThatThrownBy(() -> publicPosts.findPublicPost(username, slug, null))
         .isInstanceOfSatisfying(
             PostException.class, e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_GONE));
-    assertThat(publicPosts.listPublicPosts(username).posts())
+    assertThat(publicPosts.listPublicPosts(username, null).posts())
         .extracting(p -> p.id())
         .doesNotContain(postId);
     assertThat(taggedFeed()).doesNotContain(postId);

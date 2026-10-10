@@ -18,7 +18,8 @@ public interface PostRepository {
 
   List<PostEntity> findAllByIdIn(Collection<Long> ids);
 
-  Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
+  // Empty also when the viewer blocked the author or the author blocked the viewer.
+  Optional<PostEntity> findUnblockedByUserIdAndSlug(Long userId, String slug, Long viewerId);
 
   Optional<PostEntity> findByUserIdAndSlugForUpdate(Long userId, String slug);
 
@@ -80,7 +81,7 @@ public interface PostRepository {
 
   long countPublishedByTag(Long viewerId, String tag);
 
-  List<PostEntity> findPublishedQuotingNote(Long noteId, int offset, int limit);
+  List<PostEntity> findPublishedQuotingNote(Long noteId, Long viewerId, int offset, int limit);
 
   List<PostEntity> searchPublishedByRelevance(
       Long viewerId, String query, String lang, int page, int size);

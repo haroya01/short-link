@@ -1,8 +1,10 @@
 package com.example.short_link.post.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -84,11 +86,11 @@ class PostHighlightQueryServiceTest {
   @Test
   void listForPostAttributesHighlightsAndNullsMissingAuthor() {
     when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
-    when(highlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(5L))
+    when(highlightRepository.findHeardByPostId(5L, null))
         .thenReturn(List.of(highlightWithNote(10L, 5L, 1L, "여백의 메모"), highlight(11L, 5L, 999L)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
 
-    List<HighlightView> views = service.listForPost(5L);
+    List<HighlightView> views = service.listForPost(5L, null);
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
@@ -100,11 +102,11 @@ class PostHighlightQueryServiceTest {
   @Test
   void listForPostExposesEndBlockOrderForSingleAndMultiBlockSpans() {
     when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
-    when(highlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(5L))
+    when(highlightRepository.findHeardByPostId(5L, null))
         .thenReturn(List.of(highlight(10L, 5L, 1L), multiBlockHighlight(11L, 5L, 1L, 2, 5)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
 
-    List<HighlightView> views = service.listForPost(5L);
+    List<HighlightView> views = service.listForPost(5L, null);
 
     assertThat(views.get(0).blockOrder()).isEqualTo(0);
     assertThat(views.get(0).endBlockOrder()).isEqualTo(0);
@@ -115,12 +117,12 @@ class PostHighlightQueryServiceTest {
   @Test
   void listForPostHydratesReplyCountsInOneBatch() {
     when(postRepository.findById(5L)).thenReturn(Optional.of(publishedPost(5L, 1L)));
-    when(highlightRepository.findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(5L))
+    when(highlightRepository.findHeardByPostId(5L, null))
         .thenReturn(List.of(highlight(10L, 5L, 1L), highlight(11L, 5L, 1L)));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
     when(replyRepository.countByHighlightIds(anyCollection())).thenReturn(Map.of(10L, 3L));
 
-    List<HighlightView> views = service.listForPost(5L);
+    List<HighlightView> views = service.listForPost(5L, null);
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).replyCount()).isEqualTo(3L);
@@ -133,7 +135,7 @@ class PostHighlightQueryServiceTest {
     ReflectionTestUtils.setField(draft, "id", 5L);
     when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
 
-    assertThat(service.listForPost(5L)).isEmpty();
+    assertThat(service.listForPost(5L, null)).isEmpty();
   }
 
   @Test
@@ -171,7 +173,7 @@ class PostHighlightQueryServiceTest {
   @Test
   void feedFallsBackToGlobalWhenViewerFollowsNoOne() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of());
-    when(highlightRepository.findRecentOnPublishedPosts(0, 20))
+    when(highlightRepository.findRecentOnPublishedPosts(1L, 0, 20))
         .thenReturn(List.of(highlight(10L, 5L, 9L)));
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(publishedPost(5L, 2L)));
     when(userRepository.findAllByIdIn(anyCollection()))
@@ -183,15 +185,16 @@ class PostHighlightQueryServiceTest {
     assertThat(feed.items()).hasSize(1);
     assertThat(feed.items().get(0).curator().username()).isEqualTo("stranger");
     verify(highlightRepository, never())
-        .findByUserIdsOrderByCreatedAtDesc(anyCollection(), anyInt(), anyInt());
+        .findByUserIdsOrderByCreatedAtDesc(anyCollection(), eq(1L), anyInt(), anyInt());
   }
 
   @Test
   void feedFallsBackToGlobalOnFirstPageWhenFollowedCuratorsAreQuiet() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
-    when(highlightRepository.findByUserIdsOrderByCreatedAtDesc(anyCollection(), anyInt(), anyInt()))
+    when(highlightRepository.findByUserIdsOrderByCreatedAtDesc(
+            anyCollection(), eq(1L), anyInt(), anyInt()))
         .thenReturn(List.of());
-    when(highlightRepository.findRecentOnPublishedPosts(0, 20))
+    when(highlightRepository.findRecentOnPublishedPosts(1L, 0, 20))
         .thenReturn(List.of(highlight(10L, 5L, 9L)));
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(publishedPost(5L, 2L)));
     when(userRepository.findAllByIdIn(anyCollection()))
@@ -207,7 +210,8 @@ class PostHighlightQueryServiceTest {
   @Test
   void feedDoesNotFallBackBeyondFirstPage() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
-    when(highlightRepository.findByUserIdsOrderByCreatedAtDesc(anyCollection(), anyInt(), anyInt()))
+    when(highlightRepository.findByUserIdsOrderByCreatedAtDesc(
+            anyCollection(), eq(1L), anyInt(), anyInt()))
         .thenReturn(List.of());
 
     HighlightFeedView feed = service.feed(1L, 1, 20, false);
@@ -215,12 +219,12 @@ class PostHighlightQueryServiceTest {
     assertThat(feed.source()).isEqualTo("following");
     assertThat(feed.items()).isEmpty();
     assertThat(feed.hasNext()).isFalse();
-    verify(highlightRepository, never()).findRecentOnPublishedPosts(anyInt(), anyInt());
+    verify(highlightRepository, never()).findRecentOnPublishedPosts(any(), anyInt(), anyInt());
   }
 
   @Test
   void feedForceGlobalPinsGlobalFeedRegardlessOfFollowGraph() {
-    when(highlightRepository.findRecentOnPublishedPosts(2, 10)).thenReturn(List.of());
+    when(highlightRepository.findRecentOnPublishedPosts(1L, 2, 10)).thenReturn(List.of());
 
     HighlightFeedView feed = service.feed(1L, 2, 10, true);
 
@@ -233,7 +237,8 @@ class PostHighlightQueryServiceTest {
   void feedAssemblesFollowedCuratorHighlightsWithPostRefAndSkipsDeletedPosts() {
     // 팔로우한 큐레이터(alice, id 1)가 그은 두 구절 — 하나는 살아있는 글(작가 bob), 하나는 소실된 글.
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(1L));
-    when(highlightRepository.findByUserIdsOrderByCreatedAtDesc(anyCollection(), anyInt(), anyInt()))
+    when(highlightRepository.findByUserIdsOrderByCreatedAtDesc(
+            anyCollection(), eq(1L), anyInt(), anyInt()))
         .thenReturn(List.of(highlightWithNote(10L, 5L, 1L, "여백의 메모"), highlight(11L, 999L, 1L)));
     when(postRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(publishedPost(5L, 2L)));
     when(userRepository.findAllByIdIn(anyCollection()))

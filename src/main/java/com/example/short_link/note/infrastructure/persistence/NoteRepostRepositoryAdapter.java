@@ -1,9 +1,11 @@
 package com.example.short_link.note.infrastructure.persistence;
 
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -39,14 +41,24 @@ class NoteRepostRepositoryAdapter implements NoteRepostRepository {
   }
 
   @Override
-  public List<Long> recentNoteIdsByUser(Long userId, int offset, int limit) {
-    return em.createQuery(
-            "select r.noteId from NoteRepostEntity r where r.userId = :userId"
-                + " order by r.id desc",
-            Long.class)
-        .setParameter("userId", userId)
-        .setFirstResult(offset)
-        .setMaxResults(limit)
-        .getResultList();
+  @SuppressWarnings("unchecked")
+  public List<Long> recentNoteIdsByUser(Long userId, Long viewerId, int offset, int limit) {
+    List<Number> ids =
+        em.createNativeQuery(
+                "SELECT r.note_id FROM note_repost r JOIN note n ON n.id = r.note_id"
+                    + " WHERE r.user_id = :userId"
+                    + HeardSql.unblocked("r.user_id")
+                    + HeardSql.unblocked("n.user_id")
+                    + " AND (n.user_id = r.user_id OR NOT "
+                    + HeardSql.muted("n.user_id")
+                    + ")"
+                    + " ORDER BY r.id DESC")
+            .setParameter("userId", userId)
+            .setParameter("viewer", HeardSql.viewer(viewerId))
+            .setParameter("now", Instant.now())
+            .setFirstResult(offset)
+            .setMaxResults(limit)
+            .getResultList();
+    return ids.stream().map(Number::longValue).toList();
   }
 }

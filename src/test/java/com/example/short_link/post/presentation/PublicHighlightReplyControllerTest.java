@@ -25,7 +25,7 @@ class PublicHighlightReplyControllerTest {
 
   @Test
   void listReturnsAttributedReplies() throws Exception {
-    when(replyQuery.listForHighlight(5L))
+    when(replyQuery.listForHighlight(5L, null))
         .thenReturn(
             List.of(
                 new HighlightReplyView(

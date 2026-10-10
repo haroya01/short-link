@@ -193,6 +193,13 @@ class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
                     null)
                 .toString())
         .contains("This explanation helped.", "Thank you for reading.");
+    assertThat(
+            get(
+                    "reader-public-comment-thread-signed-in",
+                    "/api/v1/public/posts/" + postId + "/comments",
+                    reader)
+                .toString())
+        .contains("This explanation helped.", "Thank you for reading.");
     step("author-comment-like", "POST", "/api/v1/comments/" + comment + "/like", author, null, 200);
     assertThat(count("comment_like", "comment_id = ? AND user_id = ?", comment, author.id()))
         .isEqualTo(1);
@@ -287,6 +294,13 @@ class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
                     "reader-public-highlight-replies",
                     "/api/v1/public/highlights/" + highlight + "/replies",
                     null)
+                .toString())
+        .contains("I will expand this idea.");
+    assertThat(
+            get(
+                    "reader-public-highlight-replies-signed-in",
+                    "/api/v1/public/highlights/" + highlight + "/replies",
+                    reader)
                 .toString())
         .contains("I will expand this idea.");
     step(

@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntry;
@@ -146,7 +147,7 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
                     + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
                     + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
                     + " WHERE (p.id IS NOT NULL OR n.id IS NOT NULL)"
-                    + HeardSql.authoredBy("s")
+                    + HeardSql.heard("s.user_id")
                     + " GROUP BY i.series_id HAVING COUNT(*) >= :minItems"
                     + " ORDER BY last_at DESC, i.series_id DESC LIMIT :limit")
             .setParameter("minBody", DiscoveryQuality.MIN_BODY_TEXT_LENGTH)

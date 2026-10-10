@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import jakarta.persistence.LockModeType;
@@ -36,7 +37,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       "update PostEntity p set p.likeCount = p.likeCount - 1 where p.id = :id and p.likeCount > 0")
   int decrementLikeCount(@Param("id") Long id);
 
-  Optional<PostEntity> findByUserIdAndSlug(Long userId, String slug);
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p WHERE p.user_id = :userId AND p.slug = :slug"
+              + HeardSql.UNBLOCKED_POST_AUTHOR)
+  Optional<PostEntity> findUnblockedByUserIdAndSlug(
+      @Param("userId") Long userId, @Param("slug") String slug, @Param("viewer") long viewer);
 
   Optional<PostEntity> findByPreviewToken(String previewToken);
 
@@ -339,8 +346,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       nativeQuery = true,
       value =
           "SELECT p.* FROM post_note_quote q JOIN posts p ON p.id = q.post_id "
-              + "WHERE q.note_id = :noteId AND p.status = 'PUBLISHED' "
-              + "ORDER BY p.published_at DESC, p.id DESC LIMIT :limit OFFSET :offset")
+              + "WHERE q.note_id = :noteId AND p.status = 'PUBLISHED'"
+              + HeardSql.POST_AUTHOR
+              + " ORDER BY p.published_at DESC, p.id DESC LIMIT :limit OFFSET :offset")
   List<PostEntity> findPublishedQuotingNote(
-      @Param("noteId") Long noteId, @Param("offset") int offset, @Param("limit") int limit);
+      @Param("noteId") Long noteId,
+      @Param("viewer") long viewer,
+      @Param("now") Instant now,
+      @Param("offset") int offset,
+      @Param("limit") int limit);
 }

@@ -17,10 +17,10 @@ public class QuotingPostsQueryService {
   private final PostRepository postRepository;
   private final PostFeedItemAssembler feedItemAssembler;
 
-  public PublicFeedView ofNote(Long noteId, int page) {
+  public PublicFeedView ofNote(Long noteId, Long viewerId, int page) {
     int current = Math.max(page, 0);
     List<PostEntity> rows =
-        postRepository.findPublishedQuotingNote(noteId, current * SIZE, SIZE + 1);
+        postRepository.findPublishedQuotingNote(noteId, viewerId, current * SIZE, SIZE + 1);
     boolean hasNext = rows.size() > SIZE;
     return new PublicFeedView(
         feedItemAssembler.assemble(hasNext ? rows.subList(0, SIZE) : rows), current, SIZE, hasNext);

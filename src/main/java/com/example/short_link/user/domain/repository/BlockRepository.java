@@ -10,6 +10,8 @@ public interface BlockRepository {
 
   Optional<UserBlockEntity> findByBlockerIdAndBlockedId(Long blockerId, Long blockedId);
 
+  List<UserBlockEntity> findBetween(Long a, Long b);
+
   UserBlockEntity save(UserBlockEntity block);
 
   void delete(UserBlockEntity block);

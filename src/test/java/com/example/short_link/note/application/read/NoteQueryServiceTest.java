@@ -199,7 +199,7 @@ class NoteQueryServiceTest {
   @Test
   void repostsKeepRepostOrderAndSkipNotesThatAreGone() {
     when(people.activeByUsername("me")).thenReturn(Optional.of(ME));
-    when(reposts.recentNoteIdsByUser(7L, 0, 21)).thenReturn(List.of(5L, 9L, 2L));
+    when(reposts.recentNoteIdsByUser(7L, 9L, 0, 21)).thenReturn(List.of(5L, 9L, 2L));
     NoteEntity two = note(2L, null);
     NoteEntity five = note(5L, null);
     when(notes.findAllByIdIn(List.of(5L, 9L, 2L))).thenReturn(List.of(two, five));
@@ -221,8 +221,8 @@ class NoteQueryServiceTest {
     NoteEntity main = note(2L, 1L);
     NoteEntity parent = note(1L, null);
     NoteEntity reply = note(3L, 2L);
-    when(notes.findById(2L)).thenReturn(Optional.of(main));
-    when(notes.findById(1L)).thenReturn(Optional.of(parent));
+    when(notes.findUnblocked(2L, 9L)).thenReturn(Optional.of(main));
+    when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(parent));
     when(notes.replies(2L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
     when(views.of(List.of(main, parent, reply), 9L))
         .thenReturn(List.of(view(2L, 1L, null), view(1L, null, null), view(3L, 2L, null)));
@@ -235,7 +235,7 @@ class NoteQueryServiceTest {
   }
 
   private NoteEntity threadOf(NoteEntity main) {
-    when(notes.findById(main.getId())).thenReturn(Optional.of(main));
+    when(notes.findUnblocked(main.getId(), 9L)).thenReturn(Optional.of(main));
     when(notes.replies(main.getId(), 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
     when(views.of(List.of(main), 9L)).thenReturn(List.of(view(main.getId(), null, null)));
     return main;
@@ -289,8 +289,12 @@ class NoteQueryServiceTest {
   @Test
   void aThreadWhoseAuthorLeftIs404AndAMissingParentIsNull() {
     NoteEntity orphan = note(2L, 1L);
-    when(notes.findById(2L)).thenReturn(Optional.of(orphan));
-    when(notes.findById(1L)).thenReturn(Optional.empty());
+    when(notes.findUnblocked(
+            org.mockito.ArgumentMatchers.eq(2L), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(Optional.of(orphan));
+    when(notes.findUnblocked(
+            org.mockito.ArgumentMatchers.eq(1L), org.mockito.ArgumentMatchers.any()))
+        .thenReturn(Optional.empty());
     when(notes.replies(
             org.mockito.ArgumentMatchers.eq(2L),
             org.mockito.ArgumentMatchers.any(),
@@ -302,7 +306,7 @@ class NoteQueryServiceTest {
     when(views.of(List.of(orphan), 5L)).thenReturn(List.of());
     assertThatThrownBy(() -> service.thread(2L, 5L)).isInstanceOf(NoteException.class);
 
-    when(notes.findById(4L)).thenReturn(Optional.empty());
+    when(notes.findUnblocked(4L, null)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.thread(4L, null)).isInstanceOf(NoteException.class);
   }
 
