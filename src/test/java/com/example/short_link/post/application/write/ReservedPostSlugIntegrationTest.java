@@ -73,7 +73,7 @@ class ReservedPostSlugIntegrationTest {
             () ->
                 updateMetadata.execute(
                     new UpdatePostMetadataCommand(
-                        authorId, postId, null, "series", null, null, null, null, null, null,
+                        authorId, postId, null, "series", null, null, null, null, null, null, null,
                         false)))
         .isInstanceOfSatisfying(
             PostException.class,

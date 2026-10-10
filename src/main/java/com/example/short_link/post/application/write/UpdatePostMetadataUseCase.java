@@ -48,7 +48,7 @@ public class UpdatePostMetadataUseCase {
       if (cmd.ogImageUrl().isBlank()) {
         post.clearOgImage();
       } else {
-        post.updateOgImage(cmd.ogImageUrl(), cmd.ogImageKey());
+        post.updateOgImage(cmd.ogImageUrl(), cmd.ogImageKey(), coverChosen(post, cmd));
       }
     }
     if (cmd.languageTag() != null && !cmd.languageTag().isBlank()) {
@@ -63,6 +63,15 @@ public class UpdatePostMetadataUseCase {
       searchTextUpdater.refresh(post);
     }
     return writeViews.fromSaved(postRepository.save(post));
+  }
+
+  // coverChosen 을 보내지 않는 옛 클라이언트는 본문 첫 이미지도 표지로 자동 저장한다. 같은 표지면 그대로 두고, 새 표지는
+  // 고르지 않은 것으로 본다.
+  private static boolean coverChosen(PostEntity post, UpdatePostMetadataCommand cmd) {
+    if (cmd.coverChosen() != null) {
+      return cmd.coverChosen();
+    }
+    return cmd.ogImageUrl().equals(post.getOgImageUrl()) && post.isCoverChosen();
   }
 
   @Transactional

@@ -55,6 +55,7 @@ public class PostFeedItemAssembler {
         post.getTitle(),
         post.getExcerpt(),
         post.getOgImageUrl(),
+        post.thumbnailUrl(),
         post.getLanguageTag(),
         List.copyOf(post.getTags()),
         post.getPublishedAt(),

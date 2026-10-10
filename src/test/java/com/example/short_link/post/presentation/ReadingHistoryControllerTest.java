@@ -51,6 +51,7 @@ class ReadingHistoryControllerTest {
             "slug",
             "excerpt",
             null,
+            null,
             Instant.parse("2026-01-01T00:00:00Z"));
     when(readingHistoryQueryService.list(USER_ID, 0, 20))
         .thenReturn(new ReadingHistoryView(List.of(entry), 0, 20, false));

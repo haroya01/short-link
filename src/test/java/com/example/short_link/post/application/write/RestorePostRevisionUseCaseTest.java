@@ -74,6 +74,7 @@ class RestorePostRevisionUseCaseTest {
                 "Old excerpt",
                 "https://cdn/og.png",
                 "og.png",
+                true,
                 "ja",
                 List.of(new PostSnapshot.BlockSnapshot("PARAGRAPH", "Old content"))));
     when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
@@ -87,6 +88,7 @@ class RestorePostRevisionUseCaseTest {
     assertThat(restored.contentVersion()).isEqualTo(1L);
     assertThat(restored.excerpt()).isEqualTo("Old excerpt");
     assertThat(restored.ogImageUrl()).isEqualTo("https://cdn/og.png");
+    assertThat(restored.coverChosen()).isTrue();
     assertThat(restored.languageTag()).isEqualTo("ja");
     verify(postBlockRepository).deleteAllByPostId(42L);
     verify(postBlockRepository).insertAll(anyList());
@@ -96,9 +98,10 @@ class RestorePostRevisionUseCaseTest {
   @Test
   void clearsOgWhenSnapshotNull() throws Exception {
     PostEntity post = new PostEntity(7L, "my-post", "Current", "ko");
-    post.updateOgImage("https://cdn/existing.png", "existing.png");
+    post.updateOgImage("https://cdn/existing.png", "existing.png", true);
     String json =
-        objectMapper.writeValueAsString(new PostSnapshot("T", null, null, null, "ko", List.of()));
+        objectMapper.writeValueAsString(
+            new PostSnapshot("T", null, null, null, null, "ko", List.of()));
     when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 1))
         .thenReturn(Optional.of(revision(1, json)));
@@ -109,6 +112,31 @@ class RestorePostRevisionUseCaseTest {
     assertThat(post.getOgImageUrl()).isNull();
     assertThat(post.getOgImageKey()).isNull();
     verify(postBlockRepository).deleteAllByPostId(42L);
+  }
+
+  @Test
+  void aRevisionFromBeforeCoverChoiceKeepsTheChoiceOnlyForTheSameCover() {
+    PostEntity post = new PostEntity(7L, "my-post", "Current", "ko");
+    post.updateOgImage("https://cdn/picked.png", "picked.png", true);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 1))
+        .thenReturn(Optional.of(revision(1, legacySnapshot("https://cdn/picked.png"))));
+    when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 2))
+        .thenReturn(Optional.of(revision(2, legacySnapshot("https://cdn/body-first.png"))));
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(new RestorePostRevisionCommand(7L, 42L, 1));
+    assertThat(post.isCoverChosen()).isTrue();
+
+    useCase.execute(new RestorePostRevisionCommand(7L, 42L, 2));
+    assertThat(post.getOgImageUrl()).isEqualTo("https://cdn/body-first.png");
+    assertThat(post.isCoverChosen()).isFalse();
+  }
+
+  private static String legacySnapshot(String ogImageUrl) {
+    return "{\"title\":\"T\",\"excerpt\":null,\"ogImageUrl\":\""
+        + ogImageUrl
+        + "\",\"ogImageKey\":null,\"languageTag\":\"ko\",\"blocks\":[]}";
   }
 
   @Test

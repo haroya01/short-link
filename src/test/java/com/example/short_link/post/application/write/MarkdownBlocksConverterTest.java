@@ -7,6 +7,8 @@ import com.example.short_link.post.application.write.ReplacePostBlocksCommand.Bl
 import com.example.short_link.post.domain.PostBlockType;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import tools.jackson.databind.json.JsonMapper;
 
 // Ported from the web editor's markdown-to-blocks.test.ts — the two converters must stay
@@ -167,10 +169,68 @@ class MarkdownBlocksConverterTest {
   void standaloneVideoUrlBecomesEmbed() {
     assertThat(toBlocks("https://youtu.be/dQw4w9WgXcQ"))
         .containsExactly(new BlockInput(PostBlockType.EMBED, "https://youtu.be/dQw4w9WgXcQ"));
-    assertThat(toBlocks("<https://www.youtube.com/watch?v=dQw4w9WgXcQ>").get(0).type())
-        .isEqualTo(PostBlockType.EMBED);
-    assertThat(toBlocks("[clip](https://vimeo.com/123456789)").get(0).type())
-        .isEqualTo(PostBlockType.EMBED);
+  }
+
+  @ParameterizedTest
+  @ValueSource(
+      strings = {
+        "<https://www.youtube.com/watch?v=dQw4w9WgXcQ>",
+        "[clip](https://vimeo.com/123456789)",
+        "<https://example.com/article>",
+        "[읽어 볼 글](https://example.com/article)",
+        "<https://kurl.me/AbC123>",
+        "<https://cdn.example.com/a/b.webp>",
+        "[my photo](https://cdn.example.com/a/b.jpg)"
+      })
+  void aLinkAloneOnALineStaysALinkInItsParagraph(String line) {
+    List<BlockInput> blocks = toBlocks(line);
+    assertThat(blocks).containsExactly(new BlockInput(PostBlockType.PARAGRAPH, line));
+    assertThat(toBlocks(roundTrip(blocks))).isEqualTo(blocks);
+  }
+
+  @Test
+  void aLinkOnTheNextLineOfAParagraphStaysInIt() {
+    assertThat(toBlocks("intro\\\n<https://example.com/a>"))
+        .containsExactly(
+            new BlockInput(PostBlockType.PARAGRAPH, "intro\\\n<https://example.com/a>"));
+    assertThat(toBlocks("intro\n[docs](https://example.com/docs)"))
+        .containsExactly(
+            new BlockInput(PostBlockType.PARAGRAPH, "intro\n[docs](https://example.com/docs)"));
+  }
+
+  @ParameterizedTest
+  @ValueSource(strings = {"intro\\\nhttps://youtu.be/x", "intro\\\nhttps://cdn.x/a.png"})
+  void aBareUrlAfterAHardBreakStaysInItsParagraph(String md) {
+    assertThat(toBlocks(md)).containsExactly(new BlockInput(PostBlockType.PARAGRAPH, md));
+  }
+
+  @Test
+  void aBareUrlOnTheNextPlainLineStillSplitsOut() {
+    assertThat(toBlocks("intro\nhttps://youtu.be/x"))
+        .containsExactly(
+            new BlockInput(PostBlockType.PARAGRAPH, "intro"),
+            new BlockInput(PostBlockType.EMBED, "https://youtu.be/x"));
+  }
+
+  @Test
+  void aHeadingAfterAHardBreakStillStartsItsOwnBlockAndTheBackslashGoes() {
+    assertThat(toBlocks("intro\\\n# 제목"))
+        .containsExactly(
+            new BlockInput(PostBlockType.PARAGRAPH, "intro"),
+            new BlockInput(PostBlockType.H1, "제목"));
+  }
+
+  @Test
+  void aUrlLineEndingInABackslashBreaksInsideItsParagraph() {
+    String md = "intro\\\nhttps://example.com/article\\\noutro";
+    assertThat(toBlocks(md)).containsExactly(new BlockInput(PostBlockType.PARAGRAPH, md));
+  }
+
+  @Test
+  void anEscapedBackslashEndingAParagraphStays() {
+    assertThat(toBlocks("C:\\\\"))
+        .containsExactly(new BlockInput(PostBlockType.PARAGRAPH, "C:\\\\"));
+    assertThat(toBlocks("end\\")).containsExactly(new BlockInput(PostBlockType.PARAGRAPH, "end"));
   }
 
   @Test
@@ -196,15 +256,6 @@ class MarkdownBlocksConverterTest {
   void standaloneImageUrlWithQueryStringStillBecomesImage() {
     assertThat(toBlocks("https://cdn.example.com/a/b.png?v=2&w=800").get(0).type())
         .isEqualTo(PostBlockType.IMAGE);
-    assertThat(toBlocks("<https://cdn.example.com/a/b.webp>").get(0).type())
-        .isEqualTo(PostBlockType.IMAGE);
-  }
-
-  @Test
-  void labeledLinkToImageStaysEmbedNotImage() {
-    // `[text](…jpg)` is an explicit labeled link — the author meant a link, so keep it an embed.
-    assertThat(toBlocks("[my photo](https://cdn.example.com/a/b.jpg)").get(0).type())
-        .isEqualTo(PostBlockType.EMBED);
   }
 
   @Test

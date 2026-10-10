@@ -7,6 +7,7 @@ public record PostSnapshot(
     String excerpt,
     String ogImageUrl,
     String ogImageKey,
+    Boolean coverChosen,
     String languageTag,
     List<BlockSnapshot> blocks) {
 

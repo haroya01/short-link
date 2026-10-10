@@ -338,7 +338,7 @@ class PostModerationIntegrationTest {
 
   private UpdatePostMetadataCommand title(Long postId, String title) {
     return new UpdatePostMetadataCommand(
-        authorId, postId, title, null, null, null, null, null, null, null, false);
+        authorId, postId, title, null, null, null, null, null, null, null, null, false);
   }
 
   private Map<String, Object> postRow(Long postId) {

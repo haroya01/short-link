@@ -262,7 +262,7 @@ class ScheduledPublicationTransactionIntegrationTest {
                       .execute(
                           new UpdatePostMetadataCommand(
                               userId, postId, "Edited", null, null, null, null, null, null, null,
-                              false))
+                              null, false))
                       .title())
               .isEqualTo("Edited");
       case ADMIN_METADATA ->

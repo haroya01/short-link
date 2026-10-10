@@ -126,6 +126,7 @@ public class PostController {
             request.excerpt(),
             request.ogImageUrl(),
             request.ogImageKey(),
+            request.coverChosen(),
             request.languageTag(),
             request.tags(),
             request.baseVersion(),
