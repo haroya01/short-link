@@ -3,6 +3,7 @@ package com.example.short_link.notification.presentation;
 import static org.hamcrest.Matchers.nullValue;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -183,6 +184,20 @@ class NotificationControllerTest {
 
     verify(queryService).mentions(USER_ID, 30L, 10);
     verify(queryService).list(USER_ID, null, 20);
+  }
+
+  @Test
+  void readingAllOnTheMentionsTabLeavesTheRestUnreadAndSaysHowManyRemain() throws Exception {
+    when(queryService.unreadCount(USER_ID)).thenReturn(4L);
+
+    mvc.perform(
+            post("/api/v1/notifications/read-all?filter=mentions")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.count").value(4));
+
+    verify(markReadUseCase).markMentionsRead(USER_ID);
+    verify(markReadUseCase, never()).markAllRead(USER_ID);
   }
 
   @Test

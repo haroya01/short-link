@@ -16,8 +16,6 @@ import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationActorReader;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,9 +32,7 @@ public class NotificationQueryService {
 
   private static final int MAX_LIMIT = 50;
   private static final int ACTORS_PER_GROUP = 3;
-  private static final Set<NotificationType> MENTIONS =
-      EnumSet.copyOf(
-          Arrays.stream(NotificationType.values()).filter(NotificationType::inMentions).toList());
+  private static final Set<NotificationType> MENTIONS = NotificationType.mentionTypes();
 
   private final NotificationRepository repository;
   private final NotificationActorReader actorReader;

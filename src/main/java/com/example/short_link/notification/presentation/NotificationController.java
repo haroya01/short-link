@@ -51,7 +51,12 @@ public class NotificationController {
   }
 
   @PostMapping("/read-all")
-  public UnreadCountResponse markAllRead(@AuthenticationPrincipal Long userId) {
+  public UnreadCountResponse markAllRead(
+      @AuthenticationPrincipal Long userId, @RequestParam(required = false) String filter) {
+    if ("mentions".equalsIgnoreCase(filter)) {
+      markReadUseCase.markMentionsRead(userId);
+      return new UnreadCountResponse(queryService.unreadCount(userId));
+    }
     markReadUseCase.markAllRead(userId);
     return new UnreadCountResponse(0);
   }

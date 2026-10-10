@@ -305,6 +305,29 @@ class NotificationJourneyHttpQueryContractTest extends AccountHttpJourneySupport
     assertThat(items.get(0).path("type").asText()).isEqualTo("NOTE_REPLY");
     assertThat(items.get(1).path("type").asText()).isEqualTo("MENTION");
     assertThat(items.get(1).path("actorUsername").asText()).isEqualTo(stranger.getUsername());
+
+    var left =
+        body(
+            call(
+                "notification-mentions-read-all",
+                "POST",
+                "/api/v1/notifications/read-all?filter=mentions",
+                null,
+                token,
+                200));
+    assertThat(left.path("count").asLong()).isEqualTo(2);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? AND read_at IS NULL"
+                    + " AND type IN ('LIKE', 'FOLLOW')",
+                owner.getId()))
+        .isEqualTo(2);
+    assertThat(
+            count(
+                "SELECT COUNT(*) FROM notification WHERE recipient_user_id = ? AND read_at IS NULL"
+                    + " AND type IN ('MENTION', 'NOTE_REPLY')",
+                owner.getId()))
+        .isZero();
   }
 
   @Test
