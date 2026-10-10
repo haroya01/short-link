@@ -22,7 +22,8 @@ public record PostView(
     Integer pinOrder,
     Instant createdAt,
     Instant updatedAt,
-    long contentVersion) {
+    long contentVersion,
+    boolean takenDown) {
 
   public static PostView from(PostEntity post) {
     return new PostView(
@@ -43,6 +44,7 @@ public record PostView(
         post.getPinOrder(),
         post.getCreatedAt(),
         post.getUpdatedAt(),
-        post.getContentVersion());
+        post.getContentVersion(),
+        post.isTakenDown());
   }
 }

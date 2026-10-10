@@ -102,7 +102,7 @@ class ResolveAbuseReportUseCaseTest {
             ModerationAction.UNPUBLISH_POST,
             null));
 
-    verify(postModerationPort).unpublish(1L, 42L);
+    verify(postModerationPort).takeDown(1L, 42L);
   }
 
   @Test
@@ -296,6 +296,6 @@ class ResolveAbuseReportUseCaseTest {
         .extracting(e -> ((AbuseException) e).errorCode())
         .isEqualTo(AbuseErrorCode.ABUSE_REPORT_NOT_FOUND);
 
-    verify(postModerationPort, never()).unpublish(eq(1L), any());
+    verify(postModerationPort, never()).takeDown(eq(1L), any());
   }
 }

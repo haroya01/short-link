@@ -519,6 +519,7 @@ public class NoteCommandService {
   @Transactional
   public NoteView edit(
       Long userId, Long noteId, String rawBody, String rawWarning, Boolean sensitive) {
+    moderation.requireCanWrite(userId);
     NoteEntity note = owned(userId, noteId);
     String body = normalize(rawBody);
     boolean hasMedia = !media.findByNoteIds(List.of(noteId)).isEmpty();

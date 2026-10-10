@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostBlockView;
 import com.example.short_link.post.application.read.PostBodyView;
 import com.example.short_link.post.domain.PostBlockEntity;
@@ -39,6 +40,7 @@ class ReplacePostBlocksUseCaseTest {
   @Mock private PostSearchTextRepository postSearchTextRepository;
   @Mock private PostNoteQuotes noteQuotes;
   @Mock private PostRevisionCapture revisionCapture;
+  @Mock private UserModerationGuard moderation;
 
   private ReplacePostBlocksUseCase useCase;
 
@@ -50,7 +52,7 @@ class ReplacePostBlocksUseCaseTest {
     useCase =
         new ReplacePostBlocksUseCase(
             postOwnership,
-            new PostEditGuard(revisionCapture),
+            new PostEditGuard(revisionCapture, moderation),
             postBlockRepository,
             searchTextUpdater,
             noteQuotes);
