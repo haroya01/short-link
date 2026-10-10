@@ -14,4 +14,5 @@ public record RemoteNoteRow(
     Long inReplyToId,
     Long conversationId,
     boolean reply,
+    NoteReplyPolicy replyPolicy,
     String language) {}

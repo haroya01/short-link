@@ -3,12 +3,16 @@ package com.example.short_link.note.application.write;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.note.Hashtags;
+import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.RemoteNotes;
+import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
+import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -16,6 +20,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
@@ -34,22 +39,28 @@ class RemoteNoteRecorder implements RemoteNotes {
 
   private final NoteRepository notes;
   private final NoteMediaRepository media;
+  private final NotePeopleReader people;
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
   @Autowired
   RemoteNoteRecorder(
-      NoteRepository notes, NoteMediaRepository media, ApplicationEventPublisher events) {
-    this(notes, media, events, Clock.systemUTC());
+      NoteRepository notes,
+      NoteMediaRepository media,
+      NotePeopleReader people,
+      ApplicationEventPublisher events) {
+    this(notes, media, people, events, Clock.systemUTC());
   }
 
   RemoteNoteRecorder(
       NoteRepository notes,
       NoteMediaRepository media,
+      NotePeopleReader people,
       ApplicationEventPublisher events,
       Clock clock) {
     this.notes = notes;
     this.media = media;
+    this.people = people;
     this.events = events;
     this.clock = clock;
   }
@@ -86,6 +97,9 @@ class RemoteNoteRecorder implements RemoteNotes {
       parentId = notes.idByUri(received.inReplyToUri()).orElse(null);
     }
     NoteEntity parent = parentId == null ? null : notes.findById(parentId).orElse(null);
+    if (parent != null && !mayAnswer(received.remoteActorId(), parent)) {
+      parent = null;
+    }
     NoteVisibility visibility =
         NoteVisibility.parse(received.visibility()).orElse(NoteVisibility.DIRECT);
     String warning = warning(received.contentWarning());
@@ -103,6 +117,7 @@ class RemoteNoteRecorder implements RemoteNotes {
                 parent == null ? null : parent.getId(),
                 parent == null ? null : parent.conversation(),
                 parent != null || received.inReplyToUri() != null,
+                parent == null ? NoteReplyPolicy.EVERYONE : parent.getReplyPolicy(),
                 received.language()));
     if (stored.isEmpty()) {
       return Optional.empty();
@@ -143,6 +158,28 @@ class RemoteNoteRecorder implements RemoteNotes {
               parent == null ? noteId : parent.conversation()));
     }
     return stored;
+  }
+
+  // A thread whose writer limited replies keeps an answer from elsewhere only from an account the
+  // first note names or, under following, one the writer follows; any other is kept unattached.
+  private boolean mayAnswer(Long remoteActorId, NoteEntity parent) {
+    if (!parent.getReplyPolicy().limited()) {
+      return true;
+    }
+    NoteEntity root =
+        parent.conversation().equals(parent.getId())
+            ? parent
+            : notes.findById(parent.conversation()).orElse(null);
+    if (root == null || root.isRemote()) {
+      return true;
+    }
+    NoteAuthor sender = people.remoteAuthors(Set.of(remoteActorId)).get(remoteActorId);
+    if (sender != null
+        && Mentions.remote(root.getBody()).contains(sender.username().toLowerCase(Locale.ROOT))) {
+      return true;
+    }
+    return root.getReplyPolicy() == NoteReplyPolicy.FOLLOWING
+        && people.followsRemote(root.getUserId(), remoteActorId);
   }
 
   // As on Mastodon, an Update older than the edit already kept changes nothing, and only a change

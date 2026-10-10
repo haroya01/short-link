@@ -7,6 +7,7 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
+import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.QuotedPost;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -64,8 +66,9 @@ public class NoteViews {
       collectAuthor(note, authorIds, remoteIds);
     }
     quotedNotes.forEach(quotedNote -> collectAuthor(quotedNote, authorIds, remoteIds));
+    Map<Long, NoteEntity> limitedRoots = limitedRoots(page, viewerId);
     Set<String> handles =
-        page.stream()
+        Stream.concat(page.stream(), limitedRoots.values().stream())
             .flatMap(note -> Mentions.of(note.getBody()).stream())
             .collect(Collectors.toSet());
     Map<Long, NoteAuthor> members =
@@ -118,6 +121,7 @@ public class NoteViews {
     NoteViewerMarks marks = notes.viewerMarks(viewerId, ids);
     Map<Long, NoteView.LinkPreview> cards = linkCards(visible);
     Map<Long, NoteView.Poll> pollViews = polls(visible, viewerId);
+    Set<Long> closedThreads = closedTo(viewerId, limitedRoots, members);
 
     List<NoteView> views = new ArrayList<>(visible.size());
     for (NoteEntity note : visible) {
@@ -149,9 +153,74 @@ public class NoteViews {
               note.getVisibility().apiName(),
               pollViews.get(note.getId()),
               viewerId == null ? null : marks.muted().contains(note.getId()),
-              note.getLanguage()));
+              note.getLanguage(),
+              null,
+              note.getReplyPolicy().apiName(),
+              viewerId == null ? null : !closedThreads.contains(note.conversation()),
+              note.isReplyHidden()));
     }
     return views;
+  }
+
+  // The first notes of the page's threads that limit replies, read only when the viewer is signed
+  // in and the page holds such a thread; a first note already on the page is not read again.
+  private Map<Long, NoteEntity> limitedRoots(List<NoteEntity> page, Long viewerId) {
+    if (viewerId == null) {
+      return Map.of();
+    }
+    Map<Long, NoteEntity> onPage = new HashMap<>();
+    page.forEach(note -> onPage.put(note.getId(), note));
+    Map<Long, NoteEntity> roots = new HashMap<>();
+    Set<Long> missing = new HashSet<>();
+    for (NoteEntity note : page) {
+      if (!note.getReplyPolicy().limited()) {
+        continue;
+      }
+      NoteEntity root = onPage.get(note.conversation());
+      if (root == null) {
+        missing.add(note.conversation());
+      } else {
+        roots.put(root.getId(), root);
+      }
+    }
+    if (!missing.isEmpty()) {
+      notes.findAllByIdIn(missing).forEach(root -> roots.put(root.getId(), root));
+    }
+    return roots;
+  }
+
+  // Of those threads, the ones closed to this viewer: not their own, their first note does not name
+  // them, and under following its writer does not follow them (one lookup for every such writer).
+  private Set<Long> closedTo(
+      Long viewerId, Map<Long, NoteEntity> roots, Map<Long, NoteAuthor> members) {
+    if (roots.isEmpty()) {
+      return Set.of();
+    }
+    NoteAuthor viewer = members.get(viewerId);
+    List<NoteEntity> closed = new ArrayList<>();
+    for (NoteEntity root : roots.values()) {
+      boolean open =
+          !root.getReplyPolicy().limited()
+              || root.isRemote()
+              || root.isOwnedBy(viewerId)
+              || (viewer != null && Mentions.of(root.getBody()).contains(viewer.username()));
+      if (!open) {
+        closed.add(root);
+      }
+    }
+    Set<Long> writers =
+        closed.stream()
+            .filter(root -> root.getReplyPolicy() == NoteReplyPolicy.FOLLOWING)
+            .map(NoteEntity::getUserId)
+            .collect(Collectors.toSet());
+    Set<Long> following = writers.isEmpty() ? Set.of() : people.followersOf(viewerId, writers);
+    return closed.stream()
+        .filter(
+            root ->
+                root.getReplyPolicy() != NoteReplyPolicy.FOLLOWING
+                    || !following.contains(root.getUserId()))
+        .map(NoteEntity::getId)
+        .collect(Collectors.toSet());
   }
 
   // A feed page: each top-level note that the author went on in their own replies carries the next

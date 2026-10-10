@@ -311,6 +311,26 @@ class NoteQueryServiceTest {
   }
 
   @Test
+  void hiddenRepliesOpenWhereTheirNoteDoesAndLeaveTheNoteItselfOut() {
+    NoteEntity root = note(1L, null);
+    NoteEntity hidden = note(2L, 1L);
+    when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(root));
+    when(notes.hiddenReplies(1L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(hidden));
+    when(views.of(List.of(root, hidden), 9L))
+        .thenReturn(List.of(view(1L, null, 0L), view(2L, 1L, 0L)));
+
+    assertThat(service.hiddenReplies(1L, 9L)).extracting(NoteView::id).containsExactly(2L);
+
+    when(notes.findUnblocked(3L, 9L)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.hiddenReplies(3L, 9L)).isInstanceOf(NoteException.class);
+    NoteEntity unreadable = note(4L, null);
+    when(notes.findUnblocked(4L, 9L)).thenReturn(Optional.of(unreadable));
+    when(notes.hiddenReplies(4L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of());
+    when(views.of(List.of(unreadable), 9L)).thenReturn(List.of());
+    assertThatThrownBy(() -> service.hiddenReplies(4L, 9L)).isInstanceOf(NoteException.class);
+  }
+
+  @Test
   void historyOpensOnlyWhereTheThreadWould() {
     when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.history(1L, 9L)).isInstanceOf(NoteException.class);

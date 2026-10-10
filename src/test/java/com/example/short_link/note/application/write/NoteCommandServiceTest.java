@@ -31,6 +31,7 @@ import com.example.short_link.note.application.read.NoteViews;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteRepostEntity;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
@@ -804,6 +805,142 @@ class NoteCommandServiceTest {
 
     assertThat(reply.visibility()).isEqualTo("private");
     verify(notes).addRecipients(100L, Set.of(11L, 9L));
+  }
+
+  private static NoteDraft draftWithPolicy(String body, Long inReplyTo, String policy) {
+    return new NoteDraft(
+        body, List.of(), null, inReplyTo, null, null, false, null, null, null, policy);
+  }
+
+  @Test
+  void aFirstNoteSetsWhoMayReplyAndAnUnknownChoiceIsRefused() {
+    ArgumentCaptor<NoteEntity> saved = ArgumentCaptor.forClass(NoteEntity.class);
+    when(notes.save(saved.capture()))
+        .thenAnswer(
+            inv -> {
+              NoteEntity note = inv.getArgument(0);
+              ReflectionTestUtils.setField(note, "id", 100L);
+              return note;
+            });
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+
+    NoteView created = service().create(7L, draftWithPolicy("우리끼리", null, "Mentioned"));
+
+    assertThat(saved.getValue().getReplyPolicy()).isEqualTo(NoteReplyPolicy.MENTIONED);
+    assertThat(created.replyPolicy()).isEqualTo("mentioned");
+    assertThat(created.canReply()).isTrue();
+    assertThatThrownBy(() -> service().create(7L, draftWithPolicy("x", null, "friends")))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_POLICY_INVALID));
+  }
+
+  @Test
+  void aLimitedThreadTakesRepliesFromItsWriterTheNamedAndUnderFollowingTheFollowed() {
+    saving();
+    NoteEntity root = note(5L, 9L, "@writer 만 답해 주세요");
+    root.limitReplies(NoteReplyPolicy.MENTIONED);
+    NoteEntity middle = new NoteEntity(9L, "이어서", 5L, null);
+    ReflectionTestUtils.setField(middle, "id", 6L);
+    middle.answer(root);
+    when(notes.findById(5L)).thenReturn(Optional.of(root));
+    when(notes.findById(6L)).thenReturn(Optional.of(middle));
+    NoteAuthor other = new NoteAuthor(8L, "other", null);
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, WRITER));
+    when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, other));
+    when(people.activeAuthors(Set.of(9L)))
+        .thenReturn(Map.of(9L, new NoteAuthor(9L, "owner", null)));
+
+    NoteView named = service().create(7L, draftWithPolicy("저요", 6L, "everyone"));
+    assertThat(named.replyPolicy()).isEqualTo("mentioned");
+    assertThatThrownBy(() -> service().create(8L, draftWithPolicy("저도", 6L, null)))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_RESTRICTED));
+    service().create(9L, draftWithPolicy("제 스레드", 6L, null));
+
+    root.limitReplies(NoteReplyPolicy.FOLLOWING);
+    middle.answer(root);
+    when(people.followersOf(8L, Set.of(9L))).thenReturn(Set.of(), Set.of(9L));
+    assertThatThrownBy(() -> service().create(8L, draftWithPolicy("팔로우 전", 6L, null)))
+        .isInstanceOf(NoteException.class);
+    service().create(8L, draftWithPolicy("팔로우 뒤", 6L, null));
+  }
+
+  @Test
+  void onlyTheWriterOfAFirstNoteChangesWhoMayReplyForTheWholeThread() {
+    NoteEntity root = note(5L, 7L, "처음");
+    NoteEntity reply = new NoteEntity(7L, "이어서", 5L, null);
+    ReflectionTestUtils.setField(reply, "id", 6L);
+    when(notes.findById(5L)).thenReturn(Optional.of(root));
+    when(notes.findById(6L)).thenReturn(Optional.of(reply));
+
+    assertThat(service().setReplyPolicy(7L, 5L, "following").replyPolicy()).isEqualTo("following");
+    verify(notes).applyReplyPolicy(5L, NoteReplyPolicy.FOLLOWING);
+    assertThatThrownBy(() -> service().setReplyPolicy(8L, 5L, "following"))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
+    assertThatThrownBy(() -> service().setReplyPolicy(7L, 6L, "following"))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_POLICY_ON_REPLY));
+    assertThatThrownBy(() -> service().setReplyPolicy(7L, 5L, "nobody"))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_REPLY_POLICY_INVALID));
+  }
+
+  @Test
+  void theThreadsWriterHidesAndShowsAReplyAndNoOneElseDoes() {
+    NoteEntity root = note(5L, 7L, "처음");
+    NoteEntity reply = new NoteEntity(8L, "답글", 5L, null);
+    ReflectionTestUtils.setField(reply, "id", 6L);
+    reply.answer(root);
+    when(notes.findById(5L)).thenReturn(Optional.of(root));
+    when(notes.findById(6L)).thenReturn(Optional.of(reply));
+
+    assertThat(service().setReplyHidden(7L, 6L, true).hidden()).isTrue();
+    assertThat(reply.isReplyHidden()).isTrue();
+    assertThat(service().setReplyHidden(7L, 6L, false).hidden()).isFalse();
+    assertThat(reply.isReplyHidden()).isFalse();
+    assertThatThrownBy(() -> service().setReplyHidden(8L, 6L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
+    assertThatThrownBy(() -> service().setReplyHidden(7L, 5L, true))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_NOT_A_REPLY));
+    verifyNoInteractions(events);
+  }
+
+  @Test
+  void theThreadsWriterDeletesAMembersReplyAndUnhooksOneFromElsewhere() {
+    NoteEntity root = note(5L, 7L, "처음");
+    NoteEntity members = new NoteEntity(8L, "회원 답글", 5L, null);
+    ReflectionTestUtils.setField(members, "id", 6L);
+    members.answer(root);
+    NoteEntity remote = new NoteEntity(null, "먼 곳의 답글", 5L, null);
+    ReflectionTestUtils.setField(remote, "id", 7L);
+    ReflectionTestUtils.setField(remote, "remoteActorId", 40L);
+    remote.answer(root);
+    when(notes.findById(5L)).thenReturn(Optional.of(root));
+    when(notes.findById(6L)).thenReturn(Optional.of(members));
+    when(notes.findById(7L)).thenReturn(Optional.of(remote));
+
+    assertThatThrownBy(() -> service().delete(9L, 6L))
+        .isInstanceOfSatisfying(
+            NoteException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(NoteErrorCode.NOTE_PERMISSION_DENIED));
+    service().delete(7L, 7L);
+    assertThat(remote.getInReplyToId()).isNull();
+    assertThat(remote.isTopLevel()).isFalse();
+    verify(notes, never()).delete(remote);
+
+    service().delete(7L, 6L);
+    verify(notes).delete(members);
+    verify(events).publishEvent(new NoteDeletedEvent(6L, 8L, List.of(), 5L, List.of()));
   }
 
   @Test
