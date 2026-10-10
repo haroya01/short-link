@@ -311,6 +311,29 @@ class NoteQueryServiceTest {
   }
 
   @Test
+  void historyOpensOnlyWhereTheThreadWould() {
+    when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.empty());
+    assertThatThrownBy(() -> service.history(1L, 9L)).isInstanceOf(NoteException.class);
+    verify(notes, never()).versions(1L);
+
+    NoteEntity remote = new NoteEntity(null, "from afar", null, null);
+    ReflectionTestUtils.setField(remote, "id", 2L);
+    ReflectionTestUtils.setField(remote, "remoteActorId", 40L);
+    when(notes.findUnblocked(2L, 9L)).thenReturn(Optional.of(remote));
+    when(people.remoteAuthors(Set.of(40L))).thenReturn(Map.of());
+    assertThatThrownBy(() -> service.history(2L, 9L)).isInstanceOf(NoteException.class);
+
+    NoteEntity forFollowers = note(3L, null);
+    forFollowers.showTo(NoteVisibility.PRIVATE);
+    when(notes.findUnblocked(3L, 9L)).thenReturn(Optional.of(forFollowers));
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, ME));
+    when(notes.visibleTo(9L, Set.of(3L))).thenReturn(Set.of(), Set.of(3L));
+    assertThatThrownBy(() -> service.history(3L, 9L)).isInstanceOf(NoteException.class);
+    when(notes.versions(3L)).thenReturn(List.of());
+    assertThat(service.history(3L, 9L).versions()).hasSize(1);
+  }
+
+  @Test
   void likedIdsPassThrough() {
     when(likes.likedNoteIds(7L, List.of(1L))).thenReturn(List.of(1L));
 
