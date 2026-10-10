@@ -12,7 +12,8 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-// 답글은 최상위 댓글만 참조한다. 작성자·글 소유자의 삭제는 물리 삭제, 관리자 삭제는 감사·복구를 위해 deletedAt으로 숨긴다.
+// 답글은 최상위 댓글만 참조한다. 작성자·글 소유자의 삭제는 물리 삭제이고, 남은 답글이 있는 최상위 댓글은 본문을 비운
+// 자리(deletedAt)로 남긴다. 관리자 삭제는 감사·복구를 위해 본문을 둔 채 deletedAt으로 숨긴다.
 @Entity
 @Table(name = "comment")
 @Getter
@@ -67,5 +68,10 @@ public class CommentEntity extends BaseTimeEntity {
     if (deletedAt == null) {
       this.deletedAt = Instant.now();
     }
+  }
+
+  public void tombstone() {
+    softDelete();
+    this.body = "";
   }
 }

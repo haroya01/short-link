@@ -14,7 +14,8 @@ public interface CommentRepository {
 
   List<CommentEntity> findAllByPostIdOrderByCreatedAtAsc(Long postId);
 
-  // A reply stays out with its parent when the viewer cannot hear the parent's writer.
+  // A reply stays out with its parent when the viewer cannot hear the parent's writer. A deleted
+  // parent comes back only while a reply the viewer hears is under it; it has no writer to hear.
   List<CommentEntity> findHeardByPostId(Long postId, Long viewerId);
 
   List<CommentEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);

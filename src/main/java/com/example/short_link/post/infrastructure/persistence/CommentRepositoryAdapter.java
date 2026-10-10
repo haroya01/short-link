@@ -43,12 +43,18 @@ class CommentRepositoryAdapter implements CommentRepository {
   @SuppressWarnings("unchecked")
   public List<CommentEntity> findHeardByPostId(Long postId, Long viewerId) {
     return em.createNativeQuery(
-            "SELECT c.* FROM comment c WHERE c.post_id = :postId"
+            "SELECT c.* FROM comment c WHERE c.post_id = :postId AND ((c.deleted_at IS NULL"
                 + HeardSql.heard("c.user_id")
                 + " AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comment pc"
-                + " WHERE pc.id = c.parent_id"
+                + " WHERE pc.id = c.parent_id AND (pc.deleted_at IS NOT NULL"
+                + " OR (pc.deleted_at IS NULL"
                 + HeardSql.heard("pc.user_id")
-                + "))"
+                + ")))))"
+                + " OR (c.deleted_at IS NOT NULL AND c.parent_id IS NULL"
+                + " AND EXISTS (SELECT 1 FROM comment r WHERE r.parent_id = c.id"
+                + " AND r.deleted_at IS NULL"
+                + HeardSql.heard("r.user_id")
+                + ")))"
                 + " ORDER BY c.created_at ASC",
             CommentEntity.class)
         .setParameter("postId", postId)

@@ -105,6 +105,37 @@ class PostCommentQueryServiceTest {
   }
 
   @Test
+  void aDeletedParentReadsAsAnEmptyPlaceWithNoWriterTextOrLikes() {
+    when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost(42L)));
+    CommentEntity removed = comment(1L, 42L, 9L, null, "관리자가 내린 말");
+    removed.softDelete();
+    ReflectionTestUtils.setField(
+        removed, "createdAt", java.time.Instant.parse("2026-10-01T00:00:00Z"));
+    CommentEntity reply = comment(2L, 42L, 2L, 1L, "답글은 남는다");
+    when(commentRepository.findHeardByPostId(42L, 7L)).thenReturn(List.of(removed, reply));
+    when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
+    when(commentLikeRepository.countByCommentIds(List.of(2L))).thenReturn(java.util.Map.of(2L, 1L));
+
+    List<CommentView> views = service.listForPost(42L, 7L);
+
+    assertThat(views.get(0))
+        .isEqualTo(
+            new CommentView(
+                1L,
+                null,
+                null,
+                null,
+                java.time.Instant.parse("2026-10-01T00:00:00Z"),
+                0L,
+                List.of(),
+                true));
+    assertThat(views.get(1).deleted()).isFalse();
+    assertThat(views.get(1).parentId()).isEqualTo(1L);
+    assertThat(views.get(1).author().username()).isEqualTo("bob");
+    assertThat(views.get(1).likeCount()).isEqualTo(1L);
+  }
+
+  @Test
   void commentsWithoutMentionsLookUpNoOne() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost(42L)));
     when(commentRepository.findHeardByPostId(42L, null))
