@@ -2,6 +2,7 @@ package db.migration;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.ShortLinkApplication;
 import com.example.short_link.post.application.write.CreatePostCommand;
 import com.example.short_link.post.application.write.CreatePostUseCase;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -19,7 +20,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-@SpringBootTest
+@SpringBootTest(classes = ShortLinkApplication.class)
 @ActiveProfiles("test")
 class PostCoverChosenBackfillIntegrationTest {
   @Autowired private CreatePostUseCase createPost;
