@@ -34,6 +34,13 @@ public interface NoteRepository {
 
   List<NoteEntity> topLevelByAuthor(Long authorId, Long viewerId, int offset, int limit);
 
+  List<NoteEntity> repliesByAuthor(Long authorId, Long viewerId, int offset, int limit);
+
+  List<NoteEntity> withMediaByAuthor(Long authorId, Long viewerId, int offset, int limit);
+
+  // The given notes whose author, and server, the viewer can hear.
+  List<NoteEntity> heardAmong(Collection<Long> ids, Long viewerId);
+
   Set<Long> visibleTo(Long viewerId, Collection<Long> restrictedIds);
 
   void addRecipients(Long noteId, Collection<Long> userIds);
