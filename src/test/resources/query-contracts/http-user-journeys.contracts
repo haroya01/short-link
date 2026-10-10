@@ -520,6 +520,11 @@
 @junit | mention-candidates-followed | 1 | 0 | 0 | 0 | 1
 @junit | mention-candidates-prefix | 1 | 0 | 0 | 0 | 1
 @junit | mention-candidates-wildcard | 1 | 0 | 0 | 0 | 1
+# People search ranks handles, names, follows and follower counts with blocks and suspensions left
+# out in one statement; fewer than two letters never reach the database.
+@junit | user-search-anonymous | 1 | 0 | 0 | 0 | 1
+@junit | user-search-signed-in | 1 | 0 | 0 | 0 | 1
+@junit | user-search-too-short | 0 | 0 | 0 | 0 | 0
 @junit | profile-public-read | 4 | 0 | 0 | 0 | 4
 @junit | profile-public-read-after-delete | 4 | 0 | 0 | 0 | 4
 @junit | profile-public-stats-private-rejected | 1 | 0 | 0 | 0 | 1
