@@ -30,6 +30,8 @@ public interface NotificationRepository {
 
   int markAllRead(Long recipientUserId, Instant at);
 
+  int markAllReadOfTypes(Long recipientUserId, Collection<NotificationType> types, Instant at);
+
   int deleteFromDomain(Long recipientUserId, String domain);
 
   int deleteFromServer(String domain);

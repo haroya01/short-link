@@ -419,6 +419,8 @@
 # The mentions tab is the inbox page narrowed to mention and reply types in the same statement,
 # then the senders' names.
 @junit | notification-mentions | 2 | 0 | 0 | 0 | 2
+# Reading the mentions tab marks only its types in one update, then counts what is still unread.
+@junit | notification-mentions-read-all | 1 | 0 | 1 | 0 | 2
 @junit | ops-abuse-backlog | 2 | 0 | 0 | 0 | 2
 @junit | ops-active-users | 1 | 0 | 0 | 0 | 1
 @junit | ops-block-domain | 2 | 1 | 0 | 0 | 3
