@@ -331,6 +331,66 @@ class NoteQueryServiceTest {
   }
 
   @Test
+  void aThreadCountsTheHiddenRepliesItsViewerCouldOpenWithoutListingThem() {
+    NoteEntity root = note(1L, null);
+    NoteEntity reply = note(2L, 1L);
+    NoteEntity hidden = note(3L, 1L);
+    NoteEntity unreadable = note(4L, 1L);
+    when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.of(root));
+    when(notes.replies(1L, 9L, NoteQueryService.MAX_REPLIES)).thenReturn(List.of(reply));
+    when(notes.hiddenReplies(1L, 9L, NoteQueryService.MAX_REPLIES))
+        .thenReturn(List.of(hidden, unreadable));
+    when(views.of(List.of(root, reply, hidden, unreadable), 9L))
+        .thenReturn(List.of(view(1L, null, null), view(2L, 1L, null), view(3L, 1L, null)));
+
+    NoteThreadView thread = service.thread(1L, 9L);
+
+    assertThat(thread.replies()).extracting(NoteView::id).containsExactly(2L);
+    assertThat(thread.hiddenReplyCount()).isEqualTo(1);
+  }
+
+  private static NoteEntity reply(Long id, Long author, Long parent, Long root) {
+    NoteEntity note = new NoteEntity(author, "n" + id, parent, null);
+    ReflectionTestUtils.setField(note, "id", id);
+    ReflectionTestUtils.setField(note, "conversationId", root);
+    return note;
+  }
+
+  private void open(NoteEntity main, NoteEntity parent, Long viewer) {
+    when(notes.findUnblocked(main.getId(), viewer)).thenReturn(Optional.of(main));
+    if (parent != null) {
+      when(notes.findUnblocked(parent.getId(), viewer)).thenReturn(Optional.of(parent));
+    }
+    when(views.of(anyList(), eq(viewer)))
+        .thenReturn(List.of(view(main.getId(), main.getInReplyToId(), null)));
+  }
+
+  @Test
+  void onlyTheWriterOfTheThreadsFirstNoteMayModerateItAtAnyDepth() {
+    NoteEntity first = note(1L, null);
+    open(first, null, 7L);
+    assertThat(service.thread(1L, 7L).viewerCanModerate()).isTrue();
+    open(first, null, 9L);
+    assertThat(service.thread(1L, 9L).viewerCanModerate()).isFalse();
+    open(first, null, null);
+    assertThat(service.thread(1L, null).viewerCanModerate()).isFalse();
+
+    NoteEntity answer = reply(2L, 8L, 1L, 1L);
+    open(answer, first, 7L);
+    assertThat(service.thread(2L, 7L).viewerCanModerate()).isTrue();
+    verify(notes, never()).findById(1L);
+
+    NoteEntity deep = reply(3L, 8L, 2L, 1L);
+    open(deep, answer, 7L);
+    when(notes.findById(1L)).thenReturn(Optional.of(first));
+    assertThat(service.thread(3L, 7L).viewerCanModerate()).isTrue();
+    open(deep, answer, 8L);
+    assertThat(service.thread(3L, 8L).viewerCanModerate()).isFalse();
+    when(notes.findById(1L)).thenReturn(Optional.empty());
+    assertThat(service.thread(3L, 7L).viewerCanModerate()).isFalse();
+  }
+
+  @Test
   void historyOpensOnlyWhereTheThreadWould() {
     when(notes.findUnblocked(1L, 9L)).thenReturn(Optional.empty());
     assertThatThrownBy(() -> service.history(1L, 9L)).isInstanceOf(NoteException.class);

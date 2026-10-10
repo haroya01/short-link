@@ -1,5 +1,9 @@
 package com.example.short_link.notification.domain;
 
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.Set;
+
 // REPLY targets the thread author, distinct from the post-owner COMMENT notice. MENTION is
 // deduplicated against COMMENT/REPLY. CONNECTED targets the connected work's author; PATH_GREW
 // targets prior contributors excluding that author and the curator. Both graph notices open the
@@ -41,6 +45,10 @@ public enum NotificationType {
       case MENTION, NOTE_MENTION, REPLY, NOTE_REPLY, COMMENT -> true;
       default -> false;
     };
+  }
+
+  public static Set<NotificationType> mentionTypes() {
+    return EnumSet.copyOf(Arrays.stream(values()).filter(NotificationType::inMentions).toList());
   }
 
   // Notices a person causes, which the notification policy may keep aside or drop (Mastodon's

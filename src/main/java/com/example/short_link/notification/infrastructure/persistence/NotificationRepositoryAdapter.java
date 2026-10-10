@@ -162,6 +162,12 @@ class NotificationRepositoryAdapter implements NotificationRepository {
   }
 
   @Override
+  public int markAllReadOfTypes(
+      Long recipientUserId, Collection<NotificationType> types, Instant at) {
+    return jpa.markAllReadOfTypes(recipientUserId, types, at);
+  }
+
+  @Override
   public int deleteFromServer(String domain) {
     return em.createNativeQuery(
             "DELETE n FROM notification n JOIN federation_remote_actor a ON a.id = n.actor_remote_id"

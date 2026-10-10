@@ -19,7 +19,7 @@
 @junit | note-thread-create | 14 | 3 | 0 | 0 | 17
 # Reading that thread: its first note lists the later parts in order apart from other replies, and
 # the public feed carries the second part under the first.
-@junit | note-thread-parts | 8 | 0 | 0 | 0 | 8
+@junit | note-thread-parts | 9 | 0 | 0 | 0 | 9
 @junit | note-everyone-thread | 7 | 0 | 0 | 0 | 7
 # Liking or reposting answers with the note's public counts in one statement, whoever asks.
 @junit | note-like | 8 | 2 | 0 | 0 | 10
@@ -43,8 +43,9 @@
 # A profile's media: the member, the notes with attachments, then their attachments.
 @junit | note-profile-media | 3 | 0 | 0 | 0 | 3
 # A shared note's thread also reads the series it belongs to, with that series' readable items, in
-# one statement.
-@junit | note-thread | 9 | 0 | 0 | 0 | 9
+# one statement. Every thread reads the replies its writer hid under the note in one more statement
+# and views them with the page, so the count it gives is what hidden replies would list.
+@junit | note-thread | 10 | 0 | 0 | 0 | 10
 # Quotes of a note: the notes quoting it, then the page as usual (anonymous, so no reader marks).
 @junit | note-quotes | 6 | 0 | 0 | 0 | 6
 @junit | post-note-quotes | 7 | 0 | 0 | 0 | 7
@@ -83,7 +84,7 @@
 # writing nor reading a note with mentions adds a query. Each mentioned member is told after commit
 # like any other note notice: block check, preference, insert, then both names for the push.
 @junit | note-create-mention | 9 | 2 | 0 | 0 | 11
-@junit | note-thread-mention | 7 | 0 | 0 | 0 | 7
+@junit | note-thread-mention | 8 | 0 | 0 | 0 | 8
 # A content warning and the sensitive mark are columns on the note: they ride in its one insert and
 # its one update (the edit also keeps the version it replaces).
 @junit | note-create-warning | 4 | 1 | 0 | 0 | 5
@@ -125,7 +126,7 @@
 # A note with an address: the card is fetched after commit off the request thread and stored with
 # one upsert. Reading it back adds one card query, and only for pages that have an address at all.
 @junit | note-create-link | 4 | 2 | 0 | 0 | 6
-@junit | note-thread-link | 8 | 0 | 0 | 0 | 8
+@junit | note-thread-link | 9 | 0 | 0 | 0 | 9
 # Visibility (Mastodon's four). Restricted notes (followers-only, direct) record the members they
 # mention as recipients in one insert; they still get their mention notices. Shared feeds (everyone,
 # tags) filter public inside their one query. A page with restricted notes by someone else asks once
@@ -144,10 +145,10 @@
 @junit | note-vis-profile-follower | 8 | 0 | 0 | 0 | 8
 @junit | note-vis-profile-mentioned | 8 | 0 | 0 | 0 | 8
 @junit | note-vis-profile-author | 7 | 0 | 0 | 0 | 7
-@junit | note-vis-thread-private-stranger | 5 | 0 | 0 | 0 | 5
-@junit | note-vis-thread-private-follower | 8 | 0 | 0 | 0 | 8
-@junit | note-vis-thread-direct-follower | 5 | 0 | 0 | 0 | 5
-@junit | note-vis-thread-direct-mentioned | 8 | 0 | 0 | 0 | 8
+@junit | note-vis-thread-private-stranger | 6 | 0 | 0 | 0 | 6
+@junit | note-vis-thread-private-follower | 9 | 0 | 0 | 0 | 9
+@junit | note-vis-thread-direct-follower | 6 | 0 | 0 | 0 | 6
+@junit | note-vis-thread-direct-mentioned | 9 | 0 | 0 | 0 | 9
 @junit | note-vis-history-private-anonymous | 2 | 0 | 0 | 0 | 2
 @junit | note-vis-direct-mentioned | 7 | 0 | 0 | 0 | 7
 @junit | note-vis-direct-follower | 1 | 0 | 0 | 0 | 1
@@ -182,7 +183,7 @@
 @junit | note-poll-vote-again | 3 | 1 | 0 | 0 | 4
 @junit | note-poll-vote-own | 1 | 0 | 0 | 0 | 1
 @junit | note-poll-vote-ended | 1 | 0 | 0 | 0 | 1
-@junit | note-thread-poll | 8 | 0 | 0 | 0 | 8
+@junit | note-thread-poll | 9 | 0 | 0 | 0 | 9
 # Mutes (Mastodon's, account-level like blocks). Muting reads the person and the existing row, then
 # inserts or updates; unmuting deletes it. Shared lists (all notes, trending, tags, the following
 # feed, lists, a thread's replies, quotes) keep out authors blocked either way or muted, inside
@@ -193,7 +194,7 @@
 @junit | user-mutes | 2 | 0 | 0 | 0 | 2
 @junit | note-everyone-muted | 8 | 0 | 0 | 0 | 8
 @junit | note-reply-muted | 7 | 1 | 0 | 0 | 8
-@junit | note-thread-muted | 8 | 0 | 0 | 0 | 8
+@junit | note-thread-muted | 9 | 0 | 0 | 0 | 9
 @junit | user-unmute | 2 | 0 | 0 | 1 | 3
 # Keyword filters (Mastodon's) are stored for the owner's apps, which apply them, so no feed reads
 # them. Create counts the owner's filters (at most a hundred) then inserts; every other call first
@@ -214,7 +215,7 @@
 # the reader's marks pick it up in the same statement as likes, reposts and bookmarks.
 @junit | note-reply-before-mute | 11 | 2 | 0 | 0 | 13
 @junit | note-conversation-mute | 1 | 1 | 0 | 0 | 2
-@junit | note-thread-conversation-muted | 8 | 0 | 0 | 0 | 8
+@junit | note-thread-conversation-muted | 9 | 0 | 0 | 0 | 9
 # A reply or a like in the muted thread stops at the one silence check (block, mute, conversation).
 @junit | note-reply-conversation-muted | 7 | 1 | 0 | 0 | 8
 @junit | note-like-conversation-muted | 4 | 1 | 0 | 0 | 5
@@ -260,14 +261,16 @@
 @junit | note-create-reply-limited | 9 | 2 | 0 | 0 | 11
 @junit | note-reply-restricted | 5 | 0 | 0 | 0 | 5
 @junit | note-reply-named | 11 | 2 | 0 | 0 | 13
-@junit | note-thread-reply-limited | 8 | 0 | 0 | 0 | 8
+@junit | note-thread-reply-limited | 9 | 0 | 0 | 0 | 9
 @junit | note-reply-policy-change | 1 | 0 | 1 | 0 | 2
 @junit | note-reply-opened | 11 | 2 | 0 | 0 | 13
 # Hiding reads the reply and the thread's first note, then updates the reply. The thread leaves a
 # hidden reply out inside its replies statement and its reply count; hidden replies read the note
-# (blocks inside), the hidden ones under it, and view them as any page.
+# (blocks inside), the hidden ones under it, and view them as any page. Whether the reader wrote the
+# thread is free when the opened note or its parent is the first note; deeper, one read finds it.
 @junit | note-reply-hide | 2 | 0 | 1 | 0 | 3
-@junit | note-thread-hidden-reply | 7 | 0 | 0 | 0 | 7
+@junit | note-thread-hidden-reply | 8 | 0 | 0 | 0 | 8
+@junit | note-thread-moderated-by-writer | 10 | 0 | 0 | 0 | 10
 @junit | note-hidden-replies | 5 | 0 | 0 | 0 | 5
 @junit | note-reply-unhide | 2 | 0 | 1 | 0 | 3
 # The thread's writer removes a member's reply the way its writer would: the reply and the thread's
