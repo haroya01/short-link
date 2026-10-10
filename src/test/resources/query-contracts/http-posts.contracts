@@ -37,4 +37,4 @@
 @junit | note-quoting-posts | 3 | 0 | 0 | 0 | 3
 @junit | note-quoting-posts-after-edit | 1 | 0 | 0 | 0 | 1
 # The note's thread counts the post among its quotes inside the same stats statement.
-@junit | note-thread-quoted-in-post | 7 | 0 | 0 | 0 | 7
+@junit | note-thread-quoted-in-post | 8 | 0 | 0 | 0 | 8

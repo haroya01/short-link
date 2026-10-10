@@ -125,6 +125,8 @@ class NoteReplyControlsIntegrationTest {
     NoteThreadView thread = query.thread(root, followed);
     assertThat(thread.replies()).extracting(NoteView::id).containsExactly(kept);
     assertThat(thread.note().replyCount()).isEqualTo(1);
+    assertThat(thread.hiddenReplyCount()).isEqualTo(1);
+    assertThat(query.thread(root, null).hiddenReplyCount()).isEqualTo(1);
     assertThat(query.hiddenReplies(root, followed))
         .extracting(NoteView::id, NoteView::hidden)
         .containsExactly(org.assertj.core.groups.Tuple.tuple(hidden, true));
@@ -140,6 +142,26 @@ class NoteReplyControlsIntegrationTest {
         .extracting(NoteView::id)
         .containsExactly(kept, hidden);
     assertThat(query.hiddenReplies(root, null)).isEmpty();
+    assertThat(query.thread(root, null).hiddenReplyCount()).isZero();
+  }
+
+  @Test
+  void aThreadTellsOnlyTheWriterOfItsFirstNoteThatTheyModerateItAtEveryDepth() {
+    long root = post(writer, "아무나", null, null);
+    long reply = post(named, "답글", root, null);
+    long deep = post(followed, "답글의 답글", reply, null);
+    long deeper = post(stranger, "더 깊은 답글", deep, null);
+    flush();
+
+    for (long note : List.of(root, reply, deep, deeper)) {
+      assertThat(query.thread(note, writer).viewerCanModerate()).as("note %d", note).isTrue();
+      assertThat(query.thread(note, named).viewerCanModerate()).as("note %d", note).isFalse();
+      assertThat(query.thread(note, null).viewerCanModerate()).as("note %d", note).isFalse();
+    }
+    command.setReplyHidden(writer, deeper, true);
+    flush();
+    assertThat(query.thread(deep, stranger).hiddenReplyCount()).isEqualTo(1);
+    assertThat(query.thread(root, stranger).hiddenReplyCount()).isZero();
   }
 
   @Test

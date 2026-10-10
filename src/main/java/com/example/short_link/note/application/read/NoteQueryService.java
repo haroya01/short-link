@@ -293,10 +293,17 @@ public class NoteQueryService {
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
     List<NoteEntity> batch = new ArrayList<>();
     batch.add(note);
-    if (note.getInReplyToId() != null) {
-      notes.findUnblocked(note.getInReplyToId(), viewerId).ifPresent(batch::add);
+    NoteEntity parentNote =
+        note.getInReplyToId() == null
+            ? null
+            : notes.findUnblocked(note.getInReplyToId(), viewerId).orElse(null);
+    if (parentNote != null) {
+      batch.add(parentNote);
     }
     batch.addAll(notes.replies(noteId, viewerId, MAX_REPLIES));
+    List<NoteEntity> hidden = notes.hiddenReplies(noteId, viewerId, MAX_REPLIES);
+    batch.addAll(hidden);
+    Set<Long> hiddenIds = hidden.stream().map(NoteEntity::getId).collect(Collectors.toSet());
     List<Long> chain =
         NoteViews.chains(
                 notes.selfReplies(List.of(noteId), NoteCommandService.MAX_THREAD_NOTES - 1))
@@ -328,8 +335,29 @@ public class NoteQueryService {
         loaded.stream()
             .filter(view -> noteId.equals(view.inReplyToId()))
             .filter(view -> !parts.contains(view.id()))
+            .filter(view -> !hiddenIds.contains(view.id()))
             .toList();
-    return new NoteThreadView(main, parent, replies, continuation, seriesNav(note));
+    int hiddenReplyCount =
+        (int) loaded.stream().filter(view -> hiddenIds.contains(view.id())).count();
+    return new NoteThreadView(
+        main,
+        parent,
+        replies,
+        continuation,
+        seriesNav(note),
+        hiddenReplyCount,
+        viewerId != null && writesThread(viewerId, note, parentNote));
+  }
+
+  private boolean writesThread(Long viewerId, NoteEntity note, NoteEntity parent) {
+    Long root = note.conversation();
+    if (root.equals(note.getId())) {
+      return note.isOwnedBy(viewerId);
+    }
+    if (parent != null && root.equals(parent.getId())) {
+      return parent.isOwnedBy(viewerId);
+    }
+    return notes.findById(root).filter(first -> first.isOwnedBy(viewerId)).isPresent();
   }
 
   // Threads' hidden replies: the replies the thread's writer moved out of the thread under this
