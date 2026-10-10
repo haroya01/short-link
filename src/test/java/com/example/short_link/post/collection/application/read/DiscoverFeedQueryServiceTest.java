@@ -1,8 +1,10 @@
 package com.example.short_link.post.collection.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -93,7 +95,7 @@ class DiscoverFeedQueryServiceTest {
   @Test
   void fallsBackToGlobalWhenViewerFollowsNoOne() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of());
-    when(connectionRepository.findRecentPublicConnections(0, 20))
+    when(connectionRepository.findRecentPublicConnections(1L, 0, 20))
         .thenReturn(List.of(row(100L, ConnectionBlockType.NOTE, 7L, 3L)));
     when(noteBodies.blocksByIds(anyCollection()))
         .thenReturn(Map.of(7L, new NoteBlock(7L, "전역에서 온 노트", "note_author")));
@@ -107,15 +109,16 @@ class DiscoverFeedQueryServiceTest {
     assertThat(feed.items().get(0).username()).isEqualTo("note_author");
     assertThat(feed.items().get(0).noteId()).isEqualTo(7L);
     verify(connectionRepository, never())
-        .findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt());
+        .findPublicConnectionsByOwners(anyCollection(), eq(1L), anyInt(), anyInt());
   }
 
   @Test
   void fallsBackToGlobalOnFirstPageWhenFollowedCuratorsAreQuiet() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
-    when(connectionRepository.findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt()))
+    when(connectionRepository.findPublicConnectionsByOwners(
+            anyCollection(), eq(1L), anyInt(), anyInt()))
         .thenReturn(List.of());
-    when(connectionRepository.findRecentPublicConnections(0, 20))
+    when(connectionRepository.findRecentPublicConnections(1L, 0, 20))
         .thenReturn(List.of(row(100L, ConnectionBlockType.NOTE, 7L, 3L)));
     when(noteBodies.blocksByIds(anyCollection()))
         .thenReturn(Map.of(7L, new NoteBlock(7L, "전역에서 온 노트", "note_author")));
@@ -131,7 +134,8 @@ class DiscoverFeedQueryServiceTest {
   @Test
   void doesNotFallBackBeyondFirstPage() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
-    when(connectionRepository.findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt()))
+    when(connectionRepository.findPublicConnectionsByOwners(
+            anyCollection(), eq(1L), anyInt(), anyInt()))
         .thenReturn(List.of());
 
     DiscoverFeedView feed = service.feed(1L, 1, 20, false);
@@ -139,12 +143,12 @@ class DiscoverFeedQueryServiceTest {
     assertThat(feed.source()).isEqualTo("following");
     assertThat(feed.items()).isEmpty();
     assertThat(feed.hasNext()).isFalse();
-    verify(connectionRepository, never()).findRecentPublicConnections(anyInt(), anyInt());
+    verify(connectionRepository, never()).findRecentPublicConnections(any(), anyInt(), anyInt());
   }
 
   @Test
   void forceGlobalPinsGlobalFeedRegardlessOfFollowGraph() {
-    when(connectionRepository.findRecentPublicConnections(2, 10)).thenReturn(List.of());
+    when(connectionRepository.findRecentPublicConnections(1L, 2, 10)).thenReturn(List.of());
 
     DiscoverFeedView feed = service.feed(1L, 2, 10, true);
 
@@ -156,7 +160,8 @@ class DiscoverFeedQueryServiceTest {
   @Test
   void resolvesMixedBlocksWithCurators() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L, 3L));
-    when(connectionRepository.findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt()))
+    when(connectionRepository.findPublicConnectionsByOwners(
+            anyCollection(), eq(1L), anyInt(), anyInt()))
         .thenReturn(
             List.of(
                 row(100L, ConnectionBlockType.POST, 5L, 2L),
@@ -198,7 +203,8 @@ class DiscoverFeedQueryServiceTest {
   @Test
   void skipsRowWhenCuratorMissingAndFlagsHasNext() {
     when(followRepository.findFollowingIds(1L)).thenReturn(List.of(2L));
-    when(connectionRepository.findPublicConnectionsByOwners(anyCollection(), anyInt(), anyInt()))
+    when(connectionRepository.findPublicConnectionsByOwners(
+            anyCollection(), eq(1L), anyInt(), anyInt()))
         .thenReturn(
             List.of(
                 row(100L, ConnectionBlockType.NOTE, 7L, 2L),
@@ -223,7 +229,7 @@ class DiscoverFeedQueryServiceTest {
 
   @Test
   void publicFeedResolvesGloballyWithoutFollowGate() {
-    when(connectionRepository.findRecentPublicConnections(0, 20))
+    when(connectionRepository.findRecentPublicConnections(null, 0, 20))
         .thenReturn(
             List.of(
                 row(100L, ConnectionBlockType.POST, 5L, 2L),
@@ -235,7 +241,7 @@ class DiscoverFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(user(2L, "minji"), user(3L, "sori"), user(4L, "author")));
 
-    DiscoverFeedView feed = service.publicFeed(0, 20);
+    DiscoverFeedView feed = service.publicFeed(null, 0, 20);
 
     assertThat(feed.items()).hasSize(2);
     assertThat(feed.hasNext()).isFalse();
@@ -251,7 +257,7 @@ class DiscoverFeedQueryServiceTest {
   // 미발행 글은 연결이 남아 있어도 공개 발견 피드에 제목·발췌가 새지 않아야 한다.
   @Test
   void publicFeedHidesUnpublishedPosts() {
-    when(connectionRepository.findRecentPublicConnections(0, 20))
+    when(connectionRepository.findRecentPublicConnections(null, 0, 20))
         .thenReturn(
             List.of(
                 row(100L, ConnectionBlockType.POST, 5L, 2L),
@@ -263,7 +269,7 @@ class DiscoverFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(user(2L, "minji"), user(4L, "author")));
 
-    DiscoverFeedView feed = service.publicFeed(0, 20);
+    DiscoverFeedView feed = service.publicFeed(null, 0, 20);
 
     assertThat(feed.items()).hasSize(1);
     assertThat(feed.items().get(0).title()).isEqualTo("Title 5");
@@ -295,7 +301,7 @@ class DiscoverFeedQueryServiceTest {
             com.example.short_link.post.collection.domain.CollectionKind.COLLECTION,
             2L);
     DiscoverConnectionRow thinPost = row(104L, ConnectionBlockType.POST, 7L, 2L);
-    when(connectionRepository.findRecentPublicConnections(0, 20))
+    when(connectionRepository.findRecentPublicConnections(null, 0, 20))
         .thenReturn(List.of(gibberishCollection, gibberishWhy, thinPost));
     when(highlightRepository.findAllByIdIn(anyCollection())).thenReturn(List.of());
     when(noteBodies.blocksByIds(anyCollection())).thenReturn(Map.of());
@@ -307,7 +313,7 @@ class DiscoverFeedQueryServiceTest {
     when(userRepository.findAllByIdIn(anyCollection()))
         .thenReturn(List.of(user(2L, "minji"), user(4L, "author")));
 
-    DiscoverFeedView feed = service.publicFeed(0, 20);
+    DiscoverFeedView feed = service.publicFeed(null, 0, 20);
 
     assertThat(feed.items()).extracting(DiscoverConnectionView::id).containsExactly(103L);
     assertThat(feed.items().get(0).why()).isNull();
@@ -315,9 +321,9 @@ class DiscoverFeedQueryServiceTest {
 
   @Test
   void publicFeedEmptyWhenNoPublicConnectionsAndFlagsHasNext() {
-    when(connectionRepository.findRecentPublicConnections(3, 10)).thenReturn(List.of());
+    when(connectionRepository.findRecentPublicConnections(null, 3, 10)).thenReturn(List.of());
 
-    DiscoverFeedView feed = service.publicFeed(3, 10);
+    DiscoverFeedView feed = service.publicFeed(null, 3, 10);
 
     assertThat(feed.items()).isEmpty();
     assertThat(feed.page()).isEqualTo(3);

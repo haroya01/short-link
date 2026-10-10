@@ -38,27 +38,28 @@ public class DiscoverFeedQueryService {
 
   public DiscoverFeedView feed(Long viewerId, int page, int size, boolean forceGlobal) {
     if (forceGlobal) {
-      return globalFeed(page, size);
+      return globalFeed(viewerId, page, size);
     }
     List<Long> followingIds = followRepository.findFollowingIds(viewerId);
     if (followingIds.isEmpty()) {
-      return globalFeed(page, size);
+      return globalFeed(viewerId, page, size);
     }
 
     List<DiscoverConnectionRow> rows =
-        connectionRepository.findPublicConnectionsByOwners(followingIds, page, size);
+        connectionRepository.findPublicConnectionsByOwners(followingIds, viewerId, page, size);
     if (rows.isEmpty() && page == 0) {
-      return globalFeed(page, size);
+      return globalFeed(viewerId, page, size);
     }
     return assemble(rows, page, size, DiscoverFeedView.SOURCE_FOLLOWING);
   }
 
-  public DiscoverFeedView publicFeed(int page, int size) {
-    return globalFeed(page, size);
+  public DiscoverFeedView publicFeed(Long viewerId, int page, int size) {
+    return globalFeed(viewerId, page, size);
   }
 
-  private DiscoverFeedView globalFeed(int page, int size) {
-    List<DiscoverConnectionRow> rows = connectionRepository.findRecentPublicConnections(page, size);
+  private DiscoverFeedView globalFeed(Long viewerId, int page, int size) {
+    List<DiscoverConnectionRow> rows =
+        connectionRepository.findRecentPublicConnections(viewerId, page, size);
     return assemble(rows, page, size, DiscoverFeedView.SOURCE_GLOBAL);
   }
 

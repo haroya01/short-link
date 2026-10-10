@@ -4,6 +4,7 @@ import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PostCommentQueryService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +18,7 @@ public class PublicCommentController {
   private final PostCommentQueryService postCommentQueryService;
 
   @GetMapping("/{postId}/comments")
-  public List<CommentView> list(@PathVariable Long postId) {
-    return postCommentQueryService.listForPost(postId);
+  public List<CommentView> list(@AuthenticationPrincipal Long viewerId, @PathVariable Long postId) {
+    return postCommentQueryService.listForPost(postId, viewerId);
   }
 }

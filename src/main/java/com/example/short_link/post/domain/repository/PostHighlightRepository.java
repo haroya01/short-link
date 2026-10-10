@@ -17,12 +17,15 @@ public interface PostHighlightRepository {
 
   List<PostHighlightEntity> findAllByPostIdOrderByBlockOrderAscStartOffsetAsc(Long postId);
 
+  List<PostHighlightEntity> findHeardByPostId(Long postId, Long viewerId);
+
   List<PostHighlightEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
+  // Feed reads leave out highlights whose writer or whose post's author the viewer cannot hear.
   List<PostHighlightEntity> findByUserIdsOrderByCreatedAtDesc(
-      Collection<Long> userIds, int page, int size);
+      Collection<Long> userIds, Long viewerId, int page, int size);
 
-  List<PostHighlightEntity> findRecentOnPublishedPosts(int page, int size);
+  List<PostHighlightEntity> findRecentOnPublishedPosts(Long viewerId, int page, int size);
 
   int deleteAllByPostId(Long postId);
 }

@@ -4,6 +4,7 @@ import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.application.read.PostHighlightReplyQueryService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +18,8 @@ public class PublicHighlightReplyController {
   private final PostHighlightReplyQueryService replyQuery;
 
   @GetMapping("/{highlightId}/replies")
-  public List<HighlightReplyView> list(@PathVariable Long highlightId) {
-    return replyQuery.listForHighlight(highlightId);
+  public List<HighlightReplyView> list(
+      @AuthenticationPrincipal Long viewerId, @PathVariable Long highlightId) {
+    return replyQuery.listForHighlight(highlightId, viewerId);
   }
 }

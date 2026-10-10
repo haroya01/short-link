@@ -80,7 +80,7 @@ class PublicConnectionFeedIntegrationTest {
     connect(priv, ConnectionBlockType.POST, pSecret, 0);
     connect(ac, ConnectionBlockType.POST, 999_000_101L, 1);
 
-    List<DiscoverConnectionView> items = service.publicFeed(0, 200).items();
+    List<DiscoverConnectionView> items = service.publicFeed(null, 0, 200).items();
 
     DiscoverConnectionView postItem =
         items.stream().filter(i -> "Title pf-uniq-one".equals(i.title())).findFirst().orElseThrow();
@@ -104,7 +104,7 @@ class PublicConnectionFeedIntegrationTest {
     connect(c, ConnectionBlockType.POST, post(carol, "pg-3"), 2);
 
     // 공유 DB 라 다른 행이 섞일 수 있으니 size 1 페이지가 "가득 참"만 검증(hasNext=true).
-    DiscoverFeedView first = service.publicFeed(0, 1);
+    DiscoverFeedView first = service.publicFeed(null, 0, 1);
     assertThat(first.items()).hasSize(1);
     assertThat(first.page()).isEqualTo(0);
     assertThat(first.size()).isEqualTo(1);

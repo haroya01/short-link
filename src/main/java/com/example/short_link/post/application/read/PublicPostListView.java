@@ -2,4 +2,8 @@ package com.example.short_link.post.application.read;
 
 import java.util.List;
 
-public record PublicPostListView(PublicAuthorView author, List<PublicPostListItem> posts) {}
+public record PublicPostListView(
+    PublicAuthorView author,
+    List<PublicPostListItem> posts,
+    boolean blockedByViewer,
+    boolean blocksViewer) {}

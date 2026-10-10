@@ -1,6 +1,7 @@
 package com.example.short_link.note.infrastructure.persistence;
 
 import com.example.short_link.common.federation.ServerBlockSql;
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteEditEntity;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
@@ -52,6 +53,20 @@ class NoteRepositoryAdapter implements NoteRepository {
   }
 
   @Override
+  @SuppressWarnings("unchecked")
+  public Optional<NoteEntity> findUnblocked(Long id, Long viewerId) {
+    return em
+        .createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.id = :id" + HeardSql.unblocked("n.user_id"),
+            NoteEntity.class)
+        .setParameter("id", id)
+        .setParameter("viewer", viewer(viewerId))
+        .getResultList()
+        .stream()
+        .findFirst();
+  }
+
+  @Override
   public List<NoteEntity> findAllByIdIn(Collection<Long> ids) {
     return ids.isEmpty() ? List.of() : jpa.findAllByIdIn(ids);
   }
@@ -61,19 +76,8 @@ class NoteRepositoryAdapter implements NoteRepository {
     jpa.delete(note);
   }
 
-  // Notes by someone the viewer blocked, who blocked the viewer, or whom the viewer muted (until
-  // the mute ends) stay out of every shared list, as on Mastodon. The anonymous viewer is -1.
   static String heard(String alias) {
-    return " AND NOT EXISTS (SELECT 1 FROM user_block hb"
-        + " WHERE (hb.blocker_id = :viewer AND hb.blocked_id = "
-        + alias
-        + ".user_id) OR (hb.blocker_id = "
-        + alias
-        + ".user_id AND hb.blocked_id = :viewer))"
-        + " AND NOT EXISTS (SELECT 1 FROM user_mute hm"
-        + " WHERE hm.user_id = :viewer AND hm.muted_user_id = "
-        + alias
-        + ".user_id AND (hm.expires_at IS NULL OR hm.expires_at > :now))";
+    return HeardSql.heard(alias + ".user_id");
   }
 
   // As heard, for a note row: one from an account on a server the viewer blocked, or that this
@@ -108,7 +112,7 @@ class NoteRepositoryAdapter implements NoteRepository {
   }
 
   static long viewer(Long viewerId) {
-    return viewerId == null ? -1L : viewerId;
+    return HeardSql.viewer(viewerId);
   }
 
   // A reply whose parent is gone, or never reached this server, keeps reply set; the parent column
@@ -170,10 +174,11 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " WHERE f.follower_id = :viewer AND f.following_id = n.user_id)"
                 + " OR EXISTS (SELECT 1 FROM note_recipient r"
                 + " WHERE r.note_id = n.id AND r.user_id = :viewer))))"
+                + HeardSql.unblocked("n.user_id")
                 + " ORDER BY n.pinned_at IS NULL, n.pinned_at DESC, n.id DESC",
             NoteEntity.class)
         .setParameter("author", authorId)
-        .setParameter("viewer", viewerId == null ? -1L : viewerId)
+        .setParameter("viewer", viewer(viewerId))
         .setFirstResult(offset)
         .setMaxResults(limit)
         .getResultList();

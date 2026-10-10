@@ -1,7 +1,11 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -12,6 +16,8 @@ import org.springframework.stereotype.Repository;
 class CommentRepositoryAdapter implements CommentRepository {
 
   private final JpaCommentRepository jpa;
+
+  @PersistenceContext private EntityManager em;
 
   @Override
   public CommentEntity save(CommentEntity comment) {
@@ -31,6 +37,24 @@ class CommentRepositoryAdapter implements CommentRepository {
   @Override
   public List<CommentEntity> findAllByPostIdOrderByCreatedAtAsc(Long postId) {
     return jpa.findAllByPostIdAndDeletedAtIsNullOrderByCreatedAtAsc(postId);
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<CommentEntity> findHeardByPostId(Long postId, Long viewerId) {
+    return em.createNativeQuery(
+            "SELECT c.* FROM comment c WHERE c.post_id = :postId"
+                + HeardSql.heard("c.user_id")
+                + " AND (c.parent_id IS NULL OR EXISTS (SELECT 1 FROM comment pc"
+                + " WHERE pc.id = c.parent_id"
+                + HeardSql.heard("pc.user_id")
+                + "))"
+                + " ORDER BY c.created_at ASC",
+            CommentEntity.class)
+        .setParameter("postId", postId)
+        .setParameter("viewer", HeardSql.viewer(viewerId))
+        .setParameter("now", Instant.now())
+        .getResultList();
   }
 
   @Override

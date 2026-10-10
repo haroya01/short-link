@@ -536,6 +536,9 @@
 @junit | reader-author-analytics-denied | 1 | 0 | 0 | 0 | 1
 @junit | reader-author-followers | 6 | 0 | 0 | 0 | 6
 @junit | reader-author-published-posts | 3 | 0 | 0 | 0 | 3
+# Signed in, one more read finds a block either way between the reader and the author, which empties
+# the list and is returned as blockedByViewer / blocksViewer.
+@junit | reader-author-published-posts-signed-in | 4 | 0 | 0 | 0 | 4
 @junit | reader-bookmark-file-in-folder | 2 | 0 | 1 | 0 | 3
 @junit | reader-bookmark-folder-create | 1 | 1 | 0 | 0 | 2
 @junit | reader-bookmark-folder-delete | 1 | 0 | 0 | 1 | 2
@@ -591,9 +594,13 @@
 @junit | reader-private-path-hidden | 1 | 0 | 0 | 0 | 1
 @junit | reader-private-series-edit-denied | 1 | 0 | 0 | 0 | 1
 @junit | reader-public-comment-thread | 4 | 0 | 0 | 0 | 4
+# Signed in, blocks and mutes ride inside the comments statement (and the replies one below), so it
+# stays the anonymous read's four.
+@junit | reader-public-comment-thread-signed-in | 4 | 0 | 0 | 0 | 4
 @junit | reader-public-connection-feed | 6 | 0 | 0 | 0 | 6
 @junit | reader-public-curator-collections | 7 | 0 | 0 | 0 | 7
 @junit | reader-public-highlight-replies | 4 | 0 | 0 | 0 | 4
+@junit | reader-public-highlight-replies-signed-in | 4 | 0 | 0 | 0 | 4
 @junit | reader-public-markdown-download | 6 | 0 | 0 | 0 | 6
 @junit | reader-public-note-feed | 5 | 0 | 0 | 0 | 5
 @junit | reader-public-path-detail | 8 | 0 | 0 | 0 | 8
