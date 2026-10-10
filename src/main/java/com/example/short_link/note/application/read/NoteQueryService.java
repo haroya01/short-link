@@ -296,6 +296,24 @@ public class NoteQueryService {
     return new NoteThreadView(main, parent, replies, continuation, seriesNav(note));
   }
 
+  // Threads' hidden replies: the replies the thread's writer moved out of the thread under this
+  // note, for anyone who may open the note itself.
+  @Transactional(readOnly = true)
+  public List<NoteView> hiddenReplies(Long noteId, Long viewerId) {
+    NoteEntity note =
+        notes
+            .findUnblocked(noteId, viewerId)
+            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
+    List<NoteEntity> batch = new ArrayList<>();
+    batch.add(note);
+    batch.addAll(notes.hiddenReplies(noteId, viewerId, MAX_REPLIES));
+    List<NoteView> loaded = views.of(batch, viewerId);
+    if (loaded.stream().noneMatch(view -> view.id().equals(noteId))) {
+      throw new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId);
+    }
+    return loaded.stream().filter(view -> !view.id().equals(noteId)).toList();
+  }
+
   private NoteSeriesNavView seriesNav(NoteEntity note) {
     if (note.isRemote() || note.getVisibility().restricted()) {
       return null;

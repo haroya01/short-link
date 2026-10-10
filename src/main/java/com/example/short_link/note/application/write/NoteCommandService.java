@@ -24,6 +24,7 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinks;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
+import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteVisibility;
@@ -153,7 +154,8 @@ public class NoteCommandService {
       QuotedPost quoted,
       List<String> handles,
       Map<Long, NoteAuthor> authors,
-      String language) {}
+      String language,
+      NoteReplyPolicy replyPolicy) {}
 
   @Transactional(readOnly = true)
   public void validate(Long userId, NoteDraft draft) {
@@ -231,6 +233,9 @@ public class NoteCommandService {
     if (quotedNote != null && !authors.containsKey(quotedNote.getUserId())) {
       throw new NoteException(NoteErrorCode.NOTE_QUOTED_NOTE_NOT_FOUND, draft.quotedNoteId());
     }
+    if (parent != null) {
+      requireMayAnswer(userId, parent, authors.get(userId));
+    }
 
     return new Checked(
         body,
@@ -242,7 +247,39 @@ public class NoteCommandService {
         quoted,
         handles,
         authors,
-        language(draft.language()));
+        language(draft.language()),
+        replyPolicy(draft.replyPolicy()));
+  }
+
+  private static NoteReplyPolicy replyPolicy(String raw) {
+    return raw == null
+        ? null
+        : NoteReplyPolicy.parse(raw)
+            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_REPLY_POLICY_INVALID, raw));
+  }
+
+  // The thread's writer may always answer. Under a limited policy anyone else must be named in the
+  // first note or, under following, be followed by its writer. A thread whose first note is gone,
+  // or that started elsewhere, takes answers from anyone.
+  private void requireMayAnswer(Long userId, NoteEntity parent, NoteAuthor replier) {
+    if (!parent.getReplyPolicy().limited()) {
+      return;
+    }
+    NoteEntity root =
+        parent.conversation().equals(parent.getId())
+            ? parent
+            : notes.findById(parent.conversation()).orElse(null);
+    if (root == null || root.isRemote() || root.isOwnedBy(userId)) {
+      return;
+    }
+    if (replier != null && Mentions.of(root.getBody()).contains(replier.username())) {
+      return;
+    }
+    if (root.getReplyPolicy() == NoteReplyPolicy.FOLLOWING
+        && !people.followersOf(userId, Set.of(root.getUserId())).isEmpty()) {
+      return;
+    }
+    throw new NoteException(NoteErrorCode.NOTE_REPLY_RESTRICTED);
   }
 
   public static final int MAX_THREAD_NOTES = 10;
@@ -286,6 +323,8 @@ public class NoteCommandService {
         new NoteEntity(userId, body, parentId, draft.quotedPostId(), draft.quotedNoteId());
     if (parent != null) {
       fresh.answer(parent);
+    } else if (checked.replyPolicy() != null) {
+      fresh.limitReplies(checked.replyPolicy());
     }
     fresh.markContent(warning(draft.contentWarning()), draft.sensitive());
     fresh.writeIn(checked.language());
@@ -393,7 +432,11 @@ public class NoteCommandService {
         note.getVisibility().apiName(),
         note.hasPoll() ? NotePolls.view(note, NotePollTally.NONE, userId, now) : null,
         null,
-        note.getLanguage());
+        note.getLanguage(),
+        null,
+        note.getReplyPolicy().apiName(),
+        true,
+        false);
   }
 
   static String language(String raw) {
@@ -547,9 +590,63 @@ public class NoteCommandService {
     return new PinStatus(true);
   }
 
+  // The writer deletes their own note. The writer of a thread also removes someone else's reply in
+  // it, as a post's owner removes comments: a member's reply is deleted, one from elsewhere is only
+  // unhooked here, since its server keeps it.
   @Transactional
   public void delete(Long userId, Long noteId) {
-    remove(owned(userId, noteId));
+    NoteEntity note = find(noteId);
+    if (note.isOwnedBy(userId)) {
+      remove(note);
+      return;
+    }
+    if (note.getInReplyToId() == null || !writesThreadOf(userId, note)) {
+      throw new NoteException(NoteErrorCode.NOTE_PERMISSION_DENIED);
+    }
+    if (note.isRemote()) {
+      note.detach();
+    } else {
+      remove(note);
+    }
+  }
+
+  // As Threads' hidden replies: the thread's writer moves a reply out of the thread, where anyone
+  // who
+  // can read the thread still finds it under its hidden replies. The replier is not told.
+  @Transactional
+  public ReplyHiddenStatus setReplyHidden(Long userId, Long noteId, boolean on) {
+    NoteEntity reply = find(noteId);
+    if (reply.getInReplyToId() == null) {
+      throw new NoteException(NoteErrorCode.NOTE_NOT_A_REPLY);
+    }
+    if (!writesThreadOf(userId, reply)) {
+      throw new NoteException(NoteErrorCode.NOTE_PERMISSION_DENIED);
+    }
+    if (on) {
+      reply.hideReply(clock.instant().truncatedTo(ChronoUnit.MICROS));
+    } else {
+      reply.showReply();
+    }
+    return new ReplyHiddenStatus(on);
+  }
+
+  @Transactional
+  public ReplyPolicyStatus setReplyPolicy(Long userId, Long noteId, String raw) {
+    NoteReplyPolicy policy =
+        NoteReplyPolicy.parse(raw)
+            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_REPLY_POLICY_INVALID, raw));
+    NoteEntity note = owned(userId, noteId);
+    if (!note.isTopLevel()) {
+      throw new NoteException(NoteErrorCode.NOTE_REPLY_POLICY_ON_REPLY);
+    }
+    if (note.getReplyPolicy() != policy) {
+      notes.applyReplyPolicy(noteId, policy);
+    }
+    return new ReplyPolicyStatus(policy.apiName());
+  }
+
+  private boolean writesThreadOf(Long userId, NoteEntity reply) {
+    return notes.findById(reply.conversation()).filter(root -> root.isOwnedBy(userId)).isPresent();
   }
 
   // An admin takes a reported note down as if its author deleted it: a member's note also leaves
@@ -746,6 +843,10 @@ public class NoteCommandService {
   public record BookmarkStatus(boolean bookmarked) {}
 
   public record PinStatus(boolean pinned) {}
+
+  public record ReplyHiddenStatus(boolean hidden) {}
+
+  public record ReplyPolicyStatus(String replyPolicy) {}
 
   public record ConversationMuteStatus(boolean muted) {}
 }

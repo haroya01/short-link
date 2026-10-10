@@ -16,6 +16,7 @@ import com.example.short_link.note.presentation.request.CreateNoteThreadRequest;
 import com.example.short_link.note.presentation.request.EditNoteRequest;
 import com.example.short_link.note.presentation.request.NoteFeedPreferencesRequest;
 import com.example.short_link.note.presentation.request.NoteImagePresignRequest;
+import com.example.short_link.note.presentation.request.ReplyPolicyRequest;
 import com.example.short_link.note.presentation.response.LikedIdsResponse;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -115,6 +116,12 @@ public class NoteController {
   @GetMapping("/api/v1/public/notes/{id}")
   public NoteThreadView thread(@AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
     return query.thread(id, viewerId);
+  }
+
+  @GetMapping("/api/v1/public/notes/{id}/hidden-replies")
+  public List<NoteView> hiddenReplies(
+      @AuthenticationPrincipal Long viewerId, @PathVariable Long id) {
+    return query.hiddenReplies(id, viewerId);
   }
 
   @GetMapping("/api/v1/public/profiles/{username}/notes")
@@ -263,6 +270,26 @@ public class NoteController {
   public NoteCommandService.PinStatus unpin(
       @AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return command.setPin(userId, id, false);
+  }
+
+  @PutMapping("/api/v1/notes/{id}/hidden")
+  public NoteCommandService.ReplyHiddenStatus hideReply(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setReplyHidden(userId, id, true);
+  }
+
+  @DeleteMapping("/api/v1/notes/{id}/hidden")
+  public NoteCommandService.ReplyHiddenStatus showReply(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return command.setReplyHidden(userId, id, false);
+  }
+
+  @PutMapping("/api/v1/notes/{id}/reply-policy")
+  public NoteCommandService.ReplyPolicyStatus setReplyPolicy(
+      @AuthenticationPrincipal Long userId,
+      @PathVariable Long id,
+      @RequestBody ReplyPolicyRequest request) {
+    return command.setReplyPolicy(userId, id, request.replyPolicy());
   }
 
   @GetMapping("/api/v1/notes/feed-preferences")

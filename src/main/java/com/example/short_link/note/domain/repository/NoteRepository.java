@@ -2,6 +2,7 @@ package com.example.short_link.note.domain.repository;
 
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
+import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
@@ -46,6 +47,10 @@ public interface NoteRepository {
   List<NoteFeedRow> following(Collection<Long> authorIds, Long viewerId, int offset, int limit);
 
   List<NoteEntity> replies(Long noteId, Long viewerId, int limit);
+
+  List<NoteEntity> hiddenReplies(Long noteId, Long viewerId, int limit);
+
+  void applyReplyPolicy(Long rootId, NoteReplyPolicy policy);
 
   List<SelfReply> selfReplies(Collection<Long> rootIds, int depth);
 

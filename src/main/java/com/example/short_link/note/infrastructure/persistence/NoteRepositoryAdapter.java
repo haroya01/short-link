@@ -5,6 +5,7 @@ import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteEditEntity;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteFeedRow;
+import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteVersion;
 import com.example.short_link.note.domain.NoteViewerMarks;
@@ -276,6 +277,7 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " + (SELECT COUNT(*) FROM note_repost r WHERE r.note_id = n.id"
                 + " AND NOT (r.user_id <=> n.user_id))"
                 + " + (SELECT COUNT(*) FROM note c WHERE c.in_reply_to_id = n.id"
+                + " AND c.reply_hidden_at IS NULL"
                 + " AND NOT (c.user_id <=> n.user_id))"
                 + " + (SELECT COUNT(*) FROM note_remote_reaction x WHERE x.note_id = n.id)"
                 + ") DESC, n.id DESC",
@@ -364,10 +366,20 @@ class NoteRepositoryAdapter implements NoteRepository {
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public List<NoteEntity> replies(Long noteId, Long viewerId, int limit) {
+    return answers(noteId, viewerId, limit, false);
+  }
+
+  @Override
+  public List<NoteEntity> hiddenReplies(Long noteId, Long viewerId, int limit) {
+    return answers(noteId, viewerId, limit, true);
+  }
+
+  @SuppressWarnings("unchecked")
+  private List<NoteEntity> answers(Long noteId, Long viewerId, int limit, boolean hidden) {
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.in_reply_to_id = :noteId"
+            "SELECT n.* FROM note n WHERE n.in_reply_to_id = :noteId AND n.reply_hidden_at IS "
+                + (hidden ? "NOT NULL" : "NULL")
                 + heardNote("n")
                 + " ORDER BY n.id ASC",
             NoteEntity.class)
@@ -423,7 +435,7 @@ class NoteRepositoryAdapter implements NoteRepository {
         em.createNativeQuery(
                 "SELECT s.note_id, s.kind, COUNT(*) FROM ("
                     + "SELECT in_reply_to_id AS note_id, 'REPLY' AS kind FROM note"
-                    + " WHERE in_reply_to_id IN (:ids)"
+                    + " WHERE in_reply_to_id IN (:ids) AND reply_hidden_at IS NULL"
                     + " UNION ALL SELECT quoted_note_id, 'QUOTE' FROM note"
                     + " WHERE quoted_note_id IN (:ids)"
                     + " UNION ALL SELECT q.note_id, 'QUOTE' FROM post_note_quote q"
@@ -535,9 +547,9 @@ class NoteRepositoryAdapter implements NoteRepository {
         em.createNativeQuery(
                 "INSERT IGNORE INTO note (remote_actor_id, uri, remote_url, body, created_at,"
                     + " content_warning, marked_sensitive, visibility, in_reply_to_id,"
-                    + " conversation_id, reply, poll_multiple, language) VALUES (:actor, :uri,"
-                    + " :url, :body, :createdAt, :warning, :sensitive, :visibility, :parent,"
-                    + " :conversation, :reply, FALSE, :language)")
+                    + " conversation_id, reply, reply_policy, poll_multiple, language) VALUES"
+                    + " (:actor, :uri, :url, :body, :createdAt, :warning, :sensitive, :visibility,"
+                    + " :parent, :conversation, :reply, :replyPolicy, FALSE, :language)")
             .setParameter("actor", row.remoteActorId())
             .setParameter("uri", row.uri())
             .setParameter("url", row.url())
@@ -549,6 +561,7 @@ class NoteRepositoryAdapter implements NoteRepository {
             .setParameter("parent", row.inReplyToId())
             .setParameter("conversation", row.conversationId())
             .setParameter("reply", row.reply())
+            .setParameter("replyPolicy", row.replyPolicy().name())
             .setParameter("language", row.language())
             .executeUpdate();
     return inserted == 0 ? Optional.empty() : idByUri(row.uri());
@@ -557,6 +570,15 @@ class NoteRepositoryAdapter implements NoteRepository {
   @Override
   public Optional<NoteEntity> findRemoteForUpdate(Long remoteActorId, Long noteId) {
     return jpa.findRemoteForUpdate(noteId, remoteActorId);
+  }
+
+  @Override
+  public void applyReplyPolicy(Long rootId, NoteReplyPolicy policy) {
+    em.createNativeQuery(
+            "UPDATE note SET reply_policy = :policy WHERE id = :root OR conversation_id = :root")
+        .setParameter("policy", policy.name())
+        .setParameter("root", rootId)
+        .executeUpdate();
   }
 
   @Override

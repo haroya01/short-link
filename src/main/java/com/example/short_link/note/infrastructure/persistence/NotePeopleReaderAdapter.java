@@ -7,9 +7,11 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import org.springframework.stereotype.Repository;
 
 @Repository
@@ -106,6 +108,35 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
         .stream()
         .map(id -> ((Number) id).longValue())
         .toList();
+  }
+
+  @Override
+  public Set<Long> followersOf(Long userId, Collection<Long> candidates) {
+    if (candidates.isEmpty()) {
+      return Set.of();
+    }
+    Set<Long> followers = new HashSet<>();
+    for (Object id :
+        em.createNativeQuery(
+                "SELECT follower_id FROM user_follow"
+                    + " WHERE following_id = :userId AND follower_id IN (:candidates)")
+            .setParameter("userId", userId)
+            .setParameter("candidates", candidates)
+            .getResultList()) {
+      followers.add(((Number) id).longValue());
+    }
+    return followers;
+  }
+
+  @Override
+  public boolean followsRemote(Long userId, Long remoteActorId) {
+    return !em.createNativeQuery(
+            "SELECT 1 FROM federation_following WHERE user_id = :userId"
+                + " AND remote_actor_id = :actor AND accepted_at IS NOT NULL")
+        .setParameter("userId", userId)
+        .setParameter("actor", remoteActorId)
+        .getResultList()
+        .isEmpty();
   }
 
   private static NoteAuthor author(Object[] columns) {

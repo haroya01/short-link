@@ -23,8 +23,10 @@ class CreateNoteRequestTest {
             null,
             null,
             null,
-            null);
+            null,
+            "mentioned");
 
+    assertThat(request.toDraft().replyPolicy()).isEqualTo("mentioned");
     assertThat(request.toDraft().images())
         .containsExactly(
             new NoteDraft.Image("k1", "a", 1200, 1600), new NoteDraft.Image("k2", null));
