@@ -240,6 +240,7 @@ class PostEditConflictIntegrationTest {
                             null,
                             null,
                             null,
+                            null,
                             baseVersion,
                             false))
                     .contentVersion();

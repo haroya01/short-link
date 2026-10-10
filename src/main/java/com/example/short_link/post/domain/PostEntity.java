@@ -81,6 +81,10 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "og_image_key", length = 256)
   private String ogImageKey;
 
+  // 작성자가 직접 고른 표지인가. 본문 첫 이미지를 자동으로 채운 표지는 공유 카드에만 쓰고 피드 썸네일로는 쓰지 않는다.
+  @Column(name = "cover_chosen", nullable = false)
+  private boolean coverChosen;
+
   @Column(name = "view_count", nullable = false)
   private long viewCount = 0L;
 
@@ -193,14 +197,20 @@ public class PostEntity extends BaseTimeEntity {
     this.excerpt = excerpt;
   }
 
-  public void updateOgImage(String url, String key) {
+  public void updateOgImage(String url, String key, boolean chosen) {
     this.ogImageUrl = url;
     this.ogImageKey = key;
+    this.coverChosen = chosen;
   }
 
   public void clearOgImage() {
     this.ogImageUrl = null;
     this.ogImageKey = null;
+    this.coverChosen = false;
+  }
+
+  public String thumbnailUrl() {
+    return coverChosen ? ogImageUrl : null;
   }
 
   public void updateLanguageTag(String languageTag) {

@@ -37,7 +37,18 @@ class PublicPreviewControllerTest {
         new PublicPostDetail(
             new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
             new PublicPostListItem(
-                10L, "draft-post", "Draft", "Excerpt", null, "ko", List.of(), 0L, NOW, null, false),
+                10L,
+                "draft-post",
+                "Draft",
+                "Excerpt",
+                null,
+                null,
+                "ko",
+                List.of(),
+                0L,
+                NOW,
+                null,
+                false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)),
             null);
     when(publicPostQueryService.findPreviewPost("tok-123")).thenReturn(detail);

@@ -65,7 +65,7 @@ class UpdatePostMetadataUseCaseTest {
     PostView updated =
         useCase.execute(
             new UpdatePostMetadataCommand(
-                7L, 42L, "New Title", null, null, null, null, null, null, null, false));
+                7L, 42L, "New Title", null, null, null, null, null, null, null, null, false));
 
     assertThat(updated.title()).isEqualTo("New Title");
     assertThat(updated.slug()).isEqualTo("original-slug");
@@ -79,12 +79,12 @@ class UpdatePostMetadataUseCaseTest {
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, null, null, "Summary text.", null, null, null, null, null, false));
+            7L, 42L, null, null, "Summary text.", null, null, null, null, null, null, false));
     assertThat(post.getExcerpt()).isEqualTo("Summary text.");
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, null, null, "", null, null, null, null, null, false));
+            7L, 42L, null, null, "", null, null, null, null, null, null, false));
     assertThat(post.getExcerpt()).isNull();
   }
 
@@ -106,15 +106,57 @@ class UpdatePostMetadataUseCaseTest {
             null,
             null,
             null,
+            null,
             false));
     assertThat(post.getOgImageUrl()).isEqualTo("https://cdn/og/1.png");
     assertThat(post.getOgImageKey()).isEqualTo("og/1.png");
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, null, null, null, "", null, null, null, null, false));
+            7L, 42L, null, null, null, "", null, null, null, null, null, false));
     assertThat(post.getOgImageUrl()).isNull();
     assertThat(post.getOgImageKey()).isNull();
+  }
+
+  private UpdatePostMetadataCommand cover(String url, Boolean chosen) {
+    return new UpdatePostMetadataCommand(
+        7L, 42L, null, null, null, url, null, chosen, null, null, null, false);
+  }
+
+  @Test
+  void onlyAChosenCoverBecomesTheThumbnail() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    PostView prefilled = useCase.execute(cover("https://cdn/body-first.png", false));
+    assertThat(prefilled.coverChosen()).isFalse();
+    assertThat(post.thumbnailUrl()).isNull();
+
+    PostView picked = useCase.execute(cover("https://cdn/picked.png", true));
+    assertThat(picked.coverChosen()).isTrue();
+    assertThat(post.thumbnailUrl()).isEqualTo("https://cdn/picked.png");
+
+    useCase.execute(cover("", null));
+    assertThat(post.isCoverChosen()).isFalse();
+    assertThat(post.thumbnailUrl()).isNull();
+  }
+
+  @Test
+  void aClientThatSendsNoCoverChoiceKeepsTheSameCoverAndPicksANewOne() {
+    PostEntity post = ownedPost();
+    post.updateOgImage("https://cdn/body-first.png", null, false);
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(cover("https://cdn/body-first.png", null));
+    assertThat(post.isCoverChosen()).isFalse();
+
+    useCase.execute(cover("https://cdn/uploaded.png", null));
+    assertThat(post.isCoverChosen()).isTrue();
+
+    useCase.execute(cover("https://cdn/uploaded.png", null));
+    assertThat(post.isCoverChosen()).isTrue();
   }
 
   @Test
@@ -125,7 +167,7 @@ class UpdatePostMetadataUseCaseTest {
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, null, null, null, null, null, "ja", null, null, false));
+            7L, 42L, null, null, null, null, null, null, "ja", null, null, false));
     assertThat(post.getLanguageTag()).isEqualTo("ja");
   }
 
@@ -139,6 +181,7 @@ class UpdatePostMetadataUseCaseTest {
         new UpdatePostMetadataCommand(
             7L,
             42L,
+            null,
             null,
             null,
             null,
@@ -161,7 +204,7 @@ class UpdatePostMetadataUseCaseTest {
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, null, null, null, null, null, null, List.of(), null, false));
+            7L, 42L, null, null, null, null, null, null, null, List.of(), null, false));
 
     assertThat(post.getTags()).isEmpty();
   }
@@ -175,7 +218,7 @@ class UpdatePostMetadataUseCaseTest {
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, "T", null, null, null, null, null, null, null, false));
+            7L, 42L, "T", null, null, null, null, null, null, null, null, false));
 
     assertThat(post.getTags()).containsExactly("keep");
   }
@@ -189,7 +232,7 @@ class UpdatePostMetadataUseCaseTest {
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, null, "new-slug", null, null, null, null, null, null, false));
+            7L, 42L, null, "new-slug", null, null, null, null, null, null, null, false));
     assertThat(post.getSlug()).isEqualTo("new-slug");
   }
 
@@ -203,7 +246,7 @@ class UpdatePostMetadataUseCaseTest {
             () ->
                 useCase.execute(
                     new UpdatePostMetadataCommand(
-                        7L, 42L, null, "taken", null, null, null, null, null, null, false)))
+                        7L, 42L, null, "taken", null, null, null, null, null, null, null, false)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.SLUG_CONFLICT);
@@ -218,7 +261,7 @@ class UpdatePostMetadataUseCaseTest {
             () ->
                 useCase.execute(
                     new UpdatePostMetadataCommand(
-                        7L, 42L, null, "about", null, null, null, null, null, null, false)))
+                        7L, 42L, null, "about", null, null, null, null, null, null, null, false)))
         .isInstanceOfSatisfying(
             PostException.class,
             e -> {
@@ -237,7 +280,7 @@ class UpdatePostMetadataUseCaseTest {
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, "Edited", "notes", null, null, null, null, null, null, false));
+            7L, 42L, "Edited", "notes", null, null, null, null, null, null, null, false));
 
     assertThat(post.getTitle()).isEqualTo("Edited");
   }
@@ -253,7 +296,18 @@ class UpdatePostMetadataUseCaseTest {
             () ->
                 useCase.execute(
                     new UpdatePostMetadataCommand(
-                        7L, 42L, null, "new-slug", null, null, null, null, null, null, false)))
+                        7L,
+                        42L,
+                        null,
+                        "new-slug",
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        false)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.SLUG_FROZEN);
@@ -267,7 +321,7 @@ class UpdatePostMetadataUseCaseTest {
 
     useCase.execute(
         new UpdatePostMetadataCommand(
-            7L, 42L, "", null, null, null, null, null, null, null, false));
+            7L, 42L, "", null, null, null, null, null, null, null, null, false));
 
     assertThat(post.getTitle()).isEmpty();
   }
@@ -281,7 +335,7 @@ class UpdatePostMetadataUseCaseTest {
     PostView updated =
         useCase.execute(
             new UpdatePostMetadataCommand(
-                7L, 42L, "Mine", null, null, null, null, null, null, 3L, false));
+                7L, 42L, "Mine", null, null, null, null, null, null, null, 3L, false));
 
     assertThat(updated.title()).isEqualTo("Mine");
     assertThat(updated.contentVersion()).isEqualTo(4L);
@@ -296,7 +350,7 @@ class UpdatePostMetadataUseCaseTest {
             () ->
                 useCase.execute(
                     new UpdatePostMetadataCommand(
-                        7L, 42L, "Mine", null, null, null, null, null, null, 2L, false)))
+                        7L, 42L, "Mine", null, null, null, null, null, null, null, 2L, false)))
         .isInstanceOfSatisfying(
             PostException.class,
             e -> {
@@ -326,7 +380,7 @@ class UpdatePostMetadataUseCaseTest {
     PostView updated =
         useCase.execute(
             new UpdatePostMetadataCommand(
-                7L, 42L, "Mine", null, null, null, null, null, null, 1L, true));
+                7L, 42L, "Mine", null, null, null, null, null, null, null, 1L, true));
 
     assertThat(capturedTitles).containsExactly("Original");
     assertThat(updated.title()).isEqualTo("Mine");

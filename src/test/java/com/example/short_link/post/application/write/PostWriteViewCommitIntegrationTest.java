@@ -143,6 +143,7 @@ class PostWriteViewCommitIntegrationTest {
                   null,
                   null,
                   null,
+                  null,
                   false));
       case ADMIN_METADATA -> updateMetadata.adminExecute(userId, postId, null, null);
       case PUBLISH -> publishPost.execute(new PublishPostCommand(userId, postId));

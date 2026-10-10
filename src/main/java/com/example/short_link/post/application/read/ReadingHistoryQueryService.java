@@ -61,6 +61,7 @@ public class ReadingHistoryQueryService {
                   post.getSlug(),
                   post.getExcerpt(),
                   post.getOgImageUrl(),
+                  post.thumbnailUrl(),
                   r.getReadAt());
             })
         .toList();

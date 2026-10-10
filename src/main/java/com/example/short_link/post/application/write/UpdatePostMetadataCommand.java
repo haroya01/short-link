@@ -10,6 +10,7 @@ public record UpdatePostMetadataCommand(
     String excerpt,
     String ogImageUrl,
     String ogImageKey,
+    Boolean coverChosen,
     String languageTag,
     List<String> tags,
     Long baseVersion,

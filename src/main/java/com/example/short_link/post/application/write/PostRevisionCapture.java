@@ -29,6 +29,7 @@ public class PostRevisionCapture {
             post.getExcerpt(),
             post.getOgImageUrl(),
             post.getOgImageKey(),
+            post.isCoverChosen(),
             post.getLanguageTag(),
             blocks.stream()
                 .map(b -> new PostSnapshot.BlockSnapshot(b.getType().name(), b.getContent()))
