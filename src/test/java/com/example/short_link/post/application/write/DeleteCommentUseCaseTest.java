@@ -1,6 +1,9 @@
 package com.example.short_link.post.application.write;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -39,7 +42,7 @@ class DeleteCommentUseCaseTest {
   }
 
   @Test
-  void authorDeletesAndCascadesReplies() {
+  void aCommentWithRepliesStaysAsAnEmptyPlaceAndTheRepliesStay() {
     CommentEntity top = comment(1L, 9L, null);
     when(commentRepository.findById(1L)).thenReturn(Optional.of(top));
     CommentEntity reply = comment(2L, 3L, 1L);
@@ -47,8 +50,37 @@ class DeleteCommentUseCaseTest {
 
     useCase.execute(new DeleteCommentCommand(9L, 1L));
 
-    verify(commentRepository).delete(reply);
+    assertThat(top.isDeleted()).isTrue();
+    assertThat(top.getBody()).isEmpty();
+    verify(commentRepository).save(top);
+    verify(commentRepository, never()).delete(any());
+  }
+
+  @Test
+  void aCommentWhoseRepliesWereAllTakenDownGoesWithThem() {
+    CommentEntity top = comment(1L, 9L, null);
+    when(commentRepository.findById(1L)).thenReturn(Optional.of(top));
+    CommentEntity removed = comment(2L, 3L, 1L);
+    removed.softDelete();
+    when(commentRepository.findAllByParentId(1L)).thenReturn(List.of(removed));
+
+    useCase.execute(new DeleteCommentCommand(9L, 1L));
+
+    verify(commentRepository).delete(removed);
     verify(commentRepository).delete(top);
+    verify(commentRepository, never()).save(any());
+  }
+
+  @Test
+  void aCommentWithoutRepliesIsDeleted() {
+    CommentEntity top = comment(1L, 9L, null);
+    when(commentRepository.findById(1L)).thenReturn(Optional.of(top));
+    when(commentRepository.findAllByParentId(1L)).thenReturn(List.of());
+
+    useCase.execute(new DeleteCommentCommand(9L, 1L));
+
+    verify(commentRepository).delete(top);
+    assertThat(top.isDeleted()).isFalse();
   }
 
   @Test
@@ -61,6 +93,7 @@ class DeleteCommentUseCaseTest {
     useCase.execute(new DeleteCommentCommand(7L, 1L));
 
     verify(commentRepository).delete(c);
+    verify(commentRepository, never()).findAllByParentId(any());
   }
 
   @Test

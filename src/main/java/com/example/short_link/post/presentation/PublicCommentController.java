@@ -8,6 +8,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -17,8 +18,13 @@ public class PublicCommentController {
 
   private final PostCommentQueryService postCommentQueryService;
 
+  // Clients that can draw a deleted comment as an empty place ask for it with tombstones=1;
+  // builds that cannot decode one get the list without such places.
   @GetMapping("/{postId}/comments")
-  public List<CommentView> list(@AuthenticationPrincipal Long viewerId, @PathVariable Long postId) {
-    return postCommentQueryService.listForPost(postId, viewerId);
+  public List<CommentView> list(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable Long postId,
+      @RequestParam(name = "tombstones", defaultValue = "false") boolean tombstones) {
+    return postCommentQueryService.listForPost(postId, viewerId, tombstones);
   }
 }

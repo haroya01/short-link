@@ -304,7 +304,7 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void listCommentsReturnsComments() throws Exception {
-    when(postCommentQueryService.listForPost(5L, null))
+    when(postCommentQueryService.listForPost(5L, null, false))
         .thenReturn(
             List.of(
                 new CommentView(
@@ -320,6 +320,33 @@ class PublicPostDiscoveryControllersTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].body").value("nice post @kim"))
         .andExpect(jsonPath("$[0].mentions[0]").value("kim"))
-        .andExpect(jsonPath("$[0].author.username").value("lee"));
+        .andExpect(jsonPath("$[0].author.username").value("lee"))
+        .andExpect(jsonPath("$[0].deleted").value(false));
+  }
+
+  @Test
+  void aDeletedCommentWithRepliesComesAsAnEmptyPlaceOnlyWhenAskedFor() throws Exception {
+    when(postCommentQueryService.listForPost(5L, null, true))
+        .thenReturn(
+            List.of(
+                new CommentView(
+                    1L,
+                    null,
+                    null,
+                    null,
+                    Instant.parse("2026-01-01T00:00:00Z"),
+                    0L,
+                    List.of(),
+                    true)));
+
+    mvc.perform(get("/api/v1/public/posts/5/comments").param("tombstones", "1"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$[0].id").value(1))
+        .andExpect(jsonPath("$[0].deleted").value(true))
+        .andExpect(jsonPath("$[0].author").value(org.hamcrest.Matchers.nullValue()))
+        .andExpect(jsonPath("$[0].body").value(org.hamcrest.Matchers.nullValue()))
+        .andExpect(jsonPath("$[0].parentId").value(org.hamcrest.Matchers.nullValue()))
+        .andExpect(jsonPath("$[0].likeCount").value(0))
+        .andExpect(jsonPath("$[0].createdAt").exists());
   }
 }

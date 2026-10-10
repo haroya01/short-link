@@ -5,6 +5,7 @@ import com.example.short_link.post.domain.repository.CommentRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,9 +30,13 @@ public class DeleteCommentUseCase {
     }
 
     if (!comment.isReply()) {
-      for (CommentEntity reply : commentRepository.findAllByParentId(comment.getId())) {
-        commentRepository.delete(reply);
+      List<CommentEntity> replies = commentRepository.findAllByParentId(comment.getId());
+      if (replies.stream().anyMatch(reply -> !reply.isDeleted())) {
+        comment.tombstone();
+        commentRepository.save(comment);
+        return;
       }
+      replies.forEach(commentRepository::delete);
     }
     commentRepository.delete(comment);
   }

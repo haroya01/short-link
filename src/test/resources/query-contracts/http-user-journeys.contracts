@@ -75,6 +75,9 @@
 @junit | author-blocked-users-list | 2 | 0 | 0 | 0 | 2
 @junit | author-comment-like | 11 | 2 | 0 | 0 | 13
 @junit | author-comment-reply | 9 | 2 | 0 | 0 | 11
+# Deleting a reply: the reply, then its row; nothing else is read even when it was the last reply
+# under a deleted comment (the empty place drops out at read time).
+@junit | author-comment-reply-delete-last | 1 | 0 | 0 | 1 | 2
 @junit | author-comment-unlike | 3 | 0 | 0 | 1 | 4
 @junit | author-delete-post-with-live-reader-data | 3 | 0 | 0 | 12 | 15
 @junit | author-draft-create | 2 | 1 | 0 | 0 | 3
@@ -551,7 +554,9 @@
 @junit | reader-bookmark-status | 1 | 0 | 0 | 0 | 1
 @junit | reader-collection-after-source-post-deletion | 5 | 0 | 0 | 0 | 5
 @junit | reader-comment-create | 9 | 2 | 0 | 0 | 11
-@junit | reader-comment-delete-with-replies | 2 | 0 | 0 | 2 | 4
+# A comment that still has a reply stays as an empty place: the comment, its replies, then one
+# update (deleted_at and an emptied body) instead of deleting every reply.
+@junit | reader-comment-delete-with-replies | 2 | 0 | 1 | 0 | 3
 @junit | reader-deleted-note-absent | 1 | 0 | 0 | 0 | 1
 @junit | reader-deleted-public-post-missing | 2 | 0 | 0 | 0 | 2
 @junit | reader-draft-shared-preview | 4 | 0 | 0 | 0 | 4
@@ -599,6 +604,12 @@
 # Signed in, blocks and mutes ride inside the comments statement (and the replies one below), so it
 # stays the anonymous read's four.
 @junit | reader-public-comment-thread-signed-in | 4 | 0 | 0 | 0 | 4
+# With tombstones=1 the deleted comment comes back as an empty place inside the same one comments
+# statement; likes and writers are read for the live reply only. Without the flag the list is the
+# plain read. Once the last reply is gone nothing is left, so neither likes nor writers are read.
+@junit | reader-public-comment-thread-tombstone | 4 | 0 | 0 | 0 | 4
+@junit | reader-public-comment-thread-without-tombstones | 4 | 0 | 0 | 0 | 4
+@junit | reader-public-comment-thread-after-last-reply | 2 | 0 | 0 | 0 | 2
 @junit | reader-public-connection-feed | 6 | 0 | 0 | 0 | 6
 @junit | reader-public-curator-collections | 7 | 0 | 0 | 0 | 7
 @junit | reader-public-highlight-replies | 4 | 0 | 0 | 0 | 4

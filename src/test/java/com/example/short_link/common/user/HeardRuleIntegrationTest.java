@@ -134,12 +134,12 @@ class HeardRuleIntegrationTest {
     comment(post, writer("hr-expired"), tops.get("hr-normal"));
     comment(post, writer("hr-muted"), tops.get("hr-normal"));
 
-    List<CommentView> signedIn = comments.listForPost(post, viewer);
+    List<CommentView> signedIn = comments.listForPost(post, viewer, false);
     assertThat(signedIn)
         .extracting(c -> c.author().username())
         .containsExactly("hr-normal", "hr-expired", "hr-expired");
     assertThat(signedIn.get(2).parentId()).isEqualTo(tops.get("hr-normal"));
-    assertThat(comments.listForPost(post, null)).hasSize(9);
+    assertThat(comments.listForPost(post, null, false)).hasSize(9);
   }
 
   @Test
@@ -154,10 +154,12 @@ class HeardRuleIntegrationTest {
       commentRepository.save(c);
     }
 
-    assertThat(comments.listForPost(post, viewer))
+    assertThat(comments.listForPost(post, viewer, false))
         .extracting(CommentView::id)
         .containsExactly(kept);
-    assertThat(comments.listForPost(post, null)).extracting(CommentView::id).containsExactly(kept);
+    assertThat(comments.listForPost(post, null, false))
+        .extracting(CommentView::id)
+        .containsExactly(kept);
   }
 
   @Test
