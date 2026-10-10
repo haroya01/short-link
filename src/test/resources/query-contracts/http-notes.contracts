@@ -244,3 +244,25 @@
 @junit | note-create-language | 4 | 1 | 0 | 0 | 5
 @junit | note-feed-languages | 1 | 1 | 0 | 0 | 2
 @junit | note-everyone-languages | 6 | 0 | 0 | 0 | 6
+# Reply controls (Threads and X). The policy rides in the note's insert. A reply into a limited
+# thread asks nothing new: the parent is the first note here, and its writer and the named members
+# come with the authors query; the stranger stops right after it. A thread that limits replies
+# tells its reader whether they may answer from the same page reads (a following policy alone would
+# add one follow lookup). Changing the policy reads the note and rewrites the thread in one update.
+@junit | note-create-reply-limited | 9 | 2 | 0 | 0 | 11
+@junit | note-reply-restricted | 5 | 0 | 0 | 0 | 5
+@junit | note-reply-named | 11 | 2 | 0 | 0 | 13
+@junit | note-thread-reply-limited | 8 | 0 | 0 | 0 | 8
+@junit | note-reply-policy-change | 1 | 0 | 1 | 0 | 2
+@junit | note-reply-opened | 11 | 2 | 0 | 0 | 13
+# Hiding reads the reply and the thread's first note, then updates the reply. The thread leaves a
+# hidden reply out inside its replies statement and its reply count; hidden replies read the note
+# (blocks inside), the hidden ones under it, and view them as any page.
+@junit | note-reply-hide | 2 | 0 | 1 | 0 | 3
+@junit | note-thread-hidden-reply | 7 | 0 | 0 | 0 | 7
+@junit | note-hidden-replies | 5 | 0 | 0 | 0 | 5
+@junit | note-reply-unhide | 2 | 0 | 1 | 0 | 3
+# The thread's writer removes a member's reply the way its writer would: the reply and the thread's
+# first note, then the usual delete; after commit the Delete goes out as the replier's actor (made
+# on first use here), to the server of what it answered and their followers.
+@junit | note-reply-removed-by-thread-writer | 9 | 1 | 0 | 4 | 14
