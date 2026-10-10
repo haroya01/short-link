@@ -26,34 +26,38 @@ public class PostCommentQueryService {
   private final PostRepository postRepository;
   private final CommentMentions mentions;
 
-  public List<CommentView> listForPost(Long postId, Long viewerId) {
+  public List<CommentView> listForPost(Long postId, Long viewerId, boolean tombstones) {
     // 미발행 글의 댓글은 공개 목록에 노출하지 않는다.
     if (postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
       return List.of();
     }
-    List<CommentEntity> comments = commentRepository.findHeardByPostId(postId, viewerId);
-    List<Long> authorIds = comments.stream().map(CommentEntity::getUserId).distinct().toList();
+    List<CommentEntity> comments =
+        tombstones
+            ? commentRepository.findHeardWithTombstonesByPostId(postId, viewerId)
+            : commentRepository.findHeardByPostId(postId, viewerId);
+    List<CommentEntity> live = comments.stream().filter(c -> !c.isDeleted()).toList();
+    List<Long> authorIds = live.stream().map(CommentEntity::getUserId).distinct().toList();
     Map<Long, Long> likeCounts =
-        commentLikeRepository.countByCommentIds(
-            comments.stream().map(CommentEntity::getId).toList());
+        commentLikeRepository.countByCommentIds(live.stream().map(CommentEntity::getId).toList());
     Map<Long, UserEntity> authors =
         userRepository.findAllByIdIn(authorIds).stream()
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
     Function<String, List<String>> mentioned =
-        mentions.in(
-            comments.stream().filter(c -> !c.isDeleted()).map(CommentEntity::getBody).toList());
+        mentions.in(live.stream().map(CommentEntity::getBody).toList());
 
     return comments.stream()
         .map(
             c ->
-                new CommentView(
-                    c.getId(),
-                    c.getParentId(),
-                    authorView(authors.get(c.getUserId())),
-                    c.getBody(),
-                    c.getCreatedAt(),
-                    likeCounts.getOrDefault(c.getId(), 0L),
-                    c.isDeleted() ? List.of() : mentioned.apply(c.getBody())))
+                c.isDeleted()
+                    ? CommentView.tombstone(c.getId(), c.getParentId(), c.getCreatedAt())
+                    : new CommentView(
+                        c.getId(),
+                        c.getParentId(),
+                        authorView(authors.get(c.getUserId())),
+                        c.getBody(),
+                        c.getCreatedAt(),
+                        likeCounts.getOrDefault(c.getId(), 0L),
+                        mentioned.apply(c.getBody())))
         .toList();
   }
 
