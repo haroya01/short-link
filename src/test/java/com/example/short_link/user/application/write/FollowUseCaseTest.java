@@ -3,6 +3,7 @@ package com.example.short_link.user.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -10,11 +11,12 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
+import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.application.read.FollowStatus;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -34,7 +36,7 @@ class FollowUseCaseTest {
   @Mock private UserRepository userRepository;
   @Mock private FollowRepository followRepository;
   @Mock private FollowRequestRepository followRequests;
-  @Mock private BlockRepository blockRepository;
+  @Mock private UserBlockChecker userBlocks;
   @Mock private org.springframework.context.ApplicationEventPublisher events;
 
   private FollowUseCase useCase;
@@ -42,8 +44,8 @@ class FollowUseCaseTest {
   @BeforeEach
   void setUp() {
     useCase =
-        new FollowUseCase(
-            userRepository, followRepository, followRequests, blockRepository, events);
+        new FollowUseCase(userRepository, followRepository, followRequests, userBlocks, events);
+    lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
   }
 
   private UserEntity user(long id, String username) {
@@ -125,13 +127,28 @@ class FollowUseCaseTest {
   @Test
   void followRejectedWhenTargetBlockedFollower() {
     when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
-    when(blockRepository.existsByBlockerIdAndBlockedId(2L, 9L)).thenReturn(true);
+    when(userBlocks.between(9L, 2L)).thenReturn(new BlockRelation(false, true));
 
     assertThatThrownBy(() -> useCase.follow(9L, "bob", null))
         .isInstanceOf(UserException.class)
         .extracting(e -> ((UserException) e).errorCode())
         .isEqualTo(UserErrorCode.BLOCKED_TARGET);
     verify(followRepository, never()).save(any());
+  }
+
+  @Test
+  void followAndUnfollowAnswerWithTheBlocksBetweenThem() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(userBlocks.between(9L, 2L)).thenReturn(new BlockRelation(true, false));
+    when(followRepository.findByFollowerIdAndFollowingId(9L, 2L)).thenReturn(Optional.empty());
+
+    FollowStatus followed = useCase.follow(9L, "bob", null);
+    FollowStatus unfollowed = useCase.unfollow(9L, "bob");
+
+    assertThat(followed.blockedByViewer()).isTrue();
+    assertThat(followed.blocksViewer()).isFalse();
+    assertThat(unfollowed.blockedByViewer()).isTrue();
+    assertThat(unfollowed.blocksViewer()).isFalse();
   }
 
   @Test

@@ -3,11 +3,12 @@ package com.example.short_link.user.application.write;
 import com.example.short_link.common.event.BlogInteractionEvent;
 import com.example.short_link.common.event.FollowRequestSettledEvent;
 import com.example.short_link.common.event.FollowRequestedEvent;
+import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.application.read.FollowStatus;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.FollowRequestEntity;
 import com.example.short_link.user.domain.UserEntity;
-import com.example.short_link.user.domain.repository.BlockRepository;
 import com.example.short_link.user.domain.repository.FollowRepository;
 import com.example.short_link.user.domain.repository.FollowRequestRepository;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -27,7 +28,7 @@ public class FollowUseCase {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
   private final FollowRequestRepository followRequests;
-  private final BlockRepository blockRepository;
+  private final UserBlockChecker userBlocks;
   private final ApplicationEventPublisher events;
 
   @Transactional
@@ -40,11 +41,12 @@ public class FollowUseCase {
     if (target.getId().equals(followerId)) {
       throw new UserException(UserErrorCode.CANNOT_FOLLOW_SELF);
     }
-    if (blockRepository.existsByBlockerIdAndBlockedId(target.getId(), followerId)) {
+    BlockRelation blocks = userBlocks.between(followerId, target.getId());
+    if (blocks.blocksViewer()) {
       throw new UserException(UserErrorCode.BLOCKED_TARGET);
     }
     if (followRepository.existsByFollowerIdAndFollowingId(followerId, target.getId())) {
-      return statusOf(true, target);
+      return statusOf(true, target, blocks);
     }
     // A locked account approves each follower, as on Mastodon: the follow waits as a request.
     if (target.isLocked()) {
@@ -52,12 +54,12 @@ public class FollowUseCase {
         followRequests.save(new FollowRequestEntity(followerId, target.getId()));
         events.publishEvent(new FollowRequestedEvent(target.getId(), followerId, null));
       }
-      return statusOf(false, target).requesting(true, true);
+      return statusOf(false, target, blocks).requesting(true, true);
     }
     // Only a new follow records attribution and notifies; repeats preserve the original source.
     followRepository.save(new FollowEntity(followerId, target.getId(), sourcePostId));
     events.publishEvent(BlogInteractionEvent.follow(target.getId(), followerId, Instant.now()));
-    return statusOf(true, target);
+    return statusOf(true, target, blocks);
   }
 
   @Transactional
@@ -85,10 +87,10 @@ public class FollowUseCase {
     } else if (target.isLocked() && followRequests.delete(followerId, target.getId()) > 0) {
       events.publishEvent(new FollowRequestSettledEvent(target.getId(), followerId, null));
     }
-    return statusOf(false, target);
+    return statusOf(false, target, userBlocks.between(followerId, target.getId()));
   }
 
-  private FollowStatus statusOf(boolean following, UserEntity target) {
+  private FollowStatus statusOf(boolean following, UserEntity target, BlockRelation blocks) {
     FollowStatus status =
         target.isHideFollowerCount()
             ? FollowStatus.hidden(following)
@@ -96,7 +98,7 @@ public class FollowUseCase {
                 following,
                 followRepository.countByFollowingId(target.getId()),
                 followRepository.countByFollowerId(target.getId()));
-    return status.requesting(false, target.isLocked());
+    return status.requesting(false, target.isLocked()).blocking(blocks);
   }
 
   private UserEntity requireUser(String username) {
