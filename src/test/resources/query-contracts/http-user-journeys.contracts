@@ -199,8 +199,10 @@
 @junit | curation-delete-highlight-purges-connection | 1 | 0 | 0 | 3 | 4
 @junit | curation-delete-note-purges-connection | 3 | 0 | 0 | 4 | 7
 @junit | curation-disconnect-post | 2 | 0 | 0 | 1 | 3
-@junit | curation-my-collections | 8 | 0 | 0 | 0 | 8
-@junit | curation-my-collections-connected-status | 9 | 0 | 0 | 0 | 9
+# The path is ordered, so its preview is its first two steps (post, highlight): no note body or
+# note author is read until the reorder below puts the note first.
+@junit | curation-my-collections | 6 | 0 | 0 | 0 | 6
+@junit | curation-my-collections-connected-status | 7 | 0 | 0 | 0 | 7
 @junit | curation-note-create | 4 | 1 | 0 | 0 | 5
 @junit | curation-partial-reorder-denied | 2 | 0 | 0 | 0 | 2
 @junit | curation-path-after-target-deletion | 5 | 0 | 0 | 0 | 5
@@ -623,7 +625,8 @@
 @junit | reader-public-comment-thread-without-tombstones | 4 | 0 | 0 | 0 | 4
 @junit | reader-public-comment-thread-after-last-reply | 2 | 0 | 0 | 0 | 2
 @junit | reader-public-connection-feed | 6 | 0 | 0 | 0 | 6
-@junit | reader-public-curator-collections | 7 | 0 | 0 | 0 | 7
+# After the reorder the path starts with the note, so its first two steps read the note and its author.
+@junit | reader-public-curator-collections | 9 | 0 | 0 | 0 | 9
 @junit | reader-public-highlight-replies | 5 | 0 | 0 | 0 | 5
 @junit | reader-public-highlight-replies-liked | 5 | 0 | 0 | 0 | 5
 @junit | reader-public-highlight-replies-signed-in | 5 | 0 | 0 | 0 | 5
