@@ -53,6 +53,7 @@ class PublicPostControllerTest {
                     "Post 1",
                     "Excerpt",
                     null,
+                    null,
                     "ko",
                     List.of("spring", "jpa"),
                     0L,
@@ -60,7 +61,8 @@ class PublicPostControllerTest {
                     null,
                     true),
                 new PublicPostListItem(
-                    2L, "post-2", "Post 2", null, null, "ja", List.of(), 0L, NOW, null, false)),
+                    2L, "post-2", "Post 2", null, null, null, "ja", List.of(), 0L, NOW, null,
+                    false)),
             false,
             false);
     when(publicPostQueryService.listPublicPosts("john", null)).thenReturn(response);
@@ -91,7 +93,18 @@ class PublicPostControllerTest {
         new PublicPostDetail(
             new PublicAuthorView(7L, "john", "Bio", "https://cdn/avatar.png"),
             new PublicPostListItem(
-                10L, "first-post", "First", "Excerpt", null, "ko", List.of(), 0L, NOW, null, false),
+                10L,
+                "first-post",
+                "First",
+                "Excerpt",
+                null,
+                null,
+                "ko",
+                List.of(),
+                0L,
+                NOW,
+                null,
+                false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)),
             null);
     when(publicPostQueryService.findPublicPost("john", "first-post", null)).thenReturn(detail);
@@ -129,7 +142,18 @@ class PublicPostControllerTest {
         new PublicPostDetail(
             new PublicAuthorView(7L, "john", "Bio", null),
             new PublicPostListItem(
-                10L, "first-post", "First", "Excerpt", null, "ko", List.of(), 0L, NOW, null, false),
+                10L,
+                "first-post",
+                "First",
+                "Excerpt",
+                null,
+                null,
+                "ko",
+                List.of(),
+                0L,
+                NOW,
+                null,
+                false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello **world**", 0, null)),
             null);
     when(publicPostQueryService.findPublicPost("john", "first-post", null)).thenReturn(detail);

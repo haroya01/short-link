@@ -50,7 +50,8 @@ public class RestorePostRevisionUseCase {
     if (snapshot.ogImageUrl() == null) {
       post.clearOgImage();
     } else {
-      post.updateOgImage(snapshot.ogImageUrl(), snapshot.ogImageKey());
+      post.updateOgImage(
+          snapshot.ogImageUrl(), snapshot.ogImageKey(), restoredCoverChosen(post, snapshot));
     }
     if (snapshot.languageTag() != null) {
       post.updateLanguageTag(snapshot.languageTag());
@@ -71,6 +72,14 @@ public class RestorePostRevisionUseCase {
     post.markEdited();
     noteQuotes.index(post, searchTextUpdater.refresh(post));
     return writeViews.fromSaved(postRepository.save(post));
+  }
+
+  // coverChosen 이 생기기 전의 리비전에는 값이 없다. 지금 표지와 같으면 지금 상태를, 다르면 고르지 않은 것으로 둔다.
+  private static boolean restoredCoverChosen(PostEntity post, PostSnapshot snapshot) {
+    if (snapshot.coverChosen() != null) {
+      return snapshot.coverChosen();
+    }
+    return snapshot.ogImageUrl().equals(post.getOgImageUrl()) && post.isCoverChosen();
   }
 
   private PostSnapshot readJson(String json) {

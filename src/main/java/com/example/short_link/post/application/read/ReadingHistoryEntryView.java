@@ -11,4 +11,5 @@ public record ReadingHistoryEntryView(
     String slug,
     String excerpt,
     String ogImageUrl,
+    String thumbnailUrl,
     Instant readAt) {}

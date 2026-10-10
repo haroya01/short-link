@@ -234,12 +234,27 @@ class PostEntityTest {
   @Test
   void updateAndClearOgImage() {
     PostEntity p = newPost();
-    p.updateOgImage("https://cdn/og/1.png", "og/1.png");
+    p.updateOgImage("https://cdn/og/1.png", "og/1.png", true);
     assertThat(p.getOgImageUrl()).isEqualTo("https://cdn/og/1.png");
     assertThat(p.getOgImageKey()).isEqualTo("og/1.png");
     p.clearOgImage();
     assertThat(p.getOgImageUrl()).isNull();
     assertThat(p.getOgImageKey()).isNull();
+  }
+
+  @Test
+  void theFeedThumbnailIsTheCoverOnlyWhenTheAuthorChoseIt() {
+    PostEntity p = newPost();
+    p.updateOgImage("https://cdn/body-first.png", null, false);
+    assertThat(p.getOgImageUrl()).isEqualTo("https://cdn/body-first.png");
+    assertThat(p.thumbnailUrl()).isNull();
+
+    p.updateOgImage("https://cdn/picked.png", null, true);
+    assertThat(p.thumbnailUrl()).isEqualTo("https://cdn/picked.png");
+
+    p.clearOgImage();
+    assertThat(p.isCoverChosen()).isFalse();
+    assertThat(p.thumbnailUrl()).isNull();
   }
 
   @Test
