@@ -337,20 +337,20 @@ class CuratedReadingPathHttpQueryContractTest extends ContentHttpJourneySupport 
 
   private long createCollection(String id, Actor actor, String title, String visibility)
       throws Exception {
-    long collection =
+    var created =
         step(
-                id,
-                "POST",
-                "/api/v1/collections",
-                actor,
-                Map.of("title", title, "visibility", visibility, "kind", "PATH"),
-                201)
-            .path("id")
-            .asLong();
-    assertThat(
-            jdbc.queryForObject(
-                "SELECT title FROM collection WHERE id = ?", String.class, collection))
-        .isEqualTo(title);
+            id,
+            "POST",
+            "/api/v1/collections",
+            actor,
+            Map.of("title", title, "visibility", visibility, "kind", "PATH"),
+            201);
+    long collection = created.path("id").asLong();
+    assertThat(created.path("ordered").asBoolean()).isTrue();
+    assertThat(created.path("kind").asText()).isEqualTo("PATH");
+    assertThat(jdbc.queryForMap("SELECT title, ordered FROM collection WHERE id = ?", collection))
+        .containsEntry("title", title)
+        .containsEntry("ordered", true);
     return collection;
   }
 

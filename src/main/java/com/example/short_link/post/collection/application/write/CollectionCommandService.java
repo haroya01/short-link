@@ -40,7 +40,7 @@ public class CollectionCommandService {
   public CollectionEntity create(CreateCollectionCommand cmd) {
     return collectionRepository.save(
         new CollectionEntity(
-            cmd.userId(), cmd.title(), cmd.description(), cmd.visibility(), cmd.kind()));
+            cmd.userId(), cmd.title(), cmd.description(), cmd.visibility(), cmd.ordered()));
   }
 
   @Transactional
@@ -65,6 +65,7 @@ public class CollectionCommandService {
   public CollectionEntity edit(EditCollectionCommand cmd) {
     CollectionEntity collection = ownedCollection(cmd.userId(), cmd.collectionId());
     collection.edit(cmd.title(), cmd.description(), cmd.visibility());
+    if (cmd.ordered() != null) collection.order(cmd.ordered());
     return collection;
   }
 

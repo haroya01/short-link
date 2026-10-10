@@ -10,7 +10,6 @@ import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -121,9 +120,7 @@ class CollectionConnectionCleanupIntegrationTest {
 
   private Long collection(Long ownerId, String title) {
     return collectionRepository
-        .save(
-            new CollectionEntity(
-                ownerId, title, null, CollectionVisibility.PUBLIC, CollectionKind.COLLECTION))
+        .save(new CollectionEntity(ownerId, title, null, CollectionVisibility.PUBLIC, false))
         .getId();
   }
 

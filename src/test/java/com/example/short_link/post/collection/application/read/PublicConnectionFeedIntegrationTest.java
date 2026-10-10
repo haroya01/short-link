@@ -6,7 +6,6 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -20,6 +19,7 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,6 +35,7 @@ class PublicConnectionFeedIntegrationTest {
   @Autowired private PostRepository postRepository;
   @Autowired private NoteRepository noteRepository;
   @Autowired private UserRepository userRepository;
+  @Autowired private JdbcTemplate jdbc;
 
   private Long user(String username, String seed) {
     UserEntity u = new UserEntity(seed + "@x.com", "google", "g-" + seed);
@@ -55,7 +56,7 @@ class PublicConnectionFeedIntegrationTest {
 
   private Long collection(Long ownerId, String title, CollectionVisibility vis) {
     return collectionRepository
-        .save(new CollectionEntity(ownerId, title, null, vis, CollectionKind.COLLECTION))
+        .save(new CollectionEntity(ownerId, title, null, vis, false))
         .getId();
   }
 
@@ -93,6 +94,28 @@ class PublicConnectionFeedIntegrationTest {
     assertThat(noteItem.curator().username()).isEqualTo("bob-pubfeed");
 
     assertThat(items).noneMatch(i -> "Title pf-uniq-secret".equals(i.title()));
+  }
+
+  @Test
+  void publicFeed_tellsAnOrderedCollectionFromTheFlagAndKeepsTheLegacyKindInStep() {
+    Long dana = user("dana-ordered", "dor");
+    Long ordered =
+        collectionRepository
+            .save(new CollectionEntity(dana, "D-ordered", null, CollectionVisibility.PUBLIC, true))
+            .getId();
+    connect(ordered, ConnectionBlockType.POST, post(dana, "ord-uniq-step"), 0);
+
+    DiscoverConnectionView step =
+        service.publicFeed(null, 0, 200).items().stream()
+            .filter(i -> "Title ord-uniq-step".equals(i.title()))
+            .findFirst()
+            .orElseThrow();
+
+    assertThat(step.collectionOrdered()).isTrue();
+    assertThat(step.collectionKind()).isEqualTo("PATH");
+    assertThat(jdbc.queryForMap("SELECT kind, ordered FROM collection WHERE id = ?", ordered))
+        .containsEntry("kind", "PATH")
+        .containsEntry("ordered", true);
   }
 
   @Test

@@ -10,5 +10,5 @@ public record DiscoverConnectionRow(
     Instant connectedAt,
     Long collectionId,
     String collectionTitle,
-    CollectionKind kind,
+    boolean ordered,
     Long ownerId) {}

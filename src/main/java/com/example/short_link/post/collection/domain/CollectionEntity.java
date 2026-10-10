@@ -41,6 +41,11 @@ public class CollectionEntity extends BaseTimeEntity {
   @Column(nullable = false, length = 16)
   private CollectionVisibility visibility;
 
+  @Column(nullable = false)
+  private boolean ordered;
+
+  // 읽지 않는다. 되돌린 이전 릴리스가 읽을 수 있게 ordered에 맞춰 함께 쓴다.
+  @Getter(AccessLevel.NONE)
   @Enumerated(EnumType.STRING)
   @Column(nullable = false, length = 16)
   private CollectionKind kind;
@@ -50,10 +55,10 @@ public class CollectionEntity extends BaseTimeEntity {
       String title,
       String description,
       CollectionVisibility visibility,
-      CollectionKind kind) {
+      boolean ordered) {
     this.ownerId = ownerId;
     edit(title, description, visibility);
-    this.kind = kind == null ? CollectionKind.COLLECTION : kind;
+    order(ordered);
   }
 
   public boolean isOwnedBy(Long viewerId) {
@@ -68,6 +73,11 @@ public class CollectionEntity extends BaseTimeEntity {
     this.title = normalizeTitle(title);
     this.description = normalizeDescription(description);
     this.visibility = visibility;
+  }
+
+  public void order(boolean ordered) {
+    this.ordered = ordered;
+    this.kind = CollectionKind.of(ordered);
   }
 
   private static String normalizeTitle(String raw) {

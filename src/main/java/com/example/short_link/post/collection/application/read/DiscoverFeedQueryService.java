@@ -3,6 +3,7 @@ package com.example.short_link.post.collection.application.read;
 import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.application.read.PublicAuthorView;
+import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
 import com.example.short_link.post.domain.DiscoveryQuality;
@@ -174,7 +175,8 @@ public class DiscoverFeedQueryService {
         curator,
         row.collectionId(),
         row.collectionTitle(),
-        row.kind() == null ? "COLLECTION" : row.kind().name(),
+        CollectionKind.of(row.ordered()).name(),
+        row.ordered(),
         DiscoveryQuality.isMeaningfulLabel(row.why()) ? row.why() : null,
         row.connectedAt(),
         blockType,
