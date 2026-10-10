@@ -31,7 +31,7 @@ class UserSearchServiceTest {
   }
 
   private static UserSearchReader.Match match(String username) {
-    return new UserSearchReader.Match(username, null, null, null, 3, false, false, false);
+    return new UserSearchReader.Match(1L, username, null, null, null, 3, false, false, false);
   }
 
   @Test
@@ -85,14 +85,15 @@ class UserSearchServiceTest {
     when(reader.search(null, "kim", NOW, 0, 21))
         .thenReturn(
             List.of(
-                new UserSearchReader.Match("kim", "Kim", "a.png", bio, 9, true, true, true),
-                new UserSearchReader.Match("kimb", null, null, "  ", 0, false, false, false)));
+                new UserSearchReader.Match(1L, "kim", "Kim", "a.png", bio, 9, true, true, true),
+                new UserSearchReader.Match(2L, "kimb", null, null, "  ", 0, false, false, false)));
 
     List<UserSearchView.Item> items = service().search(null, "kim", 0, 20).items();
 
     assertThat(items.get(0))
         .isEqualTo(
             new UserSearchView.Item(
+                1L,
                 "kim",
                 "Kim",
                 "a.png",
@@ -100,6 +101,7 @@ class UserSearchServiceTest {
                 null,
                 true,
                 true));
+    assertThat(items.get(1).userId()).isEqualTo(2L);
     assertThat(items.get(1).bio()).isNull();
     assertThat(items.get(1).followerCount()).isZero();
   }

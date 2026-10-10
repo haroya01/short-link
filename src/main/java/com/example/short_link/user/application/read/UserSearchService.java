@@ -61,6 +61,7 @@ public class UserSearchService {
 
   private static UserSearchView.Item item(UserSearchReader.Match match) {
     return new UserSearchView.Item(
+        match.userId(),
         match.username(),
         match.displayName(),
         match.avatarUrl(),

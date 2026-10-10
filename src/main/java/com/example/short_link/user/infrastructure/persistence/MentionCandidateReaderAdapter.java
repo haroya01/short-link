@@ -21,7 +21,7 @@ class MentionCandidateReaderAdapter implements MentionCandidateReader {
   public List<Candidate> followed(Long userId, int limit) {
     List<Object[]> rows =
         em.createNativeQuery(
-                "SELECT u.username, u.display_name, u.avatar_url, 1 FROM user_follow f"
+                "SELECT u.username, u.display_name, u.avatar_url, 1, u.id FROM user_follow f"
                     + " JOIN users u ON u.id = f.following_id WHERE f.follower_id = :me AND"
                     + VISIBLE
                     + " ORDER BY f.created_at DESC, f.id DESC LIMIT :limit")
@@ -37,7 +37,7 @@ class MentionCandidateReaderAdapter implements MentionCandidateReader {
     String like = escape(prefix) + "%";
     List<Object[]> rows =
         em.createNativeQuery(
-                "SELECT u.username, u.display_name, u.avatar_url, (f.id IS NOT NULL) FROM users u"
+                "SELECT u.username, u.display_name, u.avatar_url, (f.id IS NOT NULL), u.id FROM users u"
                     + " LEFT JOIN user_follow f ON f.follower_id = :me AND f.following_id = u.id"
                     + " WHERE (u.username LIKE :like OR u.display_name LIKE :like) AND"
                     + VISIBLE
@@ -57,6 +57,7 @@ class MentionCandidateReaderAdapter implements MentionCandidateReader {
 
   private static Candidate candidate(Object[] row) {
     return new Candidate(
+        ((Number) row[4]).longValue(),
         row[0].toString(),
         row[1] == null ? null : row[1].toString(),
         row[2] == null ? null : row[2].toString(),

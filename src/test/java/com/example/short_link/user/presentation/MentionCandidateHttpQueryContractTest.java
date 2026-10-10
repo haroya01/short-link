@@ -49,11 +49,13 @@ class MentionCandidateHttpQueryContractTest extends AccountHttpJourneySupport {
         body(call("mention-candidates-followed", "GET", CANDIDATES + "?q=@", null, token, 200));
     assertThat(names(mine)).containsExactly("mentionzed");
     assertThat(mine.get(0).path("following").asBoolean()).isTrue();
+    assertThat(mine.get(0).path("userId").asLong()).isEqualTo(followed.getId());
 
     var typed =
         body(call("mention-candidates-prefix", "GET", CANDIDATES + "?q=Mention", null, token, 200));
     assertThat(names(typed)).containsExactly("mentionzed", "mentionabe");
     assertThat(typed.get(1).path("following").asBoolean()).isFalse();
+    assertThat(typed.get(1).path("userId").asLong()).isEqualTo(stranger.getId());
 
     var wild =
         body(call("mention-candidates-wildcard", "GET", CANDIDATES + "?q=%25", null, token, 200));

@@ -249,12 +249,21 @@ class CollectionControllerTest {
     when(query.detail(USER_ID, 10L))
         .thenReturn(
             new CollectionDetailView(
-                10L, "느린 사고", "오래 머문 글", "PUBLIC", "COLLECTION", false, "curator", List.of(post)));
+                10L,
+                "느린 사고",
+                "오래 머문 글",
+                "PUBLIC",
+                "COLLECTION",
+                false,
+                "curator",
+                3L,
+                List.of(post)));
 
     mvc.perform(
             get("/api/v1/collections/10").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.curatorUsername").value("curator"))
+        .andExpect(jsonPath("$.curatorUserId").value(3))
         .andExpect(jsonPath("$.connections[0].blockType").value("POST"))
         .andExpect(jsonPath("$.connections[0].title").value("글 제목"));
   }

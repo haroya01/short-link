@@ -246,8 +246,7 @@ public class CollectionQueryService {
     List<CollectionConnectionEntity> connections =
         connectionRepository.findAllByCollectionIdOrderByPositionAsc(collectionId);
     List<ConnectionView> views = contentReader.connections(connections);
-    String curatorUsername =
-        userRepository.findById(collection.getOwnerId()).map(UserEntity::getUsername).orElse(null);
+    Optional<UserEntity> curator = userRepository.findById(collection.getOwnerId());
     return new CollectionDetailView(
         collection.getId(),
         collection.getTitle(),
@@ -255,7 +254,8 @@ public class CollectionQueryService {
         collection.getVisibility().name(),
         CollectionKind.of(collection.isOrdered()).name(),
         collection.isOrdered(),
-        curatorUsername,
+        curator.map(UserEntity::getUsername).orElse(null),
+        curator.map(UserEntity::getId).orElse(null),
         views);
   }
 }

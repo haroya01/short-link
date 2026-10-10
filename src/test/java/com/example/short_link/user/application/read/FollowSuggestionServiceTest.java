@@ -38,7 +38,7 @@ class FollowSuggestionServiceTest {
     List<FollowSuggestionReader.Suggestion> picks =
         List.of(
             new FollowSuggestionReader.Suggestion(
-                "sori", "소리", null, null, 2, FollowSuggestionReader.Reason.FRIENDS, false));
+                5L, "sori", "소리", null, null, 2, FollowSuggestionReader.Reason.FRIENDS, false));
     when(reader.suggestions(7L, Instant.parse("2026-09-08T00:00:00Z"), 40)).thenReturn(picks);
     when(reader.suggestions(7L, Instant.parse("2026-09-08T00:00:00Z"), 1)).thenReturn(List.of());
 

@@ -10,4 +10,5 @@ public record CollectionDetailView(
     String kind,
     boolean ordered,
     String curatorUsername,
+    Long curatorUserId,
     List<ConnectionView> connections) {}

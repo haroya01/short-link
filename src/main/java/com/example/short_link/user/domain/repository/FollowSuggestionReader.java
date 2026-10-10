@@ -13,6 +13,7 @@ public interface FollowSuggestionReader {
   }
 
   record Suggestion(
+      Long userId,
       String username,
       String displayName,
       String avatarUrl,

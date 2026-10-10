@@ -40,6 +40,7 @@ class FollowSuggestionHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(picks.get(0).path("mutuals").asLong()).isEqualTo(2);
     assertThat(picks.get(0).path("reason").asString()).isEqualTo("FRIENDS");
     assertThat(picks.get(0).path("locked").asBoolean()).isFalse();
+    assertThat(picks.get(0).path("userId").asLong()).isEqualTo(pick.getId());
 
     call("suggestions-dismiss", "DELETE", SUGGESTIONS + "/" + pick.getUsername(), null, token, 204);
     var after =

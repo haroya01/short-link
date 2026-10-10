@@ -74,6 +74,7 @@ class ReadingHistoryQueryServiceTest {
     assertThat(view.hasNext()).isFalse();
     assertThat(view.items()).extracting(ReadingHistoryEntryView::postId).containsExactly(5L, 6L);
     assertThat(view.items().get(0).username()).isEqualTo("bob");
+    assertThat(view.items().get(0).userId()).isEqualTo(2L);
     assertThat(view.items().get(0).title()).isEqualTo("Title 5");
   }
 

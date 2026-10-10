@@ -16,7 +16,7 @@ class UserSearchReaderAdapter implements UserSearchReader {
           + " (SELECT COUNT(*) FROM user_follow c JOIN users cu ON cu.id = c.follower_id"
           + " WHERE c.following_id = u.id AND cu.deleted_at IS NULL"
           + " AND cu.username IS NOT NULL) AS followers,"
-          + " (f.id IS NOT NULL), (r.id IS NOT NULL) FROM users u"
+          + " (f.id IS NOT NULL), (r.id IS NOT NULL), u.id FROM users u"
           + " LEFT JOIN user_follow f ON f.follower_id = :viewer AND f.following_id = u.id"
           + " LEFT JOIN follow_request r ON r.follower_id = :viewer AND r.following_id = u.id"
           + " WHERE (u.username LIKE :prefix OR u.display_name LIKE :contains)"
@@ -53,6 +53,7 @@ class UserSearchReaderAdapter implements UserSearchReader {
 
   private static Match match(Object[] row) {
     return new Match(
+        ((Number) row[8]).longValue(),
         row[0].toString(),
         text(row[1]),
         text(row[2]),

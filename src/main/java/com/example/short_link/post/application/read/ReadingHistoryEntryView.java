@@ -4,6 +4,7 @@ import java.time.Instant;
 
 public record ReadingHistoryEntryView(
     Long postId,
+    Long userId,
     String username,
     String avatarUrl,
     String title,

@@ -22,7 +22,8 @@ class FollowSuggestionReaderAdapter implements FollowSuggestionReader {
   public List<Suggestion> suggestions(Long userId, Instant activeSince, int limit) {
     List<Object[]> rows =
         em.createNativeQuery(
-                "SELECT u.username, u.display_name, u.avatar_url, u.bio, s.mutuals, s.reason, u.locked"
+                "SELECT u.username, u.display_name, u.avatar_url, u.bio, s.mutuals, s.reason,"
+                    + " u.locked, u.id"
                     + " FROM (SELECT c.uid, MAX(c.mutuals) AS mutuals, MIN(c.reason) AS reason"
                     + " FROM (SELECT f2.following_id AS uid, COUNT(*) AS mutuals, 0 AS reason"
                     + " FROM user_follow f1 JOIN user_follow f2 ON f2.follower_id = f1.following_id"
@@ -56,6 +57,7 @@ class FollowSuggestionReaderAdapter implements FollowSuggestionReader {
         .map(
             row ->
                 new Suggestion(
+                    ((Number) row[7]).longValue(),
                     row[0].toString(),
                     row[1] == null ? null : row[1].toString(),
                     row[2] == null ? null : row[2].toString(),

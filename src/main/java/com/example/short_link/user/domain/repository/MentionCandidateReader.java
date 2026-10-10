@@ -4,7 +4,8 @@ import java.util.List;
 
 public interface MentionCandidateReader {
 
-  record Candidate(String username, String displayName, String avatarUrl, boolean following) {}
+  record Candidate(
+      Long userId, String username, String displayName, String avatarUrl, boolean following) {}
 
   List<Candidate> followed(Long userId, int limit);
 
