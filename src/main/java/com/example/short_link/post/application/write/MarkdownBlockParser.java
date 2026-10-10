@@ -30,8 +30,6 @@ final class MarkdownBlockParser {
   // Mirrors the web editor's unescapeTitle for escaped quotes and backslashes.
   private static final Pattern TITLE_ESCAPE = Pattern.compile("\\\\([\"\\\\])");
   private static final Pattern AUTOLINK = Pattern.compile("^<(https?://[^>\\s]+)>$");
-  private static final Pattern LINK_ONLY =
-      Pattern.compile("^\\[[^\\]]*\\]\\((https?://[^)\\s]+)\\)$");
   private static final Pattern BARE_URL = Pattern.compile("^(https?://\\S+)$");
   // Standalone image URLs become IMAGE blocks before the generic embed rule can claim them.
   private static final Pattern IMAGE_EXT =
@@ -271,8 +269,8 @@ final class MarkdownBlockParser {
         && !lines[i].startsWith("~~~")
         && !isTableStart(lines[i], i + 1 < lines.length ? lines[i + 1] : null)
         && !PARA_BREAK.matcher(lines[i]).matches()
-        && standaloneImageUrl(lines[i]) == null
-        && standaloneEmbedUrl(lines[i]) == null) {
+        && (endsWithHardBreak(paraLines)
+            || (standaloneImageUrl(lines[i]) == null && standaloneEmbedUrl(lines[i]) == null))) {
       paraLines.add(lines[i]);
       i++;
     }
@@ -285,13 +283,17 @@ final class MarkdownBlockParser {
     return TABLE_SEP.matcher(t).matches() && t.contains("-") && t.contains("|");
   }
 
-  // Any standalone parseable HTTP(S) URL becomes an embed, matching the web editor. A URL
-  // surrounded by text remains an inline link.
+  // A line ending in a backslash is a hard line break: the next line belongs to the same paragraph,
+  // so a URL there stays inline instead of leaving a dangling backslash behind.
+  private static boolean endsWithHardBreak(List<String> paraLines) {
+    return paraLines.get(paraLines.size() - 1).endsWith("\\");
+  }
+
+  // Only a bare HTTP(S) URL alone on a line becomes an embed. `<url>` and `[text](url)` are links
+  // the
+  // author wrote as links, so they stay in a paragraph; a URL surrounded by text also stays inline.
   private static String standaloneEmbedUrl(String line) {
-    String t = line.trim();
-    Matcher m = AUTOLINK.matcher(t);
-    if (!m.matches()) m = LINK_ONLY.matcher(t);
-    if (!m.matches()) m = BARE_URL.matcher(t);
+    Matcher m = BARE_URL.matcher(line.trim());
     if (!m.matches()) return null;
     String url = m.group(1);
     try {
@@ -303,8 +305,9 @@ final class MarkdownBlockParser {
     }
   }
 
-  // Labeled [text](url) image links stay on the embed path: the author requested a link. Bare URLs
-  // and autolinks with image extensions become IMAGE blocks, matching the web editor.
+  // Labeled [text](url) image links stay links: the author requested a link. Bare URLs and
+  // autolinks
+  // with image extensions become IMAGE blocks, matching the web editor.
   private static String standaloneImageUrl(String line) {
     String t = line.trim();
     Matcher m = AUTOLINK.matcher(t);

@@ -167,10 +167,39 @@ class MarkdownBlocksConverterTest {
   void standaloneVideoUrlBecomesEmbed() {
     assertThat(toBlocks("https://youtu.be/dQw4w9WgXcQ"))
         .containsExactly(new BlockInput(PostBlockType.EMBED, "https://youtu.be/dQw4w9WgXcQ"));
-    assertThat(toBlocks("<https://www.youtube.com/watch?v=dQw4w9WgXcQ>").get(0).type())
-        .isEqualTo(PostBlockType.EMBED);
-    assertThat(toBlocks("[clip](https://vimeo.com/123456789)").get(0).type())
-        .isEqualTo(PostBlockType.EMBED);
+  }
+
+  @Test
+  void anAutolinkAloneOnALineStaysALink() {
+    assertThat(toBlocks("<https://www.youtube.com/watch?v=dQw4w9WgXcQ>"))
+        .containsExactly(
+            new BlockInput(
+                PostBlockType.PARAGRAPH, "<https://www.youtube.com/watch?v=dQw4w9WgXcQ>"));
+  }
+
+  @Test
+  void aLabeledLinkAloneOnALineStaysALink() {
+    List<BlockInput> blocks = toBlocks("[clip](https://vimeo.com/123456789)");
+    assertThat(blocks)
+        .containsExactly(
+            new BlockInput(PostBlockType.PARAGRAPH, "[clip](https://vimeo.com/123456789)"));
+    assertThat(toBlocks(roundTrip(blocks))).isEqualTo(blocks);
+  }
+
+  @Test
+  void aLinkOnTheLineAfterAHardBreakStaysInItsParagraph() {
+    assertThat(toBlocks("intro\\\n<https://example.com/a>"))
+        .containsExactly(
+            new BlockInput(PostBlockType.PARAGRAPH, "intro\\\n<https://example.com/a>"));
+    assertThat(toBlocks("intro\\\nhttps://example.com/a"))
+        .containsExactly(new BlockInput(PostBlockType.PARAGRAPH, "intro\\\nhttps://example.com/a"));
+  }
+
+  @Test
+  void aLinkOnTheNextLineOfAParagraphStaysInIt() {
+    assertThat(toBlocks("intro\n[docs](https://example.com/docs)"))
+        .containsExactly(
+            new BlockInput(PostBlockType.PARAGRAPH, "intro\n[docs](https://example.com/docs)"));
   }
 
   @Test
@@ -201,10 +230,9 @@ class MarkdownBlocksConverterTest {
   }
 
   @Test
-  void labeledLinkToImageStaysEmbedNotImage() {
-    // `[text](…jpg)` is an explicit labeled link — the author meant a link, so keep it an embed.
+  void labeledLinkToImageStaysALink() {
     assertThat(toBlocks("[my photo](https://cdn.example.com/a/b.jpg)").get(0).type())
-        .isEqualTo(PostBlockType.EMBED);
+        .isEqualTo(PostBlockType.PARAGRAPH);
   }
 
   @Test
