@@ -68,6 +68,10 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "scheduled_at")
   private Instant scheduledAt;
 
+  // 있는 동안 작성자는 고칠 수 있어도 다시 공개할 수 없다. 관리자 해제만 지운다.
+  @Column(name = "taken_down_at")
+  private Instant takenDownAt;
+
   @Column(length = 500)
   private String excerpt;
 
@@ -146,6 +150,33 @@ public class PostEntity extends BaseTimeEntity {
     return status == PostStatus.PUBLISHED;
   }
 
+  public boolean isTakenDown() {
+    return takenDownAt != null;
+  }
+
+  public void takeDown(Instant at) {
+    if (takenDownAt != null) {
+      return;
+    }
+    if (status == PostStatus.PUBLISHED) {
+      this.status = PostStatus.UNPUBLISHED;
+    } else if (status == PostStatus.SCHEDULED) {
+      this.status = PostStatus.DRAFT;
+      this.scheduledAt = null;
+    }
+    this.takenDownAt = at;
+  }
+
+  public void releaseTakeDown() {
+    this.takenDownAt = null;
+  }
+
+  private void requireNotTakenDown() {
+    if (takenDownAt != null) {
+      throw new PostException(PostErrorCode.POST_TAKEN_DOWN);
+    }
+  }
+
   public void updateTitle(String title) {
     this.title = title;
   }
@@ -203,6 +234,7 @@ public class PostEntity extends BaseTimeEntity {
   }
 
   public void publish() {
+    requireNotTakenDown();
     if (status == PostStatus.PUBLISHED) {
       return;
     }
@@ -215,6 +247,7 @@ public class PostEntity extends BaseTimeEntity {
   }
 
   public void schedule(Instant when) {
+    requireNotTakenDown();
     if (when == null || !when.isAfter(Instant.now())) {
       throw new PostException(PostErrorCode.SCHEDULE_IN_PAST);
     }
@@ -234,6 +267,7 @@ public class PostEntity extends BaseTimeEntity {
   }
 
   public void republish() {
+    requireNotTakenDown();
     if (status != PostStatus.UNPUBLISHED) {
       throw new PostException(PostErrorCode.REPUBLISH_NOT_UNPUBLISHED);
     }

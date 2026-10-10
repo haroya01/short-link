@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RepublishPostUseCase {
 
+  private final UserModerationGuard moderation;
   private final PostOwnership postOwnership;
   private final PostRepository postRepository;
   private final PostRevisionCapture postRevisionCapture;
@@ -21,6 +23,7 @@ public class RepublishPostUseCase {
   @Transactional
   public PostView execute(RepublishPostCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
+    moderation.requireCanWrite(cmd.userId());
     post.republish();
     PostEntity saved = postRepository.save(post);
     // 비공개 중 수정한 내용도 재발행 시점의 리비전으로 남긴다.

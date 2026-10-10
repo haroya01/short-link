@@ -12,6 +12,8 @@ import com.example.short_link.note.domain.NoteScheduleEntity;
 import com.example.short_link.note.domain.repository.NoteScheduleRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
@@ -154,6 +156,19 @@ class NoteScheduleServiceTest {
     assertThat(orphan.getFailure()).isEqualTo("NOTE_NOT_FOUND");
     assertThat(broken.getFailure()).isEqualTo("NOTE_SCHEDULE_FAILED");
     verify(schedules, never()).delete(orphan);
+  }
+
+  @Test
+  void aNoteScheduledByAnAccountSuspendedSinceKeepsThatReasonAndIsNotRetried() {
+    NoteScheduleEntity held = row(1L, NOW.minusSeconds(30));
+    when(schedules.due(NOW, 50)).thenReturn(List.of(1L));
+    when(schedules.findById(1L)).thenReturn(Optional.of(held));
+    when(command.create(7L, DRAFT)).thenThrow(new UserException(UserErrorCode.ACCOUNT_SUSPENDED));
+
+    assertThat(service().publishDue()).isZero();
+
+    assertThat(held.getFailure()).isEqualTo("ACCOUNT_SUSPENDED");
+    verify(schedules, never()).delete(held);
   }
 
   @Test

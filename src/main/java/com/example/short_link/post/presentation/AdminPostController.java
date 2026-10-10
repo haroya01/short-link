@@ -2,7 +2,7 @@ package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.application.write.DeletePostUseCase;
-import com.example.short_link.post.application.write.UnpublishPostUseCase;
+import com.example.short_link.post.application.write.TakeDownPostUseCase;
 import com.example.short_link.post.application.write.UpdatePostMetadataUseCase;
 import com.example.short_link.post.presentation.request.AdminUpdatePostRequest;
 import jakarta.validation.Valid;
@@ -23,14 +23,20 @@ import org.springframework.web.bind.annotation.RestController;
 @RequiredArgsConstructor
 public class AdminPostController {
 
-  private final UnpublishPostUseCase unpublishPost;
+  private final TakeDownPostUseCase takeDownPost;
   private final DeletePostUseCase deletePost;
   private final UpdatePostMetadataUseCase updatePostMetadata;
 
   @PostMapping("/{id}/unpublish")
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void unpublish(@AuthenticationPrincipal Long adminUserId, @PathVariable Long id) {
-    unpublishPost.adminExecute(adminUserId, id);
+    takeDownPost.takeDown(adminUserId, id);
+  }
+
+  @PostMapping("/{id}/release")
+  @ResponseStatus(HttpStatus.NO_CONTENT)
+  public void release(@AuthenticationPrincipal Long adminUserId, @PathVariable Long id) {
+    takeDownPost.release(adminUserId, id);
   }
 
   @PatchMapping("/{id}")

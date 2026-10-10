@@ -110,7 +110,7 @@
 @junit | federation-settings-get | 2 | 0 | 0 | 0 | 2
 @junit | federation-settings-notice | 2 | 1 | 0 | 0 | 3
 @junit | federation-note-create | 10 | 3 | 0 | 0 | 13
-@junit | federation-note-edit | 14 | 2 | 1 | 1 | 18
+@junit | federation-note-edit | 15 | 2 | 1 | 1 | 19
 @junit | federation-note-delete | 6 | 1 | 0 | 4 | 11
 # The note document: note, author, images, then the author's actor (user, preference, actor).
 @junit | federation-note-document | 6 | 0 | 0 | 0 | 6
@@ -244,5 +244,5 @@
 # after the member's own work, their actor (user, preference, actor), the reply and its parent's
 # account, follower inboxes, then the delivery. The delete carries what the reply answered, since
 # the row is gone by then; the edit also asks who shared it.
-@junit | federation-remote-reply-edit | 17 | 2 | 1 | 0 | 20
+@junit | federation-remote-reply-edit | 18 | 2 | 1 | 0 | 21
 @junit | federation-remote-reply-delete | 9 | 1 | 0 | 4 | 14

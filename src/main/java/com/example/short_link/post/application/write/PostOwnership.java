@@ -17,7 +17,10 @@ public class PostOwnership {
     return loadOwned(userId, postId);
   }
 
-  // Lock the parent post before any post or child mutation, sharing the lifecycle write order.
+  // Lock the parent post before any post or child mutation, sharing the lifecycle write order. Make
+  // it
+  // the transaction's first read too: an earlier plain read fixes the snapshot before the lock is
+  // granted, and later plain reads then miss what the waiting writer committed.
   public PostEntity requireOwnedForUpdate(Long userId, Long postId) {
     return verifyOwner(
         postRepository

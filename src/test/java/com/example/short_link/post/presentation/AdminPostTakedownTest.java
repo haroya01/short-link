@@ -10,6 +10,7 @@ import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.application.JwtTokenService;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Instant;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -70,12 +71,13 @@ class AdminPostTakedownTest {
             post("/api/v1/admin/posts/" + post.getId() + "/unpublish")
                 .header("Authorization", "Bearer " + adminToken("g-take-admin")))
         .andExpect(status().isNoContent());
-    assertThat(postRepository.findById(post.getId()).orElseThrow().getStatus())
-        .isEqualTo(PostStatus.UNPUBLISHED);
+    PostEntity stored = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(stored.getStatus()).isEqualTo(PostStatus.UNPUBLISHED);
+    assertThat(stored.isTakenDown()).isTrue();
   }
 
   @Test
-  void adminTakedownIsIdempotentWhenAlreadyUnpublished() throws Exception {
+  void adminTakedownAlsoHoldsAPostItsAuthorAlreadyUnpublished() throws Exception {
     PostEntity post = new PostEntity(authorId("g-idem-author"), "idem-takedown", "제목", "ko");
     post.publish();
     post.unpublish();
@@ -84,8 +86,37 @@ class AdminPostTakedownTest {
             post("/api/v1/admin/posts/" + post.getId() + "/unpublish")
                 .header("Authorization", "Bearer " + adminToken("g-idem-admin")))
         .andExpect(status().isNoContent());
-    assertThat(postRepository.findById(post.getId()).orElseThrow().getStatus())
-        .isEqualTo(PostStatus.UNPUBLISHED);
+    PostEntity stored = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(stored.getStatus()).isEqualTo(PostStatus.UNPUBLISHED);
+    assertThat(stored.isTakenDown()).isTrue();
+  }
+
+  @Test
+  void adminReleaseLiftsTheTakedownWithoutPublishing() throws Exception {
+    PostEntity post = publishedPost(authorId("g-rel-author"), "release-takedown");
+    post.takeDown(Instant.now());
+    postRepository.save(post);
+    mvc.perform(
+            post("/api/v1/admin/posts/" + post.getId() + "/release")
+                .header("Authorization", "Bearer " + adminToken("g-rel-admin")))
+        .andExpect(status().isNoContent());
+    PostEntity stored = postRepository.findById(post.getId()).orElseThrow();
+    assertThat(stored.isTakenDown()).isFalse();
+    assertThat(stored.getStatus()).isEqualTo(PostStatus.UNPUBLISHED);
+  }
+
+  @Test
+  void plainUserCannotReleaseATakedown() throws Exception {
+    PostEntity post = publishedPost(authorId("g-urel-author"), "user-release");
+    post.takeDown(Instant.now());
+    postRepository.save(post);
+    UserEntity user =
+        userRepository.save(new UserEntity("urel-user@x.com", "google", "g-urel-user"));
+    mvc.perform(
+            post("/api/v1/admin/posts/" + post.getId() + "/release")
+                .header("Authorization", "Bearer " + jwt.createAccessToken(user.getId(), "USER")))
+        .andExpect(status().isForbidden());
+    assertThat(postRepository.findById(post.getId()).orElseThrow().isTakenDown()).isTrue();
   }
 
   @Test

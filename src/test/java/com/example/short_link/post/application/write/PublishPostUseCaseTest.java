@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.event.PostPublishedEvent;
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
@@ -24,6 +25,7 @@ import org.springframework.context.ApplicationEventPublisher;
 @ExtendWith(MockitoExtension.class)
 class PublishPostUseCaseTest {
 
+  @Mock private UserModerationGuard moderation;
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionCapture postRevisionCapture;
@@ -38,6 +40,7 @@ class PublishPostUseCaseTest {
   void setUp() {
     useCase =
         new PublishPostUseCase(
+            moderation,
             postOwnership,
             postRepository,
             new PostPublicationCompletion(

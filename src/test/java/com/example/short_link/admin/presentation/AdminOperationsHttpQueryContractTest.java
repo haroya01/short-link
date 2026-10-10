@@ -282,6 +282,12 @@ class AdminOperationsHttpQueryContractTest extends OperationalHttpJourneySupport
         204);
     assertThat(jdbc.queryForObject("SELECT status FROM posts WHERE id = ?", String.class, postId))
         .isEqualTo("UNPUBLISHED");
+    assertThat(count("posts", "id = ? AND taken_down_at IS NOT NULL", postId)).isEqualTo(1);
+    step(
+        "ops-release-post", "POST", "/api/v1/admin/posts/" + postId + "/release", admin, null, 204);
+    assertThat(count("posts", "id = ? AND taken_down_at IS NULL", postId)).isEqualTo(1);
+    assertThat(jdbc.queryForObject("SELECT status FROM posts WHERE id = ?", String.class, postId))
+        .isEqualTo("UNPUBLISHED");
     step("ops-delete-post", "DELETE", "/api/v1/admin/posts/" + postId, admin, null, 204);
     assertThat(count("posts", "id = ?", postId)).isZero();
   }

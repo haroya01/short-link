@@ -5,7 +5,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
-import java.time.Instant;
+import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 class UserModerationGuardAdapter implements UserModerationGuard {
 
   private final UserRepository userRepository;
+  private final Clock clock;
 
   @Override
   @Transactional(readOnly = true)
@@ -29,8 +30,14 @@ class UserModerationGuardAdapter implements UserModerationGuard {
     if (user.isBanned()) {
       throw new UserException(UserErrorCode.ACCOUNT_BANNED);
     }
-    if (user.isSuspendedAt(Instant.now())) {
+    if (user.isSuspendedAt(clock.instant())) {
       throw new UserException(UserErrorCode.ACCOUNT_SUSPENDED);
     }
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public boolean canWrite(Long userId) {
+    return userRepository.findById(userId).map(u -> u.canWriteAt(clock.instant())).orElse(true);
   }
 }

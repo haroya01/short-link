@@ -73,7 +73,7 @@
 @junit | note-create-tagged | 4 | 2 | 0 | 0 | 6
 @junit | note-tagged | 5 | 0 | 0 | 0 | 5
 @junit | note-following-tags | 7 | 0 | 0 | 0 | 7
-@junit | note-edit-retag | 8 | 2 | 1 | 1 | 12
+@junit | note-edit-retag | 9 | 2 | 1 | 1 | 13
 # Mentions: the mentioned handles ride in the authors query (id IN … OR username IN …), so neither
 # writing nor reading a note with mentions adds a query. Each mentioned member is told after commit
 # like any other note notice: block check, preference, insert, then both names for the push.
@@ -82,7 +82,7 @@
 # A content warning and the sensitive mark are columns on the note: they ride in its one insert and
 # its one update (the edit also keeps the version it replaces).
 @junit | note-create-warning | 4 | 1 | 0 | 0 | 5
-@junit | note-edit-warning | 8 | 1 | 1 | 0 | 10
+@junit | note-edit-warning | 9 | 1 | 1 | 0 | 11
 # Edits keep the version they replace (Mastodon edit history): one insert per edit that changes
 # anything; an edit that changes nothing is not an edit. History reads the note, checks the author is
 # still active, then the earlier versions newest first.
@@ -104,8 +104,8 @@
 @junit | note-linked-notes | 6 | 0 | 0 | 0 | 6
 # After commit an edit asks once who reposted or quoted the note (Mastodon's update notice). Here
 # the reader's quote is still up, so they hear of it: preference, insert, names for the push.
-@junit | note-edit | 13 | 2 | 1 | 0 | 16
-@junit | note-edit-denied | 1 | 0 | 0 | 0 | 1
+@junit | note-edit | 14 | 2 | 1 | 0 | 17
+@junit | note-edit-denied | 2 | 0 | 0 | 0 | 2
 # Delete: note, its image keys, then likes, collection blocks, its place in a series and the note
 # (images cascade).
 @junit | note-delete | 3 | 0 | 0 | 4 | 7
@@ -227,7 +227,7 @@
 @junit | note-repost-before-edit | 12 | 2 | 0 | 0 | 14
 @junit | note-quote-before-edit | 13 | 2 | 0 | 0 | 15
 @junit | note-repost-own-before-edit | 7 | 1 | 0 | 0 | 8
-@junit | note-edit-shared | 12 | 3 | 1 | 0 | 16
+@junit | note-edit-shared | 13 | 3 | 1 | 0 | 17
 # Mastodon's scheduled statuses. Scheduling asks the writer's load (waiting, and on that UTC day)
 # in one query, checks the draft as a post would (moderation, mentioned members), then stores it.
 # Too soon stops before any query. The job posts a due note and drops its row in one transaction.

@@ -66,7 +66,7 @@ public class ResolveAbuseReportUseCase {
     Long adminUserId = cmd.adminUserId();
     Long subjectId = report.getSubjectId();
     switch (action) {
-      case UNPUBLISH_POST -> postModerationPort.unpublish(adminUserId, subjectId);
+      case UNPUBLISH_POST -> postModerationPort.takeDown(adminUserId, subjectId);
       case DELETE_COMMENT -> commentModerationPort.softDelete(adminUserId, subjectId);
       case SUSPEND_USER -> userModerationPort.suspend(adminUserId, subjectId, requireFuture(cmd));
       case BAN_USER -> userModerationPort.ban(adminUserId, subjectId);
