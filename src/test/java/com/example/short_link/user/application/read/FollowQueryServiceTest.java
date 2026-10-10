@@ -2,8 +2,12 @@ package com.example.short_link.user.application.read;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.BlockRelation;
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -24,12 +28,14 @@ class FollowQueryServiceTest {
   @Mock private UserRepository userRepository;
   @Mock private FollowRepository followRepository;
   @Mock private FollowRequestRepository followRequests;
+  @Mock private UserBlockChecker userBlocks;
 
   private FollowQueryService service;
 
   @BeforeEach
   void setUp() {
-    service = new FollowQueryService(userRepository, followRepository, followRequests);
+    service = new FollowQueryService(userRepository, followRepository, followRequests, userBlocks);
+    lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
   }
 
   private UserEntity user(long id, String username) {
@@ -66,6 +72,24 @@ class FollowQueryServiceTest {
 
     assertThat(status.following()).isFalse();
     assertThat(status.followerCount()).isEqualTo(5);
+  }
+
+  @Test
+  void statusCarriesTheBlocksBetweenViewerAndTarget() {
+    when(userRepository.findByUsername("bob")).thenReturn(Optional.of(user(2L, "bob")));
+    when(userBlocks.between(9L, 2L)).thenReturn(new BlockRelation(true, false));
+    when(userBlocks.between(8L, 2L)).thenReturn(new BlockRelation(false, true));
+
+    FollowStatus blockedByMe = service.status(9L, "bob");
+    FollowStatus blockingMe = service.status(8L, "bob");
+    FollowStatus anonymous = service.status(null, "bob");
+
+    assertThat(blockedByMe.blockedByViewer()).isTrue();
+    assertThat(blockedByMe.blocksViewer()).isFalse();
+    assertThat(blockingMe.blockedByViewer()).isFalse();
+    assertThat(blockingMe.blocksViewer()).isTrue();
+    assertThat(anonymous.blockedByViewer()).isFalse();
+    assertThat(anonymous.blocksViewer()).isFalse();
   }
 
   @Test

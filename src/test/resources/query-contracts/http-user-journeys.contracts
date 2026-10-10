@@ -281,8 +281,9 @@
 @junit | follow-request-ask-again-second | 10 | 2 | 0 | 0 | 12
 @junit | follow-request-ask-third | 10 | 2 | 0 | 0 | 12
 @junit | follow-request-ask-again | 6 | 0 | 0 | 0 | 6
-# Status looks for a waiting request only when the account is locked.
-@junit | follow-request-status | 5 | 0 | 0 | 0 | 5
+# Status looks for a waiting request only when the account is locked, and reads the blocks between
+# the two both ways in one statement.
+@junit | follow-request-status | 6 | 0 | 0 | 0 | 6
 # One join of requests and askers, skipping deleted and blocked accounts.
 @junit | follow-request-list | 1 | 0 | 0 | 0 | 1
 # Approving deletes the request (its row count is the 404 check), adds the follow unless one exists,
@@ -290,8 +291,9 @@
 @junit | follow-request-authorize | 2 | 1 | 0 | 2 | 5
 @junit | follow-request-authorize-missing | 1 | 0 | 0 | 1 | 2
 @junit | follow-request-reject | 1 | 0 | 0 | 2 | 3
-# Unfollowing with no follow withdraws the request, then its notification.
-@junit | follow-request-withdraw | 4 | 0 | 0 | 2 | 6
+# Unfollowing with no follow withdraws the request, then its notification; the answer carries the
+# blocks between the two, read both ways in one statement.
+@junit | follow-request-withdraw | 5 | 0 | 0 | 2 | 7
 # Unlocking: profile read and update, local requests become follows (INSERT IGNORE … SELECT, delete);
 # after commit nobody waits elsewhere and the request notifications are cleared.
 @junit | follow-request-unlock | 2 | 1 | 1 | 2 | 6
@@ -403,7 +405,7 @@
 # Accepting records the permission once and lets the kept notices in; dismissing deletes them.
 @junit | notification-policy-accept | 0 | 1 | 1 | 0 | 2
 @junit | notification-policy-inbox-with | 2 | 0 | 0 | 0 | 2
-@junit | notification-policy-accepted-unfollow | 4 | 0 | 0 | 1 | 5
+@junit | notification-policy-accepted-unfollow | 5 | 0 | 0 | 1 | 6
 # A follow is heard once per person and day: the same person following again that day stops at the
 # one check and writes nothing.
 @junit | notification-policy-accepted-refollow | 9 | 1 | 0 | 0 | 10
@@ -558,7 +560,7 @@
 @junit | reader-feed-preferences-default | 1 | 0 | 0 | 0 | 1
 @junit | reader-follow-author | 11 | 2 | 0 | 0 | 13
 @junit | reader-follow-curator | 11 | 2 | 0 | 0 | 13
-@junit | reader-follow-status | 4 | 0 | 0 | 0 | 4
+@junit | reader-follow-status | 5 | 0 | 0 | 0 | 5
 @junit | reader-following-feed | 7 | 0 | 0 | 0 | 7
 # With a subscribed series the page is cut from posts and that series' notes together: the page and
 # its count, the page's posts by id and their cards, then its notes with their author and series in
@@ -632,7 +634,7 @@
 @junit | reader-tag-preferences-initial | 1 | 0 | 0 | 0 | 1
 @junit | reader-tag-unfollow | 2 | 0 | 0 | 1 | 3
 @junit | reader-tag-unhide | 2 | 0 | 0 | 1 | 3
-@junit | reader-unfollow-author | 4 | 0 | 0 | 1 | 5
+@junit | reader-unfollow-author | 5 | 0 | 0 | 1 | 6
 @junit | reader-unlisted-path-absent-from-profile | 2 | 0 | 0 | 0 | 2
 @junit | reader-unlisted-path-direct-link | 8 | 0 | 0 | 0 | 8
 @junit | reader-unpublished-post-gone | 2 | 0 | 0 | 0 | 2
