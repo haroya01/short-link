@@ -238,7 +238,7 @@ class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
     var withPlace =
         get(
             "reader-public-comment-thread-tombstone",
-            "/api/v1/public/posts/" + postId + "/comments",
+            "/api/v1/public/posts/" + postId + "/comments?tombstones=1",
             null);
     assertThat(withPlace).hasSize(2);
     assertThat(withPlace.get(0).path("id").asLong()).isEqualTo(comment);
@@ -247,6 +247,14 @@ class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
     assertThat(withPlace.get(0).path("author").isNull()).isTrue();
     assertThat(withPlace.get(1).path("deleted").asBoolean()).isFalse();
     assertThat(withPlace.get(1).path("body").asText()).isEqualTo("Thank you for reading.");
+    var withoutPlace =
+        get(
+            "reader-public-comment-thread-without-tombstones",
+            "/api/v1/public/posts/" + postId + "/comments",
+            null);
+    assertThat(withoutPlace).hasSize(1);
+    assertThat(withoutPlace.get(0).path("id").asLong()).isEqualTo(reply);
+    assertThat(withoutPlace.get(0).path("deleted").asBoolean()).isFalse();
     step(
         "author-comment-reply-delete-last",
         "DELETE",
@@ -257,7 +265,7 @@ class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
     assertThat(
             get(
                 "reader-public-comment-thread-after-last-reply",
-                "/api/v1/public/posts/" + postId + "/comments",
+                "/api/v1/public/posts/" + postId + "/comments?tombstones=1",
                 null))
         .isEmpty();
     assertThat(count("comment", "post_id = ?", postId)).isEqualTo(1);
