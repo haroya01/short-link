@@ -198,12 +198,26 @@ class MarkdownBlocksConverterTest {
             new BlockInput(PostBlockType.PARAGRAPH, "intro\n[docs](https://example.com/docs)"));
   }
 
+  @ParameterizedTest
+  @ValueSource(strings = {"intro\\\nhttps://youtu.be/x", "intro\\\nhttps://cdn.x/a.png"})
+  void aBareUrlAfterAHardBreakStaysInItsParagraph(String md) {
+    assertThat(toBlocks(md)).containsExactly(new BlockInput(PostBlockType.PARAGRAPH, md));
+  }
+
   @Test
-  void aBareUrlAfterAHardBreakStillSplitsWithoutLeavingTheBackslashBehind() {
-    assertThat(toBlocks("intro\\\nhttps://youtu.be/dQw4w9WgXcQ"))
+  void aBareUrlOnTheNextPlainLineStillSplitsOut() {
+    assertThat(toBlocks("intro\nhttps://youtu.be/x"))
         .containsExactly(
             new BlockInput(PostBlockType.PARAGRAPH, "intro"),
-            new BlockInput(PostBlockType.EMBED, "https://youtu.be/dQw4w9WgXcQ"));
+            new BlockInput(PostBlockType.EMBED, "https://youtu.be/x"));
+  }
+
+  @Test
+  void aHeadingAfterAHardBreakStillStartsItsOwnBlockAndTheBackslashGoes() {
+    assertThat(toBlocks("intro\\\n# 제목"))
+        .containsExactly(
+            new BlockInput(PostBlockType.PARAGRAPH, "intro"),
+            new BlockInput(PostBlockType.H1, "제목"));
   }
 
   @Test

@@ -30,7 +30,9 @@ final class MarkdownBlockParser {
   // Mirrors the web editor's unescapeTitle for escaped quotes and backslashes.
   private static final Pattern TITLE_ESCAPE = Pattern.compile("\\\\([\"\\\\])");
   private static final Pattern BARE_URL = Pattern.compile("^(https?://\\S+)$");
-  // A backslash closing a paragraph breaks nothing and CommonMark prints it; an escaped "\\" stays.
+  // An unescaped trailing backslash is a hard line break: the next line, a URL included, stays in
+  // the paragraph. Closing a paragraph it breaks nothing and CommonMark prints it, so it is dropped
+  // there; an escaped "\\" stays.
   private static final Pattern TRAILING_HARD_BREAK =
       Pattern.compile("(^|[^\\\\])((?:\\\\\\\\)*)\\\\\\z");
   // Standalone image URLs become IMAGE blocks before the generic embed rule can claim them.
@@ -271,7 +273,8 @@ final class MarkdownBlockParser {
         && !lines[i].startsWith("~~~")
         && !isTableStart(lines[i], i + 1 < lines.length ? lines[i + 1] : null)
         && !PARA_BREAK.matcher(lines[i]).matches()
-        && standaloneUrl(lines[i]) == null) {
+        && (TRAILING_HARD_BREAK.matcher(lines[i - 1].stripTrailing()).find()
+            || standaloneUrl(lines[i]) == null)) {
       paraLines.add(lines[i]);
       i++;
     }
