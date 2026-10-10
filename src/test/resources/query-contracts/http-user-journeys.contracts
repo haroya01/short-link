@@ -105,14 +105,14 @@
 @junit | author-post-pin | 1 | 0 | 1 | 0 | 2
 @junit | author-post-reader-stats | 18 | 0 | 0 | 0 | 18
 @junit | author-post-republish | 5 | 1 | 1 | 0 | 7
-@junit | author-post-schedule | 2 | 0 | 1 | 0 | 3
+@junit | author-post-schedule | 3 | 0 | 1 | 0 | 4
 @junit | author-post-unpublish | 3 | 0 | 1 | 0 | 4
 @junit | author-posts-export-zip | 6 | 0 | 0 | 0 | 6
-@junit | author-preview-token-issue | 1 | 0 | 1 | 0 | 2
-@junit | author-published-slug-frozen | 2 | 0 | 0 | 0 | 2
+@junit | author-preview-token-issue | 2 | 0 | 1 | 0 | 3
+@junit | author-published-slug-frozen | 3 | 0 | 0 | 0 | 3
 @junit | author-revision-list | 2 | 0 | 0 | 0 | 2
 # Restoring a public post's revision also rewrites the notes its body carries (one delete; none carried).
-@junit | author-revision-restore-first | 4 | 2 | 1 | 2 | 9
+@junit | author-revision-restore-first | 5 | 2 | 1 | 2 | 10
 @junit | author-schedule-cancel | 2 | 0 | 1 | 0 | 3
 @junit | author-second-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | author-second-draft-markdown-write | 3 | 2 | 1 | 1 | 7
@@ -446,6 +446,8 @@
 @junit | ops-overview | 15 | 0 | 0 | 0 | 15
 @junit | ops-recent-errors | 0 | 0 | 0 | 0 | 0
 @junit | ops-repair-webhook-formats | 1 | 0 | 0 | 0 | 1
+# Releasing a takedown locks the post and clears only taken_down_at.
+@junit | ops-release-post | 1 | 0 | 1 | 0 | 2
 @junit | ops-resolve-abuse | 2 | 0 | 1 | 0 | 3
 @junit | ops-resolve-link-abuse | 4 | 1 | 1 | 0 | 6
 @junit | ops-route-metrics | 1 | 0 | 0 | 0 | 1
@@ -680,7 +682,7 @@
 @junit | removal-live-read | 2 | 1 | 0 | 0 | 3
 @junit | removal-retained-reader-collection | 0 | 1 | 0 | 0 | 1
 @junit | schedule-author-creates-draft | 2 | 1 | 0 | 0 | 3
-@junit | schedule-author-selects-future-time | 2 | 0 | 1 | 0 | 3
+@junit | schedule-author-selects-future-time | 3 | 0 | 1 | 0 | 4
 @junit | schedule-author-writes-body | 3 | 2 | 1 | 1 | 7
 @junit | schedule-follower-marks-notification-read | 0 | 0 | 1 | 0 | 1
 @junit | schedule-follower-receives-new-post | 2 | 0 | 0 | 0 | 2

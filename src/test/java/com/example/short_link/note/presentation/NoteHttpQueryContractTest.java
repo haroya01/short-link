@@ -63,6 +63,13 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
         .isEqualTo(friend.username());
     assertThat(feed.path("items").get(1).path("author").path("username").asText())
         .isEqualTo(stranger.username());
+    step(
+        "note-history-blocked",
+        "GET",
+        "/api/v1/public/notes/" + blockedNote + "/history",
+        reader,
+        null,
+        404);
   }
 
   @Test
@@ -552,6 +559,16 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     var thread =
         step("note-thread-muted", "GET", "/api/v1/public/notes/" + mine, reader, null, 200);
     assertThat(thread.path("replies").size()).isZero();
+    assertThat(
+            step(
+                    "note-history-muted",
+                    "GET",
+                    "/api/v1/public/notes/" + loudNote + "/history",
+                    reader,
+                    null,
+                    200)
+                .path("versions"))
+        .hasSize(1);
     Thread.sleep(500);
     assertThat(
             count(

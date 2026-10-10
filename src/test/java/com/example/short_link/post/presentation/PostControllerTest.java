@@ -167,6 +167,31 @@ class PostControllerTest {
   }
 
   @Test
+  void aTakenDownPostReadsAsUnpublishedWithTheTakenDownFlag() throws Exception {
+    PostEntity post = new PostEntity(USER_ID, "my-post", "My Post", "ko");
+    post.publish();
+    post.takeDown(Instant.now());
+    when(postQueryService.findOwnPost(USER_ID, 42L)).thenReturn(PostView.from(post));
+
+    mvc.perform(get("/api/v1/posts/42").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.status").value("UNPUBLISHED"))
+        .andExpect(jsonPath("$.takenDown").value(true));
+  }
+
+  @Test
+  void republishingATakenDownPostIs409WithItsOwnCode() throws Exception {
+    when(republishPost.execute(any(RepublishPostCommand.class)))
+        .thenThrow(new PostException(PostErrorCode.POST_TAKEN_DOWN));
+
+    mvc.perform(
+            post("/api/v1/posts/42/republish")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isConflict())
+        .andExpect(jsonPath("$.code").value("POST_TAKEN_DOWN"));
+  }
+
+  @Test
   void findByIdNotFoundReturns404() throws Exception {
     when(postQueryService.findOwnPost(USER_ID, 99L))
         .thenThrow(new PostException(PostErrorCode.POST_NOT_FOUND, 99L));

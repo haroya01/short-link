@@ -4,4 +4,6 @@ package com.example.short_link.common.user;
 public interface UserModerationGuard {
 
   void requireCanWrite(Long userId);
+
+  boolean canWrite(Long userId);
 }

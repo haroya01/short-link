@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.util.UUID;
@@ -12,12 +13,14 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class IssuePreviewTokenUseCase {
 
+  private final UserModerationGuard moderation;
   private final PostOwnership postOwnership;
   private final PostRepository postRepository;
 
   @Transactional
   public String issue(Long userId, Long postId) {
     PostEntity post = postOwnership.requireOwnedForUpdate(userId, postId);
+    moderation.requireCanWrite(userId);
     String token = post.ensurePreviewToken(newToken());
     postRepository.save(post);
     return token;

@@ -14,6 +14,7 @@ public enum PostErrorCode {
   REPUBLISH_NOT_UNPUBLISHED(HttpStatus.CONFLICT, "only unpublished posts can be republished"),
   BACK_TO_DRAFT_NOT_SCHEDULED(HttpStatus.CONFLICT, "only scheduled posts can return to draft"),
   REVISION_NOT_FOUND(HttpStatus.NOT_FOUND, "revision not found: %s"),
+  POST_TAKEN_DOWN(HttpStatus.CONFLICT, "post was taken down by an admin and cannot be made public"),
   POST_EDIT_CONFLICT(
       HttpStatus.CONFLICT, "post was changed by another save; current content version is %s"),
   BODY_LIMIT(HttpStatus.BAD_REQUEST, "%s"),
