@@ -78,6 +78,22 @@ class NoteReplyControlsIntegrationTest {
   }
 
   @Test
+  void whoTheFirstNoteNamesIsReadAsItReadsNowAfterAnEdit() {
+    String laterHandle = handle("rc_l");
+    long later = user(laterHandle, true);
+    long root = post(writer, "@" + namedHandle + " 에게만", null, "mentioned");
+
+    command.edit(writer, root, "@" + laterHandle + " 에게만", null, null);
+    flush();
+
+    assertRestricted(() -> post(named, "이제 저는 아니죠", root, null));
+    post(later, "제가 답할게요", root, null);
+    flush();
+    assertThat(canReply(root, named)).isFalse();
+    assertThat(canReply(root, later)).isTrue();
+  }
+
+  @Test
   void aThreadTellsEachViewerWhetherTheyMayReply() {
     long root = post(writer, "@" + namedHandle + " 에게만", null, "mentioned");
     long reply = post(named, "네", root, null);
@@ -98,9 +114,13 @@ class NoteReplyControlsIntegrationTest {
     long root = post(writer, "아무나", null, null);
     long kept = post(named, "남는 답글", root, null);
     long hidden = post(stranger, "숨길 답글", root, null);
+    long underHidden = post(named, "숨긴 답글의 답글", hidden, null);
 
     command.setReplyHidden(writer, hidden, true);
     flush();
+    assertThat(query.thread(hidden, followed).replies())
+        .extracting(NoteView::id)
+        .containsExactly(underHidden);
 
     NoteThreadView thread = query.thread(root, followed);
     assertThat(thread.replies()).extracting(NoteView::id).containsExactly(kept);
