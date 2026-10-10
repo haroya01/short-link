@@ -5,6 +5,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import org.junit.jupiter.api.Test;
@@ -15,11 +16,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class IssuePreviewTokenUseCaseTest {
 
+  @Mock private UserModerationGuard moderation;
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
 
   private IssuePreviewTokenUseCase useCase() {
-    return new IssuePreviewTokenUseCase(postOwnership, postRepository);
+    return new IssuePreviewTokenUseCase(moderation, postOwnership, postRepository);
   }
 
   @Test

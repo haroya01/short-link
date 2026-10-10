@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostRevisionEntity;
@@ -28,6 +29,8 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RestorePostRevisionUseCaseTest {
 
+  @Mock private UserModerationGuard moderation;
+  @Mock private PostRevisionCapture revisionCapture;
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
   @Mock private PostRevisionRepository postRevisionRepository;
@@ -48,6 +51,7 @@ class RestorePostRevisionUseCaseTest {
     useCase =
         new RestorePostRevisionUseCase(
             postOwnership,
+            new PostEditGuard(revisionCapture, moderation),
             postRepository,
             postRevisionRepository,
             postBlockRepository,

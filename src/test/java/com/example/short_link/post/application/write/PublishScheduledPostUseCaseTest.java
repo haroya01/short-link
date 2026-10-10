@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostException;
@@ -25,14 +26,17 @@ import org.mockito.junit.jupiter.MockitoExtension;
 class PublishScheduledPostUseCaseTest {
   @Mock private PostRepository posts;
   @Mock private PostPublicationCompletion completion;
+  @Mock private UserModerationGuard moderation;
 
   @Test
   void publishesDuePostAndPreservesBatchEventTime() {
     PostEntity post = scheduledPost();
     Instant now = post.getScheduledAt();
     when(posts.findByIdForUpdate(1L)).thenReturn(Optional.of(post));
+    when(moderation.canWrite(post.getUserId())).thenReturn(true);
 
-    assertThat(new PublishScheduledPostUseCase(posts, completion).execute(1L, now)).isTrue();
+    assertThat(new PublishScheduledPostUseCase(posts, completion, moderation).execute(1L, now))
+        .isTrue();
 
     assertThat(post.isPublished()).isTrue();
     verify(posts).save(post);
@@ -55,7 +59,7 @@ class PublishScheduledPostUseCaseTest {
     when(posts.findByIdForUpdate(2L)).thenReturn(Optional.of(cancelled));
     when(posts.findByIdForUpdate(3L)).thenReturn(Optional.of(published));
     when(posts.findByIdForUpdate(4L)).thenReturn(Optional.of(rescheduled));
-    var useCase = new PublishScheduledPostUseCase(posts, completion);
+    var useCase = new PublishScheduledPostUseCase(posts, completion, moderation);
 
     for (long id = 1; id <= 4; id++) assertThat(useCase.execute(id, now)).isFalse();
 
@@ -68,15 +72,34 @@ class PublishScheduledPostUseCaseTest {
     PostEntity post = scheduledPost();
     post.updateTitle("");
     when(posts.findByIdForUpdate(1L)).thenReturn(Optional.of(post));
+    when(moderation.canWrite(post.getUserId())).thenReturn(true);
 
     assertThatThrownBy(
             () ->
-                new PublishScheduledPostUseCase(posts, completion)
+                new PublishScheduledPostUseCase(posts, completion, moderation)
                     .execute(1L, post.getScheduledAt()))
         .isInstanceOf(PostException.class);
 
     assertThat(post.isScheduled()).isTrue();
     verify(posts, never()).save(any());
+  }
+
+  @Test
+  void anAuthorWhoCannotWriteHasTheScheduleReturnedToDraftInsteadOfPublished() {
+    PostEntity post = scheduledPost();
+    when(posts.findByIdForUpdate(1L)).thenReturn(Optional.of(post));
+    when(moderation.canWrite(post.getUserId())).thenReturn(false);
+
+    assertThat(
+            new PublishScheduledPostUseCase(posts, completion, moderation)
+                .execute(1L, post.getScheduledAt()))
+        .isFalse();
+
+    assertThat(post.isDraft()).isTrue();
+    assertThat(post.getScheduledAt()).isNull();
+    assertThat(post.getPublishedAt()).isNull();
+    verify(posts).save(post);
+    verifyNoInteractions(completion);
   }
 
   private static PostEntity scheduledPost() {

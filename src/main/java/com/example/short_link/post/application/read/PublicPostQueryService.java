@@ -25,6 +25,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import java.time.Clock;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -50,6 +51,7 @@ public class PublicPostQueryService {
   private final CtaRepository ctaRepository;
   private final ShortLinkUrlBuilder shortLinkUrlBuilder;
   private final UserBlockChecker userBlocks;
+  private final Clock clock;
 
   public PublicPostListView listPublicPosts(String username, Long viewerId) {
     UserEntity author = resolveAuthor(username);
@@ -96,7 +98,8 @@ public class PublicPostQueryService {
     return buildDetail(author, post);
   }
 
-  // 미리보기 토큰 자체가 접근 권한이므로 로그인·공개 상태 검사를 생략한다. 없는 토큰과 삭제 작성자는 모두 404이며, 비공개 글은 시리즈 탐색에 포함하지 않는다.
+  // 토큰이 곧 접근 권한이라 로그인은 보지 않는다. 발행 글은 공개 읽기가 보여 줄 때만, 초안·예약 글은 내려지지 않았고 작성자가 쓸 수 있을 때만 본문을 주고, 나머지는
+  // 모두 404다. 비공개 글은 시리즈 탐색에 포함하지 않는다.
   public PublicPostDetail findPreviewPost(String token) {
     if (token == null || token.isBlank()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
@@ -110,7 +113,19 @@ public class PublicPostQueryService {
             .findById(post.getUserId())
             .filter(u -> !u.isDeleted())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, ""));
+    if (!previewable(post, author)) {
+      throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
+    }
     return buildDetail(author, post);
+  }
+
+  private boolean previewable(PostEntity post, UserEntity author) {
+    if (post.isPublished()) {
+      return true;
+    }
+    return (post.isDraft() || post.isScheduled())
+        && !post.isTakenDown()
+        && author.canWriteAt(clock.instant());
   }
 
   private PublicPostDetail buildDetail(UserEntity author, PostEntity post) {

@@ -283,6 +283,64 @@ class PostEntityTest {
   }
 
   @Test
+  void takingDownAPublishedPostUnpublishesItAndRefusesEveryWayBackToPublic() {
+    PostEntity p = newPost();
+    p.publish();
+    Instant at = Instant.parse("2026-10-10T00:00:00Z");
+
+    p.takeDown(at);
+
+    assertThat(p.isUnpublished()).isTrue();
+    assertThat(p.getTakenDownAt()).isEqualTo(at);
+    for (Runnable goPublic :
+        List.<Runnable>of(
+            p::republish, p::publish, () -> p.schedule(Instant.now().plusSeconds(3600)))) {
+      assertThatThrownBy(goPublic::run)
+          .isInstanceOfSatisfying(
+              PostException.class,
+              e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_TAKEN_DOWN));
+    }
+    assertThat(p.isUnpublished()).isTrue();
+    p.updateTitle("Fixed");
+    assertThat(p.getTitle()).isEqualTo("Fixed");
+  }
+
+  @Test
+  void takingDownAScheduledPostCancelsTheSchedule() {
+    PostEntity p = newPost();
+    p.schedule(Instant.now().plusSeconds(3600));
+
+    p.takeDown(Instant.now());
+
+    assertThat(p.isDraft()).isTrue();
+    assertThat(p.getScheduledAt()).isNull();
+    assertThat(p.isTakenDown()).isTrue();
+  }
+
+  @Test
+  void takingDownTwiceKeepsTheFirstTime() {
+    PostEntity p = newPost();
+    Instant first = Instant.parse("2026-10-10T00:00:00Z");
+    p.takeDown(first);
+    p.takeDown(first.plusSeconds(60));
+    assertThat(p.getTakenDownAt()).isEqualTo(first);
+  }
+
+  @Test
+  void releaseClearsTheTakedownWithoutPublishing() {
+    PostEntity p = newPost();
+    p.publish();
+    p.takeDown(Instant.now());
+
+    p.releaseTakeDown();
+
+    assertThat(p.isTakenDown()).isFalse();
+    assertThat(p.isUnpublished()).isTrue();
+    p.republish();
+    assertThat(p.isPublished()).isTrue();
+  }
+
+  @Test
   void contentVersionIgnoresStatusViewsAndLikes() {
     PostEntity p = newPost();
     p.publish();
