@@ -117,7 +117,8 @@ class UserDeletionServiceTest {
         "INSERT INTO post_like (post_id, user_id, created_at) VALUES (?, ?, NOW(6))",
         otherPost,
         authorId);
-    // comment_like / note_like the author placed on *other*'s content — these carry a user FK
+    // comment_like / note_like / highlight_reply_like the author placed on *other*'s content —
+    // these carry a user FK
     // without ON DELETE CASCADE (V88/V89) and otherwise trip the final users delete forever.
     jdbc.update(
         "INSERT INTO comment (post_id, user_id, body, created_at, updated_at)"
@@ -128,6 +129,23 @@ class UserDeletionServiceTest {
     jdbc.update(
         "INSERT INTO comment_like (comment_id, user_id, created_at) VALUES (?, ?, NOW(6))",
         likeableComment,
+        authorId);
+    jdbc.update(
+        "INSERT INTO post_highlight (post_id, user_id, block_order, start_offset, end_offset,"
+            + " quote, created_at) VALUES (?, ?, 0, 0, 5, 'quote', NOW(6))",
+        otherPost,
+        otherId);
+    Long otherHighlight = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    jdbc.update(
+        "INSERT INTO highlight_reply (highlight_id, user_id, body, created_at, updated_at)"
+            + " VALUES (?, ?, 'theirs reply', NOW(6), NOW(6))",
+        otherHighlight,
+        otherId);
+    Long otherReply = jdbc.queryForObject("SELECT LAST_INSERT_ID()", Long.class);
+    jdbc.update(
+        "INSERT INTO highlight_reply_like (highlight_reply_id, user_id, created_at)"
+            + " VALUES (?, ?, NOW(6))",
+        otherReply,
         authorId);
     jdbc.update(
         "INSERT INTO note (user_id, body, created_at) VALUES (?, 'theirs note', NOW(6))", otherId);
@@ -239,6 +257,9 @@ class UserDeletionServiceTest {
     assertThat(count("SELECT COUNT(*) FROM cta WHERE user_id = ?", authorId)).isZero();
     assertThat(count("SELECT COUNT(*) FROM blog_webhook WHERE user_id = ?", authorId)).isZero();
     assertThat(count("SELECT COUNT(*) FROM comment_like WHERE user_id = ?", authorId)).isZero();
+    assertThat(count("SELECT COUNT(*) FROM highlight_reply_like WHERE user_id = ?", authorId))
+        .isZero();
+    assertThat(count("SELECT COUNT(*) FROM highlight_reply WHERE id = ?", otherReply)).isEqualTo(1);
     assertThat(count("SELECT COUNT(*) FROM note_like WHERE user_id = ?", authorId)).isZero();
     assertThat(count("SELECT COUNT(*) FROM note WHERE id = ?", otherNote)).isEqualTo(1);
     assertThat(count("SELECT COUNT(*) FROM web_push_subscription WHERE user_id = ?", authorId))

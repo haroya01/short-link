@@ -17,7 +17,7 @@ public interface JpaPostHighlightReplyRepository
 
   @Query(
       "SELECT r.highlightId AS highlightId, COUNT(r) AS cnt FROM PostHighlightReplyEntity r "
-          + "WHERE r.highlightId IN :highlightIds GROUP BY r.highlightId")
+          + "WHERE r.highlightId IN :highlightIds AND r.deletedAt IS NULL GROUP BY r.highlightId")
   List<HighlightReplyCount> countGroupedByHighlightId(
       @Param("highlightIds") Collection<Long> highlightIds);
 

@@ -42,6 +42,7 @@ class PostHighlightReplyRepositoryAdapter implements PostHighlightReplyRepositor
   public List<PostHighlightReplyEntity> findHeardByHighlightId(Long highlightId, Long viewerId) {
     return em.createNativeQuery(
             "SELECT r.* FROM highlight_reply r WHERE r.highlight_id = :highlightId"
+                + " AND r.deleted_at IS NULL"
                 + HeardSql.heard("r.user_id")
                 + " AND EXISTS (SELECT 1 FROM post_highlight h WHERE h.id = r.highlight_id"
                 + HeardSql.heard("h.user_id")

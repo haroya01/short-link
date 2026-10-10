@@ -11,6 +11,7 @@ import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostException;
@@ -43,6 +44,7 @@ class LikeCommentUseCaseTest {
                 postRepository,
                 commentRepository,
                 Mockito.mock(PostHighlightRepository.class),
+                Mockito.mock(PostHighlightReplyRepository.class),
                 Mockito.mock(UserModerationGuard.class),
                 Mockito.mock(UserBlockChecker.class)),
             events);

@@ -20,6 +20,7 @@ import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -56,6 +57,7 @@ class CreateCommentUseCaseTest {
                 postRepository,
                 commentRepository,
                 mock(PostHighlightRepository.class),
+                mock(PostHighlightReplyRepository.class),
                 moderationGuard,
                 blockChecker),
             commentRepository,

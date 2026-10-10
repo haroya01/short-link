@@ -11,7 +11,9 @@ import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -35,19 +37,21 @@ class PostInteractionAccessTest {
     HIGHLIGHT,
     HIGHLIGHT_REPLY,
     POST_LIKE,
-    COMMENT_LIKE
+    COMMENT_LIKE,
+    HIGHLIGHT_REPLY_LIKE
   }
 
   @Mock private PostRepository posts;
   @Mock private CommentRepository comments;
   @Mock private PostHighlightRepository highlights;
+  @Mock private PostHighlightReplyRepository replies;
   @Mock private UserModerationGuard moderation;
   @Mock private UserBlockChecker blocks;
   private PostInteractionAccess access;
 
   @BeforeEach
   void setUp() {
-    access = new PostInteractionAccess(posts, comments, highlights, moderation, blocks);
+    access = new PostInteractionAccess(posts, comments, highlights, replies, moderation, blocks);
   }
 
   @ParameterizedTest
@@ -57,7 +61,7 @@ class PostInteractionAccessTest {
     doThrow(denial).when(moderation).requireCanWrite(9L);
 
     assertThatThrownBy(() -> access(interaction)).isSameAs(denial);
-    verifyNoInteractions(posts, comments, highlights, blocks);
+    verifyNoInteractions(posts, comments, highlights, replies, blocks);
   }
 
   @ParameterizedTest
@@ -84,7 +88,8 @@ class PostInteractionAccessTest {
     PostErrorCode expected =
         switch (interaction) {
           case COMMENT, HIGHLIGHT_REPLY -> PostErrorCode.COMMENT_BLOCKED;
-          case HIGHLIGHT, POST_LIKE, COMMENT_LIKE -> PostErrorCode.POST_INTERACTION_BLOCKED;
+          case HIGHLIGHT, POST_LIKE, COMMENT_LIKE, HIGHLIGHT_REPLY_LIKE ->
+              PostErrorCode.POST_INTERACTION_BLOCKED;
         };
 
     assertThatThrownBy(() -> access(interaction))
@@ -107,10 +112,28 @@ class PostInteractionAccessTest {
     verifyNoInteractions(posts, highlights, blocks);
   }
 
+  @Test
+  void aTakenDownHighlightReplyCannotReceiveNewLikes() {
+    PostHighlightReplyEntity takenDown = new PostHighlightReplyEntity(50L, 3L, "removed");
+    takenDown.softDelete();
+    when(replies.findById(70L)).thenReturn(Optional.of(takenDown));
+
+    assertThatThrownBy(() -> access.requireLikeableHighlightReply(9L, 70L))
+        .isInstanceOf(PostException.class)
+        .extracting(error -> ((PostException) error).errorCode())
+        .isEqualTo(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND);
+    verifyNoInteractions(posts, highlights, blocks);
+  }
+
   private void prepareTarget(Interaction interaction) {
-    if (interaction == Interaction.HIGHLIGHT_REPLY) {
+    if (interaction == Interaction.HIGHLIGHT_REPLY
+        || interaction == Interaction.HIGHLIGHT_REPLY_LIKE) {
       when(highlights.findById(50L))
           .thenReturn(Optional.of(new PostHighlightEntity(42L, 3L, 0, 0, 0, 3, "quote", null)));
+    }
+    if (interaction == Interaction.HIGHLIGHT_REPLY_LIKE) {
+      when(replies.findById(70L))
+          .thenReturn(Optional.of(new PostHighlightReplyEntity(50L, 3L, "reply")));
     } else if (interaction == Interaction.COMMENT_LIKE) {
       when(comments.findById(60L))
           .thenReturn(Optional.of(new CommentEntity(42L, 3L, null, "body")));
@@ -124,6 +147,7 @@ class PostInteractionAccessTest {
       case HIGHLIGHT -> access.requireInteractablePost(9L, 42L);
       case POST_LIKE -> access.requireInteractablePostForUpdate(9L, 42L);
       case COMMENT_LIKE -> access.requireLikeableComment(9L, 60L);
+      case HIGHLIGHT_REPLY_LIKE -> access.requireLikeableHighlightReply(9L, 70L);
     }
   }
 

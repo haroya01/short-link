@@ -5,5 +5,6 @@ public enum AbuseSubjectType {
   USER,
   COMMENT,
   LINK,
-  NOTE
+  NOTE,
+  HIGHLIGHT_REPLY
 }

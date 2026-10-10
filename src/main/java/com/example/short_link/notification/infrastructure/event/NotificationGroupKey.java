@@ -14,6 +14,15 @@ final class NotificationGroupKey {
         : null;
   }
 
+  // Comment and highlight-reply likes share COMMENT_LIKE; the reply key names its kind so the two
+  // id
+  // spaces never fold into one row.
+  static String ofHighlightReply(NotificationType type, Long replyId) {
+    return type.grouped()
+        ? type.name() + ":hr:" + replyId + ":" + LocalDate.now(ZoneOffset.UTC)
+        : null;
+  }
+
   // One notice per person, subject and day, keyed by the actor too so the inbox never folds
   // different people into one row: following, unfollowing and following again says it once.
   static String perActor(NotificationType type, Long actorId, Long subjectId) {

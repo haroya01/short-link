@@ -3,6 +3,8 @@ package com.example.short_link.post.application.read;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
+import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository;
+import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository.Likes;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -21,7 +23,10 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class PostHighlightReplyQueryService {
 
+  private static final Likes NO_LIKES = new Likes(0, false);
+
   private final PostHighlightReplyRepository replyRepository;
+  private final HighlightReplyLikeRepository likeRepository;
   private final PostHighlightRepository highlightRepository;
   private final PostRepository postRepository;
   private final UserRepository userRepository;
@@ -44,17 +49,23 @@ public class PostHighlightReplyQueryService {
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
     Function<String, List<String>> mentioned =
         mentions.in(replies.stream().map(PostHighlightReplyEntity::getBody).toList());
+    Map<Long, Likes> likes =
+        likeRepository.likesOf(
+            replies.stream().map(PostHighlightReplyEntity::getId).toList(), viewerId);
 
     return replies.stream()
         .map(
             r -> {
               UserEntity author = authors.get(r.getUserId());
+              Likes liked = likes.getOrDefault(r.getId(), NO_LIKES);
               return new HighlightReplyView(
                   r.getId(),
                   author == null ? null : PublicAuthorView.from(author),
                   r.getBody(),
                   r.getCreatedAt(),
-                  mentioned.apply(r.getBody()));
+                  mentioned.apply(r.getBody()),
+                  liked.count(),
+                  liked.likedByViewer());
             })
         .toList();
   }

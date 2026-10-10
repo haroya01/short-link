@@ -20,6 +20,7 @@ import com.example.short_link.abuse.exception.AbuseException;
 import com.example.short_link.common.link.LinkModerationPort;
 import com.example.short_link.common.note.NoteModerationPort;
 import com.example.short_link.common.post.CommentModerationPort;
+import com.example.short_link.common.post.HighlightReplyModerationPort;
 import com.example.short_link.common.post.PostModerationPort;
 import com.example.short_link.common.user.UserModerationPort;
 import java.time.Instant;
@@ -37,6 +38,7 @@ class ResolveAbuseReportUseCaseTest {
   @Mock private AbuseReportRepository abuseReportRepository;
   @Mock private PostModerationPort postModerationPort;
   @Mock private CommentModerationPort commentModerationPort;
+  @Mock private HighlightReplyModerationPort highlightReplyModerationPort;
   @Mock private NoteModerationPort noteModerationPort;
   @Mock private UserModerationPort userModerationPort;
   @Mock private LinkModerationPort linkModerationPort;
@@ -50,6 +52,7 @@ class ResolveAbuseReportUseCaseTest {
             abuseReportRepository,
             postModerationPort,
             commentModerationPort,
+            highlightReplyModerationPort,
             noteModerationPort,
             userModerationPort,
             linkModerationPort);
@@ -171,6 +174,29 @@ class ResolveAbuseReportUseCaseTest {
     verify(noteModerationPort).takeDown(1L, 66L);
     assertThat(ModerationAction.DELETE_NOTE.appliesTo(AbuseSubjectType.POST)).isFalse();
     assertThat(ModerationAction.DELETE_COMMENT.appliesTo(AbuseSubjectType.NOTE)).isFalse();
+  }
+
+  @Test
+  void deleteHighlightReplyActionHidesTheReplyAndOnlyFitsAHighlightReply() {
+    AbuseReportEntity r =
+        new AbuseReportEntity(7L, AbuseSubjectType.HIGHLIGHT_REPLY, 77L, AbuseReason.SPAM, null);
+    when(abuseReportRepository.findById(1L)).thenReturn(Optional.of(r));
+    when(abuseReportRepository.save(any(AbuseReportEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        cmd(
+            1L,
+            ResolveAbuseReportCommand.Resolution.RESOLVED,
+            ModerationAction.DELETE_HIGHLIGHT_REPLY,
+            null));
+
+    verify(highlightReplyModerationPort).softDelete(1L, 77L);
+    verifyNoInteractions(commentModerationPort);
+    assertThat(ModerationAction.DELETE_HIGHLIGHT_REPLY.appliesTo(AbuseSubjectType.COMMENT))
+        .isFalse();
+    assertThat(ModerationAction.DELETE_COMMENT.appliesTo(AbuseSubjectType.HIGHLIGHT_REPLY))
+        .isFalse();
   }
 
   @Test

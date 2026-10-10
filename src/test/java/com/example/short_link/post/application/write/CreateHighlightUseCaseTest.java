@@ -56,6 +56,7 @@ class CreateHighlightUseCaseTest {
                 postRepository,
                 mock(CommentRepository.class),
                 highlightRepository,
+                replyRepository,
                 moderation,
                 blocks),
             highlightRepository,

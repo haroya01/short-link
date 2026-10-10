@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.JsonNode;
 
 class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
 
@@ -303,6 +304,36 @@ class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
                     reader)
                 .toString())
         .contains("I will expand this idea.");
+    step(
+        "reader-highlight-reply-like",
+        "POST",
+        "/api/v1/highlight-replies/" + reply + "/like",
+        reader,
+        null,
+        200);
+    assertThat(
+            count(
+                "highlight_reply_like",
+                "highlight_reply_id = ? AND user_id = ?",
+                reply,
+                reader.id()))
+        .isEqualTo(1);
+    JsonNode liked =
+        get(
+                "reader-public-highlight-replies-liked",
+                "/api/v1/public/highlights/" + highlight + "/replies",
+                reader)
+            .get(0);
+    assertThat(liked.path("likeCount").asLong()).isEqualTo(1);
+    assertThat(liked.path("liked").asBoolean()).isTrue();
+    step(
+        "reader-highlight-reply-unlike",
+        "DELETE",
+        "/api/v1/highlight-replies/" + reply + "/like",
+        reader,
+        null,
+        200);
+    assertThat(count("highlight_reply_like", "highlight_reply_id = ?", reply)).isZero();
     step(
         "outsider-highlight-delete-denied",
         "DELETE",

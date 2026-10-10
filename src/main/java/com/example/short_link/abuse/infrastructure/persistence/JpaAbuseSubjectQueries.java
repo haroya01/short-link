@@ -36,6 +36,17 @@ public interface JpaAbuseSubjectQueries extends Repository<AbuseReportEntity, Lo
 
   @Query(
       value =
+          "SELECT r.id AS subjectId, SUBSTRING(r.body, 1, 200) AS excerpt, "
+              + "u.username AS authorHandle, "
+              + "CASE WHEN r.deleted_at IS NULL THEN 0 ELSE 1 END AS deleted "
+              + "FROM highlight_reply r LEFT JOIN users u ON u.id = r.user_id "
+              + "WHERE r.id IN (:replyIds)",
+      nativeQuery = true)
+  List<CommentSubjectSnapshot> findHighlightReplySubjectSnapshots(
+      @Param("replyIds") Collection<Long> replyIds);
+
+  @Query(
+      value =
           "SELECT u.id AS subjectId, u.username AS handle, "
               + "u.moderation_status AS moderationStatus "
               + "FROM users u WHERE u.id IN (:userIds)",
@@ -78,6 +89,9 @@ public interface JpaAbuseSubjectQueries extends Repository<AbuseReportEntity, Lo
 
   @Query(value = "SELECT COUNT(*) FROM comment WHERE id = :id", nativeQuery = true)
   long countCommentById(@Param("id") Long id);
+
+  @Query(value = "SELECT COUNT(*) FROM highlight_reply WHERE id = :id", nativeQuery = true)
+  long countHighlightReplyById(@Param("id") Long id);
 
   @Query(value = "SELECT COUNT(*) FROM users WHERE id = :id", nativeQuery = true)
   long countUserById(@Param("id") Long id);
