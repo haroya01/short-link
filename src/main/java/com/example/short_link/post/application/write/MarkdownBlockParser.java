@@ -29,8 +29,10 @@ final class MarkdownBlockParser {
       Pattern.compile("!\\[([^\\]]*)\\]\\(([^)\\s]+)(?:\\s+\"((?:[^\"\\\\]|\\\\.)*)\")?\\)");
   // Mirrors the web editor's unescapeTitle for escaped quotes and backslashes.
   private static final Pattern TITLE_ESCAPE = Pattern.compile("\\\\([\"\\\\])");
-  private static final Pattern AUTOLINK = Pattern.compile("^<(https?://[^>\\s]+)>$");
   private static final Pattern BARE_URL = Pattern.compile("^(https?://\\S+)$");
+  // A backslash closing a paragraph breaks nothing and CommonMark prints it; an escaped "\\" stays.
+  private static final Pattern TRAILING_HARD_BREAK =
+      Pattern.compile("(^|[^\\\\])((?:\\\\\\\\)*)\\\\\\z");
   // Standalone image URLs become IMAGE blocks before the generic embed rule can claim them.
   private static final Pattern IMAGE_EXT =
       Pattern.compile("\\.(?:jpe?g|png|gif|webp)$", Pattern.CASE_INSENSITIVE);
@@ -218,7 +220,7 @@ final class MarkdownBlockParser {
 
   private boolean readEmbed() {
     String line = lines[i];
-    String embedUrl = standaloneEmbedUrl(line);
+    String embedUrl = standaloneUrl(line);
     if (embedUrl != null) {
       blocks.add(block(PostBlockType.EMBED, embedUrl));
       i++;
@@ -269,12 +271,13 @@ final class MarkdownBlockParser {
         && !lines[i].startsWith("~~~")
         && !isTableStart(lines[i], i + 1 < lines.length ? lines[i + 1] : null)
         && !PARA_BREAK.matcher(lines[i]).matches()
-        && (endsWithHardBreak(paraLines)
-            || (standaloneImageUrl(lines[i]) == null && standaloneEmbedUrl(lines[i]) == null))) {
+        && standaloneUrl(lines[i]) == null) {
       paraLines.add(lines[i]);
       i++;
     }
-    blocks.add(block(PostBlockType.PARAGRAPH, String.join("\n", paraLines)));
+    String content = String.join("\n", paraLines);
+    blocks.add(
+        block(PostBlockType.PARAGRAPH, TRAILING_HARD_BREAK.matcher(content).replaceFirst("$1$2")));
   }
 
   private static boolean isTableStart(String line, String next) {
@@ -283,45 +286,27 @@ final class MarkdownBlockParser {
     return TABLE_SEP.matcher(t).matches() && t.contains("-") && t.contains("|");
   }
 
-  // A line ending in a backslash is a hard line break: the next line belongs to the same paragraph,
-  // so a URL there stays inline instead of leaving a dangling backslash behind.
-  private static boolean endsWithHardBreak(List<String> paraLines) {
-    return paraLines.get(paraLines.size() - 1).endsWith("\\");
-  }
-
-  // Only a bare HTTP(S) URL alone on a line becomes an embed. `<url>` and `[text](url)` are links
-  // the
-  // author wrote as links, so they stay in a paragraph; a URL surrounded by text also stays inline.
-  private static String standaloneEmbedUrl(String line) {
-    Matcher m = BARE_URL.matcher(line.trim());
-    if (!m.matches()) return null;
-    String url = m.group(1);
-    try {
-      URI parsed = new URI(url);
-      if (parsed.getHost() == null) return null;
-      return url;
-    } catch (Exception e) {
-      return null;
-    }
-  }
-
-  // Labeled [text](url) image links stay links: the author requested a link. Bare URLs and
-  // autolinks
-  // with image extensions become IMAGE blocks, matching the web editor.
-  private static String standaloneImageUrl(String line) {
+  // Mirrors the web editor's markdown-to-blocks: only a bare HTTP(S) URL alone on its line
+  // stands as its own block. `<url>` and `[text](url)` are links, and a line ending in a
+  // backslash breaks inside its paragraph, so both stay in the paragraph.
+  private static String standaloneUrl(String line) {
     String t = line.trim();
-    Matcher m = AUTOLINK.matcher(t);
-    if (!m.matches()) m = BARE_URL.matcher(t);
+    if (t.endsWith("\\")) return null;
+    Matcher m = BARE_URL.matcher(t);
     if (!m.matches()) return null;
     String url = m.group(1);
     try {
-      URI parsed = new URI(url);
-      if (parsed.getHost() == null) return null;
-      String path = parsed.getPath();
-      return path != null && IMAGE_EXT.matcher(path).find() ? url : null;
+      return new URI(url).getHost() == null ? null : url;
     } catch (Exception e) {
       return null;
     }
+  }
+
+  private static String standaloneImageUrl(String line) {
+    String url = standaloneUrl(line);
+    if (url == null) return null;
+    String path = URI.create(url).getPath();
+    return path != null && IMAGE_EXT.matcher(path).find() ? url : null;
   }
 
   private static String unescapeTitle(String s) {
