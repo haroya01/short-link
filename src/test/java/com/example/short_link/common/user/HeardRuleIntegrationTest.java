@@ -208,6 +208,27 @@ class HeardRuleIntegrationTest {
   }
 
   @Test
+  void theFollowingHighlightFeedDropsHighlightsOnAPostItsWriterUnpublished() {
+    long post = publish(writer("hr-normal"), "hr-feed-withdrawn");
+    highlight(post, writer("hr-expired"));
+    followRepository.save(new FollowEntity(viewer, writer("hr-expired")));
+    assertThat(highlights.feed(viewer, 0, 50, false).items())
+        .extracting(HighlightFeedItem::postSlug)
+        .containsExactly("hr-feed-withdrawn");
+
+    PostEntity p = postRepository.findById(post).orElseThrow();
+    p.unpublish();
+    postRepository.save(p);
+    assertThat(highlights.feed(viewer, 0, 50, false).items()).isEmpty();
+
+    p.republish();
+    postRepository.save(p);
+    assertThat(highlights.feed(viewer, 0, 50, false).items())
+        .extracting(HighlightFeedItem::postSlug)
+        .containsExactly("hr-feed-withdrawn");
+  }
+
+  @Test
   void theConnectionFeedLeavesOutUnheardCuratorsAndWhatUnheardWritersMade() {
     long heardPost = publish(writer("hr-normal"), "hr-connected");
     for (String handle : all()) {

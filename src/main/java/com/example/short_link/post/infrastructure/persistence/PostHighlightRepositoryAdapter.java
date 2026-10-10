@@ -79,7 +79,10 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
       return List.of();
     }
     return em.createNativeQuery(
-            ON_POST + "h.user_id IN (:userIds)" + HEARD_WRITERS + " ORDER BY h.created_at DESC",
+            ON_POST
+                + "h.user_id IN (:userIds) AND p.status = 'PUBLISHED'"
+                + HEARD_WRITERS
+                + " ORDER BY h.created_at DESC",
             PostHighlightEntity.class)
         .setParameter("userIds", userIds)
         .setParameter("viewer", HeardSql.viewer(viewerId))
