@@ -48,7 +48,7 @@ public class CollectionController {
                 request.title(),
                 request.description(),
                 request.visibility(),
-                request.kind()));
+                request.orderedOrLegacyPath()));
     return CollectionSummaryView.afterCreation(saved);
   }
 
@@ -60,7 +60,12 @@ public class CollectionController {
     CollectionEntity saved =
         commandService.edit(
             new EditCollectionCommand(
-                userId, id, request.title(), request.description(), request.visibility()));
+                userId,
+                id,
+                request.title(),
+                request.description(),
+                request.visibility(),
+                request.ordered()));
     return queryService.editedSummary(saved);
   }
 

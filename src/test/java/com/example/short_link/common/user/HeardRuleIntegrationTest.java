@@ -28,7 +28,6 @@ import com.example.short_link.post.collection.application.read.DiscoverConnectio
 import com.example.short_link.post.collection.application.read.DiscoverFeedQueryService;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -437,9 +436,7 @@ class HeardRuleIntegrationTest {
   private void connect(long curator, String title, ConnectionBlockType type, long refId) {
     long collection =
         collectionRepository
-            .save(
-                new CollectionEntity(
-                    curator, title, null, CollectionVisibility.PUBLIC, CollectionKind.COLLECTION))
+            .save(new CollectionEntity(curator, title, null, CollectionVisibility.PUBLIC, false))
             .getId();
     connectionRepository.save(new CollectionConnectionEntity(collection, type, refId, null, 0));
   }

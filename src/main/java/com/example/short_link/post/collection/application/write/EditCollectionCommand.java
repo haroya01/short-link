@@ -7,7 +7,8 @@ public record EditCollectionCommand(
     Long collectionId,
     String title,
     String description,
-    CollectionVisibility visibility) {
+    CollectionVisibility visibility,
+    Boolean ordered) {
 
   public EditCollectionCommand {
     if (userId == null) throw new IllegalArgumentException("userId required");

@@ -10,6 +10,8 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
+import com.example.short_link.post.collection.domain.CollectionEntity;
+import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
 import com.example.short_link.post.domain.PostEntity;
@@ -53,11 +55,33 @@ class CollectionContentReaderTest {
     when(highlights.findAllByIdIn(List.of(20L))).thenReturn(List.of(highlight(20L, 12L)));
     when(posts.findAllByIdIn(Set.of(12L))).thenReturn(List.of(post(12L, false)));
 
-    assertThat(reader.previewByCollection(List.of(1L), true)).containsEntry(1L, List.of());
+    assertThat(reader.previewByCollection(List.of(collection(1L, false)), true))
+        .containsEntry(1L, List.of());
     verify(posts).findAllByIdIn(List.of(11L));
     verify(posts).findAllByIdIn(Set.of(12L));
     verifyNoMoreInteractions(posts);
     verifyNoInteractions(users);
+  }
+
+  @Test
+  void anOrderedCollectionPreviewsItsFirstTwoStepsAndAnUnorderedOneItsLatestTwo() {
+    when(connections.findAllByCollectionIdInOrderByPositionDesc(List.of(1L, 2L)))
+        .thenReturn(
+            List.of(
+                postIn(1L, 13L, 2),
+                postIn(1L, 12L, 1),
+                postIn(1L, 11L, 0),
+                postIn(2L, 23L, 2),
+                postIn(2L, 22L, 1),
+                postIn(2L, 21L, 0)));
+    when(posts.findAllByIdIn(anyCollection()))
+        .thenReturn(List.of(post(11L, true), post(12L, true), post(22L, true), post(23L, true)));
+
+    var previews =
+        reader.previewByCollection(List.of(collection(1L, true), collection(2L, false)), true);
+
+    assertThat(previews.get(1L)).containsExactly("Post 11", "Post 12");
+    assertThat(previews.get(2L)).containsExactly("Post 23", "Post 22");
   }
 
   @Test
@@ -104,6 +128,21 @@ class CollectionContentReaderTest {
     var connection = new CollectionConnectionEntity(1L, type, refId, "Worth reading", position);
     ReflectionTestUtils.setField(connection, "id", id);
     return connection;
+  }
+
+  private static CollectionConnectionEntity postIn(long collectionId, long refId, int position) {
+    var connection =
+        new CollectionConnectionEntity(
+            collectionId, ConnectionBlockType.POST, refId, "Worth reading", position);
+    ReflectionTestUtils.setField(connection, "id", collectionId * 100 + position);
+    return connection;
+  }
+
+  private static CollectionEntity collection(long id, boolean ordered) {
+    var collection =
+        new CollectionEntity(7L, "Collection " + id, null, CollectionVisibility.PUBLIC, ordered);
+    ReflectionTestUtils.setField(collection, "id", id);
+    return collection;
   }
 
   private static PostEntity post(long id, boolean published) {

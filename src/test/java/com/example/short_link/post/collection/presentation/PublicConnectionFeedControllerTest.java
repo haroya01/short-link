@@ -37,6 +37,7 @@ class PublicConnectionFeedControllerTest {
             50L,
             "느린 사고",
             "COLLECTION",
+            false,
             "두고두고 다시 본다.",
             Instant.parse("2026-06-12T00:00:00Z"),
             "POST",

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -53,11 +52,7 @@ class DiscoverFeedFallbackIntegrationTest {
         collectionRepository
             .save(
                 new CollectionEntity(
-                    ownerId,
-                    collectionTitle,
-                    null,
-                    CollectionVisibility.PUBLIC,
-                    CollectionKind.COLLECTION))
+                    ownerId, collectionTitle, null, CollectionVisibility.PUBLIC, false))
             .getId();
     connectionRepository.save(
         new CollectionConnectionEntity(collectionId, ConnectionBlockType.POST, postId, null, 0));

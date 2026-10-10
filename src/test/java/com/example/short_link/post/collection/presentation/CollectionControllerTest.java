@@ -1,6 +1,8 @@
 package com.example.short_link.post.collection.presentation;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -15,8 +17,9 @@ import com.example.short_link.post.collection.application.read.CollectionQuerySe
 import com.example.short_link.post.collection.application.read.CollectionSummaryView;
 import com.example.short_link.post.collection.application.read.ConnectionView;
 import com.example.short_link.post.collection.application.write.CollectionCommandService;
+import com.example.short_link.post.collection.application.write.CreateCollectionCommand;
+import com.example.short_link.post.collection.application.write.EditCollectionCommand;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -27,6 +30,9 @@ import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.time.Instant;
 import java.util.List;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
+import org.mockito.ArgumentCaptor;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -47,8 +53,7 @@ class CollectionControllerTest {
 
   private static CollectionEntity collection(long id) {
     CollectionEntity c =
-        new CollectionEntity(
-            USER_ID, "느린 사고", "오래 머문 글", CollectionVisibility.PUBLIC, CollectionKind.COLLECTION);
+        new CollectionEntity(USER_ID, "느린 사고", "오래 머문 글", CollectionVisibility.PUBLIC, false);
     ReflectionTestUtils.setField(c, "id", id);
     ReflectionTestUtils.setField(c, "updatedAt", Instant.parse("2026-06-12T00:00:00Z"));
     return c;
@@ -73,6 +78,64 @@ class CollectionControllerTest {
         .andExpect(jsonPath("$.curatorAvatarUrl").doesNotExist())
         .andExpect(jsonPath("$.position").doesNotExist())
         .andExpect(jsonPath("$.connectionId").doesNotExist());
+  }
+
+  @ParameterizedTest
+  @CsvSource(
+      delimiter = '|',
+      value = {
+        "{\"title\":\"길\",\"kind\":\"PATH\"} | true",
+        "{\"title\":\"길\",\"kind\":\"COLLECTION\"} | false",
+        "{\"title\":\"길\"} | false",
+        "{\"title\":\"길\",\"ordered\":true} | true",
+        "{\"title\":\"길\",\"kind\":\"PATH\",\"ordered\":false} | false"
+      })
+  void createTakesOrderedAndStillUnderstandsTheLegacyKind(String body, boolean ordered)
+      throws Exception {
+    CollectionEntity saved = collection(10L);
+    saved.order(ordered);
+    when(command.create(any())).thenReturn(saved);
+
+    mvc.perform(
+            post("/api/v1/collections")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(body))
+        .andExpect(status().isCreated())
+        .andExpect(jsonPath("$.ordered").value(ordered))
+        .andExpect(jsonPath("$.kind").value(ordered ? "PATH" : "COLLECTION"));
+
+    ArgumentCaptor<CreateCollectionCommand> sent =
+        ArgumentCaptor.forClass(CreateCollectionCommand.class);
+    verify(command).create(sent.capture());
+    assertThat(sent.getValue().ordered()).isEqualTo(ordered);
+  }
+
+  @Test
+  void editPassesOrderedOnlyWhenSent() throws Exception {
+    CollectionEntity saved = collection(10L);
+    when(command.edit(any())).thenReturn(saved);
+    when(query.editedSummary(saved)).thenReturn(CollectionSummaryView.afterWrite(saved, 2L));
+
+    mvc.perform(
+            put("/api/v1/collections/10")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"느린 사고\",\"ordered\":true}"))
+        .andExpect(status().isOk());
+    mvc.perform(
+            put("/api/v1/collections/10")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"title\":\"느린 사고\"}"))
+        .andExpect(status().isOk());
+
+    ArgumentCaptor<EditCollectionCommand> sent =
+        ArgumentCaptor.forClass(EditCollectionCommand.class);
+    verify(command, times(2)).edit(sent.capture());
+    assertThat(sent.getAllValues())
+        .extracting(EditCollectionCommand::ordered)
+        .containsExactly(true, null);
   }
 
   @Test
@@ -131,6 +194,7 @@ class CollectionControllerTest {
                     "오래 머문 글",
                     "PUBLIC",
                     "COLLECTION",
+                    false,
                     3,
                     Instant.parse("2026-06-12T00:00:00Z"),
                     List.of("헥사고날로 갈아탄 지 석 달", "좋은 추상은 더 지울 게 없을 때"),
@@ -159,6 +223,7 @@ class CollectionControllerTest {
                     null,
                     "PUBLIC",
                     "COLLECTION",
+                    false,
                     3,
                     Instant.parse("2026-06-12T00:00:00Z"),
                     List.of(),
@@ -184,7 +249,7 @@ class CollectionControllerTest {
     when(query.detail(USER_ID, 10L))
         .thenReturn(
             new CollectionDetailView(
-                10L, "느린 사고", "오래 머문 글", "PUBLIC", "COLLECTION", "curator", List.of(post)));
+                10L, "느린 사고", "오래 머문 글", "PUBLIC", "COLLECTION", false, "curator", List.of(post)));
 
     mvc.perform(
             get("/api/v1/collections/10").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))

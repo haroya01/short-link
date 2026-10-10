@@ -1,6 +1,7 @@
 package com.example.short_link.post.collection.application.read;
 
 import com.example.short_link.post.collection.domain.CollectionEntity;
+import com.example.short_link.post.collection.domain.CollectionKind;
 import java.time.Instant;
 import java.util.List;
 
@@ -10,6 +11,7 @@ public record CollectionSummaryView(
     String description,
     String visibility,
     String kind,
+    boolean ordered,
     int count,
     Instant updatedAt,
     List<String> preview,
@@ -52,7 +54,8 @@ public record CollectionSummaryView(
         collection.getTitle(),
         collection.getDescription(),
         collection.getVisibility().name(),
-        collection.getKind().name(),
+        CollectionKind.of(collection.isOrdered()).name(),
+        collection.isOrdered(),
         (int) count,
         collection.getUpdatedAt(),
         preview,

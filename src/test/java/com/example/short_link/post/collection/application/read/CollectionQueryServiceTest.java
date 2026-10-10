@@ -14,7 +14,6 @@ import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionConnectionRank;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -69,8 +68,7 @@ class CollectionQueryServiceTest {
   }
 
   private CollectionEntity collection(long id, long ownerId, CollectionVisibility visibility) {
-    CollectionEntity c =
-        new CollectionEntity(ownerId, "느린 사고", "오래 머문 글", visibility, CollectionKind.COLLECTION);
+    CollectionEntity c = new CollectionEntity(ownerId, "느린 사고", "오래 머문 글", visibility, false);
     ReflectionTestUtils.setField(c, "id", id);
     return c;
   }
