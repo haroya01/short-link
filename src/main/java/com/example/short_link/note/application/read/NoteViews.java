@@ -223,6 +223,69 @@ public class NoteViews {
         .collect(Collectors.toSet());
   }
 
+  public List<ProfileRepliesView.Item> ofReplies(List<NoteEntity> page, Long viewerId) {
+    List<NoteView> replies = of(page, viewerId);
+    Set<Long> parentIds =
+        page.stream()
+            .map(NoteEntity::getInReplyToId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
+    List<NoteEntity> heard = notes.heardAmong(parentIds, viewerId);
+    Set<Long> restricted =
+        heard.stream()
+            .filter(parent -> parent.getVisibility().restricted() && !parent.isOwnedBy(viewerId))
+            .map(NoteEntity::getId)
+            .collect(Collectors.toSet());
+    Set<Long> allowed = notes.visibleTo(viewerId, restricted);
+    List<NoteEntity> readable =
+        heard.stream()
+            .filter(
+                parent -> !restricted.contains(parent.getId()) || allowed.contains(parent.getId()))
+            .toList();
+    Set<Long> authorIds = new HashSet<>();
+    Set<Long> remoteIds = new HashSet<>();
+    readable.forEach(parent -> collectAuthor(parent, authorIds, remoteIds));
+    Authors authors = new Authors(people.activeAuthors(authorIds), people.remoteAuthors(remoteIds));
+    Map<Long, ProfileRepliesView.ReplyContext> contexts = new HashMap<>();
+    for (NoteEntity parent : readable) {
+      NoteAuthor author = authors.of(parent);
+      if (author != null) {
+        contexts.put(
+            parent.getId(),
+            new ProfileRepliesView.ReplyContext(
+                parent.getId(),
+                author,
+                parent.getContentWarning() == null ? parent.excerpt() : null,
+                parent.getContentWarning()));
+      }
+    }
+    return replies.stream()
+        .map(
+            reply ->
+                new ProfileRepliesView.Item(
+                    reply, reply.inReplyToId() == null ? null : contexts.get(reply.inReplyToId())))
+        .toList();
+  }
+
+  public List<ProfileMediaView.Item> ofMedia(List<NoteEntity> page) {
+    Map<Long, List<NoteView.Media>> images = images(page.stream().map(NoteEntity::getId).toList());
+    List<ProfileMediaView.Item> items = new ArrayList<>(page.size());
+    for (NoteEntity note : page) {
+      List<NoteView.Media> attached = images.getOrDefault(note.getId(), List.of());
+      if (!attached.isEmpty()) {
+        items.add(
+            new ProfileMediaView.Item(
+                note.getId(),
+                note.getCreatedAt(),
+                attached.getFirst(),
+                attached.size(),
+                note.isSensitive(),
+                note.getContentWarning()));
+      }
+    }
+    return items;
+  }
+
   // A feed page: each top-level note that the author went on in their own replies carries the next
   // part, so the feed can show the first two parts joined. One query walks every chain on the page,
   // and the next parts are viewed in the same batch as the page.

@@ -6,6 +6,8 @@ import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.application.read.PostQuotesView;
+import com.example.short_link.note.application.read.ProfileMediaView;
+import com.example.short_link.note.application.read.ProfileRepliesView;
 import com.example.short_link.note.application.read.TrendingLinkView;
 import com.example.short_link.note.application.read.TrendingTagView;
 import com.example.short_link.note.application.write.NoteCommandService;
@@ -131,6 +133,24 @@ public class NoteController {
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     return query.byAuthor(username, page, size, viewerId);
+  }
+
+  @GetMapping("/api/v1/public/profiles/{username}/replies")
+  public ProfileRepliesView replies(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String username,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.repliesByAuthor(username, page, size, viewerId);
+  }
+
+  @GetMapping("/api/v1/public/profiles/{username}/media")
+  public ProfileMediaView media(
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String username,
+      @RequestParam(defaultValue = "0") int page,
+      @RequestParam(defaultValue = "20") int size) {
+    return query.mediaByAuthor(username, page, size, viewerId);
   }
 
   @GetMapping("/api/v1/public/profiles/{username}/reposts")
