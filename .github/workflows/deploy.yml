@@ -1,7 +1,10 @@
 name: Deploy
 
 on:
-  # push 로 직접 돌면 CI 와 나란히 달려서, 테스트가 빨개도 배포가 나간다.
+  # push 는 PR 에서 CI 가 통과한 트리와 같을 때만 내보내고, 나머지는 main CI 가 끝난 workflow_run 이 내보낸다.
+  # 두 경로가 같은 판정(pr_verified)을 반대로 쓰므로 한 커밋은 한 번만 나간다.
+  push:
+    branches: [main]
   workflow_run:
     workflows: [CI]
     types: [completed]
@@ -19,10 +22,12 @@ env:
 permissions:
   contents: read
   packages: write
+  actions: read
+  pull-requests: read
 
 jobs:
   release:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     outputs:
       sha: ${{ steps.pick.outputs.sha }}
@@ -35,9 +40,29 @@ jobs:
 
       - name: Pick the verified commit and decide whether it ships
         id: pick
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          EVENT: ${{ github.event_name }}
         run: |
           sha="${{ github.event.workflow_run.head_sha || github.sha }}"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          if [ "$EVENT" != "workflow_dispatch" ]; then
+            pr_verified=false
+            head=$(gh api "repos/$REPO/commits/$sha/pulls" -q '[.[] | select(.merged_at != null)][0].head.sha // empty')
+            if [ -n "$head" ]; then
+              head_tree=$(gh api "repos/$REPO/git/commits/$head" -q .tree.sha)
+              passed=$(gh api "repos/$REPO/actions/workflows/ci.yml/runs?head_sha=$head&event=pull_request&status=success" -q .total_count)
+              if [ "$head_tree" = "$(git rev-parse "$sha^{tree}")" ] && [ "$passed" -gt 0 ]; then
+                pr_verified=true
+              fi
+            fi
+            echo "pr_verified=$pr_verified (pr head ${head:-none})"
+            if { [ "$EVENT" = "push" ] && [ "$pr_verified" = "false" ]; } || { [ "$EVENT" = "workflow_run" ] && [ "$pr_verified" = "true" ]; }; then
+              echo "ships=false" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
           # 트리거가 CI 로 바뀌면서 paths 필터를 잃었다. main 은 스쿼시 머지라
           # HEAD^..HEAD 가 그 머지의 변경 전부다.
           if [ "${{ github.event_name }}" = "workflow_dispatch" ] || ! git rev-parse --verify -q HEAD^ >/dev/null; then
