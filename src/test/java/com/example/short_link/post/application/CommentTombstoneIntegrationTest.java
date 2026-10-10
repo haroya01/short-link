@@ -79,7 +79,7 @@ class CommentTombstoneIntegrationTest {
     assertThat(place.getBody()).isEmpty();
     assertThat(commentRepository.findById(reply)).isPresent();
 
-    List<CommentView> listed = comments.listForPost(post, null);
+    List<CommentView> listed = comments.listForPost(post, null, true);
     assertThat(listed).extracting(CommentView::id).containsExactly(answered, reply);
     CommentView tombstone = listed.get(0);
     assertThat(tombstone.deleted()).isTrue();
@@ -101,7 +101,7 @@ class CommentTombstoneIntegrationTest {
     deleteComment.execute(new DeleteCommentCommand(owner, answered));
     flush();
 
-    assertThat(comments.listForPost(post, null))
+    assertThat(comments.listForPost(post, null, true))
         .extracting(CommentView::id, CommentView::deleted)
         .containsExactly(tuple(answered, true), tuple(reply, false));
   }
@@ -115,13 +115,13 @@ class CommentTombstoneIntegrationTest {
 
     deleteComment.execute(new DeleteCommentCommand(carol, first));
     flush();
-    assertThat(comments.listForPost(post, null))
+    assertThat(comments.listForPost(post, null, true))
         .extracting(CommentView::id)
         .containsExactly(answered, second);
 
     deleteComment.execute(new DeleteCommentCommand(alice, second));
     flush();
-    assertThat(comments.listForPost(post, null)).isEmpty();
+    assertThat(comments.listForPost(post, null, true)).isEmpty();
     assertThat(commentRepository.findById(answered)).map(CommentEntity::isDeleted).contains(true);
   }
 
@@ -138,7 +138,7 @@ class CommentTombstoneIntegrationTest {
     moderation.softDelete(owner, takenReply);
     flush();
 
-    List<CommentView> listed = comments.listForPost(post, null);
+    List<CommentView> listed = comments.listForPost(post, null, true);
     assertThat(listed).extracting(CommentView::id).containsExactly(answered, reply, other);
     assertThat(listed.get(0).deleted()).isTrue();
     assertThat(listed.get(0).body()).isNull();
@@ -161,12 +161,35 @@ class CommentTombstoneIntegrationTest {
     deleteComment.execute(new DeleteCommentCommand(carol, byCarol));
     flush();
 
-    assertThat(comments.listForPost(post, viewer))
+    assertThat(comments.listForPost(post, viewer, true))
         .extracting(CommentView::id)
         .containsExactly(byBlocked, heardReply);
-    assertThat(comments.listForPost(post, null))
+    assertThat(comments.listForPost(post, null, true))
         .extracting(CommentView::id)
         .containsExactly(byBlocked, heardReply, byCarol, mutedReply, liveBlocked, underLiveBlocked);
+  }
+
+  @Test
+  void withoutAskingForPlacesTheListHasNoDeletedCommentAndKeepsTheRuleForReplies() {
+    long viewer = user("ct-viewer");
+    blockRepository.save(new UserBlockEntity(viewer, bob));
+    long answered = comment(alice, null, "답글이 달린 댓글");
+    long reply = comment(carol, answered, "답글");
+    long takenDown = comment(alice, null, "내려진 댓글");
+    long byBlocked = comment(bob, null, "차단한 사람의 댓글");
+    long underBlocked = comment(carol, byBlocked, "그 아래 답글");
+
+    deleteComment.execute(new DeleteCommentCommand(alice, answered));
+    deleteComment.execute(new DeleteCommentCommand(bob, byBlocked));
+    moderation.softDelete(owner, takenDown);
+    flush();
+
+    List<CommentView> anonymous = comments.listForPost(post, null, false);
+    List<CommentView> signedIn = comments.listForPost(post, viewer, false);
+    assertThat(anonymous).noneMatch(CommentView::deleted);
+    assertThat(signedIn).noneMatch(CommentView::deleted);
+    assertThat(anonymous).extracting(CommentView::id).containsExactly(reply, underBlocked);
+    assertThat(signedIn).extracting(CommentView::id).containsExactly(reply);
   }
 
   private void flush() {

@@ -133,12 +133,32 @@ class HeardRuleIntegrationTest {
     comment(post, writer("hr-expired"), tops.get("hr-normal"));
     comment(post, writer("hr-muted"), tops.get("hr-normal"));
 
-    List<CommentView> signedIn = comments.listForPost(post, viewer);
+    List<CommentView> signedIn = comments.listForPost(post, viewer, false);
     assertThat(signedIn)
         .extracting(c -> c.author().username())
         .containsExactly("hr-normal", "hr-expired", "hr-expired");
     assertThat(signedIn.get(2).parentId()).isEqualTo(tops.get("hr-normal"));
-    assertThat(comments.listForPost(post, null)).hasSize(9);
+    assertThat(comments.listForPost(post, null, false)).hasSize(9);
+  }
+
+  @Test
+  void commentsAnAdminTookDownStayHiddenForEveryone() {
+    long post = publish(writer("hr-normal"), "hr-takedown");
+    long kept = comment(post, writer("hr-normal"), null);
+    long takenDown = comment(post, writer("hr-expired"), null);
+    long takenDownReply = comment(post, writer("hr-expired"), kept);
+    for (long id : List.of(takenDown, takenDownReply)) {
+      CommentEntity c = commentRepository.findById(id).orElseThrow();
+      c.softDelete();
+      commentRepository.save(c);
+    }
+
+    assertThat(comments.listForPost(post, viewer, false))
+        .extracting(CommentView::id)
+        .containsExactly(kept);
+    assertThat(comments.listForPost(post, null, false))
+        .extracting(CommentView::id)
+        .containsExactly(kept);
   }
 
   @Test
@@ -187,6 +207,27 @@ class HeardRuleIntegrationTest {
     assertThat(highlights.feed(writer("hr-normal"), 0, 50, true).items())
         .extracting(HighlightFeedItem::postSlug)
         .contains("hr-feed-blocker-post");
+  }
+
+  @Test
+  void theFollowingHighlightFeedDropsHighlightsOnAPostItsWriterUnpublished() {
+    long post = publish(writer("hr-normal"), "hr-feed-withdrawn");
+    highlight(post, writer("hr-expired"));
+    followRepository.save(new FollowEntity(viewer, writer("hr-expired")));
+    assertThat(highlights.feed(viewer, 0, 50, false).items())
+        .extracting(HighlightFeedItem::postSlug)
+        .containsExactly("hr-feed-withdrawn");
+
+    PostEntity p = postRepository.findById(post).orElseThrow();
+    p.unpublish();
+    postRepository.save(p);
+    assertThat(highlights.feed(viewer, 0, 50, false).items()).isEmpty();
+
+    p.republish();
+    postRepository.save(p);
+    assertThat(highlights.feed(viewer, 0, 50, false).items())
+        .extracting(HighlightFeedItem::postSlug)
+        .containsExactly("hr-feed-withdrawn");
   }
 
   @Test

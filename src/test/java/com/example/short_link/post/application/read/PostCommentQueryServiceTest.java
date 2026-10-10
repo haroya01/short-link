@@ -78,7 +78,7 @@ class PostCommentQueryServiceTest {
     when(userRepository.findAllByIdIn(List.of(1L, 2L)))
         .thenReturn(List.of(user(1L, "alice"), user(2L, "bob")));
 
-    List<CommentView> views = service.listForPost(42L, null);
+    List<CommentView> views = service.listForPost(42L, null, false);
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
@@ -93,12 +93,13 @@ class PostCommentQueryServiceTest {
     CommentEntity live = comment(1L, 42L, 1L, null, "@bob 맞아요, @ghost 도 봤을까");
     CommentEntity removed = comment(2L, 42L, 1L, null, "@bob 지운 말");
     removed.softDelete();
-    when(commentRepository.findHeardByPostId(42L, null)).thenReturn(List.of(live, removed));
+    when(commentRepository.findHeardWithTombstonesByPostId(42L, null))
+        .thenReturn(List.of(live, removed));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
     when(userRepository.findActiveByUsernameIn(java.util.Set.of("bob", "ghost")))
         .thenReturn(List.of(user(2L, "bob")));
 
-    List<CommentView> views = service.listForPost(42L, null);
+    List<CommentView> views = service.listForPost(42L, null, true);
 
     assertThat(views.get(0).mentions()).containsExactly("bob");
     assertThat(views.get(1).mentions()).isEmpty();
@@ -112,11 +113,12 @@ class PostCommentQueryServiceTest {
     ReflectionTestUtils.setField(
         removed, "createdAt", java.time.Instant.parse("2026-10-01T00:00:00Z"));
     CommentEntity reply = comment(2L, 42L, 2L, 1L, "답글은 남는다");
-    when(commentRepository.findHeardByPostId(42L, 7L)).thenReturn(List.of(removed, reply));
+    when(commentRepository.findHeardWithTombstonesByPostId(42L, 7L))
+        .thenReturn(List.of(removed, reply));
     when(userRepository.findAllByIdIn(List.of(2L))).thenReturn(List.of(user(2L, "bob")));
     when(commentLikeRepository.countByCommentIds(List.of(2L))).thenReturn(java.util.Map.of(2L, 1L));
 
-    List<CommentView> views = service.listForPost(42L, 7L);
+    List<CommentView> views = service.listForPost(42L, 7L, true);
 
     assertThat(views.get(0))
         .isEqualTo(
@@ -142,7 +144,7 @@ class PostCommentQueryServiceTest {
         .thenReturn(List.of(comment(1L, 42L, 1L, null, "mail me at a@b.com")));
     when(userRepository.findAllByIdIn(List.of(1L))).thenReturn(List.of(user(1L, "alice")));
 
-    assertThat(service.listForPost(42L, null).get(0).mentions()).isEmpty();
+    assertThat(service.listForPost(42L, null, false).get(0).mentions()).isEmpty();
     org.mockito.Mockito.verify(userRepository, org.mockito.Mockito.never())
         .findActiveByUsernameIn(org.mockito.ArgumentMatchers.any());
   }
@@ -150,7 +152,7 @@ class PostCommentQueryServiceTest {
   @Test
   void hidesCommentsOfUnpublishedOrMissingPost() {
     when(postRepository.findById(42L)).thenReturn(Optional.empty());
-    assertThat(service.listForPost(42L, null)).isEmpty();
+    assertThat(service.listForPost(42L, null, false)).isEmpty();
   }
 
   @Test
@@ -167,7 +169,7 @@ class PostCommentQueryServiceTest {
     org.mockito.Mockito.when(commentLikeRepository.countByCommentIds(java.util.List.of(11L)))
         .thenReturn(java.util.Map.of(11L, 4L));
 
-    java.util.List<CommentView> views = service.listForPost(5L, null);
+    java.util.List<CommentView> views = service.listForPost(5L, null, false);
 
     org.assertj.core.api.Assertions.assertThat(views).hasSize(1);
     org.assertj.core.api.Assertions.assertThat(views.get(0).likeCount()).isEqualTo(4L);

@@ -14,9 +14,12 @@ public interface CommentRepository {
 
   List<CommentEntity> findAllByPostIdOrderByCreatedAtAsc(Long postId);
 
-  // A reply stays out with its parent when the viewer cannot hear the parent's writer. A deleted
-  // parent comes back only while a reply the viewer hears is under it; it has no writer to hear.
+  // A reply stays out with its parent when the viewer cannot hear the parent's writer.
   List<CommentEntity> findHeardByPostId(Long postId, Long viewerId);
+
+  // As findHeardByPostId, plus each deleted top-level comment that still has a reply the viewer
+  // hears. Such a parent has no writer to hear, so only the replies' own writers can hide them.
+  List<CommentEntity> findHeardWithTombstonesByPostId(Long postId, Long viewerId);
 
   List<CommentEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 

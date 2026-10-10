@@ -26,12 +26,15 @@ public class PostCommentQueryService {
   private final PostRepository postRepository;
   private final CommentMentions mentions;
 
-  public List<CommentView> listForPost(Long postId, Long viewerId) {
+  public List<CommentView> listForPost(Long postId, Long viewerId, boolean tombstones) {
     // 미발행 글의 댓글은 공개 목록에 노출하지 않는다.
     if (postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
       return List.of();
     }
-    List<CommentEntity> comments = commentRepository.findHeardByPostId(postId, viewerId);
+    List<CommentEntity> comments =
+        tombstones
+            ? commentRepository.findHeardWithTombstonesByPostId(postId, viewerId)
+            : commentRepository.findHeardByPostId(postId, viewerId);
     List<CommentEntity> live = comments.stream().filter(c -> !c.isDeleted()).toList();
     List<Long> authorIds = live.stream().map(CommentEntity::getUserId).distinct().toList();
     Map<Long, Long> likeCounts =

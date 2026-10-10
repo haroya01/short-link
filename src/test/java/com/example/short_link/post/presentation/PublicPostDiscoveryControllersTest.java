@@ -304,7 +304,7 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void listCommentsReturnsComments() throws Exception {
-    when(postCommentQueryService.listForPost(5L, null))
+    when(postCommentQueryService.listForPost(5L, null, false))
         .thenReturn(
             List.of(
                 new CommentView(
@@ -325,8 +325,8 @@ class PublicPostDiscoveryControllersTest {
   }
 
   @Test
-  void aDeletedCommentWithRepliesComesAsAnEmptyPlaceWithNullWriterAndText() throws Exception {
-    when(postCommentQueryService.listForPost(5L, null))
+  void aDeletedCommentWithRepliesComesAsAnEmptyPlaceOnlyWhenAskedFor() throws Exception {
+    when(postCommentQueryService.listForPost(5L, null, true))
         .thenReturn(
             List.of(
                 new CommentView(
@@ -339,7 +339,7 @@ class PublicPostDiscoveryControllersTest {
                     List.of(),
                     true)));
 
-    mvc.perform(get("/api/v1/public/posts/5/comments"))
+    mvc.perform(get("/api/v1/public/posts/5/comments").param("tombstones", "1"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(1))
         .andExpect(jsonPath("$[0].deleted").value(true))

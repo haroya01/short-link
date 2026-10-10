@@ -1,5 +1,6 @@
 package com.example.short_link.user.application.read;
 
+import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.user.domain.FollowEntity;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.FollowRepository;
@@ -20,6 +21,7 @@ public class FollowQueryService {
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
   private final FollowRequestRepository followRequests;
+  private final UserBlockChecker userBlocks;
 
   public FollowStatus status(Long viewerId, String targetUsername) {
     UserEntity target =
@@ -45,6 +47,9 @@ public class FollowQueryService {
                 following,
                 followRepository.countByFollowingId(target.getId()),
                 followRepository.countByFollowerId(target.getId()));
-    return status.notifyingOfNotes(notifyNotes).requesting(requested, target.isLocked());
+    return status
+        .notifyingOfNotes(notifyNotes)
+        .requesting(requested, target.isLocked())
+        .blocking(userBlocks.between(viewerId, target.getId()));
   }
 }

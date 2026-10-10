@@ -212,10 +212,11 @@
 @junit | note-like-conversation-muted | 4 | 1 | 0 | 0 | 5
 @junit | note-conversation-unmute | 1 | 0 | 0 | 1 | 2
 # Mastodon's bell on a followed account. Only a follower rings it (409 before following): the
-# target, then the follow row, updated in place. The follow status reads the bell from that row.
+# target, then the follow row, updated in place. The follow status reads the bell from that row,
+# and the blocks between the two both ways in one statement.
 @junit | note-bell-before-follow | 2 | 0 | 0 | 0 | 2
 @junit | note-bell-on | 2 | 0 | 1 | 0 | 3
-@junit | note-bell-follow-status | 4 | 0 | 0 | 0 | 4
+@junit | note-bell-follow-status | 5 | 0 | 0 | 0 | 5
 # A new note finds the bell-ringers in one query (blocks and notice mutes excluded), then records
 # their notices like other fan-outs: preferences in one read, the insert, names for the push.
 @junit | note-create-bell | 8 | 2 | 0 | 0 | 10
