@@ -30,8 +30,12 @@ public class NotificationController {
   public NotificationsPage list(
       @AuthenticationPrincipal Long userId,
       @RequestParam(required = false) Long before,
-      @RequestParam(defaultValue = "20") int limit) {
-    return NotificationsPage.from(queryService.list(userId, before, limit));
+      @RequestParam(defaultValue = "20") int limit,
+      @RequestParam(required = false) String filter) {
+    return NotificationsPage.from(
+        "mentions".equalsIgnoreCase(filter)
+            ? queryService.mentions(userId, before, limit)
+            : queryService.list(userId, before, limit));
   }
 
   @GetMapping("/unread-count")

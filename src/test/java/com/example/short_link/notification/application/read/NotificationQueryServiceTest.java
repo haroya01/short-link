@@ -18,6 +18,7 @@ import com.example.short_link.notification.domain.repository.NotificationActorRe
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -226,6 +227,41 @@ class NotificationQueryServiceTest {
     NotificationListResult result = service().list(RECIPIENT, null, 20);
 
     assertThat(result.items().get(0).actor()).isNull();
+  }
+
+  @Test
+  void mentionsAskOnlyForMentionsAndRepliesToTheReadersWriting() {
+    NotificationEntity reply =
+        entity(
+            8L,
+            NotificationType.NOTE_REPLY,
+            2L,
+            "{\"noteId\":5,\"excerpt\":\"hi\",\"sourceNoteId\":9,\"sourceExcerpt\":\"me too\"}");
+    when(repository.findGroupPageOfTypes(
+            eq(RECIPIENT),
+            eq(
+                EnumSet.of(
+                    NotificationType.MENTION,
+                    NotificationType.NOTE_MENTION,
+                    NotificationType.REPLY,
+                    NotificationType.NOTE_REPLY,
+                    NotificationType.COMMENT)),
+            eq(40L),
+            eq(3)))
+        .thenReturn(
+            List.of(
+                new NotificationGroup(reply, 1, true),
+                new NotificationGroup(reply, 1, true),
+                new NotificationGroup(reply, 1, true)));
+    when(actorReader.resolve(Set.of(2L)))
+        .thenReturn(Map.of(2L, new NotificationActor(2L, "bob", null)));
+
+    NotificationListResult result = service().mentions(RECIPIENT, 40L, 2);
+
+    assertThat(result.items()).hasSize(2);
+    assertThat(result.items().get(0).type()).isEqualTo(NotificationType.NOTE_REPLY);
+    assertThat(result.hasMore()).isTrue();
+    assertThat(result.nextCursor()).isEqualTo(8L);
   }
 
   @Test

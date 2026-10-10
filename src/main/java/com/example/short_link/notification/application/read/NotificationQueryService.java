@@ -16,6 +16,8 @@ import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.repository.NotificationActorReader;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,6 +34,9 @@ public class NotificationQueryService {
 
   private static final int MAX_LIMIT = 50;
   private static final int ACTORS_PER_GROUP = 3;
+  private static final Set<NotificationType> MENTIONS =
+      EnumSet.copyOf(
+          Arrays.stream(NotificationType.values()).filter(NotificationType::inMentions).toList());
 
   private final NotificationRepository repository;
   private final NotificationActorReader actorReader;
@@ -41,8 +46,21 @@ public class NotificationQueryService {
   public NotificationListResult list(Long recipientUserId, Long beforeId, int limit) {
     int capped = Math.min(Math.max(limit, 1), MAX_LIMIT);
     // Over-fetch by one to learn whether a further page exists without a second count query.
-    List<NotificationGroup> groups =
-        repository.findGroupPage(recipientUserId, beforeId, capped + 1);
+    return page(
+        recipientUserId, repository.findGroupPage(recipientUserId, beforeId, capped + 1), capped);
+  }
+
+  @Transactional(readOnly = true)
+  public NotificationListResult mentions(Long recipientUserId, Long beforeId, int limit) {
+    int capped = Math.min(Math.max(limit, 1), MAX_LIMIT);
+    return page(
+        recipientUserId,
+        repository.findGroupPageOfTypes(recipientUserId, MENTIONS, beforeId, capped + 1),
+        capped);
+  }
+
+  private NotificationListResult page(
+      Long recipientUserId, List<NotificationGroup> groups, int capped) {
     boolean hasMore = groups.size() > capped;
     List<NotificationGroup> page = hasMore ? groups.subList(0, capped) : groups;
 

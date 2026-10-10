@@ -414,6 +414,9 @@
 @junit | notification-policy-accepted-refollow | 9 | 1 | 0 | 0 | 10
 @junit | notification-policy-dismiss | 0 | 0 | 0 | 1 | 1
 @junit | notification-policy-accept-nobody | 0 | 0 | 0 | 0 | 0
+# The mentions tab is the inbox page narrowed to mention and reply types in the same statement,
+# then the senders' names.
+@junit | notification-mentions | 2 | 0 | 0 | 0 | 2
 @junit | ops-abuse-backlog | 2 | 0 | 0 | 0 | 2
 @junit | ops-active-users | 1 | 0 | 0 | 0 | 1
 @junit | ops-block-domain | 2 | 1 | 0 | 0 | 3

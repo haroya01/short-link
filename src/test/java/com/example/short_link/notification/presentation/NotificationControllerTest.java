@@ -165,6 +165,27 @@ class NotificationControllerTest {
   }
 
   @Test
+  void theMentionsFilterListsMentionsAndAnUnknownFilterListsEverything() throws Exception {
+    when(queryService.mentions(USER_ID, 30L, 10))
+        .thenReturn(new NotificationListResult(List.of(), null, false));
+    when(queryService.list(eq(USER_ID), isNull(), eq(20)))
+        .thenReturn(new NotificationListResult(List.of(), null, false));
+
+    mvc.perform(
+            get("/api/v1/notifications?filter=Mentions&before=30&limit=10")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.hasMore").value(false));
+    mvc.perform(
+            get("/api/v1/notifications?filter=likes")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk());
+
+    verify(queryService).mentions(USER_ID, 30L, 10);
+    verify(queryService).list(USER_ID, null, 20);
+  }
+
+  @Test
   void anonymousIs401() throws Exception {
     mvc.perform(get("/api/v1/notifications")).andExpect(status().isUnauthorized());
   }

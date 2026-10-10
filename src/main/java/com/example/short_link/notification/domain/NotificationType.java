@@ -36,6 +36,13 @@ public enum NotificationType {
     };
   }
 
+  public boolean inMentions() {
+    return switch (this) {
+      case MENTION, NOTE_MENTION, REPLY, NOTE_REPLY, COMMENT -> true;
+      default -> false;
+    };
+  }
+
   // Notices a person causes, which the notification policy may keep aside or drop (Mastodon's
   // filterable types). Ones the member subscribed to (new posts and notes, polls they voted in,
   // edits of notes they shared) and the reading graph's notices always arrive.
