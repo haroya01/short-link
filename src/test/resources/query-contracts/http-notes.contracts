@@ -37,6 +37,11 @@
 # replies under the top-level notes in one recursive statement (a thread written in parts) and, when
 # there are parts, read the next ones in one more query and view them with the page.
 @junit | note-reposts | 8 | 0 | 0 | 0 | 8
+# A profile's replies: the member, the page, the page as usual, then what each answered: the
+# parents the reader can hear (blocks, mutes, blocked or suspended servers) and their authors.
+@junit | note-profile-replies | 8 | 0 | 0 | 0 | 8
+# A profile's media: the member, the notes with attachments, then their attachments.
+@junit | note-profile-media | 3 | 0 | 0 | 0 | 3
 # A shared note's thread also reads the series it belongs to, with that series' readable items, in
 # one statement.
 @junit | note-thread | 9 | 0 | 0 | 0 | 9

@@ -162,25 +162,88 @@ class NoteRepositoryAdapter implements NoteRepository {
 
   // A profile shows what this viewer may read: public and unlisted to anyone, followers-only to
   // followers and mentioned members, and direct notes to no one but their author.
+  static String onProfile(String alias) {
+    return " AND ("
+        + alias
+        + ".user_id = :viewer OR "
+        + alias
+        + ".visibility IN ('PUBLIC', 'UNLISTED')"
+        + " OR ("
+        + alias
+        + ".visibility = 'PRIVATE' AND ("
+        + "EXISTS (SELECT 1 FROM user_follow f"
+        + " WHERE f.follower_id = :viewer AND f.following_id = "
+        + alias
+        + ".user_id)"
+        + " OR EXISTS (SELECT 1 FROM note_recipient r"
+        + " WHERE r.note_id = "
+        + alias
+        + ".id AND r.user_id = :viewer))))"
+        + HeardSql.unblocked(alias + ".user_id");
+  }
+
   @Override
   @SuppressWarnings("unchecked")
   public List<NoteEntity> topLevelByAuthor(Long authorId, Long viewerId, int offset, int limit) {
     return em.createNativeQuery(
             "SELECT n.* FROM note n WHERE n.user_id = :author AND "
                 + notReply("n")
-                + " AND (n.user_id = :viewer OR n.visibility IN ('PUBLIC', 'UNLISTED')"
-                + " OR (n.visibility = 'PRIVATE' AND ("
-                + "EXISTS (SELECT 1 FROM user_follow f"
-                + " WHERE f.follower_id = :viewer AND f.following_id = n.user_id)"
-                + " OR EXISTS (SELECT 1 FROM note_recipient r"
-                + " WHERE r.note_id = n.id AND r.user_id = :viewer))))"
-                + HeardSql.unblocked("n.user_id")
+                + onProfile("n")
                 + " ORDER BY n.pinned_at IS NULL, n.pinned_at DESC, n.id DESC",
             NoteEntity.class)
         .setParameter("author", authorId)
         .setParameter("viewer", viewer(viewerId))
         .setFirstResult(offset)
         .setMaxResults(limit)
+        .getResultList();
+  }
+
+  // A reply to the author's own note is a part of their thread and shows under its root instead.
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> repliesByAuthor(Long authorId, Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n LEFT JOIN note p ON p.id = n.in_reply_to_id"
+                + " WHERE n.user_id = :author AND NOT ("
+                + notReply("n")
+                + ") AND NOT (p.user_id <=> n.user_id)"
+                + onProfile("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("author", authorId)
+        .setParameter("viewer", viewer(viewerId))
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> withMediaByAuthor(Long authorId, Long viewerId, int offset, int limit) {
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.user_id = :author"
+                + " AND EXISTS (SELECT 1 FROM note_media m WHERE m.note_id = n.id)"
+                + onProfile("n")
+                + " ORDER BY n.id DESC",
+            NoteEntity.class)
+        .setParameter("author", authorId)
+        .setParameter("viewer", viewer(viewerId))
+        .setFirstResult(offset)
+        .setMaxResults(limit)
+        .getResultList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<NoteEntity> heardAmong(Collection<Long> ids, Long viewerId) {
+    if (ids.isEmpty()) {
+      return List.of();
+    }
+    return em.createNativeQuery(
+            "SELECT n.* FROM note n WHERE n.id IN (:ids)" + heardNote("n"), NoteEntity.class)
+        .setParameter("ids", ids)
+        .setParameter("viewer", viewer(viewerId))
+        .setParameter("now", Instant.now())
         .getResultList();
   }
 

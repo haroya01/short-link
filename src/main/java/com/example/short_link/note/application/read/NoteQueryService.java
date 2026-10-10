@@ -138,6 +138,36 @@ public class NoteQueryService {
   }
 
   @Transactional(readOnly = true)
+  public ProfileRepliesView repliesByAuthor(String username, int page, int size, Long viewerId) {
+    NoteAuthor author =
+        people
+            .activeByUsername(username)
+            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
+    int safePage = Math.max(page, 0);
+    int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
+    List<NoteEntity> rows =
+        notes.repliesByAuthor(author.id(), viewerId, safePage * safeSize, safeSize + 1);
+    boolean hasNext = rows.size() > safeSize;
+    return new ProfileRepliesView(
+        views.ofReplies(hasNext ? rows.subList(0, safeSize) : rows, viewerId), safePage, hasNext);
+  }
+
+  @Transactional(readOnly = true)
+  public ProfileMediaView mediaByAuthor(String username, int page, int size, Long viewerId) {
+    NoteAuthor author =
+        people
+            .activeByUsername(username)
+            .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, username));
+    int safePage = Math.max(page, 0);
+    int safeSize = Math.clamp(size, 1, MAX_PAGE_SIZE);
+    List<NoteEntity> rows =
+        notes.withMediaByAuthor(author.id(), viewerId, safePage * safeSize, safeSize + 1);
+    boolean hasNext = rows.size() > safeSize;
+    return new ProfileMediaView(
+        views.ofMedia(hasNext ? rows.subList(0, safeSize) : rows), safePage, hasNext);
+  }
+
+  @Transactional(readOnly = true)
   public NoteFeedView reposts(String username, int page, int size, Long viewerId) {
     NoteAuthor author =
         people

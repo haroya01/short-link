@@ -1155,6 +1155,33 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(reposts.path("items").get(0).path("id").asLong()).isEqualTo(noteId);
     assertThat(reposts.path("items").get(0).path("repostCount").asLong()).isEqualTo(1);
 
+    var profileReplies =
+        step(
+            "note-profile-replies",
+            "GET",
+            "/api/v1/public/profiles/" + reader.username() + "/replies",
+            writer,
+            null,
+            200);
+    assertThat(profileReplies.path("items").get(0).path("note").path("id").asLong())
+        .isEqualTo(replyId);
+    assertThat(profileReplies.path("items").get(0).path("replyingTo").path("id").asLong())
+        .isEqualTo(noteId);
+    assertThat(profileReplies.path("items").get(0).path("replyingTo").path("excerpt").asText())
+        .isEqualTo("첫 노트");
+    var media =
+        step(
+            "note-profile-media",
+            "GET",
+            "/api/v1/public/profiles/" + writer.username() + "/media",
+            null,
+            null,
+            200);
+    assertThat(media.path("items").get(0).path("noteId").asLong()).isEqualTo(noteId);
+    assertThat(media.path("items").get(0).path("media").path("altText").asText())
+        .isEqualTo("창밖 풍경");
+    assertThat(media.path("items").get(0).path("mediaCount").asInt()).isEqualTo(1);
+
     var thread = step("note-thread", "GET", "/api/v1/public/notes/" + noteId, reader, null, 200);
     assertThat(thread.path("note").path("replyCount").asLong()).isEqualTo(1);
     assertThat(thread.path("note").path("likedByMe").asBoolean()).isTrue();
