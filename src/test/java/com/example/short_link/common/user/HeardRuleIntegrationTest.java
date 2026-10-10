@@ -142,6 +142,24 @@ class HeardRuleIntegrationTest {
   }
 
   @Test
+  void commentsAnAdminTookDownStayHiddenForEveryone() {
+    long post = publish(writer("hr-normal"), "hr-takedown");
+    long kept = comment(post, writer("hr-normal"), null);
+    long takenDown = comment(post, writer("hr-expired"), null);
+    long takenDownReply = comment(post, writer("hr-expired"), kept);
+    for (long id : List.of(takenDown, takenDownReply)) {
+      CommentEntity c = commentRepository.findById(id).orElseThrow();
+      c.softDelete();
+      commentRepository.save(c);
+    }
+
+    assertThat(comments.listForPost(post, viewer))
+        .extracting(CommentView::id)
+        .containsExactly(kept);
+    assertThat(comments.listForPost(post, null)).extracting(CommentView::id).containsExactly(kept);
+  }
+
+  @Test
   void highlightsOnAPostAndTheirRepliesLeaveOutUnheardWriters() {
     long post = publish(writer("hr-normal"), "hr-highlighted");
     for (String handle : all()) {
