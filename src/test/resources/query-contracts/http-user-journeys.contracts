@@ -598,7 +598,7 @@
 @junit | reader-my-comment-history | 4 | 0 | 0 | 0 | 4
 @junit | reader-my-highlight-library | 3 | 0 | 0 | 0 | 3
 @junit | reader-my-liked-posts | 4 | 0 | 0 | 0 | 4
-@junit | reader-note-series-navigation | 7 | 0 | 0 | 0 | 7
+@junit | reader-note-series-navigation | 8 | 0 | 0 | 0 | 8
 @junit | reader-own-following | 6 | 0 | 0 | 0 | 6
 @junit | reader-personal-connection-following | 7 | 0 | 0 | 0 | 7
 @junit | reader-personal-connection-forced-global | 6 | 0 | 0 | 0 | 6

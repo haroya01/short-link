@@ -95,8 +95,8 @@
 @junit | notification-note-unread | 1 | 0 | 0 | 0 | 1
 @junit | notification-note-group-read | 0 | 0 | 1 | 0 | 1
 # Counts are public: the author and anyone else read the same one count statement for the page.
-@junit | federation-note-remote-counts | 8 | 0 | 0 | 0 | 8
-@junit | federation-note-remote-counts-stranger | 8 | 0 | 0 | 0 | 8
+@junit | federation-note-remote-counts | 9 | 0 | 0 | 0 | 9
+@junit | federation-note-remote-counts-stranger | 9 | 0 | 0 | 0 | 9
 # Undo of an embedded Like deletes by note, actor and kind; a bare activity id clears a follow or a
 # reaction with that id.
 @junit | federation-inbox-undo-like | 1 | 0 | 0 | 1 | 2
@@ -161,7 +161,7 @@
 # A reply from there is kept for its thread, but the author's notice stops at the one silence
 # check (server block OR muted conversation), and the thread leaves it out in its one query.
 @junit | federation-inbox-reply-blocked-domain | 10 | 1 | 0 | 0 | 11
-@junit | notes-thread-blocked-domain | 8 | 0 | 0 | 0 | 8
+@junit | notes-thread-blocked-domain | 9 | 0 | 0 | 0 | 9
 @junit | federation-domain-unblock | 0 | 0 | 0 | 1 | 1
 # Moderators block a whole server (Mastodon's limit and suspend). Limiting: the block row only.
 @junit | admin-server-limit | 1 | 1 | 0 | 0 | 2
@@ -178,7 +178,7 @@
 @junit | federation-account-suspended-server | 1 | 0 | 0 | 0 | 1
 @junit | notes-tag-suspended-server | 1 | 0 | 0 | 0 | 1
 # Its note's thread: the note, replies and authors, its author left out, so the note is not found.
-@junit | notes-thread-suspended-server | 4 | 0 | 0 | 0 | 4
+@junit | notes-thread-suspended-server | 5 | 0 | 0 | 0 | 5
 @junit | admin-servers | 1 | 0 | 0 | 0 | 1
 @junit | admin-servers-member | 0 | 0 | 0 | 0 | 0
 @junit | admin-server-unblock | 0 | 0 | 0 | 1 | 1
@@ -206,7 +206,7 @@
 # id; the author hears of it (muted conversation, preference, notification, recipient, remote
 # actor).
 @junit | federation-inbox-remote-reply | 14 | 2 | 0 | 0 | 16
-@junit | notes-thread-remote-reply | 8 | 0 | 0 | 0 | 8
+@junit | notes-thread-remote-reply | 9 | 0 | 0 | 0 | 9
 # Edits and deletes first ask whether we kept that note, so others never cost a key fetch. The
 # edit locks that note by the id the question found and reads its images; the changed text,
 # language and image replace the old (the dropped tag and image rows go, the new image goes in) and

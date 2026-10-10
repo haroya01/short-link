@@ -627,6 +627,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
             200);
     assertThat(closed.path("note").path("replyPolicy").asText()).isEqualTo("mentioned");
     assertThat(closed.path("note").path("canReply").asBoolean()).isFalse();
+    assertThat(closed.get("viewerCanModerate").asBoolean()).isFalse();
 
     var opened =
         step(
@@ -655,6 +656,16 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     List<Long> shown = new ArrayList<>();
     thread.path("replies").forEach(reply -> shown.add(reply.path("id").asLong()));
     assertThat(shown).containsExactly(fromNamed);
+    assertThat(thread.path("hiddenReplyCount").asInt()).isEqualTo(1);
+    var underWriter =
+        step(
+            "note-thread-moderated-by-writer",
+            "GET",
+            "/api/v1/public/notes/" + fromNamed,
+            writer,
+            null,
+            200);
+    assertThat(underWriter.path("viewerCanModerate").asBoolean()).isTrue();
     var hidden =
         step(
             "note-hidden-replies",
