@@ -20,6 +20,7 @@ import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import com.example.short_link.user.exception.UserErrorCode;
 import com.example.short_link.user.exception.UserException;
+import java.time.Instant;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -115,7 +116,7 @@ class PostInteractionAccessTest {
   @Test
   void aTakenDownHighlightReplyCannotReceiveNewLikes() {
     PostHighlightReplyEntity takenDown = new PostHighlightReplyEntity(50L, 3L, "removed");
-    takenDown.softDelete();
+    takenDown.softDelete(Instant.parse("2026-10-10T00:00:00Z"));
     when(replies.findById(70L)).thenReturn(Optional.of(takenDown));
 
     assertThatThrownBy(() -> access.requireLikeableHighlightReply(9L, 70L))

@@ -5,6 +5,7 @@ import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
+import java.time.Clock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -16,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 class HighlightReplyModerationAdapter implements HighlightReplyModerationPort {
 
   private final PostHighlightReplyRepository replyRepository;
+  private final Clock clock;
 
   @Override
   @Transactional
@@ -28,7 +30,7 @@ class HighlightReplyModerationAdapter implements HighlightReplyModerationPort {
     if (reply.isDeleted()) {
       return;
     }
-    reply.softDelete();
+    reply.softDelete(clock.instant());
     replyRepository.save(reply);
   }
 }

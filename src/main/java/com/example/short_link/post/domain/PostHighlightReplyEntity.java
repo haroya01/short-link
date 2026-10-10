@@ -50,9 +50,9 @@ public class PostHighlightReplyEntity extends BaseTimeEntity {
     return deletedAt != null;
   }
 
-  public void softDelete() {
+  public void softDelete(Instant at) {
     if (deletedAt == null) {
-      this.deletedAt = Instant.now();
+      this.deletedAt = at;
     }
   }
 }
