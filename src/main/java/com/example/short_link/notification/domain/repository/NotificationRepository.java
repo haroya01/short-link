@@ -3,6 +3,7 @@ package com.example.short_link.notification.domain.repository;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationGroup;
 import com.example.short_link.notification.domain.NotificationGroupActor;
+import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.policy.FilteredSender;
 import java.time.Instant;
 import java.util.Collection;
@@ -13,6 +14,9 @@ public interface NotificationRepository {
   NotificationEntity save(NotificationEntity notification);
 
   List<NotificationGroup> findGroupPage(Long recipientUserId, Long beforeId, int limit);
+
+  List<NotificationGroup> findGroupPageOfTypes(
+      Long recipientUserId, Collection<NotificationType> types, Long beforeId, int limit);
 
   List<NotificationGroupActor> recentActors(
       Long recipientUserId, Collection<String> groupKeys, int perGroup);

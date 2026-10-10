@@ -3,10 +3,12 @@ package com.example.short_link.notification.infrastructure.persistence;
 import com.example.short_link.notification.domain.NotificationEntity;
 import com.example.short_link.notification.domain.NotificationGroup;
 import com.example.short_link.notification.domain.NotificationGroupActor;
+import com.example.short_link.notification.domain.NotificationType;
 import com.example.short_link.notification.domain.policy.FilteredSender;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.persistence.Query;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -30,17 +32,29 @@ class NotificationRepositoryAdapter implements NotificationRepository {
     return jpa.save(notification);
   }
 
+  @Override
+  public List<NotificationGroup> findGroupPage(Long recipientUserId, Long beforeId, int limit) {
+    return groupPage(recipientUserId, null, beforeId, limit);
+  }
+
+  @Override
+  public List<NotificationGroup> findGroupPageOfTypes(
+      Long recipientUserId, Collection<NotificationType> types, Long beforeId, int limit) {
+    return groupPage(recipientUserId, types, beforeId, limit);
+  }
+
   // A group sits where its newest member is, so the cursor is that member's id and a group never
   // repeats on a later page even when its older members are below the cursor. The newest member
   // comes back as an entity alongside the group's size, in the same query.
-  @Override
-  public List<NotificationGroup> findGroupPage(Long recipientUserId, Long beforeId, int limit) {
-    List<?> rows =
+  private List<NotificationGroup> groupPage(
+      Long recipientUserId, Collection<NotificationType> types, Long beforeId, int limit) {
+    Query query =
         em.createNativeQuery(
                 "SELECT n.*, g.members, g.unread FROM ("
                     + "SELECT MAX(id) AS last_id, COUNT(*) AS members,"
                     + " SUM(read_at IS NULL) AS unread"
                     + " FROM notification WHERE recipient_user_id = :recipient AND NOT filtered"
+                    + (types == null ? "" : " AND type IN (:types)")
                     + " GROUP BY "
                     + GROUP
                     + ") g JOIN notification n ON n.id = g.last_id"
@@ -48,8 +62,11 @@ class NotificationRepositoryAdapter implements NotificationRepository {
                 NotificationEntity.GROUP_MAPPING)
             .setParameter("recipient", recipientUserId)
             .setParameter("before", beforeId == null ? Long.MAX_VALUE : beforeId)
-            .setParameter("limit", limit)
-            .getResultList();
+            .setParameter("limit", limit);
+    if (types != null) {
+      query.setParameter("types", types.stream().map(NotificationType::name).toList());
+    }
+    List<?> rows = query.getResultList();
     List<NotificationGroup> groups = new ArrayList<>(rows.size());
     for (Object raw : rows) {
       Object[] cols = (Object[]) raw;
