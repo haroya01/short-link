@@ -55,6 +55,7 @@ class UserSearchHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(anonymous.path("hasNext").asBoolean()).isTrue();
     JsonNode first = anonymous.path("items").get(0);
     assertThat(first.path("displayName").asString()).isEqualTo("Kim");
+    assertThat(first.path("userId").asLong()).isEqualTo(exact.getId());
     assertThat(first.path("followerCount").asLong()).isZero();
     assertThat(first.path("following").asBoolean()).isFalse();
     assertThat(first.path("requested").asBoolean()).isFalse();

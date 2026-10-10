@@ -45,6 +45,7 @@ class ReadingHistoryControllerTest {
     ReadingHistoryEntryView entry =
         new ReadingHistoryEntryView(
             5L,
+            2L,
             "bob",
             null,
             "Title",
@@ -61,6 +62,7 @@ class ReadingHistoryControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.items[0].title").value("Title"))
         .andExpect(jsonPath("$.items[0].username").value("bob"))
+        .andExpect(jsonPath("$.items[0].userId").value(2))
         .andExpect(jsonPath("$.hasNext").value(false));
   }
 

@@ -407,6 +407,7 @@ class CollectionQueryServiceTest {
     CollectionDetailView view = service.detail(1L, 10L);
 
     assertThat(view.curatorUsername()).isEqualTo("curator");
+    assertThat(view.curatorUserId()).isEqualTo(1L);
     assertThat(view.connections()).hasSize(3);
     ConnectionView postView = view.connections().get(0);
     assertThat(postView.blockType()).isEqualTo("POST");

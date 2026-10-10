@@ -6,6 +6,7 @@ import java.util.List;
 public interface UserSearchReader {
 
   record Match(
+      Long userId,
       String username,
       String displayName,
       String avatarUrl,

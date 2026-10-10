@@ -55,6 +55,7 @@ public class ReadingHistoryQueryService {
               UserEntity author = authors.get(post.getUserId());
               return new ReadingHistoryEntryView(
                   post.getId(),
+                  author.getId(),
                   author.getUsername(),
                   author.getAvatarUrl(),
                   post.getTitle(),

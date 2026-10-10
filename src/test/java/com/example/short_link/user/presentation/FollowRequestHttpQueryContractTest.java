@@ -61,6 +61,7 @@ class FollowRequestHttpQueryContractTest extends AccountHttpJourneySupport {
     var waiting = body(call("follow-request-list", "GET", REQUESTS, null, token, 200));
     assertThat(waiting).hasSize(1);
     assertThat(waiting.get(0).path("username").asString()).isEqualTo(stranger.getUsername());
+    assertThat(waiting.get(0).path("userId").asLong()).isEqualTo(stranger.getId());
 
     call(
         "follow-request-authorize",
