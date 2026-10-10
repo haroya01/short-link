@@ -232,7 +232,35 @@ class ReaderInteractionHttpQueryContractTest extends ContentHttpJourneySupport {
         reader,
         null,
         204);
-    assertThat(count("comment", "post_id = ?", postId)).isZero();
+    assertThat(count("comment", "id = ? AND deleted_at IS NOT NULL AND body = ''", comment))
+        .isEqualTo(1);
+    assertThat(count("comment", "id = ? AND deleted_at IS NULL", reply)).isEqualTo(1);
+    var withPlace =
+        get(
+            "reader-public-comment-thread-tombstone",
+            "/api/v1/public/posts/" + postId + "/comments",
+            null);
+    assertThat(withPlace).hasSize(2);
+    assertThat(withPlace.get(0).path("id").asLong()).isEqualTo(comment);
+    assertThat(withPlace.get(0).path("deleted").asBoolean()).isTrue();
+    assertThat(withPlace.get(0).path("body").isNull()).isTrue();
+    assertThat(withPlace.get(0).path("author").isNull()).isTrue();
+    assertThat(withPlace.get(1).path("deleted").asBoolean()).isFalse();
+    assertThat(withPlace.get(1).path("body").asText()).isEqualTo("Thank you for reading.");
+    step(
+        "author-comment-reply-delete-last",
+        "DELETE",
+        "/api/v1/comments/" + reply,
+        author,
+        null,
+        204);
+    assertThat(
+            get(
+                "reader-public-comment-thread-after-last-reply",
+                "/api/v1/public/posts/" + postId + "/comments",
+                null))
+        .isEmpty();
+    assertThat(count("comment", "post_id = ?", postId)).isEqualTo(1);
   }
 
   private void highlightAndReply(long postId) throws Exception {
