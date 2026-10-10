@@ -7,6 +7,7 @@ import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.read.NoteThreadView;
 import com.example.short_link.note.application.read.NoteView;
 import com.example.short_link.note.domain.NoteEntity;
+import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
@@ -368,6 +369,35 @@ class HeardRuleIntegrationTest {
     assertThat(notes.thread(underMuted, null).replies())
         .extracting(NoteView::id)
         .containsExactly(mutedReply);
+  }
+
+  @Test
+  void aNotesEditHistoryOpensWhereItsThreadDoes() {
+    for (String handle : all()) {
+      long id = note(writer(handle), null);
+      if (BLOCKED.contains(handle)) {
+        assertThatThrownBy(() -> notes.history(id, viewer))
+            .isInstanceOf(NoteException.class)
+            .extracting(e -> ((NoteException) e).errorCode())
+            .isEqualTo(NoteErrorCode.NOTE_NOT_FOUND);
+      } else {
+        assertThat(notes.history(id, viewer).versions()).hasSize(1);
+      }
+      assertThat(notes.history(id, null).versions()).hasSize(1);
+    }
+
+    NoteEntity forFollowers =
+        noteRepository.save(new NoteEntity(writer("hr-normal"), "팔로워에게만", null, null));
+    forFollowers.showTo(NoteVisibility.PRIVATE);
+    noteRepository.save(forFollowers);
+    long hidden = forFollowers.getId();
+    assertThatThrownBy(() -> notes.history(hidden, viewer))
+        .isInstanceOf(NoteException.class)
+        .extracting(e -> ((NoteException) e).errorCode())
+        .isEqualTo(NoteErrorCode.NOTE_NOT_FOUND);
+    assertThatThrownBy(() -> notes.history(hidden, null)).isInstanceOf(NoteException.class);
+    followRepository.save(new FollowEntity(viewer, writer("hr-normal")));
+    assertThat(notes.history(hidden, viewer).versions()).hasSize(1);
   }
 
   private long user(String handle) {
