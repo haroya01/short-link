@@ -4,7 +4,6 @@ import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionConnectionRank;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -27,7 +26,7 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
 
   private static final String PUBLIC_CONNECTIONS =
       "SELECT c.id AS connection_id, c.block_type, c.ref_id, c.why, c.created_at,"
-          + " col.id AS collection_id, col.title, col.kind, col.owner_id"
+          + " col.id AS collection_id, col.title, col.ordered, col.owner_id"
           + " FROM collection_connection c JOIN collection col ON col.id = c.collection_id"
           + " WHERE col.visibility = 'PUBLIC'";
 
@@ -115,7 +114,7 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
             .addScalar("created_at", Instant.class)
             .addScalar("collection_id", Long.class)
             .addScalar("title", String.class)
-            .addScalar("kind", String.class)
+            .addScalar("ordered", Boolean.class)
             .addScalar("owner_id", Long.class)
             .getResultList();
     return rows.stream()
@@ -129,7 +128,7 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
                     (Instant) row[4],
                     (Long) row[5],
                     (String) row[6],
-                    row[7] == null ? null : CollectionKind.valueOf((String) row[7]),
+                    (Boolean) row[7],
                     (Long) row[8]))
         .toList();
   }

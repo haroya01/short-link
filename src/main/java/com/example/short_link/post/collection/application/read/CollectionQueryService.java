@@ -5,6 +5,7 @@ import com.example.short_link.post.collection.domain.CollectionConnectionCount;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionConnectionRank;
 import com.example.short_link.post.collection.domain.CollectionEntity;
+import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -185,9 +186,7 @@ public class CollectionQueryService {
       Long userId, ConnectionBlockType blockType, Long refId) {
     List<CollectionEntity> collections =
         collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(userId);
-    Map<Long, List<String>> previews =
-        contentReader.previewByCollection(
-            collections.stream().map(CollectionEntity::getId).toList(), false);
+    Map<Long, List<String>> previews = contentReader.previewByCollection(collections, false);
     Map<Long, Long> connections = existingConnectionsFor(blockType, refId);
     Curator owner =
         userRepository
@@ -224,9 +223,7 @@ public class CollectionQueryService {
         collectionRepository.findAllByOwnerIdOrderByUpdatedAtDesc(user.get().getId()).stream()
             .filter(collection -> collection.getVisibility() == CollectionVisibility.PUBLIC)
             .toList();
-    Map<Long, List<String>> previews =
-        contentReader.previewByCollection(
-            collections.stream().map(CollectionEntity::getId).toList(), true);
+    Map<Long, List<String>> previews = contentReader.previewByCollection(collections, true);
     return collections.stream()
         .map(
             collection ->
@@ -256,7 +253,8 @@ public class CollectionQueryService {
         collection.getTitle(),
         collection.getDescription(),
         collection.getVisibility().name(),
-        collection.getKind().name(),
+        CollectionKind.of(collection.isOrdered()).name(),
+        collection.isOrdered(),
         curatorUsername,
         views);
   }

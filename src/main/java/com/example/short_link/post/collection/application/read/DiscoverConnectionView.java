@@ -9,6 +9,7 @@ public record DiscoverConnectionView(
     Long collectionId,
     String collectionTitle,
     String collectionKind,
+    boolean collectionOrdered,
     String why,
     Instant connectedAt,
     String blockType,

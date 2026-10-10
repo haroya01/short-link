@@ -49,8 +49,12 @@ public class AbuseReportQueryService {
     Map<Long, UserSubjectSnapshot> users = byUserId(reports);
     Map<Long, LinkSubjectSnapshot> links = byLinkId(reports);
     Map<Long, NoteSubjectSnapshot> notes = byNoteId(reports);
+    Map<Long, CommentSubjectSnapshot> highlightReplies = byHighlightReplyId(reports);
     return reports.stream()
-        .map(r -> AbuseReportView.of(r, snapshotFor(r, posts, comments, users, links, notes)))
+        .map(
+            r ->
+                AbuseReportView.of(
+                    r, snapshotFor(r, posts, comments, users, links, notes, highlightReplies)))
         .toList();
   }
 
@@ -67,6 +71,14 @@ public class AbuseReportQueryService {
     return ids.isEmpty()
         ? Map.of()
         : subjects.findCommentSubjectSnapshots(ids).stream()
+            .collect(Collectors.toMap(CommentSubjectSnapshot::getSubjectId, Function.identity()));
+  }
+
+  private Map<Long, CommentSubjectSnapshot> byHighlightReplyId(List<AbuseReportEntity> reports) {
+    List<Long> ids = subjectIds(reports, AbuseSubjectType.HIGHLIGHT_REPLY);
+    return ids.isEmpty()
+        ? Map.of()
+        : subjects.findHighlightReplySubjectSnapshots(ids).stream()
             .collect(Collectors.toMap(CommentSubjectSnapshot::getSubjectId, Function.identity()));
   }
 
@@ -108,7 +120,8 @@ public class AbuseReportQueryService {
       Map<Long, CommentSubjectSnapshot> comments,
       Map<Long, UserSubjectSnapshot> users,
       Map<Long, LinkSubjectSnapshot> links,
-      Map<Long, NoteSubjectSnapshot> notes) {
+      Map<Long, NoteSubjectSnapshot> notes,
+      Map<Long, CommentSubjectSnapshot> highlightReplies) {
     Long subjectId = report.getSubjectId();
     return switch (report.getSubjectType()) {
       case POST -> fromPost(posts.get(subjectId));
@@ -116,6 +129,7 @@ public class AbuseReportQueryService {
       case USER -> fromUser(users.get(subjectId));
       case LINK -> fromLink(links.get(subjectId));
       case NOTE -> fromNote(notes.get(subjectId));
+      case HIGHLIGHT_REPLY -> fromComment(highlightReplies.get(subjectId));
     };
   }
 

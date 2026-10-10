@@ -5,6 +5,7 @@ import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.common.event.HighlightMentionEvent;
 import com.example.short_link.common.event.HighlightReplyEvent;
+import com.example.short_link.common.event.HighlightReplyLikedEvent;
 import com.example.short_link.common.event.NotesEmbeddedEvent;
 import com.example.short_link.common.event.PostHighlightedEvent;
 import com.example.short_link.common.event.PostPublishedEvent;
@@ -137,6 +138,36 @@ public class PostNotificationListener {
             event.commentId(),
             null),
         NotificationGroupKey.of(NotificationType.COMMENT_LIKE, event.commentId()));
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onHighlightReplyLiked(HighlightReplyLikedEvent event) {
+    if (event.isSelfAction()
+        || event.recipientUserId() == null
+        || blocks.silences(event.recipientUserId(), event.actorUserId())) {
+      return;
+    }
+    String postAuthor =
+        event.recipientUserId().equals(event.postAuthorId())
+            ? null
+            : userReader
+                .findById(event.postAuthorId())
+                .map(NotificationUser::username)
+                .orElse(null);
+    recordUseCase.record(
+        event.recipientUserId(),
+        NotificationType.COMMENT_LIKE,
+        event.actorUserId(),
+        null,
+        new NotificationPostRef(
+            event.postId(),
+            event.postSlug(),
+            event.postTitle(),
+            postAuthor,
+            null,
+            event.highlightId()),
+        NotificationGroupKey.ofHighlightReply(NotificationType.COMMENT_LIKE, event.replyId()));
   }
 
   @Async("webhookExecutor")

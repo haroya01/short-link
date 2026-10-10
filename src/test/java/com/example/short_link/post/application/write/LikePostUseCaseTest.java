@@ -15,6 +15,7 @@ import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -48,6 +49,7 @@ class LikePostUseCaseTest {
                 postRepository,
                 mock(CommentRepository.class),
                 mock(PostHighlightRepository.class),
+                mock(PostHighlightReplyRepository.class),
                 mock(UserModerationGuard.class),
                 mock(UserBlockChecker.class)));
   }

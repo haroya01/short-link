@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
+import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository;
+import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository.Likes;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -26,6 +28,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 class PostHighlightReplyQueryServiceTest {
 
   @Mock private PostHighlightReplyRepository replyRepository;
+  @Mock private HighlightReplyLikeRepository likeRepository;
   @Mock private PostHighlightRepository highlightRepository;
   @Mock private PostRepository postRepository;
   @Mock private UserRepository userRepository;
@@ -37,6 +40,7 @@ class PostHighlightReplyQueryServiceTest {
     service =
         new PostHighlightReplyQueryService(
             replyRepository,
+            likeRepository,
             highlightRepository,
             postRepository,
             userRepository,
@@ -96,6 +100,24 @@ class PostHighlightReplyQueryServiceTest {
     assertThat(views.get(0).author().username()).isEqualTo("alice");
     assertThat(views.get(0).body()).isEqualTo("동의해요");
     assertThat(views.get(1).author()).isNull();
+  }
+
+  @Test
+  void eachReplyCarriesItsLikeCountAndWhetherTheViewerLikedIt() {
+    when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(50L, 60L)));
+    when(postRepository.findById(60L)).thenReturn(Optional.of(post(60L, true)));
+    when(replyRepository.findHeardByHighlightId(50L, 7L))
+        .thenReturn(List.of(reply(10L, 1L, "좋아요 받은 답글"), reply(11L, 1L, "아무도 안 누른 답글")));
+    when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
+    when(likeRepository.likesOf(List.of(10L, 11L), 7L))
+        .thenReturn(java.util.Map.of(10L, new Likes(2, true)));
+
+    List<HighlightReplyView> views = service.listForHighlight(50L, 7L);
+
+    assertThat(views.get(0).likeCount()).isEqualTo(2);
+    assertThat(views.get(0).liked()).isTrue();
+    assertThat(views.get(1).likeCount()).isZero();
+    assertThat(views.get(1).liked()).isFalse();
   }
 
   // 원문이 미발행(초안·비공개·관리자 차단)이면 하이라이트 답글 스레드를 통째로 숨긴다 — 열거 가능한 highlightId 로 새지 않게.

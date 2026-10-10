@@ -5,7 +5,9 @@ import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
+import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.CommentRepository;
+import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
 import com.example.short_link.post.domain.repository.PostHighlightRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
@@ -21,6 +23,7 @@ public class PostInteractionAccess {
   private final PostRepository posts;
   private final CommentRepository comments;
   private final PostHighlightRepository highlights;
+  private final PostHighlightReplyRepository highlightReplies;
   private final UserModerationGuard moderation;
   private final UserBlockChecker blocks;
 
@@ -64,6 +67,26 @@ public class PostInteractionAccess {
   }
 
   public record LikeableComment(CommentEntity comment, PostEntity post) {}
+
+  public LikeableHighlightReply requireLikeableHighlightReply(Long actorId, Long replyId) {
+    moderation.requireCanWrite(actorId);
+    PostHighlightReplyEntity reply =
+        highlightReplies
+            .findById(replyId)
+            .filter(value -> !value.isDeleted())
+            .orElseThrow(() -> new PostException(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND, replyId));
+    PostHighlightEntity highlight =
+        highlights
+            .findById(reply.getHighlightId())
+            .orElseThrow(() -> new PostException(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND, replyId));
+    return new LikeableHighlightReply(
+        reply,
+        highlight,
+        publishedPost(highlight.getPostId(), actorId, PostErrorCode.POST_INTERACTION_BLOCKED));
+  }
+
+  public record LikeableHighlightReply(
+      PostHighlightReplyEntity reply, PostHighlightEntity highlight, PostEntity post) {}
 
   private PostEntity publishedPost(Long postId, Long actorId, PostErrorCode blockedCode) {
     return publishedPost(posts.findById(postId), postId, actorId, blockedCode);

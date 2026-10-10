@@ -1,10 +1,12 @@
 package com.example.short_link.post.presentation;
 
+import com.example.short_link.post.application.read.HighlightReplyLikeStatus;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.application.write.CreateHighlightReplyCommand;
 import com.example.short_link.post.application.write.CreateHighlightReplyUseCase;
 import com.example.short_link.post.application.write.DeleteHighlightReplyCommand;
 import com.example.short_link.post.application.write.DeleteHighlightReplyUseCase;
+import com.example.short_link.post.application.write.LikeHighlightReplyUseCase;
 import com.example.short_link.post.presentation.request.CreateHighlightReplyRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +27,7 @@ public class HighlightReplyController {
 
   private final CreateHighlightReplyUseCase createReply;
   private final DeleteHighlightReplyUseCase deleteReply;
+  private final LikeHighlightReplyUseCase likeReply;
 
   @PostMapping("/highlights/{highlightId}/replies")
   @ResponseStatus(HttpStatus.CREATED)
@@ -40,5 +43,17 @@ public class HighlightReplyController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void delete(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     deleteReply.execute(new DeleteHighlightReplyCommand(userId, id));
+  }
+
+  @PostMapping("/highlight-replies/{id}/like")
+  public HighlightReplyLikeStatus like(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return likeReply.like(userId, id);
+  }
+
+  @DeleteMapping("/highlight-replies/{id}/like")
+  public HighlightReplyLikeStatus unlike(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return likeReply.unlike(userId, id);
   }
 }

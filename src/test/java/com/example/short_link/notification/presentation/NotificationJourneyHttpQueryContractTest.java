@@ -11,6 +11,7 @@ import com.example.short_link.notification.domain.repository.NotificationReposit
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -276,6 +277,34 @@ class NotificationJourneyHttpQueryContractTest extends AccountHttpJourneySupport
         .isZero();
     assertThat(count("select count(*) from notification where id=? and read_at is null", ids[2]))
         .isEqualTo(1);
+  }
+
+  @Test
+  void theMentionsFilterKeepsMentionsAndRepliesAndLeavesTheRestOut() throws Exception {
+    transactions.executeWithoutResult(
+        status -> {
+          for (NotificationType type :
+              List.of(
+                  NotificationType.LIKE,
+                  NotificationType.MENTION,
+                  NotificationType.FOLLOW,
+                  NotificationType.NOTE_REPLY)) {
+            notifications.save(new NotificationEntity(owner.getId(), type, stranger.getId(), null));
+          }
+        });
+    var items =
+        body(call(
+                "notification-mentions",
+                "GET",
+                "/api/v1/notifications?filter=mentions",
+                null,
+                token,
+                200))
+            .path("items");
+    assertThat(items.size()).isEqualTo(2);
+    assertThat(items.get(0).path("type").asText()).isEqualTo("NOTE_REPLY");
+    assertThat(items.get(1).path("type").asText()).isEqualTo("MENTION");
+    assertThat(items.get(1).path("actorUsername").asText()).isEqualTo(stranger.getUsername());
   }
 
   @Test

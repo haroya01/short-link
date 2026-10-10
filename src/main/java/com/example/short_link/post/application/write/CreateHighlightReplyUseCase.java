@@ -39,6 +39,8 @@ public class CreateHighlightReplyUseCase {
         author == null ? null : PublicAuthorView.from(author),
         saved.getBody(),
         saved.getCreatedAt(),
-        mentions.of(saved.getBody()));
+        mentions.of(saved.getBody()),
+        0,
+        false);
   }
 }

@@ -583,6 +583,108 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
   }
 
   @Test
+  void aThreadsWriterLimitsWhoRepliesHidesAReplyAndRemovesAnother() throws Exception {
+    Actor writer = actor("rc-writer", false);
+    Actor named = actor("rc-named", false);
+    Actor stranger = actor("rc-stranger", false);
+    String handle = "rcn" + named.id();
+    jdbc.update("UPDATE users SET username = ? WHERE id = ?", handle, named.id());
+
+    long root =
+        step(
+                "note-create-reply-limited",
+                "POST",
+                "/api/v1/notes",
+                writer,
+                Map.of("body", "@" + handle + " 에게만 묻습니다", "replyPolicy", "mentioned"),
+                201)
+            .path("id")
+            .asLong();
+    step(
+        "note-reply-restricted",
+        "POST",
+        "/api/v1/notes",
+        stranger,
+        Map.of("body", "저도요", "inReplyToId", root),
+        403);
+    long fromNamed =
+        step(
+                "note-reply-named",
+                "POST",
+                "/api/v1/notes",
+                named,
+                Map.of("body", "네, 저요", "inReplyToId", root),
+                201)
+            .path("id")
+            .asLong();
+    var closed =
+        step(
+            "note-thread-reply-limited",
+            "GET",
+            "/api/v1/public/notes/" + root,
+            stranger,
+            null,
+            200);
+    assertThat(closed.path("note").path("replyPolicy").asText()).isEqualTo("mentioned");
+    assertThat(closed.path("note").path("canReply").asBoolean()).isFalse();
+
+    var opened =
+        step(
+            "note-reply-policy-change",
+            "PUT",
+            "/api/v1/notes/" + root + "/reply-policy",
+            writer,
+            Map.of("replyPolicy", "everyone"),
+            200);
+    assertThat(opened.path("replyPolicy").asText()).isEqualTo("everyone");
+    assertThat(count("note", "id = ? AND reply_policy = 'EVERYONE'", fromNamed)).isEqualTo(1);
+    long fromStranger =
+        step(
+                "note-reply-opened",
+                "POST",
+                "/api/v1/notes",
+                stranger,
+                Map.of("body", "이제 저도", "inReplyToId", root),
+                201)
+            .path("id")
+            .asLong();
+
+    step("note-reply-hide", "PUT", "/api/v1/notes/" + fromStranger + "/hidden", writer, null, 200);
+    var thread =
+        step("note-thread-hidden-reply", "GET", "/api/v1/public/notes/" + root, null, null, 200);
+    List<Long> shown = new ArrayList<>();
+    thread.path("replies").forEach(reply -> shown.add(reply.path("id").asLong()));
+    assertThat(shown).containsExactly(fromNamed);
+    var hidden =
+        step(
+            "note-hidden-replies",
+            "GET",
+            "/api/v1/public/notes/" + root + "/hidden-replies",
+            null,
+            null,
+            200);
+    assertThat(hidden.get(0).path("id").asLong()).isEqualTo(fromStranger);
+    assertThat(hidden.get(0).path("hidden").asBoolean()).isTrue();
+    step(
+        "note-reply-unhide",
+        "DELETE",
+        "/api/v1/notes/" + fromStranger + "/hidden",
+        writer,
+        null,
+        200);
+    assertThat(count("note", "id = ? AND reply_hidden_at IS NULL", fromStranger)).isEqualTo(1);
+
+    step(
+        "note-reply-removed-by-thread-writer",
+        "DELETE",
+        "/api/v1/notes/" + fromNamed,
+        writer,
+        null,
+        204);
+    assertThat(count("note", "id = ?", fromNamed)).isZero();
+  }
+
+  @Test
   void aMutedConversationStopsItsNoticesWhileTheThreadStaysReadable() throws Exception {
     Actor writer = actor("conv-writer", false);
     Actor talker = actor("conv-talker", false);

@@ -24,6 +24,12 @@ class AbuseSubjectReaderAdapter implements AbuseSubjectReader {
   }
 
   @Override
+  public List<CommentSubjectSnapshot> findHighlightReplySubjectSnapshots(
+      Collection<Long> replyIds) {
+    return jpa.findHighlightReplySubjectSnapshots(replyIds);
+  }
+
+  @Override
   public List<UserSubjectSnapshot> findUserSubjectSnapshots(Collection<Long> userIds) {
     return jpa.findUserSubjectSnapshots(userIds);
   }
@@ -54,6 +60,7 @@ class AbuseSubjectReaderAdapter implements AbuseSubjectReader {
       case USER -> jpa.countUserById(subjectId) > 0;
       case LINK -> jpa.countLinkById(subjectId) > 0;
       case NOTE -> jpa.countNoteById(subjectId) > 0;
+      case HIGHLIGHT_REPLY -> jpa.countHighlightReplyById(subjectId) > 0;
     };
   }
 }

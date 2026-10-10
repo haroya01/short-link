@@ -33,12 +33,16 @@ class PublicHighlightReplyControllerTest {
                     new PublicAuthorView(1L, "alice", null, null),
                     "좋은 지적이에요",
                     Instant.parse("2026-06-12T00:00:00Z"),
-                    List.of())));
+                    List.of(),
+                    3,
+                    true)));
 
     mvc.perform(get("/api/v1/public/highlights/5/replies"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].id").value(10))
         .andExpect(jsonPath("$[0].author.username").value("alice"))
-        .andExpect(jsonPath("$[0].body").value("좋은 지적이에요"));
+        .andExpect(jsonPath("$[0].body").value("좋은 지적이에요"))
+        .andExpect(jsonPath("$[0].likeCount").value(3))
+        .andExpect(jsonPath("$[0].liked").value(true));
   }
 }

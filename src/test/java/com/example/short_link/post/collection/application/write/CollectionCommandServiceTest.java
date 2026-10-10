@@ -11,7 +11,6 @@ import com.example.short_link.common.event.CollectionConnectedEvent;
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -58,8 +57,7 @@ class CollectionCommandServiceTest {
   }
 
   private CollectionEntity collection(long id, long ownerId, CollectionVisibility visibility) {
-    CollectionEntity c =
-        new CollectionEntity(ownerId, "느린 사고", null, visibility, CollectionKind.COLLECTION);
+    CollectionEntity c = new CollectionEntity(ownerId, "느린 사고", null, visibility, false);
     ReflectionTestUtils.setField(c, "id", id);
     return c;
   }
@@ -71,25 +69,24 @@ class CollectionCommandServiceTest {
     CollectionEntity saved =
         service.create(
             new CreateCollectionCommand(
-                1L, "  느린 사고  ", "  오래 머문 글  ", CollectionVisibility.PUBLIC, null));
+                1L, "  느린 사고  ", "  오래 머문 글  ", CollectionVisibility.PUBLIC, false));
 
     assertThat(saved.getOwnerId()).isEqualTo(1L);
     assertThat(saved.getTitle()).isEqualTo("느린 사고");
     assertThat(saved.getDescription()).isEqualTo("오래 머문 글");
     assertThat(saved.getVisibility()).isEqualTo(CollectionVisibility.PUBLIC);
-    assertThat(saved.getKind()).isEqualTo(CollectionKind.COLLECTION);
+    assertThat(saved.isOrdered()).isFalse();
   }
 
   @Test
-  void createWithPathKindEchoesPath() {
+  void createKeepsTheOrderedFlag() {
     when(collectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
     CollectionEntity saved =
         service.create(
-            new CreateCollectionCommand(
-                1L, "읽기 경로", null, CollectionVisibility.PUBLIC, CollectionKind.PATH));
+            new CreateCollectionCommand(1L, "읽기 경로", null, CollectionVisibility.PUBLIC, true));
 
-    assertThat(saved.getKind()).isEqualTo(CollectionKind.PATH);
+    assertThat(saved.isOrdered()).isTrue();
   }
 
   @Test
@@ -97,7 +94,7 @@ class CollectionCommandServiceTest {
     when(collectionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
     CollectionEntity saved =
-        service.create(new CreateCollectionCommand(1L, "제목", "   ", null, null));
+        service.create(new CreateCollectionCommand(1L, "제목", "   ", null, false));
 
     assertThat(saved.getVisibility()).isEqualTo(CollectionVisibility.PRIVATE);
     assertThat(saved.getDescription()).isNull();
@@ -109,7 +106,7 @@ class CollectionCommandServiceTest {
             () ->
                 service.create(
                     new CreateCollectionCommand(
-                        1L, "   ", null, CollectionVisibility.PRIVATE, null)))
+                        1L, "   ", null, CollectionVisibility.PRIVATE, false)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_TITLE_REQUIRED);
@@ -123,7 +120,7 @@ class CollectionCommandServiceTest {
 
     CollectionEntity saved =
         service.create(
-            new CreateCollectionCommand(1L, tooLong, null, CollectionVisibility.PRIVATE, null));
+            new CreateCollectionCommand(1L, tooLong, null, CollectionVisibility.PRIVATE, false));
 
     assertThat(saved.getTitle()).hasSize(CollectionEntity.MAX_TITLE);
   }
@@ -135,11 +132,27 @@ class CollectionCommandServiceTest {
 
     CollectionEntity result =
         service.edit(
-            new EditCollectionCommand(1L, 10L, "  새 이름  ", "새 소개", CollectionVisibility.PUBLIC));
+            new EditCollectionCommand(
+                1L, 10L, "  새 이름  ", "새 소개", CollectionVisibility.PUBLIC, null));
 
     assertThat(result.getTitle()).isEqualTo("새 이름");
     assertThat(result.getDescription()).isEqualTo("새 소개");
     assertThat(result.getVisibility()).isEqualTo(CollectionVisibility.PUBLIC);
+  }
+
+  @Test
+  void editTurnsOrderOnAndOffAndKeepsItWhenNotSent() {
+    CollectionEntity c = collection(10L, 1L, CollectionVisibility.PRIVATE);
+    when(collectionRepository.findById(10L)).thenReturn(Optional.of(c));
+
+    service.edit(new EditCollectionCommand(1L, 10L, "길", null, CollectionVisibility.PUBLIC, true));
+    assertThat(c.isOrdered()).isTrue();
+
+    service.edit(new EditCollectionCommand(1L, 10L, "길", null, CollectionVisibility.PUBLIC, null));
+    assertThat(c.isOrdered()).isTrue();
+
+    service.edit(new EditCollectionCommand(1L, 10L, "길", null, CollectionVisibility.PUBLIC, false));
+    assertThat(c.isOrdered()).isFalse();
   }
 
   @Test
@@ -150,7 +163,8 @@ class CollectionCommandServiceTest {
     assertThatThrownBy(
             () ->
                 service.edit(
-                    new EditCollectionCommand(1L, 10L, "  ", null, CollectionVisibility.PUBLIC)))
+                    new EditCollectionCommand(
+                        1L, 10L, "  ", null, CollectionVisibility.PUBLIC, null)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_TITLE_REQUIRED);
@@ -164,7 +178,8 @@ class CollectionCommandServiceTest {
     assertThatThrownBy(
             () ->
                 service.edit(
-                    new EditCollectionCommand(1L, 10L, "  ", null, CollectionVisibility.PUBLIC)))
+                    new EditCollectionCommand(
+                        1L, 10L, "  ", null, CollectionVisibility.PUBLIC, null)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_PERMISSION_DENIED);

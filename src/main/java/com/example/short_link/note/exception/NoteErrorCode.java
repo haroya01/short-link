@@ -46,6 +46,12 @@ public enum NoteErrorCode {
   NOTE_QUOTED_NOTE_NOT_FOUND(HttpStatus.BAD_REQUEST, "quoted note not found: %s"),
   NOTE_QUOTE_CONFLICT(HttpStatus.BAD_REQUEST, "a note quotes a post or a note, not both"),
   NOTE_REPLY_BLOCKED(HttpStatus.FORBIDDEN, "cannot reply to this note"),
+  NOTE_REPLY_RESTRICTED(HttpStatus.FORBIDDEN, "the writer of this thread limited who can reply"),
+  NOTE_REPLY_POLICY_INVALID(
+      HttpStatus.BAD_REQUEST, "who can reply is everyone, following or mentioned: %s"),
+  NOTE_REPLY_POLICY_ON_REPLY(
+      HttpStatus.BAD_REQUEST, "who can reply is set on the first note of a thread"),
+  NOTE_NOT_A_REPLY(HttpStatus.BAD_REQUEST, "only a reply can be hidden"),
   NOTE_INTERACTION_BLOCKED(HttpStatus.FORBIDDEN, "cannot repost or quote this note"),
   NOTE_REMOTE_UNSUPPORTED(HttpStatus.BAD_REQUEST, "notes from other servers cannot be quoted yet"),
   NOTE_SCHEDULE_TOO_SOON(

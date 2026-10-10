@@ -12,6 +12,7 @@ import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteLinkPreviewEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
 import com.example.short_link.note.domain.NotePollTally;
+import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteStats;
 import com.example.short_link.note.domain.NoteViewerMarks;
 import com.example.short_link.note.domain.NoteVisibility;
@@ -103,6 +104,60 @@ class NoteViewsTest {
     assertThat(views.of(List.of(note(1L, 7L, null)), 8L).get(0).conversationMuted()).isTrue();
     when(notes.viewerMarks(null, List.of(1L))).thenReturn(NoteViewerMarks.NONE);
     assertThat(views.of(List.of(note(1L, 7L, null)), null).get(0).conversationMuted()).isNull();
+  }
+
+  @Test
+  void whoMayAnswerALimitedThreadIsReadOnlyForSignedInViewersOfSuchAPage() {
+    NoteEntity named = new NoteEntity(9L, "@mina 와 이야기", null, null);
+    ReflectionTestUtils.setField(named, "id", 1L);
+    named.limitReplies(NoteReplyPolicy.MENTIONED);
+    NoteEntity followingRoot = new NoteEntity(9L, "팔로우한 사람만", null, null);
+    ReflectionTestUtils.setField(followingRoot, "id", 2L);
+    followingRoot.limitReplies(NoteReplyPolicy.FOLLOWING);
+    NoteEntity reply = new NoteEntity(9L, "이어서", 2L, null);
+    ReflectionTestUtils.setField(reply, "id", 3L);
+    reply.answer(followingRoot);
+    NoteEntity closed = new NoteEntity(9L, "아무도", null, null);
+    ReflectionTestUtils.setField(closed, "id", 4L);
+    closed.limitReplies(NoteReplyPolicy.MENTIONED);
+    NoteEntity open = note(5L, 9L, null);
+    NoteAuthor owner = new NoteAuthor(9L, "owner", null);
+    NoteAuthor me = new NoteAuthor(7L, "mina", null);
+    when(notes.findAllByIdIn(Set.of(2L))).thenReturn(List.of(followingRoot));
+    when(people.activeAuthors(Set.of(9L), Set.of("mina"))).thenReturn(Map.of(9L, owner, 7L, me));
+    when(people.followersOf(7L, Set.of(9L))).thenReturn(Set.of(9L));
+    when(notes.stats(List.of(1L, 3L, 4L, 5L))).thenReturn(Map.of());
+    when(notes.viewerMarks(7L, List.of(1L, 3L, 4L, 5L))).thenReturn(NoteViewerMarks.NONE);
+
+    List<NoteView> page = views.of(List.of(named, reply, closed, open), 7L);
+
+    assertThat(page)
+        .extracting(NoteView::replyPolicy, NoteView::canReply)
+        .containsExactly(
+            org.assertj.core.groups.Tuple.tuple("mentioned", true),
+            org.assertj.core.groups.Tuple.tuple("following", true),
+            org.assertj.core.groups.Tuple.tuple("mentioned", false),
+            org.assertj.core.groups.Tuple.tuple("everyone", true));
+    assertThat(page).extracting(NoteView::hidden).containsOnly(false);
+  }
+
+  @Test
+  void anAnonymousReaderNeverCostsAThreadLookupAndCannotReply() {
+    NoteEntity limited = new NoteEntity(9L, "제한", 2L, null);
+    ReflectionTestUtils.setField(limited, "id", 3L);
+    ReflectionTestUtils.setField(limited, "conversationId", 2L);
+    limited.limitReplies(NoteReplyPolicy.FOLLOWING);
+    limited.hideReply(Instant.EPOCH);
+    when(people.activeAuthors(Set.of(9L))).thenReturn(Map.of(9L, new NoteAuthor(9L, "o", null)));
+    when(notes.stats(List.of(3L))).thenReturn(Map.of());
+    when(notes.viewerMarks(null, List.of(3L))).thenReturn(NoteViewerMarks.NONE);
+
+    NoteView view = views.of(List.of(limited), null).get(0);
+
+    assertThat(view.canReply()).isNull();
+    assertThat(view.hidden()).isTrue();
+    verify(notes, never()).findAllByIdIn(anyCollection());
+    verify(people, never()).followersOf(org.mockito.ArgumentMatchers.any(), anyCollection());
   }
 
   @Test

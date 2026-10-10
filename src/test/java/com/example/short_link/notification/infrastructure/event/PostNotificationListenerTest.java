@@ -14,6 +14,7 @@ import com.example.short_link.common.event.CommentMentionEvent;
 import com.example.short_link.common.event.CommentReplyEvent;
 import com.example.short_link.common.event.HighlightMentionEvent;
 import com.example.short_link.common.event.HighlightReplyEvent;
+import com.example.short_link.common.event.HighlightReplyLikedEvent;
 import com.example.short_link.common.event.NotesEmbeddedEvent;
 import com.example.short_link.common.event.PostHighlightedEvent;
 import com.example.short_link.common.event.PostPublishedEvent;
@@ -202,6 +203,42 @@ class PostNotificationListenerTest {
 
     listener().onCommentLiked(new CommentLikedEvent(3L, 3L, 10L, "s", "t", 3L, 77L));
     listener().onCommentLiked(new CommentLikedEvent(3L, 8L, 10L, "s", "t", 3L, 77L));
+
+    verifyNoInteractions(recordUseCase);
+  }
+
+  @Test
+  void aHighlightReplyLikeIsACommentLikeThatOpensTheThreadAndGroupsApartFromComments() {
+    when(userReader.findById(5L)).thenReturn(Optional.of(new NotificationUser(5L, "owner", "ko")));
+
+    listener()
+        .onHighlightReplyLiked(
+            new HighlightReplyLikedEvent(3L, 9L, 10L, "the-post", "The Post", 5L, 42L, 77L));
+
+    ArgumentCaptor<NotificationPostRef> post = ArgumentCaptor.forClass(NotificationPostRef.class);
+    verify(recordUseCase)
+        .record(
+            eq(3L),
+            eq(NotificationType.COMMENT_LIKE),
+            eq(9L),
+            isNull(),
+            post.capture(),
+            eq("COMMENT_LIKE:hr:77:" + LocalDate.now(ZoneOffset.UTC)));
+    assertThat(post.getValue().authorUsername()).isEqualTo("owner");
+    assertThat(post.getValue().highlightId()).isEqualTo(42L);
+    assertThat(post.getValue().commentId()).isNull();
+    assertThat(today("COMMENT_LIKE", 77L))
+        .isNotEqualTo("COMMENT_LIKE:hr:77:" + LocalDate.now(ZoneOffset.UTC));
+  }
+
+  @Test
+  void selfAndMutedHighlightReplyLikesAreSkipped() {
+    when(blocks.silences(3L, 8L)).thenReturn(true);
+
+    listener()
+        .onHighlightReplyLiked(new HighlightReplyLikedEvent(3L, 3L, 10L, "s", "t", 3L, 42L, 77L));
+    listener()
+        .onHighlightReplyLiked(new HighlightReplyLikedEvent(3L, 8L, 10L, "s", "t", 3L, 42L, 77L));
 
     verifyNoInteractions(recordUseCase);
   }

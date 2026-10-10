@@ -9,6 +9,7 @@ import com.example.short_link.abuse.exception.AbuseException;
 import com.example.short_link.common.link.LinkModerationPort;
 import com.example.short_link.common.note.NoteModerationPort;
 import com.example.short_link.common.post.CommentModerationPort;
+import com.example.short_link.common.post.HighlightReplyModerationPort;
 import com.example.short_link.common.post.PostModerationPort;
 import com.example.short_link.common.user.UserModerationPort;
 import java.time.Instant;
@@ -24,6 +25,7 @@ public class ResolveAbuseReportUseCase {
   private final AbuseReportRepository abuseReportRepository;
   private final PostModerationPort postModerationPort;
   private final CommentModerationPort commentModerationPort;
+  private final HighlightReplyModerationPort highlightReplyModerationPort;
   private final NoteModerationPort noteModerationPort;
   private final UserModerationPort userModerationPort;
   private final LinkModerationPort linkModerationPort;
@@ -72,6 +74,8 @@ public class ResolveAbuseReportUseCase {
       case BAN_USER -> userModerationPort.ban(adminUserId, subjectId);
       case DISABLE_LINK -> linkModerationPort.disable(adminUserId, subjectId);
       case DELETE_NOTE -> noteModerationPort.takeDown(adminUserId, subjectId);
+      case DELETE_HIGHLIGHT_REPLY ->
+          highlightReplyModerationPort.softDelete(adminUserId, subjectId);
       case NONE -> {
         // 위에서 이미 걸러져 여기 올 일은 없다.
       }

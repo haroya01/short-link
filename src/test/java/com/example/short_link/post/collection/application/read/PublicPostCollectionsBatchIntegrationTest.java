@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
-import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.CollectionVisibility;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -47,7 +46,7 @@ class PublicPostCollectionsBatchIntegrationTest {
 
   private Long collection(Long ownerId, String title, CollectionVisibility vis) {
     return collectionRepository
-        .save(new CollectionEntity(ownerId, title, null, vis, CollectionKind.COLLECTION))
+        .save(new CollectionEntity(ownerId, title, null, vis, false))
         .getId();
   }
 

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 class CollectionEntityTest {
 
@@ -17,9 +18,7 @@ class CollectionEntityTest {
   @ValueSource(strings = {"  ", "\t\n"})
   void rejectsMissingTitleAtCreation(String title) {
     assertThatThrownBy(
-            () ->
-                new CollectionEntity(
-                    1L, title, "설명", CollectionVisibility.PRIVATE, CollectionKind.PATH))
+            () -> new CollectionEntity(1L, title, "설명", CollectionVisibility.PRIVATE, true))
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.COLLECTION_TITLE_REQUIRED);
@@ -30,8 +29,7 @@ class CollectionEntityTest {
   @ValueSource(strings = {"  ", "\t\n"})
   void rejectsMissingTitleBeforeChangingExistingFields(String title) {
     CollectionEntity collection =
-        new CollectionEntity(
-            1L, "처음 제목", "처음 설명", CollectionVisibility.PRIVATE, CollectionKind.PATH);
+        new CollectionEntity(1L, "처음 제목", "처음 설명", CollectionVisibility.PRIVATE, true);
 
     assertThatThrownBy(() -> collection.edit(title, "바뀔 설명", CollectionVisibility.PUBLIC))
         .isInstanceOf(PostException.class)
@@ -41,7 +39,20 @@ class CollectionEntityTest {
     assertThat(collection.getTitle()).isEqualTo("처음 제목");
     assertThat(collection.getDescription()).isEqualTo("처음 설명");
     assertThat(collection.getVisibility()).isEqualTo(CollectionVisibility.PRIVATE);
-    assertThat(collection.getKind()).isEqualTo(CollectionKind.PATH);
+    assertThat(collection.isOrdered()).isTrue();
+  }
+
+  @Test
+  void theLegacyKindColumnFollowsTheOrderedFlag() {
+    CollectionEntity collection =
+        new CollectionEntity(1L, "제목", null, CollectionVisibility.PRIVATE, true);
+    assertThat(ReflectionTestUtils.getField(collection, "kind")).isEqualTo(CollectionKind.PATH);
+
+    collection.order(false);
+
+    assertThat(collection.isOrdered()).isFalse();
+    assertThat(ReflectionTestUtils.getField(collection, "kind"))
+        .isEqualTo(CollectionKind.COLLECTION);
   }
 
   @Test
@@ -49,11 +60,11 @@ class CollectionEntityTest {
     String title = "  " + "제".repeat(150) + "  ";
     String description = "\t" + "설".repeat(300) + "\n";
     CollectionEntity collection =
-        new CollectionEntity(1L, title, description, CollectionVisibility.PRIVATE, null);
+        new CollectionEntity(1L, title, description, CollectionVisibility.PRIVATE, false);
 
     assertThat(collection.getTitle()).isEqualTo("제".repeat(120));
     assertThat(collection.getDescription()).isEqualTo("설".repeat(280));
-    assertThat(collection.getKind()).isEqualTo(CollectionKind.COLLECTION);
+    assertThat(collection.isOrdered()).isFalse();
 
     collection.edit("  짧은 제목  ", "  짧은 설명  ", CollectionVisibility.PUBLIC);
     assertThat(collection.getTitle()).isEqualTo("짧은 제목");
@@ -69,8 +80,7 @@ class CollectionEntityTest {
   @ValueSource(strings = {"  ", "\t\n"})
   void optionalDescriptionUsesNullForMissingText(String description) {
     CollectionEntity collection =
-        new CollectionEntity(
-            1L, "제목", description, CollectionVisibility.PRIVATE, CollectionKind.PATH);
+        new CollectionEntity(1L, "제목", description, CollectionVisibility.PRIVATE, true);
     assertThat(collection.getDescription()).isNull();
 
     collection.edit("제목", "이전 설명", CollectionVisibility.PRIVATE);

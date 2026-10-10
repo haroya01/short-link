@@ -67,7 +67,7 @@ class DiscoverFeedQueryServiceTest {
         Instant.parse("2026-06-12T00:00:00Z"),
         50L,
         "느린 사고",
-        com.example.short_link.post.collection.domain.CollectionKind.COLLECTION,
+        false,
         ownerId);
   }
 
@@ -280,26 +280,10 @@ class DiscoverFeedQueryServiceTest {
     Instant at = Instant.parse("2026-06-12T00:00:00Z");
     DiscoverConnectionRow gibberishCollection =
         new DiscoverConnectionRow(
-            102L,
-            ConnectionBlockType.POST,
-            5L,
-            "다시 읽을 글",
-            at,
-            51L,
-            "ㅇㅇㅇ",
-            com.example.short_link.post.collection.domain.CollectionKind.COLLECTION,
-            2L);
+            102L, ConnectionBlockType.POST, 5L, "다시 읽을 글", at, 51L, "ㅇㅇㅇ", false, 2L);
     DiscoverConnectionRow gibberishWhy =
         new DiscoverConnectionRow(
-            103L,
-            ConnectionBlockType.POST,
-            5L,
-            "ㅁㅇㄹㄹㅇㄴㅁㄹㅁ",
-            at,
-            50L,
-            "느린 사고",
-            com.example.short_link.post.collection.domain.CollectionKind.COLLECTION,
-            2L);
+            103L, ConnectionBlockType.POST, 5L, "ㅁㅇㄹㄹㅇㄴㅁㄹㅁ", at, 50L, "느린 사고", false, 2L);
     DiscoverConnectionRow thinPost = row(104L, ConnectionBlockType.POST, 7L, 2L);
     when(connectionRepository.findRecentPublicConnections(null, 0, 20))
         .thenReturn(List.of(gibberishCollection, gibberishWhy, thinPost));

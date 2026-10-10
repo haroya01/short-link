@@ -12,7 +12,33 @@ public record NoteDraft(
     boolean sensitive,
     String visibility,
     Poll poll,
-    String language) {
+    String language,
+    String replyPolicy) {
+
+  public NoteDraft(
+      String body,
+      List<Image> images,
+      Long quotedPostId,
+      Long inReplyToId,
+      Long quotedNoteId,
+      String contentWarning,
+      boolean sensitive,
+      String visibility,
+      Poll poll,
+      String language) {
+    this(
+        body,
+        images,
+        quotedPostId,
+        inReplyToId,
+        quotedNoteId,
+        contentWarning,
+        sensitive,
+        visibility,
+        poll,
+        language,
+        null);
+  }
 
   public NoteDraft(
       String body,
@@ -59,7 +85,7 @@ public record NoteDraft(
   }
 
   // The next note of a thread answers the one before it and keeps that note's visibility, warning
-  // and sensitive mark, unless it carries a warning of its own.
+  // and sensitive mark, unless it carries a warning of its own; who may reply is the thread's.
   NoteDraft continuing(Long previousId, String previousWarning, boolean previousSensitive) {
     return new NoteDraft(
         body,
@@ -71,7 +97,8 @@ public record NoteDraft(
         sensitive || previousSensitive,
         null,
         poll,
-        language);
+        language,
+        null);
   }
 
   public NoteDraft(String body, List<Image> images, Long quotedPostId, Long inReplyToId) {

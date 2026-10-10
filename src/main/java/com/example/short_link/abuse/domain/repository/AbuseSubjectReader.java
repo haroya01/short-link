@@ -11,6 +11,9 @@ public interface AbuseSubjectReader {
   // 관리자가 삭제 여부를 확인할 수 있게 soft 삭제된 댓글도 포함한다.
   List<CommentSubjectSnapshot> findCommentSubjectSnapshots(Collection<Long> commentIds);
 
+  // 하이라이트 답글은 댓글과 같은 모양으로 읽고, 내려진 답글도 포함한다.
+  List<CommentSubjectSnapshot> findHighlightReplySubjectSnapshots(Collection<Long> replyIds);
+
   List<UserSubjectSnapshot> findUserSubjectSnapshots(Collection<Long> userIds);
 
   List<LinkSubjectSnapshot> findLinkSubjectSnapshots(Collection<Long> linkIds);

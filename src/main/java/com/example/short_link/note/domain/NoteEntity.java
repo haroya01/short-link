@@ -95,6 +95,13 @@ public class NoteEntity extends BaseCreatedEntity {
   @Column(nullable = false, length = 16)
   private NoteVisibility visibility = NoteVisibility.PUBLIC;
 
+  @Enumerated(EnumType.STRING)
+  @Column(name = "reply_policy", nullable = false, length = 16)
+  private NoteReplyPolicy replyPolicy = NoteReplyPolicy.EVERYONE;
+
+  @Column(name = "reply_hidden_at")
+  private Instant replyHiddenAt;
+
   @Getter(AccessLevel.NONE)
   @Column(name = "poll_options")
   private String pollOptions;
@@ -141,6 +148,31 @@ public class NoteEntity extends BaseCreatedEntity {
 
   public void answer(NoteEntity parent) {
     this.conversationId = parent.conversation();
+    this.replyPolicy = parent.replyPolicy;
+  }
+
+  public void limitReplies(NoteReplyPolicy policy) {
+    this.replyPolicy = policy;
+  }
+
+  public boolean isReplyHidden() {
+    return replyHiddenAt != null;
+  }
+
+  public void hideReply(Instant at) {
+    if (replyHiddenAt == null) {
+      replyHiddenAt = at;
+    }
+  }
+
+  public void showReply() {
+    replyHiddenAt = null;
+  }
+
+  // A reply from elsewhere that the thread's writer removed: it stays a reply, under nothing.
+  public void detach() {
+    this.inReplyToId = null;
+    this.conversationId = null;
   }
 
   public String excerpt() {

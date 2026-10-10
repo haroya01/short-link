@@ -2,6 +2,7 @@ package com.example.short_link.post.collection.application.read;
 
 import com.example.short_link.common.note.NoteBodyReader;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
+import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
 import com.example.short_link.post.domain.PostEntity;
@@ -32,10 +33,10 @@ public class CollectionContentReader {
   private final UserRepository userRepository;
 
   public Map<Long, List<String>> previewByCollection(
-      List<Long> collectionIds, boolean publishedOnly) {
-    if (collectionIds.isEmpty()) return Map.of();
+      List<CollectionEntity> collections, boolean publishedOnly) {
+    if (collections.isEmpty()) return Map.of();
 
-    var selected = latestPreviewConnections(collectionIds);
+    var selected = previewConnections(collections);
     var connections = selected.values().stream().flatMap(List::stream).toList();
     var content = loadPreviewContent(connections, publishedOnly);
     return content.previewLabels(selected);
@@ -45,13 +46,25 @@ public class CollectionContentReader {
     return loadPublishedContent(connections).connectionViews(connections);
   }
 
-  private Map<Long, List<CollectionConnectionEntity>> latestPreviewConnections(
-      List<Long> collectionIds) {
+  // 순서 있는 컬렉션은 처음 두 단계를, 나머지는 최근 두 연결을 고른다.
+  private Map<Long, List<CollectionConnectionEntity>> previewConnections(
+      List<CollectionEntity> collections) {
+    Set<Long> ordered =
+        collections.stream()
+            .filter(CollectionEntity::isOrdered)
+            .map(CollectionEntity::getId)
+            .collect(Collectors.toSet());
     Map<Long, List<CollectionConnectionEntity>> selected = new LinkedHashMap<>();
     for (var connection :
-        connectionRepository.findAllByCollectionIdInOrderByPositionDesc(collectionIds)) {
-      var latest = selected.computeIfAbsent(connection.getCollectionId(), id -> new ArrayList<>());
-      if (latest.size() < PREVIEW_PER_COLLECTION) latest.add(connection);
+        connectionRepository.findAllByCollectionIdInOrderByPositionDesc(
+            collections.stream().map(CollectionEntity::getId).toList())) {
+      var picked = selected.computeIfAbsent(connection.getCollectionId(), id -> new ArrayList<>());
+      if (ordered.contains(connection.getCollectionId())) {
+        picked.addFirst(connection);
+        if (picked.size() > PREVIEW_PER_COLLECTION) picked.removeLast();
+      } else if (picked.size() < PREVIEW_PER_COLLECTION) {
+        picked.add(connection);
+      }
     }
     // 먼저 두 연결을 고른 뒤 공개 범위를 적용한다. 제외된 항목을 더 오래된 연결로 채우지 않는다.
     return selected;

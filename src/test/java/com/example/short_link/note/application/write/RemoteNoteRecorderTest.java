@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -12,11 +13,14 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.common.event.NoteInteractionEvent;
 import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.note.RemoteNotes;
+import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
 import com.example.short_link.note.domain.repository.NoteMediaRepository;
+import com.example.short_link.note.domain.repository.NotePeopleReader;
 import com.example.short_link.note.domain.repository.NoteRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -39,10 +43,11 @@ class RemoteNoteRecorderTest {
 
   @Mock private NoteRepository notes;
   @Mock private NoteMediaRepository media;
+  @Mock private NotePeopleReader people;
   @Mock private ApplicationEventPublisher events;
 
   private RemoteNoteRecorder recorder() {
-    return new RemoteNoteRecorder(notes, media, events, Clock.fixed(NOW, ZoneOffset.UTC));
+    return new RemoteNoteRecorder(notes, media, people, events, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   private static RemoteNotes.Received received(
@@ -335,6 +340,50 @@ class RemoteNoteRecorderTest {
     assertThat(row.getValue().conversationId()).isNull();
     assertThat(row.getValue().reply()).isTrue();
     verify(notes).tag(903L, List.of("Cats", "dogs"));
+  }
+
+  @Test
+  void anAnswerFromElsewhereToALimitedThreadStaysUnattachedUnlessItsSenderMayReply() {
+    NoteEntity root = new NoteEntity(7L, "@bob@m.example 에게만", null, null);
+    ReflectionTestUtils.setField(root, "id", 5L);
+    root.limitReplies(NoteReplyPolicy.MENTIONED);
+    when(notes.findById(5L)).thenReturn(Optional.of(root));
+    when(notes.insertRemote(any())).thenReturn(Optional.of(910L), Optional.of(911L));
+    when(people.remoteAuthors(java.util.Set.of(42L)))
+        .thenReturn(
+            java.util.Map.of(42L, NoteAuthor.remote(42L, "alice@m.example", null, null, null)),
+            java.util.Map.of(42L, NoteAuthor.remote(42L, "Bob@m.example", null, null, null)));
+
+    recorder().receive(received("public", null, 5L, null, List.of(7L), List.of(), null));
+    recorder().receive(received("public", null, 5L, null, List.of(7L), List.of(), null));
+
+    ArgumentCaptor<RemoteNoteRow> rows = ArgumentCaptor.forClass(RemoteNoteRow.class);
+    verify(notes, times(2)).insertRemote(rows.capture());
+    assertThat(rows.getAllValues())
+        .extracting(RemoteNoteRow::inReplyToId, RemoteNoteRow::replyPolicy)
+        .containsExactly(
+            tuple(null, NoteReplyPolicy.EVERYONE), tuple(5L, NoteReplyPolicy.MENTIONED));
+    verify(events, times(1))
+        .publishEvent(
+            org.mockito.ArgumentMatchers.<NoteInteractionEvent>argThat(
+                event -> event.type() == NoteInteractionEvent.Type.REPLY));
+  }
+
+  @Test
+  void underFollowingTheThreadsWriterFollowingTheSenderLetsTheAnswerIn() {
+    NoteEntity root = new NoteEntity(7L, "팔로우한 사람만", null, null);
+    ReflectionTestUtils.setField(root, "id", 5L);
+    root.limitReplies(NoteReplyPolicy.FOLLOWING);
+    when(notes.findById(5L)).thenReturn(Optional.of(root));
+    when(notes.insertRemote(any())).thenReturn(Optional.of(912L));
+    when(people.remoteAuthors(java.util.Set.of(42L))).thenReturn(java.util.Map.of());
+    when(people.followsRemote(7L, 42L)).thenReturn(true);
+
+    recorder().receive(received("public", null, 5L, null, List.of(), List.of(), null));
+
+    ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
+    verify(notes).insertRemote(row.capture());
+    assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
   }
 
   @Test

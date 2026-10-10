@@ -7,6 +7,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -32,6 +33,9 @@ public class PostHighlightReplyEntity extends BaseTimeEntity {
   @Column(nullable = false, length = MAX_BODY)
   private String body;
 
+  @Column(name = "deleted_at")
+  private Instant deletedAt;
+
   public PostHighlightReplyEntity(Long highlightId, Long userId, String body) {
     this.highlightId = highlightId;
     this.userId = userId;
@@ -40,5 +44,15 @@ public class PostHighlightReplyEntity extends BaseTimeEntity {
 
   public boolean isOwnedBy(Long userId) {
     return this.userId.equals(userId);
+  }
+
+  public boolean isDeleted() {
+    return deletedAt != null;
+  }
+
+  public void softDelete(Instant at) {
+    if (deletedAt == null) {
+      this.deletedAt = at;
+    }
   }
 }
