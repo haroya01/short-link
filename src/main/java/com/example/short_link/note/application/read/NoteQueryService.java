@@ -222,13 +222,19 @@ public class NoteQueryService {
   }
 
   // Mastodon's edit history: the note as it reads now, then each earlier version, newest first.
+  // It opens for whoever may open the thread: not across a block, not once the writer is gone or
+  // their server suspended, and a restricted note only for its readers.
   @Transactional(readOnly = true)
   public NoteHistoryView history(Long noteId, Long viewerId) {
     NoteEntity note =
         notes
-            .findById(noteId)
+            .findUnblocked(noteId, viewerId)
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
-    if ((!note.isRemote() && people.activeAuthors(Set.of(note.getUserId())).isEmpty())
+    boolean authorGone =
+        note.isRemote()
+            ? people.remoteAuthors(Set.of(note.getRemoteActorId())).isEmpty()
+            : people.activeAuthors(Set.of(note.getUserId())).isEmpty();
+    if (authorGone
         || (note.getVisibility().restricted()
             && !note.isOwnedBy(viewerId)
             && !notes.visibleTo(viewerId, Set.of(noteId)).contains(noteId))) {

@@ -84,9 +84,12 @@
 @junit | note-create-warning | 4 | 1 | 0 | 0 | 5
 @junit | note-edit-warning | 8 | 1 | 1 | 0 | 10
 # Edits keep the version they replace (Mastodon edit history): one insert per edit that changes
-# anything; an edit that changes nothing is not an edit. History reads the note, checks the author is
-# still active, then the earlier versions newest first.
+# anything; an edit that changes nothing is not an edit. History reads the note (across a block it is
+# not found, inside the same statement), checks the author is still active, then the earlier
+# versions newest first. A muted author's history opens as their thread does.
 @junit | note-history | 3 | 0 | 0 | 0 | 3
+@junit | note-history-blocked | 1 | 0 | 0 | 0 | 1
+@junit | note-history-muted | 3 | 0 | 0 | 0 | 3
 # Pins: the note, how many the author already pinned (at most five), the update. The profile list
 # orders pins first inside its one query, so a pinned profile costs the same.
 @junit | note-pin | 2 | 0 | 1 | 0 | 3
