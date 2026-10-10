@@ -143,20 +143,20 @@ class UpdatePostMetadataUseCaseTest {
   }
 
   @Test
-  void aClientThatSendsNoCoverChoiceKeepsTheSameCoverAndPicksANewOne() {
+  void aClientThatSendsNoCoverChoiceKeepsTheSameCoverAndLeavesANewOneUnchosen() {
     PostEntity post = ownedPost();
-    post.updateOgImage("https://cdn/body-first.png", null, false);
+    post.updateOgImage("https://cdn/picked.png", null, true);
     when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(cover("https://cdn/picked.png", null));
+    assertThat(post.isCoverChosen()).isTrue();
 
     useCase.execute(cover("https://cdn/body-first.png", null));
     assertThat(post.isCoverChosen()).isFalse();
 
-    useCase.execute(cover("https://cdn/uploaded.png", null));
-    assertThat(post.isCoverChosen()).isTrue();
-
-    useCase.execute(cover("https://cdn/uploaded.png", null));
-    assertThat(post.isCoverChosen()).isTrue();
+    useCase.execute(cover("https://cdn/body-first.png", null));
+    assertThat(post.isCoverChosen()).isFalse();
   }
 
   @Test

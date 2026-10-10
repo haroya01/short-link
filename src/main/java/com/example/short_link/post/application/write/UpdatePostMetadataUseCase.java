@@ -65,12 +65,13 @@ public class UpdatePostMetadataUseCase {
     return writeViews.fromSaved(postRepository.save(post));
   }
 
-  // coverChosen 을 보내지 않는 옛 클라이언트는 표지를 직접 고를 때만 바꾼다고 본다. 같은 표지를 다시 보내면 그대로 둔다.
+  // coverChosen 을 보내지 않는 옛 클라이언트는 본문 첫 이미지도 표지로 자동 저장한다. 같은 표지면 그대로 두고, 새 표지는
+  // 고르지 않은 것으로 본다.
   private static boolean coverChosen(PostEntity post, UpdatePostMetadataCommand cmd) {
     if (cmd.coverChosen() != null) {
       return cmd.coverChosen();
     }
-    return !cmd.ogImageUrl().equals(post.getOgImageUrl()) || post.isCoverChosen();
+    return cmd.ogImageUrl().equals(post.getOgImageUrl()) && post.isCoverChosen();
   }
 
   @Transactional
