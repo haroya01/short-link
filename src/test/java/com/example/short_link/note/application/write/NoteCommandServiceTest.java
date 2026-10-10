@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -44,6 +45,8 @@ import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.domain.repository.QuotedPostReader;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import com.example.short_link.user.exception.UserErrorCode;
+import com.example.short_link.user.exception.UserException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -563,6 +566,21 @@ class NoteCommandServiceTest {
                 null));
     verify(events, never())
         .publishEvent(new NoteLinkPreviewRequested(100L, "https://example.com/b"));
+  }
+
+  @Test
+  void aSuspendedWriterCannotEditANoteTheyAlreadyPosted() {
+    doThrow(new UserException(UserErrorCode.ACCOUNT_SUSPENDED))
+        .when(moderation)
+        .requireCanWrite(7L);
+
+    assertThatThrownBy(() -> service().edit(7L, 1L, "changed while suspended", null, null))
+        .isInstanceOfSatisfying(
+            UserException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(UserErrorCode.ACCOUNT_SUSPENDED));
+
+    verify(notes, never()).findById(any());
+    verify(notes, never()).recordVersion(any(), any());
   }
 
   @Test

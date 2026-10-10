@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
@@ -33,6 +34,7 @@ class UpdatePostMetadataUseCaseTest {
   @Mock private PostBlockRepository postBlockRepository;
   @Mock private PostSearchTextRepository postSearchTextRepository;
   @Mock private PostRevisionCapture revisionCapture;
+  @Mock private UserModerationGuard moderation;
 
   private UpdatePostMetadataUseCase useCase;
 
@@ -44,7 +46,7 @@ class UpdatePostMetadataUseCaseTest {
     useCase =
         new UpdatePostMetadataUseCase(
             postOwnership,
-            new PostEditGuard(revisionCapture),
+            new PostEditGuard(revisionCapture, moderation),
             postRepository,
             searchTextUpdater,
             new PostWriteViewAssembler(postRepository));

@@ -29,11 +29,16 @@ import com.example.short_link.profile.exception.ProfileErrorCode;
 import com.example.short_link.profile.exception.ProfileException;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
@@ -49,6 +54,8 @@ class PublicPostQueryServiceTest {
   @Mock private CtaRepository ctaRepository;
   @Mock private UserBlockChecker userBlocks;
 
+  private static final Instant NOW = Instant.now();
+
   private PublicPostQueryService service;
 
   @BeforeEach
@@ -62,7 +69,8 @@ class PublicPostQueryServiceTest {
             seriesItemReader,
             ctaRepository,
             new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me"),
-            userBlocks);
+            userBlocks,
+            Clock.fixed(NOW, ZoneOffset.UTC));
     lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
   }
 
@@ -294,6 +302,63 @@ class PublicPostQueryServiceTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+  }
+
+  @ParameterizedTest
+  @EnumSource(PreviewState.class)
+  void previewShowsOnlyDraftsTheAuthorMayStillShareAndPublishedPosts(PreviewState state) {
+    UserEntity author = authorWithUsername("john");
+    PostEntity post = state.post(author.getId());
+    post.ensurePreviewToken("tok-123");
+    when(postRepository.findByPreviewToken("tok-123")).thenReturn(Optional.of(post));
+    when(userRepository.findById(author.getId())).thenReturn(Optional.of(author));
+    if (state.suspendsAuthor) author.suspend(NOW.plusSeconds(3600));
+
+    if (state.served) {
+      assertThat(service.findPreviewPost("tok-123").post().slug()).isEqualTo("preview-post");
+    } else {
+      assertThatThrownBy(() -> service.findPreviewPost("tok-123"))
+          .isInstanceOf(PostException.class)
+          .extracting(e -> ((PostException) e).errorCode())
+          .isEqualTo(PostErrorCode.POST_NOT_FOUND);
+    }
+  }
+
+  enum PreviewState {
+    SCHEDULED(true, false),
+    PUBLISHED(true, false),
+    PUBLISHED_BY_SUSPENDED_AUTHOR(true, true),
+    UNPUBLISHED(false, false),
+    TAKEN_DOWN_DRAFT(false, false),
+    TAKEN_DOWN_AFTER_PUBLISHING(false, false),
+    DRAFT_OF_SUSPENDED_AUTHOR(false, true);
+
+    final boolean served;
+    final boolean suspendsAuthor;
+
+    PreviewState(boolean served, boolean suspendsAuthor) {
+      this.served = served;
+      this.suspendsAuthor = suspendsAuthor;
+    }
+
+    PostEntity post(Long authorId) {
+      PostEntity post = new PostEntity(authorId, "preview-post", "Preview", "ko");
+      switch (this) {
+        case SCHEDULED -> post.schedule(Instant.now().plusSeconds(3600));
+        case PUBLISHED, PUBLISHED_BY_SUSPENDED_AUTHOR -> post.publish();
+        case UNPUBLISHED -> {
+          post.publish();
+          post.unpublish();
+        }
+        case TAKEN_DOWN_DRAFT -> post.takeDown(NOW);
+        case TAKEN_DOWN_AFTER_PUBLISHING -> {
+          post.publish();
+          post.takeDown(NOW);
+        }
+        case DRAFT_OF_SUSPENDED_AUTHOR -> {}
+      }
+      return post;
+    }
   }
 
   @Test

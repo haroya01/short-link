@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.domain.PostEntity;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -10,8 +11,12 @@ import org.springframework.stereotype.Component;
 public class PostEditGuard {
 
   private final PostRevisionCapture revisions;
+  private final UserModerationGuard moderation;
 
   public void check(PostEntity post, Long baseVersion, boolean overwrite) {
+    if (post.isPublished()) {
+      moderation.requireCanWrite(post.getUserId());
+    }
     if (overwrite) {
       revisions.capture(post);
     } else if (baseVersion != null) {

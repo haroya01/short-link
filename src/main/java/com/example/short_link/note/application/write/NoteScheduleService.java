@@ -1,5 +1,6 @@
 package com.example.short_link.note.application.write;
 
+import com.example.short_link.common.exception.DomainException;
 import com.example.short_link.note.domain.NoteScheduleEntity;
 import com.example.short_link.note.domain.repository.NoteScheduleRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
@@ -113,8 +114,7 @@ public class NoteScheduleService {
           published++;
         }
       } catch (RuntimeException e) {
-        String code =
-            e instanceof NoteException failed ? failed.errorCode().name() : UNKNOWN_FAILURE;
+        String code = e instanceof DomainException failed ? failed.code() : UNKNOWN_FAILURE;
         transaction.executeWithoutResult(
             status ->
                 schedules

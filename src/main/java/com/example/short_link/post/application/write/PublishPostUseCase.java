@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class PublishPostUseCase {
 
+  private final UserModerationGuard moderation;
   private final PostOwnership postOwnership;
   private final PostRepository postRepository;
   private final PostPublicationCompletion publicationCompletion;
@@ -20,6 +22,7 @@ public class PublishPostUseCase {
   @Transactional
   public PostView execute(PublishPostCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
+    moderation.requireCanWrite(cmd.userId());
     // publishedAt은 재발행에도 유지되므로 null일 때만 최초 발행 알림을 보낸다.
     boolean firstPublish = post.getPublishedAt() == null;
     post.publish();

@@ -25,6 +25,7 @@ public class RestorePostRevisionUseCase {
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
   private final PostOwnership postOwnership;
+  private final PostEditGuard editGuard;
   private final PostRepository postRepository;
   private final PostRevisionRepository postRevisionRepository;
   private final PostBlockRepository postBlockRepository;
@@ -35,6 +36,7 @@ public class RestorePostRevisionUseCase {
   @Transactional
   public PostView execute(RestorePostRevisionCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
+    editGuard.check(post, null, false);
     PostRevisionEntity revision =
         postRevisionRepository
             .findByPostIdAndVersionNumber(cmd.postId(), cmd.versionNumber())
