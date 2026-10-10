@@ -210,6 +210,39 @@ class UpdatePostMetadataUseCaseTest {
   }
 
   @Test
+  void rejectsATypedProfilePageName() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
+                    new UpdatePostMetadataCommand(
+                        7L, 42L, null, "about", null, null, null, null, null, null, false)))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            e -> {
+              assertThat(e.errorCode()).isEqualTo(PostErrorCode.SLUG_RESERVED);
+              assertThat(e.properties()).containsEntry("slug", "about");
+            });
+    assertThat(post.getSlug()).isEqualTo("original-slug");
+    verify(postRepository, never()).existsByUserIdAndSlug(any(), any());
+  }
+
+  @Test
+  void keepsAProfilePageNameThePostAlreadyHas() {
+    PostEntity post = new PostEntity(7L, "notes", "Original", "ko");
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        new UpdatePostMetadataCommand(
+            7L, 42L, "Edited", "notes", null, null, null, null, null, null, false));
+
+    assertThat(post.getTitle()).isEqualTo("Edited");
+  }
+
+  @Test
   void rejectsSlugChangeWhenFrozen() {
     PostEntity post = ownedPost();
     post.publish();

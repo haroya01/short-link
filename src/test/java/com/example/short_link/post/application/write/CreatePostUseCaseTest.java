@@ -3,6 +3,7 @@ package com.example.short_link.post.application.write;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -57,6 +58,18 @@ class CreatePostUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.SLUG_CONFLICT);
+  }
+
+  @Test
+  void aProfilePageNameGetsTheFirstFreeNumberInstead() {
+    when(postRepository.existsByUserIdAndSlug(7L, "notes-2")).thenReturn(true);
+    when(postRepository.existsByUserIdAndSlug(7L, "notes-3")).thenReturn(false);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    PostView created = useCase.execute(new CreatePostCommand(7L, "notes", "Notes", "ko"));
+
+    assertThat(created.slug()).isEqualTo("notes-3");
+    verify(postRepository, never()).existsByUserIdAndSlug(7L, "notes");
   }
 
   @Test

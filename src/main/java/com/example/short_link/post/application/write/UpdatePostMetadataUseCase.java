@@ -2,6 +2,7 @@ package com.example.short_link.post.application.write;
 
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.ProfilePathSlugs;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
@@ -28,6 +29,9 @@ public class UpdatePostMetadataUseCase {
     editGuard.check(post, cmd.baseVersion(), cmd.overwrite());
 
     if (cmd.slug() != null && !cmd.slug().equals(post.getSlug())) {
+      if (ProfilePathSlugs.isReserved(cmd.slug())) {
+        throw new PostException(PostErrorCode.SLUG_RESERVED, cmd.slug()).with("slug", cmd.slug());
+      }
       if (postRepository.existsByUserIdAndSlug(cmd.userId(), cmd.slug())) {
         throw new PostException(PostErrorCode.SLUG_CONFLICT, cmd.slug());
       }
