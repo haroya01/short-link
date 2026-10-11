@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.post.application.read.PostView;
+import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.ProfilePathSlugs;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -21,6 +22,7 @@ public class UpdatePostMetadataUseCase {
   private final PostEditGuard editGuard;
   private final PostRepository postRepository;
   private final PostSearchTextUpdater searchTextUpdater;
+  private final PostRevisionCapture revisions;
   private final PostWriteViewAssembler writeViews;
 
   @Transactional
@@ -59,8 +61,13 @@ public class UpdatePostMetadataUseCase {
     }
 
     post.markEdited();
-    if (searchFieldChanged) {
-      searchTextUpdater.refresh(post);
+    List<PostBlockEntity> body = searchFieldChanged ? searchTextUpdater.refresh(post) : null;
+    if (post.isPublished()) {
+      if (body == null) {
+        revisions.capture(post);
+      } else {
+        revisions.capture(post, body);
+      }
     }
     return writeViews.fromSaved(postRepository.save(post));
   }
