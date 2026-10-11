@@ -10,7 +10,8 @@ final class PostMetadataValidation {
   private PostMetadataValidation() {}
 
   static void requireSlug(String slug, String invalidFormatMessage) {
-    if (slug.length() < 2 || slug.length() > 200) {
+    boolean number = !slug.isEmpty() && slug.chars().allMatch(Character::isDigit);
+    if ((slug.length() < 2 && !number) || slug.length() > 200) {
       throw new IllegalArgumentException("slug length 2~200");
     }
     if (!SLUG_PATTERN.matcher(slug).matches()) {
