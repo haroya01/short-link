@@ -20,6 +20,7 @@ public class ReplacePostBlocksUseCase {
   private final PostBlockRepository postBlockRepository;
   private final PostSearchTextUpdater searchTextUpdater;
   private final PostNoteQuotes noteQuotes;
+  private final PostRevisionCapture revisions;
 
   @Transactional
   public PostBodyView execute(ReplacePostBlocksCommand cmd) {
@@ -32,6 +33,7 @@ public class ReplacePostBlocksUseCase {
       // 본문이 비었어도 검색 컬럼은 제목·요약·태그로 다시 채워야 한다(예전 본문 잔재가 남지 않게).
       searchTextUpdater.refresh(post, List.of());
       noteQuotes.index(post, List.of());
+      recordPublished(post, List.of());
       return new PostBodyView(post.getContentVersion(), List.of());
     }
     List<PostBlockEntity> entities = new ArrayList<>(cmd.blocks().size());
@@ -45,7 +47,15 @@ public class ReplacePostBlocksUseCase {
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(cmd.postId());
     searchTextUpdater.refresh(post, persisted);
     noteQuotes.index(post, persisted);
+    recordPublished(post, persisted);
     return new PostBodyView(
         post.getContentVersion(), persisted.stream().map(PostBlockView::from).toList());
+  }
+
+  // 독자가 본 내용은 모두 버전으로 남긴다. 초안 자동 저장은 기록하지 않는다.
+  private void recordPublished(PostEntity post, List<PostBlockEntity> blocks) {
+    if (post.isPublished()) {
+      revisions.capture(post, blocks);
+    }
   }
 }

@@ -26,6 +26,7 @@ public class RestorePostRevisionUseCase {
 
   private final PostOwnership postOwnership;
   private final PostEditGuard editGuard;
+  private final PostRevisionCapture revisions;
   private final PostRepository postRepository;
   private final PostRevisionRepository postRevisionRepository;
   private final PostBlockRepository postBlockRepository;
@@ -42,6 +43,8 @@ public class RestorePostRevisionUseCase {
             .findByPostIdAndVersionNumber(cmd.postId(), cmd.versionNumber())
             .orElseThrow(
                 () -> new PostException(PostErrorCode.REVISION_NOT_FOUND, cmd.versionNumber()));
+    // 되돌리기가 덮어쓰는 지금 내용도 다시 꺼낼 수 있어야 한다.
+    revisions.capture(post);
 
     PostSnapshot snapshot = readJson(revision.getContentJson());
 

@@ -52,6 +52,7 @@ class RestorePostRevisionUseCaseTest {
         new RestorePostRevisionUseCase(
             postOwnership,
             new PostEditGuard(revisionCapture, moderation),
+            revisionCapture,
             postRepository,
             postRevisionRepository,
             postBlockRepository,
@@ -149,5 +150,30 @@ class RestorePostRevisionUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.REVISION_NOT_FOUND);
+  }
+
+  @Test
+  void keepsTheContentItReplacesAsAVersionBeforeRestoring() throws Exception {
+    PostEntity post = new PostEntity(7L, "my-post", "Current", "ko");
+    String json =
+        objectMapper.writeValueAsString(
+            new PostSnapshot("Old", null, null, null, null, "ko", List.of()));
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRevisionRepository.findByPostIdAndVersionNumber(42L, 1))
+        .thenReturn(Optional.of(revision(1, json)));
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    List<String> titleWhenKept = new java.util.ArrayList<>();
+    org.mockito.Mockito.doAnswer(
+            inv -> {
+              titleWhenKept.add(((PostEntity) inv.getArgument(0)).getTitle());
+              return null;
+            })
+        .when(revisionCapture)
+        .capture(any(PostEntity.class));
+
+    useCase.execute(new RestorePostRevisionCommand(7L, 42L, 1));
+
+    assertThat(titleWhenKept).containsExactly("Current");
+    assertThat(post.getTitle()).isEqualTo("Old");
   }
 }

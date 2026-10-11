@@ -112,7 +112,9 @@
 @junit | author-published-slug-frozen | 3 | 0 | 0 | 0 | 3
 @junit | author-revision-list | 2 | 0 | 0 | 0 | 2
 # Restoring a public post's revision also rewrites the notes its body carries (one delete; none carried).
-@junit | author-revision-restore-first | 5 | 2 | 1 | 2 | 10
+# Before restoring it reads the current blocks and the latest revision to keep the content it replaces;
+# here that content is already the latest revision, so nothing is inserted.
+@junit | author-revision-restore-first | 7 | 2 | 1 | 2 | 12
 @junit | author-schedule-cancel | 2 | 0 | 1 | 0 | 3
 @junit | author-second-draft-create | 2 | 1 | 0 | 0 | 3
 @junit | author-second-draft-markdown-write | 3 | 2 | 1 | 1 | 7
