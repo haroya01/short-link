@@ -17,6 +17,7 @@ public class PublishScheduledPostUseCase {
   private final PostRepository postRepository;
   private final PostPublicationCompletion publicationCompletion;
   private final UserModerationGuard moderation;
+  private final PostNumbering numbering;
 
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public boolean execute(Long postId, Instant now) {
@@ -33,6 +34,7 @@ public class PublishScheduledPostUseCase {
       return false;
     }
     boolean firstPublish = post.getPublishedAt() == null;
+    numbering.numberIfClientMade(post);
     post.publish();
     postRepository.save(post);
     publicationCompletion.complete(post, firstPublish, () -> now);

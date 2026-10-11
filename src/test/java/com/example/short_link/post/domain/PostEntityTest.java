@@ -392,4 +392,19 @@ class PostEntityTest {
             });
     assertThat(p.getContentVersion()).isEqualTo(1L);
   }
+
+  @Test
+  void aNumberReplacesTheAddressOnlyBeforeThePostWasEverPublic() {
+    PostEntity p = newPost();
+    p.numberSlug(3);
+    assertThat(p.getSlug()).isEqualTo("3");
+
+    p.publish();
+    p.unpublish();
+    assertThatThrownBy(() -> p.numberSlug(4))
+        .isInstanceOf(PostException.class)
+        .extracting(e -> ((PostException) e).errorCode())
+        .isEqualTo(PostErrorCode.SLUG_FROZEN);
+    assertThat(p.getSlug()).isEqualTo("3");
+  }
 }

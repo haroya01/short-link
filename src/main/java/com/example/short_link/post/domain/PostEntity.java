@@ -186,6 +186,14 @@ public class PostEntity extends BaseTimeEntity {
   }
 
   // Slug is frozen once the post has ever been public (published or unpublished).
+  // 한 번이라도 공개된 글의 주소는 공유된 링크라 바꾸지 않는다.
+  public void numberSlug(long number) {
+    if (publishedAt != null) {
+      throw new PostException(PostErrorCode.SLUG_FROZEN, this.slug);
+    }
+    this.slug = String.valueOf(number);
+  }
+
   public void updateSlug(String slug) {
     if (status == PostStatus.PUBLISHED || status == PostStatus.UNPUBLISHED) {
       throw new PostException(PostErrorCode.SLUG_FROZEN, this.slug);

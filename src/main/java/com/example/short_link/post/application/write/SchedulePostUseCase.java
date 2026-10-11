@@ -14,6 +14,7 @@ public class SchedulePostUseCase {
 
   private final UserModerationGuard moderation;
   private final PostOwnership postOwnership;
+  private final PostNumbering numbering;
   private final PostRepository postRepository;
   private final PostWriteViewAssembler writeViews;
 
@@ -21,6 +22,7 @@ public class SchedulePostUseCase {
   public PostView execute(SchedulePostCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
     moderation.requireCanWrite(cmd.userId());
+    numbering.numberIfClientMade(post);
     post.schedule(cmd.scheduledAt());
     return writeViews.fromSaved(postRepository.save(post));
   }

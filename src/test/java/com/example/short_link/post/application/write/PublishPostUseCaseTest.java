@@ -12,6 +12,7 @@ import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.post.domain.repository.AuthorPostNumberRepository;
 import com.example.short_link.post.domain.repository.PostRepository;
 import java.util.List;
 import org.junit.jupiter.api.BeforeEach;
@@ -33,6 +34,7 @@ class PublishPostUseCaseTest {
   @Mock private PostNoteQuotes noteQuotes;
   @Mock private ProfileCacheInvalidator cacheEviction;
   @Mock private ApplicationEventPublisher events;
+  @Mock private AuthorPostNumberRepository numbers;
 
   private PublishPostUseCase useCase;
 
@@ -42,6 +44,7 @@ class PublishPostUseCaseTest {
         new PublishPostUseCase(
             moderation,
             postOwnership,
+            new PostNumbering(numbers, postRepository),
             postRepository,
             new PostPublicationCompletion(
                 postRevisionCapture, searchTextUpdater, noteQuotes, cacheEviction, events),
@@ -81,5 +84,20 @@ class PublishPostUseCaseTest {
     verify(events, never()).publishEvent(any());
     verify(noteQuotes).index(post, List.of());
     verify(noteQuotes, never()).indexFirstPublish(any(), any());
+  }
+
+  @Test
+  void publishingAClientMadeDraftAnswersWithTheAuthorsNextNumber() {
+    PostEntity post = new PostEntity(7L, "draft-x7k2abc", "My Post", "ko");
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    when(numbers.next(7L)).thenReturn(12L);
+
+    PostView result = useCase.execute(new PublishPostCommand(7L, 42L));
+
+    assertThat(result.slug()).isEqualTo("12");
+    ArgumentCaptor<PostPublishedEvent> evt = ArgumentCaptor.forClass(PostPublishedEvent.class);
+    verify(events).publishEvent(evt.capture());
+    assertThat(evt.getValue().postSlug()).isEqualTo("12");
   }
 }
