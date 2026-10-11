@@ -30,8 +30,9 @@
 # Publishing for the first time: the usual first publish plus one insert of the notes it carries;
 # nothing was kept before, so nothing is cleared.
 @junit | post-publish-quoting-note | 14 | 4 | 1 | 0 | 19
-# Editing a public post's body also clears and rewrites the notes it carries (delete + insert).
-@junit | post-blocks-replace-published-quote | 10 | 3 | 1 | 2 | 16
+# Editing a public post's body also clears and rewrites the notes it carries (delete + insert),
+# and keeps the new content as a revision (latest revision read + insert).
+@junit | post-blocks-replace-published-quote | 11 | 4 | 1 | 2 | 18
 # Posts carrying a note: the page of published posts, their authors and tags in one batch each; an
 # empty page stops after the first statement.
 @junit | note-quoting-posts | 3 | 0 | 0 | 0 | 3
