@@ -15,6 +15,7 @@ public class PublishPostUseCase {
 
   private final UserModerationGuard moderation;
   private final PostOwnership postOwnership;
+  private final PostNumbering numbering;
   private final PostRepository postRepository;
   private final PostPublicationCompletion publicationCompletion;
   private final PostWriteViewAssembler writeViews;
@@ -25,6 +26,7 @@ public class PublishPostUseCase {
     moderation.requireCanWrite(cmd.userId());
     // publishedAt은 재발행에도 유지되므로 null일 때만 최초 발행 알림을 보낸다.
     boolean firstPublish = post.getPublishedAt() == null;
+    numbering.numberIfClientMade(post);
     post.publish();
     PostEntity saved = postRepository.save(post);
     publicationCompletion.complete(saved, firstPublish, Instant::now);

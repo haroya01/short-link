@@ -55,7 +55,8 @@ class ReplacePostBlocksUseCaseTest {
             new PostEditGuard(revisionCapture, moderation),
             postBlockRepository,
             searchTextUpdater,
-            noteQuotes);
+            noteQuotes,
+            revisionCapture);
   }
 
   @Test
@@ -200,5 +201,41 @@ class ReplacePostBlocksUseCaseTest {
     PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
     for (int i = 0; i < version; i++) post.markEdited();
     return post;
+  }
+
+  private void save(PostEntity post, String text) {
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(42L))
+        .thenReturn(List.of(new PostBlockEntity(42L, PostBlockType.PARAGRAPH, text, 0)));
+    useCase.execute(
+        new ReplacePostBlocksCommand(
+            7L,
+            42L,
+            List.of(new ReplacePostBlocksCommand.BlockInput(PostBlockType.PARAGRAPH, text)),
+            null,
+            false));
+  }
+
+  @Test
+  void aSaveToAPublishedPostKeepsTheNewBodyAsAVersion() {
+    PostEntity post = new PostEntity(7L, "my-post", "My Post", "ko");
+    post.publish();
+
+    save(post, "readers now see this");
+
+    @SuppressWarnings("unchecked")
+    ArgumentCaptor<List<PostBlockEntity>> kept = ArgumentCaptor.forClass(List.class);
+    verify(revisionCapture).capture(eq(post), kept.capture());
+    assertThat(kept.getValue())
+        .extracting(PostBlockEntity::getContent)
+        .containsExactly("readers now see this");
+  }
+
+  @Test
+  void aDraftAutosaveAddsNoVersion() {
+    save(new PostEntity(7L, "my-post", "My Post", "ko"), "still drafting");
+
+    verify(revisionCapture, never()).capture(any(PostEntity.class), any());
+    verify(revisionCapture, never()).capture(any(PostEntity.class));
   }
 }

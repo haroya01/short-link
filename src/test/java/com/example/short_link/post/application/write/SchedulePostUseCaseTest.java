@@ -26,6 +26,7 @@ class SchedulePostUseCaseTest {
   @Mock private UserModerationGuard moderation;
   @Mock private PostOwnership postOwnership;
   @Mock private PostRepository postRepository;
+  @Mock private PostNumbering numbering;
 
   private SchedulePostUseCase useCase;
 
@@ -33,7 +34,11 @@ class SchedulePostUseCaseTest {
   void setUp() {
     useCase =
         new SchedulePostUseCase(
-            moderation, postOwnership, postRepository, new PostWriteViewAssembler(postRepository));
+            moderation,
+            postOwnership,
+            numbering,
+            postRepository,
+            new PostWriteViewAssembler(postRepository));
   }
 
   @Test
@@ -72,5 +77,16 @@ class SchedulePostUseCaseTest {
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.SCHEDULE_AFTER_PUBLISH);
+  }
+
+  @Test
+  void schedulingIsWhenADraftGetsItsNumber() {
+    PostEntity post = new PostEntity(7L, "draft-x7k2abc", "My Post", "ko");
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(new SchedulePostCommand(7L, 42L, Instant.now().plus(2, ChronoUnit.HOURS)));
+
+    org.mockito.Mockito.verify(numbering).numberIfClientMade(post);
   }
 }

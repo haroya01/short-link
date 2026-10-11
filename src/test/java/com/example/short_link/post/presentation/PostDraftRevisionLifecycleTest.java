@@ -164,7 +164,7 @@ class PostDraftRevisionLifecycleTest {
   }
 
   @Test
-  void publishCapturesOneRevisionAndLaterEditsDoNot() throws Exception {
+  void everyContentReadersSawOfAPublishedPostIsKeptOnce() throws Exception {
     String token = token("g-lc-pub");
     long id = createDraft(token, "lc-publish", "발행 스냅샷");
     putMarkdown(token, id, COMPLEX_MARKDOWN);
@@ -175,12 +175,48 @@ class PostDraftRevisionLifecycleTest {
     assertThat(afterPublish.get(0).get("versionNumber").asInt()).isEqualTo(1);
     assertThat(afterPublish.get(0).get("titleSnapshot").asText()).isEqualTo("발행 스냅샷");
 
-    putMarkdown(token, id, "발행 뒤 고친 본문");
-    assertThat(revisions(token, id)).hasSize(1);
+    String edited = putMarkdown(token, id, "발행 뒤 고친 본문");
+    putMarkdown(token, id, "발행 뒤 다시 고친 본문");
+    assertThat(revisions(token, id)).hasSize(3);
+
+    putMarkdown(token, id, "발행 뒤 다시 고친 본문");
+    act(token, id, "unpublish");
+    act(token, id, "republish");
+    assertThat(revisions(token, id)).hasSize(3);
+
+    mvc.perform(
+            post("/api/v1/posts/" + id + "/revisions/2/restore")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk());
+    assertThat(getMarkdown(token, id)).isEqualTo(edited);
   }
 
   @Test
-  void restoreRollsBackBodyAndTitleButKeepsSlugStatusAndRevisions() throws Exception {
+  void restoringKeepsTheContentItReplacesEvenWhenNoVersionHeldIt() throws Exception {
+    String token = token("g-lc-keep");
+    long id = createDraft(token, "lc-keep", "되돌리기 보관");
+    putMarkdown(token, id, "처음 공개한 본문");
+    act(token, id, "publish");
+    act(token, id, "unpublish");
+    String unseen = putMarkdown(token, id, "# 비공개 동안 고친 본문\n\n아직 어느 버전에도 없다.");
+    assertThat(revisions(token, id)).hasSize(1);
+
+    mvc.perform(
+            post("/api/v1/posts/" + id + "/revisions/1/restore")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk());
+    assertThat(getMarkdown(token, id)).isEqualTo("처음 공개한 본문");
+    assertThat(revisions(token, id)).hasSize(2);
+
+    mvc.perform(
+            post("/api/v1/posts/" + id + "/revisions/2/restore")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk());
+    assertThat(getMarkdown(token, id)).isEqualTo(unseen);
+  }
+
+  @Test
+  void restoreRollsBackBodyAndTitleButKeepsSlugStatusAndEveryVersion() throws Exception {
     String token = token("g-lc-restore");
     long id = createDraft(token, "lc-restore", "원래 제목");
     String canonicalV1 = putMarkdown(token, id, COMPLEX_MARKDOWN);
@@ -211,7 +247,13 @@ class PostDraftRevisionLifecycleTest {
     assertThat(post.get("slug").asText()).isEqualTo("lc-restore");
     assertThat(post.get("status").asText()).isEqualTo("PUBLISHED");
 
-    assertThat(revisions(token, id)).hasSize(1);
+    // v1 발행, v2 제목 저장, v3 본문 저장. 되돌리기 직전 내용은 v3 과 같아 새 버전을 만들지 않는다.
+    assertThat(revisions(token, id)).hasSize(3);
+    mvc.perform(
+            post("/api/v1/posts/" + id + "/revisions/3/restore")
+                .header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk());
+    assertThat(getMarkdown(token, id)).isEqualTo("완전히 다른 본문");
   }
 
   @Test

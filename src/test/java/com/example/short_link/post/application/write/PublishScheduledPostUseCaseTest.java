@@ -27,6 +27,7 @@ class PublishScheduledPostUseCaseTest {
   @Mock private PostRepository posts;
   @Mock private PostPublicationCompletion completion;
   @Mock private UserModerationGuard moderation;
+  @Mock private PostNumbering numbering;
 
   @Test
   void publishesDuePostAndPreservesBatchEventTime() {
@@ -35,10 +36,13 @@ class PublishScheduledPostUseCaseTest {
     when(posts.findByIdForUpdate(1L)).thenReturn(Optional.of(post));
     when(moderation.canWrite(post.getUserId())).thenReturn(true);
 
-    assertThat(new PublishScheduledPostUseCase(posts, completion, moderation).execute(1L, now))
+    assertThat(
+            new PublishScheduledPostUseCase(posts, completion, moderation, numbering)
+                .execute(1L, now))
         .isTrue();
 
     assertThat(post.isPublished()).isTrue();
+    verify(numbering).numberIfClientMade(post);
     verify(posts).save(post);
     @SuppressWarnings("unchecked")
     ArgumentCaptor<Supplier<Instant>> time = ArgumentCaptor.forClass(Supplier.class);
@@ -59,7 +63,7 @@ class PublishScheduledPostUseCaseTest {
     when(posts.findByIdForUpdate(2L)).thenReturn(Optional.of(cancelled));
     when(posts.findByIdForUpdate(3L)).thenReturn(Optional.of(published));
     when(posts.findByIdForUpdate(4L)).thenReturn(Optional.of(rescheduled));
-    var useCase = new PublishScheduledPostUseCase(posts, completion, moderation);
+    var useCase = new PublishScheduledPostUseCase(posts, completion, moderation, numbering);
 
     for (long id = 1; id <= 4; id++) assertThat(useCase.execute(id, now)).isFalse();
 
@@ -76,7 +80,7 @@ class PublishScheduledPostUseCaseTest {
 
     assertThatThrownBy(
             () ->
-                new PublishScheduledPostUseCase(posts, completion, moderation)
+                new PublishScheduledPostUseCase(posts, completion, moderation, numbering)
                     .execute(1L, post.getScheduledAt()))
         .isInstanceOf(PostException.class);
 
@@ -91,7 +95,7 @@ class PublishScheduledPostUseCaseTest {
     when(moderation.canWrite(post.getUserId())).thenReturn(false);
 
     assertThat(
-            new PublishScheduledPostUseCase(posts, completion, moderation)
+            new PublishScheduledPostUseCase(posts, completion, moderation, numbering)
                 .execute(1L, post.getScheduledAt()))
         .isFalse();
 

@@ -49,6 +49,7 @@ class UpdatePostMetadataUseCaseTest {
             new PostEditGuard(revisionCapture, moderation),
             postRepository,
             searchTextUpdater,
+            revisionCapture,
             new PostWriteViewAssembler(postRepository));
   }
 
@@ -402,5 +403,47 @@ class UpdatePostMetadataUseCaseTest {
     PostEntity post = new PostEntity(7L, "original-slug", "Original", "ko");
     for (int i = 0; i < version; i++) post.markEdited();
     return post;
+  }
+
+  @Test
+  void aTitleChangeOnAPublishedPostIsKeptAsAVersion() {
+    PostEntity post = ownedPost();
+    post.publish();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        new UpdatePostMetadataCommand(
+            7L, 42L, "Readers see this", null, null, null, null, null, null, null, null, false));
+
+    verify(revisionCapture).capture(org.mockito.ArgumentMatchers.eq(post), any());
+  }
+
+  @Test
+  void aCoverChangeOnAPublishedPostIsKeptAsAVersion() {
+    PostEntity post = ownedPost();
+    post.publish();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        new UpdatePostMetadataCommand(
+            7L, 42L, null, null, null, "https://cdn/c.png", null, true, null, null, null, false));
+
+    verify(revisionCapture).capture(post);
+  }
+
+  @Test
+  void aDraftMetadataSaveAddsNoVersion() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(
+        new UpdatePostMetadataCommand(
+            7L, 42L, "Draft title", null, null, null, null, null, null, null, null, false));
+
+    verify(revisionCapture, never()).capture(any(PostEntity.class));
+    verify(revisionCapture, never()).capture(any(PostEntity.class), any());
   }
 }
