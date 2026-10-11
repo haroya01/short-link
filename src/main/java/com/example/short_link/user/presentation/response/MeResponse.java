@@ -11,7 +11,8 @@ public record MeResponse(
     String timezone,
     Instant createdAt,
     String username,
-    String avatarUrl) {
+    String avatarUrl,
+    String displayName) {
 
   public static MeResponse from(UserEntity u) {
     return new MeResponse(
@@ -22,6 +23,7 @@ public record MeResponse(
         u.getTimezone(),
         u.getCreatedAt(),
         u.getUsername(),
-        u.getAvatarUrl());
+        u.getAvatarUrl(),
+        u.getDisplayName());
   }
 }
