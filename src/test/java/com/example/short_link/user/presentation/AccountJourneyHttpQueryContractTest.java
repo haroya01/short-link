@@ -52,11 +52,10 @@ class AccountJourneyHttpQueryContractTest extends AccountHttpJourneySupport {
   @Test
   void editsAccountPreferencesExportsDataAndSoftDeletesAccount() throws Exception {
     ExportFixture fixture = commitOwnedAndForeignExportData();
-    assertThat(
-            body(call("account-me-read", "GET", "/api/v1/users/me", null, token, 200))
-                .path("email")
-                .asText())
-        .isEqualTo(owner.getEmail());
+    jdbc.update("update users set display_name=? where id=?", "Ada Lovelace", owner.getId());
+    var me = body(call("account-me-read", "GET", "/api/v1/users/me", null, token, 200));
+    assertThat(me.path("email").asText()).isEqualTo(owner.getEmail());
+    assertThat(me.path("displayName").asText()).isEqualTo("Ada Lovelace");
     call(
         "account-preferences-update",
         "PUT",

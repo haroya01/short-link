@@ -1,5 +1,6 @@
 package com.example.short_link.user.presentation;
 
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -40,7 +41,20 @@ class UserControllerTest {
         .andExpect(jsonPath("$.id").value(user.getId()))
         .andExpect(jsonPath("$.email").value("u@x.com"))
         .andExpect(jsonPath("$.role").value("USER"))
-        .andExpect(jsonPath("$.provider").value("google"));
+        .andExpect(jsonPath("$.provider").value("google"))
+        .andExpect(jsonPath("$.displayName").value(nullValue()));
+  }
+
+  @Test
+  void returnsDisplayName() throws Exception {
+    UserEntity user = new UserEntity("named@x.com", "google", "g-named");
+    user.updateDisplayName("Ada Lovelace");
+    userRepository.save(user);
+    String token = jwt.createAccessToken(user.getId(), "USER");
+
+    mvc.perform(get("/api/v1/users/me").header("Authorization", "Bearer " + token))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.displayName").value("Ada Lovelace"));
   }
 
   @Test
