@@ -54,6 +54,7 @@ class PublicPostControllerTest {
                     "Excerpt",
                     null,
                     null,
+                    false,
                     "ko",
                     List.of("spring", "jpa"),
                     0L,
@@ -61,7 +62,7 @@ class PublicPostControllerTest {
                     null,
                     true),
                 new PublicPostListItem(
-                    2L, "post-2", "Post 2", null, null, null, "ja", List.of(), 0L, NOW, null,
+                    2L, "post-2", "Post 2", null, null, null, false, "ja", List.of(), 0L, NOW, null,
                     false)),
             false,
             false);
@@ -97,8 +98,9 @@ class PublicPostControllerTest {
                 "first-post",
                 "First",
                 "Excerpt",
-                null,
-                null,
+                "https://cdn/photo.png",
+                "https://cdn/photo.png",
+                true,
                 "ko",
                 List.of(),
                 0L,
@@ -112,6 +114,7 @@ class PublicPostControllerTest {
     mvc.perform(get("/api/v1/public/profiles/john/posts/first-post"))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.post.slug").value("first-post"))
+        .andExpect(jsonPath("$.post.coverChosen").value(true))
         .andExpect(jsonPath("$.blocks[0].type").value("PARAGRAPH"))
         .andExpect(jsonPath("$.blocks[0].content").value("Hello"));
   }
@@ -148,6 +151,7 @@ class PublicPostControllerTest {
                 "Excerpt",
                 null,
                 null,
+                false,
                 "ko",
                 List.of(),
                 0L,

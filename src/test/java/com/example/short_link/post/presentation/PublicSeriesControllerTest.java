@@ -55,7 +55,7 @@ class PublicSeriesControllerTest {
   void seriesDetailReturnsOrderedPosts() throws Exception {
     PublicPostListItem intro =
         new PublicPostListItem(
-            1L, "intro", "Intro", null, null, null, "ko", List.of(), 0L, NOW, null, false);
+            1L, "intro", "Intro", null, null, null, false, "ko", List.of(), 0L, NOW, null, false);
     when(publicSeriesQueryService.findPublicSeries("john", "guide"))
         .thenReturn(
             new PublicSeriesDetail(

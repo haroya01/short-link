@@ -43,6 +43,7 @@ class PublicPreviewControllerTest {
                 "Excerpt",
                 null,
                 null,
+                false,
                 "ko",
                 List.of(),
                 0L,
