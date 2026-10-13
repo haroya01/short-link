@@ -35,7 +35,7 @@ public class AuthService {
   private final Clock clock;
 
   // Bump when the Terms/Privacy materially change so new sign-ups record the version they accepted.
-  private static final String TERMS_VERSION = "2026-10-21";
+  private static final String TERMS_VERSION = "2026-10-13";
 
   public sealed interface TokenLoginResult {
     record Tokens(IssuedTokens issued) implements TokenLoginResult {}
