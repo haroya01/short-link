@@ -349,7 +349,7 @@ class RemoteNoteRecorderTest {
     root.limitReplies(NoteReplyPolicy.MENTIONED);
     when(notes.findById(5L)).thenReturn(Optional.of(root));
     when(notes.insertRemote(any())).thenReturn(Optional.of(910L), Optional.of(911L));
-    when(people.remoteAuthors(java.util.Set.of(42L)))
+    when(people.remoteAuthors(java.util.Set.of(42L), null))
         .thenReturn(
             java.util.Map.of(42L, NoteAuthor.remote(42L, "alice@m.example", null, null, null)),
             java.util.Map.of(42L, NoteAuthor.remote(42L, "Bob@m.example", null, null, null)));
@@ -376,7 +376,7 @@ class RemoteNoteRecorderTest {
     root.limitReplies(NoteReplyPolicy.FOLLOWING);
     when(notes.findById(5L)).thenReturn(Optional.of(root));
     when(notes.insertRemote(any())).thenReturn(Optional.of(912L));
-    when(people.remoteAuthors(java.util.Set.of(42L))).thenReturn(java.util.Map.of());
+    when(people.remoteAuthors(java.util.Set.of(42L), null)).thenReturn(java.util.Map.of());
     when(people.followsRemote(7L, 42L)).thenReturn(true);
 
     recorder().receive(received("public", null, 5L, null, List.of(), List.of(), null));

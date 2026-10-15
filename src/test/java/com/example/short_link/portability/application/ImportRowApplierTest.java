@@ -11,7 +11,9 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.federation.application.DomainBlocks;
 import com.example.short_link.federation.application.RemoteAccountView;
+import com.example.short_link.federation.application.RemoteBlocks;
 import com.example.short_link.federation.application.RemoteFollowing;
+import com.example.short_link.federation.application.RemoteMutes;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteListService;
@@ -33,6 +35,8 @@ class ImportRowApplierTest {
   @Mock private BlockUseCase blocks;
   @Mock private MuteUseCase mutes;
   @Mock private RemoteFollowing remoteFollowing;
+  @Mock private RemoteBlocks remoteBlocks;
+  @Mock private RemoteMutes remoteMutes;
   @Mock private DomainBlocks domainBlocks;
   @Mock private NoteCommandService notes;
   @Mock private NoteFeedSettingsService feedSettings;
@@ -45,6 +49,8 @@ class ImportRowApplierTest {
         blocks,
         mutes,
         remoteFollowing,
+        remoteBlocks,
+        remoteMutes,
         domainBlocks,
         notes,
         feedSettings,
@@ -76,6 +82,22 @@ class ImportRowApplierTest {
         .setRepostsHidden(anyLong(), any(), org.mockito.ArgumentMatchers.anyBoolean());
   }
 
+  private static RemoteAccountView alice() {
+    return new RemoteAccountView(
+        42L,
+        "alice@mastodon.social",
+        "alice",
+        "mastodon.social",
+        null,
+        null,
+        "u",
+        false,
+        false,
+        false,
+        false,
+        false);
+  }
+
   @Test
   void anAccountElsewhereIsLookedUpThenFollowed() {
     RemoteAccountView alice =
@@ -89,6 +111,8 @@ class ImportRowApplierTest {
             "u",
             false,
             false,
+            false,
+            false,
             false);
     when(remoteFollowing.lookup(7L, "Alice@mastodon.social")).thenReturn(alice);
 
@@ -98,19 +122,34 @@ class ImportRowApplierTest {
   }
 
   @Test
-  void blocksMutesAndListsTakeMembersHereOnly() {
+  void blocksAndMutesTakeMembersHereAndListsTakeOnlyThem() {
     ImportRowApplier applier = applier();
 
     assertThat(applier.apply(7L, ImportKind.BLOCKS, List.of("troll@kurl.me"))).isTrue();
     verify(blocks).block(7L, "troll");
-    assertThat(applier.apply(7L, ImportKind.BLOCKS, List.of("troll@elsewhere.example"))).isFalse();
+    assertThat(applier.apply(7L, ImportKind.BLOCKS, List.of("@"))).isFalse();
     assertThat(applier.apply(7L, ImportKind.MUTES, List.of("loud@kurl.me", "false"))).isTrue();
     verify(mutes).mute(7L, "loud", false, null);
     assertThat(applier.apply(7L, ImportKind.MUTES, List.of("quiet"))).isTrue();
     verify(mutes).mute(7L, "quiet", true, null);
+    assertThat(applier.apply(7L, ImportKind.MUTES, List.of(""))).isFalse();
     assertThat(applier.apply(7L, ImportKind.LISTS, List.of("friends", "a@elsewhere.example")))
         .isFalse();
-    verifyNoInteractions(lists);
+    verifyNoInteractions(lists, remoteBlocks, remoteMutes);
+  }
+
+  @Test
+  void anAccountElsewhereIsLookedUpThenBlockedOrMuted() {
+    when(remoteFollowing.lookup(7L, "troll@mastodon.social")).thenReturn(alice());
+    when(remoteFollowing.lookup(7L, "loud@mastodon.social")).thenReturn(alice());
+    ImportRowApplier applier = applier();
+
+    assertThat(applier.apply(7L, ImportKind.BLOCKS, List.of("troll@Mastodon.Social"))).isTrue();
+    verify(remoteBlocks).block(7L, 42L);
+    assertThat(applier.apply(7L, ImportKind.MUTES, List.of("loud@mastodon.social", "false")))
+        .isTrue();
+    verify(remoteMutes).mute(7L, 42L, false, null);
+    verifyNoInteractions(blocks, mutes);
   }
 
   @Test

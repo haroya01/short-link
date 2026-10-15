@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.event;
 
+import com.example.short_link.common.event.RemoteAccountBlockedEvent;
 import com.example.short_link.common.event.RemoteDomainBlockedEvent;
 import com.example.short_link.common.event.ServerSuspendedEvent;
 import com.example.short_link.notification.domain.repository.NotificationRepository;
@@ -22,6 +23,13 @@ public class RemoteDomainNotificationListener {
   @Transactional(propagation = Propagation.REQUIRES_NEW)
   public void onDomainBlocked(RemoteDomainBlockedEvent event) {
     notifications.deleteFromDomain(event.userId(), event.domain());
+  }
+
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  @Transactional(propagation = Propagation.REQUIRES_NEW)
+  public void onAccountBlocked(RemoteAccountBlockedEvent event) {
+    notifications.deleteFromRemoteActor(event.userId(), event.remoteActorId());
   }
 
   @Async("webhookExecutor")

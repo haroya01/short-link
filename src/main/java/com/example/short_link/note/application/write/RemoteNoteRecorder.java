@@ -173,7 +173,7 @@ class RemoteNoteRecorder implements RemoteNotes {
     if (root == null || root.isRemote()) {
       return true;
     }
-    NoteAuthor sender = people.remoteAuthors(Set.of(remoteActorId)).get(remoteActorId);
+    NoteAuthor sender = people.remoteAuthors(Set.of(remoteActorId), null).get(remoteActorId);
     if (sender != null
         && Mentions.remote(root.getBody()).contains(sender.username().toLowerCase(Locale.ROOT))) {
       return true;

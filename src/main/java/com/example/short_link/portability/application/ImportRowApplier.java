@@ -1,7 +1,9 @@
 package com.example.short_link.portability.application;
 
 import com.example.short_link.federation.application.DomainBlocks;
+import com.example.short_link.federation.application.RemoteBlocks;
 import com.example.short_link.federation.application.RemoteFollowing;
+import com.example.short_link.federation.application.RemoteMutes;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteFeedSettingsService;
 import com.example.short_link.note.application.write.NoteListService;
@@ -19,9 +21,8 @@ import org.springframework.stereotype.Component;
 
 // Applies one line of a Mastodon export as the member would by hand: the same follow, block,
 // mute, server block, bookmark or list membership, with the same checks. An account on another
-// server is followed after it is looked up; blocking, muting and lists take members of this server
-// only, as this server has no per-account block or mute for accounts elsewhere yet. A line that
-// cannot be applied is counted as failed and the rest go on.
+// server is followed, blocked or muted after it is looked up; lists take members of this server
+// only. A line that cannot be applied is counted as failed and the rest go on.
 @Slf4j
 @Component
 class ImportRowApplier {
@@ -30,6 +31,8 @@ class ImportRowApplier {
   private final BlockUseCase blocks;
   private final MuteUseCase mutes;
   private final RemoteFollowing remoteFollowing;
+  private final RemoteBlocks remoteBlocks;
+  private final RemoteMutes remoteMutes;
   private final DomainBlocks domainBlocks;
   private final NoteCommandService notes;
   private final NoteFeedSettingsService feedSettings;
@@ -43,6 +46,8 @@ class ImportRowApplier {
       BlockUseCase blocks,
       MuteUseCase mutes,
       RemoteFollowing remoteFollowing,
+      RemoteBlocks remoteBlocks,
+      RemoteMutes remoteMutes,
       DomainBlocks domainBlocks,
       NoteCommandService notes,
       NoteFeedSettingsService feedSettings,
@@ -53,6 +58,8 @@ class ImportRowApplier {
     this.blocks = blocks;
     this.mutes = mutes;
     this.remoteFollowing = remoteFollowing;
+    this.remoteBlocks = remoteBlocks;
+    this.remoteMutes = remoteMutes;
     this.domainBlocks = domainBlocks;
     this.notes = notes;
     this.feedSettings = feedSettings;
@@ -69,17 +76,8 @@ class ImportRowApplier {
     try {
       return switch (kind) {
         case FOLLOWING -> follow(userId, cells);
-        case BLOCKS ->
-            local(cells.get(0)).map(a -> run(() -> blocks.block(userId, a))).orElse(false);
-        case MUTES ->
-            local(cells.get(0))
-                .map(
-                    a ->
-                        run(
-                            () ->
-                                mutes.mute(
-                                    userId, a, !"false".equalsIgnoreCase(cell(cells, 1)), null)))
-                .orElse(false);
+        case BLOCKS -> block(userId, cells);
+        case MUTES -> mute(userId, cells);
         case DOMAIN_BLOCKS -> run(() -> domainBlocks.block(userId, cells.get(0)));
         case BOOKMARKS ->
             noteId(cells.get(0))
@@ -112,10 +110,39 @@ class ImportRowApplier {
       }
       return true;
     }
-    Long remoteId =
-        remoteFollowing.lookup(userId, address.username() + "@" + address.domain()).id();
-    remoteFollowing.follow(userId, remoteId);
+    remoteFollowing.follow(userId, remoteId(userId, address));
     return true;
+  }
+
+  private boolean block(Long userId, List<String> cells) {
+    Address address = address(cells.get(0));
+    if (address == null) {
+      return false;
+    }
+    if (isLocal(address)) {
+      blocks.block(userId, address.username());
+    } else {
+      remoteBlocks.block(userId, remoteId(userId, address));
+    }
+    return true;
+  }
+
+  private boolean mute(Long userId, List<String> cells) {
+    Address address = address(cells.get(0));
+    if (address == null) {
+      return false;
+    }
+    boolean notifications = !"false".equalsIgnoreCase(cell(cells, 1));
+    if (isLocal(address)) {
+      mutes.mute(userId, address.username(), notifications, null);
+    } else {
+      remoteMutes.mute(userId, remoteId(userId, address), notifications, null);
+    }
+    return true;
+  }
+
+  private Long remoteId(Long userId, Address address) {
+    return remoteFollowing.lookup(userId, address.username() + "@" + address.domain()).id();
   }
 
   private boolean list(Long userId, List<String> cells) {

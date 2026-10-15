@@ -110,6 +110,9 @@ public class NoteNotificationListener {
   @Async("webhookExecutor")
   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
   public void onRemoteFollowed(RemoteFollowedEvent event) {
+    if (blocks.silences(event.userId(), null, event.remoteActorId(), null)) {
+      return;
+    }
     recordUseCase.record(
         event.userId(), NotificationType.REMOTE_FOLLOW, null, event.remoteActorId(), null, null);
   }

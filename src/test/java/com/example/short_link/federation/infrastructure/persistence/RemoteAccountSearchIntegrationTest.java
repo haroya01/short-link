@@ -7,6 +7,7 @@ import com.example.short_link.federation.domain.repository.RemoteActorRepository
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -91,7 +92,9 @@ class RemoteAccountSearchIntegrationTest {
   }
 
   private List<Long> ids(Long viewerId, String term) {
-    return actors.search(viewerId, term, 20).stream().map(RemoteAccountMatch::id).toList();
+    return actors.search(viewerId, term, 20, Instant.now()).stream()
+        .map(RemoteAccountMatch::id)
+        .toList();
   }
 
   @Test
@@ -123,7 +126,7 @@ class RemoteAccountSearchIntegrationTest {
     follow(followed, true);
     follow(requested, false);
 
-    List<RemoteAccountMatch> found = actors.search(viewer, tag, 20);
+    List<RemoteAccountMatch> found = actors.search(viewer, tag, 20, Instant.now());
     assertThat(found)
         .extracting(RemoteAccountMatch::id)
         .containsExactly(followed, exact, first, requested);
@@ -132,7 +135,7 @@ class RemoteAccountSearchIntegrationTest {
     assertThat(found.get(3).following()).isFalse();
     assertThat(found.get(3).requested()).isTrue();
     assertThat(ids(null, tag)).containsExactly(exact, first, requested, followed);
-    assertThat(actors.search(viewer, tag, 2)).hasSize(2);
+    assertThat(actors.search(viewer, tag, 2, Instant.now())).hasSize(2);
   }
 
   @Test
@@ -148,6 +151,34 @@ class RemoteAccountSearchIntegrationTest {
 
     assertThat(ids(viewer, tag)).containsExactly(open, limited);
     assertThat(ids(null, tag)).containsExactly(open, limited, blocked);
+  }
+
+  @Test
+  void anAccountTheViewerBlockedStaysOutAndOneTheyMutedSaysSoUntilTheMuteEnds() {
+    Long blocked = actor(tag + "a", domain("one"), null);
+    Long muted = actor(tag + "b", domain("two"), null);
+    Long lapsed = actor(tag + "c", domain("three"), null);
+    em.createNativeQuery(
+            "INSERT INTO federation_remote_block (user_id, remote_actor_id, created_at)"
+                + " VALUES (?, ?, NOW(6))")
+        .setParameter(1, viewer)
+        .setParameter(2, blocked)
+        .executeUpdate();
+    for (Long actor : List.of(muted, lapsed)) {
+      em.createNativeQuery(
+              "INSERT INTO federation_remote_mute (user_id, remote_actor_id, hide_notifications,"
+                  + " expires_at, created_at) VALUES (?, ?, TRUE, ?, NOW(6))")
+          .setParameter(1, viewer)
+          .setParameter(2, actor)
+          .setParameter(3, actor.equals(muted) ? null : Instant.now().minusSeconds(60))
+          .executeUpdate();
+    }
+
+    List<RemoteAccountMatch> found = actors.search(viewer, tag, 20, Instant.now());
+
+    assertThat(found).extracting(RemoteAccountMatch::id).containsExactly(muted, lapsed);
+    assertThat(found).extracting(RemoteAccountMatch::muting).containsExactly(true, false);
+    assertThat(ids(null, tag)).containsExactly(blocked, muted, lapsed);
   }
 
   @Test

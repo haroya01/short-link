@@ -16,18 +16,20 @@ import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationFollowingEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.FollowOnDomain;
+import com.example.short_link.federation.domain.RemoteAccountStanding;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
+import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
-import com.example.short_link.federation.domain.repository.UserDomainBlockRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -50,7 +52,7 @@ class RemoteFollowingTest {
       new LocalActor(new FederationUser(7L, "yuki", null, null), "pid", "pem");
 
   @Mock private FederationFollowingRepository followings;
-  @Mock private UserDomainBlockRepository domainBlocks;
+  @Mock private RemoteAccountStandingReader standings;
   @Mock private RemoteActorRepository remoteActors;
   @Mock private RemoteAccountFinder finder;
   @Mock private FederationActorService localActors;
@@ -83,7 +85,7 @@ class RemoteFollowingTest {
   private RemoteFollowing following() {
     return new RemoteFollowing(
         followings,
-        domainBlocks,
+        standings,
         remoteActors,
         finder,
         localActors,
@@ -133,6 +135,8 @@ class RemoteFollowingTest {
                 "https://mastodon.example/@alice",
                 false,
                 true,
+                false,
+                false,
                 false));
   }
 
@@ -329,10 +333,15 @@ class RemoteFollowingTest {
     verifyNoInteractions(deliveries, remoteActors);
   }
 
+  private void standing(boolean domainBlocked, boolean blocking, boolean muting) {
+    when(standings.of(7L, List.of(42L), NOW))
+        .thenReturn(Map.of(42L, new RemoteAccountStanding(domainBlocked, blocking, muting)));
+  }
+
   @Test
   void anAccountOnABlockedServerSaysSoAndCannotBeFollowed() {
     when(followings.find(7L, 42L)).thenReturn(Optional.empty());
-    when(domainBlocks.blocks(7L, "mastodon.example")).thenReturn(true);
+    standing(true, false, false);
 
     assertThat(following().account(7L, 42L).domainBlocked()).isTrue();
     assertThatThrownBy(() -> following().follow(7L, 42L))
@@ -366,5 +375,86 @@ class RemoteFollowingTest {
     following().leaveDomain(7L, "quiet.example");
 
     verifyNoInteractions(deliveries, remoteActors, actorRows);
+  }
+
+  @Test
+  void aBlockedAccountSaysSoAndCannotBeFollowedUntilUnblocked() {
+    when(followings.find(7L, 42L)).thenReturn(Optional.empty());
+    standing(false, true, false);
+
+    RemoteAccountView view = following().account(7L, 42L);
+    assertThat(view.blocking()).isTrue();
+    assertThat(view.domainBlocked()).isFalse();
+    assertThatThrownBy(() -> following().follow(7L, 42L))
+        .isInstanceOfSatisfying(
+            FederationException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_BLOCKED));
+    verify(followings, never()).save(any());
+    verifyNoInteractions(localActors, deliveries);
+  }
+
+  @Test
+  void aMutedAccountCanStillBeFollowedAndStaysMarkedMuted() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(LOCAL));
+    when(followings.find(7L, 42L)).thenReturn(Optional.empty());
+    standing(false, false, true);
+
+    RemoteAccountView view = following().follow(7L, 42L);
+
+    assertThat(view.requested()).isTrue();
+    assertThat(view.muting()).isTrue();
+  }
+
+  @Test
+  void unfollowingAndTheFollowingListCarryTheMute() {
+    when(followings.find(7L, 42L)).thenReturn(Optional.empty());
+    standing(false, false, true);
+    when(followings.page(7L, 0, 10)).thenReturn(List.of(row(ME + "#follows/1", true)));
+    when(remoteActors.findAllById(List.of(42L))).thenReturn(List.of(alice));
+    when(standings.of(7L, java.util.Set.of(42L), NOW))
+        .thenReturn(Map.of(42L, new RemoteAccountStanding(false, false, true)));
+
+    assertThat(following().unfollow(7L, 42L).muting()).isTrue();
+    assertThat(following().following(7L, 0, 10))
+        .extracting(RemoteAccountView::muting)
+        .containsExactly(true);
+  }
+
+  @Test
+  void stoppingAFollowUndoesItWithTheGivenActorOrQuietlyWithoutOne() {
+    FederationFollowingEntity row = row(ME + "#follows/1", true);
+    when(followings.find(7L, 42L)).thenReturn(Optional.of(row), Optional.empty());
+
+    following().stopFollowing(7L, Optional.of(ME), alice);
+    following().stopFollowing(7L, Optional.of(ME), alice);
+
+    verify(followings).delete(row);
+    ArgumentCaptor<String> id = ArgumentCaptor.forClass(String.class);
+    verify(deliveries).enqueue(eq(7L), id.capture(), anyString(), eq(List.of(ALICE + "/inbox")));
+    assertThat(delivered(id.getValue()).path("object").path("id").asString())
+        .isEqualTo(ME + "#follows/1");
+  }
+
+  @Test
+  void stoppingAFollowWithoutAnActorDropsTheRowAndSendsNothing() {
+    FederationFollowingEntity row = row(ME + "#follows/1", false);
+    when(followings.find(7L, 42L)).thenReturn(Optional.of(row));
+
+    following().stopFollowing(7L, Optional.empty(), alice);
+
+    verify(followings).delete(row);
+    verifyNoInteractions(deliveries);
+  }
+
+  @Test
+  void aKnownAccountIsFoundEvenOnASuspendedServer() {
+    ReflectionTestUtils.setField(alice, "serverBlock", "SUSPEND");
+    when(remoteActors.findById(99L)).thenReturn(Optional.empty());
+
+    assertThat(following().known(42L)).isSameAs(alice);
+    assertThatThrownBy(() -> following().known(99L))
+        .isInstanceOfSatisfying(
+            FederationException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND));
   }
 }

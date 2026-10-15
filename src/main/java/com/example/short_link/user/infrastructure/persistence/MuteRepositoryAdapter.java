@@ -1,6 +1,7 @@
 package com.example.short_link.user.infrastructure.persistence;
 
 import com.example.short_link.common.federation.ServerBlockSql;
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.user.domain.UserMuteEntity;
 import com.example.short_link.user.domain.repository.MuteRepository;
 import jakarta.persistence.EntityManager;
@@ -77,6 +78,7 @@ class MuteRepositoryAdapter implements MuteRepository {
               + " WHERE d.user_id = :recipient AND a.id = :remote)");
       checks.add(ServerBlockSql.suspended(":remote"));
       checks.add(ServerBlockSql.limitedFor(":remote", ":recipient"));
+      checks.add(HeardSql.remoteSilenced(":recipient", ":remote"));
     }
     if (conversationId != null) {
       checks.add(
@@ -87,7 +89,10 @@ class MuteRepositoryAdapter implements MuteRepository {
         em.createNativeQuery("SELECT " + String.join(" OR ", checks))
             .setParameter("recipient", recipientId);
     if (actorId != null) {
-      query.setParameter("actor", actorId).setParameter("now", now);
+      query.setParameter("actor", actorId);
+    }
+    if (actorId != null || remoteActorId != null) {
+      query.setParameter("now", now);
     }
     if (remoteActorId != null) {
       query.setParameter("remote", remoteActorId);

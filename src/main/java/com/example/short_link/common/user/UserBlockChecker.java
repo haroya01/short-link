@@ -13,6 +13,6 @@ public interface UserBlockChecker {
 
   // As above, or the recipient muted the conversation the notice is about (Mastodon's mute
   // conversation). An actor elsewhere comes as remoteActorId (actorId null), and silences when the
-  // recipient blocked their server.
+  // recipient blocked them or their server, or muted them with their notices.
   boolean silences(Long recipientId, Long actorId, Long remoteActorId, Long conversationId);
 }

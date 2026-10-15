@@ -49,6 +49,7 @@ class NoteRepostRepositoryAdapter implements NoteRepostRepository {
                     + " WHERE r.user_id = :userId"
                     + HeardSql.unblocked("r.user_id")
                     + HeardSql.unblocked("n.user_id")
+                    + HeardSql.heardRemote("n.remote_actor_id")
                     + " AND (n.user_id = r.user_id OR NOT "
                     + HeardSql.muted("n.user_id")
                     + ")"

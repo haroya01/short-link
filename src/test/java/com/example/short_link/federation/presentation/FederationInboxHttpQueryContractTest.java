@@ -1211,6 +1211,215 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
     }
   }
 
+  @Test
+  void aMemberBlocksOneMastodonAccountThenMutesItInstead() throws Exception {
+    String me = urls.actor(target.publicId());
+    String personal = "/ap/actors/" + target.publicId() + "/inbox";
+    Long aliceId =
+        jdbc.queryForObject(
+            "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
+    String account = "/api/v1/federation/accounts/" + aliceId;
+    jdbc.update(
+        "INSERT INTO federation_follower (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+        owner.getId(),
+        aliceId,
+        remote + "/follows/20");
+    jdbc.update(
+        "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+        owner.getId(),
+        aliceId,
+        me + "#follows/20");
+    jdbc.update(
+        "INSERT INTO notification (recipient_user_id, type, actor_remote_id, created_at)"
+            + " VALUES (?, 'REMOTE_FOLLOW', ?, NOW(6))",
+        owner.getId(),
+        aliceId);
+    jdbc.update(
+        "INSERT INTO note (remote_actor_id, uri, body, created_at) VALUES (?, ?, ?, NOW(6))",
+        aliceId,
+        alice + "/statuses/20",
+        "loud from elsewhere");
+    Long theirs =
+        jdbc.queryForObject(
+            "SELECT id FROM note WHERE uri = ?", Long.class, alice + "/statuses/20");
+    jdbc.update(
+        "INSERT INTO note (user_id, body, created_at) VALUES (?, 'from kurl', NOW(6))",
+        owner.getId());
+    Long mine =
+        jdbc.queryForObject(
+            "SELECT MAX(id) FROM note WHERE user_id = ?", Long.class, owner.getId());
+    try {
+      var blocked =
+          body(call("federation-remote-block", "PUT", account + "/block", null, token, 200));
+      assertThat(blocked.path("blocking").asBoolean()).isTrue();
+      assertThat(blocked.path("muting").asBoolean()).isFalse();
+      assertThat(blocked.path("following").asBoolean()).isFalse();
+      assertThat(
+              count("SELECT COUNT(*) FROM federation_following WHERE user_id = ?", owner.getId()))
+          .isZero();
+      assertThat(count("SELECT COUNT(*) FROM federation_follower WHERE user_id = ?", owner.getId()))
+          .isZero();
+      assertThat(
+              count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
+          .isZero();
+      List<String> sent =
+          jdbc.queryForList(
+              "SELECT body FROM federation_delivery WHERE signer_user_id = ? AND inbox = ?"
+                  + " ORDER BY id",
+              String.class,
+              owner.getId(),
+              alice + "/inbox");
+      assertThat(sent).hasSize(3);
+      assertThat(json.readTree(sent.get(0)).path("type").asString()).isEqualTo("Undo");
+      assertThat(json.readTree(sent.get(1)).path("type").asString()).isEqualTo("Reject");
+      var block = json.readTree(sent.get(2));
+      assertThat(block.path("type").asString()).isEqualTo("Block");
+      assertThat(block.path("actor").asString()).isEqualTo(me);
+      assertThat(block.path("object").asString()).isEqualTo(alice);
+
+      var listed =
+          body(
+              call(
+                  "federation-remote-blocks",
+                  "GET",
+                  "/api/v1/federation/blocks",
+                  null,
+                  token,
+                  200));
+      assertThat(listed.path("items").get(0).path("id").asLong()).isEqualTo(aliceId);
+      assertThat(listed.path("items").get(0).path("blocking").asBoolean()).isTrue();
+      assertThat(
+              body(call("federation-remote-account-blocked", "GET", account, null, token, 200))
+                  .path("blocking")
+                  .asBoolean())
+          .isTrue();
+      assertThat(
+              body(call(
+                      "federation-remote-notes-blocked",
+                      "GET",
+                      account + "/notes",
+                      null,
+                      token,
+                      200))
+                  .path("items"))
+          .isEmpty();
+      call(
+          "notes-thread-blocked-account",
+          "GET",
+          "/api/v1/public/notes/" + theirs,
+          null,
+          token,
+          404);
+      var refused =
+          body(
+              call(
+                  "federation-remote-follow-blocked",
+                  "POST",
+                  account + "/follow",
+                  null,
+                  token,
+                  409));
+      assertThat(refused.path("code").asString()).isEqualTo("REMOTE_ACCOUNT_BLOCKED");
+
+      post(
+          "federation-inbox-follow-blocked-account",
+          personal,
+          activity(remote + "/follows/21", "Follow", me),
+          202);
+      assertThat(count("SELECT COUNT(*) FROM federation_follower WHERE user_id = ?", owner.getId()))
+          .isZero();
+      Map<String, Object> reply = new LinkedHashMap<>();
+      reply.put("id", alice + "/statuses/21");
+      reply.put("type", "Note");
+      reply.put("attributedTo", alice);
+      reply.put("inReplyTo", urls.note(mine));
+      reply.put("content", "<p>from a blocked account</p>");
+      reply.put("published", "2026-10-15T00:00:00Z");
+      reply.put("to", List.of("https://www.w3.org/ns/activitystreams#Public"));
+      post(
+          "federation-inbox-reply-blocked-account",
+          "/ap/inbox",
+          activity(alice + "/statuses/21/activity", "Create", reply),
+          202);
+      assertThat(
+              count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
+          .isZero();
+
+      var unblocked =
+          body(call("federation-remote-unblock", "DELETE", account + "/block", null, token, 200));
+      assertThat(unblocked.path("blocking").asBoolean()).isFalse();
+      var undo =
+          json.readTree(
+              jdbc.queryForObject(
+                  "SELECT body FROM federation_delivery WHERE signer_user_id = ? AND inbox = ?"
+                      + " ORDER BY id DESC LIMIT 1",
+                  String.class,
+                  owner.getId(),
+                  alice + "/inbox"));
+      assertThat(undo.path("type").asString()).isEqualTo("Undo");
+      assertThat(undo.path("object").path("id").asString()).isEqualTo(block.path("id").asString());
+
+      var muted =
+          body(
+              call(
+                  "federation-remote-mute",
+                  "PUT",
+                  account + "/mute",
+                  Map.of("notifications", true, "duration", 3600),
+                  token,
+                  200));
+      assertThat(muted.path("muting").asBoolean()).isTrue();
+      assertThat(muted.path("blocking").asBoolean()).isFalse();
+      var mutes =
+          body(
+              call("federation-remote-mutes", "GET", "/api/v1/federation/mutes", null, token, 200));
+      assertThat(mutes.path("items").get(0).path("account").path("id").asLong()).isEqualTo(aliceId);
+      assertThat(mutes.path("items").get(0).path("notifications").asBoolean()).isTrue();
+      assertThat(mutes.path("items").get(0).path("expiresAt").isNull()).isFalse();
+      assertThat(
+              body(call(
+                      "federation-remote-notes-muted", "GET", account + "/notes", null, token, 200))
+                  .path("items")
+                  .get(0)
+                  .path("id")
+                  .asLong())
+          .isEqualTo(theirs);
+      Map<String, Object> again = new LinkedHashMap<>(reply);
+      again.put("id", alice + "/statuses/22");
+      post(
+          "federation-inbox-reply-muted-account",
+          "/ap/inbox",
+          activity(alice + "/statuses/22/activity", "Create", again),
+          202);
+      assertThat(
+              count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
+          .isZero();
+      assertThat(
+              body(call(
+                      "federation-remote-mute-invalid",
+                      "PUT",
+                      account + "/mute",
+                      Map.of("duration", 5),
+                      token,
+                      400))
+                  .path("code")
+                  .asString())
+          .isEqualTo("MUTE_DURATION_INVALID");
+
+      var unmuted =
+          body(call("federation-remote-unmute", "DELETE", account + "/mute", null, token, 200));
+      assertThat(unmuted.path("muting").asBoolean()).isFalse();
+      assertThat(
+              count("SELECT COUNT(*) FROM federation_remote_mute WHERE user_id = ?", owner.getId()))
+          .isZero();
+    } finally {
+      jdbc.update("DELETE FROM note WHERE remote_actor_id = ?", aliceId);
+      jdbc.update("DELETE FROM note WHERE id = ?", mine);
+    }
+  }
+
   private List<Long> taggedIds(String id, String tag, String auth) throws Exception {
     List<Long> ids = new ArrayList<>();
     body(call(id, "GET", "/api/v1/public/notes/tags/" + tag, null, auth, 200))

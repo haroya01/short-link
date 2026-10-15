@@ -6,6 +6,7 @@ import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import jakarta.persistence.EntityManager;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -21,7 +22,8 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
   private static final String SEARCH =
       "SELECT a.id, a.username, a.domain, a.display_name, a.avatar_url,"
           + " COALESCE(a.profile_url, a.actor_uri), f.accepted_at IS NOT NULL,"
-          + " f.id IS NOT NULL AND f.accepted_at IS NULL"
+          + " f.id IS NOT NULL AND f.accepted_at IS NULL, "
+          + HeardSql.remoteMuted(":viewer", "a.id")
           + " FROM federation_remote_actor a"
           + " LEFT JOIN federation_following f"
           + " ON f.user_id = :viewer AND f.remote_actor_id = a.id"
@@ -32,6 +34,7 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
           + ")"
           + " AND NOT EXISTS (SELECT 1 FROM user_domain_block d"
           + " WHERE d.user_id = :viewer AND d.domain = a.domain)"
+          + HeardSql.unblockedRemote("a.id")
           + " ORDER BY f.accepted_at IS NOT NULL DESC, EXACT = :exact DESC,"
           + " a.username, a.domain, a.id";
 
@@ -73,12 +76,13 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
 
   @Override
   @SuppressWarnings("unchecked")
-  public List<RemoteAccountMatch> search(Long viewerId, String term, int limit) {
+  public List<RemoteAccountMatch> search(Long viewerId, String term, int limit, Instant now) {
     List<Object[]> rows =
         em.createNativeQuery(term.indexOf('@') >= 0 ? BY_ACCT : BY_NAME)
             .setParameter("viewer", HeardSql.viewer(viewerId))
             .setParameter("prefix", escape(term) + "%")
             .setParameter("exact", term)
+            .setParameter("now", now)
             .setMaxResults(limit)
             .getResultList();
     return rows.stream().map(RemoteActorRepositoryAdapter::match).toList();
@@ -107,7 +111,8 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
         (String) row[4],
         (String) row[5],
         flag(row[6]),
-        flag(row[7]));
+        flag(row[7]),
+        flag(row[8]));
   }
 
   private static boolean flag(Object value) {
