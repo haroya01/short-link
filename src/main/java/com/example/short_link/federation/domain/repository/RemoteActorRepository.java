@@ -1,5 +1,6 @@
 package com.example.short_link.federation.domain.repository;
 
+import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import java.util.Collection;
 import java.util.List;
@@ -16,6 +17,8 @@ public interface RemoteActorRepository {
   Optional<RemoteActorEntity> findByAcct(String username, String domain);
 
   List<RemoteActorEntity> findAllById(Collection<Long> ids);
+
+  List<RemoteAccountMatch> search(Long viewerId, String term, int limit);
 
   RemoteActorEntity saveAndFlush(RemoteActorEntity actor);
 

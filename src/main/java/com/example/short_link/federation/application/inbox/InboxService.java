@@ -3,7 +3,6 @@ package com.example.short_link.federation.application.inbox;
 import static com.example.short_link.federation.application.ActivityStreams.idOf;
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
-import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteSnapshotReader;
 import com.example.short_link.common.note.NoteSnapshotReader.NoteSnapshot;
 import com.example.short_link.common.note.NoteSnapshotReader.Visibility;
@@ -17,13 +16,13 @@ import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.application.RemoteActorParser;
 import com.example.short_link.federation.application.RemoteFollowing;
+import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
 import io.micrometer.core.instrument.MeterRegistry;
-import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
@@ -54,6 +53,7 @@ public class InboxService {
   private final RemoteNotes remoteNotes;
   private final EarlyDeletes earlyDeletes;
   private final RemoteNoteParser noteParser;
+  private final RemoteNoteIntake intake;
   private final FederationFollowingRepository followingRows;
   private final FederationUrls urls;
   private final JsonMapper json;
@@ -285,7 +285,7 @@ public class InboxService {
         yield InboxOutcome.accepted("undo-follow");
       }
       case Intent.React react -> {
-        if (!mayRead(actor, react.note())) {
+        if (!intake.mayRead(actor, react.note())) {
           yield InboxOutcome.ignored("unknown-target");
         }
         reactions.add(react.note().id(), actor.getId(), react.kind(), id);
@@ -305,7 +305,7 @@ public class InboxService {
         yield InboxOutcome.accepted("undo");
       }
       case Intent.Vote vote -> {
-        if (!mayRead(actor, vote.poll())) {
+        if (!intake.mayRead(actor, vote.poll())) {
           yield InboxOutcome.ignored("unknown-target");
         }
         yield votes.recordRemoteVote(vote.poll().id(), actor.getId(), vote.option())
@@ -325,28 +325,9 @@ public class InboxService {
         if (earlyDeletes.remembered(actor.getId(), idOf(receive.object()))) {
           yield InboxOutcome.ignored("deleted");
         }
-        RemoteNoteParser.Parsed note = noteParser.parse(receive.object(), receive.activity());
-        boolean answers = receive.parent() == null || mayRead(actor, receive.parent());
-        List<Long> addressed =
-            actorRows.findByPublicIds(note.addressedPublicIds()).stream()
-                .map(FederationActorEntity::getUserId)
-                .toList();
-        yield remoteNotes
-                .receive(
-                    new RemoteNotes.Received(
-                        actor.getId(),
-                        note.uri(),
-                        note.url() != null && note.url().length() <= MAX_URI ? note.url() : null,
-                        note.body(),
-                        note.contentWarning(),
-                        note.sensitive(),
-                        note.visibility(),
-                        note.publishedAt(),
-                        answers ? note.inReplyToLocalId().orElse(null) : null,
-                        note.inReplyToUri(),
-                        addressed,
-                        note.media(),
-                        note.language()))
+        yield intake
+                .keep(
+                    actor, noteParser.parse(receive.object(), receive.activity()), receive.parent())
                 .isPresent()
             ? InboxOutcome.accepted("note")
             : InboxOutcome.ignored("duplicate");
@@ -398,22 +379,6 @@ public class InboxService {
 
   private static boolean shareable(NoteSnapshot note) {
     return note.visibility() == Visibility.PUBLIC || note.visibility() == Visibility.UNLISTED;
-  }
-
-  // Mastodon's rule for who may like, answer or vote on a note: anyone on a public or unlisted
-  // one, an accepted follower or a named account on a followers-only one, a named account on a
-  // direct one. A named account is one the note's text mentions, as delivery reached it.
-  private boolean mayRead(RemoteActorEntity actor, NoteSnapshot note) {
-    if (shareable(note)) {
-      return true;
-    }
-    boolean named =
-        actor.getUsername() != null
-            && Mentions.remote(note.body())
-                .contains((actor.getUsername() + "@" + actor.getDomain()).toLowerCase(Locale.ROOT));
-    return named
-        || (note.visibility() == Visibility.PRIVATE
-            && followers.accepts(note.authorId(), actor.getId()));
   }
 
   private static boolean authoredBy(JsonNode object, String actorUri) {

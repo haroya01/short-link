@@ -27,6 +27,8 @@ import org.springframework.web.util.HtmlUtils;
 @RequiredArgsConstructor
 public class ActorController {
 
+  private static final boolean DISCOVERABLE = true;
+
   private static final List<Object> ACTOR_CONTEXT =
       List.of(
           ActivityPubMedia.CONTEXT,
@@ -35,6 +37,7 @@ public class ActorController {
               "manuallyApprovesFollowers", "as:manuallyApprovesFollowers",
               "toot", "http://joinmastodon.org/ns#",
               "discoverable", "toot:discoverable",
+              "indexable", "toot:indexable",
               "featured", Map.of("@id", "toot:featured", "@type", "@id"),
               "schema", "http://schema.org#",
               "PropertyValue", "schema:PropertyValue",
@@ -156,7 +159,8 @@ public class ActorController {
         attachment(actor.user().links()),
         new ActorResponse.Endpoints(urls.sharedInbox()),
         actor.user().locked(),
-        true,
+        DISCOVERABLE,
+        DISCOVERABLE,
         avatar == null || avatar.isBlank() ? null : new ActorResponse.Image("Image", avatar),
         new ActorResponse.PublicKey(urls.key(actor.publicId()), id, actor.publicKeyPem()));
   }

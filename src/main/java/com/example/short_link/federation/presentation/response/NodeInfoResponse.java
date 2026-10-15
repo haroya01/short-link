@@ -16,5 +16,5 @@ public record NodeInfoResponse(
 
   public record Services(List<String> inbound, List<String> outbound) {}
 
-  public record Usage(Map<String, Object> users, int localPosts) {}
+  public record Usage(Map<String, Object> users, long localPosts) {}
 }

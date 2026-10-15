@@ -214,4 +214,25 @@ class RemoteActorResolverTest {
     assertThat(resolver().refreshed(stale)).contains(stale);
     verify(http).get(MASTODON_ACTOR, instance);
   }
+
+  @Test
+  void aDocumentFetchedFromAProfileAddressIsStoredUnderItsOwnIdOnTheSameHost() {
+    JsonMapper json = JsonMapper.builder().build();
+    URI profile = URI.create("https://mastodon.example/@alice");
+    when(actors.findByActorUri(MASTODON_ACTOR.toString())).thenReturn(Optional.empty());
+
+    Optional<RemoteActorEntity> stored =
+        resolver().stored(json.readTree(RemoteActorFixtures.MASTODON), profile);
+
+    assertThat(stored).isPresent();
+    assertThat(stored.get().getActorUri()).isEqualTo(MASTODON_ACTOR.toString());
+    assertThat(stored.get().getProfileUrl()).isEqualTo("https://mastodon.example/@alice");
+    assertThat(
+            resolver()
+                .stored(
+                    json.readTree(RemoteActorFixtures.MASTODON),
+                    URI.create("https://elsewhere.example/@alice")))
+        .isEmpty();
+    verify(http, never()).get(any(), any());
+  }
 }

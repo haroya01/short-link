@@ -42,6 +42,7 @@ public class InstanceActorController {
                 new ActorResponse.Endpoints(urls.sharedInbox()),
                 true,
                 false,
+                false,
                 null,
                 new ActorResponse.PublicKey(
                     urls.instanceKey(), id, signingKeys.instanceActor().getPublicKeyPem())));

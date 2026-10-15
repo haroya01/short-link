@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application;
 
 import com.example.short_link.federation.domain.FederationFollowingEntity;
+import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import java.util.Optional;
 
@@ -19,6 +20,20 @@ public record RemoteAccountView(
   static RemoteAccountView of(
       RemoteActorEntity actor, Optional<FederationFollowingEntity> following) {
     return of(actor, following, false);
+  }
+
+  static RemoteAccountView of(RemoteAccountMatch match) {
+    return new RemoteAccountView(
+        match.id(),
+        match.username() + "@" + match.domain(),
+        match.username(),
+        match.domain(),
+        match.displayName(),
+        match.avatarUrl(),
+        match.url(),
+        match.following(),
+        match.requested(),
+        false);
   }
 
   static RemoteAccountView of(

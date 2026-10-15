@@ -20,7 +20,9 @@ import com.example.short_link.federation.application.FederationFollowers;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
+import com.example.short_link.federation.application.RemoteActorResolver;
 import com.example.short_link.federation.application.RemoteFollowing;
+import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
@@ -62,6 +64,7 @@ class InboxServiceTest {
   @Mock private RemoteNotes remoteNotes;
   @Mock private EarlyDeletes earlyDeletes;
   @Mock private FederationFollowingRepository followingRows;
+  @Mock private RemoteActorResolver resolver;
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
 
@@ -81,6 +84,15 @@ class InboxServiceTest {
         remoteNotes,
         earlyDeletes,
         new RemoteNoteParser(URLS),
+        new RemoteNoteIntake(
+            new RemoteNoteParser(URLS),
+            remoteNotes,
+            actorRows,
+            followers,
+            notes,
+            resolver,
+            earlyDeletes,
+            URLS),
         followingRows,
         URLS,
         JsonMapper.builder().build(),

@@ -102,6 +102,10 @@ public class RemoteActorResolver {
     return fresh(cached) ? Optional.of(cached) : byActorUri(cached.getActorUri());
   }
 
+  public Optional<RemoteActorEntity> stored(JsonNode document, URI fetchedFrom) {
+    return RemoteActorParser.parse(document, fetchedFrom, null).map(this::store);
+  }
+
   // A suspended server is never asked for anything.
   private Optional<JsonNode> fetch(URI uri) {
     if (serverBlocks.suspends(uri.getHost())) {

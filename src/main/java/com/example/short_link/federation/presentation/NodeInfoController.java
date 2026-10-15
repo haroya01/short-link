@@ -1,6 +1,8 @@
 package com.example.short_link.federation.presentation;
 
 import com.example.short_link.federation.application.FederationUrls;
+import com.example.short_link.federation.application.NodeInfoService;
+import com.example.short_link.federation.domain.NodeUsage;
 import com.example.short_link.federation.presentation.response.NodeInfoLinksResponse;
 import com.example.short_link.federation.presentation.response.NodeInfoResponse;
 import java.time.Duration;
@@ -23,6 +25,7 @@ public class NodeInfoController {
       MediaType.parseMediaType("application/json; profile=\"" + SCHEMA + "#\"");
 
   private final FederationUrls urls;
+  private final NodeInfoService nodeInfo;
 
   @GetMapping("/.well-known/nodeinfo")
   public ResponseEntity<NodeInfoLinksResponse> discovery() {
@@ -35,6 +38,7 @@ public class NodeInfoController {
 
   @GetMapping("/ap/nodeinfo/2.1")
   public ResponseEntity<NodeInfoResponse> nodeInfo() {
+    NodeUsage usage = nodeInfo.usage();
     return ResponseEntity.ok()
         .contentType(NODEINFO)
         .cacheControl(CacheControl.maxAge(Duration.ofHours(1)).cachePublic())
@@ -46,7 +50,7 @@ public class NodeInfoController {
                 List.of("activitypub"),
                 new NodeInfoResponse.Services(List.of(), List.of()),
                 true,
-                new NodeInfoResponse.Usage(Map.of(), 0),
+                new NodeInfoResponse.Usage(Map.of("total", usage.users()), usage.localPosts()),
                 Map.of()));
   }
 }

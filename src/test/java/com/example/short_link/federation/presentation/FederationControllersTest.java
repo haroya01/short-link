@@ -12,7 +12,9 @@ import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
+import com.example.short_link.federation.application.NodeInfoService;
 import com.example.short_link.federation.domain.FederationUser;
+import com.example.short_link.federation.domain.NodeUsage;
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import java.util.List;
 import java.util.Optional;
@@ -52,6 +54,7 @@ class FederationControllersTest {
   @Autowired private MockMvc mvc;
   @MockitoBean private FederationActorService actors;
   @MockitoBean private NoteSnapshotReader notes;
+  @MockitoBean private NodeInfoService nodeInfo;
 
   @Test
   void webFingerAnswersAcctWithActorAndProfileLinks() throws Exception {
@@ -130,8 +133,12 @@ class FederationControllersTest {
         .andExpect(jsonPath("$.inbox").value("https://kurl.me/ap/actors/pid123/inbox"))
         .andExpect(jsonPath("$.endpoints.sharedInbox").value("https://kurl.me/ap/inbox"))
         .andExpect(jsonPath("$.manuallyApprovesFollowers").value(false))
+        .andExpect(jsonPath("$.discoverable").value(true))
+        .andExpect(jsonPath("$.indexable").value(true))
         .andExpect(jsonPath("$.icon.url").value("https://cdn/a.png"))
         .andExpect(jsonPath("$['@context'][2].PropertyValue").value("schema:PropertyValue"))
+        .andExpect(jsonPath("$['@context'][2].discoverable").value("toot:discoverable"))
+        .andExpect(jsonPath("$['@context'][2].indexable").value("toot:indexable"))
         .andExpect(jsonPath("$.attachment[0].type").value("PropertyValue"))
         .andExpect(jsonPath("$.attachment[0].name").value("X"))
         .andExpect(
@@ -210,6 +217,7 @@ class FederationControllersTest {
 
   @Test
   void nodeInfoDiscoveryPointsAtTheDocument() throws Exception {
+    when(nodeInfo.usage()).thenReturn(new NodeUsage(3, 41));
     mvc.perform(get("/.well-known/nodeinfo"))
         .andExpect(status().isOk())
         .andExpect(
@@ -220,6 +228,9 @@ class FederationControllersTest {
         .andExpect(jsonPath("$.version").value("2.1"))
         .andExpect(jsonPath("$.software.name").value("kurl"))
         .andExpect(jsonPath("$.protocols[0]").value("activitypub"))
-        .andExpect(jsonPath("$.openRegistrations").value(true));
+        .andExpect(jsonPath("$.openRegistrations").value(true))
+        .andExpect(jsonPath("$.usage.users.total").value(3))
+        .andExpect(jsonPath("$.usage.users.activeMonth").doesNotExist())
+        .andExpect(jsonPath("$.usage.localPosts").value(41));
   }
 }

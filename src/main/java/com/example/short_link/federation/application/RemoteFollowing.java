@@ -105,7 +105,7 @@ public class RemoteFollowing {
     return view(userId, remote(remoteActorId));
   }
 
-  private RemoteAccountView view(Long userId, RemoteActorEntity actor) {
+  public RemoteAccountView view(Long userId, RemoteActorEntity actor) {
     return RemoteAccountView.of(
         actor,
         followings.find(userId, actor.getId()),
