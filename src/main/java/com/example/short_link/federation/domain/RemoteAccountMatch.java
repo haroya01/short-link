@@ -8,4 +8,5 @@ public record RemoteAccountMatch(
     String avatarUrl,
     String url,
     boolean following,
-    boolean requested) {}
+    boolean requested,
+    boolean muting) {}

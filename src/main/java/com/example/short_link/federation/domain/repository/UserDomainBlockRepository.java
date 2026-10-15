@@ -10,8 +10,6 @@ public interface UserDomainBlockRepository {
 
   Optional<UserDomainBlockEntity> find(Long userId, String domain);
 
-  boolean blocks(Long userId, String domain);
-
   UserDomainBlockEntity save(UserDomainBlockEntity block);
 
   int delete(Long userId, String domain);

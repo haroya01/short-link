@@ -78,7 +78,8 @@ public class NoteViews {
     Set<String> memberNames =
         members.values().stream().map(NoteAuthor::username).collect(Collectors.toSet());
     Authors authors =
-        new Authors(members, remoteIds.isEmpty() ? Map.of() : people.remoteAuthors(remoteIds));
+        new Authors(
+            members, remoteIds.isEmpty() ? Map.of() : people.remoteAuthors(remoteIds, viewerId));
     Set<Long> restricted = new HashSet<>();
     for (NoteEntity note : page) {
       if (note.getVisibility().restricted() && !note.isOwnedBy(viewerId)) {
@@ -245,7 +246,8 @@ public class NoteViews {
     Set<Long> authorIds = new HashSet<>();
     Set<Long> remoteIds = new HashSet<>();
     readable.forEach(parent -> collectAuthor(parent, authorIds, remoteIds));
-    Authors authors = new Authors(people.activeAuthors(authorIds), people.remoteAuthors(remoteIds));
+    Authors authors =
+        new Authors(people.activeAuthors(authorIds), people.remoteAuthors(remoteIds, viewerId));
     Map<Long, ProfileRepliesView.ReplyContext> contexts = new HashMap<>();
     for (NoteEntity parent : readable) {
       NoteAuthor author = authors.of(parent);

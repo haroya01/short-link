@@ -4,11 +4,12 @@ import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationFollowingEntity;
 import com.example.short_link.federation.domain.FollowOnDomain;
+import com.example.short_link.federation.domain.RemoteAccountStanding;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
+import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
-import com.example.short_link.federation.domain.repository.UserDomainBlockRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.time.Clock;
@@ -30,7 +31,7 @@ import tools.jackson.databind.json.JsonMapper;
 public class RemoteFollowing {
 
   private final FederationFollowingRepository followings;
-  private final UserDomainBlockRepository domainBlocks;
+  private final RemoteAccountStandingReader standings;
   private final RemoteActorRepository remoteActors;
   private final RemoteAccountFinder finder;
   private final FederationActorService localActors;
@@ -43,7 +44,7 @@ public class RemoteFollowing {
   @Autowired
   public RemoteFollowing(
       FederationFollowingRepository followings,
-      UserDomainBlockRepository domainBlocks,
+      RemoteAccountStandingReader standings,
       RemoteActorRepository remoteActors,
       RemoteAccountFinder finder,
       FederationActorService localActors,
@@ -53,7 +54,7 @@ public class RemoteFollowing {
       JsonMapper json) {
     this(
         followings,
-        domainBlocks,
+        standings,
         remoteActors,
         finder,
         localActors,
@@ -66,7 +67,7 @@ public class RemoteFollowing {
 
   RemoteFollowing(
       FederationFollowingRepository followings,
-      UserDomainBlockRepository domainBlocks,
+      RemoteAccountStandingReader standings,
       RemoteActorRepository remoteActors,
       RemoteAccountFinder finder,
       FederationActorService localActors,
@@ -76,7 +77,7 @@ public class RemoteFollowing {
       JsonMapper json,
       Clock clock) {
     this.followings = followings;
-    this.domainBlocks = domainBlocks;
+    this.standings = standings;
     this.remoteActors = remoteActors;
     this.finder = finder;
     this.localActors = localActors;
@@ -106,17 +107,28 @@ public class RemoteFollowing {
   }
 
   public RemoteAccountView view(Long userId, RemoteActorEntity actor) {
-    return RemoteAccountView.of(
-        actor,
-        followings.find(userId, actor.getId()),
-        domainBlocks.blocks(userId, actor.getDomain()));
+    return view(userId, actor, standing(userId, actor));
+  }
+
+  RemoteAccountView view(Long userId, RemoteActorEntity actor, RemoteAccountStanding standing) {
+    return RemoteAccountView.of(actor, followings.find(userId, actor.getId()), standing);
+  }
+
+  RemoteAccountStanding standing(Long userId, RemoteActorEntity actor) {
+    return standings
+        .of(userId, List.of(actor.getId()), clock.instant())
+        .getOrDefault(actor.getId(), RemoteAccountStanding.NONE);
   }
 
   @Transactional
   public RemoteAccountView follow(Long userId, Long remoteActorId) {
     RemoteActorEntity remote = remote(remoteActorId);
-    if (domainBlocks.blocks(userId, remote.getDomain())) {
+    RemoteAccountStanding standing = standing(userId, remote);
+    if (standing.domainBlocked()) {
       throw new FederationException(FederationErrorCode.REMOTE_DOMAIN_BLOCKED, remote.getDomain());
+    }
+    if (standing.blocking()) {
+      throw new FederationException(FederationErrorCode.REMOTE_ACCOUNT_BLOCKED, remote.getId());
     }
     LocalActor me =
         localActors
@@ -124,7 +136,7 @@ public class RemoteFollowing {
             .orElseThrow(() -> new FederationException(FederationErrorCode.FEDERATION_DISABLED));
     Optional<FederationFollowingEntity> existing = followings.find(userId, remote.getId());
     if (existing.isPresent()) {
-      return RemoteAccountView.of(remote, existing);
+      return RemoteAccountView.of(remote, existing, standing);
     }
     String actor = urls.actor(me.publicId());
     String followId = actor + "#follows/" + UUID.randomUUID();
@@ -135,7 +147,7 @@ public class RemoteFollowing {
     follow.putAll(follow(followId, actor, remote.getActorUri()));
     deliveries.enqueue(
         userId, followId, json.writeValueAsString(follow), List.of(remote.getInbox()));
-    return RemoteAccountView.of(remote, Optional.of(row));
+    return RemoteAccountView.of(remote, Optional.of(row), standing);
   }
 
   @Transactional
@@ -149,7 +161,15 @@ public class RemoteFollowing {
           .map(FederationActorEntity::getPublicId)
           .ifPresent(publicId -> undo(userId, urls.actor(publicId), existing.get(), remote));
     }
-    return RemoteAccountView.of(remote, Optional.empty());
+    return RemoteAccountView.of(remote, Optional.empty(), standing(userId, remote));
+  }
+
+  void stopFollowing(Long userId, Optional<String> actor, RemoteActorEntity remote) {
+    Optional<FederationFollowingEntity> existing = followings.find(userId, remote.getId());
+    if (existing.isPresent()) {
+      followings.delete(existing.get());
+      actor.ifPresent(uri -> undo(userId, uri, existing.get(), remote));
+    }
   }
 
   @Transactional(readOnly = true)
@@ -160,9 +180,15 @@ public class RemoteFollowing {
             .findAllById(rows.stream().map(FederationFollowingEntity::getRemoteActorId).toList())
             .stream()
             .collect(Collectors.toMap(RemoteActorEntity::getId, Function.identity()));
+    Map<Long, RemoteAccountStanding> marks = standings.of(userId, actors.keySet(), clock.instant());
     return rows.stream()
         .filter(row -> actors.containsKey(row.getRemoteActorId()))
-        .map(row -> RemoteAccountView.of(actors.get(row.getRemoteActorId()), Optional.of(row)))
+        .map(
+            row ->
+                RemoteAccountView.of(
+                    actors.get(row.getRemoteActorId()),
+                    Optional.of(row),
+                    marks.getOrDefault(row.getRemoteActorId(), RemoteAccountStanding.NONE)))
         .toList();
   }
 
@@ -249,13 +275,18 @@ public class RemoteFollowing {
     return follow;
   }
 
-  private RemoteActorEntity remote(Long remoteActorId) {
+  RemoteActorEntity remote(Long remoteActorId) {
     return remoteActors
         .findById(remoteActorId)
         .filter(found -> !found.onSuspendedServer())
-        .orElseThrow(
-            () ->
-                new FederationException(
-                    FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND, remoteActorId));
+        .orElseThrow(() -> notFound(remoteActorId));
+  }
+
+  RemoteActorEntity known(Long remoteActorId) {
+    return remoteActors.findById(remoteActorId).orElseThrow(() -> notFound(remoteActorId));
+  }
+
+  private static FederationException notFound(Long remoteActorId) {
+    return new FederationException(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND, remoteActorId);
   }
 }

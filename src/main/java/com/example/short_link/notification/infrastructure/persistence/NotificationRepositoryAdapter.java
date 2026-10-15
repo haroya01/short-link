@@ -238,6 +238,16 @@ class NotificationRepositoryAdapter implements NotificationRepository {
   }
 
   @Override
+  public int deleteFromRemoteActor(Long recipientUserId, Long remoteActorId) {
+    return em.createNativeQuery(
+            "DELETE FROM notification WHERE recipient_user_id = :recipient"
+                + " AND actor_remote_id = :remote")
+        .setParameter("recipient", recipientUserId)
+        .setParameter("remote", remoteActorId)
+        .executeUpdate();
+  }
+
+  @Override
   public int deleteFromDomain(Long recipientUserId, String domain) {
     return em.createNativeQuery(
             "DELETE n FROM notification n JOIN federation_remote_actor a ON a.id = n.actor_remote_id"

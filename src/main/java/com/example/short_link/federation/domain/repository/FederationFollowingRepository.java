@@ -2,12 +2,15 @@ package com.example.short_link.federation.domain.repository;
 
 import com.example.short_link.federation.domain.FederationFollowingEntity;
 import com.example.short_link.federation.domain.FollowOnDomain;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface FederationFollowingRepository {
 
   Optional<FederationFollowingEntity> find(Long userId, Long remoteActorId);
+
+  List<FederationFollowingEntity> findAll(Long userId, Collection<Long> remoteActorIds);
 
   Optional<FederationFollowingEntity> findByFollowActivity(
       Long remoteActorId, String followActivityId);

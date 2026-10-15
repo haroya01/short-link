@@ -33,6 +33,43 @@ public final class HeardSql {
     return MUTED_POST_AUTHOR.replace("p.user_id", authorColumn);
   }
 
+  public static String remoteBlocked(String viewerExpr, String remoteActorExpr) {
+    return "EXISTS (SELECT 1 FROM federation_remote_block hrb WHERE hrb.user_id = "
+        + viewerExpr
+        + " AND hrb.remote_actor_id = "
+        + remoteActorExpr
+        + ")";
+  }
+
+  public static String remoteMuted(String viewerExpr, String remoteActorExpr) {
+    return "EXISTS (SELECT 1 FROM federation_remote_mute hrm WHERE hrm.user_id = "
+        + viewerExpr
+        + " AND hrm.remote_actor_id = "
+        + remoteActorExpr
+        + " AND (hrm.expires_at IS NULL OR hrm.expires_at > :now))";
+  }
+
+  public static String remoteSilenced(String recipientExpr, String remoteActorExpr) {
+    return "("
+        + remoteBlocked(recipientExpr, remoteActorExpr)
+        + " OR EXISTS (SELECT 1 FROM federation_remote_mute hrn WHERE hrn.user_id = "
+        + recipientExpr
+        + " AND hrn.remote_actor_id = "
+        + remoteActorExpr
+        + " AND hrn.hide_notifications"
+        + " AND (hrn.expires_at IS NULL OR hrn.expires_at > :now)))";
+  }
+
+  public static String unblockedRemote(String remoteActorColumn) {
+    return " AND NOT " + remoteBlocked(":viewer", remoteActorColumn);
+  }
+
+  public static String heardRemote(String remoteActorColumn) {
+    return unblockedRemote(remoteActorColumn)
+        + " AND NOT "
+        + remoteMuted(":viewer", remoteActorColumn);
+  }
+
   public static long viewer(Long viewerId) {
     return viewerId == null ? -1L : viewerId;
   }

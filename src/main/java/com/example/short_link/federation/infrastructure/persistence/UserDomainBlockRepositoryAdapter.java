@@ -24,11 +24,6 @@ class UserDomainBlockRepositoryAdapter implements UserDomainBlockRepository {
   }
 
   @Override
-  public boolean blocks(Long userId, String domain) {
-    return userId != null && domain != null && jpa.existsByUserIdAndDomain(userId, domain);
-  }
-
-  @Override
   public UserDomainBlockEntity save(UserDomainBlockEntity block) {
     return jpa.save(block);
   }

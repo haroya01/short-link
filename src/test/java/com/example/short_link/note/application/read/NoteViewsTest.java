@@ -68,7 +68,7 @@ class NoteViewsTest {
     NoteEntity followersOnly = remote(2L, 42L, NoteVisibility.PRIVATE);
     NoteEntity orphan = remote(3L, 43L, NoteVisibility.PUBLIC);
     when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
-    when(people.remoteAuthors(Set.of(42L, 43L)))
+    when(people.remoteAuthors(Set.of(42L, 43L), 7L))
         .thenReturn(
             Map.of(
                 42L,
@@ -168,7 +168,7 @@ class NoteViewsTest {
         .thenReturn(new NoteViewerMarks(Set.of(), Set.of(), Set.of()));
 
     assertThat(views.of(List.of(note(1L, 7L, null)), 7L)).hasSize(1);
-    verify(people, never()).remoteAuthors(anyCollection());
+    verify(people, never()).remoteAuthors(anyCollection(), org.mockito.ArgumentMatchers.any());
   }
 
   @Test

@@ -125,7 +125,16 @@ class NoteNotificationListenerTest {
             isNull(),
             group.capture());
     assertThat(group.getValue()).isNull();
-    verifyNoInteractions(blocks);
+    verify(blocks).silences(9L, null, 7L, null);
+  }
+
+  @Test
+  void aFollowFromAnAccountTheMemberSilencedIsNoNotice() {
+    when(blocks.silences(9L, null, 7L, null)).thenReturn(true);
+
+    listener().onRemoteFollowed(new RemoteFollowedEvent(9L, 7L));
+
+    verifyNoInteractions(recordUseCase);
   }
 
   @Test

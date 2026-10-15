@@ -14,8 +14,6 @@ public interface JpaUserDomainBlockRepository extends JpaRepository<UserDomainBl
 
   Optional<UserDomainBlockEntity> findByUserIdAndDomain(Long userId, String domain);
 
-  boolean existsByUserIdAndDomain(Long userId, String domain);
-
   @Modifying
   @Query("delete from UserDomainBlockEntity b where b.userId = :userId and b.domain = :domain")
   int deleteBlock(@Param("userId") Long userId, @Param("domain") String domain);

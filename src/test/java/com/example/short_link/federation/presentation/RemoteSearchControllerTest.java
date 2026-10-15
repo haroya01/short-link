@@ -34,6 +34,8 @@ class RemoteSearchControllerTest {
           "https://mastodon.example/@alice",
           true,
           false,
+          false,
+          false,
           false);
 
   @Autowired private MockMvc mvc;

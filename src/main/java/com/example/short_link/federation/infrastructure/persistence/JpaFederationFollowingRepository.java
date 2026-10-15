@@ -1,6 +1,7 @@
 package com.example.short_link.federation.infrastructure.persistence;
 
 import com.example.short_link.federation.domain.FederationFollowingEntity;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.domain.Pageable;
@@ -13,6 +14,9 @@ public interface JpaFederationFollowingRepository
     extends JpaRepository<FederationFollowingEntity, Long> {
 
   Optional<FederationFollowingEntity> findByUserIdAndRemoteActorId(Long userId, Long remoteActorId);
+
+  List<FederationFollowingEntity> findByUserIdAndRemoteActorIdIn(
+      Long userId, Collection<Long> remoteActorIds);
 
   Optional<FederationFollowingEntity> findFirstByRemoteActorIdAndFollowActivityId(
       Long remoteActorId, String followActivityId);

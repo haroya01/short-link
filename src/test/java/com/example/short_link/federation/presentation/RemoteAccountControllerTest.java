@@ -33,6 +33,8 @@ class RemoteAccountControllerTest {
           "https://mastodon.example/@alice",
           false,
           true,
+          false,
+          false,
           false);
 
   @Autowired private MockMvc mvc;
@@ -53,6 +55,8 @@ class RemoteAccountControllerTest {
                 "Alice",
                 null,
                 "https://mastodon.example/@alice",
+                false,
+                false,
                 false,
                 false,
                 false));

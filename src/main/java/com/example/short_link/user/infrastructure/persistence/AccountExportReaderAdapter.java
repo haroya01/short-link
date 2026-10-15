@@ -38,10 +38,13 @@ class AccountExportReaderAdapter implements AccountExportReader {
   @Override
   public List<Account> blocks(Long userId) {
     return rows(
-        "SELECT u.username, NULL FROM user_block b JOIN users u ON u.id = b.blocked_id"
-            + " WHERE b.blocker_id = :user AND"
+        "SELECT u.username, NULL, 0 AS side, b.id FROM user_block b"
+            + " JOIN users u ON u.id = b.blocked_id WHERE b.blocker_id = :user AND"
             + ACTIVE
-            + " ORDER BY b.id",
+            + " UNION ALL SELECT a.username, a.domain, 1, rb.id FROM federation_remote_block rb"
+            + " JOIN federation_remote_actor a ON a.id = rb.remote_actor_id"
+            + " WHERE rb.user_id = :user AND a.username IS NOT NULL"
+            + " ORDER BY 3, 4",
         userId,
         AccountExportReaderAdapter::account);
   }
@@ -51,10 +54,16 @@ class AccountExportReaderAdapter implements AccountExportReader {
   public List<Mute> mutes(Long userId) {
     List<Object[]> rows =
         em.createNativeQuery(
-                "SELECT u.username, NULL, m.hide_notifications FROM user_mute m"
+                "SELECT u.username, NULL, m.hide_notifications, 0 AS side, m.id FROM user_mute m"
                     + " JOIN users u ON u.id = m.muted_user_id WHERE m.user_id = :user AND"
                     + ACTIVE
-                    + " AND (m.expires_at IS NULL OR m.expires_at > :now) ORDER BY m.id")
+                    + " AND (m.expires_at IS NULL OR m.expires_at > :now)"
+                    + " UNION ALL SELECT a.username, a.domain, rm.hide_notifications, 1, rm.id"
+                    + " FROM federation_remote_mute rm"
+                    + " JOIN federation_remote_actor a ON a.id = rm.remote_actor_id"
+                    + " WHERE rm.user_id = :user AND a.username IS NOT NULL"
+                    + " AND (rm.expires_at IS NULL OR rm.expires_at > :now)"
+                    + " ORDER BY 4, 5")
             .setParameter("user", userId)
             .setParameter("now", Instant.now())
             .getResultList();

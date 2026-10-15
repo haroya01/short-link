@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application;
 
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
+import java.time.Clock;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -14,6 +15,7 @@ public class RemoteAccountSearch {
   static final int MAX_LIMIT = 20;
 
   private final RemoteActorRepository actors;
+  private final Clock clock;
 
   @Transactional(readOnly = true)
   public List<RemoteAccountView> search(Long viewerId, String query, int limit) {
@@ -24,7 +26,7 @@ public class RemoteAccountSearch {
     if (term.codePointCount(0, term.length()) < MIN_TERM) {
       return List.of();
     }
-    return actors.search(viewerId, term, Math.clamp(limit, 1, MAX_LIMIT)).stream()
+    return actors.search(viewerId, term, Math.clamp(limit, 1, MAX_LIMIT), clock.instant()).stream()
         .map(RemoteAccountView::of)
         .toList();
   }

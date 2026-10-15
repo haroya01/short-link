@@ -400,7 +400,7 @@ class NoteQueryServiceTest {
     ReflectionTestUtils.setField(remote, "id", 2L);
     ReflectionTestUtils.setField(remote, "remoteActorId", 40L);
     when(notes.findUnblocked(2L, 9L)).thenReturn(Optional.of(remote));
-    when(people.remoteAuthors(Set.of(40L))).thenReturn(Map.of());
+    when(people.remoteAuthors(Set.of(40L), 9L)).thenReturn(Map.of());
     assertThatThrownBy(() -> service.history(2L, 9L)).isInstanceOf(NoteException.class);
 
     NoteEntity forFollowers = note(3L, null);

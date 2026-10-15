@@ -6,11 +6,12 @@ import com.example.short_link.common.event.RemoteFollowedEvent;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationFollowerEntity;
 import com.example.short_link.federation.domain.FollowOnDomain;
+import com.example.short_link.federation.domain.RemoteAccountStanding;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
+import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
-import com.example.short_link.federation.domain.repository.UserDomainBlockRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.time.Clock;
@@ -36,7 +37,7 @@ public class FederationFollowers {
   static final int REQUESTS_PAGE_SIZE = 40;
 
   private final FederationFollowerRepository followers;
-  private final UserDomainBlockRepository domainBlocks;
+  private final RemoteAccountStandingReader standings;
   private final FederationActorRepository actorRows;
   private final RemoteActorRepository remoteActors;
   private final DeliveryQueue deliveries;
@@ -48,7 +49,7 @@ public class FederationFollowers {
   @Autowired
   public FederationFollowers(
       FederationFollowerRepository followers,
-      UserDomainBlockRepository domainBlocks,
+      RemoteAccountStandingReader standings,
       FederationActorRepository actorRows,
       RemoteActorRepository remoteActors,
       DeliveryQueue deliveries,
@@ -57,7 +58,7 @@ public class FederationFollowers {
       ApplicationEventPublisher events) {
     this(
         followers,
-        domainBlocks,
+        standings,
         actorRows,
         remoteActors,
         deliveries,
@@ -69,7 +70,7 @@ public class FederationFollowers {
 
   FederationFollowers(
       FederationFollowerRepository followers,
-      UserDomainBlockRepository domainBlocks,
+      RemoteAccountStandingReader standings,
       FederationActorRepository actorRows,
       RemoteActorRepository remoteActors,
       DeliveryQueue deliveries,
@@ -78,7 +79,7 @@ public class FederationFollowers {
       ApplicationEventPublisher events,
       Clock clock) {
     this.followers = followers;
-    this.domainBlocks = domainBlocks;
+    this.standings = standings;
     this.actorRows = actorRows;
     this.remoteActors = remoteActors;
     this.deliveries = deliveries;
@@ -92,7 +93,11 @@ public class FederationFollowers {
   public void follow(LocalActor target, RemoteActorEntity follower, String followId) {
     Long userId = target.user().id();
     String actor = urls.actor(target.publicId());
-    if (domainBlocks.blocks(userId, follower.getDomain())) {
+    RemoteAccountStanding standing =
+        standings
+            .of(userId, List.of(follower.getId()), clock.instant())
+            .getOrDefault(follower.getId(), RemoteAccountStanding.NONE);
+    if (standing.domainBlocked() || standing.blocking()) {
       answer("Reject", userId, actor, followId, follower);
       return;
     }
@@ -194,6 +199,19 @@ public class FederationFollowers {
       actor.ifPresent(
           uri -> answer("Reject", userId, uri, row.follow().getFollowActivityId(), row.actor()));
     }
+  }
+
+  void drop(Long userId, Optional<String> actor, RemoteActorEntity follower) {
+    Optional<FederationFollowerEntity> row = followers.find(userId, follower.getId());
+    if (row.isEmpty()) {
+      return;
+    }
+    followers.delete(userId, follower.getId());
+    if (row.get().isPending()) {
+      events.publishEvent(new FollowRequestSettledEvent(userId, null, follower.getId()));
+    }
+    actor.ifPresent(
+        uri -> answer("Reject", userId, uri, row.get().getFollowActivityId(), follower));
   }
 
   private void answer(

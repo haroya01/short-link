@@ -7,6 +7,9 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,10 +19,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 @ExtendWith(MockitoExtension.class)
 class RemoteAccountSearchTest {
 
+  private static final Instant NOW = Instant.parse("2026-10-15T00:00:00Z");
+
   @Mock private RemoteActorRepository actors;
 
   private RemoteAccountSearch search() {
-    return new RemoteAccountSearch(actors);
+    return new RemoteAccountSearch(actors, Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
   @Test
@@ -32,34 +37,34 @@ class RemoteAccountSearchTest {
 
   @Test
   void aLeadingAtIsDroppedAndTheTermIsTrimmed() {
-    when(actors.search(7L, "alice@mast", 10)).thenReturn(List.of());
+    when(actors.search(7L, "alice@mast", 10, NOW)).thenReturn(List.of());
 
     assertThat(search().search(7L, "  @alice@mast ", 10)).isEmpty();
-    verify(actors).search(7L, "alice@mast", 10);
+    verify(actors).search(7L, "alice@mast", 10, NOW);
   }
 
   @Test
   void twoCharactersAreEnoughEvenOutsideAscii() {
-    when(actors.search(null, "유키", 10)).thenReturn(List.of());
+    when(actors.search(null, "유키", 10, NOW)).thenReturn(List.of());
 
     search().search(null, "유키", 10);
-    verify(actors).search(null, "유키", 10);
+    verify(actors).search(null, "유키", 10, NOW);
   }
 
   @Test
   void theLimitIsKeptBetweenOneAndTwenty() {
-    when(actors.search(7L, "al", 1)).thenReturn(List.of());
-    when(actors.search(7L, "al", 20)).thenReturn(List.of());
+    when(actors.search(7L, "al", 1, NOW)).thenReturn(List.of());
+    when(actors.search(7L, "al", 20, NOW)).thenReturn(List.of());
 
     search().search(7L, "al", 0);
     search().search(7L, "al", 500);
-    verify(actors).search(7L, "al", 1);
-    verify(actors).search(7L, "al", 20);
+    verify(actors).search(7L, "al", 1, NOW);
+    verify(actors).search(7L, "al", 20, NOW);
   }
 
   @Test
-  void matchesBecomeAccountViewsWithTheViewersFollow() {
-    when(actors.search(7L, "alice", 10))
+  void matchesBecomeAccountViewsWithTheViewersFollowAndMute() {
+    when(actors.search(7L, "alice", 10, NOW))
         .thenReturn(
             List.of(
                 new RemoteAccountMatch(
@@ -70,6 +75,7 @@ class RemoteAccountSearchTest {
                     "https://mastodon.example/a.png",
                     "https://mastodon.example/@alice",
                     true,
+                    false,
                     false),
                 new RemoteAccountMatch(
                     43L,
@@ -79,6 +85,7 @@ class RemoteAccountSearchTest {
                     null,
                     "https://social.example/users/alicia",
                     false,
+                    true,
                     true)));
 
     assertThat(search().search(7L, "alice", 10))
@@ -93,6 +100,8 @@ class RemoteAccountSearchTest {
                 "https://mastodon.example/@alice",
                 true,
                 false,
+                false,
+                false,
                 false),
             new RemoteAccountView(
                 43L,
@@ -104,6 +113,8 @@ class RemoteAccountSearchTest {
                 "https://social.example/users/alicia",
                 false,
                 true,
-                false));
+                false,
+                false,
+                true));
   }
 }

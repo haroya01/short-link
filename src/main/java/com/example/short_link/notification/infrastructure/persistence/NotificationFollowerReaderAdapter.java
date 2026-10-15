@@ -1,5 +1,6 @@
 package com.example.short_link.notification.infrastructure.persistence;
 
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.notification.domain.repository.NotificationFollowerReader;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -52,7 +53,7 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
   }
 
   // Members who reposted or quoted the note. A member author is silenced by blocks and notice
-  // mutes, an author elsewhere by a blocked server; a muted conversation silences either.
+  // mutes, an author elsewhere by those and a blocked server; a muted conversation silences either.
   @Override
   public List<Long> noteSharersOf(Long noteId, Long authorUserId, Long authorRemoteId) {
     String server =
@@ -60,7 +61,9 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
             ? ""
             : " AND NOT EXISTS (SELECT 1 FROM user_domain_block d"
                 + " JOIN federation_remote_actor a ON a.domain = d.domain"
-                + " WHERE d.user_id = s.user_id AND a.id = :remote)";
+                + " WHERE d.user_id = s.user_id AND a.id = :remote)"
+                + " AND NOT "
+                + HeardSql.remoteSilenced("s.user_id", ":remote");
     String silenced =
         authorUserId == null
             ? server
@@ -85,7 +88,7 @@ class NotificationFollowerReaderAdapter implements NotificationFollowerReader {
       query.setParameter("author", authorUserId).setParameter("now", Instant.now());
     }
     if (authorRemoteId != null) {
-      query.setParameter("remote", authorRemoteId);
+      query.setParameter("remote", authorRemoteId).setParameter("now", Instant.now());
     }
     List<?> rows = query.getResultList();
     return rows.stream().map(raw -> ((Number) raw).longValue()).toList();

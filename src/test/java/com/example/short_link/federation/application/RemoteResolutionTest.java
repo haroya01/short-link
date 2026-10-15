@@ -36,6 +36,8 @@ class RemoteResolutionTest {
           "https://mastodon.example/@alice",
           false,
           false,
+          false,
+          false,
           false);
 
   @Mock private RemoteAccountFinder finder;

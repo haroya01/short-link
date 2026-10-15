@@ -262,7 +262,7 @@ public class NoteQueryService {
             .orElseThrow(() -> new NoteException(NoteErrorCode.NOTE_NOT_FOUND, noteId));
     boolean authorGone =
         note.isRemote()
-            ? people.remoteAuthors(Set.of(note.getRemoteActorId())).isEmpty()
+            ? people.remoteAuthors(Set.of(note.getRemoteActorId()), viewerId).isEmpty()
             : people.activeAuthors(Set.of(note.getUserId())).isEmpty();
     if (authorGone
         || (note.getVisibility().restricted()

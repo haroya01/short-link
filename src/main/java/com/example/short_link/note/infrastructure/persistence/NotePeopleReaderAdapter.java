@@ -1,6 +1,7 @@
 package com.example.short_link.note.infrastructure.persistence;
 
 import com.example.short_link.common.federation.ServerBlockSql;
+import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.repository.NotePeopleReader;
 import jakarta.persistence.EntityManager;
@@ -68,9 +69,10 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
   }
 
   // Keyed by the remote actor id. An account without a username shows as its server. An account on
-  // a suspended server is left out, and a note without its author is shown nowhere.
+  // a suspended server, or one the viewer blocked, is left out, and a note without its author is
+  // shown nowhere.
   @Override
-  public Map<Long, NoteAuthor> remoteAuthors(Collection<Long> remoteActorIds) {
+  public Map<Long, NoteAuthor> remoteAuthors(Collection<Long> remoteActorIds, Long viewerId) {
     Map<Long, NoteAuthor> authors = new HashMap<>();
     if (remoteActorIds.isEmpty()) {
       return authors;
@@ -80,8 +82,10 @@ class NotePeopleReaderAdapter implements NotePeopleReader {
                 "SELECT id, username, domain, avatar_url, display_name,"
                     + " COALESCE(profile_url, actor_uri) FROM federation_remote_actor ra"
                     + " WHERE ra.id IN (:ids) AND NOT "
-                    + ServerBlockSql.suspended("ra.id"))
+                    + ServerBlockSql.suspended("ra.id")
+                    + HeardSql.unblockedRemote("ra.id"))
             .setParameter("ids", remoteActorIds)
+            .setParameter("viewer", HeardSql.viewer(viewerId))
             .getResultList()) {
       Object[] columns = (Object[]) raw;
       Long id = ((Number) columns[0]).longValue();

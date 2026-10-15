@@ -4,6 +4,7 @@ import com.example.short_link.federation.domain.FederationFollowingEntity;
 import com.example.short_link.federation.domain.FollowOnDomain;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +20,13 @@ class FederationFollowingRepositoryAdapter implements FederationFollowingReposit
   @Override
   public Optional<FederationFollowingEntity> find(Long userId, Long remoteActorId) {
     return jpa.findByUserIdAndRemoteActorId(userId, remoteActorId);
+  }
+
+  @Override
+  public List<FederationFollowingEntity> findAll(Long userId, Collection<Long> remoteActorIds) {
+    return remoteActorIds.isEmpty()
+        ? List.of()
+        : jpa.findByUserIdAndRemoteActorIdIn(userId, remoteActorIds);
   }
 
   @Override

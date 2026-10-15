@@ -58,7 +58,9 @@ class NoteRepositoryAdapter implements NoteRepository {
   public Optional<NoteEntity> findUnblocked(Long id, Long viewerId) {
     return em
         .createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.id = :id" + HeardSql.unblocked("n.user_id"),
+            "SELECT n.* FROM note n WHERE n.id = :id"
+                + HeardSql.unblocked("n.user_id")
+                + HeardSql.unblockedRemote("n.remote_actor_id"),
             NoteEntity.class)
         .setParameter("id", id)
         .setParameter("viewer", viewer(viewerId))
@@ -85,6 +87,7 @@ class NoteRepositoryAdapter implements NoteRepository {
   // server suspended, stays out too.
   static String heardNote(String alias) {
     return heard(alias)
+        + HeardSql.heardRemote(alias + ".remote_actor_id")
         + " AND NOT EXISTS (SELECT 1 FROM user_domain_block hd"
         + " JOIN federation_remote_actor ha ON ha.domain = hd.domain"
         + " WHERE hd.user_id = :viewer AND ha.id = "
@@ -306,6 +309,7 @@ class NoteRepositoryAdapter implements NoteRepository {
             "SELECT n.* FROM note n WHERE n.visibility = 'DIRECT' AND (n.user_id = :viewer"
                 + " OR EXISTS (SELECT 1 FROM note_recipient r"
                 + " WHERE r.note_id = n.id AND r.user_id = :viewer))"
+                + HeardSql.unblockedRemote("n.remote_actor_id")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("viewer", viewerId)
@@ -402,6 +406,7 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " AND "
                     + notReply("ro")
                     + " AND ro.visibility <> 'DIRECT'"
+                    + HeardSql.heardRemote("ro.remote_actor_id")
                     + " UNION ALL"
                     + " SELECT g.note_id, gn.created_at, NULL FROM user_tag_pref f"
                     + " JOIN note_tag g ON g.tag = f.tag"
@@ -584,6 +589,7 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " AND NOT EXISTS (SELECT 1 FROM user_domain_block hd"
                 + " JOIN federation_remote_actor ha ON ha.domain = hd.domain"
                 + " WHERE hd.user_id = :viewer AND ha.id = n.remote_actor_id)"
+                + HeardSql.unblockedRemote("n.remote_actor_id")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("actor", remoteActorId)

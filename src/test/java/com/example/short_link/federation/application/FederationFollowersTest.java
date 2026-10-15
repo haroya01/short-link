@@ -19,16 +19,18 @@ import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationFollowerEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.FollowOnDomain;
+import com.example.short_link.federation.domain.RemoteAccountStanding;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowerRepository;
+import com.example.short_link.federation.domain.repository.RemoteAccountStandingReader;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
-import com.example.short_link.federation.domain.repository.UserDomainBlockRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -52,7 +54,7 @@ class FederationFollowersTest {
   private static final String TARGET_URI = "https://kurl.me/ap/actors/owner1";
 
   @Mock private FederationFollowerRepository followers;
-  @Mock private UserDomainBlockRepository domainBlocks;
+  @Mock private RemoteAccountStandingReader standings;
   @Mock private FederationActorRepository actorRows;
   @Mock private RemoteActorRepository remoteActors;
   @Mock private DeliveryQueue deliveries;
@@ -61,7 +63,7 @@ class FederationFollowersTest {
   private FederationFollowers service() {
     return new FederationFollowers(
         followers,
-        domainBlocks,
+        standings,
         actorRows,
         remoteActors,
         deliveries,
@@ -173,9 +175,14 @@ class FederationFollowersTest {
     verify(remoteActors).delete(alice);
   }
 
+  private void standing(boolean domainBlocked, boolean blocking, boolean muting) {
+    when(standings.of(eq(7L), eq(List.of(42L)), any()))
+        .thenReturn(Map.of(42L, new RemoteAccountStanding(domainBlocked, blocking, muting)));
+  }
+
   @Test
   void aFollowFromABlockedServerIsRejectedAndNeverStored() {
-    when(domainBlocks.blocks(7L, "mastodon.example")).thenReturn(true);
+    standing(true, false, false);
 
     service().follow(TARGET, alice(), "https://mastodon.example/f/1");
 
@@ -186,6 +193,68 @@ class FederationFollowersTest {
     assertThat(reject.path("id").asString()).startsWith(TARGET_URI + "#rejects/follows/");
     assertThat(reject.path("object").path("id").asString())
         .isEqualTo("https://mastodon.example/f/1");
+  }
+
+  @Test
+  void aFollowFromABlockedAccountIsRejectedAndNeverStored() {
+    standing(false, true, false);
+
+    service().follow(TARGET, alice(), "https://mastodon.example/f/1");
+
+    verify(followers, never()).save(any());
+    verifyNoInteractions(events);
+    assertThat(enqueuedAccept().path("type").asString()).isEqualTo("Reject");
+  }
+
+  @Test
+  void aFollowFromAMutedAccountIsStillAccepted() {
+    standing(false, false, true);
+    when(followers.find(7L, 42L)).thenReturn(Optional.empty());
+
+    service().follow(TARGET, alice(), "https://mastodon.example/f/1");
+
+    verify(followers).save(any());
+    assertThat(enqueuedAccept().path("type").asString()).isEqualTo("Accept");
+  }
+
+  @Test
+  void droppingAnAcceptedFollowerRejectsTheirFollowWithoutSettlingARequest() {
+    FederationFollowerEntity row =
+        new FederationFollowerEntity(7L, 42L, "https://mastodon.example/f/1");
+    row.accept(Instant.parse("2026-10-06T00:00:00Z"));
+    when(followers.find(7L, 42L)).thenReturn(Optional.of(row));
+
+    service().drop(7L, Optional.of(TARGET_URI), alice());
+
+    verify(followers).delete(7L, 42L);
+    verifyNoInteractions(events);
+    JsonNode reject = enqueuedAccept();
+    assertThat(reject.path("type").asString()).isEqualTo("Reject");
+    assertThat(reject.path("object").path("id").asString())
+        .isEqualTo("https://mastodon.example/f/1");
+  }
+
+  @Test
+  void droppingAWaitingRequestSettlesItAndWithoutAnActorSendsNothing() {
+    when(followers.find(7L, 42L))
+        .thenReturn(
+            Optional.of(new FederationFollowerEntity(7L, 42L, "https://mastodon.example/f/1")));
+
+    service().drop(7L, Optional.empty(), alice());
+
+    verify(followers).delete(7L, 42L);
+    verify(events).publishEvent(new FollowRequestSettledEvent(7L, null, 42L));
+    verifyNoInteractions(deliveries);
+  }
+
+  @Test
+  void droppingSomeoneWhoDoesNotFollowDoesNothing() {
+    when(followers.find(7L, 42L)).thenReturn(Optional.empty());
+
+    service().drop(7L, Optional.of(TARGET_URI), alice());
+
+    verify(followers, never()).delete(any(), any());
+    verifyNoInteractions(events, deliveries);
   }
 
   @Test
