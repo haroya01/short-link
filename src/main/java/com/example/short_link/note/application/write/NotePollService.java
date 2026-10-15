@@ -50,6 +50,9 @@ public class NotePollService implements RemoteNotePollVotes {
     if (note.isOwnedBy(userId)) {
       throw new NoteException(NoteErrorCode.NOTE_POLL_OWN);
     }
+    if (note.isRemote()) {
+      throw new NoteException(NoteErrorCode.NOTE_POLL_ELSEWHERE);
+    }
     Instant now = clock.instant();
     if (note.pollEndedBy(now)) {
       throw new NoteException(NoteErrorCode.NOTE_POLL_ENDED);

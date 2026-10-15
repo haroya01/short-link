@@ -3,13 +3,17 @@ package com.example.short_link.federation.presentation;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.federation.application.ActorKeys;
+import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
+import com.example.short_link.testsupport.FederationFixtures;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -28,6 +32,7 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
 
   @MockitoBean private FederationHttp http;
   @Autowired private FederationUrls urls;
+  @Autowired private FederationActorService localActors;
   @Autowired private SigningKeys signingKeys;
 
   private String tag;
@@ -295,6 +300,61 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
                 token,
                 200));
     assertThat(listed.path("items").get(0)).isEqualTo(note.path("note"));
+  }
+
+  @Test
+  void aNewlySeenAccountsPageIsFilledFromItsOutboxOnceInSixHours() throws Exception {
+    String server = "https://" + host("outbox");
+    long alice = seed("alice", host("outbox"));
+    String actor = server + "/users/alice";
+    when(http.get(eq(URI.create(actor)), any()))
+        .thenReturn(
+            ok(
+                "{\"id\":\"%s\",\"type\":\"Person\",\"outbox\":\"%s/outbox\"}"
+                    .formatted(actor, actor)));
+    when(http.get(eq(URI.create(actor + "/outbox")), any()))
+        .thenReturn(
+            ok(
+                FederationFixtures.text("mastodon-outbox.json")
+                    .replace("https://mastodon.example", server)));
+    String me = urls.actor(localActors.byUserId(owner.getId()).orElseThrow().publicId());
+    when(http.get(eq(URI.create(actor + "/outbox?page=true")), any()))
+        .thenReturn(
+            ok(
+                FederationFixtures.text("mastodon-outbox-page.json")
+                    .replace("https://mastodon.example", server)
+                    .replace("files.mastodon.example", "files." + host("outbox"))
+                    .replace("KURL_MEMBER_ACTOR", me)
+                    .replace("KURL_MEMBER_NAME", owner.getUsername())));
+
+    var filled =
+        body(
+            call(
+                "federation-remote-notes-filled",
+                "GET",
+                "/api/v1/federation/accounts/" + alice + "/notes",
+                null,
+                token,
+                200));
+    List<String> kinds = new ArrayList<>();
+    filled.path("items").forEach(item -> kinds.add(item.path("remote").path("kind").asString()));
+    assertThat(kinds).containsExactly("NOTE", "NOTE", "QUESTION");
+    assertThat(filled.path("items").get(2).path("poll").path("votersCount").asLong()).isEqualTo(12);
+    assertThat(
+            count("SELECT COUNT(*) FROM notification WHERE recipient_user_id = ?", owner.getId()))
+        .isZero();
+
+    var again =
+        body(
+            call(
+                "federation-remote-notes-filled-again",
+                "GET",
+                "/api/v1/federation/accounts/" + alice + "/notes",
+                null,
+                token,
+                200));
+    assertThat(again.path("items")).isEqualTo(filled.path("items"));
+    verify(http, times(3)).get(any(), any());
   }
 
   @Test

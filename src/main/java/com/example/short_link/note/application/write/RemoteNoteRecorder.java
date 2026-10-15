@@ -5,6 +5,8 @@ import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.RemoteNotes;
+import com.example.short_link.common.note.RemoteNotes.Poll;
+import com.example.short_link.common.note.RemoteNotes.Shape;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
@@ -35,6 +37,7 @@ import org.springframework.transaction.annotation.Transactional;
 class RemoteNoteRecorder implements RemoteNotes {
 
   private static final int MAX_WARNING = NoteEntity.MAX_WARNING_LENGTH;
+  private static final int MAX_TITLE = 255;
   private static final int MAX_CONTENT_TYPE = 32;
 
   private final NoteRepository notes;
@@ -103,6 +106,9 @@ class RemoteNoteRecorder implements RemoteNotes {
     NoteVisibility visibility =
         NoteVisibility.parse(received.visibility()).orElse(NoteVisibility.DIRECT);
     String warning = warning(received.contentWarning());
+    Shape shape = received.shape();
+    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+    Poll poll = shape.poll();
     Optional<Long> stored =
         notes.insertRemote(
             new RemoteNoteRow(
@@ -118,7 +124,19 @@ class RemoteNoteRecorder implements RemoteNotes {
                 parent == null ? null : parent.conversation(),
                 parent != null || received.inReplyToUri() != null,
                 parent == null ? NoteReplyPolicy.EVERYONE : parent.getReplyPolicy(),
-                received.language()));
+                received.language(),
+                shape.kind().name(),
+                cut(shape.title(), MAX_TITLE),
+                cut(shape.community(), MAX_TITLE),
+                poll == null
+                    ? null
+                    : new RemoteNoteRow.Poll(
+                        poll.options(),
+                        pollEnds(poll, now),
+                        poll.multiple(),
+                        now,
+                        poll.votes(),
+                        poll.voters())));
     if (stored.isEmpty()) {
       return Optional.empty();
     }
@@ -128,6 +146,9 @@ class RemoteNoteRecorder implements RemoteNotes {
     Set<Long> addressed = new LinkedHashSet<>(received.addressedUserIds());
     if (visibility.restricted() && !addressed.isEmpty()) {
       notes.addRecipients(noteId, List.copyOf(addressed));
+    }
+    if (!received.notifies()) {
+      return stored;
     }
     String excerpt = NoteEntity.excerptOf(received.body());
     if (parent != null && parent.getUserId() != null) {
@@ -203,10 +224,18 @@ class RemoteNoteRecorder implements RemoteNotes {
     List<NoteMediaEntity> attached = mediaRows(noteId, revision.media());
     boolean mediaChanged = !sameMedia(media.findByNoteIds(List.of(noteId)), attached);
     note.writeIn(revision.language());
+    Shape shape = revision.shape();
+    String title = cut(shape.title(), MAX_TITLE);
+    boolean reshaped =
+        !Objects.equals(title, note.getRemoteTitle())
+            || !Objects.equals(note.pollOptions(), pollOptions(shape.poll()));
+    note.describeElsewhere(shape.kind().name(), title, cut(shape.community(), MAX_TITLE));
+    tally(note, shape.poll());
     if (revision.body().equals(note.getBody())
         && Objects.equals(warning, note.getContentWarning())
         && sensitive == note.isSensitive()
-        && !mediaChanged) {
+        && !mediaChanged
+        && !reshaped) {
       return true;
     }
     boolean retagged = !Hashtags.sameTags(note.getBody(), revision.body());
@@ -230,6 +259,37 @@ class RemoteNoteRecorder implements RemoteNotes {
   @Transactional
   public boolean retract(Long remoteActorId, String uri) {
     return notes.deleteRemote(remoteActorId, uri) > 0;
+  }
+
+  @Override
+  @Transactional(readOnly = true)
+  public int countListed(Long remoteActorId, int atMost) {
+    return notes.countListed(remoteActorId, atMost);
+  }
+
+  // New counts or a later end are not an edit: Mastodon sends them in an Update as votes come in.
+  private void tally(NoteEntity note, Poll poll) {
+    if (poll == null) {
+      if (note.hasPoll()) {
+        note.dropPoll();
+      }
+      return;
+    }
+    Instant now = clock.instant().truncatedTo(ChronoUnit.MICROS);
+    note.pollElsewhere(
+        poll.options(), pollEnds(poll, now), poll.multiple(), poll.votes(), poll.voters(), now);
+  }
+
+  private static List<String> pollOptions(Poll poll) {
+    return poll == null ? List.of() : poll.options();
+  }
+
+  private static Instant pollEnds(Poll poll, Instant now) {
+    Instant ends = poll.endsAt() == null ? null : poll.endsAt().truncatedTo(ChronoUnit.MICROS);
+    if (poll.closed() && (ends == null || ends.isAfter(now))) {
+      return now;
+    }
+    return ends;
   }
 
   private static List<NoteMediaEntity> mediaRows(Long noteId, List<Media> attached) {

@@ -143,8 +143,10 @@
 # its server. Reading the account by id asks the same.
 @junit | federation-remote-lookup | 3 | 0 | 0 | 0 | 3
 # Follow: the account, no block on its server, the member's actor (user, preference, actor), no
-# follow yet, the follow row, then the Follow delivery's dedupe check and insert.
-@junit | federation-remote-follow | 7 | 2 | 0 | 0 | 9
+# follow yet, the follow row, then the Follow delivery's dedupe check and insert. After commit the
+# account's history is filled in once: the account, its outbox marked looked at, its kept notes
+# counted, the instance key; its server does not resolve here, so nothing is fetched.
+@junit | federation-remote-follow | 10 | 2 | 1 | 0 | 13
 # Accept to the personal inbox: inbox owner (actor, user, preference), the signer's key, our follow
 # by its id, and its accepted time.
 @junit | federation-remote-accept | 5 | 0 | 1 | 0 | 6
@@ -178,8 +180,9 @@
 # The block list is one paged join of blocks and accounts, then the standing of the page.
 @junit | federation-remote-blocks | 2 | 0 | 0 | 0 | 2
 @junit | federation-remote-account-blocked | 3 | 0 | 0 | 0 | 3
-# Its notes page leaves everything out inside the one page statement.
-@junit | federation-remote-notes-blocked | 1 | 0 | 0 | 0 | 1
+# Its notes page asks for nothing from its server for the member who blocked it (the account,
+# the member's standing toward it) and leaves everything out inside the one page statement.
+@junit | federation-remote-notes-blocked | 3 | 0 | 0 | 0 | 3
 # Opening its note directly stops at the note statement.
 @junit | notes-thread-blocked-account | 1 | 0 | 0 | 0 | 1
 # Following it stops at the standing, before the member's actor is read.
@@ -195,8 +198,10 @@
 @junit | federation-remote-mute | 4 | 1 | 0 | 0 | 5
 # The mute list: one paged join of live mutes and accounts, the page's standing and follows.
 @junit | federation-remote-mutes | 3 | 0 | 0 | 0 | 3
-# A muted account's own notes page still shows its notes, as the account notes page does.
-@junit | federation-remote-notes-muted | 6 | 0 | 0 | 0 | 6
+# A muted account's own notes page still shows its notes, as the account notes page does, and a
+# mute does not stop the history fill (account, standing, outbox marked, notes counted, instance
+# key; the server does not resolve here).
+@junit | federation-remote-notes-muted | 10 | 0 | 1 | 0 | 11
 # A mute with its notices silences a reply's notice at the same one check.
 @junit | federation-inbox-reply-muted-account | 10 | 1 | 0 | 0 | 11
 # A duration outside a minute to a year is refused after the account is read.
@@ -238,7 +243,17 @@
 @junit | notes-federated | 6 | 0 | 0 | 0 | 6
 @junit | notes-federated-anonymous | 0 | 0 | 0 | 0 | 0
 @junit | notes-following-remote | 7 | 0 | 0 | 0 | 7
-@junit | federation-remote-notes | 6 | 0 | 0 | 0 | 6
+# The account's notes page, first page: with one note kept, its history is filled in before the
+# page (account, the member's standing, outbox marked looked at, notes counted, instance key; the
+# server does not resolve here), then the page as before.
+@junit | federation-remote-notes | 10 | 0 | 1 | 0 | 11
+# A poll and an article from a followed account: before the key, is anyone following it; then the
+# key and the one INSERT IGNORE carrying its kind, title and poll counts, and its id; the article's
+# picture is its one image. Neither costs a query on the following feed: a poll from elsewhere
+# brings its server's counts, so no tally is read.
+@junit | federation-inbox-remote-question | 3 | 1 | 0 | 0 | 4
+@junit | federation-inbox-remote-article | 3 | 2 | 0 | 0 | 5
+@junit | notes-following-remote-shapes | 7 | 0 | 0 | 0 | 7
 # All notes stays kurl's own (remote_actor_id IS NULL), the same four queries as before.
 @junit | notes-everyone-without-remote | 5 | 0 | 0 | 0 | 5
 # A reply to a member's note is wanted from anyone: the target is checked with the note document's
@@ -310,10 +325,19 @@
 # A note address: server suspended, instance key, is the note kept, its author (cached, fresh), then
 # the inbox's INSERT IGNORE and its id; the answer is the account notes page's item for that note
 # (note, its thread chain, remote author, media, stats, the member's marks). Asked again, the kept
-# note is answered without a write; the account's notes page carries the same item.
+# note is answered without a write; the account's notes page carries the same item, after the
+# history fill finds its server silent (account, standing, outbox marked, notes counted, instance
+# key).
 @junit | federation-resolve-note | 11 | 1 | 0 | 0 | 12
 @junit | federation-resolve-note-again | 9 | 0 | 0 | 0 | 9
-@junit | federation-resolve-note-listed | 6 | 0 | 0 | 0 | 6
+@junit | federation-resolve-note-listed | 10 | 0 | 1 | 0 | 11
+# A newly seen account's notes page: the account, the member's standing, its outbox marked looked
+# at, its kept notes counted; then off the request thread the instance key and, from its outbox's
+# first page, its own public top-level notes: each INSERT IGNORE and its id, a hashtag, the member
+# a note names, a picture; nobody is told. Then the page (one name looked up for the mention).
+# Asked again within six hours, only the account is read before the page.
+@junit | federation-remote-notes-filled | 15 | 5 | 1 | 0 | 21
+@junit | federation-remote-notes-filled-again | 8 | 0 | 0 | 0 | 8
 # Failures: anonymous is turned away and this server's own addresses and malformed handles are
 # answered before any query; a server that does not answer costs the block check and the instance
 # key; a suspended server is never asked.

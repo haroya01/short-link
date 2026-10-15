@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application;
 
 import static com.example.short_link.federation.application.ActivityStreams.idOf;
+import static com.example.short_link.federation.application.ActivityStreams.idsOf;
 
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.note.NoteSnapshotReader;
@@ -38,6 +39,31 @@ public class RemoteNoteIntake {
 
   public Optional<Long> keep(
       RemoteActorEntity actor, RemoteNoteParser.Parsed note, NoteSnapshot parent) {
+    return keep(actor, note, parent, true);
+  }
+
+  // A note from the account's own outbox: written by it, public or unlisted, not a reply, and told
+  // to no one, since it may be years old.
+  public boolean fromHistory(RemoteActorEntity actor, JsonNode object) {
+    String uri = idOf(object);
+    if (uri == null
+        || uri.length() > MAX_URI
+        || RemoteNoteParser.kindOf(object).isEmpty()
+        || !actor.getDomain().equals(RemoteActorParser.host(uri))
+        || !idsOf(object.get("attributedTo")).contains(actor.getActorUri())
+        || idOf(object.get("inReplyTo")) != null
+        || earlyDeletes.remembered(actor.getId(), uri)) {
+      return false;
+    }
+    RemoteNoteParser.Parsed note = parser.parse(object, object);
+    return SHAREABLE.contains(note.visibility()) && keep(actor, note, null, false).isPresent();
+  }
+
+  private Optional<Long> keep(
+      RemoteActorEntity actor,
+      RemoteNoteParser.Parsed note,
+      NoteSnapshot parent,
+      boolean notifies) {
     boolean answers = parent == null || mayRead(actor, parent);
     List<Long> addressed =
         actorRows.findByPublicIds(note.addressedPublicIds()).stream()
@@ -57,7 +83,9 @@ public class RemoteNoteIntake {
             note.inReplyToUri(),
             addressed,
             note.media(),
-            note.language()));
+            note.language(),
+            note.shape(),
+            notifies));
   }
 
   public Optional<Long> fetched(JsonNode object, URI from) {
@@ -73,7 +101,7 @@ public class RemoteNoteIntake {
     if (kept.isPresent()) {
       return kept;
     }
-    String attributedTo = idOf(object.get("attributedTo"));
+    String attributedTo = idsOf(object.get("attributedTo")).stream().findFirst().orElse(null);
     if (attributedTo == null || !host.equals(RemoteActorParser.host(attributedTo))) {
       return Optional.empty();
     }

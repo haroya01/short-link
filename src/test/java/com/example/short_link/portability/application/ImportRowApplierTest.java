@@ -118,7 +118,7 @@ class ImportRowApplierTest {
 
     assertThat(applier().apply(7L, ImportKind.FOLLOWING, List.of("Alice@Mastodon.Social", "true")))
         .isTrue();
-    verify(remoteFollowing).follow(7L, 42L);
+    verify(remoteFollowing).followFromImport(7L, 42L);
   }
 
   @Test

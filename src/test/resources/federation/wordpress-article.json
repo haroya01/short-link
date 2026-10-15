@@ -1,0 +1,40 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    {
+      "Hashtag": "as:Hashtag",
+      "sensitive": "as:sensitive"
+    }
+  ],
+  "id": "https://blog.example/?p=42",
+  "type": "Article",
+  "attachment": [
+    {
+      "type": "Image",
+      "url": "https://blog.example/wp-content/uploads/2026/10/tomatoes.jpg",
+      "mediaType": "image/jpeg",
+      "name": "Tomatoes ripening on the vine"
+    }
+  ],
+  "attributedTo": "https://blog.example/?author=1",
+  "content": "<h2>Spring</h2><p>The first seedlings went in late. Everything that follows is a long story about patience, slugs and the one heirloom that made it.</p><h2>Summer</h2><p>More words than anyone should copy into a feed.</p>",
+  "contentMap": {
+    "en": "<h2>Spring</h2><p>The first seedlings went in late. Everything that follows is a long story about patience, slugs and the one heirloom that made it.</p><h2>Summer</h2><p>More words than anyone should copy into a feed.</p>"
+  },
+  "name": "What the garden taught me this year",
+  "published": "2026-10-01T12:00:00Z",
+  "summary": "A season of tomatoes, slugs &amp; patience. [&hellip;]",
+  "summaryMap": {"en": "A season of tomatoes, slugs &amp; patience. [&hellip;]"},
+  "tag": [
+    {"type": "Hashtag", "href": "https://blog.example/tag/garden/", "name": "#garden"}
+  ],
+  "updated": "2026-10-02T08:00:00Z",
+  "url": "https://blog.example/2026/10/01/what-the-garden-taught-me/",
+  "to": [
+    "https://www.w3.org/ns/activitystreams#Public",
+    "https://blog.example/wp-json/activitypub/1.0/actors/1/followers"
+  ],
+  "cc": [],
+  "mediaType": "text/html",
+  "sensitive": false
+}

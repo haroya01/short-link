@@ -11,6 +11,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.event.RemoteAccountFollowedEvent;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationFollowingEntity;
@@ -37,6 +38,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
@@ -58,6 +60,7 @@ class RemoteFollowingTest {
   @Mock private FederationActorService localActors;
   @Mock private FederationActorRepository actorRows;
   @Mock private DeliveryQueue deliveries;
+  @Mock private ApplicationEventPublisher events;
 
   private RemoteActorEntity alice;
 
@@ -95,6 +98,7 @@ class RemoteFollowingTest {
         deliveries,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
         JSON,
+        events,
         Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -213,6 +217,18 @@ class RemoteFollowingTest {
     assertThat(follow.path("type").asString()).isEqualTo("Follow");
     assertThat(follow.path("actor").asString()).isEqualTo(ME);
     assertThat(follow.path("object").asString()).isEqualTo(ALICE);
+    verify(events).publishEvent(new RemoteAccountFollowedEvent(7L, 42L));
+  }
+
+  @Test
+  void anImportedFollowIsSentButAsksForNoHistory() {
+    when(localActors.byUserId(7L)).thenReturn(Optional.of(LOCAL));
+    when(followings.find(7L, 42L)).thenReturn(Optional.empty());
+
+    assertThat(following().followFromImport(7L, 42L).requested()).isTrue();
+
+    verify(deliveries).enqueue(eq(7L), anyString(), anyString(), eq(List.of(ALICE + "/inbox")));
+    verifyNoInteractions(events);
   }
 
   @Test
@@ -222,7 +238,7 @@ class RemoteFollowingTest {
 
     assertThat(following().follow(7L, 42L).following()).isTrue();
     verify(followings, never()).save(any());
-    verifyNoInteractions(deliveries);
+    verifyNoInteractions(deliveries, events);
   }
 
   @Test

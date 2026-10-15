@@ -1,6 +1,7 @@
 package com.example.short_link.note.application.read;
 
 import com.example.short_link.common.note.Mentions;
+import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
@@ -25,6 +26,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -158,9 +160,27 @@ public class NoteViews {
               null,
               note.getReplyPolicy().apiName(),
               viewerId == null ? null : !closedThreads.contains(note.conversation()),
-              note.isReplyHidden()));
+              note.isReplyHidden(),
+              remote(note)));
     }
     return views;
+  }
+
+  private static NoteView.Remote remote(NoteEntity note) {
+    if (!note.isRemote()) {
+      return null;
+    }
+    String url = note.getRemoteUrl();
+    return new NoteView.Remote(
+        note.getRemoteKind() == null ? RemoteNotes.Kind.NOTE.name() : note.getRemoteKind(),
+        note.getRemoteTitle(),
+        web(url) ? url : note.getUri(),
+        note.getRemoteCommunity());
+  }
+
+  private static boolean web(String url) {
+    String lower = url == null ? "" : url.toLowerCase(Locale.ROOT);
+    return lower.startsWith("https://") || lower.startsWith("http://");
   }
 
   // The first notes of the page's threads that limit replies, read only when the viewer is signed
@@ -343,21 +363,25 @@ public class NoteViews {
     return chains;
   }
 
-  // Like link cards, a page without a poll costs no query.
+  // Like link cards, a page without a poll of its own costs no query: a poll from elsewhere carries
+  // its server's counts.
   private Map<Long, NoteView.Poll> polls(List<NoteEntity> visible, Long viewerId) {
     List<NoteEntity> polled = visible.stream().filter(NoteEntity::hasPoll).toList();
     Map<Long, NoteView.Poll> views = new HashMap<>();
     if (polled.isEmpty()) {
       return views;
     }
+    List<Long> counted =
+        polled.stream().filter(note -> !note.isRemote()).map(NoteEntity::getId).toList();
     Map<Long, NotePollTally> tallies =
-        polls.tallies(polled.stream().map(NoteEntity::getId).toList(), viewerId);
+        counted.isEmpty() ? Map.of() : polls.tallies(counted, viewerId);
     Instant now = clock.instant();
     for (NoteEntity note : polled) {
-      views.put(
-          note.getId(),
-          NotePolls.view(
-              note, tallies.getOrDefault(note.getId(), NotePollTally.NONE), viewerId, now));
+      NotePollTally tally =
+          note.isRemote()
+              ? note.remoteTally()
+              : tallies.getOrDefault(note.getId(), NotePollTally.NONE);
+      views.put(note.getId(), NotePolls.view(note, tally, viewerId, now));
     }
     return views;
   }

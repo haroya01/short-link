@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application;
 
+import com.example.short_link.common.event.RemoteAccountFollowedEvent;
 import com.example.short_link.federation.application.delivery.DeliveryQueue;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationFollowingEntity;
@@ -21,6 +22,7 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.json.JsonMapper;
@@ -39,6 +41,7 @@ public class RemoteFollowing {
   private final DeliveryQueue deliveries;
   private final FederationUrls urls;
   private final JsonMapper json;
+  private final ApplicationEventPublisher events;
   private final Clock clock;
 
   @Autowired
@@ -51,7 +54,8 @@ public class RemoteFollowing {
       FederationActorRepository actorRows,
       DeliveryQueue deliveries,
       FederationUrls urls,
-      JsonMapper json) {
+      JsonMapper json,
+      ApplicationEventPublisher events) {
     this(
         followings,
         standings,
@@ -62,6 +66,7 @@ public class RemoteFollowing {
         deliveries,
         urls,
         json,
+        events,
         Clock.systemUTC());
   }
 
@@ -75,6 +80,7 @@ public class RemoteFollowing {
       DeliveryQueue deliveries,
       FederationUrls urls,
       JsonMapper json,
+      ApplicationEventPublisher events,
       Clock clock) {
     this.followings = followings;
     this.standings = standings;
@@ -85,6 +91,7 @@ public class RemoteFollowing {
     this.deliveries = deliveries;
     this.urls = urls;
     this.json = json;
+    this.events = events;
     this.clock = clock;
   }
 
@@ -122,6 +129,17 @@ public class RemoteFollowing {
 
   @Transactional
   public RemoteAccountView follow(Long userId, Long remoteActorId) {
+    return request(userId, remoteActorId, true);
+  }
+
+  // An import follows hundreds of accounts at once, so it asks none of their servers for history;
+  // each is filled in when someone opens its page.
+  @Transactional
+  public RemoteAccountView followFromImport(Long userId, Long remoteActorId) {
+    return request(userId, remoteActorId, false);
+  }
+
+  private RemoteAccountView request(Long userId, Long remoteActorId, boolean fillHistory) {
     RemoteActorEntity remote = remote(remoteActorId);
     RemoteAccountStanding standing = standing(userId, remote);
     if (standing.domainBlocked()) {
@@ -147,6 +165,9 @@ public class RemoteFollowing {
     follow.putAll(follow(followId, actor, remote.getActorUri()));
     deliveries.enqueue(
         userId, followId, json.writeValueAsString(follow), List.of(remote.getInbox()));
+    if (fillHistory) {
+      events.publishEvent(new RemoteAccountFollowedEvent(userId, remote.getId()));
+    }
     return RemoteAccountView.of(remote, Optional.of(row), standing);
   }
 
