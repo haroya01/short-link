@@ -72,7 +72,9 @@ class RemoteAccountFinderTest {
             "mastodon.example",
             null,
             null,
-            null),
+            null,
+            false,
+            false),
         Instant.parse("2026-10-06T00:00:00Z"));
   }
 

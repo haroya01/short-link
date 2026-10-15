@@ -64,7 +64,9 @@ class InboxVerifierTest {
             "mastodon.example",
             null,
             null,
-            null),
+            null,
+            false,
+            false),
         fetchedAt);
   }
 

@@ -428,7 +428,9 @@ class NoteFederationTest {
             "b.example",
             "https://b.example/@bob",
             null,
-            null),
+            null,
+            false,
+            false),
         Instant.parse("2026-10-07T00:00:00Z"));
   }
 

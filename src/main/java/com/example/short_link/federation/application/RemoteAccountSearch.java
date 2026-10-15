@@ -30,4 +30,11 @@ public class RemoteAccountSearch {
         .map(RemoteAccountView::of)
         .toList();
   }
+
+  @Transactional(readOnly = true)
+  public List<RemoteAccountView> suggestions(Long viewerId, int limit) {
+    return actors.suggestions(viewerId, Math.clamp(limit, 1, MAX_LIMIT), clock.instant()).stream()
+        .map(RemoteAccountView::of)
+        .toList();
+  }
 }

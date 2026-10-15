@@ -889,9 +889,12 @@ class NoteRepositoryAdapter implements NoteRepository {
             ? "MATCH(n.body) AGAINST(:term IN BOOLEAN MODE)"
             : "LOWER(n.body) LIKE :term ESCAPE '!'";
     return em.createNativeQuery(
-            "SELECT n.* FROM note n WHERE n.visibility = 'PUBLIC' AND n.remote_actor_id IS NULL AND "
+            "SELECT n.* FROM note n WHERE n.visibility = 'PUBLIC' AND "
                 + term
-                + heard("n")
+                + " AND (n.remote_actor_id IS NULL OR EXISTS (SELECT 1 FROM federation_remote_actor ia"
+                + " WHERE ia.id = n.remote_actor_id AND ia.indexable))"
+                + heardNote("n")
+                + unlimited("n")
                 + " ORDER BY n.id DESC",
             NoteEntity.class)
         .setParameter("term", match != null ? match : like)

@@ -70,7 +70,9 @@ public final class RemoteActorParser {
             host,
             link(document.get("url")),
             text(document.get("name")),
-            link(document.get("icon"))));
+            link(document.get("icon")),
+            flag(document.get("discoverable")),
+            flag(document.get("indexable"))));
   }
 
   private static JsonNode publicKey(JsonNode document, String keyId) {
@@ -104,6 +106,10 @@ public final class RemoteActorParser {
       return url != null ? url : text(node.get("href"));
     }
     return text(node);
+  }
+
+  private static boolean flag(JsonNode node) {
+    return node != null && node.isBoolean() && node.asBoolean();
   }
 
   private static String text(JsonNode node) {

@@ -53,6 +53,12 @@ public class RemoteActorEntity extends BaseTimeEntity {
   @Column(name = "avatar_url", length = 512)
   private String avatarUrl;
 
+  @Column(nullable = false)
+  private boolean discoverable;
+
+  @Column(nullable = false)
+  private boolean indexable;
+
   @Column(name = "fetched_at", nullable = false)
   private Instant fetchedAt;
 
@@ -78,6 +84,8 @@ public class RemoteActorEntity extends BaseTimeEntity {
     this.profileUrl = document.profileUrl();
     this.displayName = document.displayName();
     this.avatarUrl = document.avatarUrl();
+    this.discoverable = document.discoverable();
+    this.indexable = document.indexable();
     this.fetchedAt = fetchedAt;
   }
 

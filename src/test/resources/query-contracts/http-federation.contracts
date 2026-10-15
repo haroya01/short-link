@@ -292,6 +292,15 @@
 @junit | federation-account-search | 1 | 0 | 0 | 0 | 1
 @junit | federation-account-search-anonymous | 1 | 0 | 0 | 0 | 1
 @junit | federation-account-search-short | 0 | 0 | 0 | 0 | 0
+# Suggestions: one statement over the accounts the member's follows follow, counted and ranked,
+# leaving out accounts not open to suggestions, already followed or asked, blocked or muted, and
+# servers suspended, limited or blocked by the member. Signing in comes first.
+@junit | federation-account-suggestions | 1 | 0 | 0 | 0 | 1
+@junit | federation-account-suggestions-anonymous | 0 | 0 | 0 | 0 | 0
+# Note search with a public note from an account that opted into search: the one search statement,
+# then the page as usual with its account from elsewhere (thread chain, remote author, media,
+# stats).
+@junit | notes-search-elsewhere | 5 | 0 | 0 | 0 | 5
 # Resolving a handle already known and fresh reads as the lookup does: the account by handle (its
 # server's block rides along), the member's follow of it, whether they blocked its server.
 @junit | federation-resolve-handle | 3 | 0 | 0 | 0 | 3

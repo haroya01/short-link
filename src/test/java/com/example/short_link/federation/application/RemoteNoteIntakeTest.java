@@ -70,7 +70,9 @@ class RemoteNoteIntakeTest {
                 domain,
                 null,
                 null,
-                null),
+                null,
+                false,
+                false),
             Instant.parse("2026-10-06T00:00:00Z"));
     ReflectionTestUtils.setField(actor, "id", 42L);
     return actor;

@@ -141,6 +141,70 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   @Test
+  void aMemberIsSuggestedAccountsTheirFollowsFollowAndFindsTheirPublicNotes() throws Exception {
+    long carol = seed(tag + "c", host("carol"));
+    long quiet = seed(tag + "q", host("quiet"));
+    jdbc.update(
+        "UPDATE federation_remote_actor SET discoverable = TRUE, indexable = TRUE WHERE id = ?",
+        carol);
+    var friend = createUser();
+    jdbc.update(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        owner.getId(),
+        friend.getId());
+    for (long account : List.of(carol, quiet)) {
+      jdbc.update(
+          "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+              + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+          friend.getId(),
+          account,
+          "https://kurl.me/ap/actors/x#follows/" + tag + account);
+    }
+    String word = "zqx" + tag;
+    for (long account : List.of(carol, quiet)) {
+      jdbc.update(
+          "INSERT INTO note (remote_actor_id, uri, body, created_at) VALUES (?, ?, ?, NOW(6))",
+          account,
+          "https://elsewhere.example/" + tag + "/" + account,
+          "notes about " + word);
+    }
+    try {
+      var suggested =
+          body(
+              call(
+                  "federation-account-suggestions",
+                  "GET",
+                  "/api/v1/federation/accounts/suggestions",
+                  null,
+                  token,
+                  200));
+      assertThat(accts(suggested)).containsExactly(tag + "c@" + host("carol"));
+      call(
+          "federation-account-suggestions-anonymous",
+          "GET",
+          "/api/v1/federation/accounts/suggestions",
+          null,
+          null,
+          401);
+
+      var found =
+          body(
+              call(
+                  "notes-search-elsewhere",
+                  "GET",
+                  "/api/v1/public/notes/search?q=" + word,
+                  null,
+                  null,
+                  200));
+      assertThat(found.path("items")).hasSize(1);
+      assertThat(found.path("items").get(0).path("author").path("remoteId").asLong())
+          .isEqualTo(carol);
+    } finally {
+      jdbc.update("DELETE FROM note WHERE remote_actor_id IN (?, ?)", carol, quiet);
+    }
+  }
+
+  @Test
   void aMemberResolvesAHandleAProfileAddressAndANoteAddress() throws Exception {
     long alice = seed(tag, host("exact"));
     String aliceUri = "https://" + host("exact") + "/users/" + tag;

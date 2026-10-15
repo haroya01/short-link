@@ -188,4 +188,118 @@ class RemoteAccountSearchIntegrationTest {
     assertThat(ids(viewer, tag.substring(0, 4) + "%")).isEmpty();
     assertThat(ids(viewer, tag.substring(0, 4) + "_")).isEmpty();
   }
+
+  private Long member(String prefix) {
+    String name = prefix + tag;
+    UserEntity user = new UserEntity(name + "@example.com", "google", name);
+    user.claimUsername(name);
+    return users.save(user).getId();
+  }
+
+  private void exec(String sql, Object... values) {
+    var query = em.createNativeQuery(sql);
+    for (int i = 0; i < values.length; i++) {
+      query.setParameter(i + 1, values[i]);
+    }
+    query.executeUpdate();
+  }
+
+  private Long discoverable(String username, String domain) {
+    Long id = actor(username, domain, null);
+    exec("UPDATE federation_remote_actor SET discoverable = TRUE WHERE id = ?", id);
+    return id;
+  }
+
+  private void follows(Long userId, Long actorId, boolean accepted) {
+    exec(
+        "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at)"
+            + " VALUES (?, ?, ?, "
+            + (accepted ? "NOW(6)" : "NULL")
+            + ", NOW(6), NOW(6))",
+        userId,
+        actorId,
+        "https://kurl.me/ap/actors/x#follows/" + userId + "-" + actorId);
+  }
+
+  @Test
+  void suggestionsAreAccountsThePeopleIFollowFollowMostFirst() {
+    Long first = member("a");
+    Long second = member("b");
+    Long unknown = member("c");
+    for (Long followee : List.of(first, second)) {
+      exec(
+          "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+          viewer,
+          followee);
+    }
+    Long popular = discoverable("popular", domain("one"));
+    Long single = discoverable("single", domain("two"));
+    Long lapsedMute = discoverable("lapsed", domain("three"));
+    Long quiet = actor("quiet", domain("four"), null);
+    Long already = discoverable("already", domain("five"));
+    Long asked = discoverable("asked", domain("six"));
+    Long blocked = discoverable("blocked", domain("seven"));
+    Long muted = discoverable("muted", domain("eight"));
+    Long gone = discoverable("gone", "social." + domain("nine"));
+    Long limited = discoverable("limited", domain("ten"));
+    Long walled = discoverable("walled", domain("eleven"));
+    Long strangers = discoverable("strangers", domain("twelve"));
+    Long waiting = discoverable("waiting", domain("thirteen"));
+    for (Long account :
+        List.of(
+            popular, single, lapsedMute, quiet, already, asked, blocked, muted, gone, limited)) {
+      follows(first, account, true);
+    }
+    follows(second, popular, true);
+    follows(second, quiet, true);
+    follows(second, walled, true);
+    follows(unknown, strangers, true);
+    follows(first, waiting, false);
+    follows(viewer, already, true);
+    follows(viewer, asked, false);
+    exec(
+        "INSERT INTO federation_remote_block (user_id, remote_actor_id, created_at)"
+            + " VALUES (?, ?, NOW(6))",
+        viewer,
+        blocked);
+    exec(
+        "INSERT INTO federation_remote_mute (user_id, remote_actor_id, hide_notifications,"
+            + " expires_at, created_at) VALUES (?, ?, TRUE, NULL, NOW(6))",
+        viewer,
+        muted);
+    exec(
+        "INSERT INTO federation_remote_mute (user_id, remote_actor_id, hide_notifications,"
+            + " expires_at, created_at) VALUES (?, ?, TRUE, ?, NOW(6))",
+        viewer,
+        lapsedMute,
+        Instant.now().minusSeconds(60));
+    serverBlock(domain("nine"), "SUSPEND");
+    serverBlock(domain("ten"), "LIMIT");
+    viewerBlocks(domain("eleven"));
+
+    List<RemoteAccountMatch> found = actors.suggestions(viewer, 20, Instant.now());
+
+    assertThat(found)
+        .extracting(RemoteAccountMatch::id)
+        .containsExactly(popular, lapsedMute, single);
+    assertThat(found.getFirst().username()).isEqualTo("popular");
+    assertThat(found.getFirst().domain()).isEqualTo(domain("one"));
+    assertThat(actors.suggestions(viewer, 1, Instant.now()))
+        .extracting(RemoteAccountMatch::id)
+        .containsExactly(popular);
+    assertThat(actors.suggestions(unknown, 20, Instant.now())).isEmpty();
+  }
+
+  @Test
+  void anAccountByItsAddressIsFoundByTheExactNameAndAServerPrefixOnly() {
+    Long exact = actor(tag, domain("one"), null);
+    actor(tag + "x", domain("one"), null);
+    actor(tag, "other.example", null);
+
+    assertThat(ids(viewer, tag + "@one")).containsExactly(exact);
+    assertThat(ids(viewer, tag + "@")).hasSize(2);
+    assertThat(ids(viewer, tag + "@one%")).isEmpty();
+    assertThat(ids(viewer, tag.toUpperCase() + "@ONE-" + tag)).containsExactly(exact);
+  }
 }

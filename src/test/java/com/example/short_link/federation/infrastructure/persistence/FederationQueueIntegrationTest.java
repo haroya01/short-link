@@ -91,7 +91,9 @@ class FederationQueueIntegrationTest {
                     "mastodon.example",
                     null,
                     null,
-                    null),
+                    null,
+                    false,
+                    false),
                 NOW));
     ReflectionTestUtils.getField(saved, "id");
 

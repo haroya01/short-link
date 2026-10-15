@@ -70,7 +70,9 @@ class RemoteBlocksTest {
                 "mastodon.example",
                 "https://mastodon.example/@alice",
                 "Alice",
-                null),
+                null,
+                false,
+                false),
             NOW);
     ReflectionTestUtils.setField(alice, "id", 42L);
     lenient().when(following.remote(42L)).thenReturn(alice);
@@ -222,7 +224,9 @@ class RemoteBlocksTest {
                 "social.example",
                 null,
                 null,
-                null),
+                null,
+                false,
+                false),
             NOW);
     ReflectionTestUtils.setField(bob, "id", 43L);
     when(blocks.page(7L, 20, 10))

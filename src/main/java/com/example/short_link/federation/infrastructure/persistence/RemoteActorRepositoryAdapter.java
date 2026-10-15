@@ -44,7 +44,28 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
       SEARCH.replace("MATCHES", NAMES).replace("EXACT", "a.username");
 
   private static final String BY_ACCT =
-      SEARCH.replace("MATCHES", NAMES + " OR " + ACCT + " LIKE :prefix").replace("EXACT", ACCT);
+      SEARCH
+          .replace("MATCHES", NAMES + " OR (a.username = :user AND a.domain LIKE :domainPrefix)")
+          .replace("EXACT", ACCT);
+
+  private static final String SUGGESTIONS =
+      "SELECT a.id, a.username, a.domain, a.display_name, a.avatar_url,"
+          + " COALESCE(a.profile_url, a.actor_uri)"
+          + " FROM user_follow uf"
+          + " JOIN federation_following ff"
+          + " ON ff.user_id = uf.following_id AND ff.accepted_at IS NOT NULL"
+          + " JOIN federation_remote_actor a ON a.id = ff.remote_actor_id"
+          + " WHERE uf.follower_id = :viewer AND a.username IS NOT NULL AND a.discoverable"
+          + " AND NOT EXISTS (SELECT 1 FROM federation_following mf"
+          + " WHERE mf.user_id = :viewer AND mf.remote_actor_id = a.id)"
+          + " AND NOT "
+          + ServerBlockSql.suspended("a.id")
+          + " AND NOT "
+          + ServerBlockSql.limitedFor("a.id", ":viewer")
+          + " AND NOT EXISTS (SELECT 1 FROM user_domain_block d"
+          + " WHERE d.user_id = :viewer AND d.domain = a.domain)"
+          + HeardSql.heardRemote("a.id")
+          + " GROUP BY a.id ORDER BY COUNT(*) DESC, a.id DESC";
 
   private final JpaRemoteActorRepository jpa;
   private final EntityManager em;
@@ -77,15 +98,45 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
   @Override
   @SuppressWarnings("unchecked")
   public List<RemoteAccountMatch> search(Long viewerId, String term, int limit, Instant now) {
-    List<Object[]> rows =
-        em.createNativeQuery(term.indexOf('@') >= 0 ? BY_ACCT : BY_NAME)
+    int at = term.indexOf('@');
+    var query =
+        em.createNativeQuery(at >= 0 ? BY_ACCT : BY_NAME)
             .setParameter("viewer", HeardSql.viewer(viewerId))
             .setParameter("prefix", escape(term) + "%")
             .setParameter("exact", term)
+            .setParameter("now", now);
+    if (at >= 0) {
+      query
+          .setParameter("user", term.substring(0, at))
+          .setParameter("domainPrefix", escape(term.substring(at + 1)) + "%");
+    }
+    List<Object[]> rows = query.setMaxResults(limit).getResultList();
+    return rows.stream().map(RemoteActorRepositoryAdapter::match).toList();
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
+  public List<RemoteAccountMatch> suggestions(Long viewerId, int limit, Instant now) {
+    List<Object[]> rows =
+        em.createNativeQuery(SUGGESTIONS)
+            .setParameter("viewer", viewerId)
             .setParameter("now", now)
             .setMaxResults(limit)
             .getResultList();
-    return rows.stream().map(RemoteActorRepositoryAdapter::match).toList();
+    return rows.stream()
+        .map(
+            row ->
+                new RemoteAccountMatch(
+                    ((Number) row[0]).longValue(),
+                    (String) row[1],
+                    (String) row[2],
+                    (String) row[3],
+                    (String) row[4],
+                    (String) row[5],
+                    false,
+                    false,
+                    false))
+        .toList();
   }
 
   @Override
