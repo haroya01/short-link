@@ -189,9 +189,9 @@
 # Its reply is kept for the thread; the author's notice stops at the one silence check.
 @junit | federation-inbox-reply-blocked-account | 10 | 1 | 0 | 0 | 11
 # Unblocking: the account, the block and its delete, the member's actor and the Undo of the Block
-# (dedupe, insert), then the follow and the standing for the answer.
+# (dedupe, insert), then the standing and the follow for the answer.
 @junit | federation-remote-unblock | 6 | 1 | 0 | 1 | 8
-# Muting: the account, the mute row (lookup, insert), then the follow and the standing.
+# Muting: the account, the mute row (lookup, insert), then the standing and the follow.
 @junit | federation-remote-mute | 4 | 1 | 0 | 0 | 5
 # The mute list: one paged join of live mutes and accounts, the page's standing and follows.
 @junit | federation-remote-mutes | 3 | 0 | 0 | 0 | 3
@@ -201,7 +201,7 @@
 @junit | federation-inbox-reply-muted-account | 10 | 1 | 0 | 0 | 11
 # A duration outside a minute to a year is refused after the account is read.
 @junit | federation-remote-mute-invalid | 1 | 0 | 0 | 0 | 1
-# Unmuting: the account, the mute and its delete, then the follow and the standing.
+# Unmuting: the account, the mute and its delete, then the standing and the follow.
 @junit | federation-remote-unmute | 4 | 0 | 0 | 1 | 5
 # Moderators block a whole server (Mastodon's limit and suspend). Limiting: the block row only.
 @junit | admin-server-limit | 1 | 1 | 0 | 0 | 2
