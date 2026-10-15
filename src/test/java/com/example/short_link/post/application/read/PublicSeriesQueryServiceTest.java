@@ -53,7 +53,10 @@ class PublicSeriesQueryServiceTest {
             postRepository,
             subscriptionRepository,
             seriesItemRepository,
-            seriesItemReader);
+            seriesItemReader,
+            new PostSourceViews(
+                new com.example.short_link.link.application.ShortLinkUrlBuilder(
+                    "https://kurl.me")));
   }
 
   private PostEntity publishedPost(long userId, String slug, String title) {

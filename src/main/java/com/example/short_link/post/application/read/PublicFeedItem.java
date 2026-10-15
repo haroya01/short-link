@@ -17,7 +17,8 @@ public record PublicFeedItem(
     long viewCount,
     long likeCount,
     FollowReason followReason,
-    FeedSeriesRef series) {
+    FeedSeriesRef series,
+    PostSourceView source) {
 
   public PublicFeedItem(
       long id,
@@ -46,6 +47,7 @@ public record PublicFeedItem(
         viewCount,
         likeCount,
         null,
+        null,
         null);
   }
 
@@ -64,7 +66,8 @@ public record PublicFeedItem(
         viewCount,
         likeCount,
         reason,
-        series);
+        series,
+        source);
   }
 
   public PublicFeedItem withSeries(FeedSeriesRef ref) {
@@ -82,6 +85,7 @@ public record PublicFeedItem(
         viewCount,
         likeCount,
         followReason,
-        ref);
+        ref,
+        source);
   }
 }

@@ -32,7 +32,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
-// 발견 화면(최신·인기·태그·태그 칩·추천 작가)은 본문이 하한선 아래인 글을 올리지 않는다. 작가 페이지와 검색은 그대로 둔다.
+// 발견 화면(최신·인기·태그·태그 칩·추천 작가)은 본문이 하한선 아래인 글과 발견에서 숨긴 가져온 글을 올리지 않는다. 작가 페이지와 검색은 그대로 둔다.
 class DiscoveryQualityFloorHttpTest extends DockerHttpTest {
 
   private static final Instant BASE = Instant.parse("2026-09-01T00:00:00Z");
@@ -51,6 +51,7 @@ class DiscoveryQualityFloorHttpTest extends DockerHttpTest {
   private Long authorId;
   private Long realId;
   private Long junkId;
+  private Long hiddenId;
 
   @BeforeEach
   void commitOneRealPostAndOneNewerTestPost() {
@@ -73,7 +74,19 @@ class DiscoveryQualityFloorHttpTest extends DockerHttpTest {
               junkId = junk.getId();
               searchText.upsert(junkId, "거거거구ㅜㅅ ㅎㅎㅎ");
 
-              postIds.addAll(List.of(realId, junkId));
+              PostEntity hidden =
+                  PostEntity.importedDraft(
+                      author.getId(), "hidden", null, "NAVER", "https://blog.naver.com/f/1");
+              hidden.updateTitle("숨긴블로그글");
+              hidden.updateTags(List.of(TAG));
+              DiscoverableBodies.discoverable(hidden);
+              Instant at = BASE.plus(Duration.ofDays(3));
+              hidden.publishImported(true, null, null, true, at, at);
+              posts.save(hidden);
+              hiddenId = hidden.getId();
+              searchText.upsert(hiddenId, "숨긴블로그글 " + DiscoverableBodies.PARAGRAPH);
+
+              postIds.addAll(List.of(realId, junkId, hiddenId));
             });
   }
 
@@ -100,7 +113,7 @@ class DiscoveryQualityFloorHttpTest extends DockerHttpTest {
   @ValueSource(strings = {"recent", "trending"})
   void browseFeedsLeaveOutThinPosts(String sort) throws Exception {
     List<Long> ids = feedIds(get("/api/v1/public/posts?sort=" + sort + "&size=50"));
-    assertThat(ids).contains(realId).doesNotContain(junkId);
+    assertThat(ids).contains(realId).doesNotContain(junkId, hiddenId);
   }
 
   @Test
@@ -122,10 +135,13 @@ class DiscoveryQualityFloorHttpTest extends DockerHttpTest {
     JsonNode page = get("/api/v1/public/profiles/floor-author/posts");
     List<Long> onPage = new ArrayList<>();
     page.path("posts").forEach(p -> onPage.add(p.path("id").asLong()));
-    assertThat(onPage).contains(realId, junkId);
+    assertThat(onPage).contains(realId, junkId, hiddenId);
 
     String q = URLEncoder.encode("거거거구", StandardCharsets.UTF_8);
     assertThat(feedIds(get("/api/v1/public/posts?q=" + q + "&size=20"))).contains(junkId);
+    String hiddenQuery = URLEncoder.encode("숨긴블로그글", StandardCharsets.UTF_8);
+    assertThat(feedIds(get("/api/v1/public/posts?q=" + hiddenQuery + "&size=20")))
+        .contains(hiddenId);
   }
 
   private static List<Long> feedIds(JsonNode feed) {

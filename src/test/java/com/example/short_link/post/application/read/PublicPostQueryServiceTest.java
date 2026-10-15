@@ -70,6 +70,8 @@ class PublicPostQueryServiceTest {
             ctaRepository,
             new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me"),
             userBlocks,
+            new PostSourceViews(
+                new com.example.short_link.link.application.ShortLinkUrlBuilder("https://kurl.me")),
             Clock.fixed(NOW, ZoneOffset.UTC));
     lenient().when(userBlocks.between(any(), any())).thenReturn(BlockRelation.NONE);
   }

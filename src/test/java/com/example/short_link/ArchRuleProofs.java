@@ -2,8 +2,10 @@ package com.example.short_link;
 
 import archfixtures.CacheFixtures;
 import archfixtures.EntityFixtures;
+import archfixtures.HtmlFixtures;
 import archfixtures.RedisFixtures;
 import archfixtures.TransactionFixtures;
+import archfixtures.blogimport.application.feed.FeedReaderFixtures;
 import archfixtures.domain.ClockFixtures;
 import com.tngtech.archunit.lang.ArchRule;
 import java.util.List;
@@ -52,7 +54,12 @@ final class ArchRuleProofs {
               "ArchUnitSemanticRulesTest.entitySetters",
               ArchUnitSemanticRulesTest.entitySetters,
               List.of(EntityFixtures.EntityWithPublicSetter.class),
-              List.of(EntityFixtures.EntityWithNamedOperation.class)));
+              List.of(EntityFixtures.EntityWithNamedOperation.class)),
+          new Proof(
+              "ArchUnitGraphRulesTest.jsoupConfinedToHtmlReaders",
+              ArchUnitGraphRulesTest.jsoupConfinedToHtmlReaders,
+              List.of(HtmlFixtures.ParsesHtmlOutsideAReader.class),
+              List.of(FeedReaderFixtures.ParsesHtmlInAFeedReader.class)));
 
   // 아직 반례로 증명하지 못한 규칙. 새 규칙은 여기 추가할 수 없고, 이 목록은 줄어들기만 한다.
   static final Set<String> RULES_WITHOUT_A_PROOF =
@@ -64,7 +71,6 @@ final class ArchRuleProofs {
           "ArchUnitGraphRulesTest.awsSdkConfinedToCommonStorage",
           "ArchUnitGraphRulesTest.maxmindSdkConfinedToCommonGeoip",
           "ArchUnitGraphRulesTest.jjwtSdkConfinedToUserApplication",
-          "ArchUnitGraphRulesTest.jsoupSdkConfinedToOgScraper",
           "ArchUnitGraphRulesTest.burstHeuristicConfinedToBotClassifier",
           "ArchUnitGraphRulesTest.yauaaSdkConfinedToUserAgentClassifier",
           "ArchUnitGraphRulesTest.zxingSdkConfinedToQrPngEncoder",

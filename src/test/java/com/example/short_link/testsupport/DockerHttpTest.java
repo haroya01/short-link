@@ -37,10 +37,15 @@ public abstract class DockerHttpTest {
   @Qualifier("webhookExecutor")
   private ThreadPoolTaskExecutor webhookExecutor;
 
+  @Autowired
+  @Qualifier("blogImportExecutor")
+  private ThreadPoolTaskExecutor blogImportExecutor;
+
   protected void awaitAsyncWork() {
     long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
     long idleSince = -1;
-    List<ThreadPoolTaskExecutor> executors = List.of(taskExecutor, webhookExecutor);
+    List<ThreadPoolTaskExecutor> executors =
+        List.of(taskExecutor, webhookExecutor, blogImportExecutor);
     while (true) {
       boolean busy =
           executors.stream()

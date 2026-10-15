@@ -1,0 +1,44 @@
+# Exact JDBC execution counts for real HTTP requests; fixtures and DB assertions are outside capture.
+# Review changes with the actual SQL evidence in build/reports/query-audit/http-contracts/.
+# identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
+# A preview reads the blog's feed and nothing else.
+@junit | blog-import-preview | 0 | 0 | 0 | 0 | 0
+# Connecting: the writer check, whether another member holds the blog, the writer's own row for it,
+# the connected-blog cap, the new row, and its imported-post count.
+@junit | blog-import-connect | 5 | 1 | 0 | 0 | 6
+# Asking again after a disconnect reuses the row: the same reads, a new code instead of an insert.
+@junit | blog-import-reconnect | 5 | 0 | 1 | 0 | 6
+# Another member's blog stops at the writer check and the claim check.
+@junit | blog-import-connect-taken | 2 | 0 | 0 | 0 | 2
+# Without the code in the description nothing past the source row is read or written.
+@junit | blog-import-verify-code-missing | 1 | 0 | 0 | 0 | 1
+# Verifying: source, source locked, claim check, ledger lookup, the claim written, the count (6).
+# The first import then runs on the import executor inside the step: source, writer, ledger,
+# source (4); per post 37 = ledger claim, attach and done (5), the draft and its writer check (2),
+# the short link through the ordinary path (dedupe, quota, link, its four policy rows, audit, then
+# the issuer's lookup: 9), publishing (lock, writer, tags, the author number pair, the numbering
+# flush and slug check, blocks replaced and read, search text, revision read and write, the post:
+# 14), progress (2) and the link's OG fetch after commit (5); the first link also loads the blocked
+# domains (1); finishing marks the source synced (2). Three posts: 6 + 4 + 111 + 1 + 2 = 124.
+@junit | blog-import-verify | 62 | 36 | 23 | 3 | 124
+# The list and one source: the rows, then one grouped count of their published posts.
+@junit | blog-import-list | 2 | 0 | 0 | 0 | 2
+@junit | blog-import-get | 2 | 0 | 0 | 0 | 2
+# An imported post reads like any other: source travels in the post row, no extra query.
+@junit | blog-import-public-post | 4 | 0 | 0 | 0 | 4
+# Hiding a source from discover: the locked source, one update across its posts, the source, the count.
+@junit | blog-import-hide-from-discover | 2 | 0 | 2 | 0 | 4
+# A sync that finds one post written after verification: the run's reads, one post as above, and its
+# announcement note (writer, author lookup, the note, its federation and notification follow-ups).
+@junit | blog-import-sync-new-post | 26 | 13 | 9 | 2 | 50
+# Deleting an imported post is the ordinary post delete.
+@junit | blog-import-owner-deletes-a-post | 3 | 0 | 0 | 11 | 14
+# A sync after that deletion finds every original settled in the ledger: source, writer, ledger, and
+# the source marked synced. The deleted post does not come back.
+@junit | blog-import-sync-nothing-new | 4 | 0 | 1 | 0 | 5
+# Disconnecting but keeping the posts only flips the locked source.
+@junit | blog-import-disconnect-keep | 1 | 0 | 1 | 0 | 2
+# Disconnecting with the posts: the source flipped, its post ids, three ordinary post deletes (the
+# lock, the highlight ids, the owner lookup and eleven deletes each), then the source row, whose ledger
+# rows go by ON DELETE CASCADE.
+@junit | blog-import-delete-with-posts | 12 | 0 | 1 | 34 | 47

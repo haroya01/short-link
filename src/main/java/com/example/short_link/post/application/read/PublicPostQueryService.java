@@ -51,6 +51,7 @@ public class PublicPostQueryService {
   private final CtaRepository ctaRepository;
   private final ShortLinkUrlBuilder shortLinkUrlBuilder;
   private final UserBlockChecker userBlocks;
+  private final PostSourceViews sources;
   private final Clock clock;
 
   public PublicPostListView listPublicPosts(String username, Long viewerId) {
@@ -65,7 +66,7 @@ public class PublicPostQueryService {
                     author.getId(), PostStatus.PUBLISHED)
                 .stream()
                 .sorted(PINNED_FIRST)
-                .map(PublicPostListItem::from)
+                .map(p -> PublicPostListItem.from(p, sources.of(p)))
                 .toList();
     return new PublicPostListView(
         PublicAuthorView.from(author), posts, blocks.blockedByViewer(), blocks.blocksViewer());
@@ -138,7 +139,10 @@ public class PublicPostQueryService {
     }
 
     return new PublicPostDetail(
-        PublicAuthorView.from(author), PublicPostListItem.from(post), blocks, seriesNavFor(post));
+        PublicAuthorView.from(author),
+        PublicPostListItem.from(post, sources.of(post)),
+        blocks,
+        seriesNavFor(post));
   }
 
   private PublicPostSeriesNav seriesNavFor(PostEntity post) {

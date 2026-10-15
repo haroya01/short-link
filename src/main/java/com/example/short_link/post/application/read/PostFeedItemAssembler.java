@@ -19,6 +19,7 @@ public class PostFeedItemAssembler {
 
   private final UserRepository userRepository;
   private final SeriesRepository seriesRepository;
+  private final PostSourceViews sources;
 
   public List<PublicFeedItem> assemble(List<PostEntity> posts) {
     List<Long> authorIds = posts.stream().map(PostEntity::getUserId).distinct().toList();
@@ -60,6 +61,9 @@ public class PostFeedItemAssembler {
         List.copyOf(post.getTags()),
         post.getPublishedAt(),
         post.getViewCount(),
-        post.getLikeCount());
+        post.getLikeCount(),
+        null,
+        null,
+        sources.of(post));
   }
 }

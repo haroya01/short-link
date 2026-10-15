@@ -51,7 +51,12 @@ class PublicFeedQueryServiceTest {
             followRepository,
             seriesSubscriptionRepository,
             tagPrefQueryService,
-            new PostFeedItemAssembler(userRepository, seriesRepository),
+            new PostFeedItemAssembler(
+                userRepository,
+                seriesRepository,
+                new PostSourceViews(
+                    new com.example.short_link.link.application.ShortLinkUrlBuilder(
+                        "https://kurl.me"))),
             followingFeedReader,
             seriesItemReader);
   }
