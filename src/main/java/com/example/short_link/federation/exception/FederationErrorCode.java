@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 public enum FederationErrorCode {
   REMOTE_ACCOUNT_INVALID(HttpStatus.BAD_REQUEST, "an account on another server is user@server"),
   REMOTE_ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "no account on another server: %s"),
+  REMOTE_SERVER_UNREACHABLE(HttpStatus.BAD_GATEWAY, "%s did not answer"),
   FEDERATION_DISABLED(
       HttpStatus.CONFLICT, "turn on federation to follow accounts on other servers"),
   REMOTE_DOMAIN_INVALID(HttpStatus.BAD_REQUEST, "a server is a domain like mastodon.social"),

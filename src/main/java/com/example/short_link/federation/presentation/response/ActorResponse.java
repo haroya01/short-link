@@ -22,6 +22,7 @@ public record ActorResponse(
     Endpoints endpoints,
     boolean manuallyApprovesFollowers,
     boolean discoverable,
+    boolean indexable,
     Image icon,
     PublicKey publicKey) {
 

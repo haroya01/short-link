@@ -18,7 +18,10 @@
 @junit | federation-actor-featured | 4 | 0 | 0 | 0 | 4
 @junit | federation-host-meta | 0 | 0 | 0 | 0 | 0
 @junit | federation-nodeinfo-discovery | 0 | 0 | 0 | 0 | 0
-@junit | federation-nodeinfo | 0 | 0 | 0 | 0 | 0
+# NodeInfo usage: one statement counts members with a live federating actor and their public
+# notes; the answer is cached for an hour, so the next crawler reads nothing.
+@junit | federation-nodeinfo | 1 | 0 | 0 | 0 | 1
+@junit | federation-nodeinfo-cached | 0 | 0 | 0 | 0 | 0
 # A soft-deleted account stops resolving. After commit it leaves: actor, the accounts it follows
 # elsewhere (none here), follower inboxes (none here), then the follower rows are cleared. Its
 # scheduled notes are dropped after commit too, so none posts for a deleted account.
@@ -246,3 +249,30 @@
 # the row is gone by then; the edit also asks who shared it.
 @junit | federation-remote-reply-edit | 18 | 2 | 1 | 0 | 21
 @junit | federation-remote-reply-delete | 9 | 1 | 0 | 4 | 14
+# Searching accounts this server already knows: one statement with the viewer's follow joined in and
+# suspended servers and the viewer's blocked servers left out. A term under two characters asks
+# nothing.
+@junit | federation-account-search | 1 | 0 | 0 | 0 | 1
+@junit | federation-account-search-anonymous | 1 | 0 | 0 | 0 | 1
+@junit | federation-account-search-short | 0 | 0 | 0 | 0 | 0
+# Resolving a handle already known and fresh reads as the lookup does: the account by handle (its
+# server's block rides along), the member's follow of it, whether they blocked its server.
+@junit | federation-resolve-handle | 3 | 0 | 0 | 0 | 3
+# A profile address: is its server suspended, the instance key that signs the fetch, then the
+# document is kept under its own id (lookup, insert) and read as the lookup does.
+@junit | federation-resolve-profile | 5 | 1 | 0 | 0 | 6
+# A note address: server suspended, instance key, is the note kept, its author (cached, fresh), then
+# the inbox's INSERT IGNORE and its id; the answer is the account notes page's item for that note
+# (note, its thread chain, remote author, media, stats, the member's marks). Asked again, the kept
+# note is answered without a write; the account's notes page carries the same item.
+@junit | federation-resolve-note | 11 | 1 | 0 | 0 | 12
+@junit | federation-resolve-note-again | 9 | 0 | 0 | 0 | 9
+@junit | federation-resolve-note-listed | 6 | 0 | 0 | 0 | 6
+# Failures: anonymous is turned away and this server's own addresses and malformed handles are
+# answered before any query; a server that does not answer costs the block check and the instance
+# key; a suspended server is never asked.
+@junit | federation-resolve-anonymous | 0 | 0 | 0 | 0 | 0
+@junit | federation-resolve-self | 0 | 0 | 0 | 0 | 0
+@junit | federation-resolve-invalid | 0 | 0 | 0 | 0 | 0
+@junit | federation-resolve-unreachable | 2 | 0 | 0 | 0 | 2
+@junit | federation-resolve-suspended | 1 | 0 | 0 | 0 | 1

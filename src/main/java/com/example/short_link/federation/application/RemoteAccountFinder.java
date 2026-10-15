@@ -40,6 +40,7 @@ public class RemoteAccountFinder {
   private final RemoteActorResolver resolver;
   private final FederationUrls urls;
   private final JsonMapper json;
+  private final RemoteDocuments documents;
 
   public record Handle(String username, String domain) {}
 
@@ -63,15 +64,36 @@ public class RemoteAccountFinder {
     return webFinger(handle).flatMap(resolver::byActorUri);
   }
 
+  public RemoteActorEntity resolve(String raw) {
+    Handle handle = parse(raw);
+    String asked = handle.username() + "@" + handle.domain();
+    if (handle.domain().equals(urls.domain())) {
+      throw RemoteDocuments.notFound(asked);
+    }
+    Optional<RemoteActorEntity> cached = actors.findByAcct(handle.username(), handle.domain());
+    RemoteActorEntity actor =
+        cached.isPresent()
+            ? resolver.refreshed(cached.get()).orElse(cached.get())
+            : located(handle, asked);
+    if (actor.onSuspendedServer()) {
+      throw RemoteDocuments.notFound(asked);
+    }
+    return actor;
+  }
+
+  private RemoteActorEntity located(Handle handle, String asked) {
+    URI actorUri =
+        selfLink(documents.fetch(webFingerUri(handle), asked))
+            .map(RemoteActorResolver::withoutFragment)
+            .orElseThrow(() -> RemoteDocuments.notFound(asked));
+    return resolver
+        .stored(documents.fetch(actorUri, asked), actorUri)
+        .orElseThrow(() -> RemoteDocuments.notFound(asked));
+  }
+
   private Optional<String> webFinger(Handle handle) {
-    String resource = "acct:" + handle.username() + "@" + handle.domain();
-    URI uri =
-        URI.create(
-            "https://"
-                + handle.domain()
-                + "/.well-known/webfinger?resource="
-                + URLEncoder.encode(resource, StandardCharsets.UTF_8));
-    if (!(http.get(uri, signingKeys.forInstance()) instanceof FederationHttp.Result.Ok ok)) {
+    if (!(http.get(webFingerUri(handle), signingKeys.forInstance())
+        instanceof FederationHttp.Result.Ok ok)) {
       return Optional.empty();
     }
     JsonNode document;
@@ -81,7 +103,20 @@ public class RemoteAccountFinder {
       log.info("federation webfinger malformed host={}", handle.domain());
       return Optional.empty();
     }
-    JsonNode links = document == null ? null : document.get("links");
+    return document == null ? Optional.empty() : selfLink(document);
+  }
+
+  private static URI webFingerUri(Handle handle) {
+    String resource = "acct:" + handle.username() + "@" + handle.domain();
+    return URI.create(
+        "https://"
+            + handle.domain()
+            + "/.well-known/webfinger?resource="
+            + URLEncoder.encode(resource, StandardCharsets.UTF_8));
+  }
+
+  private static Optional<String> selfLink(JsonNode document) {
+    JsonNode links = document.get("links");
     if (links == null || !links.isArray()) {
       return Optional.empty();
     }

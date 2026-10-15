@@ -53,6 +53,7 @@ class FederationDiscoveryHttpQueryContractTest extends AccountHttpJourneySupport
     assertThat(actor.path("preferredUsername").asText()).isEqualTo(owner.getUsername());
     assertThat(actor.path("publicKey").path("publicKeyPem").asText())
         .startsWith("-----BEGIN PUBLIC KEY-----");
+    assertThat(actor.path("indexable").asBoolean()).isTrue();
 
     var html =
         callWithHeaders(
@@ -96,7 +97,16 @@ class FederationDiscoveryHttpQueryContractTest extends AccountHttpJourneySupport
     callWithHeaders("federation-host-meta", "GET", "/.well-known/host-meta", null, Map.of(), 200);
     callWithHeaders(
         "federation-nodeinfo-discovery", "GET", "/.well-known/nodeinfo", null, Map.of(), 200);
-    callWithHeaders("federation-nodeinfo", "GET", "/ap/nodeinfo/2.1", null, Map.of(), 200);
+    var nodeInfo =
+        body(
+            callWithHeaders("federation-nodeinfo", "GET", "/ap/nodeinfo/2.1", null, Map.of(), 200));
+    assertThat(nodeInfo.path("usage").path("users").path("total").asLong()).isPositive();
+    assertThat(nodeInfo.path("usage").path("localPosts").isIntegralNumber()).isTrue();
+    var cached =
+        body(
+            callWithHeaders(
+                "federation-nodeinfo-cached", "GET", "/ap/nodeinfo/2.1", null, Map.of(), 200));
+    assertThat(cached.path("usage")).isEqualTo(nodeInfo.path("usage"));
   }
 
   @Test

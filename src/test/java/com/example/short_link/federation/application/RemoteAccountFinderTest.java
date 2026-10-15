@@ -25,6 +25,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +40,7 @@ class RemoteAccountFinderTest {
   @Mock private SigningKeys signingKeys;
   @Mock private RemoteActorRepository actors;
   @Mock private RemoteActorResolver resolver;
+  @Mock private RemoteDocuments documents;
 
   private final Signer instance = new Signer("https://kurl.me/ap/instance#main-key", null);
 
@@ -54,7 +56,8 @@ class RemoteAccountFinderTest {
         actors,
         resolver,
         new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me")),
-        JsonMapper.builder().build());
+        JsonMapper.builder().build(),
+        documents);
   }
 
   private static RemoteActorEntity alice() {
@@ -158,5 +161,102 @@ class RemoteAccountFinderTest {
       assertThat(finder.find("alice@mastodon.example")).isEmpty();
     }
     verify(resolver, never()).byActorUri(any());
+  }
+
+  private static FederationErrorCode codeOf(Runnable resolve) {
+    try {
+      resolve.run();
+    } catch (FederationException e) {
+      return e.errorCode();
+    }
+    throw new AssertionError("expected a FederationException");
+  }
+
+  @Test
+  void resolvingAnAccountOnThisServerIsNotFoundWithoutAskingAnyone() {
+    assertThat(codeOf(() -> finder().resolve("@yuki@kurl.me")))
+        .isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND);
+    assertThat(codeOf(() -> finder().resolve("yuki")))
+        .isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_INVALID);
+    verifyNoInteractions(http, actors, resolver, documents);
+  }
+
+  @Test
+  void resolvingAKnownAccountRefreshesItAndKeepsTheCopyWhenItsServerIsSilent() {
+    RemoteActorEntity cached = alice();
+    RemoteActorEntity refreshed = alice();
+    when(actors.findByAcct("alice", "mastodon.example")).thenReturn(Optional.of(cached));
+    when(resolver.refreshed(cached)).thenReturn(Optional.of(refreshed), Optional.empty());
+
+    assertThat(finder().resolve("@alice@mastodon.example")).isSameAs(refreshed);
+    assertThat(finder().resolve("@alice@mastodon.example")).isSameAs(cached);
+    verifyNoInteractions(http, documents);
+  }
+
+  @Test
+  void resolvingAKnownAccountOnASuspendedServerIsNotFound() {
+    RemoteActorEntity cached = alice();
+    ReflectionTestUtils.setField(cached, "serverBlock", "SUSPEND");
+    when(actors.findByAcct("alice", "mastodon.example")).thenReturn(Optional.of(cached));
+    when(resolver.refreshed(cached)).thenReturn(Optional.of(cached));
+
+    assertThat(codeOf(() -> finder().resolve("@alice@mastodon.example")))
+        .isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND);
+  }
+
+  @Test
+  void resolvingANewAccountFollowsWebFingerToTheActorDocument() {
+    JsonMapper json = JsonMapper.builder().build();
+    RemoteActorEntity stored = alice();
+    URI actor = URI.create(ALICE);
+    var person = json.readTree("{\"type\":\"Person\"}");
+    when(actors.findByAcct("alice", "mastodon.example")).thenReturn(Optional.empty());
+    when(documents.fetch(WEBFINGER, "alice@mastodon.example"))
+        .thenReturn(
+            json.readTree(
+                """
+                {"links":[{"rel":"self","type":"application/activity+json","href":"%s#me"}]}"""
+                    .formatted(ALICE)));
+    when(documents.fetch(actor, "alice@mastodon.example")).thenReturn(person);
+    when(resolver.stored(person, actor)).thenReturn(Optional.of(stored));
+
+    assertThat(finder().resolve("alice@mastodon.example")).isSameAs(stored);
+    verifyNoInteractions(http);
+  }
+
+  @Test
+  void resolvingANewAccountWithoutAnActorOrAUsableDocumentIsNotFound() {
+    JsonMapper json = JsonMapper.builder().build();
+    URI actor = URI.create(ALICE);
+    var notAnActor = json.readTree("{\"type\":\"Note\"}");
+    when(actors.findByAcct("alice", "mastodon.example")).thenReturn(Optional.empty());
+    when(documents.fetch(WEBFINGER, "alice@mastodon.example"))
+        .thenReturn(
+            json.readTree("{\"subject\":\"acct:alice@mastodon.example\"}"),
+            json.readTree(
+                """
+                {"links":[{"rel":"self","type":"application/activity+json","href":"%s"}]}"""
+                    .formatted(ALICE)));
+    when(documents.fetch(actor, "alice@mastodon.example")).thenReturn(notAnActor);
+    when(resolver.stored(notAnActor, actor)).thenReturn(Optional.empty());
+
+    RemoteAccountFinder finder = finder();
+    assertThat(codeOf(() -> finder.resolve("alice@mastodon.example")))
+        .isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND);
+    assertThat(codeOf(() -> finder.resolve("alice@mastodon.example")))
+        .isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND);
+  }
+
+  @Test
+  void resolvingANewAccountOnAServerThatDoesNotAnswerSaysSo() {
+    when(actors.findByAcct("alice", "mastodon.example")).thenReturn(Optional.empty());
+    when(documents.fetch(WEBFINGER, "alice@mastodon.example"))
+        .thenThrow(
+            new FederationException(
+                FederationErrorCode.REMOTE_SERVER_UNREACHABLE, "mastodon.example"));
+
+    assertThat(codeOf(() -> finder().resolve("alice@mastodon.example")))
+        .isEqualTo(FederationErrorCode.REMOTE_SERVER_UNREACHABLE);
+    verifyNoInteractions(resolver);
   }
 }
