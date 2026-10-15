@@ -25,5 +25,8 @@ public interface RemoteActorRepository {
 
   RemoteActorEntity saveAndFlush(RemoteActorEntity actor);
 
+  // True for the one caller that marks the outbox looked at; false when it was looked at since.
+  boolean claimOutbox(Long id, Instant at, Instant lookedAtBefore);
+
   void delete(RemoteActorEntity actor);
 }

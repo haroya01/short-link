@@ -6,7 +6,6 @@ import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.net.URI;
 import java.util.Locale;
-import java.util.Set;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.JsonNode;
@@ -14,8 +13,6 @@ import tools.jackson.databind.JsonNode;
 @Service
 @RequiredArgsConstructor
 public class RemoteResolution {
-
-  private static final Set<String> NOTE_TYPES = Set.of("Note", "Article", "Question");
 
   private final RemoteAccountFinder finder;
   private final RemoteDocuments documents;
@@ -38,7 +35,7 @@ public class RemoteResolution {
       throw RemoteDocuments.notFound(asked);
     }
     JsonNode document = documents.fetch(uri, asked);
-    if (NOTE_TYPES.contains(ActivityStreams.text(document.get("type")))) {
+    if (RemoteNoteParser.kindOf(document).isPresent()) {
       Long noteId = notes.fetched(document, uri).orElseThrow(() -> RemoteDocuments.notFound(asked));
       return new Resolved(
           null,

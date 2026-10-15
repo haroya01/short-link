@@ -31,6 +31,7 @@ public enum NoteErrorCode {
   NOTE_POLL_NOT_FOUND(HttpStatus.NOT_FOUND, "note has no poll: %s"),
   NOTE_POLL_ENDED(HttpStatus.BAD_REQUEST, "the poll has ended"),
   NOTE_POLL_OWN(HttpStatus.BAD_REQUEST, "you do not vote in your own poll"),
+  NOTE_POLL_ELSEWHERE(HttpStatus.BAD_REQUEST, "a poll from another server is voted on there"),
   NOTE_POLL_ALREADY_VOTED(HttpStatus.CONFLICT, "you already voted in this poll"),
   NOTE_POLL_BLOCKED(HttpStatus.FORBIDDEN, "cannot vote in this poll"),
   NOTE_POLL_CHOICES_INVALID(

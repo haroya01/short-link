@@ -590,7 +590,7 @@ class NoteRepositoryAdapter implements NoteRepository {
                 + " JOIN federation_remote_actor ha ON ha.domain = hd.domain"
                 + " WHERE hd.user_id = :viewer AND ha.id = n.remote_actor_id)"
                 + HeardSql.unblockedRemote("n.remote_actor_id")
-                + " ORDER BY n.id DESC",
+                + " ORDER BY n.created_at DESC, n.id DESC",
             NoteEntity.class)
         .setParameter("actor", remoteActorId)
         .setParameter("viewer", viewer(viewerId))
@@ -612,13 +612,18 @@ class NoteRepositoryAdapter implements NoteRepository {
   // stored once, and the second delivery reads back the first row.
   @Override
   public Optional<Long> insertRemote(RemoteNoteRow row) {
+    RemoteNoteRow.Poll poll = row.poll();
     int inserted =
         em.createNativeQuery(
                 "INSERT IGNORE INTO note (remote_actor_id, uri, remote_url, body, created_at,"
                     + " content_warning, marked_sensitive, visibility, in_reply_to_id,"
-                    + " conversation_id, reply, reply_policy, poll_multiple, language) VALUES"
+                    + " conversation_id, reply, reply_policy, language, remote_kind, remote_title,"
+                    + " remote_community, poll_options, poll_expires_at, poll_multiple,"
+                    + " poll_closed_at, poll_votes, poll_voters) VALUES"
                     + " (:actor, :uri, :url, :body, :createdAt, :warning, :sensitive, :visibility,"
-                    + " :parent, :conversation, :reply, :replyPolicy, FALSE, :language)")
+                    + " :parent, :conversation, :reply, :replyPolicy, :language, :kind, :title,"
+                    + " :community, :pollOptions, :pollExpiresAt, :pollMultiple, :pollClosedAt,"
+                    + " :pollVotes, :pollVoters)")
             .setParameter("actor", row.remoteActorId())
             .setParameter("uri", row.uri())
             .setParameter("url", row.url())
@@ -632,8 +637,33 @@ class NoteRepositoryAdapter implements NoteRepository {
             .setParameter("reply", row.reply())
             .setParameter("replyPolicy", row.replyPolicy().name())
             .setParameter("language", row.language())
+            .setParameter("kind", row.kind())
+            .setParameter("title", row.title())
+            .setParameter("community", row.community())
+            .setParameter(
+                "pollOptions", poll == null ? null : NoteEntity.optionsColumn(poll.options()))
+            .setParameter("pollExpiresAt", poll == null ? null : poll.expiresAt())
+            .setParameter("pollMultiple", poll != null && poll.multiple())
+            .setParameter("pollClosedAt", poll == null ? null : poll.closedAt())
+            .setParameter("pollVotes", poll == null ? null : NoteEntity.votesColumn(poll.votes()))
+            .setParameter(
+                "pollVoters", poll == null ? null : Math.clamp(poll.voters(), 0, Integer.MAX_VALUE))
             .executeUpdate();
     return inserted == 0 ? Optional.empty() : idByUri(row.uri());
+  }
+
+  @Override
+  public int countListed(Long remoteActorId, int atMost) {
+    Object count =
+        em.createNativeQuery(
+                "SELECT COUNT(*) FROM (SELECT 1 FROM note n WHERE n.remote_actor_id = :actor"
+                    + " AND n.visibility IN ('PUBLIC', 'UNLISTED') AND "
+                    + notReply("n")
+                    + " LIMIT :atMost) listed")
+            .setParameter("actor", remoteActorId)
+            .setParameter("atMost", atMost)
+            .getSingleResult();
+    return ((Number) count).intValue();
   }
 
   @Override

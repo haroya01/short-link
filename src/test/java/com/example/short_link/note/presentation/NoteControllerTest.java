@@ -1,13 +1,18 @@
 package com.example.short_link.note.presentation;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.common.federation.RemoteHistory;
+import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteQueryService;
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteDraft;
@@ -32,6 +37,26 @@ class NoteControllerTest {
   @MockitoBean private NoteCommandService command;
   @MockitoBean private NoteImages images;
   @MockitoBean private NoteFeedSettingsService feedSettings;
+  @MockitoBean private RemoteHistory remoteHistory;
+
+  @Test
+  void anAccountElsewhereHasItsHistoryFilledInBeforeItsFirstPageOnly() throws Exception {
+    when(query.byRemoteActor(eq(42L), anyInt(), eq(20), eq(7L)))
+        .thenReturn(new NoteFeedView(List.of(), 0, false));
+
+    mvc.perform(
+            get("/api/v1/federation/accounts/42/notes")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7"))
+        .andExpect(status().isOk());
+    verify(remoteHistory).fillIn(42L, 7L);
+
+    mvc.perform(
+            get("/api/v1/federation/accounts/42/notes?page=1")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7"))
+        .andExpect(status().isOk());
+    verify(remoteHistory, times(1)).fillIn(any(), any());
+    verify(query).byRemoteActor(42L, 1, 20, 7L);
+  }
 
   @Test
   void aNoteErrorKeepsItsStatusAndCode() throws Exception {

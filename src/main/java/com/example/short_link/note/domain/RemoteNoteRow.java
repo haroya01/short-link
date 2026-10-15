@@ -1,6 +1,7 @@
 package com.example.short_link.note.domain;
 
 import java.time.Instant;
+import java.util.List;
 
 public record RemoteNoteRow(
     Long remoteActorId,
@@ -15,4 +16,17 @@ public record RemoteNoteRow(
     Long conversationId,
     boolean reply,
     NoteReplyPolicy replyPolicy,
-    String language) {}
+    String language,
+    String kind,
+    String title,
+    String community,
+    Poll poll) {
+
+  public record Poll(
+      List<String> options,
+      Instant expiresAt,
+      boolean multiple,
+      Instant closedAt,
+      List<Long> votes,
+      long voters) {}
+}

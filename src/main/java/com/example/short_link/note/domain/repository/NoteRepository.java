@@ -71,6 +71,8 @@ public interface NoteRepository {
 
   Optional<Long> insertRemote(RemoteNoteRow row);
 
+  int countListed(Long remoteActorId, int atMost);
+
   Optional<NoteEntity> findRemoteForUpdate(Long remoteActorId, Long noteId);
 
   int deleteRemote(Long remoteActorId, String uri);

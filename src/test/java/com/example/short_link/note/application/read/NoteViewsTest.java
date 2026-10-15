@@ -332,6 +332,55 @@ class NoteViewsTest {
   }
 
   @Test
+  void aNoteFromElsewhereSaysWhatItWasThereAndItsPollNeedsNoTally() {
+    Instant now = Instant.parse("2026-10-07T12:00:00Z");
+    NoteViews clocked =
+        new NoteViews(
+            notes,
+            media,
+            people,
+            quotedPosts,
+            linkPreviews,
+            polls,
+            Clock.fixed(now, ZoneOffset.UTC));
+    NoteEntity question = remote(1L, 42L, NoteVisibility.PUBLIC);
+    ReflectionTestUtils.setField(question, "uri", "https://m.example/users/a/statuses/1");
+    ReflectionTestUtils.setField(question, "remoteUrl", "https://m.example/@a/1");
+    question.describeElsewhere("QUESTION", null, null);
+    question.pollElsewhere(List.of("Vim", "Emacs"), now, false, List.of(7L, 3L), 10, now);
+    NoteEntity page = remote(2L, 42L, NoteVisibility.PUBLIC);
+    ReflectionTestUtils.setField(page, "uri", "https://lemmy.example/post/1");
+    ReflectionTestUtils.setField(page, "remoteUrl", "javascript:alert(1)");
+    page.describeElsewhere("PAGE", "Raised beds", "gardening@lemmy.example");
+    NoteEntity older = remote(3L, 42L, NoteVisibility.PUBLIC);
+    ReflectionTestUtils.setField(older, "uri", "https://m.example/users/a/statuses/3");
+    NoteEntity mine = note(4L, 7L, null);
+    when(people.activeAuthors(Set.of(7L))).thenReturn(Map.of(7L, new NoteAuthor(7L, "me", null)));
+    when(people.remoteAuthors(Set.of(42L), 7L))
+        .thenReturn(Map.of(42L, NoteAuthor.remote(42L, "a@m.example", null, null, null)));
+    when(notes.viewerMarks(org.mockito.ArgumentMatchers.any(), anyCollection()))
+        .thenReturn(NoteViewerMarks.NONE);
+
+    List<NoteView> seen = clocked.of(List.of(question, page, older, mine), 7L);
+
+    assertThat(seen)
+        .extracting(NoteView::remote)
+        .containsExactly(
+            new NoteView.Remote("QUESTION", null, "https://m.example/@a/1", null),
+            new NoteView.Remote(
+                "PAGE", "Raised beds", "https://lemmy.example/post/1", "gardening@lemmy.example"),
+            new NoteView.Remote("NOTE", null, "https://m.example/users/a/statuses/3", null),
+            null);
+    NoteView.Poll poll = seen.getFirst().poll();
+    assertThat(poll.options())
+        .containsExactly(new NoteView.PollOption("Vim", 7), new NoteView.PollOption("Emacs", 3));
+    assertThat(poll.votersCount()).isEqualTo(10);
+    assertThat(poll.voted()).isTrue();
+    assertThat(poll.expired()).isTrue();
+    verifyNoInteractions(polls);
+  }
+
+  @Test
   void aPageWithoutAPollNeverAsksForTallies() {
     when(people.activeAuthors(Set.of(8L))).thenReturn(Map.of(8L, new NoteAuthor(8L, "them", null)));
     when(notes.viewerMarks(8L, List.of(1L))).thenReturn(NoteViewerMarks.NONE);

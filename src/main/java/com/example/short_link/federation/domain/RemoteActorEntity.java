@@ -62,6 +62,9 @@ public class RemoteActorEntity extends BaseTimeEntity {
   @Column(name = "fetched_at", nullable = false)
   private Instant fetchedAt;
 
+  @Column(name = "outbox_checked_at", insertable = false, updatable = false)
+  private Instant outboxCheckedAt;
+
   // The moderators' decision about this account's server rides along with every load of the
   // account, so the inbox, lookups and follows need no query of their own.
   @Formula(

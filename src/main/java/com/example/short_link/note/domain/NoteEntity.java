@@ -13,7 +13,9 @@ import jakarta.persistence.Id;
 import jakarta.persistence.SqlResultSetMapping;
 import jakarta.persistence.Table;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.StringJoiner;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -114,6 +116,23 @@ public class NoteEntity extends BaseCreatedEntity {
 
   @Column(name = "poll_closed_at")
   private Instant pollClosedAt;
+
+  @Getter(AccessLevel.NONE)
+  @Column(name = "poll_votes", length = 64)
+  private String pollVotes;
+
+  @Getter(AccessLevel.NONE)
+  @Column(name = "poll_voters")
+  private Integer pollVoters;
+
+  @Column(name = "remote_kind", length = 16)
+  private String remoteKind;
+
+  @Column(name = "remote_title")
+  private String remoteTitle;
+
+  @Column(name = "remote_community")
+  private String remoteCommunity;
 
   public NoteEntity(Long userId, String body, Long inReplyToId, Long quotedPostId) {
     this(userId, body, inReplyToId, quotedPostId, null);
@@ -217,7 +236,7 @@ public class NoteEntity extends BaseCreatedEntity {
 
   // Option titles never contain a newline; it separates them in the one column.
   public void attachPoll(List<String> options, Instant expiresAt, boolean multiple) {
-    this.pollOptions = String.join("\n", options);
+    this.pollOptions = optionsColumn(options);
     this.pollExpiresAt = expiresAt;
     this.pollMultiple = multiple;
   }
@@ -232,6 +251,60 @@ public class NoteEntity extends BaseCreatedEntity {
 
   public boolean pollEndedBy(Instant now) {
     return pollExpiresAt != null && !pollExpiresAt.isAfter(now);
+  }
+
+  // A poll from elsewhere is counted and closed by its own server. It is closed here from the
+  // start, so the close job, which tells voters and federates the result, never takes it.
+  public void pollElsewhere(
+      List<String> options,
+      Instant expiresAt,
+      boolean multiple,
+      List<Long> votes,
+      long voters,
+      Instant at) {
+    attachPoll(options, expiresAt, multiple);
+    this.pollVotes = votesColumn(votes);
+    this.pollVoters = Math.clamp(voters, 0, Integer.MAX_VALUE);
+    if (pollClosedAt == null) {
+      pollClosedAt = at;
+    }
+  }
+
+  public void dropPoll() {
+    this.pollOptions = null;
+    this.pollExpiresAt = null;
+    this.pollMultiple = false;
+    this.pollClosedAt = null;
+    this.pollVotes = null;
+    this.pollVoters = null;
+  }
+
+  public NotePollTally remoteTally() {
+    List<Long> votes = new ArrayList<>();
+    if (pollVotes != null && !pollVotes.isEmpty()) {
+      for (String count : pollVotes.split(",")) {
+        votes.add(Long.parseLong(count));
+      }
+    }
+    return new NotePollTally(pollVoters == null ? 0 : pollVoters, votes, null);
+  }
+
+  public static String optionsColumn(List<String> options) {
+    return String.join("\n", options);
+  }
+
+  public static String votesColumn(List<Long> votes) {
+    StringJoiner column = new StringJoiner(",");
+    for (Long count : votes) {
+      column.add(String.valueOf(Math.clamp(count == null ? 0 : count, 0, Integer.MAX_VALUE)));
+    }
+    return column.toString();
+  }
+
+  public void describeElsewhere(String kind, String title, String community) {
+    this.remoteKind = kind;
+    this.remoteTitle = title;
+    this.remoteCommunity = community;
   }
 
   public void edit(String body, Instant at) {

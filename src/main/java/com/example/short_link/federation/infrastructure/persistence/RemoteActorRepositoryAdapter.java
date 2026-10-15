@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 @Repository
 @RequiredArgsConstructor
@@ -147,6 +148,19 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
   @Override
   public void delete(RemoteActorEntity actor) {
     jpa.delete(actor);
+  }
+
+  @Override
+  @Transactional
+  public boolean claimOutbox(Long id, Instant at, Instant lookedAtBefore) {
+    return em.createNativeQuery(
+                "UPDATE federation_remote_actor SET outbox_checked_at = :at WHERE id = :id"
+                    + " AND (outbox_checked_at IS NULL OR outbox_checked_at < :before)")
+            .setParameter("at", at)
+            .setParameter("id", id)
+            .setParameter("before", lookedAtBefore)
+            .executeUpdate()
+        == 1;
   }
 
   private static String escape(String text) {

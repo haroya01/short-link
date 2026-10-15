@@ -30,6 +30,7 @@ import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
 import com.example.short_link.federation.domain.repository.FederationFollowingRepository;
+import com.example.short_link.testsupport.FederationFixtures;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -43,6 +44,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -932,6 +934,117 @@ class InboxServiceTest {
     assertThat(service.receive(request(delete), null)).isEqualTo(InboxOutcome.accepted("delete"));
     assertThat(service.receive(request(delete), null))
         .isEqualTo(InboxOutcome.ignored("unknown-note"));
+  }
+
+  private static String create(String actor, JsonNode object) {
+    return """
+        {"id":"%s#create","type":"Create","actor":"%s","object":%s}"""
+        .formatted(object.path("id").asString(), actor, object);
+  }
+
+  @Test
+  void aPollArticlePageOrVideoFromAFollowedAccountIsKeptWithWhatItWas() {
+    record Sent(String fixture, String actor, String host, RemoteNotes.Kind kind) {}
+    List<Sent> sent =
+        List.of(
+            new Sent(
+                "mastodon-question.json", ALICE, "mastodon.example", RemoteNotes.Kind.QUESTION),
+            new Sent(
+                "wordpress-article.json",
+                "https://blog.example/?author=1",
+                "blog.example",
+                RemoteNotes.Kind.ARTICLE),
+            new Sent(
+                "lemmy-page.json",
+                "https://lemmy.example/u/river",
+                "lemmy.example",
+                RemoteNotes.Kind.PAGE),
+            new Sent(
+                "peertube-video.json",
+                "https://peertube.example/accounts/maker",
+                "peertube.example",
+                RemoteNotes.Kind.VIDEO));
+    when(followingRows.anyAcceptedFollowOf(any())).thenReturn(true);
+    when(remoteNotes.receive(any())).thenReturn(Optional.of(600L));
+    InboxService service = service();
+
+    for (Sent one : sent) {
+      verifiedAs(remote(one.actor(), one.host()));
+      assertThat(
+              service.receive(
+                  request(create(one.actor(), FederationFixtures.json(one.fixture()))), null))
+          .isEqualTo(InboxOutcome.accepted("note"));
+    }
+
+    ArgumentCaptor<RemoteNotes.Received> received =
+        ArgumentCaptor.forClass(RemoteNotes.Received.class);
+    verify(remoteNotes, times(4)).receive(received.capture());
+    assertThat(received.getAllValues())
+        .extracting(kept -> kept.shape().kind())
+        .containsExactly(
+            RemoteNotes.Kind.QUESTION,
+            RemoteNotes.Kind.ARTICLE,
+            RemoteNotes.Kind.PAGE,
+            RemoteNotes.Kind.VIDEO);
+    assertThat(received.getAllValues().get(0).shape().poll().votes()).containsExactly(7L, 3L, 2L);
+    assertThat(received.getAllValues().get(2).shape().community())
+        .isEqualTo("gardening@lemmy.example");
+    verifyNoInteractions(votes);
+  }
+
+  @Test
+  void onlyANamedNoteReplyingToOurPollIsAVote() {
+    noteOneFederates();
+    verifiedAs(ALICE_ACTOR);
+    when(remoteNotes.receive(any())).thenReturn(Optional.of(601L));
+
+    String article =
+        activity(
+            ALICE + "/statuses/12/activity",
+            "Create",
+            """
+            {"id":"%s/statuses/12","type":"Article","name":"Re: lunch","attributedTo":"%s",
+             "inReplyTo":"%s","to":["https://www.w3.org/ns/activitystreams#Public"]}"""
+                .formatted(ALICE, ALICE, NOTE_URI));
+
+    assertThat(service().receive(request(article), null)).isEqualTo(InboxOutcome.accepted("note"));
+    verifyNoInteractions(votes);
+  }
+
+  @Test
+  void anObjectWeDoNotKeepIsAcknowledgedWithoutAKeyFetch() {
+    InboxService service = service();
+    for (String type : new String[] {"Create", "Update"}) {
+      assertThat(
+              service.receive(
+                  request(
+                      activity(
+                          ALICE + "/events/1#" + type,
+                          type,
+                          "{\"id\":\"%s/events/1\",\"type\":\"Event\",\"attributedTo\":\"%s\"}"
+                              .formatted(ALICE, ALICE))),
+                  null))
+          .isEqualTo(InboxOutcome.ignored("unsupported"));
+    }
+    verifyNoInteractions(verifier, remoteNotes);
+  }
+
+  @Test
+  void anUpdatedQuestionCarriesItsNewCounts() {
+    String uri = ALICE + "/statuses/113300000000000001";
+    when(remoteNotes.kept(uri)).thenReturn(Optional.of(902L));
+    verifiedAs(ALICE_ACTOR);
+    when(remoteNotes.revise(eq(42L), eq(902L), any())).thenReturn(true);
+
+    String update =
+        activity(uri + "#updates/1", "Update", FederationFixtures.text("mastodon-question.json"));
+    assertThat(service().receive(request(update), null)).isEqualTo(InboxOutcome.accepted("update"));
+
+    ArgumentCaptor<RemoteNotes.Revision> revision =
+        ArgumentCaptor.forClass(RemoteNotes.Revision.class);
+    verify(remoteNotes).revise(eq(42L), eq(902L), revision.capture());
+    assertThat(revision.getValue().shape().kind()).isEqualTo(RemoteNotes.Kind.QUESTION);
+    assertThat(revision.getValue().shape().poll().voters()).isEqualTo(12);
   }
 
   @Test

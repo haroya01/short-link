@@ -1,0 +1,39 @@
+{
+  "@context": [
+    "https://join-lemmy.org/context.json",
+    "https://www.w3.org/ns/activitystreams"
+  ],
+  "type": "Page",
+  "id": "https://lemmy.example/post/12345",
+  "attributedTo": "https://lemmy.example/u/river",
+  "to": [
+    "https://lemmy.example/c/gardening",
+    "https://www.w3.org/ns/activitystreams#Public"
+  ],
+  "name": "Raised beds: worth the lumber?",
+  "cc": [],
+  "content": "<p>Thinking about building raised beds this winter. Anyone regret it?</p>\n",
+  "mediaType": "text/html",
+  "source": {
+    "content": "Thinking about building raised beds this winter. Anyone regret it?",
+    "mediaType": "text/markdown"
+  },
+  "attachment": [
+    {
+      "href": "https://garden.example/guides/raised-beds",
+      "mediaType": "text/html; charset=utf-8",
+      "type": "Link"
+    }
+  ],
+  "image": {
+    "type": "Image",
+    "url": "https://lemmy.example/pictrs/image/raised-beds.jpeg"
+  },
+  "sensitive": false,
+  "published": "2026-10-05T03:00:00.123456Z",
+  "language": {"identifier": "en", "name": "English"},
+  "audience": "https://lemmy.example/c/gardening",
+  "tag": [
+    {"href": "https://lemmy.example/post/12345", "name": "#gardening", "type": "Hashtag"}
+  ]
+}

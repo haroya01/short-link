@@ -110,7 +110,7 @@ class ImportRowApplier {
       }
       return true;
     }
-    remoteFollowing.follow(userId, remoteId(userId, address));
+    remoteFollowing.followFromImport(userId, remoteId(userId, address));
     return true;
   }
 

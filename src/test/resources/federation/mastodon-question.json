@@ -1,0 +1,49 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    {
+      "ostatus": "http://ostatus.org#",
+      "atomUri": "ostatus:atomUri",
+      "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
+      "conversation": "ostatus:conversation",
+      "sensitive": "as:sensitive",
+      "toot": "http://joinmastodon.org/ns#",
+      "votersCount": "toot:votersCount"
+    }
+  ],
+  "id": "https://mastodon.example/users/alice/statuses/113300000000000001",
+  "type": "Question",
+  "summary": null,
+  "inReplyTo": null,
+  "published": "2026-10-10T09:00:00Z",
+  "url": "https://mastodon.example/@alice/113300000000000001",
+  "attributedTo": "https://mastodon.example/users/alice",
+  "to": ["https://www.w3.org/ns/activitystreams#Public"],
+  "cc": ["https://mastodon.example/users/alice/followers"],
+  "sensitive": false,
+  "atomUri": "https://mastodon.example/users/alice/statuses/113300000000000001",
+  "inReplyToAtomUri": null,
+  "conversation": "tag:mastodon.example,2026-10-10:objectId=901:objectType=Conversation",
+  "content": "<p>Which editor do you write in?</p>",
+  "contentMap": {"en": "<p>Which editor do you write in?</p>"},
+  "updated": "2026-10-10T09:00:00Z",
+  "attachment": [],
+  "tag": [],
+  "replies": {
+    "id": "https://mastodon.example/users/alice/statuses/113300000000000001/replies",
+    "type": "Collection",
+    "first": {
+      "type": "CollectionPage",
+      "next": "https://mastodon.example/users/alice/statuses/113300000000000001/replies?only_other_accounts=true&page=true",
+      "partOf": "https://mastodon.example/users/alice/statuses/113300000000000001/replies",
+      "items": []
+    }
+  },
+  "endTime": "2026-10-11T09:00:00Z",
+  "votersCount": 12,
+  "oneOf": [
+    {"type": "Note", "name": "Vim", "replies": {"type": "Collection", "totalItems": 7}},
+    {"type": "Note", "name": "Emacs", "replies": {"type": "Collection", "totalItems": 3}},
+    {"type": "Note", "name": "Something else", "replies": {"type": "Collection", "totalItems": 2}}
+  ]
+}

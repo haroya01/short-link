@@ -27,7 +27,9 @@ public final class NotePolls {
         votes,
         tally.voters(),
         options,
-        viewerId == null ? null : note.isOwnedBy(viewerId) || tally.viewerChoices() != null,
+        viewerId == null
+            ? null
+            : note.isOwnedBy(viewerId) || note.isRemote() || tally.viewerChoices() != null,
         viewerId == null ? null : indexes(tally.viewerChoices()));
   }
 
