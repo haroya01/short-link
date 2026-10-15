@@ -28,7 +28,7 @@ public final class Mentions {
 
   private Mentions() {}
 
-  private static String outsideLinks(String text) {
+  public static String outsideLinks(String text) {
     return LINK.matcher(text).replaceAll(" ");
   }
 

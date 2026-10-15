@@ -25,6 +25,24 @@ class MentionParserTest {
   }
 
   @Test
+  void aHandleOnAnotherServerIsNoMemberHere() {
+    assertThat(MentionParser.parse("@mina@mastodon.social")).isEmpty();
+    assertThat(MentionParser.parse("thanks @mina@mastodon.social and @bob!"))
+        .containsExactly("bob");
+  }
+
+  @Test
+  void aHandleIsTheWholeTokenNotItsFirstSixteenCharacters() {
+    assertThat(MentionParser.parse("@abcdefghijklmnopq @alicex9 @aliceB"))
+        .containsExactly("alicex9");
+  }
+
+  @Test
+  void anAtInsideALinkNamesNoOne() {
+    assertThat(MentionParser.parse("see https://kurl.me/@mina and @bob")).containsExactly("bob");
+  }
+
+  @Test
   void capsAtMaxMentions() {
     String body =
         IntStream.range(0, MentionParser.MAX_MENTIONS + 5)
