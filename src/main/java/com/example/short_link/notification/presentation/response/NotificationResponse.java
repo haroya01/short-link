@@ -30,7 +30,8 @@ public record NotificationResponse(
     String sourceExcerpt,
     long count,
     List<Actor> actors,
-    Long actorRemoteId) {
+    Long actorRemoteId,
+    Integer milestone) {
 
   public record Actor(Long id, String username, String avatarUrl, String profileUrl) {}
 
@@ -66,7 +67,8 @@ public record NotificationResponse(
                     new Actor(
                         actor.userId(), actor.username(), actor.avatarUrl(), actor.profileUrl()))
             .toList(),
-        view.actor() == null ? null : view.actor().remoteId());
+        view.actor() == null ? null : view.actor().remoteId(),
+        view.post() == null ? null : view.post().milestone());
   }
 
   private static Long postId(NotificationView view) {

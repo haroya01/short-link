@@ -263,8 +263,10 @@ public class RecordBlogNotificationUseCase {
     String actor =
         actorUsername != null ? actorUsername : remoteHandle != null ? remoteHandle : "kurl";
     String subtitle = payload == null || !quoted ? null : payload.pushSubtitle();
+    Integer milestone = payload instanceof NotificationPostRef post ? post.milestone() : null;
     String body =
-        messageSource.getMessage("notification.push." + type.name(), new Object[] {actor}, locale);
+        messageSource.getMessage(
+            "notification.push." + type.name(), new Object[] {actor, milestone}, locale);
     return new PushSender.PushMessage(
         "kurl",
         subtitle,

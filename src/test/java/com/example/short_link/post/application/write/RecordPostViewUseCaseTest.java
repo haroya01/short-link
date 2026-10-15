@@ -42,6 +42,7 @@ class RecordPostViewUseCaseTest {
   @Mock private GeoIpResolver geoIpResolver;
   @Mock private AsnResolver asnResolver;
   @Mock private BotHeuristic botHeuristic;
+  @Mock private PostReaders readers;
 
   private RecordPostViewUseCase useCase;
 
@@ -56,6 +57,7 @@ class RecordPostViewUseCaseTest {
             geoIpResolver,
             asnResolver,
             new BotClassifier(botHeuristic),
+            readers,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -82,6 +84,23 @@ class RecordPostViewUseCaseTest {
     ArgumentCaptor<PostViewEventEntity> event = ArgumentCaptor.forClass(PostViewEventEntity.class);
     verify(postViewEventRepository).save(event.capture());
     assertThat(event.getValue().getViewedAt()).isEqualTo(NOW);
+  }
+
+  @Test
+  void countsTheReaderBeforeTheViewIsStored() {
+    UserEntity author = author("john");
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
+        .thenReturn(Optional.of(post));
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    useCase.execute(new RecordPostViewCommand("john", "p", 42L), ViewContext.empty());
+
+    org.mockito.InOrder order = org.mockito.Mockito.inOrder(readers, postViewEventRepository);
+    order.verify(readers).countView(post, null, false, 42L);
+    order.verify(postViewEventRepository).save(any());
   }
 
   @Test

@@ -108,6 +108,35 @@ class NotificationControllerTest {
   }
 
   @Test
+  void listExposesTheReadMilestoneWithoutAnActor() throws Exception {
+    NotificationView view =
+        new NotificationView(
+            7L,
+            NotificationType.POST_READ_MILESTONE,
+            null,
+            new NotificationPostRef(10L, "3", "가져온 글", null, null, null, 100),
+            null,
+            null,
+            null,
+            1,
+            List.of(),
+            false,
+            Instant.parse("2026-10-16T00:00:00Z"));
+    when(queryService.list(eq(USER_ID), isNull(), eq(20)))
+        .thenReturn(new NotificationListResult(List.of(view), null, false));
+
+    mvc.perform(
+            get("/api/v1/notifications").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].type").value("POST_READ_MILESTONE"))
+        .andExpect(jsonPath("$.items[0].postId").value(10))
+        .andExpect(jsonPath("$.items[0].postSlug").value("3"))
+        .andExpect(jsonPath("$.items[0].postTitle").value("가져온 글"))
+        .andExpect(jsonPath("$.items[0].milestone").value(100))
+        .andExpect(jsonPath("$.items[0].actorUsername").doesNotExist());
+  }
+
+  @Test
   void listExposesCollectionFieldsForGraphNotice() throws Exception {
     NotificationView view =
         new NotificationView(

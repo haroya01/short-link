@@ -7,6 +7,7 @@ import com.example.short_link.post.application.write.ViewContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -38,9 +39,10 @@ public class PublicPostViewBeaconController {
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
+      @AuthenticationPrincipal Long viewerId,
       HttpServletRequest req) {
     recordPostView.execute(
-        new RecordPostViewCommand(username, slug),
+        new RecordPostViewCommand(username, slug, viewerId),
         new ViewContext(
             // fetch의 Referer는 글 자체이므로 document.referrer를 담은 ref 쿼리를 우선한다.
             ref != null && !ref.isBlank() ? ref : referrer,

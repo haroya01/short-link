@@ -49,6 +49,19 @@ class NotificationTargetCodecTest {
   }
 
   @Test
+  void readNoticesCarryTheirMilestoneOnlyWhenThereIsOne() {
+    var milestone = new NotificationPostRef(10L, "3", "Title", null, null, null, 100);
+    var first = new NotificationPostRef(10L, "3", "Title", null, null, null, null);
+
+    assertThat(mapper.readTree(codec.encode(milestone)).get("milestone").asInt()).isEqualTo(100);
+    assertThat(mapper.readTree(codec.encode(first)).has("milestone")).isFalse();
+    assertThat(codec.decode(NotificationType.POST_READ_MILESTONE, codec.encode(milestone)))
+        .isEqualTo(milestone);
+    assertThat(codec.decode(NotificationType.POST_FIRST_READER, codec.encode(first)))
+        .isEqualTo(first);
+  }
+
+  @Test
   void payloadStoredBeforeTheSpotDecodesWithoutIt() {
     NotificationTarget decoded =
         codec.decode(
