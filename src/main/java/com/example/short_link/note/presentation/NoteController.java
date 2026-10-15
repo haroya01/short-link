@@ -1,5 +1,6 @@
 package com.example.short_link.note.presentation;
 
+import com.example.short_link.common.federation.RemoteHistory;
 import com.example.short_link.note.application.read.NoteFeedView;
 import com.example.short_link.note.application.read.NoteHistoryView;
 import com.example.short_link.note.application.read.NoteQueryService;
@@ -44,6 +45,7 @@ public class NoteController {
   private final NoteCommandService command;
   private final NoteImages images;
   private final NoteFeedSettingsService feedSettings;
+  private final RemoteHistory remoteHistory;
 
   @GetMapping("/api/v1/public/notes")
   public NoteFeedView everyone(
@@ -99,6 +101,9 @@ public class NoteController {
       @PathVariable Long id,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
+    if (page <= 0) {
+      remoteHistory.fillIn(id, viewerId);
+    }
     return query.byRemoteActor(id, page, size, viewerId);
   }
 

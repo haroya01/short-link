@@ -3,6 +3,11 @@ package com.example.short_link.federation.application;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.common.note.RemoteNotes;
+import com.example.short_link.common.note.RemoteNotes.Kind;
+import com.example.short_link.common.note.RemoteNotes.Shape;
+import com.example.short_link.testsupport.FederationFixtures;
+import java.time.Instant;
+import java.util.List;
 import java.util.Set;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.JsonNode;
@@ -132,6 +137,262 @@ class RemoteNoteParserTest {
                 json("{}")))
         .isTrue();
     assertThat(parser.addressesUs(json("{\"cc\":\"" + PUBLIC + "\"}"), json("{}"))).isFalse();
+  }
+
+  @Test
+  void theKindsKeptAreNotesQuestionsArticlesPagesAndVideos() {
+    assertThat(RemoteNoteParser.kindOf(json("{\"type\":\"Note\"}"))).contains(Kind.NOTE);
+    assertThat(RemoteNoteParser.kindOf(json("{\"type\":\"Question\"}"))).contains(Kind.QUESTION);
+    assertThat(RemoteNoteParser.kindOf(json("{\"type\":\"Article\"}"))).contains(Kind.ARTICLE);
+    assertThat(RemoteNoteParser.kindOf(json("{\"type\":\"Page\"}"))).contains(Kind.PAGE);
+    assertThat(RemoteNoteParser.kindOf(json("{\"type\":\"Video\"}"))).contains(Kind.VIDEO);
+    assertThat(RemoteNoteParser.kindOf(json("{\"type\":\"Event\"}"))).isEmpty();
+    assertThat(RemoteNoteParser.kindOf(json("{}"))).isEmpty();
+    assertThat(RemoteNoteParser.kindOf(json("\"https://m.example/s/1\""))).isEmpty();
+    assertThat(RemoteNoteParser.kindOf(null)).isEmpty();
+  }
+
+  @Test
+  void aMastodonQuestionIsANoteCarryingItsServersCounts() {
+    RemoteNoteParser.Parsed parsed =
+        parser.parse(FederationFixtures.json("mastodon-question.json"), json("{}"));
+
+    assertThat(parsed.body()).isEqualTo("Which editor do you write in?");
+    assertThat(parsed.url()).isEqualTo("https://mastodon.example/@alice/113300000000000001");
+    assertThat(parsed.visibility()).isEqualTo("public");
+    assertThat(parsed.shape())
+        .isEqualTo(
+            new Shape(
+                Kind.QUESTION,
+                null,
+                null,
+                new RemoteNotes.Poll(
+                    List.of("Vim", "Emacs", "Something else"),
+                    List.of(7L, 3L, 2L),
+                    12,
+                    false,
+                    Instant.parse("2026-10-11T09:00:00Z"),
+                    false)));
+  }
+
+  @Test
+  void aMultipleChoicePollClosedEarlyEndsWhenItClosed() {
+    RemoteNotes.Poll poll =
+        RemoteNoteParser.poll(
+            json(
+                """
+                {"type":"Question","endTime":"2026-10-11T09:00:00Z",
+                 "closed":"2026-10-10T21:00:00Z",
+                 "anyOf":[{"name":"<b>Beans</b>\\nand peas","replies":{"totalItems":4}},
+                          {"name":"%s","replies":{"totalItems":-3}},
+                          {"name":"Squash","replies":{"totalItems":"2"}}]}
+                """
+                    .formatted("x".repeat(60))));
+
+    assertThat(poll.multiple()).isTrue();
+    assertThat(poll.options()).containsExactly("Beans and peas", "x".repeat(49) + "…", "Squash");
+    assertThat(poll.votes()).containsExactly(4L, 0L, 0L);
+    assertThat(poll.voters()).isEqualTo(4);
+    assertThat(poll.endsAt()).isEqualTo(Instant.parse("2026-10-10T21:00:00Z"));
+    assertThat(poll.closed()).isTrue();
+
+    RemoteNotes.Poll ended =
+        RemoteNoteParser.poll(
+            json(
+                """
+                {"closed":true,"votersCount":"many",
+                 "oneOf":[{"name":"a"},{"name":"b","replies":{"totalItems":1}}]}
+                """));
+    assertThat(ended.closed()).isTrue();
+    assertThat(ended.endsAt()).isNull();
+    assertThat(ended.voters()).isZero();
+    assertThat(
+            RemoteNoteParser.poll(
+                    json(
+                        """
+                        {"endTime":"2026-10-11T09:00:00Z","closed":"2026-10-12T09:00:00Z",
+                         "oneOf":[{"name":"a"},{"name":"b"}]}
+                        """))
+                .endsAt())
+        .isEqualTo(Instant.parse("2026-10-11T09:00:00Z"));
+  }
+
+  @Test
+  void aPollThatDoesNotFitIsLeftOffItsNote() {
+    assertThat(RemoteNoteParser.poll(json("{\"oneOf\":[{\"name\":\"only\"}]}"))).isNull();
+    assertThat(
+            RemoteNoteParser.poll(
+                json(
+                    "{\"anyOf\":[{\"name\":\"a\"},{\"name\":\"b\"},{\"name\":\"c\"},"
+                        + "{\"name\":\"d\"},{\"name\":\"e\"}]}")))
+        .isNull();
+    assertThat(RemoteNoteParser.poll(json("{\"oneOf\":[{\"name\":\"a\"},{\"name\":\" \"}]}")))
+        .isNull();
+    assertThat(RemoteNoteParser.poll(json("{\"oneOf\":{\"name\":\"a\"}}"))).isNull();
+    assertThat(RemoteNoteParser.poll(json("{}"))).isNull();
+    assertThat(
+            parser.parse(json("{\"type\":\"Question\",\"content\":\"pick\"}"), json("{}")).shape())
+        .isEqualTo(new Shape(Kind.QUESTION, null, null, null));
+  }
+
+  @Test
+  void aWordPressArticleIsACardWithItsTitleSummaryPictureAndAddress() {
+    RemoteNoteParser.Parsed parsed =
+        parser.parse(FederationFixtures.json("wordpress-article.json"), json("{}"));
+
+    assertThat(parsed.shape())
+        .isEqualTo(new Shape(Kind.ARTICLE, "What the garden taught me this year", null, null));
+    assertThat(parsed.body()).isEqualTo("A season of tomatoes, slugs & patience. […]");
+    assertThat(parsed.contentWarning()).isNull();
+    assertThat(parsed.url())
+        .isEqualTo("https://blog.example/2026/10/01/what-the-garden-taught-me/");
+    assertThat(parsed.visibility()).isEqualTo("public");
+    assertThat(parsed.media())
+        .containsExactly(
+            new RemoteNotes.Media(
+                "https://blog.example/wp-content/uploads/2026/10/tomatoes.jpg",
+                "Tomatoes ripening on the vine",
+                "image/jpeg"));
+  }
+
+  @Test
+  void anArticleWithoutASummaryKeepsOnlyTheStartOfItsText() {
+    RemoteNoteParser.Parsed parsed =
+        parser.parse(
+            json(
+                "{\"id\":\"https://blog.example/?p=7\",\"type\":\"Article\",\"name\":\"Long\","
+                    + "\"contentMap\":{\"en\":\"<p>"
+                    + "가".repeat(700)
+                    + "</p>\"},\"image\":\"https://blog.example/cover.jpg\","
+                    + "\"attachment\":[{\"type\":\"Image\",\"url\":\"https://blog.example/2.jpg\"}]}"),
+            json("{}"));
+
+    assertThat(parsed.body().codePointCount(0, parsed.body().length()))
+        .isEqualTo(RemoteNoteParser.MAX_EXCERPT);
+    assertThat(parsed.body()).endsWith("…");
+    assertThat(parsed.media())
+        .containsExactly(
+            new RemoteNotes.Media("https://blog.example/cover.jpg", null, "image/jpeg"));
+    assertThat(
+            parser
+                .parse(
+                    json(
+                        "{\"id\":\"https://blog.example/?p=8\",\"type\":\"Article\","
+                            + "\"image\":\"http://blog.example/plain.jpg\"}"),
+                    json("{}"))
+                .media())
+        .isEmpty();
+  }
+
+  @Test
+  void aLemmyPageNamesItsCommunityAndKeepsItsImage() {
+    RemoteNoteParser.Parsed parsed =
+        parser.parse(FederationFixtures.json("lemmy-page.json"), json("{}"));
+
+    assertThat(parsed.shape())
+        .isEqualTo(
+            new Shape(
+                Kind.PAGE, "Raised beds: worth the lumber?", "gardening@lemmy.example", null));
+    assertThat(parsed.body())
+        .isEqualTo("Thinking about building raised beds this winter. Anyone regret it?");
+    assertThat(parsed.url()).isNull();
+    assertThat(parsed.visibility()).isEqualTo("public");
+    assertThat(parsed.publishedAt()).isEqualTo(Instant.parse("2026-10-05T03:00:00.123456Z"));
+    assertThat(parsed.media())
+        .containsExactly(
+            new RemoteNotes.Media(
+                "https://lemmy.example/pictrs/image/raised-beds.jpeg", null, "image/jpeg"));
+  }
+
+  @Test
+  void aCommunityIsFoundInToWithoutAudienceAndOnlyWhenItLooksLikeOne() {
+    assertThat(
+            community(
+                "{\"type\":\"Page\",\"to\":[\""
+                    + PUBLIC
+                    + "\","
+                    + "\"https://lemmy.example/c/gardening/\"]}"))
+        .isEqualTo("gardening@lemmy.example");
+    assertThat(community("{\"type\":\"Page\",\"to\":[\"https://lemmy.example/u/river\"]}"))
+        .isNull();
+    assertThat(community("{\"type\":\"Note\",\"to\":[\"https://lemmy.example/c/gardening\"]}"))
+        .isNull();
+    assertThat(
+            community(
+                "{\"type\":\"Note\",\"audience\":{\"id\":\"https://mbin.example/m/tech\","
+                    + "\"type\":\"Group\"}}"))
+        .isEqualTo("tech@mbin.example");
+    assertThat(community("{\"type\":\"Page\",\"audience\":\"https://lemmy.example/c/a%20b\"}"))
+        .isNull();
+    assertThat(community("{\"type\":\"Page\",\"audience\":\"not a uri\"}")).isNull();
+    assertThat(community("{\"type\":\"Page\",\"to\":[\"https://lemmy.example/c/bad name\"]}"))
+        .isNull();
+  }
+
+  private String community(String object) {
+    return parser.parse(json(object), json("{}")).shape().community();
+  }
+
+  @Test
+  void aPeerTubeVideoKeepsItsTitleWidestThumbnailAndWatchPageButNoVideoFile() {
+    RemoteNoteParser.Parsed parsed =
+        parser.parse(FederationFixtures.json("peertube-video.json"), json("{}"));
+
+    assertThat(parsed.shape())
+        .isEqualTo(new Shape(Kind.VIDEO, "Building a raised bed in ten minutes", null, null));
+    assertThat(parsed.url()).isEqualTo("https://peertube.example/w/kVBbnS8f4E5yDLs8JhzHmb");
+    assertThat(parsed.body()).isEqualTo("Step by step, with **cheap** lumber and one saw.");
+    assertThat(parsed.visibility()).isEqualTo("public");
+    assertThat(parsed.media())
+        .containsExactly(
+            new RemoteNotes.Media(
+                "https://peertube.example/lazy-static/previews/9c9de5e8.jpg",
+                null,
+                "image/jpeg",
+                850,
+                480));
+    assertThat(
+            parser
+                .parse(
+                    json(
+                        "{\"id\":\"https://pt.example/v/1\",\"type\":\"Video\","
+                            + "\"icon\":[{\"type\":\"Image\",\"url\":\"https://pt.example/a.jpg\"},"
+                            + "{\"type\":\"Image\",\"url\":\"https://pt.example/b.jpg\",\"width\":100}],"
+                            + "\"attachment\":[{\"type\":\"Image\",\"url\":\"https://pt.example/c.jpg\"}]}"),
+                    json("{}"))
+                .media())
+        .extracting(RemoteNotes.Media::url)
+        .containsExactly("https://pt.example/b.jpg");
+    assertThat(
+            parser
+                .parse(
+                    json(
+                        "{\"id\":\"https://pt.example/v/2\",\"type\":\"Video\","
+                            + "\"image\":{\"type\":\"Image\",\"url\":\"https://pt.example/d.jpg\"},"
+                            + "\"attachment\":[{\"type\":\"Image\",\"url\":\"https://pt.example/e.jpg\"}]}"),
+                    json("{}"))
+                .media())
+        .extracting(RemoteNotes.Media::url)
+        .containsExactly("https://pt.example/d.jpg");
+  }
+
+  @Test
+  void anAddressElsewhereOrOffTheWebIsDropped() {
+    assertThat(url("{\"id\":\"https://m.example/s/1\",\"url\":\"https://phish.example/s/1\"}"))
+        .isNull();
+    assertThat(url("{\"id\":\"https://m.example/s/1\",\"url\":\"javascript:alert(1)\"}")).isNull();
+    assertThat(url("{\"url\":\"https://m.example/s/1\"}")).isNull();
+    assertThat(url("{\"id\":\"https://m.example/s/1\",\"url\":\"https://m.example/@a/1\"}"))
+        .isEqualTo("https://m.example/@a/1");
+    assertThat(
+            url(
+                "{\"id\":\"https://pt.example/v/1\",\"url\":[{\"mediaType\":\"video/mp4\","
+                    + "\"href\":\"https://pt.example/1.mp4\"},{\"href\":\"https://pt.example/w/1\"}]}"))
+        .isEqualTo("https://pt.example/1.mp4");
+  }
+
+  private String url(String object) {
+    return parser.parse(json(object), json("{}")).url();
   }
 
   @Test

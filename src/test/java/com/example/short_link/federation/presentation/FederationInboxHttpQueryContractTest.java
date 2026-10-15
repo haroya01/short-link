@@ -9,7 +9,9 @@ import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.application.inbox.SignedInboxRequests;
 import com.example.short_link.federation.application.signature.HttpSignatures;
+import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
+import com.example.short_link.testsupport.FederationFixtures;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -21,6 +23,7 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.databind.JsonNode;
 
 class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
 
@@ -29,6 +32,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   @Autowired private FederationUrls urls;
   @Autowired private FederationActorService actors;
   @Autowired private FederationProperties props;
+  @Autowired private SigningKeys signingKeys;
 
   private String remote;
   private String alice;
@@ -49,6 +53,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         remote + "/inbox",
         URI.create(remote).getHost());
     target = actors.byUsername(owner.getUsername()).orElseThrow();
+    signingKeys.forInstance();
   }
 
   private Map<String, String> signed(String path, Map<String, Object> activity) {
@@ -738,6 +743,76 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         .isEqualTo(1);
     assertThat(question.path("votersCount").asLong()).isEqualTo(1);
     jdbc.update("DELETE FROM note WHERE id = ?", noteId);
+  }
+
+  @Test
+  void aFollowedAccountsPollAndArticleArriveAsWhatTheyWereThere() throws Exception {
+    Long aliceId =
+        jdbc.queryForObject(
+            "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
+    jdbc.update(
+        "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
+            + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
+        owner.getId(),
+        aliceId,
+        urls.actor(target.publicId()) + "#follows/shapes");
+
+    JsonNode question =
+        json.readTree(
+            FederationFixtures.text("mastodon-question.json")
+                .replace("https://mastodon.example", remote));
+    post(
+        "federation-inbox-remote-question",
+        "/ap/inbox",
+        activity(question.path("id").asString() + "/activity", "Create", question),
+        202);
+
+    Map<String, Object> article = new LinkedHashMap<>();
+    article.put("id", remote + "/articles/1");
+    article.put("type", "Article");
+    article.put("attributedTo", alice);
+    article.put("name", "What the garden taught me");
+    article.put("summary", "A season of tomatoes &amp; patience.");
+    article.put("content", "<p>" + "A long article. ".repeat(100) + "</p>");
+    article.put("url", remote + "/@alice/articles/1");
+    article.put("published", "2026-10-01T12:00:00Z");
+    article.put("to", List.of("https://www.w3.org/ns/activitystreams#Public"));
+    article.put(
+        "attachment",
+        List.of(
+            Map.of(
+                "type", "Image",
+                "mediaType", "image/jpeg",
+                "url", remote + "/media/tomatoes.jpg",
+                "name", "Tomatoes")));
+    post(
+        "federation-inbox-remote-article",
+        "/ap/inbox",
+        activity(remote + "/articles/1/activity", "Create", article),
+        202);
+
+    var feed =
+        body(
+            call(
+                "notes-following-remote-shapes",
+                "GET",
+                "/api/v1/notes/following",
+                null,
+                token,
+                200));
+    var poll = feed.path("items").get(0);
+    assertThat(poll.path("remote").path("kind").asString()).isEqualTo("QUESTION");
+    assertThat(poll.path("poll").path("votersCount").asLong()).isEqualTo(12);
+    assertThat(poll.path("poll").path("options").get(0).path("votesCount").asLong()).isEqualTo(7);
+    assertThat(poll.path("poll").path("voted").asBoolean()).isTrue();
+    var card = feed.path("items").get(1);
+    assertThat(card.path("remote").path("kind").asString()).isEqualTo("ARTICLE");
+    assertThat(card.path("remote").path("title").asString()).isEqualTo("What the garden taught me");
+    assertThat(card.path("remote").path("url").asString()).isEqualTo(remote + "/@alice/articles/1");
+    assertThat(card.path("body").asString()).isEqualTo("A season of tomatoes & patience.");
+    assertThat(card.path("media").get(0).path("url").asString())
+        .isEqualTo(remote + "/media/tomatoes.jpg");
+    jdbc.update("DELETE FROM note WHERE remote_actor_id = ?", aliceId);
   }
 
   private Map<String, Object> vote(String id, String option, String question) {

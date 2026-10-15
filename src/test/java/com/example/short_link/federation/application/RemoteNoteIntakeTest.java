@@ -3,6 +3,7 @@ package com.example.short_link.federation.application;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -14,6 +15,7 @@ import com.example.short_link.federation.application.inbox.EarlyDeletes;
 import com.example.short_link.federation.domain.RemoteActorDocument;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
+import com.example.short_link.testsupport.FederationFixtures;
 import java.net.URI;
 import java.time.Instant;
 import java.util.List;
@@ -184,6 +186,79 @@ class RemoteNoteIntakeTest {
     assertThat(intake.fetched(note(NOTE, ALICE, "https://kurl.me/ap/actors/pid1", null), PAGE))
         .isEmpty();
     verify(remoteNotes, never()).receive(any());
+  }
+
+  @Test
+  void aVideoAttributedToItsAccountAndChannelIsKeptUnderTheAccount() {
+    String account = "https://peertube.example/accounts/maker";
+    URI watch = URI.create("https://peertube.example/w/kVBbnS8f4E5yDLs8JhzHmb");
+    RemoteActorEntity maker = alice("peertube.example");
+    when(remoteNotes.kept(any())).thenReturn(Optional.empty());
+    when(resolver.byActorUri(account)).thenReturn(Optional.of(maker));
+    when(actorRows.findByPublicIds(Set.of())).thenReturn(List.of());
+    when(remoteNotes.receive(any())).thenReturn(Optional.of(11L));
+
+    assertThat(intake().fetched(FederationFixtures.json("peertube-video.json"), watch))
+        .contains(11L);
+    ArgumentCaptor<RemoteNotes.Received> received =
+        ArgumentCaptor.forClass(RemoteNotes.Received.class);
+    verify(remoteNotes).receive(received.capture());
+    assertThat(received.getValue().shape().kind()).isEqualTo(RemoteNotes.Kind.VIDEO);
+    assertThat(received.getValue().notifies()).isTrue();
+  }
+
+  @Test
+  void aNoteFromTheAccountsHistoryIsKeptQuietly() {
+    when(actorRows.findByPublicIds(Set.of())).thenReturn(List.of());
+    when(remoteNotes.receive(any())).thenReturn(Optional.of(9L), Optional.empty());
+
+    RemoteNoteIntake intake = intake();
+    assertThat(intake.fromHistory(alice("mastodon.example"), publicNote())).isTrue();
+    assertThat(intake.fromHistory(alice("mastodon.example"), publicNote())).isFalse();
+    ArgumentCaptor<RemoteNotes.Received> received =
+        ArgumentCaptor.forClass(RemoteNotes.Received.class);
+    verify(remoteNotes, times(2)).receive(received.capture());
+    assertThat(received.getValue().notifies()).isFalse();
+    assertThat(received.getValue().inReplyToLocalId()).isNull();
+    verifyNoInteractions(resolver, notes);
+  }
+
+  @Test
+  void aHistoryNoteThatIsNotTheAccountsOwnPublicTopLevelNoteIsSkipped() {
+    RemoteActorEntity alice = alice("mastodon.example");
+    RemoteNoteIntake intake = intake();
+    String pub = ActivityStreams.PUBLIC;
+
+    assertThat(intake.fromHistory(alice, note(null, ALICE, pub, null))).isFalse();
+    assertThat(
+            intake.fromHistory(
+                alice, note("https://mastodon.example/" + "x".repeat(520), ALICE, pub, null)))
+        .isFalse();
+    assertThat(
+            intake.fromHistory(
+                alice,
+                JSON.readTree(
+                    "{\"id\":\""
+                        + NOTE
+                        + "\",\"type\":\"Event\",\"attributedTo\":\""
+                        + ALICE
+                        + "\"}")))
+        .isFalse();
+    assertThat(
+            intake.fromHistory(
+                alice, note("https://elsewhere.example/statuses/1", ALICE, pub, null)))
+        .isFalse();
+    assertThat(
+            intake.fromHistory(alice, note(NOTE, "https://mastodon.example/users/bob", pub, null)))
+        .isFalse();
+    assertThat(intake.fromHistory(alice, note(NOTE, ALICE, pub, "https://other.example/s/1")))
+        .isFalse();
+    verifyNoInteractions(earlyDeletes, remoteNotes);
+
+    when(earlyDeletes.remembered(42L, NOTE)).thenReturn(true, false);
+    assertThat(intake.fromHistory(alice, publicNote())).isFalse();
+    assertThat(intake.fromHistory(alice, note(NOTE, ALICE, ALICE + "/followers", null))).isFalse();
+    verifyNoInteractions(remoteNotes);
   }
 
   @Test

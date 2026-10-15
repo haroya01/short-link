@@ -1,0 +1,141 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    {
+      "ostatus": "http://ostatus.org#",
+      "atomUri": "ostatus:atomUri",
+      "inReplyToAtomUri": "ostatus:inReplyToAtomUri",
+      "conversation": "ostatus:conversation",
+      "sensitive": "as:sensitive",
+      "toot": "http://joinmastodon.org/ns#",
+      "votersCount": "toot:votersCount"
+    }
+  ],
+  "id": "https://mastodon.example/users/alice/outbox?page=true",
+  "type": "OrderedCollectionPage",
+  "next": "https://mastodon.example/users/alice/outbox?max_id=113200000000000001&page=true",
+  "prev": "https://mastodon.example/users/alice/outbox?min_id=113300000000000005&page=true",
+  "partOf": "https://mastodon.example/users/alice/outbox",
+  "orderedItems": [
+    {
+      "id": "https://mastodon.example/users/alice/statuses/113300000000000005/activity",
+      "type": "Create",
+      "actor": "https://mastodon.example/users/alice",
+      "published": "2026-10-12T08:00:00Z",
+      "to": ["https://www.w3.org/ns/activitystreams#Public"],
+      "cc": ["https://mastodon.example/users/alice/followers"],
+      "object": {
+        "id": "https://mastodon.example/users/alice/statuses/113300000000000005",
+        "type": "Note",
+        "summary": null,
+        "inReplyTo": null,
+        "published": "2026-10-12T08:00:00Z",
+        "url": "https://mastodon.example/@alice/113300000000000005",
+        "attributedTo": "https://mastodon.example/users/alice",
+        "to": ["https://www.w3.org/ns/activitystreams#Public"],
+        "cc": ["https://mastodon.example/users/alice/followers"],
+        "sensitive": false,
+        "content": "<p>First frost tonight. Covered the last of the peppers. <a href=\"https://mastodon.example/tags/garden\" class=\"mention hashtag\" rel=\"tag\">#<span>garden</span></a></p>",
+        "contentMap": {"en": "<p>First frost tonight. Covered the last of the peppers. <a href=\"https://mastodon.example/tags/garden\" class=\"mention hashtag\" rel=\"tag\">#<span>garden</span></a></p>"},
+        "attachment": [],
+        "tag": [{"type": "Hashtag", "href": "https://mastodon.example/tags/garden", "name": "#garden"}]
+      }
+    },
+    {
+      "id": "https://mastodon.example/users/alice/statuses/113300000000000004/activity",
+      "type": "Announce",
+      "actor": "https://mastodon.example/users/alice",
+      "published": "2026-10-11T20:00:00Z",
+      "to": ["https://www.w3.org/ns/activitystreams#Public"],
+      "cc": ["https://other.example/users/bob", "https://mastodon.example/users/alice/followers"],
+      "object": "https://other.example/users/bob/statuses/7"
+    },
+    {
+      "id": "https://mastodon.example/users/alice/statuses/113300000000000003/activity",
+      "type": "Create",
+      "actor": "https://mastodon.example/users/alice",
+      "published": "2026-10-11T10:00:00Z",
+      "to": ["https://www.w3.org/ns/activitystreams#Public"],
+      "cc": ["https://mastodon.example/users/alice/followers", "https://other.example/users/bob"],
+      "object": {
+        "id": "https://mastodon.example/users/alice/statuses/113300000000000003",
+        "type": "Note",
+        "summary": null,
+        "inReplyTo": "https://other.example/users/bob/statuses/6",
+        "published": "2026-10-11T10:00:00Z",
+        "url": "https://mastodon.example/@alice/113300000000000003",
+        "attributedTo": "https://mastodon.example/users/alice",
+        "to": ["https://www.w3.org/ns/activitystreams#Public"],
+        "cc": ["https://mastodon.example/users/alice/followers", "https://other.example/users/bob"],
+        "sensitive": false,
+        "content": "<p><span class=\"h-card\"><a href=\"https://other.example/@bob\" class=\"u-url mention\">@<span>bob</span></a></span> agreed, mulch everything.</p>",
+        "attachment": [],
+        "tag": [{"type": "Mention", "href": "https://other.example/users/bob", "name": "@bob@other.example"}]
+      }
+    },
+    {
+      "id": "https://mastodon.example/users/alice/statuses/113300000000000002/activity",
+      "type": "Create",
+      "actor": "https://mastodon.example/users/alice",
+      "published": "2026-10-10T12:00:00Z",
+      "to": ["https://mastodon.example/users/alice/followers"],
+      "cc": ["https://www.w3.org/ns/activitystreams#Public", "KURL_MEMBER_ACTOR"],
+      "object": {
+        "id": "https://mastodon.example/users/alice/statuses/113300000000000002",
+        "type": "Note",
+        "summary": null,
+        "inReplyTo": null,
+        "published": "2026-10-10T12:00:00Z",
+        "url": "https://mastodon.example/@alice/113300000000000002",
+        "attributedTo": "https://mastodon.example/users/alice",
+        "to": ["https://mastodon.example/users/alice/followers"],
+        "cc": ["https://www.w3.org/ns/activitystreams#Public", "KURL_MEMBER_ACTOR"],
+        "sensitive": false,
+        "content": "<p>Seed swap list is up, <span class=\"h-card\"><a href=\"KURL_MEMBER_ACTOR\" class=\"u-url mention\">@<span>KURL_MEMBER_NAME</span></a></span> you wanted the beans.</p>",
+        "attachment": [
+          {
+            "type": "Document",
+            "mediaType": "image/jpeg",
+            "url": "https://files.mastodon.example/media_attachments/files/113/300/000/000/000/002/original/beans.jpg",
+            "name": "A jar of speckled beans",
+            "blurhash": "UFGkLJ~q00of",
+            "width": 1200,
+            "height": 900
+          }
+        ],
+        "tag": [{"type": "Mention", "href": "KURL_MEMBER_ACTOR", "name": "@KURL_MEMBER_NAME@kurl.me"}]
+      }
+    },
+    {
+      "id": "https://mastodon.example/users/alice/statuses/113300000000000001/activity",
+      "type": "Create",
+      "actor": "https://mastodon.example/users/alice",
+      "published": "2026-10-10T09:00:00Z",
+      "to": ["https://www.w3.org/ns/activitystreams#Public"],
+      "cc": ["https://mastodon.example/users/alice/followers"],
+      "object": {
+        "id": "https://mastodon.example/users/alice/statuses/113300000000000001",
+        "type": "Question",
+        "summary": null,
+        "inReplyTo": null,
+        "published": "2026-10-10T09:00:00Z",
+        "url": "https://mastodon.example/@alice/113300000000000001",
+        "attributedTo": "https://mastodon.example/users/alice",
+        "to": ["https://www.w3.org/ns/activitystreams#Public"],
+        "cc": ["https://mastodon.example/users/alice/followers"],
+        "sensitive": false,
+        "content": "<p>Which editor do you write in?</p>",
+        "attachment": [],
+        "tag": [],
+        "endTime": "2026-10-11T09:00:00Z",
+        "closed": "2026-10-11T09:00:00Z",
+        "votersCount": 12,
+        "oneOf": [
+          {"type": "Note", "name": "Vim", "replies": {"type": "Collection", "totalItems": 7}},
+          {"type": "Note", "name": "Emacs", "replies": {"type": "Collection", "totalItems": 3}},
+          {"type": "Note", "name": "Something else", "replies": {"type": "Collection", "totalItems": 2}}
+        ]
+      }
+    }
+  ]
+}

@@ -16,6 +16,7 @@ import com.example.short_link.common.note.RemoteNotes;
 import com.example.short_link.note.domain.NoteAuthor;
 import com.example.short_link.note.domain.NoteEntity;
 import com.example.short_link.note.domain.NoteMediaEntity;
+import com.example.short_link.note.domain.NotePollTally;
 import com.example.short_link.note.domain.NoteReplyPolicy;
 import com.example.short_link.note.domain.NoteVisibility;
 import com.example.short_link.note.domain.RemoteNoteRow;
@@ -384,6 +385,223 @@ class RemoteNoteRecorderTest {
     ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
     verify(notes).insertRemote(row.capture());
     assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
+  }
+
+  private static RemoteNotes.Received shaped(
+      Long localParent, RemoteNotes.Shape shape, boolean notifies) {
+    return new RemoteNotes.Received(
+        42L,
+        URI,
+        null,
+        "hello from afar",
+        null,
+        false,
+        "public",
+        null,
+        localParent,
+        null,
+        List.of(8L),
+        List.of(),
+        null,
+        shape,
+        notifies);
+  }
+
+  private static RemoteNotes.Poll poll(List<String> options, List<Long> votes, Instant endsAt) {
+    return new RemoteNotes.Poll(options, votes, 9, false, endsAt, false);
+  }
+
+  @Test
+  void aPollKeepsItsServersCountsAndIsClosedHereFromTheStart() {
+    when(notes.insertRemote(any())).thenReturn(Optional.of(920L), Optional.of(921L));
+    Instant ends = Instant.parse("2026-10-08T00:00:00.123456789Z");
+
+    recorder()
+        .receive(
+            shaped(
+                null,
+                new RemoteNotes.Shape(
+                    RemoteNotes.Kind.QUESTION,
+                    null,
+                    null,
+                    poll(List.of("a", "b"), List.of(5L, 4L), ends)),
+                true));
+    recorder()
+        .receive(
+            shaped(
+                null,
+                new RemoteNotes.Shape(
+                    RemoteNotes.Kind.QUESTION,
+                    null,
+                    null,
+                    new RemoteNotes.Poll(List.of("a", "b"), List.of(1L, 0L), 1, true, null, true)),
+                true));
+
+    ArgumentCaptor<RemoteNoteRow> rows = ArgumentCaptor.forClass(RemoteNoteRow.class);
+    verify(notes, times(2)).insertRemote(rows.capture());
+    RemoteNoteRow open = rows.getAllValues().get(0);
+    assertThat(open.kind()).isEqualTo("QUESTION");
+    assertThat(open.poll())
+        .isEqualTo(
+            new RemoteNoteRow.Poll(
+                List.of("a", "b"),
+                Instant.parse("2026-10-08T00:00:00.123456Z"),
+                false,
+                NOW,
+                List.of(5L, 4L),
+                9));
+    RemoteNoteRow closed = rows.getAllValues().get(1);
+    assertThat(closed.poll().expiresAt()).isEqualTo(NOW);
+    assertThat(closed.poll().multiple()).isTrue();
+  }
+
+  @Test
+  void aCardKeepsItsTitleAndCommunityCutToTheirColumns() {
+    when(notes.insertRemote(any())).thenReturn(Optional.of(922L));
+
+    recorder()
+        .receive(
+            shaped(
+                null,
+                new RemoteNotes.Shape(
+                    RemoteNotes.Kind.PAGE, "t".repeat(300), "gardening@lemmy.example", null),
+                true));
+
+    ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
+    verify(notes).insertRemote(row.capture());
+    assertThat(row.getValue().kind()).isEqualTo("PAGE");
+    assertThat(row.getValue().title()).isEqualTo("t".repeat(254) + "…");
+    assertThat(row.getValue().community()).isEqualTo("gardening@lemmy.example");
+    assertThat(row.getValue().poll()).isNull();
+  }
+
+  @Test
+  void aNoteFromTheAccountsHistoryJoinsItsThreadButTellsNoOne() {
+    NoteEntity parent = new NoteEntity(7L, "my question", null, null);
+    ReflectionTestUtils.setField(parent, "id", 5L);
+    when(notes.findById(5L)).thenReturn(Optional.of(parent));
+    when(notes.insertRemote(any())).thenReturn(Optional.of(923L));
+
+    assertThat(recorder().receive(shaped(5L, RemoteNotes.Shape.NOTE, false))).contains(923L);
+
+    ArgumentCaptor<RemoteNoteRow> row = ArgumentCaptor.forClass(RemoteNoteRow.class);
+    verify(notes).insertRemote(row.capture());
+    assertThat(row.getValue().inReplyToId()).isEqualTo(5L);
+    verify(notes).tag(923L, List.of());
+    verifyNoInteractions(events);
+  }
+
+  private NoteEntity keptPoll() {
+    NoteEntity note = kept("pick one", null);
+    note.pollElsewhere(
+        List.of("a", "b"), Instant.parse("2026-10-08T00:00:00Z"), false, List.of(1L, 1L), 2, NOW);
+    note.describeElsewhere("QUESTION", null, null);
+    return note;
+  }
+
+  @Test
+  void newCountsOrALaterEndOnAPollAreNoEdit() {
+    NoteEntity note = keptPoll();
+    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(media.findByNoteIds(List.of(900L))).thenReturn(List.of());
+    Instant later = Instant.parse("2026-10-09T00:00:00Z");
+
+    assertThat(
+            recorder()
+                .revise(
+                    42L,
+                    900L,
+                    new RemoteNotes.Revision(
+                        "pick one",
+                        null,
+                        false,
+                        null,
+                        List.of(),
+                        "en",
+                        new RemoteNotes.Shape(
+                            RemoteNotes.Kind.QUESTION,
+                            null,
+                            null,
+                            poll(List.of("a", "b"), List.of(6L, 3L), later)))))
+        .isTrue();
+
+    assertThat(note.remoteTally().votes()).containsExactly(6L, 3L);
+    assertThat(note.remoteTally().voters()).isEqualTo(9);
+    assertThat(note.getPollExpiresAt()).isEqualTo(later);
+    assertThat(note.getPollClosedAt()).isEqualTo(NOW);
+    assertThat(note.getEditedAt()).isNull();
+    verifyNoInteractions(events);
+  }
+
+  @Test
+  void aNewTitleOrPollOptionsOrADroppedPollIsAnEdit() {
+    NoteEntity polled = keptPoll();
+    NoteEntity article = kept("a summary", null);
+    article.describeElsewhere("ARTICLE", "Old title", null);
+    when(notes.findRemoteForUpdate(42L, 900L))
+        .thenReturn(Optional.of(article), Optional.of(polled));
+    when(media.findByNoteIds(List.of(900L))).thenReturn(List.of());
+
+    recorder()
+        .revise(
+            42L,
+            900L,
+            new RemoteNotes.Revision(
+                "a summary",
+                null,
+                false,
+                null,
+                List.of(),
+                "en",
+                new RemoteNotes.Shape(RemoteNotes.Kind.ARTICLE, "New title", null, null)));
+    recorder()
+        .revise(
+            42L, 900L, new RemoteNotes.Revision("pick one", null, false, null, List.of(), "en"));
+
+    assertThat(article.getRemoteTitle()).isEqualTo("New title");
+    assertThat(article.getEditedAt()).isEqualTo(NOW);
+    assertThat(polled.hasPoll()).isFalse();
+    assertThat(polled.getPollClosedAt()).isNull();
+    assertThat(polled.remoteTally()).isEqualTo(new NotePollTally(0, List.of(), null));
+    assertThat(polled.getRemoteKind()).isEqualTo("NOTE");
+    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "a summary"));
+    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "pick one"));
+  }
+
+  @Test
+  void aNoteEditedIntoAPollGetsTheCountsAndIsClosedHere() {
+    NoteEntity note = kept("pick one", null);
+    when(notes.findRemoteForUpdate(42L, 900L)).thenReturn(Optional.of(note));
+    when(media.findByNoteIds(List.of(900L))).thenReturn(List.of());
+
+    recorder()
+        .revise(
+            42L,
+            900L,
+            new RemoteNotes.Revision(
+                "pick one",
+                null,
+                false,
+                null,
+                List.of(),
+                "en",
+                new RemoteNotes.Shape(
+                    RemoteNotes.Kind.QUESTION,
+                    null,
+                    null,
+                    poll(List.of("x", "y"), List.of(0L, 2L), null))));
+
+    assertThat(note.pollOptions()).containsExactly("x", "y");
+    assertThat(note.getPollClosedAt()).isEqualTo(NOW);
+    assertThat(note.getPollExpiresAt()).isNull();
+    verify(events).publishEvent(new NoteRevisedEvent(900L, null, 42L, "pick one"));
+  }
+
+  @Test
+  void theListedNotesOfAnAccountAreCountedByTheRepository() {
+    when(notes.countListed(42L, 5)).thenReturn(3);
+
+    assertThat(recorder().countListed(42L, 5)).isEqualTo(3);
   }
 
   @Test

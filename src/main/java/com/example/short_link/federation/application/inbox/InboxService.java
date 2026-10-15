@@ -1,6 +1,7 @@
 package com.example.short_link.federation.application.inbox;
 
 import static com.example.short_link.federation.application.ActivityStreams.idOf;
+import static com.example.short_link.federation.application.ActivityStreams.idsOf;
 import static com.example.short_link.federation.application.ActivityStreams.text;
 
 import com.example.short_link.common.note.NoteSnapshotReader;
@@ -171,10 +172,11 @@ public class InboxService {
       }
       case "Create" -> {
         JsonNode object = activity.get("object");
-        if (object == null || !object.isObject() || !"Note".equals(text(object.get("type")))) {
+        Optional<RemoteNotes.Kind> kind = RemoteNoteParser.kindOf(object);
+        if (kind.isEmpty()) {
           return InboxOutcome.ignored("unsupported");
         }
-        String option = text(object.get("name"));
+        String option = kind.get() == RemoteNotes.Kind.NOTE ? text(object.get("name")) : null;
         String inReplyTo = idOf(object.get("inReplyTo"));
         Optional<Long> noteId = urls.noteIdOf(inReplyTo);
         if (option != null && noteId.isPresent()) {
@@ -201,7 +203,7 @@ public class InboxService {
       }
       case "Update" -> {
         JsonNode object = activity.get("object");
-        if (object == null || !object.isObject() || !"Note".equals(text(object.get("type")))) {
+        if (RemoteNoteParser.kindOf(object).isEmpty()) {
           return InboxOutcome.ignored("unsupported");
         }
         Optional<Long> kept =
@@ -343,7 +345,8 @@ public class InboxService {
                     note.sensitive(),
                     RemoteNoteParser.updated(revise.object()),
                     note.media(),
-                    note.language()))
+                    note.language(),
+                    note.shape()))
             ? InboxOutcome.accepted("update")
             : InboxOutcome.ignored("unknown-note");
       }
@@ -385,7 +388,7 @@ public class InboxService {
     String uri = idOf(object);
     return uri != null
         && uri.length() <= MAX_URI
-        && actorUri.equals(idOf(object.get("attributedTo")));
+        && idsOf(object.get("attributedTo")).contains(actorUri);
   }
 
   private static Kind reactionKind(String type) {

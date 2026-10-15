@@ -1,0 +1,76 @@
+{
+  "@context": [
+    "https://www.w3.org/ns/activitystreams",
+    "https://w3id.org/security/v1",
+    {"RsaSignature2017": "https://w3id.org/security#RsaSignature2017"},
+    {"pt": "https://joinpeertube.org/ns#", "sc": "http://schema.org/"}
+  ],
+  "type": "Video",
+  "id": "https://peertube.example/videos/watch/9c9de5e8-0a1e-484a-b099-e80766180a6d",
+  "name": "Building a raised bed in ten minutes",
+  "duration": "PT612S",
+  "uuid": "9c9de5e8-0a1e-484a-b099-e80766180a6d",
+  "category": {"identifier": "15", "name": "Science & Technology"},
+  "licence": {"identifier": "1", "name": "Attribution"},
+  "language": {"identifier": "en", "name": "English"},
+  "views": 120,
+  "sensitive": false,
+  "waitTranscoding": true,
+  "state": 1,
+  "commentsEnabled": true,
+  "downloadEnabled": true,
+  "published": "2026-10-03T10:00:00.000Z",
+  "originallyPublishedAt": null,
+  "updated": "2026-10-03T10:05:00.000Z",
+  "tag": [{"type": "Hashtag", "name": "garden"}],
+  "mediaType": "text/markdown",
+  "content": "Step by step, with **cheap** lumber and one saw.",
+  "support": null,
+  "subtitleLanguage": [],
+  "icon": [
+    {
+      "type": "Image",
+      "url": "https://peertube.example/lazy-static/thumbnails/9c9de5e8.jpg",
+      "mediaType": "image/jpeg",
+      "width": 280,
+      "height": 157
+    },
+    {
+      "type": "Image",
+      "url": "https://peertube.example/lazy-static/previews/9c9de5e8.jpg",
+      "mediaType": "image/jpeg",
+      "width": 850,
+      "height": 480
+    }
+  ],
+  "url": [
+    {
+      "type": "Link",
+      "mediaType": "text/html",
+      "href": "https://peertube.example/w/kVBbnS8f4E5yDLs8JhzHmb"
+    },
+    {
+      "type": "Link",
+      "mediaType": "application/x-mpegURL",
+      "href": "https://peertube.example/static/streaming-playlists/hls/9c9de5e8/master.m3u8"
+    },
+    {
+      "type": "Link",
+      "mediaType": "video/mp4",
+      "href": "https://peertube.example/static/web-videos/9c9de5e8-720.mp4",
+      "height": 720,
+      "size": 52428800,
+      "fps": 30
+    }
+  ],
+  "likes": "https://peertube.example/videos/watch/9c9de5e8-0a1e-484a-b099-e80766180a6d/likes",
+  "dislikes": "https://peertube.example/videos/watch/9c9de5e8-0a1e-484a-b099-e80766180a6d/dislikes",
+  "shares": "https://peertube.example/videos/watch/9c9de5e8-0a1e-484a-b099-e80766180a6d/announces",
+  "comments": "https://peertube.example/videos/watch/9c9de5e8-0a1e-484a-b099-e80766180a6d/comments",
+  "attributedTo": [
+    {"type": "Person", "id": "https://peertube.example/accounts/maker"},
+    {"type": "Group", "id": "https://peertube.example/video-channels/maker_channel"}
+  ],
+  "to": ["https://www.w3.org/ns/activitystreams#Public"],
+  "cc": ["https://peertube.example/accounts/maker/followers"]
+}

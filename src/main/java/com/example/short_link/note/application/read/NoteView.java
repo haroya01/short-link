@@ -39,7 +39,73 @@ public record NoteView(
     SelfThread thread,
     String replyPolicy,
     Boolean canReply,
-    boolean hidden) {
+    boolean hidden,
+    Remote remote) {
+
+  public NoteView(
+      Long id,
+      String body,
+      Instant createdAt,
+      Instant editedAt,
+      Long likeCount,
+      Boolean likedByMe,
+      NoteAuthor author,
+      List<Media> media,
+      QuotedPost quotedPost,
+      Long inReplyToId,
+      long replyCount,
+      Long repostCount,
+      Boolean repostedByMe,
+      QuotedNote quotedNote,
+      LinkPreview linkPreview,
+      NoteAuthor repostedBy,
+      long quoteCount,
+      Boolean bookmarkedByMe,
+      List<String> mentions,
+      String contentWarning,
+      boolean sensitive,
+      boolean pinned,
+      String visibility,
+      Poll poll,
+      Boolean conversationMuted,
+      String language,
+      SelfThread thread,
+      String replyPolicy,
+      Boolean canReply,
+      boolean hidden) {
+    this(
+        id,
+        body,
+        createdAt,
+        editedAt,
+        likeCount,
+        likedByMe,
+        author,
+        media,
+        quotedPost,
+        inReplyToId,
+        replyCount,
+        repostCount,
+        repostedByMe,
+        quotedNote,
+        linkPreview,
+        repostedBy,
+        quoteCount,
+        bookmarkedByMe,
+        mentions,
+        contentWarning,
+        sensitive,
+        pinned,
+        visibility,
+        poll,
+        conversationMuted,
+        language,
+        thread,
+        replyPolicy,
+        canReply,
+        hidden,
+        null);
+  }
 
   public NoteView(
       Long id,
@@ -273,7 +339,8 @@ public record NoteView(
   }
 
   // Mastodon's poll: counts are public, and voted is true for the author, who sees results and does
-  // not vote. voted and ownVotes are null for anonymous readers.
+  // not vote, and on a poll from elsewhere, whose votes are cast on its own server. voted and
+  // ownVotes are null for anonymous readers.
   public record Poll(
       Instant expiresAt,
       boolean expired,
@@ -287,6 +354,10 @@ public record NoteView(
   public record PollOption(String title, long votesCount) {}
 
   public record LinkPreview(String url, String title, String description, String image) {}
+
+  // What a note from another server was there, and its address there. kind is NOTE, QUESTION,
+  // ARTICLE, PAGE or VIDEO; title and community are null where the kind has none.
+  public record Remote(String kind, String title, String url, String community) {}
 
   // A thread the author wrote in parts: how many parts there are, counting this one, and the parts
   // a feed shows right under it.
@@ -332,7 +403,8 @@ public record NoteView(
         thread,
         replyPolicy,
         canReply,
-        hidden);
+        hidden,
+        remote);
   }
 
   NoteView withThread(SelfThread selfThread) {
@@ -366,6 +438,7 @@ public record NoteView(
         selfThread,
         replyPolicy,
         canReply,
-        hidden);
+        hidden,
+        remote);
   }
 }

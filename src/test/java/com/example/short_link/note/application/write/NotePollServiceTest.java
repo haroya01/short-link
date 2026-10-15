@@ -106,6 +106,33 @@ class NotePollServiceTest {
   }
 
   @Test
+  void aPollFromElsewhereIsVotedOnThereAndShowsItsResultsHere() {
+    NoteEntity remote = new NoteEntity(null, "Which editor?", null, null);
+    ReflectionTestUtils.setField(remote, "id", 5L);
+    ReflectionTestUtils.setField(remote, "remoteActorId", 42L);
+    remote.pollElsewhere(
+        List.of("Vim", "Emacs"), NOW.plusSeconds(60), false, List.of(7L, 3L), 10, NOW);
+    when(notes.findById(5L)).thenReturn(Optional.of(remote));
+
+    fails(() -> service().vote(8L, 5L, List.of(0)), NoteErrorCode.NOTE_POLL_ELSEWHERE);
+    verifyNoInteractions(polls);
+
+    NoteView.Poll seen =
+        com.example.short_link.note.application.read.NotePolls.view(
+            remote, remote.remoteTally(), 8L, NOW);
+    assertThat(seen.voted()).isTrue();
+    assertThat(seen.ownVotes()).isEmpty();
+    assertThat(seen.votesCount()).isEqualTo(10);
+    assertThat(seen.votersCount()).isEqualTo(10);
+    assertThat(seen.expired()).isFalse();
+    assertThat(
+            com.example.short_link.note.application.read.NotePolls.view(
+                    remote, remote.remoteTally(), null, NOW)
+                .voted())
+        .isNull();
+  }
+
+  @Test
   void theAuthorEndedPollsNotesWithoutAPollAndBlocksAllRefuseAVote() {
     when(notes.findById(1L)).thenReturn(Optional.of(poll(1L, false, NOW.plusSeconds(60))));
     fails(() -> service().vote(7L, 1L, List.of(0)), NoteErrorCode.NOTE_POLL_OWN);
