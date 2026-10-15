@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>velopert.log</title>
+        <link>https://velog.io/</link>
+        <description>CEO @ Chaf Inc. 사용자들이 좋아하는 프로덕트를 만듭니다.</description>
+        <lastBuildDate>Sat, 31 Dec 2022 18:32:39 GMT</lastBuildDate>
+        <docs>https://validator.w3.org/feed/docs/rss2.html</docs>
+        <generator>https://github.com/jpmonette/feed</generator>
+        <image>
+            <title>velopert.log</title>
+            <url>https://images.velog.io/images/velopert/profile/ccab49cd-098c-4bb4-87dd-38044a403b61/17202261.png</url>
+            <link>https://velog.io/</link>
+        </image>
+        <copyright>Copyright (C) 2019. velopert.log. All rights reserved.</copyright>
+        <atom:link href="https://v2.velog.io/rss/velopert" rel="self" type="application/rss+xml"/>
+        <item>
+            <title><![CDATA[2022.log]]></title>
+            <link>https://velog.io/@velopert/2022.log</link>
+            <guid>https://velog.io/@velopert/2022.log</guid>
+            <pubDate>Sat, 31 Dec 2022 18:32:39 GMT</pubDate>
+            <description><![CDATA[<p>2022년, 나에게 정말 큰 변화가 있던 한 해였다. 첫 직장이었던 라프텔을 퇴사했다. 그리고 구독형 게임 플랫폼 회사, 체프를 창업을 했다. </p>
+<h2 id="왜-퇴사를-했는가">왜 퇴사를 했는가?</h2>
+<p>이 글을 읽는 사람들이 많이 궁금해할 것 같다. 라프텔은 솔직히 모든 부분이 마음에 들었다. 재직자 입장에서 정말이지 꿈의 기업이었다. 배울 점들이 많은 최고의 동료들이 있고, 팀 내 분위기도 정말 좋고 보상도 좋았다.</p>
+<p>정말 좋은 회사였기 때문에, 그 동안 다양한 회사에서 이직 제안을 했어도 흔들리지 않고 자리를 지켰다. </p>
+<p>그럼에도 불구하고 퇴사를 결정한 이유는 창업 때문이었고, 왜 퇴사를 했는지 보다는 왜 지금인지에 대한 이야기를 하는게 더 중요한 것 같다.</p>
+<p>원래는 직장을 다니면서 사이드로 프로젝트를 만들어서 그게 충분히 활성화되면 나올 계획이었다. 많은  사람들이 비슷한 생각을 가지고 있긴한데, 이상적이지만 말처럼 쉽지는 않다.</p>
+<p>나 또한 그러한 방향을 계획했고 작년 말에 사이드 프로젝트를 하나 런칭을 했었지만 안타깝게도 활성화에 실패했었다. 그리고 느꼈던 것은 본업은 따로 있고 사이드로 작업을 하기 때문에 제약이 참 많다는 것이다. 예를 들어서 좀 더 큰 스케일로 마케팅을 할 수가 없었고, 한다고 해도 들어오는 사용자들에 대하여 실시간으로 대응을 할 수 없었다. 업무 시간 중에 서버 모니터링하면서 증설 작업을 할 수는 없으니까.</p>
+<p>사실상 말이 사이드 프로젝트지 창업을 위한 진심 프로젝트였기 때문에 여기에 시간을 많이 쏟지 못 하는게 너무 아쉬웠고, 일이 예상처럼 잘 풀리지도 않아서 스트레스가 컸었다.</p>
+<p>그래서, 가능한 일찍 풀타임으로 작업을 하고 싶었고, 라프텔과의 이런 저런 계약이 끝나자마자 바로 퇴사를 결정했다.</p>
+<p>퇴사 결정을 하는 것은 정말 어려웠다. 계속 직장을 다니는 것과, 퇴사하고 창업을 하는 것에 대해서 끝없이 고민을 하면서 다음과 같은 부분들을 생각하면서 결국 퇴사를 결정했다.</p>
+<ol>
+<li>라프텔의 전 CEO 김범준님이 걸었던 길을 따라가고 싶었다. 내 주변에서 내가 가장 존경하는 인물이고, 어찌보면 지금의 내가 있게 한 가장 중요한 사람이기도 하다.  그 사람이 나를 발굴해내고 팀원들이 행복한 회사를 만든 것 처럼 나 또한 그러하고 싶다.</li>
+<li>실패는 두렵다. 그렇지만 실패를 통해서 많은걸 배울 수 있고 그 배움을 통하여 큰 도약을 하기도 한다. 실패하는게 옵션에 있어서는 안되지만 만약 실패한다면 더 어릴 때 실패하는게 덜 치명적일것이다. </li>
+<li>대학교 자퇴를 결정하면서 또래들에 비하여 2년이란 시간을 벌었다. 2년 정도는 모험을 떠난다고 해서 뒤쳐지지 않는다.</li>
+</ol>
+<p>내가 내 자신을 많이 설득했음에도 불구하고 창업 결정은 쉽지 않았다. 그래도 결정을 할 수 있던 이유중에 하나는 정말 뛰어난 공동창업자와 함께하기 때문이다. 지금의 라프텔의 비지니스 모델이 있게 한 일등공신중 한명인데 비지니스 감각이 정말 남다르다. 그 사람과 함께하기에, 좀 더 일찍 결정을 내릴수가 있었다. 만약에 혼자 했더라면 몇년을 더 미뤘었을지도 모른다.</p>]]></description>
+        </item>
+<item>
+            <title><![CDATA[veltrends 개발 후기]]></title>
+            <link>https://velog.io/@velopert/veltrends-dev-review</link>
+            <guid>https://velog.io/@velopert/veltrends-dev-review</guid>
+            <pubDate>Sun, 23 Oct 2022 14:40:32 GMT</pubDate>
+            <description><![CDATA[<p>Veltrends는 개발, IT, 디자인, 스타트업 관련 유익하고 재미있는 소식들을 한 눈에 볼 수 있는 서비스입니다.</p>
+<p>홈페이지: <a href="https://www.veltrends.com/">https://www.veltrends.com/</a>
+GitHub Repo: <a href="https://github.com/velopert/veltrends">https://github.com/velopert/veltrends</a></p>
+<p>이 포스트에서는 이 프로젝트를 만들면서 했던 생각들을 여러분들께 공유해보고자 합니다.</p>
+<h2 id="프로젝트를-만든-이유">프로젝트를 만든 이유</h2>
+<p>이 프로젝트를 시작한 주요 목적은 기존에 제가 집필했던 『리액트를 다루는 기술』, 『리액트 네이티브를 다루는 기술』 에서 다루는 마지막 프로젝트 개발 튜토리얼을 대체하는 것이였습니다. 그래서 최대한 복잡하지 않고 이해하기 쉬운 코드로 작성을 해야겠다는 생각을 가지고 시작을 했습니다. 하지만 만들다보니, 이왕 만드는거 조금 더 진심으로 만들어보자라는 마음을 갖게 됐고, 서비스를 충분히 활성화 시킬 수 있지 않을까 싶어서 프로덕션 배포까지 진행을 하게 되었습니다.</p>
+<p>열심히 개발을 하다 보니 프로젝트의 결국 좀 복잡해지긴 했고.. 입문자가 그대로 따라 할 수 있는 수준을 조금 벗어나게 되었습니다. 나중에 책에 실은 프로젝트의 경우엔 Veltrends Lite 버전을 만들 계획입니다.</p>
+<p>이 프로젝트는 해외의 <a href="https://news.ycombinator.com/">Hackernews</a>와 국내의 <a href="https://news.hada.io/">GeekNews</a>를 모티브로 만들어졌습니다.</p>
+<p>이 프로젝트는 최대한 이미 알고 있는 기술을 사용해서 빠르고 쉽게 만드는게 의도였지만 프로젝트 개발을 하다보니 이번 프로젝트를 통해 새로운 것들을 꽤나 많이 경험하게 되었습니다. 중요하다고 생각하는것들 순으로 정리를 해보겠습니다.</p>
+<h2 id="1-모바일-우선-디자인-mobile-first-design">1. 모바일 우선 디자인 (Mobile First Design)</h2>
+<p>지금까지 서비스 개발을 해오면서, 매번 데스크탑 우선 디자인(Desktop First Design)을 해왔었습니다. 즉, 넓은 화면에서 보여지는 UI/UX 기획을 한 다음에 나중에 모바일 화면에 최적화를 해주는 것이죠. 이러한 방식은 기획 과정에 충분한 시간을 들이지 않으면 모바일 디바이스에서의 UX를 챙기기가 참 어려운 것 같습니다. 넓은 화면에서 보여주던걸 좁은 화면에서 보여주기 위해서 숨길 것들을 숨기고 재배치하거나 새로 만드는 작업이 많이 요구되기 마련이기 때문입니다.</p>
+<p>저는 특히 프로젝트를 만들 때 모바일 호환 작업을 가장 나중에 하는 습관이 있는데요, 빨리 배포하고 마무리하고 싶다 보니까 모바일 호환 작업에 공수를 덜 들이게 되고 그러다보니 모바일에서의 UX가 좋지 않은 경우가 많았습니다.</p>
+<p>모바일 우선 디자인(Mobile First Design)에 대해서는 이전부터 많이 들어왔었는데, 이번 프로젝트에 처음으로 도입을 해보게 되었습니다. 이 방식은 기획 과정에서 모바일 화면을 우선 만들고 나중에 더 넓은 화면으로 확장해나가는 방식입니다. 이 방식의 가장 큰 장점은 모바일 화면에서의 UX를 먼저 고려하면서 기획을 할 수 있다는 것입니다.</p>
+<p><img src="https://velog.velcdn.com/images/velopert/post/5806f85b-5ffd-43f5-976b-ce6037dd4281/image.png" alt=""></p>
+<p>이번 프로젝트에서 모바일 우선 디자인을 했었기에, 모바일 디바이스에서 하단 탭을 보여줄 생각을 할 수 있었습니다.</p>
+<p><img src="https://velog.velcdn.com/images/velopert/post/bcdeb49d-082b-4da2-a088-eb1bdcd356d1/image.png" alt=""></p>
+<p>만약 데스크탑을 먼저 기획했었더라면 해당 기능들을 헤더에다가 다 몰아놨다가 모바일에서는 햄버거 메뉴를 만들었겠죠. 또는, 사용자 로그인 정보를 눌렀을 때 보여줄수도 있었을 것 같습니다.</p>
+<p>그렇게 메뉴가 숨겨져있다면 사용자는 이 서비스에 어떤 기능들이 있는지 파악하기 어려울 것 입니다. 주요 기능들을 바로 노출시켜줌으로써 사용자가 서비스에 대해서 학습하는 리소스를 최소화시킬 수 있습니다.</p>
+<p>특히, 헤더에 너무 많은 항목들을 넣으려면 디자인적으로도 매우 복잡했을 것 입니다.</p>
+<p><img src="https://velog.velcdn.com/images/velopert/post/620ae58f-5b83-43e8-ae23-1d2b303d6cdc/image.png" alt=""></p>
+<p>위 이미지는 데스크탑에서 보여지는 헤더입니다. 만약 데스크탑에서 하던 대로 모바일 헤더에서도 새 글 작성, 검색, 로그인/로그아웃 등의 기능을 넣으려고 하면 자리가 충분하지 않았겠죠.</p>
+<p>추가적으로, 모바일 우선 디자인을 하니까 서비스 기능의 핵심에 대해서 좀 더 집중할 수 있던 점이 참 좋았습니다. 기획 단계에서부터 사용할 수 있는 화면의 크기가 제한되어 있기 때문에, 자연스레 불필요한 기능들은 숨기고 핵심 기능들만 노출시킬 수 있게 되었습니다. 그러다보니 더 쉬운 사용자 경험을 제공할 수 있도록 유도되었습니다.</p>
+<p>그리고, 더 넓은 화면으로 확장해나가는건 난이도가 꽤 쉬웠습니다. 보통 넓은 화면 우선 디자인을 한 다음에 나중에가서 모바일 디바이스 호환을 하다 보면 대응이 덜 된 UI가 있다면, UI가 화면에서 잘릴수도 있어서 버그처럼 보이게됩니다. 반면, 반대의 상황의 경우엔, 모바일 UI가 데스크탑에서 뜨게 됐을 땐 비록 덜 편할 수 있긴 하지만 버그처럼 느껴지지 않습니다. 따라서, 좀 더 여유롭게 대응할 수 있습니다. 쉽게 정리하자면 데스크탑 -&gt; 모바일 대응은 화면이 잘리지 않도록 대응하는 느낌인 반면에, 모바일 -&gt; 데스크탑 대응은 어떻게 하면 데스크탑에서 좀 더 편하게 보여줄 수 있을지 고민하여 개선하는 느낌입니다.</p>
+<p><img src="https://velog.velcdn.com/images/velopert/post/f4e0c6ff-949a-4306-9203-112e72d0b0ca/image.png" alt=""></p>
+<p>예를 들어서 댓글을 수정하거나 삭제할 때 모바일에서는 하단 모달을 띄웠었습니다. 이러한 UX를 똑같이 데스크탑에서 사용하면 어색한감이 있긴 하죠. 초반엔 단순히 최대 너비를 정해서 보여주도록 배포를 한 다음에 나중에가서 popper UI가 나타나도록 개선을 해주었습니다.</p>
+<p>이렇게 모바일 우선 디자인을 하면서 배운 점이 많았고, 데스크탑 사용자가 압도적으로 많은 서비스가 아닌 이상 앞으로 저는 가급적이면 계속해서 모바일 우선 디자인을 하게 될 것 같습니다.</p>
+<h2 id="2-remix-후기">2. Remix 후기</h2>
+<p>이번 프로젝트에선 제가 처음으로 <a href="https://remix.run/">Remix</a>를 프로덕션에서 사용을 해보았습니다. 충분히 재밌고 편한 프레임워크였지만 불편한 것들도 있었습니다.</p>
+<h3 id="초심자에게-추천하기엔-아직-이르다">초심자에게 추천하기엔 아직 이르다</h3>
+<p>사용해보고 느낀점은 초심자들에게 사용하라고 권장하긴 아직 이르다는 생각이 들었습니다.</p>
+<p>Remix가 익숙하지 않은 독자들을 위해서 간단하게 설명을 해보자면, 리액트로 풀 스택 웹 사이트를 만들 수 있게 해주는 웹 프레임워크입니다. 쉽게 생각하면 Next.js 처럼 서버사이드 렌더링, 코드 스플리팅, 라우팅 등을 지원해주는 프레임워크라고 생각하시면 됩니다. 좀 더 나아가자면 Remix는 풀 스택 프로젝트를 만드는 것에 초점이 좀 더 많이 잡혀있어서 프로젝트에서 데이터베이스에 직접 접근하거나 인증을 처리하는 등의 작업을 할 수 있습니다. 특장점중에 하나는 React Router를 만든 개발자들이 만든 프레임워크이기 때문에 React Router와 API 호환이 아주 잘 되지요.</p>
+<p>Remix가 추구하는 개발 방식은 꽤나 신선합니다. 백엔드와 프런트엔드를 분리하지 않고 한 프로젝트로 관리를 할 수 있게 해주지만 과거의 PHP 같은 고전의 방식이 아닌 좀 더 모던한 방식으로 이를 가능하게 해주니까요. 만약에 이렇게 백엔드와 프런트엔드를 함께 작성하고 싶다면 Remix는 참 이상적인 선택인것이 확실하지만, 저 같은 경우는 백엔드와 프런트엔드가 분리되어있긴 했습니다.</p>
+<p>백엔드와 프런트엔드가 분리되어있는 프로젝트에서도 Remix를 사용할 수 있습니다. Database를 접근하는 대신에 API Client로 API를 호출해주면 됩니다. 이론상 정말 간단합니다.</p>
+<pre><code class="language-jsx">import { json, LoaderFunction } from &#39;@remix-run/node&#39;
+import { useLoaderData } from &#39;@remix-run/react&#39;
+import { getItems } from &#39;~/lib/api/items&#39;
+import { GetItemsResult } from &#39;~/lib/api/types&#39;
+
+export const loader: LoaderFunction = async () =&gt; {
+  const items = await getItems({ mode: &#39;trending&#39; })
+  return json(items) // 여기서 반환된 값을
+}
+
+function Home() {
+  const items = useLoaderData&lt;GetItemsResult&gt;() // 여기서 사용 가능
+  return &lt;div&gt;{items.list.length}개의 항목&lt;/div&gt;
+}
+
+export default Home</code></pre>]]></description>
+        </item>
+<item>
+            <title><![CDATA[다른 사람들이 안 알려주는 리액트에서 Context API 잘 쓰는 방법]]></title>
+            <link>https://velog.io/@velopert/react-context-tutorial</link>
+            <guid>https://velog.io/@velopert/react-context-tutorial</guid>
+            <pubDate>Sun, 12 Jun 2022 08:28:48 GMT</pubDate>
+            <description><![CDATA[<p>여러분, 리액트로 웹 애플리케이션 개발 하면서 Context API를 어떻게 사용하고 계신가요? 과거에도 관련 포스트를 작성한적이 있긴 하지만, 지난 몇 년간 Context를 사용하면서 습득하게된 팁들을 여러분들에게 공유하면서 튜토리얼을 최신화 해보려고 합니다. 리액트를 실무에서 사용하고 계신 분들이라면 대부분 알만한 내용이지만 이에 대해서 입문자를 대상으로 다루는 콘텐츠를 찾기 어렵더라구요! 과거의 제가 잘 몰라서 나누지 못했던 내용들을 여러분들에게 전해드립니다.  </p>
+<blockquote>
+<p>이 포스트는 리액트의 Context를 처음 접하는 입문자들을 대상으로 작성하였으며,  책 『리액트를 다루는 기술』 에 수록될 예정입니다.</p>
+</blockquote>
+<h2 id="context-란">Context 란?</h2>
+<p>Context는 리액트 컴포넌트간에 어떠한 값을 공유할수 있게 해주는 기능입니다. 주로 Context는 전역적(global)으로 필요한 값을 다룰 때 사용하는데요, 꼭 전역적일 필요는 없습니다.  Context를 단순히 &quot;리액트 컴포넌트에서 Props가 아닌 또 다른 방식으로 컴포넌트간에 값을 전달하는 방법이다&quot; 라고 접근을 하시는 것이 좋습니다.</p>
+<h3 id="props로만-데이터를-전달하면-발생할-수-있는-문제">Props로만 데이터를 전달하면 발생할 수 있는 문제</h3>
+<p>리액트 애플리케이션에서는 일반적으로 컴포넌트에게 데이터를 전달해주어야 할 때 Props를 통해 전달합니다. 그런데 깊숙히 위치한 컴포넌트에 데이터를 전달해야 하는 경우에는 여러 컴포넌트를 거쳐 연달아서 Props를 설정해주어야 하기 때문에 불편하고 실수할 가능성이 높아지죠. </p>
+<pre><code class="language-js">function App() {
+  return &lt;GrandParent value=&quot;Hello World!&quot; /&gt;;
+}
+
+function GrandParent({ value }) {
+  return &lt;Parent value={value} /&gt;;
+}
+
+function Parent({ value }) {
+  return &lt;Child value={value} /&gt;;
+}
+
+function Child({ value }) {
+  return &lt;GrandChild value={value} /&gt;;
+}
+
+function GrandChild({ value }) {
+  return &lt;Message value={value} /&gt;;
+}
+
+function Message({ value }) {
+  return &lt;div&gt;Received: {value}&lt;/div&gt;;
+}</code></pre>]]></description>
+        </item>
+    </channel>
+</rss>

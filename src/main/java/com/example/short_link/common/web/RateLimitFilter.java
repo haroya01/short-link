@@ -21,7 +21,8 @@ public class RateLimitFilter extends OncePerRequestFilter {
   static final String METRIC_NAME = "rate_limit.exceeded";
 
   // Auth endpoints need stricter per-IP limits to resist brute-forcing six-digit 2FA codes, and
-  // the anonymous report endpoints so one address cannot flood the moderation queue.
+  // the anonymous report endpoints so one address cannot flood the moderation queue, and the blog
+  // import reads so one address cannot drive the server's outbound feed fetches.
   private record EndpointRule(String method, String path, long perMinute) {}
 
   // dev-login은 dev profile에만 노출되므로 테스트 계정 생성에 별도 인증 제한을 적용하지 않는다.
@@ -32,7 +33,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
           new EndpointRule("POST", "/api/v1/2fa/disable", 5),
           new EndpointRule("POST", "/api/v1/auth/refresh", 10),
           new EndpointRule("POST", "/api/v1/public/abuse-reports", 10),
-          new EndpointRule("POST", "/api/v1/public/abuse-reports/links", 10));
+          new EndpointRule("POST", "/api/v1/public/abuse-reports/links", 10),
+          new EndpointRule("POST", "/api/v1/imports/preview", 10),
+          new EndpointRule("POST", "/api/v1/imports/sources", 10));
 
   private final RateLimitCounter counter;
   private final JsonMapper jsonMapper;

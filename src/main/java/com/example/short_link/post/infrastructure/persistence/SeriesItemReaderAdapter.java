@@ -144,6 +144,7 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
                     + " JOIN series s ON s.id = i.series_id"
                     + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id"
                     + " AND p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+                    + " AND p.hidden_from_discover = FALSE"
                     + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
                     + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
                     + " WHERE (p.id IS NOT NULL OR n.id IS NOT NULL)"

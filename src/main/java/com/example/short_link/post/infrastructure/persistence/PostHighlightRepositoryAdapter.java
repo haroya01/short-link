@@ -98,6 +98,7 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
     return em.createNativeQuery(
             ON_POST
                 + "p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+                + " AND p.hidden_from_discover = FALSE"
                 + HEARD_WRITERS
                 + " ORDER BY h.created_at DESC",
             PostHighlightEntity.class)

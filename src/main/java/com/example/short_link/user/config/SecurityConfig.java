@@ -193,6 +193,9 @@ public class SecurityConfig {
                     // Anonymous creation is protected by PoW in the controller.
                     .requestMatchers(POST, "/api/v1/links")
                     .permitAll()
+                    // Anonymous preview reads public feeds only; RateLimitFilter caps it per IP.
+                    .requestMatchers(POST, "/api/v1/imports/preview")
+                    .permitAll()
 
                     // 2FA verification authenticates with the primary-login challenge, before a
                     // session exists.

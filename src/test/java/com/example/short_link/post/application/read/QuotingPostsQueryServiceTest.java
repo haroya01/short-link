@@ -30,7 +30,13 @@ class QuotingPostsQueryServiceTest {
   void setUp() {
     service =
         new QuotingPostsQueryService(
-            postRepository, new PostFeedItemAssembler(userRepository, seriesRepository));
+            postRepository,
+            new PostFeedItemAssembler(
+                userRepository,
+                seriesRepository,
+                new PostSourceViews(
+                    new com.example.short_link.link.application.ShortLinkUrlBuilder(
+                        "https://kurl.me"))));
   }
 
   private static PostEntity published(long id) {

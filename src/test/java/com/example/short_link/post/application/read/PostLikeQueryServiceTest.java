@@ -35,7 +35,12 @@ class PostLikeQueryServiceTest {
         new PostLikeQueryService(
             postRepository,
             postLikeRepository,
-            new PostFeedItemAssembler(userRepository, seriesRepository));
+            new PostFeedItemAssembler(
+                userRepository,
+                seriesRepository,
+                new PostSourceViews(
+                    new com.example.short_link.link.application.ShortLinkUrlBuilder(
+                        "https://kurl.me"))));
   }
 
   private PostEntity publishedPost(long id, long authorId, String slug) {

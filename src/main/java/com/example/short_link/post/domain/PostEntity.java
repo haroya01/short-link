@@ -122,6 +122,30 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "content_version", nullable = false)
   private long contentVersion = 0L;
 
+  @Column(name = "import_source_id")
+  private Long importSourceId;
+
+  @Column(name = "source_platform", length = 16)
+  private String sourcePlatform;
+
+  @Column(name = "source_url", length = 2048)
+  private String sourceUrl;
+
+  @Column(name = "source_url_hash", length = 64)
+  private String sourceUrlHash;
+
+  @Column(name = "source_excerpt_only", nullable = false)
+  private boolean sourceExcerptOnly;
+
+  @Column(name = "source_link_id")
+  private Long sourceLinkId;
+
+  @Column(name = "source_short_code", length = 16)
+  private String sourceShortCode;
+
+  @Column(name = "hidden_from_discover", nullable = false)
+  private boolean hiddenFromDiscover;
+
   public PostEntity(Long userId, String slug, String title, String languageTag) {
     this.userId = userId;
     this.slug = slug;
@@ -242,7 +266,45 @@ public class PostEntity extends BaseTimeEntity {
   }
 
   public boolean isDiscoverable() {
-    return bodyTextLength >= DiscoveryQuality.MIN_BODY_TEXT_LENGTH;
+    return bodyTextLength >= DiscoveryQuality.MIN_BODY_TEXT_LENGTH && !hiddenFromDiscover;
+  }
+
+  public static PostEntity importedDraft(
+      Long userId, String slug, Long importSourceId, String platform, String sourceUrl) {
+    PostEntity post = new PostEntity(userId, slug, "", "ko");
+    post.importSourceId = importSourceId;
+    post.sourcePlatform = platform;
+    post.sourceUrl = sourceUrl;
+    post.sourceUrlHash = SourceUrlHash.of(sourceUrl);
+    return post;
+  }
+
+  public boolean isImported() {
+    return sourceUrl != null;
+  }
+
+  public void publishImported(
+      boolean excerptOnly,
+      Long linkId,
+      String shortCode,
+      boolean hidden,
+      Instant originalPublishedAt,
+      Instant now) {
+    requireNotTakenDown();
+    if (status != PostStatus.DRAFT) {
+      return;
+    }
+    requireTitleToGoPublic();
+    this.sourceExcerptOnly = excerptOnly;
+    this.sourceLinkId = linkId;
+    this.sourceShortCode = linkId == null ? null : shortCode;
+    this.hiddenFromDiscover = hidden;
+    this.status = PostStatus.PUBLISHED;
+    this.publishedAt =
+        originalPublishedAt != null && !originalPublishedAt.isAfter(now)
+            ? originalPublishedAt
+            : now;
+    this.scheduledAt = null;
   }
 
   private void requireTitleToGoPublic() {

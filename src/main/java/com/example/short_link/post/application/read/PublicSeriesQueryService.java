@@ -48,6 +48,7 @@ public class PublicSeriesQueryService {
   private final SeriesSubscriptionRepository subscriptionRepository;
   private final SeriesItemRepository seriesItemRepository;
   private final SeriesItemReader seriesItemReader;
+  private final PostSourceViews sources;
 
   public List<PublicSeriesCard> subscribedSeries(Long userId) {
     List<Long> ids = subscriptionRepository.findSubscribedSeriesIds(userId);
@@ -188,7 +189,9 @@ public class PublicSeriesQueryService {
       PostEntity post = row.getType() == SeriesItemType.POST ? published.get(row.getRefId()) : null;
       SeriesNote note = row.getType() == SeriesItemType.NOTE ? notes.get(row.getRefId()) : null;
       if (post != null) {
-        items.add(new PublicSeriesItem(row.getType().name(), PublicPostListItem.from(post), null));
+        items.add(
+            new PublicSeriesItem(
+                row.getType().name(), PublicPostListItem.from(post, sources.of(post)), null));
       } else if (note != null && note.shared()) {
         items.add(new PublicSeriesItem(row.getType().name(), null, SeriesNoteView.from(note)));
       }
@@ -202,7 +205,7 @@ public class PublicSeriesQueryService {
             members.size(),
             items.size(),
             distinctTags(members)),
-        members.stream().map(PublicPostListItem::from).toList(),
+        members.stream().map(p -> PublicPostListItem.from(p, sources.of(p))).toList(),
         items);
   }
 

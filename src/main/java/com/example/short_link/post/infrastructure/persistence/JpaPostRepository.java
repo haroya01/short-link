@@ -95,11 +95,11 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   String BROWSE_PREDICATE =
       "WHERE p.status = 'PUBLISHED' AND (:lang IS NULL OR p.language_tag = :lang) "
-          + "AND p.body_text_length >= :minBody"
+          + "AND p.body_text_length >= :minBody AND p.hidden_from_discover = FALSE"
           + HeardSql.POST_AUTHOR
           + " AND (p.series_id IS NULL OR NOT EXISTS (SELECT 1 FROM posts q "
           + "WHERE q.series_id = p.series_id AND q.status = 'PUBLISHED' "
-          + "AND q.body_text_length >= :minBody "
+          + "AND q.body_text_length >= :minBody AND q.hidden_from_discover = FALSE "
           + "AND (:lang IS NULL OR q.language_tag = :lang) "
           + "AND (q.published_at > p.published_at "
           + "OR (q.published_at = p.published_at AND q.id > p.id)))) ";
@@ -136,7 +136,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   String TAG_PREDICATE =
       "WHERE LOWER(t.tag) = LOWER(:tag) AND p.status = 'PUBLISHED' "
-          + "AND p.body_text_length >= :minBody"
+          + "AND p.body_text_length >= :minBody AND p.hidden_from_discover = FALSE"
           + HeardSql.POST_AUTHOR
           + " ";
 
@@ -206,7 +206,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       "JOIN post_tag t ON t.post_id = p.id "
           + "WHERE p.status = 'PUBLISHED' AND p.user_id <> :viewer "
           + "AND LOWER(t.tag) IN (:tags) AND p.id NOT IN (:excludeIds) "
-          + "AND p.body_text_length >= :minBody"
+          + "AND p.body_text_length >= :minBody AND p.hidden_from_discover = FALSE"
           + HeardSql.POST_AUTHOR
           + " ";
 
@@ -235,6 +235,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   @Query(
       "select t, count(p) from PostEntity p join p.tags t "
           + "where p.status = :status and p.bodyTextLength >= :minBody "
+          + "and p.hiddenFromDiscover = false "
           + "group by t order by count(p) desc")
   List<Object[]> findPopularTags(
       @Param("status") PostStatus status, @Param("minBody") int minBody, Pageable pageable);
@@ -333,6 +334,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       value =
           "SELECT p.user_id, COUNT(*), COALESCE(SUM(p.view_count), 0) FROM posts p "
               + "WHERE p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+              + " AND p.hidden_from_discover = FALSE"
               + HeardSql.POST_AUTHOR
               + " GROUP BY p.user_id "
               + "ORDER BY COUNT(*) DESC, COALESCE(SUM(p.view_count), 0) DESC")

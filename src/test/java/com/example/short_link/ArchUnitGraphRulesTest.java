@@ -80,10 +80,10 @@ class ArchUnitGraphRulesTest {
           .resideInAPackage("io.jsonwebtoken..");
 
   @ArchTest
-  static final ArchRule jsoupSdkConfinedToOgScraper =
+  static final ArchRule jsoupConfinedToHtmlReaders =
       noClasses()
           .that()
-          .resideOutsideOfPackage("..link.og.application..")
+          .resideOutsideOfPackages("..link.og.application..", "..blogimport.application.feed..")
           .should()
           .dependOnClassesThat()
           .resideInAPackage("org.jsoup..");

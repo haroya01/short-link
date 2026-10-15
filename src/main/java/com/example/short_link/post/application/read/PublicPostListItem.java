@@ -16,9 +16,39 @@ public record PublicPostListItem(
     long likeCount,
     Instant publishedAt,
     Instant lastEditedAt,
-    boolean pinned) {
+    boolean pinned,
+    PostSourceView source) {
 
-  public static PublicPostListItem from(PostEntity post) {
+  public PublicPostListItem(
+      Long id,
+      String slug,
+      String title,
+      String excerpt,
+      String ogImageUrl,
+      String thumbnailUrl,
+      String languageTag,
+      List<String> tags,
+      long likeCount,
+      Instant publishedAt,
+      Instant lastEditedAt,
+      boolean pinned) {
+    this(
+        id,
+        slug,
+        title,
+        excerpt,
+        ogImageUrl,
+        thumbnailUrl,
+        languageTag,
+        tags,
+        likeCount,
+        publishedAt,
+        lastEditedAt,
+        pinned,
+        null);
+  }
+
+  public static PublicPostListItem from(PostEntity post, PostSourceView source) {
     return new PublicPostListItem(
         post.getId(),
         post.getSlug(),
@@ -31,6 +61,7 @@ public record PublicPostListItem(
         post.getLikeCount(),
         post.getPublishedAt(),
         post.getLastEditedAt(),
-        post.getPinOrder() != null);
+        post.getPinOrder() != null,
+        source);
   }
 }

@@ -39,4 +39,18 @@ public class AsyncConfig {
     executor.initialize();
     return executor;
   }
+
+  // A blog import runs for minutes, so it must hold neither the single scheduler thread nor the
+  // default pool. A dropped or interrupted run is resumed by the next sync.
+  @Bean(name = "blogImportExecutor")
+  public Executor blogImportExecutor() {
+    ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+    executor.setCorePoolSize(2);
+    executor.setMaxPoolSize(2);
+    executor.setQueueCapacity(50);
+    executor.setThreadNamePrefix("kurl-blog-import-");
+    executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
+    executor.initialize();
+    return executor;
+  }
 }
