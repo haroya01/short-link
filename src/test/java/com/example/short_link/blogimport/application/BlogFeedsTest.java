@@ -99,7 +99,7 @@ class BlogFeedsTest {
   }
 
   @Test
-  void anEmptyOrForeignDocumentIsNotFound() {
+  void anEmptyChannelIsNotFoundAndAForeignDocumentIsInvalid() {
     when(fetcher.fetch("https://rss.blog.naver.com/ghost.xml"))
         .thenReturn("<rss><channel><title/><link/><description/></channel></rss>");
     when(fetcher.fetch("https://ghost.tistory.com/rss")).thenReturn("<html>moved</html>");
@@ -109,7 +109,9 @@ class BlogFeedsTest {
             BlogImportException.class,
             e -> assertThat(e.errorCode()).isEqualTo(BlogImportErrorCode.IMPORT_FEED_NOT_FOUND));
     assertThatThrownBy(() -> feeds.read(feeds.parse("ghost.tistory.com")))
-        .isInstanceOf(BlogImportException.class);
+        .isInstanceOfSatisfying(
+            BlogImportException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(BlogImportErrorCode.IMPORT_FEED_INVALID));
   }
 
   @Test

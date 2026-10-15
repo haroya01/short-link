@@ -40,11 +40,13 @@ public class BlogFeeds {
     BlogAddress resolved = address.feedKnown() ? address : brunchFeed(address);
     FeedDocument doc =
         RssFeedParser.parse(fetcher.fetch(resolved.feedUrl()))
-            .filter(d -> !d.isEmpty())
             .orElseThrow(
                 () ->
                     new BlogImportException(
-                        BlogImportErrorCode.IMPORT_FEED_NOT_FOUND, resolved.blogUrl()));
+                        BlogImportErrorCode.IMPORT_FEED_INVALID, resolved.feedUrl()));
+    if (doc.isEmpty()) {
+      throw new BlogImportException(BlogImportErrorCode.IMPORT_FEED_NOT_FOUND, resolved.blogUrl());
+    }
     List<BlogFeed.Post> posts = new ArrayList<>();
     Set<String> seen = new HashSet<>();
     for (FeedEntry entry : doc.entries()) {
