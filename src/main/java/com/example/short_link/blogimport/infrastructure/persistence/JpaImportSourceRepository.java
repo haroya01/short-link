@@ -29,13 +29,13 @@ interface JpaImportSourceRepository extends JpaRepository<ImportSourceEntity, Lo
   @Query(
       "select s.id from ImportSourceEntity s"
           + " where (s.status in :syncing"
-          + " and (s.lastSyncedAt is null or s.lastSyncedAt < :syncedBefore))"
+          + " and (s.nextFetchAt is null or s.nextFetchAt <= :now))"
           + " or (s.status = :importing and s.updatedAt < :stalledBefore)"
-          + " order by s.lastSyncedAt asc, s.id asc")
+          + " order by s.nextFetchAt asc, s.id asc")
   List<Long> findDueIds(
       @Param("syncing") List<ImportSourceStatus> syncing,
       @Param("importing") ImportSourceStatus importing,
-      @Param("syncedBefore") Instant syncedBefore,
+      @Param("now") Instant now,
       @Param("stalledBefore") Instant stalledBefore,
       Pageable pageable);
 }

@@ -2,8 +2,10 @@ package com.example.short_link.blogimport.application.write;
 
 import com.example.short_link.blogimport.application.BlogFeed;
 import com.example.short_link.blogimport.application.BlogFeeds;
+import com.example.short_link.blogimport.application.HostGate;
 import com.example.short_link.blogimport.application.feed.ConvertedBody;
 import com.example.short_link.blogimport.application.feed.HtmlBlockConverter;
+import com.example.short_link.blogimport.domain.FeedValidators;
 import com.example.short_link.blogimport.domain.ImportItemEntity;
 import com.example.short_link.blogimport.domain.ImportSourceEntity;
 import com.example.short_link.blogimport.domain.ImportSourceStatus;
@@ -48,6 +50,7 @@ public class BlogImportRunner {
 
   private final ImportSourceRepository sources;
   private final BlogFeeds feeds;
+  private final HostGate hosts;
   private final HtmlBlockConverter html;
   private final ImportLedger ledger;
   private final ImportSourceRuns runs;
@@ -85,7 +88,15 @@ public class BlogImportRunner {
     boolean firstImport = source.getStatus() == ImportSourceStatus.IMPORTING;
     BlogFeed feed;
     try {
-      feed = feeds.read(source.address());
+      Optional<BlogFeed> changed =
+          firstImport
+              ? Optional.of(feeds.readRecent(source.address()))
+              : feeds.readIfChanged(source.address(), source.validators());
+      if (changed.isEmpty()) {
+        runs.notModified(sourceId);
+        return;
+      }
+      feed = changed.get();
     } catch (BlogImportException e) {
       runs.fail(sourceId, e.code());
       return;
@@ -123,7 +134,11 @@ public class BlogImportRunner {
         return;
       }
     }
-    runs.finish(sourceId, feed.title(), feed.fullContent());
+    runs.finish(
+        sourceId,
+        feed.title(),
+        feed.fullContent(),
+        failed == 0 ? feed.validators() : FeedValidators.NONE);
   }
 
   private boolean writerActive(Long userId) {
@@ -263,7 +278,8 @@ public class BlogImportRunner {
 
   private Rehosted rehost(Long userId, Long postId, String url) {
     try {
-      PostImageService.CommitResult result = images.importFromUrl(userId, postId, url);
+      PostImageService.CommitResult result =
+          hosts.call(url, () -> images.importFromUrl(userId, postId, url));
       return new Rehosted(result.imageUrl(), result.key());
     } catch (RuntimeException e) {
       return Rehosted.of(url);

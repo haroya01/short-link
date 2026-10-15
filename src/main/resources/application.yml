@@ -167,6 +167,13 @@ short-link:
     expiry-threshold-days: ${LINK_NOTIFICATION_EXPIRY_THRESHOLD_DAYS:7}
     velocity-min-clicks: ${LINK_NOTIFICATION_VELOCITY_MIN_CLICKS:10}
     velocity-ratio: ${LINK_NOTIFICATION_VELOCITY_RATIO:3.0}
+  # robots-policy: respect | named-only | ignore
+  blog-import:
+    robots-policy: ${BLOG_IMPORT_ROBOTS_POLICY:respect}
+    sync-cron: ${BLOG_IMPORT_SYNC_CRON:0 */5 * * * *}
+    sync-batch: ${BLOG_IMPORT_SYNC_BATCH:60}
+    sync-spacing: ${BLOG_IMPORT_SYNC_SPACING:2s}
+    host-wait: ${BLOG_IMPORT_HOST_WAIT:20s}
   safety-rescan:
     enabled: ${SAFETY_RESCAN_ENABLED:true}
     cron: ${SAFETY_RESCAN_CRON:0 41 */6 * * *}

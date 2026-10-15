@@ -1,10 +1,14 @@
 package com.example.short_link.blogimport.presentation;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.blogimport.application.BlogFeedFetcher;
 import com.example.short_link.blogimport.application.write.BlogImportRunner;
+import com.example.short_link.blogimport.domain.FeedValidators;
 import com.example.short_link.testsupport.OperationalHttpJourneySupport;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -15,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -28,12 +33,18 @@ class BlogImportHttpQueryContractTest extends OperationalHttpJourneySupport {
   @MockitoBean private BlogFeedFetcher feeds;
   @Autowired private BlogImportRunner runner;
 
+  private void serve(String body) {
+    when(feeds.fetch(eq(FEED), any()))
+        .thenReturn(new BlogFeedFetcher.Fetched(body, FeedValidators.NONE, false));
+  }
+
   @Test
   void aWriterBringsTheirVelogInAndKeepsItInSync() throws Exception {
     Actor owner = actor("blog-owner", false);
     Actor other = actor("blog-other", false);
     String velog = Files.readString(Path.of("src/test/resources/blog-import/velog.xml"));
-    when(feeds.fetch(FEED)).thenReturn(velog);
+    when(feeds.robots(anyString())).thenReturn(Optional.empty());
+    serve(velog);
 
     JsonNode preview =
         step(
@@ -72,8 +83,7 @@ class BlogImportHttpQueryContractTest extends OperationalHttpJourneySupport {
         null,
         422);
 
-    when(feeds.fetch(FEED))
-        .thenReturn(velog.replace("<description>CEO @", "<description>" + code + " CEO @"));
+    serve(velog.replace("<description>CEO @", "<description>" + code + " CEO @"));
     JsonNode verified =
         step("blog-import-verify", "POST", SOURCES + "/" + id + "/verify", owner, null, 200);
     assertThat(verified.path("status").asString()).isEqualTo("IMPORTING");
@@ -144,7 +154,7 @@ class BlogImportHttpQueryContractTest extends OperationalHttpJourneySupport {
             + "<description><![CDATA[<p>@Transactional 을 붙인 메서드가 하나 더 생겼다.</p>"
             + "<pre><code class=\"language-java\">class A {}</code></pre>]]></description>"
             + "</item>";
-    when(feeds.fetch(FEED)).thenReturn(velog.replaceFirst("<item>", newPost + "<item>"));
+    serve(velog.replaceFirst("<item>", newPost + "<item>"));
     deliverBackgroundWork("blog-import-sync-new-post", () -> runner.run(id));
     assertThat(count("posts", "import_source_id = ?", id)).isEqualTo(4);
     String note =

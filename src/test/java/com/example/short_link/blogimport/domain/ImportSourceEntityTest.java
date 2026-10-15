@@ -138,4 +138,41 @@ class ImportSourceEntityTest {
     assertThat(done.isSettled()).isTrue();
     assertThat(done.getImportedAt()).isEqualTo(VERIFIED);
   }
+
+  @Test
+  void aFetchSetsTheNextOneHalfAnHourLaterAndFailuresBackOffToADay() {
+    ImportSourceEntity source = pending();
+    source.verify(VERIFIED, 0);
+    assertThat(source.getLastFetchedAt()).isEqualTo(VERIFIED);
+    assertThat(source.getNextFetchAt()).isEqualTo(VERIFIED.plus(ImportSourceEntity.FETCH_INTERVAL));
+
+    java.util.List<java.time.Duration> waits = new java.util.ArrayList<>();
+    for (int i = 0; i < 8; i++) {
+      source.fetchFailed(VERIFIED);
+      waits.add(java.time.Duration.between(VERIFIED, source.getNextFetchAt()));
+    }
+    assertThat(waits)
+        .extracting(java.time.Duration::toHours)
+        .containsExactly(1L, 2L, 4L, 8L, 16L, 24L, 24L, 24L);
+    assertThat(source.getFetchFailures()).isEqualTo(8);
+
+    source.fetched(VERIFIED.plusSeconds(60));
+    assertThat(source.getFetchFailures()).isZero();
+    assertThat(source.getNextFetchAt())
+        .isEqualTo(VERIFIED.plusSeconds(60).plus(ImportSourceEntity.FETCH_INTERVAL));
+  }
+
+  @Test
+  void validatorsAreRememberedAndForgotten() {
+    ImportSourceEntity source = pending();
+    assertThat(source.validators().isEmpty()).isTrue();
+
+    source.rememberValidators(new FeedValidators("\"v1\"", "Thu, 15 Oct 2026 00:00:00 GMT"));
+    assertThat(source.validators())
+        .isEqualTo(new FeedValidators("\"v1\"", "Thu, 15 Oct 2026 00:00:00 GMT"));
+
+    source.rememberValidators(null);
+    assertThat(source.validators()).isEqualTo(FeedValidators.NONE);
+    assertThat(new FeedValidators(" ", "x".repeat(65)).isEmpty()).isTrue();
+  }
 }

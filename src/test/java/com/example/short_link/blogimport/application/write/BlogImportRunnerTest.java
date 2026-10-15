@@ -16,8 +16,11 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.blogimport.application.BlogFeed;
 import com.example.short_link.blogimport.application.BlogFeeds;
+import com.example.short_link.blogimport.application.BlogImportProperties;
+import com.example.short_link.blogimport.application.HostGate;
 import com.example.short_link.blogimport.application.feed.HtmlBlockConverter;
 import com.example.short_link.blogimport.domain.BlogAddress;
+import com.example.short_link.blogimport.domain.FeedValidators;
 import com.example.short_link.blogimport.domain.ImportItemEntity;
 import com.example.short_link.blogimport.domain.ImportSourceEntity;
 import com.example.short_link.blogimport.domain.repository.ImportSourceRepository;
@@ -71,6 +74,7 @@ class BlogImportRunnerTest {
       new BlogImportRunner(
           sources,
           feeds,
+          new HostGate(new BlogImportProperties(null, 0, null, null)),
           html,
           ledger,
           runs,
@@ -125,9 +129,17 @@ class BlogImportRunnerTest {
   }
 
   private void feed(boolean full, BlogFeed.Post... posts) {
-    when(feeds.read(any()))
-        .thenReturn(
-            new BlogFeed(source.address(), "writer.log", "desc", "ko", full, List.of(posts)));
+    BlogFeed feed =
+        new BlogFeed(
+            source.address(),
+            "writer.log",
+            "desc",
+            "ko",
+            full,
+            List.of(posts),
+            new FeedValidators("\"etag\"", null));
+    lenient().when(feeds.readRecent(any())).thenReturn(feed);
+    lenient().when(feeds.readIfChanged(any(), any())).thenReturn(Optional.of(feed));
   }
 
   @Test
@@ -163,7 +175,7 @@ class BlogImportRunnerTest {
     assertThat(old.blocks().get(1).content()).contains("https://img.kurl.me/");
     verify(runs).start(SOURCE, 2, "writer.log", true);
     verify(runs).progress(SOURCE, 2, 0);
-    verify(runs).finish(SOURCE, "writer.log", true);
+    verify(runs).finish(SOURCE, "writer.log", true, new FeedValidators("\"etag\"", null));
     verify(ledger, times(2)).complete(anyLong());
     verifyNoInteractions(notes);
   }
@@ -301,7 +313,7 @@ class BlogImportRunnerTest {
     verify(runs).progress(SOURCE, 1, 1);
     verify(runs).progress(SOURCE, 1, 2);
     verify(ledger, times(2)).fail(anyLong());
-    verify(runs).finish(SOURCE, "writer.log", true);
+    verify(runs).finish(SOURCE, "writer.log", true, FeedValidators.NONE);
   }
 
   @Test
@@ -325,7 +337,7 @@ class BlogImportRunnerTest {
 
   @Test
   void aFeedFailureMarksTheSourceAndImportsNothing() {
-    when(feeds.read(any()))
+    when(feeds.readRecent(any()))
         .thenThrow(new BlogImportException(BlogImportErrorCode.IMPORT_SOURCE_UNREACHABLE, "x"));
 
     runner.run(SOURCE);
@@ -376,7 +388,7 @@ class BlogImportRunnerTest {
     runner.run(SOURCE);
 
     verify(posts, times(1)).publish(any());
-    verify(runs, never()).finish(anyLong(), anyString(), any(Boolean.class));
+    verify(runs, never()).finish(anyLong(), anyString(), any(Boolean.class), any());
   }
 
   @Test
@@ -396,7 +408,7 @@ class BlogImportRunnerTest {
     runner.run(SOURCE);
 
     verify(runs, never()).start(anyLong(), anyInt(), anyString(), any(Boolean.class));
-    verify(runs).finish(SOURCE, "writer.log", true);
+    verify(runs).finish(SOURCE, "writer.log", true, new FeedValidators("\"etag\"", null));
   }
 
   @Test
@@ -426,5 +438,30 @@ class BlogImportRunnerTest {
   @Test
   void mentionsAreDefused() {
     assertThat(BlogImportRunner.unmention("@velopert 님")).isEqualTo("＠velopert 님");
+  }
+
+  @Test
+  void aSyncAsksConditionallyAndAnUnchangedFeedIsJustMarkedFetched() {
+    source.finishRun(VERIFIED.plusSeconds(1));
+    source.rememberValidators(new FeedValidators("\"v1\"", null));
+    when(feeds.readIfChanged(any(), eq(new FeedValidators("\"v1\"", null))))
+        .thenReturn(Optional.empty());
+
+    runner.run(SOURCE);
+
+    verify(runs).notModified(SOURCE);
+    verify(feeds, never()).readRecent(any());
+    verifyNoInteractions(posts, ledger);
+  }
+
+  @Test
+  void aSyncWhoseFeedVanishedRecordsTheReason() {
+    source.finishRun(VERIFIED.plusSeconds(1));
+    when(feeds.readIfChanged(any(), any()))
+        .thenThrow(new BlogImportException(BlogImportErrorCode.IMPORT_FEED_NOT_FOUND, "x"));
+
+    runner.run(SOURCE);
+
+    verify(runs).fail(SOURCE, "IMPORT_FEED_NOT_FOUND");
   }
 }

@@ -11,7 +11,7 @@ public class BlogImportSyncJob {
 
   private final SyncImportSourcesUseCase sync;
 
-  @Scheduled(cron = "${short-link.blog-import.sync-cron:0 */30 * * * *}", zone = "Asia/Seoul")
+  @Scheduled(cron = "${short-link.blog-import.sync-cron:0 */5 * * * *}", zone = "Asia/Seoul")
   public void tick() {
     sync.execute();
   }

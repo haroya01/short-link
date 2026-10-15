@@ -15,11 +15,13 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.blogimport.application.BlogFeed;
 import com.example.short_link.blogimport.application.BlogFeeds;
+import com.example.short_link.blogimport.application.BlogImportProperties;
 import com.example.short_link.blogimport.application.feed.HtmlBlockConverter;
 import com.example.short_link.blogimport.application.read.ImportPreviewView;
 import com.example.short_link.blogimport.application.read.ImportSourceQueryService;
 import com.example.short_link.blogimport.application.read.ImportSourceView;
 import com.example.short_link.blogimport.domain.BlogAddress;
+import com.example.short_link.blogimport.domain.FeedValidators;
 import com.example.short_link.blogimport.domain.ImportItemEntity;
 import com.example.short_link.blogimport.domain.ImportSourceEntity;
 import com.example.short_link.blogimport.domain.ImportSourceStatus;
@@ -83,6 +85,7 @@ class ImportSourceUseCasesTest {
                 new BlogFeed.Post("https://velog.io/@writer/b", "b", NOW, "<p>b</p>", List.of())));
     lenient().when(feeds.parse(anyString())).thenReturn(VELOG);
     lenient().when(feeds.read(any())).thenReturn(feed);
+    lenient().when(feeds.readRecent(any())).thenReturn(feed);
     lenient().when(views.viewOf(any())).thenAnswer(i -> ImportSourceView.of(i.getArgument(0), 0));
     lenient().when(sources.saveAndFlush(any())).thenAnswer(i -> i.getArgument(0));
     lenient().when(sources.save(any())).thenAnswer(i -> i.getArgument(0));
@@ -330,7 +333,7 @@ class ImportSourceUseCasesTest {
   void aPreviewListsThePostsWithExcerptsAndThumbnails() {
     PreviewBlogUseCase preview =
         new PreviewBlogUseCase(feeds, new HtmlBlockConverter(JsonMapper.builder().build()));
-    when(feeds.read(any()))
+    when(feeds.readRecent(any()))
         .thenReturn(
             new BlogFeed(
                 VELOG,
@@ -360,29 +363,54 @@ class ImportSourceUseCasesTest {
   }
 
   @Test
-  void aSyncRunsEveryDueSourceAndSurvivesOneFailing() {
+  void aSyncRunsAtMostABatchOfDueSourcesAndSurvivesOneFailing() {
     BlogImportRunner runner = mock(BlogImportRunner.class);
     RedisDistributedLock lock = mock(RedisDistributedLock.class);
     when(lock.tryAcquire(anyString(), any())).thenReturn(true);
     when(sources.findDueIds(any(), any(), any(Integer.class))).thenReturn(List.of(1L, 2L, 3L));
     doThrow(new IllegalStateException("boom")).when(runner).run(2L);
-    SyncImportSourcesUseCase sync = new SyncImportSourcesUseCase(sources, runner, lock, clock);
+    SyncImportSourcesUseCase sync =
+        new SyncImportSourcesUseCase(
+            sources,
+            runner,
+            lock,
+            clock,
+            new BlogImportProperties(null, 7, java.time.Duration.ofMillis(1), null));
 
     sync.execute();
 
     verify(runner).run(1L);
     verify(runner).run(3L);
-    ArgumentCaptor<Instant> syncedBefore = ArgumentCaptor.forClass(Instant.class);
+    ArgumentCaptor<Instant> now = ArgumentCaptor.forClass(Instant.class);
     ArgumentCaptor<Instant> stalledBefore = ArgumentCaptor.forClass(Instant.class);
-    verify(sources)
-        .findDueIds(
-            syncedBefore.capture(), stalledBefore.capture(), eq(SyncImportSourcesUseCase.BATCH));
-    assertThat(syncedBefore.getValue())
-        .isEqualTo(NOW.minus(SyncImportSourcesUseCase.SYNC_INTERVAL));
+    verify(sources).findDueIds(now.capture(), stalledBefore.capture(), eq(7));
+    assertThat(now.getValue()).isEqualTo(NOW);
     assertThat(stalledBefore.getValue())
         .isEqualTo(NOW.minus(SyncImportSourcesUseCase.STALLED_AFTER));
     verify(lock).release(SyncImportSourcesUseCase.LOCK_KEY);
-    assertThat(sync.runDue()).isEqualTo(2);
+    assertThat(sync.runDue()).isEqualTo(3);
+  }
+
+  @Test
+  void anInterruptedPauseEndsTheTick() {
+    BlogImportRunner runner = mock(BlogImportRunner.class);
+    when(sources.findDueIds(any(), any(), any(Integer.class))).thenReturn(List.of(1L, 2L));
+    SyncImportSourcesUseCase sync =
+        new SyncImportSourcesUseCase(
+            sources,
+            runner,
+            mock(RedisDistributedLock.class),
+            clock,
+            new BlogImportProperties(null, 0, java.time.Duration.ofSeconds(5), null));
+
+    Thread.currentThread().interrupt();
+    try {
+      assertThat(sync.runDue()).isEqualTo(1);
+    } finally {
+      Thread.interrupted();
+    }
+    verify(runner).run(1L);
+    verify(runner, never()).run(2L);
   }
 
   @Test
@@ -391,7 +419,9 @@ class ImportSourceUseCasesTest {
     RedisDistributedLock lock = mock(RedisDistributedLock.class);
     when(lock.tryAcquire(anyString(), any())).thenReturn(false);
 
-    new SyncImportSourcesUseCase(sources, runner, lock, clock).execute();
+    new SyncImportSourcesUseCase(
+            sources, runner, lock, clock, new BlogImportProperties(null, 0, null, null))
+        .execute();
 
     verify(sources, never()).findDueIds(any(), any(), any(Integer.class));
     verify(lock, never()).release(anyString());
@@ -425,11 +455,20 @@ class ImportSourceUseCasesTest {
 
     runs.fail(2L, "IMPORT_FEED_NOT_FOUND");
     assertThat(verified.getStatus()).isEqualTo(ImportSourceStatus.ERROR);
-    runs.finish(2L, "final", true);
+    runs.finish(2L, "final", true, new FeedValidators("\"v1\"", null));
     assertThat(verified.getStatus()).isEqualTo(ImportSourceStatus.SYNCING);
     assertThat(verified.getLastSyncedAt()).isEqualTo(NOW);
     assertThat(verified.getBlogTitle()).isEqualTo("final");
-    runs.finish(1L, "ignored", true);
+    assertThat(verified.validators()).isEqualTo(new FeedValidators("\"v1\"", null));
+    assertThat(verified.getNextFetchAt()).isEqualTo(NOW.plus(ImportSourceEntity.FETCH_INTERVAL));
+    runs.fail(2L, "IMPORT_SOURCE_UNREACHABLE");
+    assertThat(verified.getFetchFailures()).isEqualTo(1);
+    assertThat(verified.getNextFetchAt()).isEqualTo(NOW.plus(java.time.Duration.ofHours(1)));
+    runs.notModified(2L);
+    assertThat(verified.getStatus()).isEqualTo(ImportSourceStatus.SYNCING);
+    assertThat(verified.getFetchFailures()).isZero();
+    runs.notModified(9L);
+    runs.finish(1L, "ignored", true, FeedValidators.NONE);
     assertThat(pending.getBlogTitle()).isEqualTo("writer.log");
   }
 }

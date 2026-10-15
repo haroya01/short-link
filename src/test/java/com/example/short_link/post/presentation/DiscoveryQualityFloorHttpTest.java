@@ -76,7 +76,7 @@ class DiscoveryQualityFloorHttpTest extends DockerHttpTest {
 
               PostEntity hidden =
                   PostEntity.importedDraft(
-                      author.getId(), "hidden", null, "NAVER", "https://blog.naver.com/f/1");
+                      author.getId(), "hidden", null, "TISTORY", "https://f.tistory.com/1");
               hidden.updateTitle("숨긴블로그글");
               hidden.updateTags(List.of(TAG));
               DiscoverableBodies.discoverable(hidden);

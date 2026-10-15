@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Duration;
 import java.time.Instant;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -21,6 +22,8 @@ import lombok.NoArgsConstructor;
 public class ImportSourceEntity extends BaseTimeEntity {
 
   public static final int MAX_TITLE_LENGTH = 200;
+  public static final Duration FETCH_INTERVAL = Duration.ofMinutes(30);
+  public static final Duration MAX_BACKOFF = Duration.ofHours(24);
 
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -70,6 +73,21 @@ public class ImportSourceEntity extends BaseTimeEntity {
 
   @Column(name = "last_synced_at")
   private Instant lastSyncedAt;
+
+  @Column(name = "last_fetched_at")
+  private Instant lastFetchedAt;
+
+  @Column(name = "next_fetch_at")
+  private Instant nextFetchAt;
+
+  @Column(name = "fetch_failures", nullable = false)
+  private int fetchFailures;
+
+  @Column(name = "feed_etag", length = 255)
+  private String feedEtag;
+
+  @Column(name = "feed_last_modified", length = 64)
+  private String feedLastModified;
 
   @Column(name = "last_error", length = 64)
   private String lastError;
@@ -131,7 +149,31 @@ public class ImportSourceEntity extends BaseTimeEntity {
     this.verificationCode = null;
     this.verifiedAt = at;
     this.lastError = null;
+    fetched(at);
     startRun(pending);
+  }
+
+  public FeedValidators validators() {
+    return new FeedValidators(feedEtag, feedLastModified);
+  }
+
+  public void rememberValidators(FeedValidators validators) {
+    FeedValidators kept = validators == null ? FeedValidators.NONE : validators;
+    this.feedEtag = kept.etag();
+    this.feedLastModified = kept.lastModified();
+  }
+
+  public void fetched(Instant at) {
+    this.lastFetchedAt = at;
+    this.nextFetchAt = at.plus(FETCH_INTERVAL);
+    this.fetchFailures = 0;
+  }
+
+  public void fetchFailed(Instant at) {
+    this.lastFetchedAt = at;
+    this.fetchFailures++;
+    Duration wait = FETCH_INTERVAL.multipliedBy(1L << Math.min(fetchFailures, 6));
+    this.nextFetchAt = at.plus(wait.compareTo(MAX_BACKOFF) > 0 ? MAX_BACKOFF : wait);
   }
 
   public void refresh(String blogTitle, boolean fullContent) {

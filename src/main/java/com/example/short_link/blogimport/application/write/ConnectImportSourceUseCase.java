@@ -43,7 +43,7 @@ public class ConnectImportSourceUseCase {
   public ImportSourceView execute(Long userId, String url) {
     moderation.requireCanWrite(userId);
     BlogAddress parsed = feeds.parse(url);
-    BlogFeed feed = feeds.read(parsed);
+    BlogFeed feed = feeds.readRecent(parsed);
     try {
       return tx.execute(status -> connect(userId, feed));
     } catch (DataIntegrityViolationException raced) {

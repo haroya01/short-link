@@ -1,8 +1,10 @@
 package com.example.short_link.blogimport.application.write;
 
+import com.example.short_link.blogimport.domain.FeedValidators;
 import com.example.short_link.blogimport.domain.ImportSourceEntity;
 import com.example.short_link.blogimport.domain.repository.ImportSourceRepository;
 import java.time.Clock;
+import java.time.Instant;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,20 +38,42 @@ public class ImportSourceRuns {
   }
 
   @Transactional
-  public void finish(Long sourceId, String blogTitle, boolean fullContent) {
+  public void finish(
+      Long sourceId, String blogTitle, boolean fullContent, FeedValidators validators) {
     sources
         .findById(sourceId)
         .ifPresent(
             source -> {
+              Instant now = clock.instant();
               if (source.isVerified()) {
                 source.refresh(blogTitle, fullContent);
               }
-              source.finishRun(clock.instant());
+              source.finishRun(now);
+              source.fetched(now);
+              source.rememberValidators(validators);
+            });
+  }
+
+  @Transactional
+  public void notModified(Long sourceId) {
+    sources
+        .findById(sourceId)
+        .ifPresent(
+            source -> {
+              Instant now = clock.instant();
+              source.finishRun(now);
+              source.fetched(now);
             });
   }
 
   @Transactional
   public void fail(Long sourceId, String errorCode) {
-    sources.findById(sourceId).ifPresent(source -> source.failRun(errorCode));
+    sources
+        .findById(sourceId)
+        .ifPresent(
+            source -> {
+              source.failRun(errorCode);
+              source.fetchFailed(clock.instant());
+            });
   }
 }

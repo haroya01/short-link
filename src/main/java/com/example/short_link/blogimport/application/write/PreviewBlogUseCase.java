@@ -16,7 +16,7 @@ public class PreviewBlogUseCase {
   private final HtmlBlockConverter html;
 
   public ImportPreviewView execute(String url) {
-    BlogFeed feed = feeds.read(feeds.parse(url));
+    BlogFeed feed = feeds.readRecent(feeds.parse(url));
     List<ImportPreviewView.Item> items =
         feed.posts().stream()
             .map(

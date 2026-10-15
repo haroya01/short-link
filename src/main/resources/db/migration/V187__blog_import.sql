@@ -1,7 +1,9 @@
 -- A blog a member brings in from another platform and keeps in sync. blog_key names the blog on its
 -- platform (platform:id), so a member has one row per blog. claim_key holds the blog_key while the
 -- member's ownership stands (verified and not disconnected) and is NULL otherwise, so one blog has
--- at most one verified owner. The row goes with the member by ON DELETE CASCADE.
+-- at most one verified owner. next_fetch_at is never sooner than 30 minutes after the last fetch
+-- and backs off after failures; feed_etag and feed_last_modified are the validators of the last
+-- fully processed feed. The row goes with the member by ON DELETE CASCADE.
 CREATE TABLE blog_import_source (
   id                 BIGINT       NOT NULL AUTO_INCREMENT PRIMARY KEY,
   user_id            BIGINT       NOT NULL,
@@ -18,6 +20,11 @@ CREATE TABLE blog_import_source (
   announce_new_posts BOOLEAN      NOT NULL DEFAULT TRUE,
   show_in_discover   BOOLEAN      NOT NULL DEFAULT TRUE,
   last_synced_at     DATETIME(6)  NULL,
+  last_fetched_at    DATETIME(6)  NULL,
+  next_fetch_at      DATETIME(6)  NULL,
+  fetch_failures     INT          NOT NULL DEFAULT 0,
+  feed_etag          VARCHAR(255) NULL,
+  feed_last_modified VARCHAR(64)  NULL,
   last_error         VARCHAR(64)  NULL,
   progress_total     INT          NULL,
   progress_done      INT          NULL,
@@ -26,7 +33,7 @@ CREATE TABLE blog_import_source (
   updated_at         DATETIME(6)  NOT NULL,
   CONSTRAINT uk_blog_import_source_user_blog UNIQUE (user_id, blog_key),
   CONSTRAINT uk_blog_import_source_claim UNIQUE (claim_key),
-  KEY idx_blog_import_source_status (status, last_synced_at),
+  KEY idx_blog_import_source_due (status, next_fetch_at),
   CONSTRAINT fk_blog_import_source_user
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

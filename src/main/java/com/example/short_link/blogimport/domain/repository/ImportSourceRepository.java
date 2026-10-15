@@ -24,8 +24,8 @@ public interface ImportSourceRepository {
 
   long countActiveByUserId(Long userId);
 
-  // Verified sources not synced since syncedBefore, and first imports stalled since stalledBefore.
-  List<Long> findDueIds(Instant syncedBefore, Instant stalledBefore, int limit);
+  // Verified sources whose next fetch is due, and first imports stalled since stalledBefore.
+  List<Long> findDueIds(Instant now, Instant stalledBefore, int limit);
 
   void delete(ImportSourceEntity source);
 }

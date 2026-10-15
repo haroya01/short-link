@@ -265,9 +265,7 @@ class ImportedPostDiscoveryIntegrationTest {
                 true,
                 "kurl-DDDDDD"));
 
-    List<Long> due =
-        sources.findDueIds(
-            now.minus(25, ChronoUnit.MINUTES), now.minus(30, ChronoUnit.MINUTES), 10_000);
+    List<Long> due = sources.findDueIds(now, now.minus(30, ChronoUnit.MINUTES), 10_000);
 
     assertThat(due).contains(source.getId()).doesNotContain(fresh.getId(), pending.getId());
     assertThat(sources.findAllByUserId(authorId))

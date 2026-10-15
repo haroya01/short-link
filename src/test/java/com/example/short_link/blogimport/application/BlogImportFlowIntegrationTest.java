@@ -1,6 +1,12 @@
 package com.example.short_link.blogimport.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.blogimport.application.read.ImportSourceView;
@@ -8,6 +14,9 @@ import com.example.short_link.blogimport.application.write.BlogImportRunner;
 import com.example.short_link.blogimport.application.write.ConnectImportSourceUseCase;
 import com.example.short_link.blogimport.application.write.DisconnectImportSourceUseCase;
 import com.example.short_link.blogimport.application.write.VerifyImportSourceUseCase;
+import com.example.short_link.blogimport.domain.FeedValidators;
+import com.example.short_link.blogimport.exception.BlogImportErrorCode;
+import com.example.short_link.blogimport.exception.BlogImportException;
 import com.example.short_link.post.application.read.PublicPostDetail;
 import com.example.short_link.post.application.read.PublicPostQueryService;
 import com.example.short_link.user.domain.UserEntity;
@@ -16,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CountDownLatch;
@@ -32,7 +42,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 @ActiveProfiles("test")
 class BlogImportFlowIntegrationTest {
 
-  private static final String FEED = "https://rss.blog.naver.com/naverofficial.xml";
+  private static final String FEED = "https://brunch.co.kr/rss/@@2xr";
 
   @MockitoBean private BlogFeedFetcher fetcher;
   @Autowired private ConnectImportSourceUseCase connect;
@@ -42,6 +52,7 @@ class BlogImportFlowIntegrationTest {
   @Autowired private PublicPostQueryService publicPosts;
   @Autowired private UserRepository users;
   @Autowired private JdbcTemplate jdbc;
+  @Autowired private BlogImportProperties properties;
 
   private Long userId;
   private String username;
@@ -78,6 +89,11 @@ class BlogImportFlowIntegrationTest {
     jdbc.update("DELETE FROM users WHERE id = ?", userId);
   }
 
+  private void serve(String body) {
+    when(fetcher.fetch(eq(FEED), any()))
+        .thenReturn(new BlogFeedFetcher.Fetched(body, FeedValidators.NONE, false));
+  }
+
   private void awaitStatus(Long sourceId, String status) throws InterruptedException {
     long deadline = System.nanoTime() + Duration.ofSeconds(30).toNanos();
     while (System.nanoTime() < deadline) {
@@ -92,22 +108,40 @@ class BlogImportFlowIntegrationTest {
     throw new AssertionError("source " + sourceId + " never reached " + status);
   }
 
-  @Test
-  void aNaverBlogComesInAsSummariesThatPointBackToTheOriginal() throws Exception {
-    username = "nv" + UUID.randomUUID().toString().substring(0, 8);
+  private void signUp() {
+    username = "bf" + UUID.randomUUID().toString().substring(0, 8);
     UserEntity user = new UserEntity(username + "@x.com", "google", "g-" + username);
     user.claimUsername(username);
     userId = users.save(user).getId();
-    String naver = Files.readString(Path.of("src/test/resources/blog-import/naver.xml"));
-    when(fetcher.fetch(FEED)).thenReturn(naver);
+  }
 
-    ImportSourceView pending = connect.execute(userId, "https://blog.naver.com/naverofficial");
+  @Test
+  void naverStaysOutWhileItsRobotsTxtShutsEveryoneOut() {
+    signUp();
+    when(fetcher.robots("https://rss.blog.naver.com"))
+        .thenReturn(Optional.of("User-agent: *\nDisallow: /\n\nUser-agent: Yeti\nDisallow: /\n"));
+
+    assertThat(properties.robotsPolicy()).isEqualTo(BlogImportProperties.RobotsPolicy.RESPECT);
+    assertThatThrownBy(() -> connect.execute(userId, "https://blog.naver.com/naverofficial"))
+        .isInstanceOfSatisfying(
+            BlogImportException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(BlogImportErrorCode.IMPORT_ROBOTS_DISALLOWED));
+    verify(fetcher, never()).fetch(any(), any());
+  }
+
+  @Test
+  void aBrunchBlogComesInAsSummariesThatPointBackToTheOriginal() throws Exception {
+    signUp();
+    String brunch = Files.readString(Path.of("src/test/resources/blog-import/brunch.xml"));
+    when(fetcher.robots(anyString())).thenReturn(Optional.empty());
+    serve(brunch);
+
+    ImportSourceView pending = connect.execute(userId, "https://brunch.co.kr/@@2xr");
     assertThat(pending.fullContent()).isFalse();
-    when(fetcher.fetch(FEED))
-        .thenReturn(
-            naver.replace(
-                "<description><![CDATA[차곡차곡",
-                "<description><![CDATA[" + pending.verificationCode() + " 차곡차곡"));
+    String verified =
+        brunch.replaceFirst(
+            "<description>글이 작품이", "<description>" + pending.verificationCode() + " 글이 작품이");
+    serve(verified);
 
     ImportSourceView importing = verify.execute(userId, pending.id());
     assertThat(importing.status()).isEqualTo("IMPORTING");
@@ -121,30 +155,22 @@ class BlogImportFlowIntegrationTest {
             pending.id());
     assertThat(slugs).containsExactly("1", "2", "3");
     PublicPostDetail detail = publicPosts.findPublicPost(username, "3", null);
-    assertThat(detail.post().title()).isEqualTo("월 최대 40만 원! 라운지 서포터즈 참여하세요");
-    assertThat(detail.post().source().platform()).isEqualTo("NAVER");
-    assertThat(detail.post().source().originalUrl())
-        .isEqualTo("https://blog.naver.com/naverofficial/224429356463");
+    assertThat(detail.post().title()).startsWith("브런치 독서클럽 떼독 오픈 안내");
+    assertThat(detail.post().source().platform()).isEqualTo("BRUNCH");
+    assertThat(detail.post().source().originalUrl()).isEqualTo("https://brunch.co.kr/@@2xr/432");
     assertThat(detail.post().source().excerptOnly()).isTrue();
     assertThat(detail.post().source().shortUrl()).isNotBlank();
-    assertThat(detail.post().thumbnailUrl()).startsWith("https://blogthumb.pstatic.net/");
+    assertThat(detail.post().thumbnailUrl()).startsWith("https://img1.kakaocdn.net/");
     assertThat(detail.post().publishedAt())
-        .isEqualTo(java.time.Instant.parse("2026-10-02T04:53:56Z"));
+        .isEqualTo(java.time.Instant.parse("2026-09-30T05:16:48Z"));
     assertThat(detail.blocks()).hasSize(1);
-    assertThat(detail.blocks().get(0).content()).startsWith("실시간 관심사를").endsWith("…");
+    assertThat(detail.blocks().get(0).content()).startsWith("읽고 싶은 책은");
 
-    String verified =
-        naver.replace(
-            "<description><![CDATA[차곡차곡",
-            "<description><![CDATA[" + pending.verificationCode() + " 차곡차곡");
-    when(fetcher.fetch(FEED))
-        .thenReturn(
-            verified.replaceFirst(
-                "<item>",
-                "<item><title>새 글</title>"
-                    + "<link>https://blog.naver.com/naverofficial/9?fromRss=true</link>"
-                    + "<guid>https://blog.naver.com/naverofficial/9</guid>"
-                    + "<description>요약입니다</description></item><item>"));
+    serve(
+        verified.replaceFirst(
+            "<item>",
+            "<item><title>새 글</title><link>https://brunch.co.kr/@@2xr/433</link>"
+                + "<description>요약입니다</description></item><item>"));
     CountDownLatch start = new CountDownLatch(1);
     CompletableFuture<Void> first =
         CompletableFuture.runAsync(

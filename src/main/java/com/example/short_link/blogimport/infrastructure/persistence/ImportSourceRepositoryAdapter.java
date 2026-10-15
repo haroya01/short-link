@@ -57,11 +57,11 @@ class ImportSourceRepositoryAdapter implements ImportSourceRepository {
   }
 
   @Override
-  public List<Long> findDueIds(Instant syncedBefore, Instant stalledBefore, int limit) {
+  public List<Long> findDueIds(Instant now, Instant stalledBefore, int limit) {
     return jpa.findDueIds(
         List.of(ImportSourceStatus.SYNCING, ImportSourceStatus.ERROR),
         ImportSourceStatus.IMPORTING,
-        syncedBefore,
+        now,
         stalledBefore,
         PageRequest.of(0, limit));
   }
