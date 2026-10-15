@@ -63,6 +63,28 @@ class RemoteSearchControllerTest {
   }
 
   @Test
+  void aMemberGetsFiveSuggestionsByDefaultAndAnyoneElseIsTurnedAway() throws Exception {
+    when(search.suggestions(7L, 5)).thenReturn(List.of(ALICE));
+    when(search.suggestions(7L, 20)).thenReturn(List.of());
+
+    mvc.perform(
+            get("/api/v1/federation/accounts/suggestions")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items[0].acct").value("alice@mastodon.example"))
+        .andExpect(jsonPath("$.items[0].blocking").value(false))
+        .andExpect(jsonPath("$.items[0].muting").value(false));
+    mvc.perform(
+            get("/api/v1/federation/accounts/suggestions")
+                .param("limit", "20")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, "7"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.items").isEmpty());
+    mvc.perform(get("/api/v1/federation/accounts/suggestions"))
+        .andExpect(status().isUnauthorized());
+  }
+
+  @Test
   void resolvingNeedsASignedInMember() throws Exception {
     mvc.perform(get("/api/v1/federation/resolve").param("q", "@alice@mastodon.example"))
         .andExpect(status().isUnauthorized());

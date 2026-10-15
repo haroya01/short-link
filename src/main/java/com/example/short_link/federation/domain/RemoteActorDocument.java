@@ -10,4 +10,6 @@ public record RemoteActorDocument(
     String domain,
     String profileUrl,
     String displayName,
-    String avatarUrl) {}
+    String avatarUrl,
+    boolean discoverable,
+    boolean indexable) {}

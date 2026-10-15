@@ -2,6 +2,7 @@ package com.example.short_link.federation.presentation;
 
 import com.example.short_link.federation.application.RemoteAccountSearch;
 import com.example.short_link.federation.application.RemoteResolution;
+import com.example.short_link.federation.presentation.response.RemoteAccountListResponse;
 import com.example.short_link.federation.presentation.response.RemoteAccountSearchResponse;
 import com.example.short_link.federation.presentation.response.RemoteResolveResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,6 +26,12 @@ public class RemoteSearchController {
       @RequestParam(defaultValue = "") String q,
       @RequestParam(defaultValue = "10") int limit) {
     return new RemoteAccountSearchResponse(search.search(viewerId, q, limit));
+  }
+
+  @GetMapping("/accounts/suggestions")
+  public RemoteAccountListResponse suggestions(
+      @AuthenticationPrincipal Long viewerId, @RequestParam(defaultValue = "5") int limit) {
+    return new RemoteAccountListResponse(search.suggestions(viewerId, limit));
   }
 
   @GetMapping("/resolve")

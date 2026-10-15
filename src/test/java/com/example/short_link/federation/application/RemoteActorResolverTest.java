@@ -74,7 +74,9 @@ class RemoteActorResolverTest {
             "mastodon.example",
             null,
             null,
-            null),
+            null,
+            false,
+            false),
         fetchedAt);
   }
 

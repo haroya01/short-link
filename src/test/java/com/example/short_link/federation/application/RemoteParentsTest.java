@@ -40,7 +40,9 @@ class RemoteParentsTest {
             "m.example",
             null,
             null,
-            null),
+            null,
+            false,
+            false),
         Instant.parse("2026-10-07T00:00:00Z"));
   }
 

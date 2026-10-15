@@ -21,6 +21,8 @@ public interface RemoteActorRepository {
 
   List<RemoteAccountMatch> search(Long viewerId, String term, int limit, Instant now);
 
+  List<RemoteAccountMatch> suggestions(Long viewerId, int limit, Instant now);
+
   RemoteActorEntity saveAndFlush(RemoteActorEntity actor);
 
   void delete(RemoteActorEntity actor);

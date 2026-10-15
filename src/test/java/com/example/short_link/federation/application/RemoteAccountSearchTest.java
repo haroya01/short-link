@@ -117,4 +117,18 @@ class RemoteAccountSearchTest {
                 false,
                 true));
   }
+
+  @Test
+  void suggestionsAreKeptBetweenOneAndTwentyAndComeBackAsAccountViews() {
+    RemoteAccountMatch carol =
+        new RemoteAccountMatch(
+            44L, "carol", "social.example", "Carol", null, "u", false, false, false);
+    when(actors.suggestions(7L, 1, NOW)).thenReturn(List.of(carol));
+    when(actors.suggestions(7L, 20, NOW)).thenReturn(List.of());
+
+    assertThat(search().suggestions(7L, 0))
+        .extracting(RemoteAccountView::acct)
+        .containsExactly("carol@social.example");
+    assertThat(search().suggestions(7L, 500)).isEmpty();
+  }
 }

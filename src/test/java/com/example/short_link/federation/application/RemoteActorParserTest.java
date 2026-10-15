@@ -38,6 +38,29 @@ class RemoteActorParserTest {
   }
 
   @Test
+  void anAccountIsInSuggestionsAndSearchOnlyWhenItsDocumentSaysTrue() {
+    ObjectNode document = (ObjectNode) read(RemoteActorFixtures.MASTODON);
+    URI from = URI.create("https://mastodon.example/users/alice");
+    String key = "https://mastodon.example/users/alice#main-key";
+
+    var silent = RemoteActorParser.parse(document, from, key).orElseThrow();
+    assertThat(silent.discoverable()).isFalse();
+    assertThat(silent.indexable()).isFalse();
+
+    document.put("discoverable", true);
+    document.put("indexable", true);
+    var open = RemoteActorParser.parse(document, from, key).orElseThrow();
+    assertThat(open.discoverable()).isTrue();
+    assertThat(open.indexable()).isTrue();
+
+    document.put("discoverable", "true");
+    document.put("indexable", false);
+    var unclear = RemoteActorParser.parse(document, from, key).orElseThrow();
+    assertThat(unclear.discoverable()).isFalse();
+    assertThat(unclear.indexable()).isFalse();
+  }
+
+  @Test
   void aGoToSocialKeyStubIsNotAnActorButNamesItsOwner() {
     JsonNode stub = read(RemoteActorFixtures.GOTOSOCIAL_KEY_STUB);
     String keyId = "https://gts.example/users/bob/main-key";

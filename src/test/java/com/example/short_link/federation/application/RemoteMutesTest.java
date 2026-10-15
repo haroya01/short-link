@@ -61,7 +61,18 @@ class RemoteMutesTest {
     RemoteActorEntity actor =
         new RemoteActorEntity(
             new RemoteActorDocument(
-                uri, uri + "#k", "pem", uri + "/inbox", null, username, domain, null, null, null),
+                uri,
+                uri + "#k",
+                "pem",
+                uri + "/inbox",
+                null,
+                username,
+                domain,
+                null,
+                null,
+                null,
+                false,
+                false),
             NOW);
     ReflectionTestUtils.setField(actor, "id", id);
     return actor;
