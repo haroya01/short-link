@@ -68,9 +68,9 @@ public class RecordPostViewUseCase {
     PostEntity post =
         postRepository.findByUserIdAndSlugForUpdate(author.getId(), cmd.slug()).orElse(null);
     if (post == null || !post.isPublished()) return;
-    post.incrementViewCount();
     PostViewEventEntity event = buildEvent(post.getId(), ctx);
     readers.countView(post, event.getVisitorHash(), event.isBot(), cmd.viewerId());
+    post.incrementViewCount();
     postRepository.save(post);
     postViewEventRepository.save(event);
   }

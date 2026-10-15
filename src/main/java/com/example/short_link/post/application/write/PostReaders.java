@@ -24,7 +24,8 @@ public class PostReaders {
   private final ApplicationEventPublisher events;
   private final Clock clock;
 
-  // Runs inside the view's transaction with the post locked, before the view itself is saved.
+  // Runs inside the view's transaction with the post locked and still unchanged: a native query
+  // flushes a dirty post first, which would split its single UPDATE in two.
   public void countView(PostEntity post, String visitorHash, boolean bot, Long viewerId) {
     if (bot
         || visitorHash == null
@@ -32,15 +33,12 @@ public class PostReaders {
         || views.hasHumanVisit(post.getId(), visitorHash)) {
       return;
     }
-    reached(post, post.countReader());
-  }
-
-  private void reached(PostEntity post, int readers) {
-    if (!MILESTONES.contains(readers)) {
-      return;
-    }
+    int readers = post.getHumanReaderCount() + 1;
     Instant now = clock.instant();
-    if (milestones.record(post.getId(), readers, now)) {
+    boolean announce =
+        MILESTONES.contains(readers) && milestones.record(post.getId(), readers, now);
+    post.countReader();
+    if (announce) {
       events.publishEvent(
           new PostReadMilestoneEvent(
               post.getUserId(), post.getId(), post.getSlug(), post.getTitle(), readers, now));

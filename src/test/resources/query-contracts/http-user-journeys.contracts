@@ -615,6 +615,7 @@
 @junit | reader-post-unbookmark | 1 | 0 | 0 | 1 | 2
 @junit | reader-post-unlike | 2 | 0 | 1 | 1 | 4
 @junit | reader-post-view-beacon | 2 | 1 | 1 | 0 | 4
+@junit | reader-post-view-beacon-human | 5 | 3 | 1 | 0 | 9
 @junit | reader-preview-unknown-token | 1 | 0 | 0 | 0 | 1
 @junit | reader-private-path-hidden | 1 | 0 | 0 | 0 | 1
 @junit | reader-private-series-edit-denied | 1 | 0 | 0 | 0 | 1
