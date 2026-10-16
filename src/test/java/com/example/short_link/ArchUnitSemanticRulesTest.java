@@ -9,6 +9,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
 import com.tngtech.archunit.base.DescribedPredicate;
+import com.tngtech.archunit.core.domain.AccessTarget;
+import com.tngtech.archunit.core.domain.JavaAccess;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
 import com.tngtech.archunit.core.domain.JavaCodeUnit;
@@ -100,7 +102,7 @@ class ArchUnitSemanticRulesTest {
 
   @ArchTest
   static final ArchRule postVisibilityIsDecidedByTheAccessPolicy =
-      noClasses()
+      classes()
           .that()
           .resideOutsideOfPackages(
               "..post.domain..",
@@ -111,10 +113,7 @@ class ArchUnitSemanticRulesTest {
           .and()
           .doNotHaveFullyQualifiedName(
               "com.example.short_link.post.application.read.PostAnalyticsQueryService")
-          .should()
-          .callMethod(PostEntity.class, "isPublished")
-          .orShould()
-          .accessField(PostStatus.class, "PUBLISHED");
+          .should(leaveWhetherAPostIsPublishedToThePolicy());
 
   @ArchTest
   static final ArchRule transactionsDoNotCallOutboundClients =
@@ -168,6 +167,25 @@ class ArchUnitSemanticRulesTest {
                 + "Replace a setter to drop below the baseline, then lower ENTITY_SETTER_BASELINE.",
             ENTITY_SETTER_BASELINE)
         .hasSizeLessThanOrEqualTo(ENTITY_SETTER_BASELINE);
+  }
+
+  private static ArchCondition<JavaClass> leaveWhetherAPostIsPublishedToThePolicy() {
+    return new ArchCondition<>("leave whether a post is published to the access policy") {
+      @Override
+      public void check(JavaClass javaClass, ConditionEvents events) {
+        for (JavaAccess<?> access : javaClass.getAccessesFromSelf()) {
+          AccessTarget target = access.getTarget();
+          boolean publishedCheck =
+              target.getOwner().isEquivalentTo(PostEntity.class)
+                      && target.getName().equals("isPublished")
+                  || target.getOwner().isEquivalentTo(PostStatus.class)
+                      && target.getName().equals("PUBLISHED");
+          if (publishedCheck) {
+            events.add(SimpleConditionEvent.violated(access, access.getDescription()));
+          }
+        }
+      }
+    };
   }
 
   private static List<String> violations(ArchRule rule, JavaClasses classes) {

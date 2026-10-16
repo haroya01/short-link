@@ -20,6 +20,12 @@ public final class PostVisibilityFixtures {
     }
   }
 
+  public static class FiltersByAMethodReference {
+    java.util.List<PostEntity> shown(java.util.List<PostEntity> posts) {
+      return posts.stream().filter(PostEntity::isPublished).toList();
+    }
+  }
+
   public static class AsksThePolicy {
     boolean shown(PostEntity post) {
       return PostAccessPolicy.isOpen(post);

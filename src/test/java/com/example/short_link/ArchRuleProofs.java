@@ -45,7 +45,8 @@ final class ArchRuleProofs {
               ArchUnitSemanticRulesTest.postVisibilityIsDecidedByTheAccessPolicy,
               List.of(
                   PostVisibilityFixtures.ShowsAPostBecauseItIsPublished.class,
-                  PostVisibilityFixtures.ListsPostsByStatus.class),
+                  PostVisibilityFixtures.ListsPostsByStatus.class,
+                  PostVisibilityFixtures.FiltersByAMethodReference.class),
               List.of(PostVisibilityFixtures.AsksThePolicy.class, PublishesAPost.class)),
           new Proof(
               "ArchUnitSemanticRulesTest.transactionsDoNotCallOutboundClients",
