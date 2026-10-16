@@ -44,7 +44,12 @@ public class SignedFederationHttp implements FederationHttp {
 
   @Override
   public Result get(URI uri, Signer signer) {
-    return send(uri, null, signer, ACCEPT, true).result();
+    return send(uri, null, signer, ACCEPT, true, READ_TIMEOUT).result();
+  }
+
+  @Override
+  public Result get(URI uri, Signer signer, Duration patience) {
+    return send(uri, null, signer, ACCEPT, true, patience).result();
   }
 
   @Override
@@ -54,7 +59,7 @@ public class SignedFederationHttp implements FederationHttp {
       if (!allowedHost.test(next.getHost())) {
         return new Result.Refused("host " + next.getHost());
       }
-      Sent sent = send(next, null, signer, JRD, false);
+      Sent sent = send(next, null, signer, JRD, false, READ_TIMEOUT);
       if (sent.location() == null || redirects == MAX_REDIRECTS) {
         return sent.result();
       }
@@ -67,7 +72,7 @@ public class SignedFederationHttp implements FederationHttp {
 
   @Override
   public Result post(URI inbox, byte[] body, Signer signer) {
-    return send(inbox, body, signer, ACCEPT, true).result();
+    return send(inbox, body, signer, ACCEPT, true, READ_TIMEOUT).result();
   }
 
   private record Sent(Result result, URI location) {
@@ -77,7 +82,15 @@ public class SignedFederationHttp implements FederationHttp {
     }
   }
 
-  private Sent send(URI uri, byte[] body, Signer signer, String accept, boolean followRedirects) {
+  private Sent send(
+      URI uri,
+      byte[] body,
+      Signer signer,
+      String accept,
+      boolean followRedirects,
+      Duration readTimeout) {
+    Duration connectTimeout =
+        readTimeout.compareTo(CONNECT_TIMEOUT) < 0 ? readTimeout : CONNECT_TIMEOUT;
     if (!"https".equalsIgnoreCase(uri.getScheme())
         && !(allowPlainHttp && "http".equalsIgnoreCase(uri.getScheme()))) {
       return new Sent(new Result.Refused("scheme " + uri.getScheme()));
@@ -119,14 +132,14 @@ public class SignedFederationHttp implements FederationHttp {
                       headers,
                       body,
                       ACTIVITY_JSON,
-                      CONNECT_TIMEOUT,
-                      READ_TIMEOUT,
+                      connectTimeout,
+                      readTimeout,
                       MAX_BODY_BYTES)
                   : followRedirects
                       ? HttpFetcher.Request.get(
-                          resolved.get(), headers, CONNECT_TIMEOUT, READ_TIMEOUT, MAX_BODY_BYTES)
+                          resolved.get(), headers, connectTimeout, readTimeout, MAX_BODY_BYTES)
                       : HttpFetcher.Request.getNoRedirects(
-                          resolved.get(), headers, CONNECT_TIMEOUT, READ_TIMEOUT, MAX_BODY_BYTES));
+                          resolved.get(), headers, connectTimeout, readTimeout, MAX_BODY_BYTES));
     } catch (RuntimeException e) {
       return new Sent(new Result.Unreachable(e.getClass().getSimpleName()));
     }

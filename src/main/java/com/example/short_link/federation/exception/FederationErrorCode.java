@@ -16,7 +16,11 @@ public enum FederationErrorCode {
   SERVER_LIST_INVALID(
       HttpStatus.BAD_REQUEST,
       "a server list is Mastodon's domain_blocks.csv: #domain and #severity columns, at most %s"
-          + " servers");
+          + " servers"),
+  RELAY_DISABLED(HttpStatus.CONFLICT, "relays are off; FEDERATION_RELAY_ENABLED turns them on"),
+  RELAY_INVALID(
+      HttpStatus.BAD_REQUEST, "a relay is the https address of an actor on another server"),
+  RELAY_NOT_FOUND(HttpStatus.NOT_FOUND, "no such relay");
 
   private final HttpStatus status;
   private final String template;

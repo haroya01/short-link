@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import com.example.short_link.federation.domain.ServerBlockSeverity;
+import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 class RemoteAccountSearchIntegrationTest {
 
   @Autowired private RemoteActorRepository actors;
+  @Autowired private FederationDomainBlockRepository blocks;
   @Autowired private UserRepository users;
   @Autowired private EntityManager em;
 
@@ -343,5 +346,19 @@ class RemoteAccountSearchIntegrationTest {
     assertThat(actors.findByAcct(tag, domain("other")).map(RemoteActorEntity::getId))
         .contains(elsewhere);
     assertThat(actors.findByAcct(tag + "x", domain("home"))).isEmpty();
+  }
+
+  @Test
+  void aServersStrongestBlockCoversItsSubdomainsToo() {
+    serverBlock(domain("loud"), "LIMIT");
+    serverBlock(domain("gone"), "SUSPEND");
+    serverBlock("sub." + domain("gone"), "LIMIT");
+
+    assertThat(blocks.severityFor(domain("loud"))).contains(ServerBlockSeverity.LIMIT);
+    assertThat(blocks.severityFor("a.b." + domain("loud").toUpperCase()))
+        .contains(ServerBlockSeverity.LIMIT);
+    assertThat(blocks.severityFor("sub." + domain("gone"))).contains(ServerBlockSeverity.SUSPEND);
+    assertThat(blocks.severityFor("x" + domain("loud"))).isEmpty();
+    assertThat(blocks.severityFor(null)).isEmpty();
   }
 }
