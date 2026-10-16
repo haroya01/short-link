@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.HighlightFeedView;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.application.read.MyHighlightView;
@@ -35,7 +36,7 @@ class PostHighlightControllerTest {
 
   @Test
   void createReturns201WithNote() throws Exception {
-    when(createHighlight.execute(any()))
+    when(createHighlight.execute(any(), any(PostReader.class)))
         .thenReturn(
             new HighlightRef(
                 10L, 0, 0, 0, 5, "abc", Instant.parse("2026-06-12T00:00:00Z"), "여백의 메모"));
@@ -56,7 +57,7 @@ class PostHighlightControllerTest {
 
   @Test
   void createMultiBlockEchoesEndBlockOrder() throws Exception {
-    when(createHighlight.execute(any()))
+    when(createHighlight.execute(any(), any(PostReader.class)))
         .thenReturn(
             new HighlightRef(10L, 2, 5, 3, 1, "abc", Instant.parse("2026-06-12T00:00:00Z"), null));
 
@@ -73,7 +74,7 @@ class PostHighlightControllerTest {
 
   @Test
   void createWithoutNoteIsAllowed() throws Exception {
-    when(createHighlight.execute(any()))
+    when(createHighlight.execute(any(), any(PostReader.class)))
         .thenReturn(
             new HighlightRef(10L, 0, 0, 0, 5, "abc", Instant.parse("2026-06-12T00:00:00Z"), null));
 

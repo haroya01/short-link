@@ -8,7 +8,10 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.access.PostAccessFixtures;
+import com.example.short_link.post.application.access.PostPasswords;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBlockRepository;
@@ -50,7 +53,121 @@ class UpdatePostMetadataUseCaseTest {
             postRepository,
             searchTextUpdater,
             revisionCapture,
-            new PostWriteViewAssembler(postRepository));
+            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()),
+            new PostAccessSettings(new PostPasswords()),
+            profileCache);
+  }
+
+  @Mock private ProfileCacheInvalidator profileCache;
+
+  private UpdatePostMetadataCommand access(String audience, String password, List<String> blocked) {
+    return new UpdatePostMetadataCommand(
+        7L,
+        42L,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        false,
+        new PostAccessChange(audience, password, blocked));
+  }
+
+  @Test
+  void anAccessOnlyChangeLeavesTheContentVersionAndRevisionsAlone() {
+    PostEntity post = ownedPost();
+    post.publish();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    PostView view = useCase.execute(access("followers", null, List.of("jp", "KR")));
+
+    assertThat(view.audience()).isEqualTo("FOLLOWERS");
+    assertThat(view.blockedCountries()).containsExactly("JP", "KR");
+    assertThat(view.contentVersion()).isZero();
+    assertThat(post.getLastEditedAt()).isNull();
+    verify(revisionCapture, never()).capture(any());
+    verify(moderation).requireCanWrite(7L);
+    verify(profileCache).evictByUserId(7L);
+  }
+
+  @Test
+  void aContentEditCarriesItsAccessChangeAlong() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+
+    PostView view =
+        useCase.execute(
+            new UpdatePostMetadataCommand(
+                7L,
+                42L,
+                "Retitled",
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                false,
+                new PostAccessChange("UNLISTED", null, null)));
+
+    assertThat(view.title()).isEqualTo("Retitled");
+    assertThat(view.audience()).isEqualTo("UNLISTED");
+    assertThat(view.contentVersion()).isEqualTo(1);
+    assertThat(post.getUnlistedKey()).hasSize(32);
+    verify(profileCache, never()).evictByUserId(any());
+  }
+
+  @Test
+  void aPasswordPostNeedsAPasswordAndKeepsItWhenItOpensUp() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+
+    assertThatThrownBy(() -> useCase.execute(access("PASSWORD", null, null)))
+        .isInstanceOfSatisfying(
+            PostException.class,
+            e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_PASSWORD_REQUIRED));
+
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    PostView protectedView = useCase.execute(access("PASSWORD", "다섯글자다", null));
+    String hash = post.getPasswordHash();
+    PostView reopened = useCase.execute(access("PUBLIC", null, null));
+
+    assertThat(protectedView.hasPassword()).isTrue();
+    assertThat(hash).startsWith("$2a$10$");
+    assertThat(reopened.hasPassword()).isTrue();
+    assertThat(post.getPasswordHash()).isEqualTo(hash);
+  }
+
+  @Test
+  void settingsThatCannotBeStoredAreRefusedBeforeAnythingChanges() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+
+    assertCode(access("FRIENDS", null, null), PostErrorCode.POST_AUDIENCE_INVALID);
+    assertCode(access(null, "abc", null), PostErrorCode.POST_PASSWORD_LENGTH);
+    assertCode(access(null, "가".repeat(201), null), PostErrorCode.POST_PASSWORD_LENGTH);
+    assertCode(
+        access(null, null, List.of("JP", "XX")), PostErrorCode.POST_BLOCKED_COUNTRIES_INVALID);
+    assertCode(
+        access("UNLISTED", "valid-password", List.of("ZZ")),
+        PostErrorCode.POST_BLOCKED_COUNTRIES_INVALID);
+    assertThat(post.getAudience().name()).isEqualTo("PUBLIC");
+    assertThat(post.hasPassword()).isFalse();
+    assertThat(post.getUnlistedKey()).isNull();
+  }
+
+  private void assertCode(UpdatePostMetadataCommand cmd, PostErrorCode code) {
+    assertThatThrownBy(() -> useCase.execute(cmd))
+        .isInstanceOfSatisfying(
+            PostException.class, e -> assertThat(e.errorCode()).isEqualTo(code));
   }
 
   private PostEntity ownedPost() {

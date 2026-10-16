@@ -52,7 +52,7 @@ abstract class ContentHttpJourneySupport extends DockerHttpTest {
     outsider = person("journey-outsider");
   }
 
-  private Actor person(String username) {
+  protected Actor person(String username) {
     long id =
         new TransactionTemplate(transactionManager)
             .execute(
@@ -74,10 +74,36 @@ abstract class ContentHttpJourneySupport extends DockerHttpTest {
   protected String rawStep(
       String id, String method, String path, Actor actor, Object body, int status)
       throws Exception {
+    return rawStep(id, method, path, actor, body, status, Map.of());
+  }
+
+  protected JsonNode step(
+      String id,
+      String method,
+      String path,
+      Actor actor,
+      Object body,
+      int status,
+      Map<String, String> headers)
+      throws Exception {
+    String response = rawStep(id, method, path, actor, body, status, headers);
+    return response.isBlank() ? json.nullNode() : json.readTree(response);
+  }
+
+  protected String rawStep(
+      String id,
+      String method,
+      String path,
+      Actor actor,
+      Object body,
+      int status,
+      Map<String, String> headers)
+      throws Exception {
     HttpRequest.Builder request =
         HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
             .timeout(Duration.ofSeconds(30))
             .header("X-Query-Contract-ID", id);
+    headers.forEach(request::header);
     if (actor != null) request.header("Authorization", "Bearer " + actor.token());
     HttpRequest.BodyPublisher payload = HttpRequest.BodyPublishers.noBody();
     if (body != null) {

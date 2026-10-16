@@ -1,6 +1,12 @@
-package com.example.short_link.post.application.access;
+package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.post.PostAudience;
+import com.example.short_link.post.application.access.PostAccess;
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostGrants;
+import com.example.short_link.post.application.access.PostPasswordAttempts;
+import com.example.short_link.post.application.access.PostPasswords;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.post.exception.PostErrorCode;

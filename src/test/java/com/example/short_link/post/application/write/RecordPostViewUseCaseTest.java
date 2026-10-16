@@ -13,6 +13,8 @@ import com.example.short_link.link.classifier.application.BotClassifier;
 import com.example.short_link.link.classifier.application.BotHeuristic;
 import com.example.short_link.link.classifier.application.GeoIpResolver;
 import com.example.short_link.link.classifier.application.UserAgentClassifier;
+import com.example.short_link.post.application.access.PostAccessFixtures;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -56,6 +58,7 @@ class RecordPostViewUseCaseTest {
             geoIpResolver,
             asnResolver,
             new BotClassifier(botHeuristic),
+            PostAccessFixtures.policy(),
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -75,7 +78,8 @@ class RecordPostViewUseCaseTest {
         .thenReturn(Optional.of(post));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
+    useCase.execute(
+        new RecordPostViewCommand("john", "p"), ViewContext.empty(), PostReader.of(null));
 
     assertThat(post.getViewCount()).isEqualTo(1L);
     verify(postRepository).save(post);
@@ -94,7 +98,8 @@ class RecordPostViewUseCaseTest {
         .thenReturn(Optional.of(post));
     when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
 
-    useCase.execute(new RecordPostViewCommand("  JOHN  ", "p"), ViewContext.empty());
+    useCase.execute(
+        new RecordPostViewCommand("  JOHN  ", "p"), ViewContext.empty(), PostReader.of(null));
 
     assertThat(post.getViewCount()).isEqualTo(1L);
   }
@@ -103,7 +108,8 @@ class RecordPostViewUseCaseTest {
   void noopForUnknownUser() {
     when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-    useCase.execute(new RecordPostViewCommand("ghost", "p"), ViewContext.empty());
+    useCase.execute(
+        new RecordPostViewCommand("ghost", "p"), ViewContext.empty(), PostReader.of(null));
 
     verify(postRepository, never()).save(any());
     verify(postViewEventRepository, never()).save(any());
@@ -115,7 +121,8 @@ class RecordPostViewUseCaseTest {
     author.softDelete();
     when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
+    useCase.execute(
+        new RecordPostViewCommand("john", "p"), ViewContext.empty(), PostReader.of(null));
 
     verify(postRepository, never()).save(any());
     verify(postViewEventRepository, never()).save(any());
@@ -129,7 +136,8 @@ class RecordPostViewUseCaseTest {
     when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
         .thenReturn(Optional.of(post));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
+    useCase.execute(
+        new RecordPostViewCommand("john", "p"), ViewContext.empty(), PostReader.of(null));
 
     assertThat(post.getViewCount()).isZero();
     verify(postRepository, never()).save(any());
@@ -146,7 +154,8 @@ class RecordPostViewUseCaseTest {
     when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
         .thenReturn(Optional.of(post));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"), ViewContext.empty());
+    useCase.execute(
+        new RecordPostViewCommand("john", "p"), ViewContext.empty(), PostReader.of(null));
 
     verify(postRepository, never()).save(any());
     verify(postViewEventRepository, never()).save(any());
@@ -181,7 +190,8 @@ class RecordPostViewUseCaseTest {
             null,
             null,
             false,
-            null));
+            null),
+        PostReader.of(null));
 
     ArgumentCaptor<PostViewEventEntity> event = ArgumentCaptor.forClass(PostViewEventEntity.class);
     verify(postViewEventRepository).save(event.capture());
@@ -236,7 +246,7 @@ class RecordPostViewUseCaseTest {
     when(asnResolver.resolve(any())).thenReturn(new AsnResolver.AsnInfo(0, "ISP", false, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(true);
 
-    useCase.execute(new RecordPostViewCommand("john", "p"), ctx());
+    useCase.execute(new RecordPostViewCommand("john", "p"), ctx(), PostReader.of(null));
 
     assertThat(savedEvent().isBot()).isTrue();
     assertThat(savedEvent().getBotName()).isEqualTo(BotHeuristic.SUSPECT_LABEL);
@@ -252,7 +262,7 @@ class RecordPostViewUseCaseTest {
         .thenReturn(new AsnResolver.AsnInfo(15169, "GOOGLE", true, false));
     when(botHeuristic.isSuspectBurst(any())).thenReturn(false);
 
-    useCase.execute(new RecordPostViewCommand("john", "p"), ctx());
+    useCase.execute(new RecordPostViewCommand("john", "p"), ctx(), PostReader.of(null));
 
     assertThat(savedEvent().isBot()).isTrue();
     assertThat(savedEvent().getBotName()).startsWith("datacenter:");
@@ -263,7 +273,7 @@ class RecordPostViewUseCaseTest {
     stubPublished();
     when(userAgentClassifier.classify(any())).thenThrow(new RuntimeException("classifier down"));
 
-    useCase.execute(new RecordPostViewCommand("john", "p"), ctx());
+    useCase.execute(new RecordPostViewCommand("john", "p"), ctx(), PostReader.of(null));
 
     PostViewEventEntity saved = savedEvent();
     assertThat(saved.getCountryCode()).isNull();
@@ -293,7 +303,8 @@ class RecordPostViewUseCaseTest {
             null,
             null,
             true,
-            null));
+            null),
+        PostReader.of(null));
 
     assertThat(savedEvent().getVisitorHash()).isNull();
   }

@@ -8,6 +8,8 @@ import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.access.PostAccessFixtures;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -52,7 +54,9 @@ class PostInteractionAccessTest {
 
   @BeforeEach
   void setUp() {
-    access = new PostInteractionAccess(posts, comments, highlights, replies, moderation, blocks);
+    access =
+        new PostInteractionAccess(
+            posts, comments, highlights, replies, moderation, blocks, PostAccessFixtures.policy());
   }
 
   @ParameterizedTest
@@ -106,7 +110,7 @@ class PostInteractionAccessTest {
     deleted.softDelete();
     when(comments.findById(60L)).thenReturn(Optional.of(deleted));
 
-    assertThatThrownBy(() -> access.requireLikeableComment(9L, 60L))
+    assertThatThrownBy(() -> access.requireLikeableComment(PostReader.of(9L), 60L))
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.COMMENT_NOT_FOUND);
@@ -119,7 +123,7 @@ class PostInteractionAccessTest {
     takenDown.softDelete(Instant.parse("2026-10-10T00:00:00Z"));
     when(replies.findById(70L)).thenReturn(Optional.of(takenDown));
 
-    assertThatThrownBy(() -> access.requireLikeableHighlightReply(9L, 70L))
+    assertThatThrownBy(() -> access.requireLikeableHighlightReply(PostReader.of(9L), 70L))
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.HIGHLIGHT_REPLY_NOT_FOUND);
@@ -143,12 +147,12 @@ class PostInteractionAccessTest {
 
   private void access(Interaction interaction) {
     switch (interaction) {
-      case COMMENT -> access.requireCommentablePost(9L, 42L);
-      case HIGHLIGHT_REPLY -> access.requireReplyableHighlight(9L, 50L);
-      case HIGHLIGHT -> access.requireInteractablePost(9L, 42L);
-      case POST_LIKE -> access.requireInteractablePostForUpdate(9L, 42L);
-      case COMMENT_LIKE -> access.requireLikeableComment(9L, 60L);
-      case HIGHLIGHT_REPLY_LIKE -> access.requireLikeableHighlightReply(9L, 70L);
+      case COMMENT -> access.requireCommentablePost(PostReader.of(9L), 42L);
+      case HIGHLIGHT_REPLY -> access.requireReplyableHighlight(PostReader.of(9L), 50L);
+      case HIGHLIGHT -> access.requireInteractablePost(PostReader.of(9L), 42L);
+      case POST_LIKE -> access.requireInteractablePostForUpdate(PostReader.of(9L), 42L);
+      case COMMENT_LIKE -> access.requireLikeableComment(PostReader.of(9L), 60L);
+      case HIGHLIGHT_REPLY_LIKE -> access.requireLikeableHighlightReply(PostReader.of(9L), 70L);
     }
   }
 

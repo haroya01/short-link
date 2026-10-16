@@ -6,6 +6,8 @@ import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noMethods;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.post.domain.PostEntity;
+import com.example.short_link.post.domain.PostStatus;
 import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClass;
 import com.tngtech.archunit.core.domain.JavaClasses;
@@ -95,6 +97,24 @@ class ArchUnitSemanticRulesTest {
           .that()
           .doNotHaveFullyQualifiedName("com.example.short_link.common.counter.RedisWindowCounter")
           .should(notIncrementOrExpireRedisKeysDirectly());
+
+  @ArchTest
+  static final ArchRule postVisibilityIsDecidedByTheAccessPolicy =
+      noClasses()
+          .that()
+          .resideOutsideOfPackages(
+              "..post.domain..",
+              "..post.application.access..",
+              "..post.application.write..",
+              "..post.infrastructure..",
+              "..post.scheduler..")
+          .and()
+          .doNotHaveFullyQualifiedName(
+              "com.example.short_link.post.application.read.PostAnalyticsQueryService")
+          .should()
+          .callMethod(PostEntity.class, "isPublished")
+          .orShould()
+          .accessField(PostStatus.class, "PUBLISHED");
 
   @ArchTest
   static final ArchRule transactionsDoNotCallOutboundClients =

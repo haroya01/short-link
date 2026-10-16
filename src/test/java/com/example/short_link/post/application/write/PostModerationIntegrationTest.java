@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.example.short_link.note.application.write.NoteCommandService;
 import com.example.short_link.note.application.write.NoteDraft;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.PostExportQueryService;
 import com.example.short_link.post.application.read.PostQueryService;
 import com.example.short_link.post.application.read.PublicFeedItem;
@@ -221,29 +222,37 @@ class PostModerationIntegrationTest {
     assertThat(stored.getScheduledAt()).isNull();
     assertThat(stored.isTakenDown()).isTrue();
     assertThat(posts.findScheduledDueIds(Instant.now().plusSeconds(7200))).doesNotContain(postId);
-    assertNotFound(() -> publicPosts.findPreviewPost(token));
+    assertNotFound(() -> publicPosts.findPreviewPost(token, PostReader.of(null)).body());
   }
 
   private void assertVisibleToReaders(Long postId, String token) {
     String slug = posts.findById(postId).orElseThrow().getSlug();
-    assertThat(publicPosts.findPublicPost(username, slug, null).post().id()).isEqualTo(postId);
-    assertThat(publicPosts.listPublicPosts(username, null).posts())
+    assertThat(
+            publicPosts
+                .findPublicPost(username, slug, PostReader.of(null), null)
+                .body()
+                .post()
+                .id())
+        .isEqualTo(postId);
+    assertThat(publicPosts.listPublicPosts(username, PostReader.of(null)).body().posts())
         .extracting(p -> p.id())
         .contains(postId);
     assertThat(taggedFeed()).contains(postId);
-    assertThat(publicPosts.findPreviewPost(token).post().id()).isEqualTo(postId);
+    assertThat(publicPosts.findPreviewPost(token, PostReader.of(null)).body().post().id())
+        .isEqualTo(postId);
   }
 
   private void assertHiddenFromReaders(Long postId, String token) {
     String slug = posts.findById(postId).orElseThrow().getSlug();
-    assertThatThrownBy(() -> publicPosts.findPublicPost(username, slug, null))
+    assertThatThrownBy(
+            () -> publicPosts.findPublicPost(username, slug, PostReader.of(null), null).body())
         .isInstanceOfSatisfying(
             PostException.class, e -> assertThat(e.errorCode()).isEqualTo(PostErrorCode.POST_GONE));
-    assertThat(publicPosts.listPublicPosts(username, null).posts())
+    assertThat(publicPosts.listPublicPosts(username, PostReader.of(null)).body().posts())
         .extracting(p -> p.id())
         .doesNotContain(postId);
     assertThat(taggedFeed()).doesNotContain(postId);
-    assertNotFound(() -> publicPosts.findPreviewPost(token));
+    assertNotFound(() -> publicPosts.findPreviewPost(token, PostReader.of(null)).body());
   }
 
   private static void assertNotFound(Runnable read) {

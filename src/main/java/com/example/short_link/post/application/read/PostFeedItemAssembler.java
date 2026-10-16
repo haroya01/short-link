@@ -29,10 +29,7 @@ public class PostFeedItemAssembler {
             .filter(u -> !u.isDeleted())
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
     List<PostEntity> visible =
-        posts.stream()
-            .filter(p -> authors.containsKey(p.getUserId()))
-            .filter(PostAccessPolicy::isCard)
-            .toList();
+        posts.stream().filter(p -> authors.containsKey(p.getUserId())).toList();
     Map<Long, FeedSeriesRef> series = seriesOf(visible);
     return visible.stream()
         .map(

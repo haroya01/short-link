@@ -163,10 +163,10 @@ public class PublicPostQueryService {
             .findById(post.getUserId())
             .filter(u -> !u.isDeleted())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, ""));
-    if (!previewable(post, author)) {
-      throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
-    }
-    if (!post.isPublished()) {
+    if (post.isDraft() || post.isScheduled()) {
+      if (post.isTakenDown() || !author.canWriteAt(clock.instant())) {
+        throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
+      }
       return new PostScoped<>(
           buildDetail(author, post, PublicPostListItem.of(post, PostAccess.FULL, null)), true);
     }
@@ -177,15 +177,6 @@ public class PublicPostQueryService {
     }
     return new PostScoped<>(
         detail(author, post, decided, anonymous, null), !PostAccessPolicy.isOpen(post));
-  }
-
-  private boolean previewable(PostEntity post, UserEntity author) {
-    if (post.isPublished()) {
-      return true;
-    }
-    return (post.isDraft() || post.isScheduled())
-        && !post.isTakenDown()
-        && author.canWriteAt(clock.instant());
   }
 
   private PublicPostDetail buildDetail(

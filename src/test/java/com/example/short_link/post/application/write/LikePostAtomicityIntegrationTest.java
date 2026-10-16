@@ -2,6 +2,7 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.user.domain.UserEntity;
@@ -47,8 +48,8 @@ class LikePostAtomicityIntegrationTest {
     long postId = persistPost();
     long liker = user("liker");
 
-    assertThat(likePost.like(liker, postId).likeCount()).isEqualTo(1);
-    assertThat(likePost.like(liker, postId).likeCount()).isEqualTo(1);
+    assertThat(likePost.like(PostReader.of(liker), postId).likeCount()).isEqualTo(1);
+    assertThat(likePost.like(PostReader.of(liker), postId).likeCount()).isEqualTo(1);
     assertThat(denormalizedLikeCount(postId)).isEqualTo(1);
   }
 
@@ -56,8 +57,8 @@ class LikePostAtomicityIntegrationTest {
   void distinctUsersEachAddToTheCount() {
     long postId = persistPost();
 
-    assertThat(likePost.like(user("u1"), postId).likeCount()).isEqualTo(1);
-    assertThat(likePost.like(user("u2"), postId).likeCount()).isEqualTo(2);
+    assertThat(likePost.like(PostReader.of(user("u1")), postId).likeCount()).isEqualTo(1);
+    assertThat(likePost.like(PostReader.of(user("u2")), postId).likeCount()).isEqualTo(2);
     assertThat(denormalizedLikeCount(postId)).isEqualTo(2);
   }
 
@@ -65,12 +66,12 @@ class LikePostAtomicityIntegrationTest {
   void unlikeDropsCounterAndNeverGoesNegative() {
     long postId = persistPost();
     long liker = user("liker");
-    likePost.like(liker, postId);
+    likePost.like(PostReader.of(liker), postId);
 
-    assertThat(likePost.unlike(liker, postId).likeCount()).isZero();
+    assertThat(likePost.unlike(PostReader.of(liker), postId).likeCount()).isZero();
     assertThat(denormalizedLikeCount(postId)).isZero();
 
-    assertThat(likePost.unlike(liker, postId).likeCount()).isZero();
+    assertThat(likePost.unlike(PostReader.of(liker), postId).likeCount()).isZero();
     assertThat(denormalizedLikeCount(postId)).isZero();
   }
 }

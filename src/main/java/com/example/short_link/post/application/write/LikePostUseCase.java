@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
+import com.example.short_link.post.application.access.PostAccess;
 import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.PostLikeStatus;
@@ -43,10 +44,14 @@ public class LikePostUseCase {
   @Transactional
   public PostLikeStatus unlike(PostReader reader, Long postId) {
     PostEntity post = requirePost(postId);
+    if (!policy.revealsExistence(post, reader)) {
+      throw new PostException(PostErrorCode.POST_NOT_FOUND, postId);
+    }
+    PostAccess decided = policy.decide(post, reader);
     if (postLikeRepository.deleteByPostIdAndUserId(postId, reader.viewerId()) > 0) {
       postRepository.decrementLikeCount(postId);
     }
-    if (!policy.decide(post, reader).full()) {
+    if (decided.redacted()) {
       return new PostLikeStatus(0, false);
     }
     return new PostLikeStatus(postLikeRepository.countByPostId(postId), false);

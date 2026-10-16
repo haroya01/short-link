@@ -5,6 +5,8 @@ import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.PostAccessFixtures;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
@@ -44,7 +46,8 @@ class PostHighlightReplyQueryServiceTest {
             highlightRepository,
             postRepository,
             userRepository,
-            new CommentMentions(userRepository));
+            new CommentMentions(userRepository),
+            PostAccessFixtures.policy());
   }
 
   private PostHighlightReplyEntity reply(long id, long userId, String body) {
@@ -83,7 +86,8 @@ class PostHighlightReplyQueryServiceTest {
     when(userRepository.findActiveByUsernameIn(java.util.Set.of("bob", "ghost")))
         .thenReturn(List.of(user(2L, "bob")));
 
-    assertThat(service.listForHighlight(50L, null).get(0).mentions()).containsExactly("bob");
+    assertThat(service.listForHighlight(50L, PostReader.of(null)).body().get(0).mentions())
+        .containsExactly("bob");
   }
 
   @Test
@@ -94,7 +98,7 @@ class PostHighlightReplyQueryServiceTest {
         .thenReturn(List.of(reply(10L, 1L, "동의해요"), reply(11L, 999L, "익명 답글")));
     when(userRepository.findAllByIdIn(anyCollection())).thenReturn(List.of(user(1L, "alice")));
 
-    List<HighlightReplyView> views = service.listForHighlight(50L, null);
+    List<HighlightReplyView> views = service.listForHighlight(50L, PostReader.of(null)).body();
 
     assertThat(views).hasSize(2);
     assertThat(views.get(0).author().username()).isEqualTo("alice");
@@ -112,7 +116,7 @@ class PostHighlightReplyQueryServiceTest {
     when(likeRepository.likesOf(List.of(10L, 11L), 7L))
         .thenReturn(java.util.Map.of(10L, new Likes(2, true)));
 
-    List<HighlightReplyView> views = service.listForHighlight(50L, 7L);
+    List<HighlightReplyView> views = service.listForHighlight(50L, PostReader.of(7L)).body();
 
     assertThat(views.get(0).likeCount()).isEqualTo(2);
     assertThat(views.get(0).liked()).isTrue();
@@ -126,7 +130,7 @@ class PostHighlightReplyQueryServiceTest {
     when(highlightRepository.findById(50L)).thenReturn(Optional.of(highlight(50L, 60L)));
     when(postRepository.findById(60L)).thenReturn(Optional.of(post(60L, false)));
 
-    assertThat(service.listForHighlight(50L, null)).isEmpty();
+    assertThat(service.listForHighlight(50L, PostReader.of(null)).body()).isEmpty();
     verifyNoInteractions(replyRepository);
   }
 
@@ -135,7 +139,7 @@ class PostHighlightReplyQueryServiceTest {
   void emptyWhenHighlightMissing() {
     when(highlightRepository.findById(50L)).thenReturn(Optional.empty());
 
-    assertThat(service.listForHighlight(50L, null)).isEmpty();
+    assertThat(service.listForHighlight(50L, PostReader.of(null)).body()).isEmpty();
     verifyNoInteractions(replyRepository);
   }
 }

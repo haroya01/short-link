@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.application.write.PostOwnership;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
@@ -36,7 +37,11 @@ class PostQueryServiceTest {
   void setUp() {
     service =
         new PostQueryService(
-            postRepository, postBlockRepository, postRevisionRepository, postOwnership);
+            postRepository,
+            postBlockRepository,
+            postRevisionRepository,
+            postOwnership,
+            PostAccessFixtures.unlistedUrls());
   }
 
   @Test

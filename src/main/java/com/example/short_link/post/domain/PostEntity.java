@@ -165,10 +165,6 @@ public class PostEntity extends BaseTimeEntity {
     return status == PostStatus.UNPUBLISHED;
   }
 
-  public boolean isPublic() {
-    return status == PostStatus.PUBLISHED;
-  }
-
   public boolean isTakenDown() {
     return takenDownAt != null;
   }

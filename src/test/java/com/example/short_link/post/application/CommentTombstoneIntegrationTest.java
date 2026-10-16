@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.tuple;
 
 import com.example.short_link.common.post.CommentModerationPort;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PostCommentQueryService;
 import com.example.short_link.post.application.write.DeleteCommentCommand;
@@ -79,7 +80,7 @@ class CommentTombstoneIntegrationTest {
     assertThat(place.getBody()).isEmpty();
     assertThat(commentRepository.findById(reply)).isPresent();
 
-    List<CommentView> listed = comments.listForPost(post, null, true);
+    List<CommentView> listed = comments.listForPost(post, PostReader.of(null), true).body();
     assertThat(listed).extracting(CommentView::id).containsExactly(answered, reply);
     CommentView tombstone = listed.get(0);
     assertThat(tombstone.deleted()).isTrue();
@@ -101,7 +102,7 @@ class CommentTombstoneIntegrationTest {
     deleteComment.execute(new DeleteCommentCommand(owner, answered));
     flush();
 
-    assertThat(comments.listForPost(post, null, true))
+    assertThat(comments.listForPost(post, PostReader.of(null), true).body())
         .extracting(CommentView::id, CommentView::deleted)
         .containsExactly(tuple(answered, true), tuple(reply, false));
   }
@@ -115,13 +116,13 @@ class CommentTombstoneIntegrationTest {
 
     deleteComment.execute(new DeleteCommentCommand(carol, first));
     flush();
-    assertThat(comments.listForPost(post, null, true))
+    assertThat(comments.listForPost(post, PostReader.of(null), true).body())
         .extracting(CommentView::id)
         .containsExactly(answered, second);
 
     deleteComment.execute(new DeleteCommentCommand(alice, second));
     flush();
-    assertThat(comments.listForPost(post, null, true)).isEmpty();
+    assertThat(comments.listForPost(post, PostReader.of(null), true).body()).isEmpty();
     assertThat(commentRepository.findById(answered)).map(CommentEntity::isDeleted).contains(true);
   }
 
@@ -138,7 +139,7 @@ class CommentTombstoneIntegrationTest {
     moderation.softDelete(owner, takenReply);
     flush();
 
-    List<CommentView> listed = comments.listForPost(post, null, true);
+    List<CommentView> listed = comments.listForPost(post, PostReader.of(null), true).body();
     assertThat(listed).extracting(CommentView::id).containsExactly(answered, reply, other);
     assertThat(listed.get(0).deleted()).isTrue();
     assertThat(listed.get(0).body()).isNull();
@@ -161,10 +162,10 @@ class CommentTombstoneIntegrationTest {
     deleteComment.execute(new DeleteCommentCommand(carol, byCarol));
     flush();
 
-    assertThat(comments.listForPost(post, viewer, true))
+    assertThat(comments.listForPost(post, PostReader.of(viewer), true).body())
         .extracting(CommentView::id)
         .containsExactly(byBlocked, heardReply);
-    assertThat(comments.listForPost(post, null, true))
+    assertThat(comments.listForPost(post, PostReader.of(null), true).body())
         .extracting(CommentView::id)
         .containsExactly(byBlocked, heardReply, byCarol, mutedReply, liveBlocked, underLiveBlocked);
   }
@@ -184,8 +185,8 @@ class CommentTombstoneIntegrationTest {
     moderation.softDelete(owner, takenDown);
     flush();
 
-    List<CommentView> anonymous = comments.listForPost(post, null, false);
-    List<CommentView> signedIn = comments.listForPost(post, viewer, false);
+    List<CommentView> anonymous = comments.listForPost(post, PostReader.of(null), false).body();
+    List<CommentView> signedIn = comments.listForPost(post, PostReader.of(viewer), false).body();
     assertThat(anonymous).noneMatch(CommentView::deleted);
     assertThat(signedIn).noneMatch(CommentView::deleted);
     assertThat(anonymous).extracting(CommentView::id).containsExactly(reply, underBlocked);
