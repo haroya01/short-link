@@ -33,6 +33,7 @@ public class BodySizeFilter extends OncePerRequestFilter {
       List.of(
           new Limit("/api/v1/posts", 1024L * 1024L),
           new Limit("/api/v1/links/bulk", 1024L * 1024L),
+          new Limit("/api/v1/admin/federation/servers/import", 1024L * 1024L),
           new Limit("/ap/", 1024L * 1024L));
 
   private record Limit(String pathPrefix, long maxBytes) {}

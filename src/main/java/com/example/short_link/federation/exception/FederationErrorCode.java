@@ -13,6 +13,10 @@ public enum FederationErrorCode {
   REMOTE_ACCOUNT_BLOCKED(HttpStatus.CONFLICT, "unblock account %s before following it"),
   MUTE_DURATION_INVALID(HttpStatus.BAD_REQUEST, "a mute lasts from a minute to a year, or forever"),
   REMOTE_FOLLOW_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "no follow request from that account"),
+  SERVER_LIST_INVALID(
+      HttpStatus.BAD_REQUEST,
+      "a server list is Mastodon's domain_blocks.csv: #domain and #severity columns, at most %s"
+          + " servers"),
   RELAY_DISABLED(HttpStatus.CONFLICT, "relays are off; FEDERATION_RELAY_ENABLED turns them on"),
   RELAY_INVALID(
       HttpStatus.BAD_REQUEST, "a relay is the https address of an actor on another server"),

@@ -89,12 +89,15 @@ public abstract class AccountHttpJourneySupport extends DockerHttpTest {
       builder.header("Accept-Language", "ko");
     }
     headers.forEach(builder::header);
-    if (body != null) builder.header("Content-Type", "application/json");
+    boolean typed =
+        headers.keySet().stream().anyMatch(name -> name.equalsIgnoreCase("Content-Type"));
+    if (body != null && !typed) builder.header("Content-Type", "application/json");
     builder.method(
         method,
         body == null
             ? HttpRequest.BodyPublishers.noBody()
-            : HttpRequest.BodyPublishers.ofString(json.writeValueAsString(body)));
+            : HttpRequest.BodyPublishers.ofString(
+                typed && body instanceof String raw ? raw : json.writeValueAsString(body)));
     var captured =
         contracts.capture(
             id, () -> http.send(builder.build(), HttpResponse.BodyHandlers.ofString()));
