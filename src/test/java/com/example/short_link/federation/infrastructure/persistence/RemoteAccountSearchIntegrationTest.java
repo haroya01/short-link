@@ -11,6 +11,7 @@ import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -360,5 +361,33 @@ class RemoteAccountSearchIntegrationTest {
     assertThat(blocks.severityFor("sub." + domain("gone"))).contains(ServerBlockSeverity.SUSPEND);
     assertThat(blocks.severityFor("x" + domain("loud"))).isEmpty();
     assertThat(blocks.severityFor(null)).isEmpty();
+  }
+
+  @Test
+  void aBlockCoversSubdomainsDownToSixLabelsAndADeeperOneOnlyItself() {
+    String host = "a.b.c.d.e.f." + domain("deep");
+    Long deep = actor(tag + "deep", host, null);
+    em.createNativeQuery("UPDATE federation_remote_actor SET discoverable = TRUE WHERE id = ?")
+        .setParameter(1, deep)
+        .executeUpdate();
+    String[] labels = host.split("\\.");
+    for (int kept = labels.length; kept >= 2; kept--) {
+      String blocked =
+          String.join(".", Arrays.copyOfRange(labels, labels.length - kept, labels.length));
+      serverBlock(blocked, "SUSPEND");
+      em.flush();
+      em.clear();
+      boolean covers = kept == labels.length || kept <= 6;
+      assertThat(blocks.suspends(host)).as("block on %s", blocked).isEqualTo(covers);
+      assertThat(actors.findById(deep).orElseThrow().onSuspendedServer())
+          .as("formula, block on %s", blocked)
+          .isEqualTo(covers);
+      assertThat(ids(viewer, tag + "deep"))
+          .as("search, block on %s", blocked)
+          .isEqualTo(covers ? List.of() : List.of(deep));
+      em.createNativeQuery("DELETE FROM federation_domain_block WHERE domain = ?")
+          .setParameter(1, blocked)
+          .executeUpdate();
+    }
   }
 }
