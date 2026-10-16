@@ -11,6 +11,8 @@ import com.example.short_link.link.classifier.application.helper.LanguageExtract
 import com.example.short_link.link.classifier.application.helper.ReferrerNormalizer;
 import com.example.short_link.link.classifier.application.helper.SourceChannelNormalizer;
 import com.example.short_link.link.classifier.application.helper.VisitorHasher;
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostViewEventEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -35,6 +37,7 @@ public class RecordPostViewUseCase {
   private final GeoIpResolver geoIpResolver;
   private final AsnResolver asnResolver;
   private final BotClassifier botClassifier;
+  private final PostAccessPolicy access;
   private final PostReaders readers;
   private final Clock clock;
 
@@ -46,6 +49,7 @@ public class RecordPostViewUseCase {
       GeoIpResolver geoIpResolver,
       AsnResolver asnResolver,
       BotClassifier botClassifier,
+      PostAccessPolicy access,
       PostReaders readers,
       Clock clock) {
     this.userRepository = userRepository;
@@ -55,19 +59,20 @@ public class RecordPostViewUseCase {
     this.geoIpResolver = geoIpResolver;
     this.asnResolver = asnResolver;
     this.botClassifier = botClassifier;
+    this.access = access;
     this.readers = readers;
     this.clock = clock;
   }
 
   @Transactional
-  public void execute(RecordPostViewCommand cmd, ViewContext ctx) {
+  public void execute(RecordPostViewCommand cmd, ViewContext ctx, PostReader reader) {
     String normalized = cmd.username().trim().toLowerCase(Locale.ROOT);
     UserEntity author =
         userRepository.findByUsername(normalized).filter(u -> !u.isDeleted()).orElse(null);
     if (author == null) return;
     PostEntity post =
         postRepository.findByUserIdAndSlugForUpdate(author.getId(), cmd.slug()).orElse(null);
-    if (post == null || !post.isPublished()) return;
+    if (post == null || !access.decide(post, reader).full()) return;
     PostViewEventEntity event = buildEvent(post.getId(), ctx);
     readers.countView(post, event.getVisitorHash(), event.isBot(), cmd.viewerId());
     post.incrementViewCount();

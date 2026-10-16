@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostBookmarkRepository;
@@ -37,7 +38,7 @@ public class PostBookmarkQueryService {
     List<Long> postIds = bookmarks.stream().map(PostBookmarkEntity::getPostId).toList();
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostEntity::isPublished)
+            .filter(PostAccessPolicy::isCard)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     Map<Long, UserEntity> authors =
         userRepository

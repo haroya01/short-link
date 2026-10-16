@@ -2,6 +2,7 @@ package com.example.short_link.common.counter;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
@@ -39,6 +40,11 @@ public class RedisWindowCounter {
 
   public long current(String key, Duration window) {
     return run(CURRENT, key, window);
+  }
+
+  public long remainingMillis(String key) {
+    Long ttl = redis.getExpire(key, TimeUnit.MILLISECONDS);
+    return ttl == null || ttl < 0 ? 0 : ttl;
   }
 
   public void reset(String key) {

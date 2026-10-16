@@ -1,6 +1,5 @@
 package com.example.short_link.post.infrastructure.persistence;
 
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesSummary;
 import com.example.short_link.post.domain.repository.SeriesRepository;
@@ -59,7 +58,7 @@ class SeriesRepositoryAdapter implements SeriesRepository {
   @Override
   public List<SeriesSummary> findPublishedSummaries(Collection<Long> seriesIds) {
     if (seriesIds.isEmpty()) return List.of();
-    return jpa.findPublishedSummaries(seriesIds, PostStatus.PUBLISHED).stream()
+    return jpa.findPublishedSummaries(seriesIds).stream()
         .map(
             row ->
                 new SeriesSummary(

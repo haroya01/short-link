@@ -15,4 +15,7 @@ public record UpdatePostRequest(
     @Size(max = 16) String languageTag,
     @Size(max = 100) List<@Size(max = 80) String> tags,
     @PositiveOrZero Long baseVersion,
-    Boolean overwrite) {}
+    Boolean overwrite,
+    @Size(max = 16) String audience,
+    String password,
+    @Size(max = 300) List<@Size(max = 8) String> blockedCountries) {}

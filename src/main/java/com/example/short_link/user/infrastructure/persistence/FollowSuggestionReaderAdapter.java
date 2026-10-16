@@ -1,5 +1,6 @@
 package com.example.short_link.user.infrastructure.persistence;
 
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.user.domain.repository.FollowSuggestionReader;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -32,7 +33,9 @@ class FollowSuggestionReaderAdapter implements FollowSuggestionReader {
                     + " WHERE EXISTS (SELECT 1 FROM note n WHERE n.user_id = p.following_id"
                     + " AND n.created_at > :since)"
                     + " OR EXISTS (SELECT 1 FROM posts po WHERE po.user_id = p.following_id"
-                    + " AND po.status = 'PUBLISHED' AND po.published_at > :since)"
+                    + " AND "
+                    + PostAccessSql.card("po")
+                    + " AND po.published_at > :since)"
                     + " GROUP BY p.following_id ORDER BY COUNT(*) DESC LIMIT "
                     + POPULAR_POOL
                     + ")) c GROUP BY c.uid) s"

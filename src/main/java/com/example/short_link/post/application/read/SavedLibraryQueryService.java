@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.FolderBookmarkCount;
 import com.example.short_link.post.domain.PostBookmarkEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -39,7 +40,7 @@ public class SavedLibraryQueryService {
     List<Long> postIds = bookmarks.stream().map(PostBookmarkEntity::getPostId).toList();
     Map<Long, PostEntity> published =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostEntity::isPublished)
+            .filter(PostAccessPolicy::isCard)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 
     List<PostEntity> ordered =

@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
@@ -31,7 +32,9 @@ class BackToDraftPostUseCaseTest {
   void setUp() {
     useCase =
         new BackToDraftPostUseCase(
-            postOwnership, postRepository, new PostWriteViewAssembler(postRepository));
+            postOwnership,
+            postRepository,
+            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()));
   }
 
   @Test

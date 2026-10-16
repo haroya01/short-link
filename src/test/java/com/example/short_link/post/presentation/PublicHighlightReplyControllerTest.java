@@ -1,5 +1,7 @@
 package com.example.short_link.post.presentation;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -7,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.application.read.PostHighlightReplyQueryService;
+import com.example.short_link.post.application.read.PostScoped;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.testsupport.KurlWebMvcTest;
 import java.time.Instant;
@@ -25,17 +28,19 @@ class PublicHighlightReplyControllerTest {
 
   @Test
   void listReturnsAttributedReplies() throws Exception {
-    when(replyQuery.listForHighlight(5L, null))
+    when(replyQuery.listForHighlight(eq(5L), any()))
         .thenReturn(
-            List.of(
-                new HighlightReplyView(
-                    10L,
-                    new PublicAuthorView(1L, "alice", null, null),
-                    "좋은 지적이에요",
-                    Instant.parse("2026-06-12T00:00:00Z"),
-                    List.of(),
-                    3,
-                    true)));
+            new PostScoped<>(
+                List.of(
+                    new HighlightReplyView(
+                        10L,
+                        new PublicAuthorView(1L, "alice", null, null),
+                        "좋은 지적이에요",
+                        Instant.parse("2026-06-12T00:00:00Z"),
+                        List.of(),
+                        3,
+                        true)),
+                false));
 
     mvc.perform(get("/api/v1/public/highlights/5/replies"))
         .andExpect(status().isOk())

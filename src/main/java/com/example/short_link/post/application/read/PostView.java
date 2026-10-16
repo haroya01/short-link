@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.read;
 
 import com.example.short_link.post.domain.PostEntity;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 import java.util.List;
 
@@ -24,9 +25,17 @@ public record PostView(
     Instant createdAt,
     Instant updatedAt,
     long contentVersion,
-    boolean takenDown) {
+    boolean takenDown,
+    String audience,
+    boolean hasPassword,
+    @JsonInclude(JsonInclude.Include.NON_NULL) String unlistedUrl,
+    List<String> blockedCountries) {
 
   public static PostView from(PostEntity post) {
+    return from(post, null);
+  }
+
+  public static PostView from(PostEntity post, String unlistedUrl) {
     return new PostView(
         post.getId(),
         post.getSlug(),
@@ -47,6 +56,10 @@ public record PostView(
         post.getCreatedAt(),
         post.getUpdatedAt(),
         post.getContentVersion(),
-        post.isTakenDown());
+        post.isTakenDown(),
+        post.getAudience().name(),
+        post.hasPassword(),
+        unlistedUrl,
+        post.blockedCountryCodes());
   }
 }

@@ -1,6 +1,8 @@
 package com.example.short_link.post.presentation;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,6 +12,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PostCommentQueryService;
+import com.example.short_link.post.application.read.PostScoped;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.application.read.PublicFeedQuery;
 import com.example.short_link.post.application.read.PublicFeedQuery.Browse;
@@ -304,17 +307,19 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void listCommentsReturnsComments() throws Exception {
-    when(postCommentQueryService.listForPost(5L, null, false))
+    when(postCommentQueryService.listForPost(eq(5L), any(), eq(false)))
         .thenReturn(
-            List.of(
-                new CommentView(
-                    1L,
-                    null,
-                    new PublicAuthorView(2L, "lee", null, null),
-                    "nice post @kim",
-                    Instant.parse("2026-01-01T00:00:00Z"),
-                    0L,
-                    List.of("kim"))));
+            new PostScoped<>(
+                List.of(
+                    new CommentView(
+                        1L,
+                        null,
+                        new PublicAuthorView(2L, "lee", null, null),
+                        "nice post @kim",
+                        Instant.parse("2026-01-01T00:00:00Z"),
+                        0L,
+                        List.of("kim"))),
+                false));
 
     mvc.perform(get("/api/v1/public/posts/5/comments"))
         .andExpect(status().isOk())
@@ -326,18 +331,20 @@ class PublicPostDiscoveryControllersTest {
 
   @Test
   void aDeletedCommentWithRepliesComesAsAnEmptyPlaceOnlyWhenAskedFor() throws Exception {
-    when(postCommentQueryService.listForPost(5L, null, true))
+    when(postCommentQueryService.listForPost(eq(5L), any(), eq(true)))
         .thenReturn(
-            List.of(
-                new CommentView(
-                    1L,
-                    null,
-                    null,
-                    null,
-                    Instant.parse("2026-01-01T00:00:00Z"),
-                    0L,
-                    List.of(),
-                    true)));
+            new PostScoped<>(
+                List.of(
+                    new CommentView(
+                        1L,
+                        null,
+                        null,
+                        null,
+                        Instant.parse("2026-01-01T00:00:00Z"),
+                        0L,
+                        List.of(),
+                        true)),
+                false));
 
     mvc.perform(get("/api/v1/public/posts/5/comments").param("tombstones", "1"))
         .andExpect(status().isOk())

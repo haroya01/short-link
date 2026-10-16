@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostStatus;
@@ -51,7 +52,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p WHERE p.user_id = :userId AND "
+              + PostAccessSql.PROFILE
+              + " ORDER BY p.published_at DESC")
+  List<PostEntity> findProfilePosts(@Param("userId") Long userId, @Param("viewer") long viewer);
 
   // 지표가 같아도 페이지 순서가 안정되도록 어댑터에서 ID 내림차순을 추가한다.
   List<PostEntity> findByUserIdAndStatusIn(
@@ -60,7 +67,10 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   long countByUserIdAndStatusIn(Long userId, Collection<PostStatus> statuses);
 
   // 공개 프로필의 블로그 표시에는 UNPUBLISHED를 포함하는 분석용 카운트를 쓰면 안 된다.
-  long countByUserIdAndStatus(Long userId, PostStatus status);
+  @Query(
+      nativeQuery = true,
+      value = "SELECT COUNT(*) FROM posts p WHERE p.user_id = :userId AND " + PostAccessSql.CARD)
+  long countCardsByUserId(@Param("userId") Long userId);
 
   @Query(
       "select p.id from PostEntity p where p.status = :status and p.scheduledAt <= :now order by p.id")
@@ -81,8 +91,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   List<PostEntity> findAllBySeriesIdInOrderBySeriesOrderAsc(Collection<Long> seriesIds);
 
-  List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-      Long seriesId, PostStatus status);
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT p.* FROM posts p WHERE p.series_id = :seriesId AND "
+              + PostAccessSql.OPEN
+              + " ORDER BY p.series_order ASC")
+  List<PostEntity> findOpenBySeriesId(@Param("seriesId") Long seriesId);
 
   // LEFT JOIN으로 최근 조회가 없는 글도 포함한다. 누적 view_count는 순위에 사용하지 않는다.
   // MySQL에서는 기본키로 GROUP BY하면 p.*를 선택할 수 있다.
@@ -94,12 +109,15 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       "GROUP BY p.id ORDER BY COUNT(DISTINCT e.visitor_hash) DESC, p.published_at DESC";
 
   String BROWSE_PREDICATE =
-      "WHERE p.status = 'PUBLISHED' AND (:lang IS NULL OR p.language_tag = :lang) "
+      "WHERE "
+          + PostAccessSql.LISTED
+          + " AND (:lang IS NULL OR p.language_tag = :lang) "
           + "AND p.body_text_length >= :minBody"
           + HeardSql.POST_AUTHOR
           + " AND (p.series_id IS NULL OR NOT EXISTS (SELECT 1 FROM posts q "
-          + "WHERE q.series_id = p.series_id AND q.status = 'PUBLISHED' "
-          + "AND q.body_text_length >= :minBody "
+          + "WHERE q.series_id = p.series_id AND "
+          + PostAccessSql.LISTED_AS_Q
+          + " AND q.body_text_length >= :minBody "
           + "AND (:lang IS NULL OR q.language_tag = :lang) "
           + "AND (q.published_at > p.published_at "
           + "OR (q.published_at = p.published_at AND q.id > p.id)))) ";
@@ -135,8 +153,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   String TAGGED = "JOIN post_tag t ON t.post_id = p.id ";
 
   String TAG_PREDICATE =
-      "WHERE LOWER(t.tag) = LOWER(:tag) AND p.status = 'PUBLISHED' "
-          + "AND p.body_text_length >= :minBody"
+      "WHERE LOWER(t.tag) = LOWER(:tag) AND "
+          + PostAccessSql.LISTED
+          + " AND p.body_text_length >= :minBody"
           + HeardSql.POST_AUTHOR
           + " ";
 
@@ -173,8 +192,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   // 빈 IN 인수는 어댑터가 매칭되지 않는 값으로 변환한다.
   String FOLLOWED_PREDICATE =
       "LEFT JOIN post_tag t ON t.post_id = p.id "
-          + "WHERE p.status = 'PUBLISHED' "
-          + "AND (p.user_id IN (:authorIds) OR p.series_id IN (:seriesIds) "
+          + "WHERE "
+          + PostAccessSql.LISTED
+          + " AND (p.user_id IN (:authorIds) OR p.series_id IN (:seriesIds) "
           + "OR LOWER(t.tag) IN (:tags))"
           + HeardSql.POST_AUTHOR
           + " ";
@@ -204,7 +224,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   // DISTINCT로 다중 태그의 중복을 제거한다. 빈 NOT IN 인수는 어댑터가 변환한다.
   String FOR_YOU_PREDICATE =
       "JOIN post_tag t ON t.post_id = p.id "
-          + "WHERE p.status = 'PUBLISHED' AND p.user_id <> :viewer "
+          + "WHERE "
+          + PostAccessSql.LISTED
+          + " AND p.user_id <> :viewer "
           + "AND LOWER(t.tag) IN (:tags) AND p.id NOT IN (:excludeIds) "
           + "AND p.body_text_length >= :minBody"
           + HeardSql.POST_AUTHOR
@@ -233,11 +255,12 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       @Param("now") Instant now);
 
   @Query(
-      "select t, count(p) from PostEntity p join p.tags t "
-          + "where p.status = :status and p.bodyTextLength >= :minBody "
-          + "group by t order by count(p) desc")
-  List<Object[]> findPopularTags(
-      @Param("status") PostStatus status, @Param("minBody") int minBody, Pageable pageable);
+      nativeQuery = true,
+      value =
+          "SELECT t.tag, COUNT(p.id) FROM posts p JOIN post_tag t ON t.post_id = p.id WHERE "
+              + PostAccessSql.LISTED
+              + " AND p.body_text_length >= :minBody GROUP BY t.tag ORDER BY COUNT(p.id) DESC")
+  List<Object[]> findPopularTags(@Param("minBody") int minBody, Pageable pageable);
 
   // 검색 평문이 없는 글도 작성자 핸들로 찾을 수 있도록 LEFT JOIN한다.
   // :match는 연산자를 제거한 BOOLEAN 검색어, :like는 이스케이프한 핸들 검색어다.
@@ -246,7 +269,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   // ngram에서 접두·구문 연산자는 한글 다중 바이그램을 깨뜨리고 NATURAL MODE는 일부 바이그램만
   // 겹쳐도 매칭되므로, 연산자 없는 BOOLEAN 항을 유지한다.
   String SEARCH_PREDICATE =
-      "WHERE p.status = 'PUBLISHED' AND ("
+      "WHERE "
+          + PostAccessSql.LISTED
+          + " AND ("
           + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
           + "OR p.user_id IN (SELECT u.id FROM users u "
           + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
@@ -332,7 +357,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       nativeQuery = true,
       value =
           "SELECT p.user_id, COUNT(*), COALESCE(SUM(p.view_count), 0) FROM posts p "
-              + "WHERE p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+              + "WHERE "
+              + PostAccessSql.LISTED
+              + " AND p.body_text_length >= :minBody"
               + HeardSql.POST_AUTHOR
               + " GROUP BY p.user_id "
               + "ORDER BY COUNT(*) DESC, COALESCE(SUM(p.view_count), 0) DESC")
@@ -346,7 +373,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       nativeQuery = true,
       value =
           "SELECT p.* FROM post_note_quote q JOIN posts p ON p.id = q.post_id "
-              + "WHERE q.note_id = :noteId AND p.status = 'PUBLISHED'"
+              + "WHERE q.note_id = :noteId AND "
+              + PostAccessSql.CARD
               + HeardSql.POST_AUTHOR
               + " ORDER BY p.published_at DESC, p.id DESC LIMIT :limit OFFSET :offset")
   List<PostEntity> findPublishedQuotingNote(

@@ -10,6 +10,7 @@ import com.example.short_link.post.application.write.DeleteCommentCommand;
 import com.example.short_link.post.application.write.DeleteCommentUseCase;
 import com.example.short_link.post.application.write.LikeCommentUseCase;
 import com.example.short_link.post.presentation.request.CreateCommentRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -39,9 +40,11 @@ public class CommentController {
   public CommentView create(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long postId,
-      @Valid @RequestBody CreateCommentRequest request) {
+      @Valid @RequestBody CreateCommentRequest request,
+      HttpServletRequest req) {
     return createComment.execute(
-        new CreateCommentCommand(userId, postId, request.parentId(), request.body()));
+        new CreateCommentCommand(userId, postId, request.parentId(), request.body()),
+        PostReaderHeaders.from(userId, req));
   }
 
   @DeleteMapping("/comments/{id}")
@@ -51,8 +54,9 @@ public class CommentController {
   }
 
   @PostMapping("/comments/{id}/like")
-  public CommentLikeStatus like(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return likeComment.like(userId, id);
+  public CommentLikeStatus like(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id, HttpServletRequest req) {
+    return likeComment.like(PostReaderHeaders.from(userId, req), id);
   }
 
   @DeleteMapping("/comments/{id}/like")

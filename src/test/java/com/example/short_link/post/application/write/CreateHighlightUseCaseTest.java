@@ -14,6 +14,8 @@ import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.PostHighlightedEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.access.PostAccessFixtures;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -58,7 +60,8 @@ class CreateHighlightUseCaseTest {
                 highlightRepository,
                 replyRepository,
                 moderation,
-                blocks),
+                blocks,
+                PostAccessFixtures.policy()),
             highlightRepository,
             replyRepository,
             connectionCleaner,
@@ -90,7 +93,9 @@ class CreateHighlightUseCaseTest {
             });
 
     HighlightRef ref =
-        useCase.execute(new CreateHighlightCommand(1L, 5L, 2, null, 3, 10, "hello", "  메모  "));
+        useCase.execute(
+            new CreateHighlightCommand(1L, 5L, 2, null, 3, 10, "hello", "  메모  "),
+            PostReader.of(1L));
 
     assertThat(ref.id()).isEqualTo(99L);
     assertThat(ref.blockOrder()).isEqualTo(2);
@@ -111,7 +116,8 @@ class CreateHighlightUseCaseTest {
               return e;
             });
 
-    useCase.execute(new CreateHighlightCommand(4L, 5L, 2, null, 3, 10, "hello", null));
+    useCase.execute(
+        new CreateHighlightCommand(4L, 5L, 2, null, 3, 10, "hello", null), PostReader.of(4L));
 
     verify(events).publishEvent(new PostHighlightedEvent(1L, 4L, 5L, "slug-5", "Title", 99L));
   }
@@ -128,7 +134,8 @@ class CreateHighlightUseCaseTest {
             });
 
     HighlightRef ref =
-        useCase.execute(new CreateHighlightCommand(1L, 5L, 2, 5, 3, 1, "hello", null));
+        useCase.execute(
+            new CreateHighlightCommand(1L, 5L, 2, 5, 3, 1, "hello", null), PostReader.of(1L));
 
     assertThat(ref.blockOrder()).isEqualTo(2);
     assertThat(ref.endBlockOrder()).isEqualTo(5);
@@ -137,7 +144,9 @@ class CreateHighlightUseCaseTest {
   @Test
   void rejectsEndBlockOrderBeforeBlockOrder() {
     assertThatThrownBy(
-            () -> useCase.execute(new CreateHighlightCommand(1L, 5L, 5, 2, 0, 3, "q", null)))
+            () ->
+                useCase.execute(
+                    new CreateHighlightCommand(1L, 5L, 5, 2, 0, 3, "q", null), PostReader.of(1L)))
         .isInstanceOf(IllegalArgumentException.class);
     verify(highlightRepository, never()).save(any());
   }
@@ -154,7 +163,8 @@ class CreateHighlightUseCaseTest {
             });
 
     HighlightRef ref =
-        useCase.execute(new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "q", "   "));
+        useCase.execute(
+            new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "q", "   "), PostReader.of(1L));
 
     assertThat(ref.note()).isNull();
   }
@@ -166,7 +176,8 @@ class CreateHighlightUseCaseTest {
     String tooLong = "x".repeat(PostHighlightEntity.MAX_QUOTE + 500);
 
     HighlightRef ref =
-        useCase.execute(new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, tooLong, null));
+        useCase.execute(
+            new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, tooLong, null), PostReader.of(1L));
 
     assertThat(ref.quote()).hasSize(PostHighlightEntity.MAX_QUOTE);
   }
@@ -176,7 +187,10 @@ class CreateHighlightUseCaseTest {
     when(postRepository.findById(5L)).thenReturn(Optional.empty());
 
     assertThatThrownBy(
-            () -> useCase.execute(new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "q", null)))
+            () ->
+                useCase.execute(
+                    new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "q", null),
+                    PostReader.of(1L)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -189,7 +203,10 @@ class CreateHighlightUseCaseTest {
     when(postRepository.findById(5L)).thenReturn(Optional.of(draft));
 
     assertThatThrownBy(
-            () -> useCase.execute(new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "q", null)))
+            () ->
+                useCase.execute(
+                    new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "q", null),
+                    PostReader.of(1L)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -203,7 +220,8 @@ class CreateHighlightUseCaseTest {
     assertThatThrownBy(
             () ->
                 useCase.execute(
-                    new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "quote", "public note")))
+                    new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "quote", "public note"),
+                    PostReader.of(1L)))
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.POST_INTERACTION_BLOCKED);
@@ -216,7 +234,10 @@ class CreateHighlightUseCaseTest {
     doThrow(denied).when(moderation).requireCanWrite(1L);
 
     assertThatThrownBy(
-            () -> useCase.execute(new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "quote", null)))
+            () ->
+                useCase.execute(
+                    new CreateHighlightCommand(1L, 5L, 0, null, 0, 5, "quote", null),
+                    PostReader.of(1L)))
         .isSameAs(denied);
     verifyNoInteractions(postRepository, highlightRepository, replyRepository, connectionCleaner);
   }

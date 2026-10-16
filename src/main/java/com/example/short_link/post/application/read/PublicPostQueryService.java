@@ -6,10 +6,13 @@ import com.example.short_link.cta.domain.CtaEntity;
 import com.example.short_link.cta.domain.repository.CtaRepository;
 import com.example.short_link.link.application.ShortLinkUrlBuilder;
 import com.example.short_link.link.domain.ShortCode;
+import com.example.short_link.post.application.access.PostAccess;
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
+import com.example.short_link.post.application.access.PostUnlistedUrls;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesEntry;
 import com.example.short_link.post.domain.SeriesItemType;
@@ -51,24 +54,32 @@ public class PublicPostQueryService {
   private final CtaRepository ctaRepository;
   private final ShortLinkUrlBuilder shortLinkUrlBuilder;
   private final UserBlockChecker userBlocks;
+  private final PostAccessPolicy access;
+  private final PostUnlistedUrls unlistedUrls;
   private final Clock clock;
 
-  public PublicPostListView listPublicPosts(String username, Long viewerId) {
+  public PostScoped<PublicPostListView> listPublicPosts(String username, PostReader reader) {
     UserEntity author = resolveAuthor(username);
-    BlockRelation blocks = userBlocks.between(viewerId, author.getId());
-    // 안정 정렬이므로 고정되지 않은 글은 저장소의 발행 최신순을 유지한다.
-    List<PublicPostListItem> posts =
-        blocks.any()
-            ? List.of()
-            : postRepository
-                .findAllByUserIdAndStatusOrderByPublishedAtDesc(
-                    author.getId(), PostStatus.PUBLISHED)
-                .stream()
-                .sorted(PINNED_FIRST)
-                .map(PublicPostListItem::from)
-                .toList();
-    return new PublicPostListView(
-        PublicAuthorView.from(author), posts, blocks.blockedByViewer(), blocks.blocksViewer());
+    BlockRelation blocks = userBlocks.between(reader.viewerId(), author.getId());
+    PostAccessPolicy.Lists lists = access.forLists(reader);
+    List<PublicPostListItem> posts = new ArrayList<>();
+    boolean restricted = false;
+    if (!blocks.any()) {
+      // 안정 정렬이므로 고정되지 않은 글은 저장소의 발행 최신순을 유지한다.
+      for (PostEntity post :
+          postRepository.findProfilePosts(author.getId(), reader.viewerId()).stream()
+              .sorted(PINNED_FIRST)
+              .toList()) {
+        PostAccess decided = lists.of(post);
+        if (decided.hidden()) continue;
+        restricted |= !PostAccessPolicy.isOpen(post);
+        posts.add(PublicPostListItem.of(post, decided, ownerView(post, author, reader)));
+      }
+    }
+    return new PostScoped<>(
+        new PublicPostListView(
+            PublicAuthorView.from(author), posts, blocks.blockedByViewer(), blocks.blocksViewer()),
+        restricted);
   }
 
   private static final Comparator<PostEntity> PINNED_FIRST =
@@ -81,26 +92,65 @@ public class PublicPostQueryService {
         return 0;
       };
 
-  public PublicPostDetail findPublicPost(String username, String slug, Long viewerId) {
+  public PostScoped<PublicPostDetail> findPublicPost(
+      String username, String slug, PostReader reader, String acceptLanguage) {
     UserEntity author = resolveAuthor(username);
     PostEntity post =
         postRepository
-            .findUnblockedByUserIdAndSlug(author.getId(), slug, viewerId)
+            .findUnblockedByUserIdAndSlug(author.getId(), slug, reader.viewerId())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, slug));
 
-    if (post.isUnpublished()) {
+    if (post.isUnpublished() && access.revealsExistence(post, reader)) {
       throw new PostException(PostErrorCode.POST_GONE, slug);
     }
-    if (!post.isPublished()) {
+    PostAccess decided = access.decide(post, reader);
+    if (decided.hidden()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, slug);
     }
+    return new PostScoped<>(
+        detail(author, post, decided, reader, acceptLanguage), !PostAccessPolicy.isOpen(post));
+  }
 
-    return buildDetail(author, post);
+  public PostScoped<PublicPostDetail> findReadablePost(
+      String username, String slug, PostReader reader) {
+    PostScoped<PublicPostDetail> found = findPublicPost(username, slug, reader, null);
+    PostLockView locked = found.body().post().locked();
+    if (locked != null) {
+      throw new PostException(PostErrorCode.POST_LOCKED, slug).with("reason", locked.reason());
+    }
+    return found;
+  }
+
+  private PublicPostDetail detail(
+      UserEntity author,
+      PostEntity post,
+      PostAccess decided,
+      PostReader reader,
+      String acceptLanguage) {
+    OwnerAudience owner = ownerView(post, author, reader);
+    if (decided.full()) {
+      return buildDetail(author, post, PublicPostListItem.of(post, decided, owner));
+    }
+    return new PublicPostDetail(
+        PublicAuthorView.from(author),
+        PublicPostListItem.of(post, decided, owner),
+        List.of(
+            new PublicPostBlockView(
+                PostBlockType.PARAGRAPH.name(),
+                PostLockedNotice.text(decided.lock(), acceptLanguage),
+                0,
+                null)),
+        null);
+  }
+
+  private OwnerAudience ownerView(PostEntity post, UserEntity author, PostReader reader) {
+    if (reader.viewerId() == null || !post.isOwnedBy(reader.viewerId())) return null;
+    return OwnerAudience.of(post, unlistedUrls.of(post, author.getUsername()));
   }
 
   // 토큰이 곧 접근 권한이라 로그인은 보지 않는다. 발행 글은 공개 읽기가 보여 줄 때만, 초안·예약 글은 내려지지 않았고 작성자가 쓸 수 있을 때만 본문을 주고, 나머지는
   // 모두 404다. 비공개 글은 시리즈 탐색에 포함하지 않는다.
-  public PublicPostDetail findPreviewPost(String token) {
+  public PostScoped<PublicPostDetail> findPreviewPost(String token, PostReader reader) {
     if (token == null || token.isBlank()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
     }
@@ -113,22 +163,24 @@ public class PublicPostQueryService {
             .findById(post.getUserId())
             .filter(u -> !u.isDeleted())
             .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, ""));
-    if (!previewable(post, author)) {
+    if (post.isDraft() || post.isScheduled()) {
+      if (post.isTakenDown() || !author.canWriteAt(clock.instant())) {
+        throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
+      }
+      return new PostScoped<>(
+          buildDetail(author, post, PublicPostListItem.of(post, PostAccess.FULL, null)), true);
+    }
+    PostReader anonymous = reader.withoutCredentials().anonymous();
+    PostAccess decided = access.decide(post, anonymous);
+    if (decided.hidden()) {
       throw new PostException(PostErrorCode.POST_NOT_FOUND, "");
     }
-    return buildDetail(author, post);
+    return new PostScoped<>(
+        detail(author, post, decided, anonymous, null), !PostAccessPolicy.isOpen(post));
   }
 
-  private boolean previewable(PostEntity post, UserEntity author) {
-    if (post.isPublished()) {
-      return true;
-    }
-    return (post.isDraft() || post.isScheduled())
-        && !post.isTakenDown()
-        && author.canWriteAt(clock.instant());
-  }
-
-  private PublicPostDetail buildDetail(UserEntity author, PostEntity post) {
+  private PublicPostDetail buildDetail(
+      UserEntity author, PostEntity post, PublicPostListItem item) {
     List<PostBlockEntity> entities =
         postBlockRepository.findAllByPostIdOrderByBlockOrderAsc(post.getId());
     Map<Long, CtaEntity> ctaMap = hydrateCtas(entities);
@@ -138,7 +190,10 @@ public class PublicPostQueryService {
     }
 
     return new PublicPostDetail(
-        PublicAuthorView.from(author), PublicPostListItem.from(post), blocks, seriesNavFor(post));
+        PublicAuthorView.from(author),
+        item,
+        blocks,
+        PostAccessPolicy.isOpen(post) ? seriesNavFor(post) : null);
   }
 
   private PublicPostSeriesNav seriesNavFor(PostEntity post) {

@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.common.post.PostAudience;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 import java.util.List;
 
@@ -17,7 +19,10 @@ public record PublicFeedItem(
     long viewCount,
     long likeCount,
     FollowReason followReason,
-    FeedSeriesRef series) {
+    FeedSeriesRef series,
+    String audience,
+    @JsonInclude(JsonInclude.Include.NON_NULL) Boolean regionRestricted,
+    @JsonInclude(JsonInclude.Include.NON_NULL) PostLockView locked) {
 
   public PublicFeedItem(
       long id,
@@ -46,10 +51,18 @@ public record PublicFeedItem(
         viewCount,
         likeCount,
         null,
+        null,
+        PostAudience.PUBLIC.name(),
+        null,
         null);
   }
 
+  public boolean redacted() {
+    return locked != null || regionRestricted != null;
+  }
+
   public PublicFeedItem withFollowReason(FollowReason reason) {
+    FollowReason kept = redacted() && reason != null && reason.tag() != null ? null : reason;
     return new PublicFeedItem(
         id,
         author,
@@ -63,8 +76,11 @@ public record PublicFeedItem(
         publishedAt,
         viewCount,
         likeCount,
-        reason,
-        series);
+        kept,
+        series,
+        audience,
+        regionRestricted,
+        locked);
   }
 
   public PublicFeedItem withSeries(FeedSeriesRef ref) {
@@ -82,6 +98,9 @@ public record PublicFeedItem(
         viewCount,
         likeCount,
         followReason,
-        ref);
+        redacted() ? null : ref,
+        audience,
+        regionRestricted,
+        locked);
   }
 }

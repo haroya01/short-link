@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.CommentEntity;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.CommentLikeRepository;
@@ -25,12 +27,19 @@ public class PostCommentQueryService {
   private final UserRepository userRepository;
   private final PostRepository postRepository;
   private final CommentMentions mentions;
+  private final PostAccessPolicy access;
 
-  public List<CommentView> listForPost(Long postId, Long viewerId, boolean tombstones) {
-    // 미발행 글의 댓글은 공개 목록에 노출하지 않는다.
-    if (postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
-      return List.of();
+  public PostScoped<List<CommentView>> listForPost(
+      Long postId, PostReader reader, boolean tombstones) {
+    PostEntity post = postRepository.findById(postId).orElse(null);
+    if (post == null || !access.readable(post, reader)) {
+      return new PostScoped<>(List.of(), false);
     }
+    return new PostScoped<>(
+        comments(postId, reader.viewerId(), tombstones), !PostAccessPolicy.isOpen(post));
+  }
+
+  private List<CommentView> comments(Long postId, Long viewerId, boolean tombstones) {
     List<CommentEntity> comments =
         tombstones
             ? commentRepository.findHeardWithTombstonesByPostId(postId, viewerId)

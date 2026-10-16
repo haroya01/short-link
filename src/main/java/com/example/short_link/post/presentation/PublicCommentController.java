@@ -2,8 +2,10 @@ package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PostCommentQueryService;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,10 +23,13 @@ public class PublicCommentController {
   // Clients that can draw a deleted comment as an empty place ask for it with tombstones=1;
   // builds that cannot decode one get the list without such places.
   @GetMapping("/{postId}/comments")
-  public List<CommentView> list(
+  public ResponseEntity<List<CommentView>> list(
       @AuthenticationPrincipal Long viewerId,
       @PathVariable Long postId,
-      @RequestParam(name = "tombstones", defaultValue = "false") boolean tombstones) {
-    return postCommentQueryService.listForPost(postId, viewerId, tombstones);
+      @RequestParam(name = "tombstones", defaultValue = "false") boolean tombstones,
+      HttpServletRequest req) {
+    return PostResponses.of(
+        postCommentQueryService.listForPost(
+            postId, PostReaderHeaders.from(viewerId, req), tombstones));
   }
 }

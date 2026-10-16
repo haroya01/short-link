@@ -1,5 +1,6 @@
 package com.example.short_link.link.domain;
 
+import com.example.short_link.common.geoip.CountryBlocklist;
 import com.example.short_link.common.jpa.BaseCreatedEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -24,11 +25,21 @@ public class UpdatePostMetadataUseCase {
   private final PostSearchTextUpdater searchTextUpdater;
   private final PostRevisionCapture revisions;
   private final PostWriteViewAssembler writeViews;
+  private final PostAccessSettings accessSettings;
+  private final ProfileCacheInvalidator profileCache;
 
   @Transactional
   public PostView execute(UpdatePostMetadataCommand cmd) {
     PostEntity post = postOwnership.requireOwnedForUpdate(cmd.userId(), cmd.postId());
+    if (cmd.access().any() && !cmd.changesContent()) {
+      editGuard.checkAccessChange(post);
+      changeAccess(post, cmd.access());
+      return writeViews.fromSaved(postRepository.save(post));
+    }
     editGuard.check(post, cmd.baseVersion(), cmd.overwrite());
+    if (cmd.access().any()) {
+      changeAccess(post, cmd.access());
+    }
 
     if (cmd.slug() != null && !cmd.slug().equals(post.getSlug())) {
       if (ProfilePathSlugs.isReserved(cmd.slug())) {
@@ -70,6 +81,13 @@ public class UpdatePostMetadataUseCase {
       }
     }
     return writeViews.fromSaved(postRepository.save(post));
+  }
+
+  private void changeAccess(PostEntity post, PostAccessChange change) {
+    accessSettings.apply(post, change);
+    if (post.isPublished()) {
+      profileCache.evictByUserId(post.getUserId());
+    }
   }
 
   // coverChosen 을 보내지 않는 옛 클라이언트는 본문 첫 이미지도 표지로 자동 저장한다. 같은 표지면 그대로 두고, 새 표지는

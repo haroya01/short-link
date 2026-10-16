@@ -14,6 +14,7 @@ import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
 import com.example.short_link.post.application.write.IssuePreviewTokenUseCase;
 import com.example.short_link.post.application.write.MarkdownBlocksConverter;
+import com.example.short_link.post.application.write.PostAccessChange;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
@@ -130,7 +131,9 @@ public class PostController {
             request.languageTag(),
             request.tags(),
             request.baseVersion(),
-            Boolean.TRUE.equals(request.overwrite())));
+            Boolean.TRUE.equals(request.overwrite()),
+            new PostAccessChange(
+                request.audience(), request.password(), request.blockedCountries())));
   }
 
   @PostMapping("/{id}/publish")

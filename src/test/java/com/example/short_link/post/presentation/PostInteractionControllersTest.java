@@ -1,5 +1,6 @@
 package com.example.short_link.post.presentation;
 
+import static com.example.short_link.post.application.access.PostReaderMatchers.viewer;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -11,6 +12,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.image.PostImageService;
 import com.example.short_link.post.application.read.CommentLikeStatus;
 import com.example.short_link.post.application.read.CommentView;
@@ -70,7 +72,7 @@ class PostInteractionControllersTest {
 
   @Test
   void likeCommentReturnsStatus() throws Exception {
-    when(likeComment.like(USER_ID, 10L)).thenReturn(new CommentLikeStatus(4L, true));
+    when(likeComment.like(viewer(USER_ID), eq(10L))).thenReturn(new CommentLikeStatus(4L, true));
 
     mvc.perform(
             post("/api/v1/comments/10/like")
@@ -115,7 +117,7 @@ class PostInteractionControllersTest {
 
   @Test
   void createCommentReturns201() throws Exception {
-    when(createComment.execute(any(CreateCommentCommand.class)))
+    when(createComment.execute(any(CreateCommentCommand.class), any(PostReader.class)))
         .thenReturn(
             new CommentView(
                 10L,
@@ -156,7 +158,8 @@ class PostInteractionControllersTest {
 
   @Test
   void likeStatusReturnsCount() throws Exception {
-    when(postLikeQueryService.status(USER_ID, 3L)).thenReturn(new PostLikeStatus(12, true));
+    when(postLikeQueryService.status(viewer(USER_ID), eq(3L)))
+        .thenReturn(new PostLikeStatus(12, true));
 
     mvc.perform(
             get("/api/v1/posts/3/like").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
@@ -167,7 +170,7 @@ class PostInteractionControllersTest {
 
   @Test
   void likePutInvokesLike() throws Exception {
-    when(likePost.like(USER_ID, 3L)).thenReturn(new PostLikeStatus(13, true));
+    when(likePost.like(viewer(USER_ID), eq(3L))).thenReturn(new PostLikeStatus(13, true));
 
     mvc.perform(
             put("/api/v1/posts/3/like").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
@@ -177,7 +180,7 @@ class PostInteractionControllersTest {
 
   @Test
   void unlikeDeleteInvokesUnlike() throws Exception {
-    when(likePost.unlike(USER_ID, 3L)).thenReturn(new PostLikeStatus(11, false));
+    when(likePost.unlike(viewer(USER_ID), eq(3L))).thenReturn(new PostLikeStatus(11, false));
 
     mvc.perform(
             delete("/api/v1/posts/3/like").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
@@ -257,7 +260,8 @@ class PostInteractionControllersTest {
                 .header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isAccepted());
 
-    verify(recordPostView).execute(any(RecordPostViewCommand.class), any(ViewContext.class));
+    verify(recordPostView)
+        .execute(any(RecordPostViewCommand.class), any(ViewContext.class), any(PostReader.class));
   }
 
   @Test
@@ -273,7 +277,8 @@ class PostInteractionControllersTest {
 
     org.mockito.ArgumentCaptor<ViewContext> ctx =
         org.mockito.ArgumentCaptor.forClass(ViewContext.class);
-    verify(recordPostView).execute(any(RecordPostViewCommand.class), ctx.capture());
+    verify(recordPostView)
+        .execute(any(RecordPostViewCommand.class), ctx.capture(), any(PostReader.class));
     org.assertj.core.api.Assertions.assertThat(ctx.getValue().referrer())
         .isEqualTo("https://news.ycombinator.com/item?id=1");
   }

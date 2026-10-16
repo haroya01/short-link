@@ -6,7 +6,6 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesEntry;
@@ -224,8 +223,7 @@ class PublicSeriesQueryServiceTest {
         .thenReturn(Optional.of(series));
     PostEntity published = publishedPost(author.getId(), "a", "A");
     ReflectionTestUtils.setField(published, "id", 10L);
-    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-            series.getId(), PostStatus.PUBLISHED))
+    when(postRepository.findOpenBySeriesIdOrderBySeriesOrderAsc(series.getId()))
         .thenReturn(List.of(published));
     when(seriesItemRepository.findBySeriesId(42L))
         .thenReturn(
@@ -256,8 +254,7 @@ class PublicSeriesQueryServiceTest {
     SeriesEntity series = series(42L, author.getId(), "my-series", "My Series");
     when(seriesRepository.findByUserIdAndSlug(author.getId(), "my-series"))
         .thenReturn(Optional.of(series));
-    when(postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-            series.getId(), PostStatus.PUBLISHED))
+    when(postRepository.findOpenBySeriesIdOrderBySeriesOrderAsc(series.getId()))
         .thenReturn(List.of(new PostEntity(author.getId(), "a", "A", "ko")));
 
     PublicSeriesDetail detail = service.findPublicSeries("john", "my-series");

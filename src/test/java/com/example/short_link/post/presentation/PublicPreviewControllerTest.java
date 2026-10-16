@@ -1,10 +1,13 @@
 package com.example.short_link.post.presentation;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.read.PostScoped;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.application.read.PublicPostBlockView;
 import com.example.short_link.post.application.read.PublicPostDetail;
@@ -51,7 +54,8 @@ class PublicPreviewControllerTest {
                 false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)),
             null);
-    when(publicPostQueryService.findPreviewPost("tok-123")).thenReturn(detail);
+    when(publicPostQueryService.findPreviewPost(eq("tok-123"), any()))
+        .thenReturn(new PostScoped<>(detail, false));
 
     mvc.perform(get("/api/v1/public/preview/tok-123"))
         .andExpect(status().isOk())
@@ -61,7 +65,7 @@ class PublicPreviewControllerTest {
 
   @Test
   void previewUnknownTokenReturns404() throws Exception {
-    when(publicPostQueryService.findPreviewPost("nope"))
+    when(publicPostQueryService.findPreviewPost(eq("nope"), any()))
         .thenThrow(new PostException(PostErrorCode.POST_NOT_FOUND, ""));
 
     mvc.perform(get("/api/v1/public/preview/nope"))

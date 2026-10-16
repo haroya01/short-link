@@ -1,6 +1,8 @@
 package com.example.short_link.post.domain;
 
+import com.example.short_link.common.geoip.CountryBlocklist;
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import jakarta.persistence.CollectionTable;
@@ -122,6 +124,19 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "content_version", nullable = false)
   private long contentVersion = 0L;
 
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  private PostAudience audience = PostAudience.PUBLIC;
+
+  @Column(name = "password_hash", length = 60)
+  private String passwordHash;
+
+  @Column(name = "unlisted_key", length = 32)
+  private String unlistedKey;
+
+  @Column(name = "blocked_countries", length = 255)
+  private String blockedCountries;
+
   // Moves only under this row's lock, one reader at a time.
   @Column(name = "human_reader_count", nullable = false)
   private int humanReaderCount;
@@ -152,10 +167,6 @@ public class PostEntity extends BaseTimeEntity {
 
   public boolean isUnpublished() {
     return status == PostStatus.UNPUBLISHED;
-  }
-
-  public boolean isPublic() {
-    return status == PostStatus.PUBLISHED;
   }
 
   public boolean isTakenDown() {
@@ -302,6 +313,41 @@ public class PostEntity extends BaseTimeEntity {
     }
     this.status = PostStatus.DRAFT;
     this.scheduledAt = null;
+  }
+
+  public void changeAudience(PostAudience audience, String newUnlistedKey) {
+    this.audience = audience;
+    if (audience == PostAudience.UNLISTED && unlistedKey == null) {
+      this.unlistedKey = newUnlistedKey;
+    }
+  }
+
+  public void protectWith(String passwordHash) {
+    this.passwordHash = passwordHash;
+  }
+
+  public boolean hasPassword() {
+    return passwordHash != null;
+  }
+
+  public void rotateUnlistedKey(String key) {
+    this.unlistedKey = key;
+  }
+
+  public void blockCountries(List<String> codes) {
+    this.blockedCountries = CountryBlocklist.normalize(String.join(",", codes));
+  }
+
+  public boolean isRegionRestricted() {
+    return blockedCountries != null;
+  }
+
+  public boolean blocksCountry(String countryCode) {
+    return CountryBlocklist.fromCsv(blockedCountries).contains(countryCode);
+  }
+
+  public List<String> blockedCountryCodes() {
+    return CountryBlocklist.fromCsv(blockedCountries).codes();
   }
 
   public void incrementViewCount() {

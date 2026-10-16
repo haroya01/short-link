@@ -1,6 +1,8 @@
 package com.example.short_link.post.presentation;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -8,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.read.PostScoped;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.application.read.PublicPostBlockView;
 import com.example.short_link.post.application.read.PublicPostDetail;
@@ -65,7 +68,8 @@ class PublicPostControllerTest {
                     false)),
             false,
             false);
-    when(publicPostQueryService.listPublicPosts("john", null)).thenReturn(response);
+    when(publicPostQueryService.listPublicPosts(eq("john"), any()))
+        .thenReturn(new PostScoped<>(response, false));
 
     mvc.perform(get("/api/v1/public/profiles/john/posts"))
         .andExpect(status().isOk())
@@ -79,7 +83,7 @@ class PublicPostControllerTest {
 
   @Test
   void listUnknownUsernameReturns404() throws Exception {
-    when(publicPostQueryService.listPublicPosts("ghost", null))
+    when(publicPostQueryService.listPublicPosts(eq("ghost"), any()))
         .thenThrow(new ProfileException(ProfileErrorCode.PROFILE_NOT_FOUND, "ghost"));
 
     mvc.perform(get("/api/v1/public/profiles/ghost/posts"))
@@ -107,7 +111,8 @@ class PublicPostControllerTest {
                 false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello", 0, null)),
             null);
-    when(publicPostQueryService.findPublicPost("john", "first-post", null)).thenReturn(detail);
+    when(publicPostQueryService.findPublicPost(eq("john"), eq("first-post"), any(), any()))
+        .thenReturn(new PostScoped<>(detail, false));
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/first-post"))
         .andExpect(status().isOk())
@@ -118,7 +123,7 @@ class PublicPostControllerTest {
 
   @Test
   void findDraftReturns404() throws Exception {
-    when(publicPostQueryService.findPublicPost("john", "draft", null))
+    when(publicPostQueryService.findPublicPost(eq("john"), eq("draft"), any(), any()))
         .thenThrow(new PostException(PostErrorCode.POST_NOT_FOUND, "draft"));
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/draft"))
@@ -128,7 +133,7 @@ class PublicPostControllerTest {
 
   @Test
   void findUnpublishedReturns410Gone() throws Exception {
-    when(publicPostQueryService.findPublicPost("john", "gone", null))
+    when(publicPostQueryService.findPublicPost(eq("john"), eq("gone"), any(), any()))
         .thenThrow(new PostException(PostErrorCode.POST_GONE, "gone"));
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/gone"))
@@ -156,7 +161,8 @@ class PublicPostControllerTest {
                 false),
             List.of(new PublicPostBlockView("PARAGRAPH", "Hello **world**", 0, null)),
             null);
-    when(publicPostQueryService.findPublicPost("john", "first-post", null)).thenReturn(detail);
+    when(publicPostQueryService.findReadablePost(eq("john"), eq("first-post"), any()))
+        .thenReturn(new PostScoped<>(detail, false));
     when(markdownBlocks.toMarkdown(anyList())).thenReturn("Hello **world**\n");
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/first-post/markdown"))
@@ -168,7 +174,7 @@ class PublicPostControllerTest {
 
   @Test
   void publicMarkdownForDraftReturns404() throws Exception {
-    when(publicPostQueryService.findPublicPost("john", "draft", null))
+    when(publicPostQueryService.findReadablePost(eq("john"), eq("draft"), any()))
         .thenThrow(new PostException(PostErrorCode.POST_NOT_FOUND, "draft"));
 
     mvc.perform(get("/api/v1/public/profiles/john/posts/draft/markdown"))

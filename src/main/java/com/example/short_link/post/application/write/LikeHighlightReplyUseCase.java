@@ -1,6 +1,7 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.HighlightReplyLikedEvent;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.HighlightReplyLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository;
@@ -22,9 +23,10 @@ public class LikeHighlightReplyUseCase {
   private final ApplicationEventPublisher events;
 
   @Transactional
-  public HighlightReplyLikeStatus like(Long userId, Long replyId) {
+  public HighlightReplyLikeStatus like(PostReader reader, Long replyId) {
+    Long userId = reader.viewerId();
     PostInteractionAccess.LikeableHighlightReply target =
-        access.requireLikeableHighlightReply(userId, replyId);
+        access.requireLikeableHighlightReply(reader, replyId);
     if (likeRepository.insertIgnore(replyId, userId) > 0) {
       PostEntity post = target.post();
       events.publishEvent(

@@ -1,4 +1,4 @@
-package com.example.short_link.link.domain;
+package com.example.short_link.common.geoip;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

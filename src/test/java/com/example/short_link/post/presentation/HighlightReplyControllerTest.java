@@ -1,6 +1,8 @@
 package com.example.short_link.post.presentation;
 
+import static com.example.short_link.post.application.access.PostReaderMatchers.viewer;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -8,6 +10,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.HighlightReplyLikeStatus;
 import com.example.short_link.post.application.read.HighlightReplyView;
 import com.example.short_link.post.application.read.PublicAuthorView;
@@ -38,7 +41,7 @@ class HighlightReplyControllerTest {
 
   @Test
   void createReturns201() throws Exception {
-    when(createReply.execute(any(CreateHighlightReplyCommand.class)))
+    when(createReply.execute(any(CreateHighlightReplyCommand.class), any(PostReader.class)))
         .thenReturn(
             new HighlightReplyView(
                 10L,
@@ -98,7 +101,7 @@ class HighlightReplyControllerTest {
 
   @Test
   void likeAnswersTheCountAndThatTheReaderLikesIt() throws Exception {
-    when(likeReply.like(USER_ID, 9L)).thenReturn(new HighlightReplyLikeStatus(3, true));
+    when(likeReply.like(viewer(USER_ID), eq(9L))).thenReturn(new HighlightReplyLikeStatus(3, true));
 
     mvc.perform(
             post("/api/v1/highlight-replies/9/like")
