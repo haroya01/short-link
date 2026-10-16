@@ -31,7 +31,9 @@ public enum NotificationType {
   POST_QUOTE,
   NOTE_EMBED,
   COMMENT_LIKE,
-  HIGHLIGHT;
+  HIGHLIGHT,
+  POST_FIRST_READER,
+  POST_READ_MILESTONE;
 
   public boolean grouped() {
     return switch (this) {
@@ -74,7 +76,15 @@ public enum NotificationType {
               COMMENT_LIKE,
               HIGHLIGHT ->
           true;
-      case NEW_POST, CONNECTED, PATH_GREW, NOTE_POLL, NOTE_POST, NOTE_EDIT -> false;
+      case NEW_POST,
+              CONNECTED,
+              PATH_GREW,
+              NOTE_POLL,
+              NOTE_POST,
+              NOTE_EDIT,
+              POST_FIRST_READER,
+              POST_READ_MILESTONE ->
+          false;
     };
   }
 }

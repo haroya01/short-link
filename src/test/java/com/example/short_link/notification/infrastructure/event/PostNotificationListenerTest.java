@@ -18,6 +18,7 @@ import com.example.short_link.common.event.HighlightReplyLikedEvent;
 import com.example.short_link.common.event.NotesEmbeddedEvent;
 import com.example.short_link.common.event.PostHighlightedEvent;
 import com.example.short_link.common.event.PostPublishedEvent;
+import com.example.short_link.common.event.PostReadMilestoneEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
@@ -53,6 +54,24 @@ class PostNotificationListenerTest {
 
   private static String today(String type, long subject) {
     return type + ":" + subject + ":" + LocalDate.now(ZoneOffset.UTC);
+  }
+
+  @Test
+  void theFirstReaderAndLaterMilestonesReachTheAuthorWithoutAnActor() {
+    listener().onPostReadMilestone(new PostReadMilestoneEvent(7L, 30L, "3", "제목", 1, AT));
+    listener().onPostReadMilestone(new PostReadMilestoneEvent(7L, 30L, "3", "제목", 100, AT));
+
+    ArgumentCaptor<NotificationPostRef> first = ArgumentCaptor.forClass(NotificationPostRef.class);
+    verify(recordUseCase)
+        .record(eq(7L), eq(NotificationType.POST_FIRST_READER), isNull(), first.capture());
+    assertThat(first.getValue())
+        .isEqualTo(new NotificationPostRef(30L, "3", "제목", null, null, null, null));
+    ArgumentCaptor<NotificationPostRef> hundred =
+        ArgumentCaptor.forClass(NotificationPostRef.class);
+    verify(recordUseCase)
+        .record(eq(7L), eq(NotificationType.POST_READ_MILESTONE), isNull(), hundred.capture());
+    assertThat(hundred.getValue().milestone()).isEqualTo(100);
+    verifyNoInteractions(followerReader, userReader, blocks);
   }
 
   @Test

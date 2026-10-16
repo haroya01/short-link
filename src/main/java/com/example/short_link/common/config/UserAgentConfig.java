@@ -9,6 +9,10 @@ public class UserAgentConfig {
 
   @Bean
   public UserAgentAnalyzer userAgentAnalyzer() {
-    return UserAgentAnalyzer.newBuilder().hideMatcherLoadStats().withCache(10_000).build();
+    return UserAgentAnalyzer.newBuilder()
+        .hideMatcherLoadStats()
+        .dropTests()
+        .withCache(10_000)
+        .build();
   }
 }

@@ -20,4 +20,7 @@ public interface PostViewEventRepository {
   List<ReferrerViewCount> topReferrerHostsByUserSince(Long userId, Instant since, int limit);
 
   Map<Long, Set<String>> readersByPostId(Collection<Long> postIds);
+
+  // Sees views committed after the caller's transaction began, so a reader is counted once.
+  boolean hasHumanVisit(Long postId, String visitorHash);
 }

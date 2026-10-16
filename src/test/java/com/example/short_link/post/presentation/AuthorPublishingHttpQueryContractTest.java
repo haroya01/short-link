@@ -372,6 +372,18 @@ class AuthorPublishingHttpQueryContractTest extends ContentHttpJourneySupport {
         202);
     assertThat(count("post_view_event", "post_id = ? AND utm_source = ?", first, "journey"))
         .isEqualTo(1);
+    assertThat(
+            count(
+                "post_view_event",
+                "post_id = ? AND utm_source = ? AND is_bot = TRUE AND bot_name = ?",
+                first,
+                "journey",
+                "Java-http-client"))
+        .isEqualTo(1);
+    assertThat(
+            jdbc.queryForObject(
+                "SELECT human_reader_count FROM posts WHERE id = ?", Integer.class, first))
+        .isZero();
     assertThat(jdbc.queryForObject("SELECT view_count FROM posts WHERE id = ?", Long.class, first))
         .isEqualTo(1);
     assertThat(

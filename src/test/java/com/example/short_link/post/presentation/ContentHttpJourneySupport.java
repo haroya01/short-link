@@ -74,10 +74,23 @@ abstract class ContentHttpJourneySupport extends DockerHttpTest {
   protected String rawStep(
       String id, String method, String path, Actor actor, Object body, int status)
       throws Exception {
+    return rawStep(id, method, path, actor, body, status, Map.of());
+  }
+
+  protected String rawStep(
+      String id,
+      String method,
+      String path,
+      Actor actor,
+      Object body,
+      int status,
+      Map<String, String> headers)
+      throws Exception {
     HttpRequest.Builder request =
         HttpRequest.newBuilder(URI.create("http://localhost:" + port + path))
             .timeout(Duration.ofSeconds(30))
             .header("X-Query-Contract-ID", id);
+    headers.forEach(request::header);
     if (actor != null) request.header("Authorization", "Bearer " + actor.token());
     HttpRequest.BodyPublisher payload = HttpRequest.BodyPublishers.noBody();
     if (body != null) {

@@ -1,6 +1,10 @@
 package com.example.short_link.post.application.write;
 
-public record RecordPostViewCommand(String username, String slug) {
+public record RecordPostViewCommand(String username, String slug, Long viewerId) {
+
+  public RecordPostViewCommand(String username, String slug) {
+    this(username, slug, null);
+  }
 
   public RecordPostViewCommand {
     if (username == null || username.isBlank()) {
