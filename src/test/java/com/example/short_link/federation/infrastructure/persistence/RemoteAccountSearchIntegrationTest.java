@@ -100,10 +100,10 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void aUsernameOrDisplayNameStartingWithTheTermMatchesInAnyCase() {
-    Long byName = actor(tag + "alice", domain("one"), "Zed");
-    Long byDisplayName = actor("bob", domain("two"), tag.toUpperCase() + " Bob");
-    actor("carol", domain("three"), "Carol " + tag);
-    actor("dave" + tag, domain("four"), null);
+    Long byName = findable(tag + "alice", domain("one"), "Zed");
+    Long byDisplayName = findable("bob", domain("two"), tag.toUpperCase() + " Bob");
+    findable("carol", domain("three"), "Carol " + tag);
+    findable("dave" + tag, domain("four"), null);
 
     assertThat(ids(viewer, tag)).containsExactly(byDisplayName, byName);
     assertThat(ids(viewer, tag.toUpperCase())).containsExactly(byDisplayName, byName);
@@ -111,8 +111,8 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void aTermWithAServerMatchesUserAtDomain() {
-    Long one = actor(tag, domain("one"), null);
-    actor(tag, domain("two"), null);
+    Long one = findable(tag, domain("one"), null);
+    findable(tag, domain("two"), null);
 
     assertThat(ids(viewer, tag + "@one-" + tag.substring(0, 3))).containsExactly(one);
     assertThat(ids(viewer, tag + "@" + domain("one"))).containsExactly(one);
@@ -120,10 +120,10 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void theViewersFollowsComeFirstThenAnExactNameThenTheRestByName() {
-    Long followed = actor(tag + "zz", domain("one"), null);
-    Long exact = actor(tag, domain("two"), null);
-    Long first = actor(tag + "aa", domain("three"), null);
-    Long requested = actor(tag + "bb", domain("four"), null);
+    Long followed = findable(tag + "zz", domain("one"), null);
+    Long exact = findable(tag, domain("two"), null);
+    Long first = findable(tag + "aa", domain("three"), null);
+    Long requested = findable(tag + "bb", domain("four"), null);
     follow(followed, true);
     follow(requested, false);
 
@@ -141,10 +141,10 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void accountsOnSuspendedServersAndOnServersTheViewerBlockedStayOut() {
-    Long open = actor(tag + "a", domain("open"), null);
-    actor(tag + "b", "social." + domain("gone"), null);
-    Long limited = actor(tag + "c", domain("quiet"), null);
-    Long blocked = actor(tag + "d", domain("muted"), null);
+    Long open = findable(tag + "a", domain("open"), null);
+    findable(tag + "b", "social." + domain("gone"), null);
+    Long limited = findable(tag + "c", domain("quiet"), null);
+    Long blocked = findable(tag + "d", domain("muted"), null);
     actor(null, domain("open"), tag + " no username");
     serverBlock(domain("gone"), "SUSPEND");
     serverBlock(domain("quiet"), "LIMIT");
@@ -156,9 +156,9 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void anAccountTheViewerBlockedStaysOutAndOneTheyMutedSaysSoUntilTheMuteEnds() {
-    Long blocked = actor(tag + "a", domain("one"), null);
-    Long muted = actor(tag + "b", domain("two"), null);
-    Long lapsed = actor(tag + "c", domain("three"), null);
+    Long blocked = findable(tag + "a", domain("one"), null);
+    Long muted = findable(tag + "b", domain("two"), null);
+    Long lapsed = findable(tag + "c", domain("three"), null);
     em.createNativeQuery(
             "INSERT INTO federation_remote_block (user_id, remote_actor_id, created_at)"
                 + " VALUES (?, ?, NOW(6))")
@@ -183,8 +183,25 @@ class RemoteAccountSearchIntegrationTest {
   }
 
   @Test
+  void aNameFindsOnlyAnAccountThatLetsItselfBeFoundUnlessTheViewerFollowsItOrTypesItsHandle() {
+    Long hidden = actor(tag + "hid", domain("one"), tag + " Hidden");
+    Long open = findable(tag + "open", domain("two"), null);
+    Long followed = actor(tag + "fol", domain("three"), null);
+    Long requested = actor(tag + "req", domain("four"), null);
+    follow(followed, true);
+    follow(requested, false);
+
+    assertThat(ids(viewer, tag)).containsExactly(followed, open, requested);
+    assertThat(ids(null, tag)).containsExactly(open);
+    assertThat(ids(null, tag + "hid@" + domain("one"))).containsExactly(hidden);
+    assertThat(ids(viewer, (tag + "HID@" + domain("one")).toUpperCase())).containsExactly(hidden);
+    assertThat(ids(null, tag + "hid@" + domain("one").substring(0, 5))).isEmpty();
+    assertThat(ids(null, tag + "hid@")).isEmpty();
+  }
+
+  @Test
   void wildcardsInTheTermAreMatchedLiterally() {
-    actor(tag + "alice", domain("one"), null);
+    findable(tag + "alice", domain("one"), null);
 
     assertThat(ids(viewer, tag.substring(0, 4) + "%")).isEmpty();
     assertThat(ids(viewer, tag.substring(0, 4) + "_")).isEmpty();
@@ -203,6 +220,12 @@ class RemoteAccountSearchIntegrationTest {
       query.setParameter(i + 1, values[i]);
     }
     query.executeUpdate();
+  }
+
+  private Long findable(String username, String domain, String displayName) {
+    Long id = actor(username, domain, displayName);
+    exec("UPDATE federation_remote_actor SET discoverable = TRUE WHERE id = ?", id);
+    return id;
   }
 
   private Long discoverable(String username, String domain) {
@@ -294,9 +317,9 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void anAccountByItsAddressIsFoundByTheExactNameAndAServerPrefixOnly() {
-    Long exact = actor(tag, domain("one"), null);
-    actor(tag + "x", domain("one"), null);
-    actor(tag, "other.example", null);
+    Long exact = findable(tag, domain("one"), null);
+    findable(tag + "x", domain("one"), null);
+    findable(tag, "other.example", null);
 
     assertThat(ids(viewer, tag + "@one")).containsExactly(exact);
     assertThat(ids(viewer, tag + "@")).hasSize(2);

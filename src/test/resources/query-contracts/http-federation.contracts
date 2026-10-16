@@ -310,9 +310,12 @@
 @junit | federation-remote-reply-delete | 9 | 1 | 0 | 4 | 14
 # Searching accounts this server already knows: one statement with the viewer's follow and mute
 # joined in and suspended servers, the viewer's blocked servers and blocked accounts left out. A
-# term under two characters asks nothing.
+# name finds an account that lets itself be found, one the viewer follows, or one whose whole
+# handle was typed; that rule is part of the same statement, so the counts stayed. A term under two
+# characters asks nothing.
 @junit | federation-account-search | 1 | 0 | 0 | 0 | 1
 @junit | federation-account-search-anonymous | 1 | 0 | 0 | 0 | 1
+@junit | federation-account-search-handle | 1 | 0 | 0 | 0 | 1
 @junit | federation-account-search-short | 0 | 0 | 0 | 0 | 0
 # Suggestions: one statement over the accounts the member's follows follow, counted and ranked,
 # leaving out accounts not open to suggestions, already followed or asked, blocked or muted, and

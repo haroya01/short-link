@@ -20,6 +20,8 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
 
   private static final String ACCT = "CONCAT(a.username, '@', a.domain)";
 
+  // A name finds only an account that lets itself be found (toot:discoverable), unless the viewer
+  // follows or asked to follow it or typed its whole handle.
   private static final String SEARCH =
       "SELECT a.id, a.username, a.domain, a.display_name, a.avatar_url,"
           + " COALESCE(a.profile_url, a.actor_uri), f.accepted_at IS NOT NULL,"
@@ -29,6 +31,7 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
           + " LEFT JOIN federation_following f"
           + " ON f.user_id = :viewer AND f.remote_actor_id = a.id"
           + " WHERE a.username IS NOT NULL AND (MATCHES)"
+          + " AND (a.discoverable OR f.id IS NOT NULL OR HANDLE)"
           + " AND NOT EXISTS (SELECT 1 FROM federation_domain_block sb"
           + " WHERE sb.severity = 'SUSPEND' AND "
           + ServerBlockSql.covers("sb", "a.domain")
@@ -42,11 +45,12 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
   private static final String NAMES = "a.username LIKE :prefix OR a.display_name LIKE :prefix";
 
   private static final String BY_NAME =
-      SEARCH.replace("MATCHES", NAMES).replace("EXACT", "a.username");
+      SEARCH.replace("MATCHES", NAMES).replace("HANDLE", "FALSE").replace("EXACT", "a.username");
 
   private static final String BY_ACCT =
       SEARCH
           .replace("MATCHES", NAMES + " OR (a.username = :user AND a.domain LIKE :domainPrefix)")
+          .replace("HANDLE", ACCT + " = :exact")
           .replace("EXACT", ACCT);
 
   private static final String SUGGESTIONS =

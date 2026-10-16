@@ -83,10 +83,13 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
 
   @Test
   void anyoneFindsKnownAccountsAndAMemberSeesTheirFollowsFirst() throws Exception {
-    seed(tag, host("exact"));
+    long exact = seed(tag, host("exact"));
     long followed = seed(tag + "zz", host("followed"));
-    seed(tag + "aa", host("gone"));
-    seed(tag + "bb", host("blocked"));
+    long gone = seed(tag + "aa", host("gone"));
+    long blocked = seed(tag + "bb", host("blocked"));
+    for (long findable : List.of(exact, gone, blocked)) {
+      jdbc.update("UPDATE federation_remote_actor SET discoverable = TRUE WHERE id = ?", findable);
+    }
     jdbc.update(
         "INSERT INTO federation_following (user_id, remote_actor_id, follow_activity_id,"
             + " accepted_at, created_at, updated_at) VALUES (?, ?, ?, NOW(6), NOW(6), NOW(6))",
@@ -127,11 +130,20 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
                 null,
                 200));
     assertThat(accts(anyone))
-        .containsExactly(
-            tag + "@" + host("exact"),
-            tag + "bb@" + host("blocked"),
-            tag + "zz@" + host("followed"));
-    assertThat(anyone.path("items").get(2).path("following").asBoolean()).isFalse();
+        .containsExactly(tag + "@" + host("exact"), tag + "bb@" + host("blocked"));
+
+    var byHandle =
+        body(
+            call(
+                "federation-account-search-handle",
+                "GET",
+                "/api/v1/federation/accounts/search?q="
+                    + query("@" + tag + "zz@" + host("followed")),
+                null,
+                null,
+                200));
+    assertThat(accts(byHandle)).containsExactly(tag + "zz@" + host("followed"));
+    assertThat(byHandle.path("items").get(0).path("following").asBoolean()).isFalse();
 
     assertThat(
             body(call(
