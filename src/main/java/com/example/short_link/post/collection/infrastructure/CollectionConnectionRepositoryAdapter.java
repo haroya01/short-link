@@ -173,7 +173,7 @@ class CollectionConnectionRepositoryAdapter implements CollectionConnectionRepos
   }
 
   @Override
-  public List<CuratorOverlapRow> findOverlappingCurators(Long ownerId, int limit) {
-    return jpa.findOverlappingCurators(ownerId, limit);
+  public List<CuratorOverlapRow> findOverlappingCurators(Long ownerId, Long viewerId, int limit) {
+    return jpa.findOverlappingCurators(ownerId, HeardSql.viewer(viewerId), limit);
   }
 }

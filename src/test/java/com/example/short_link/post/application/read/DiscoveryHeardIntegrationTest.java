@@ -139,6 +139,21 @@ class DiscoveryHeardIntegrationTest {
   }
 
   @Test
+  void suggestedAuthorsLeaveOutTheViewer() {
+    for (int i = 0; i < 3; i++) {
+      publish(viewer, "hrd-viewer-" + i, null);
+    }
+
+    assertThat(feed.suggestedAuthors(viewer, 20))
+        .extracting(s -> s.author().username())
+        .contains("hrd-normal")
+        .doesNotContain("hrd-viewer");
+    assertThat(feed.suggestedAuthors(null, 20))
+        .extracting(s -> s.author().username())
+        .contains("hrd-viewer");
+  }
+
+  @Test
   void seriesDiscoveryLeavesOutSeriesWhoseAuthorTheViewerCannotHear() {
     for (String handle : concat(HEARD, UNHEARD)) {
       seriesOfTwo(authors.get(handle), handle + "-series");

@@ -153,7 +153,7 @@ class CurationGraphQueryServiceIntegrationTest {
     Long acPriv = collection(alice, "A-priv", CollectionVisibility.PRIVATE);
     connect(acPriv, ConnectionBlockType.POST, pSecret, 0);
 
-    List<KindredCuratorView> kindred = service.kindredCurators("alice-kin", 12);
+    List<KindredCuratorView> kindred = service.kindredCurators("alice-kin", null, 12);
 
     // 공유 DB가 오염돼 있을 수 있어 hasSize 대신 포함 여부와 자기 제외만 단언한다.
     assertThat(kindred)
@@ -169,8 +169,30 @@ class CurationGraphQueryServiceIntegrationTest {
   }
 
   @Test
+  void kindredCurators_leaveOutTheViewer() {
+    Long alice = user("alice-kv", "akv");
+    Long bob = user("bob-kv", "bkv");
+    Long viewer = user("viewer-kv", "vkv");
+    Long h1 = highlight(post(alice, "kv-seed"), alice, "같이 고른 문장");
+    connect(
+        collection(alice, "A", CollectionVisibility.PUBLIC), ConnectionBlockType.HIGHLIGHT, h1, 0);
+    connect(
+        collection(bob, "B", CollectionVisibility.PUBLIC), ConnectionBlockType.HIGHLIGHT, h1, 0);
+    connect(
+        collection(viewer, "V", CollectionVisibility.PUBLIC), ConnectionBlockType.HIGHLIGHT, h1, 0);
+
+    assertThat(service.kindredCurators("alice-kv", viewer, 12))
+        .extracting(k -> k.curator().username())
+        .contains("bob-kv")
+        .doesNotContain("viewer-kv");
+    assertThat(service.kindredCurators("alice-kv", null, 12))
+        .extracting(k -> k.curator().username())
+        .contains("bob-kv", "viewer-kv");
+  }
+
+  @Test
   void kindredCurators_emptyForUnknownHandle() {
-    assertThat(service.kindredCurators("no-such-curator-xyz", 12)).isEmpty();
+    assertThat(service.kindredCurators("no-such-curator-xyz", null, 12)).isEmpty();
   }
 
   @Test
@@ -204,6 +226,6 @@ class CurationGraphQueryServiceIntegrationTest {
     Long c = collection(solo, "Solo", CollectionVisibility.PUBLIC);
     connect(c, ConnectionBlockType.POST, p, 0);
 
-    assertThat(service.kindredCurators("solo-curator", 12)).isEmpty();
+    assertThat(service.kindredCurators("solo-curator", null, 12)).isEmpty();
   }
 }

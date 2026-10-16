@@ -71,11 +71,11 @@ public class CurationGraphQueryService {
     return out;
   }
 
-  public List<KindredCuratorView> kindredCurators(String username, int limit) {
+  public List<KindredCuratorView> kindredCurators(String username, Long viewerId, int limit) {
     Optional<UserEntity> me = userRepository.findByUsername(username);
     if (me.isEmpty()) return List.of();
     List<CuratorOverlapRow> rows =
-        connectionRepository.findOverlappingCurators(me.get().getId(), clamp(limit));
+        connectionRepository.findOverlappingCurators(me.get().getId(), viewerId, clamp(limit));
     if (rows.isEmpty()) return List.of();
 
     Map<Long, UserEntity> users =

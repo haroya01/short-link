@@ -359,6 +359,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
           "SELECT p.user_id, COUNT(*), COALESCE(SUM(p.view_count), 0) FROM posts p "
               + "WHERE "
               + PostAccessSql.LISTED
+              + " AND p.user_id <> :viewer"
               + " AND p.body_text_length >= :minBody"
               + HeardSql.POST_AUTHOR
               + " GROUP BY p.user_id "

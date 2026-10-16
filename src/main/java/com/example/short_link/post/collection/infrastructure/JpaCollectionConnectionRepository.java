@@ -98,6 +98,7 @@ public interface JpaCollectionConnectionRepository
               + "ON cc2.block_type = cc1.block_type AND cc2.ref_id = cc1.ref_id "
               + "JOIN collection col2 ON col2.id = cc2.collection_id "
               + "AND col2.visibility = 'PUBLIC' AND col2.owner_id <> :ownerId "
+              + "AND col2.owner_id <> :viewer "
               + "GROUP BY col2.owner_id "
               + "ORDER BY sharedItems DESC "
               + "LIMIT :limit",
@@ -105,5 +106,6 @@ public interface JpaCollectionConnectionRepository
   List<
           com.example.short_link.post.collection.domain.repository.projection
               .CurationGraphProjections.CuratorOverlapRow>
-      findOverlappingCurators(@Param("ownerId") Long ownerId, @Param("limit") int limit);
+      findOverlappingCurators(
+          @Param("ownerId") Long ownerId, @Param("viewer") long viewer, @Param("limit") int limit);
 }
