@@ -3,6 +3,7 @@ package com.example.short_link.post.presentation;
 import com.example.short_link.post.application.read.ReadingHistoryQueryService;
 import com.example.short_link.post.application.read.ReadingHistoryView;
 import com.example.short_link.post.application.write.RecordPostReadUseCase;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,8 +28,9 @@ public class ReadingHistoryController {
 
   @PostMapping("/posts/{postId}/read")
   @ResponseStatus(HttpStatus.NO_CONTENT)
-  public void record(@AuthenticationPrincipal Long userId, @PathVariable Long postId) {
-    recordPostRead.record(userId, postId);
+  public void record(
+      @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
+    recordPostRead.record(PostReaders.from(userId, req), postId);
   }
 
   @GetMapping("/users/me/reading-history")

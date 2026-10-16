@@ -1,6 +1,7 @@
 package com.example.short_link.note.infrastructure.persistence;
 
 import com.example.short_link.common.federation.ServerBlockSql;
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.note.domain.NoteEditEntity;
 import com.example.short_link.note.domain.NoteEntity;
@@ -508,7 +509,8 @@ class NoteRepositoryAdapter implements NoteRepository {
                     + " WHERE quoted_note_id IN (:ids)"
                     + " UNION ALL SELECT q.note_id, 'QUOTE' FROM post_note_quote q"
                     + " JOIN posts p ON p.id = q.post_id"
-                    + " WHERE q.note_id IN (:ids) AND p.status = 'PUBLISHED'"
+                    + " WHERE q.note_id IN (:ids) AND "
+                    + PostAccessSql.CARD
                     + " UNION ALL SELECT note_id, 'LIKE' FROM note_like WHERE note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, 'REPOST' FROM note_repost WHERE note_id IN (:ids)"
                     + " UNION ALL SELECT note_id, IF(kind = 'LIKE', 'LIKE', 'REPOST')"

@@ -1,6 +1,8 @@
 package com.example.short_link.post.domain;
 
+import com.example.short_link.common.geoip.CountryBlocklist;
 import com.example.short_link.common.jpa.BaseTimeEntity;
+import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.exception.PostErrorCode;
 import com.example.short_link.post.exception.PostException;
 import jakarta.persistence.CollectionTable;
@@ -121,6 +123,19 @@ public class PostEntity extends BaseTimeEntity {
   // markEdited()로만 오른다. 비교와 증가가 원자적이려면 findByIdForUpdate로 잠근 엔티티여야 한다.
   @Column(name = "content_version", nullable = false)
   private long contentVersion = 0L;
+
+  @Enumerated(EnumType.STRING)
+  @Column(nullable = false, length = 16)
+  private PostAudience audience = PostAudience.PUBLIC;
+
+  @Column(name = "password_hash", length = 60)
+  private String passwordHash;
+
+  @Column(name = "unlisted_key", length = 32)
+  private String unlistedKey;
+
+  @Column(name = "blocked_countries", length = 255)
+  private String blockedCountries;
 
   public PostEntity(Long userId, String slug, String title, String languageTag) {
     this.userId = userId;
@@ -298,6 +313,41 @@ public class PostEntity extends BaseTimeEntity {
     }
     this.status = PostStatus.DRAFT;
     this.scheduledAt = null;
+  }
+
+  public void changeAudience(PostAudience audience, String newUnlistedKey) {
+    this.audience = audience;
+    if (audience == PostAudience.UNLISTED && unlistedKey == null) {
+      this.unlistedKey = newUnlistedKey;
+    }
+  }
+
+  public void protectWith(String passwordHash) {
+    this.passwordHash = passwordHash;
+  }
+
+  public boolean hasPassword() {
+    return passwordHash != null;
+  }
+
+  public void rotateUnlistedKey(String key) {
+    this.unlistedKey = key;
+  }
+
+  public void blockCountries(List<String> codes) {
+    this.blockedCountries = CountryBlocklist.normalize(String.join(",", codes));
+  }
+
+  public boolean isRegionRestricted() {
+    return blockedCountries != null;
+  }
+
+  public boolean blocksCountry(String countryCode) {
+    return CountryBlocklist.fromCsv(blockedCountries).contains(countryCode);
+  }
+
+  public List<String> blockedCountryCodes() {
+    return CountryBlocklist.fromCsv(blockedCountries).codes();
   }
 
   public void incrementViewCount() {

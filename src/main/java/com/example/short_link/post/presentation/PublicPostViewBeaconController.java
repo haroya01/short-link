@@ -7,6 +7,7 @@ import com.example.short_link.post.application.write.ViewContext;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -25,6 +26,7 @@ public class PublicPostViewBeaconController {
   @PostMapping("/{username}/posts/{slug}/view")
   @ResponseStatus(HttpStatus.ACCEPTED)
   public void recordView(
+      @AuthenticationPrincipal Long viewerId,
       @PathVariable String username,
       @PathVariable String slug,
       @RequestParam(value = "src", required = false) String src,
@@ -55,6 +57,7 @@ public class PublicPostViewBeaconController {
             utmContent,
             "1".equals(req.getHeader("Sec-GPC")),
             // behavior_event와 조인하는 탭 수명 세션 ID다.
-            sid));
+            sid),
+        PostReaders.from(viewerId, req));
   }
 }

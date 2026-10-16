@@ -3,6 +3,7 @@ package com.example.short_link.post.presentation;
 import com.example.short_link.post.application.read.PostLikeQueryService;
 import com.example.short_link.post.application.read.PostLikeStatus;
 import com.example.short_link.post.application.write.LikePostUseCase;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -21,17 +22,20 @@ public class PostLikeController {
   private final PostLikeQueryService postLikeQueryService;
 
   @GetMapping
-  public PostLikeStatus status(@AuthenticationPrincipal Long userId, @PathVariable Long postId) {
-    return postLikeQueryService.status(userId, postId);
+  public PostLikeStatus status(
+      @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
+    return postLikeQueryService.status(PostReaders.from(userId, req), postId);
   }
 
   @PutMapping
-  public PostLikeStatus like(@AuthenticationPrincipal Long userId, @PathVariable Long postId) {
-    return likePost.like(userId, postId);
+  public PostLikeStatus like(
+      @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
+    return likePost.like(PostReaders.from(userId, req), postId);
   }
 
   @DeleteMapping
-  public PostLikeStatus unlike(@AuthenticationPrincipal Long userId, @PathVariable Long postId) {
-    return likePost.unlike(userId, postId);
+  public PostLikeStatus unlike(
+      @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
+    return likePost.unlike(PostReaders.from(userId, req), postId);
   }
 }

@@ -2,7 +2,9 @@ package com.example.short_link.post.presentation;
 
 import com.example.short_link.post.application.read.PublicPostDetail;
 import com.example.short_link.post.application.read.PublicPostQueryService;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -17,7 +19,9 @@ public class PublicPreviewController {
   private final PublicPostQueryService publicPostQueryService;
 
   @GetMapping("/{token}")
-  public PublicPostDetail preview(@PathVariable String token) {
-    return publicPostQueryService.findPreviewPost(token);
+  public ResponseEntity<PublicPostDetail> preview(
+      @PathVariable String token, HttpServletRequest req) {
+    return PostResponses.of(
+        publicPostQueryService.findPreviewPost(token, PostReaders.from(null, req)));
   }
 }

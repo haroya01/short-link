@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.access.PostUnlistedUrls;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
@@ -10,10 +11,11 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 public class PostWriteViewAssembler {
   private final PostRepository postRepository;
+  private final PostUnlistedUrls unlistedUrls;
 
   public PostView fromSaved(PostEntity post) {
     // @UpdateTimestamp는 flush 시 갱신된다. 먼저 DTO로 복사하면 이전 수정 시각이 응답에 남는다.
     postRepository.flush();
-    return PostView.from(post);
+    return PostView.from(post, unlistedUrls.of(post));
   }
 }

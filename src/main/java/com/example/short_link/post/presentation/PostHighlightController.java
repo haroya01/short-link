@@ -7,6 +7,7 @@ import com.example.short_link.post.application.read.PostHighlightQueryService;
 import com.example.short_link.post.application.write.CreateHighlightCommand;
 import com.example.short_link.post.application.write.CreateHighlightUseCase;
 import com.example.short_link.post.presentation.request.CreateHighlightRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +36,8 @@ public class PostHighlightController {
   public HighlightRef create(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long postId,
-      @Valid @RequestBody CreateHighlightRequest request) {
+      @Valid @RequestBody CreateHighlightRequest request,
+      HttpServletRequest req) {
     return createHighlight.execute(
         new CreateHighlightCommand(
             userId,
@@ -45,7 +47,8 @@ public class PostHighlightController {
             request.startOffset(),
             request.endOffset(),
             request.quote(),
-            request.note()));
+            request.note()),
+        PostReaders.from(userId, req));
   }
 
   @DeleteMapping("/highlights/{id}")

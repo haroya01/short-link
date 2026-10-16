@@ -3,7 +3,6 @@ package com.example.short_link.post.domain.repository;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostPerformanceSort;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.TagCount;
 import java.time.Instant;
 import java.util.Collection;
@@ -41,7 +40,9 @@ public interface PostRepository {
 
   List<PostEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
-  List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(Long userId, PostStatus status);
+  // An author's published posts a profile list may carry for this viewer, newest first: all but
+  // UNLISTED ones, which only the author sees.
+  List<PostEntity> findProfilePosts(Long userId, Long viewerId);
 
   List<PostEntity> findUserAnalyticsPosts(
       Long userId, int page, int size, PostPerformanceSort sort);
@@ -62,8 +63,7 @@ public interface PostRepository {
 
   List<PostEntity> findAllBySeriesIdInOrderBySeriesOrderAsc(Collection<Long> seriesIds);
 
-  List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-      Long seriesId, PostStatus status);
+  List<PostEntity> findOpenBySeriesIdOrderBySeriesOrderAsc(Long seriesId);
 
   // A viewer-scoped read leaves out authors the viewer blocked, who blocked the viewer, or whom the
   // viewer muted until the mute ends; a null viewer is anonymous.

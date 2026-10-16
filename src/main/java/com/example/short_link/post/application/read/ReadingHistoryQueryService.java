@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccess;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
@@ -37,7 +39,7 @@ public class ReadingHistoryQueryService {
     List<Long> postIds = reads.stream().map(PostReadEntity::getPostId).toList();
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostEntity::isPublished)
+            .filter(PostAccessPolicy::isCard)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     Map<Long, UserEntity> authors =
         userRepository
@@ -53,6 +55,8 @@ public class ReadingHistoryQueryService {
             r -> {
               PostEntity post = posts.get(r.getPostId());
               UserEntity author = authors.get(post.getUserId());
+              PostAccess card = PostAccessPolicy.card(post);
+              boolean redacted = card.redacted();
               return new ReadingHistoryEntryView(
                   post.getId(),
                   author.getId(),
@@ -60,10 +64,13 @@ public class ReadingHistoryQueryService {
                   author.getAvatarUrl(),
                   post.getTitle(),
                   post.getSlug(),
-                  post.getExcerpt(),
-                  post.getOgImageUrl(),
-                  post.thumbnailUrl(),
-                  r.getReadAt());
+                  redacted ? null : post.getExcerpt(),
+                  redacted ? null : post.getOgImageUrl(),
+                  redacted ? null : post.thumbnailUrl(),
+                  r.getReadAt(),
+                  post.getAudience().name(),
+                  post.isRegionRestricted() ? Boolean.TRUE : null,
+                  PostLockView.of(card));
             })
         .toList();
   }

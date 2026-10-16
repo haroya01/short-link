@@ -1,7 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostStatus;
 import com.example.short_link.post.domain.SeriesActivity;
 import com.example.short_link.post.domain.SeriesEntity;
 import com.example.short_link.post.domain.SeriesEntry;
@@ -139,7 +139,7 @@ public class PublicSeriesQueryService {
     List<Long> ids = all.stream().map(SeriesEntity::getId).toList();
     Map<Long, List<PostEntity>> publishedBySeries =
         postRepository.findAllBySeriesIdInOrderBySeriesOrderAsc(ids).stream()
-            .filter(p -> p.getStatus() == PostStatus.PUBLISHED)
+            .filter(PostAccessPolicy::isOpen)
             .collect(Collectors.groupingBy(PostEntity::getSeriesId));
     List<SeriesItemEntity> rows = seriesItemRepository.findBySeriesIdIn(ids);
     Map<Long, SeriesNote> notes = seriesItemReader.notes(noteIds(rows));
@@ -177,8 +177,7 @@ public class PublicSeriesQueryService {
             .findByUserIdAndSlug(author.getId(), slug)
             .orElseThrow(() -> new PostException(PostErrorCode.SERIES_NOT_FOUND, slug));
     List<PostEntity> members =
-        postRepository.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-            series.getId(), PostStatus.PUBLISHED);
+        postRepository.findOpenBySeriesIdOrderBySeriesOrderAsc(series.getId());
     Map<Long, PostEntity> published =
         members.stream().collect(Collectors.toMap(PostEntity::getId, Function.identity()));
     List<SeriesItemEntity> rows = seriesItemRepository.findBySeriesId(series.getId());

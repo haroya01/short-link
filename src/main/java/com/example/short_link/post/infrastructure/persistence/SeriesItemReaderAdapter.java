@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.SeriesActivity;
@@ -142,8 +143,9 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
                     + " MAX(COALESCE(p.published_at, n.created_at)) AS last_at"
                     + " FROM series_item i"
                     + " JOIN series s ON s.id = i.series_id"
-                    + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id"
-                    + " AND p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+                    + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id AND "
+                    + PostAccessSql.OPEN
+                    + " AND p.body_text_length >= :minBody"
                     + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
                     + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
                     + " WHERE (p.id IS NOT NULL OR n.id IS NOT NULL)"
@@ -187,8 +189,8 @@ class SeriesItemReaderAdapter implements SeriesItemReader {
             "SELECT i.series_id, i.item_type, i.ref_id, p.slug, p.title, p.og_image_url, n.body,"
                 + " n.content_warning, COALESCE(p.published_at, n.created_at) AS item_at"
                 + " FROM series_item i"
-                + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id"
-                + " AND p.status = 'PUBLISHED'"
+                + " LEFT JOIN posts p ON i.item_type = 'POST' AND p.id = i.ref_id AND "
+                + PostAccessSql.OPEN
                 + " LEFT JOIN note n ON i.item_type = 'NOTE' AND n.id = i.ref_id"
                 + " AND n.visibility IN ('PUBLIC', 'UNLISTED')"
                 + " WHERE i.series_id IN (:ids) AND (p.id IS NOT NULL OR n.id IS NOT NULL)"

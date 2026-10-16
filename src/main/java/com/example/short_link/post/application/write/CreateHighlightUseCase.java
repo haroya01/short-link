@@ -2,6 +2,7 @@ package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.collection.CollectionConnectionCleaner;
 import com.example.short_link.common.event.PostHighlightedEvent;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.HighlightRef;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -26,8 +27,8 @@ public class CreateHighlightUseCase {
   private final ApplicationEventPublisher events;
 
   @Transactional
-  public HighlightRef execute(CreateHighlightCommand cmd) {
-    PostEntity post = access.requireInteractablePost(cmd.userId(), cmd.postId());
+  public HighlightRef execute(CreateHighlightCommand cmd, PostReader reader) {
+    PostEntity post = access.requireInteractablePost(reader, cmd.postId());
 
     String quote =
         cmd.quote().length() > PostHighlightEntity.MAX_QUOTE

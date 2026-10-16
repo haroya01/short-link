@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostReadEntity;
 import com.example.short_link.post.domain.repository.PostReadRepository;
@@ -17,10 +19,13 @@ public class RecordPostReadUseCase {
 
   private final PostRepository postRepository;
   private final PostReadRepository postReadRepository;
+  private final PostAccessPolicy access;
 
   @Transactional
-  public void record(Long userId, Long postId) {
-    if (postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
+  public void record(PostReader reader, Long postId) {
+    Long userId = reader.viewerId();
+    PostEntity post = postRepository.findById(postId).orElse(null);
+    if (post == null || !access.decide(post, reader).full()) {
       return;
     }
     Instant now = Instant.now();

@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccess;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.SeriesSummary;
 import com.example.short_link.post.domain.repository.SeriesRepository;
@@ -27,7 +29,10 @@ public class PostFeedItemAssembler {
             .filter(u -> !u.isDeleted())
             .collect(Collectors.toMap(UserEntity::getId, Function.identity()));
     List<PostEntity> visible =
-        posts.stream().filter(p -> authors.containsKey(p.getUserId())).toList();
+        posts.stream()
+            .filter(p -> authors.containsKey(p.getUserId()))
+            .filter(PostAccessPolicy::isCard)
+            .toList();
     Map<Long, FeedSeriesRef> series = seriesOf(visible);
     return visible.stream()
         .map(
@@ -48,18 +53,25 @@ public class PostFeedItemAssembler {
   }
 
   public PublicFeedItem toItem(PostEntity post, UserEntity author) {
+    PostAccess card = PostAccessPolicy.card(post);
+    boolean redacted = card.redacted();
     return new PublicFeedItem(
         post.getId(),
         PublicAuthorView.from(author),
         post.getSlug(),
         post.getTitle(),
-        post.getExcerpt(),
-        post.getOgImageUrl(),
-        post.thumbnailUrl(),
+        redacted ? null : post.getExcerpt(),
+        redacted ? null : post.getOgImageUrl(),
+        redacted ? null : post.thumbnailUrl(),
         post.getLanguageTag(),
-        List.copyOf(post.getTags()),
+        redacted ? List.of() : List.copyOf(post.getTags()),
         post.getPublishedAt(),
-        post.getViewCount(),
-        post.getLikeCount());
+        redacted ? 0 : post.getViewCount(),
+        redacted ? 0 : post.getLikeCount(),
+        null,
+        null,
+        post.getAudience().name(),
+        post.isRegionRestricted() ? Boolean.TRUE : null,
+        PostLockView.of(card));
   }
 }

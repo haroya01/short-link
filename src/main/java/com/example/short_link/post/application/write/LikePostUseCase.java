@@ -1,6 +1,8 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.event.BlogInteractionEvent;
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.PostLikeStatus;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
@@ -21,10 +23,12 @@ public class LikePostUseCase {
   private final PostLikeRepository postLikeRepository;
   private final ApplicationEventPublisher events;
   private final PostInteractionAccess access;
+  private final PostAccessPolicy policy;
 
   @Transactional
-  public PostLikeStatus like(Long userId, Long postId) {
-    PostEntity post = access.requireInteractablePostForUpdate(userId, postId);
+  public PostLikeStatus like(PostReader reader, Long postId) {
+    Long userId = reader.viewerId();
+    PostEntity post = access.requireInteractablePostForUpdate(reader, postId);
     if (postLikeRepository.insertIgnore(postId, userId) > 0) {
       postRepository.incrementLikeCount(postId);
       if (!post.getUserId().equals(userId)) {
@@ -37,10 +41,13 @@ public class LikePostUseCase {
   }
 
   @Transactional
-  public PostLikeStatus unlike(Long userId, Long postId) {
-    requirePost(postId);
-    if (postLikeRepository.deleteByPostIdAndUserId(postId, userId) > 0) {
+  public PostLikeStatus unlike(PostReader reader, Long postId) {
+    PostEntity post = requirePost(postId);
+    if (postLikeRepository.deleteByPostIdAndUserId(postId, reader.viewerId()) > 0) {
       postRepository.decrementLikeCount(postId);
+    }
+    if (!policy.decide(post, reader).full()) {
+      return new PostLikeStatus(0, false);
     }
     return new PostLikeStatus(postLikeRepository.countByPostId(postId), false);
   }

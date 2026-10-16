@@ -1,6 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
-import com.example.short_link.post.domain.PostStatus;
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.post.domain.SeriesEntity;
 import jakarta.persistence.LockModeType;
 import java.util.Collection;
@@ -26,9 +26,11 @@ public interface JpaSeriesRepository extends JpaRepository<SeriesEntity, Long> {
   List<SeriesEntity> findAllByUserIdOrderByCreatedAtDesc(Long userId);
 
   @Query(
-      "select s.id, s.slug, s.title, count(p) from SeriesEntity s, PostEntity p "
-          + "where p.seriesId = s.id and s.id in :ids and p.status = :status "
-          + "group by s.id, s.slug, s.title")
-  List<Object[]> findPublishedSummaries(
-      @Param("ids") Collection<Long> ids, @Param("status") PostStatus status);
+      nativeQuery = true,
+      value =
+          "SELECT s.id, s.slug, s.title, COUNT(p.id) FROM series s JOIN posts p"
+              + " ON p.series_id = s.id WHERE s.id IN (:ids) AND "
+              + PostAccessSql.OPEN
+              + " GROUP BY s.id, s.slug, s.title")
+  List<Object[]> findPublishedSummaries(@Param("ids") Collection<Long> ids);
 }

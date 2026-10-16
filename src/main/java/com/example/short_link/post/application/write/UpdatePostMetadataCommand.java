@@ -14,9 +14,49 @@ public record UpdatePostMetadataCommand(
     String languageTag,
     List<String> tags,
     Long baseVersion,
-    boolean overwrite) {
+    boolean overwrite,
+    PostAccessChange access) {
+
+  public UpdatePostMetadataCommand(
+      Long userId,
+      Long postId,
+      String title,
+      String slug,
+      String excerpt,
+      String ogImageUrl,
+      String ogImageKey,
+      Boolean coverChosen,
+      String languageTag,
+      List<String> tags,
+      Long baseVersion,
+      boolean overwrite) {
+    this(
+        userId,
+        postId,
+        title,
+        slug,
+        excerpt,
+        ogImageUrl,
+        ogImageKey,
+        coverChosen,
+        languageTag,
+        tags,
+        baseVersion,
+        overwrite,
+        PostAccessChange.NONE);
+  }
+
+  public boolean changesContent() {
+    return title != null
+        || slug != null
+        || excerpt != null
+        || ogImageUrl != null
+        || (languageTag != null && !languageTag.isBlank())
+        || tags != null;
+  }
 
   public UpdatePostMetadataCommand {
+    if (access == null) access = PostAccessChange.NONE;
     if (userId == null) throw new IllegalArgumentException("userId required");
     if (postId == null) throw new IllegalArgumentException("postId required");
     if (title != null && title.length() > 200) {

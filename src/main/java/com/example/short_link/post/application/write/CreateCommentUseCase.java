@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.write;
 
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.PublicAuthorView;
@@ -25,8 +26,8 @@ public class CreateCommentUseCase {
   private final CommentMentions mentions;
 
   @Transactional
-  public CommentView execute(CreateCommentCommand cmd) {
-    PostEntity post = access.requireCommentablePost(cmd.userId(), cmd.postId());
+  public CommentView execute(CreateCommentCommand cmd, PostReader reader) {
+    PostEntity post = access.requireCommentablePost(reader, cmd.postId());
 
     CommentEntity parent = null;
     if (cmd.parentId() != null) {

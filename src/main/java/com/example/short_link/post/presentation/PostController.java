@@ -14,6 +14,7 @@ import com.example.short_link.post.application.write.DeletePostCommand;
 import com.example.short_link.post.application.write.DeletePostUseCase;
 import com.example.short_link.post.application.write.IssuePreviewTokenUseCase;
 import com.example.short_link.post.application.write.MarkdownBlocksConverter;
+import com.example.short_link.post.application.write.PostAccessChange;
 import com.example.short_link.post.application.write.PublishPostCommand;
 import com.example.short_link.post.application.write.PublishPostUseCase;
 import com.example.short_link.post.application.write.ReplacePostBlocksCommand;
@@ -22,6 +23,7 @@ import com.example.short_link.post.application.write.RepublishPostCommand;
 import com.example.short_link.post.application.write.RepublishPostUseCase;
 import com.example.short_link.post.application.write.RestorePostRevisionCommand;
 import com.example.short_link.post.application.write.RestorePostRevisionUseCase;
+import com.example.short_link.post.application.write.RotateUnlistedKeyUseCase;
 import com.example.short_link.post.application.write.SchedulePostCommand;
 import com.example.short_link.post.application.write.SchedulePostUseCase;
 import com.example.short_link.post.application.write.SetPinnedPostsUseCase;
@@ -38,6 +40,7 @@ import com.example.short_link.post.presentation.request.SetPinnedPostsRequest;
 import com.example.short_link.post.presentation.request.UpdatePostRequest;
 import com.example.short_link.post.presentation.response.PostMarkdownResponse;
 import com.example.short_link.post.presentation.response.PreviewTokenResponse;
+import com.example.short_link.post.presentation.response.UnlistedLinkResponse;
 import jakarta.validation.Valid;
 import java.io.IOException;
 import java.util.List;
@@ -71,6 +74,7 @@ public class PostController {
   private final SchedulePostUseCase schedulePost;
   private final UnpublishPostUseCase unpublishPost;
   private final RepublishPostUseCase republishPost;
+  private final RotateUnlistedKeyUseCase rotateUnlistedKey;
   private final BackToDraftPostUseCase backToDraftPost;
   private final ReplacePostBlocksUseCase replacePostBlocks;
   private final RestorePostRevisionUseCase restorePostRevision;
@@ -130,12 +134,20 @@ public class PostController {
             request.languageTag(),
             request.tags(),
             request.baseVersion(),
-            Boolean.TRUE.equals(request.overwrite())));
+            Boolean.TRUE.equals(request.overwrite()),
+            new PostAccessChange(
+                request.audience(), request.password(), request.blockedCountries())));
   }
 
   @PostMapping("/{id}/publish")
   public PostView publish(@AuthenticationPrincipal Long userId, @PathVariable Long id) {
     return publishPost.execute(new PublishPostCommand(userId, id));
+  }
+
+  @PostMapping("/{id}/unlisted-key/rotate")
+  public UnlistedLinkResponse rotateUnlistedKey(
+      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
+    return new UnlistedLinkResponse(rotateUnlistedKey.rotate(userId, id));
   }
 
   @PostMapping("/{id}/preview-token")

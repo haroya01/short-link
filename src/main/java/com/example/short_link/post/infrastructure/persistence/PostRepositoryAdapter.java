@@ -95,9 +95,8 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findAllByUserIdAndStatusOrderByPublishedAtDesc(
-      Long userId, PostStatus status) {
-    return jpa.findAllByUserIdAndStatusOrderByPublishedAtDesc(userId, status);
+  public List<PostEntity> findProfilePosts(Long userId, Long viewerId) {
+    return jpa.findProfilePosts(userId, HeardSql.viewer(viewerId));
   }
 
   private static final List<PostStatus> ANALYTICS_STATUSES =
@@ -152,9 +151,8 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
-  public List<PostEntity> findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(
-      Long seriesId, PostStatus status) {
-    return jpa.findAllBySeriesIdAndStatusOrderBySeriesOrderAsc(seriesId, status);
+  public List<PostEntity> findOpenBySeriesIdOrderBySeriesOrderAsc(Long seriesId) {
+    return jpa.findOpenBySeriesId(seriesId);
   }
 
   @Override
@@ -190,7 +188,7 @@ class PostRepositoryAdapter implements PostRepository {
 
   @Override
   public long countPublishedByUserId(Long userId) {
-    return jpa.countByUserIdAndStatus(userId, PostStatus.PUBLISHED);
+    return jpa.countCardsByUserId(userId);
   }
 
   @Override
@@ -425,8 +423,7 @@ class PostRepositoryAdapter implements PostRepository {
   @Override
   public List<TagCount> findPopularTags(int limit) {
     return jpa
-        .findPopularTags(
-            PostStatus.PUBLISHED, DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(0, limit))
+        .findPopularTags(DiscoveryQuality.MIN_BODY_TEXT_LENGTH, PageRequest.of(0, limit))
         .stream()
         .map(row -> new TagCount((String) row[0], ((Number) row[1]).longValue()))
         .toList();
