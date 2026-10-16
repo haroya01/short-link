@@ -10,6 +10,9 @@ public interface RemoteAccountStandingReader {
 
   Map<Long, RemoteAccountStanding> of(Long userId, Collection<Long> remoteActorIds, Instant now);
 
+  // The ids of the accounts this server already knows, by ActivityPub id.
+  Map<String, Long> idsOf(Collection<String> actorUris);
+
   // Of these accounts (by ActivityPub id) and servers, the ones the member blocked or muted.
   Hidden hidden(Long userId, Collection<String> actorUris, Collection<String> domains, Instant now);
 

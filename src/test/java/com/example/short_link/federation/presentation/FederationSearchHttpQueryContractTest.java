@@ -195,11 +195,12 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
     when(http.getJson(
             eq(URI.create("https://mstdn.jp/api/v1/trends/statuses?limit=20")), any(), any()))
         .thenReturn(ok("[" + String.join(",", alice, erin) + "]"));
+    long bobHere = seed("bob", host("tb"));
     jdbc.update(
         "INSERT INTO federation_remote_block (user_id, remote_actor_id, created_at)"
             + " VALUES (?, ?, NOW(6))",
         owner.getId(),
-        seed("bob", host("tb")));
+        bobHere);
     jdbc.update(
         "INSERT INTO user_domain_block (user_id, domain, created_at) VALUES (?, ?, NOW(6))",
         owner.getId(),
@@ -245,6 +246,17 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
     assertThat(first.path("remote").path("url").asString())
         .isEqualTo("https://" + host("ta") + "/@alice/1");
     assertThat(first.path("servers").toString()).isEqualTo("[\"mastodon.social\",\"mstdn.jp\"]");
+    assertThat(first.path("sourceHost").asString()).isEqualTo("mastodon.social");
+    assertThat(first.path("url").asString()).isEqualTo("https://" + host("ta") + "/@alice/1");
+    assertThat(first.has("id")).isTrue();
+    assertThat(first.path("id").isNull()).isTrue();
+    assertThat(first.path("likedByMe").isNull()).isTrue();
+    assertThat(first.path("visibility").asString()).isEqualTo("public");
+    assertThat(first.path("author").path("id").isNull()).isTrue();
+    assertThat(first.path("author").path("remoteId").isNull()).isTrue();
+    JsonNode known = anyone.path("items").get(2).path("author");
+    assertThat(known.path("remoteId").asLong()).isEqualTo(bobHere);
+    assertThat(known.path("id").asLong()).isEqualTo(-bobHere);
 
     var mine =
         body(

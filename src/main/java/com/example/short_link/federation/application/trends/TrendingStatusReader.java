@@ -63,28 +63,32 @@ class TrendingStatusReader {
     }
     TrendingNote note =
         new TrendingNote(
-            uri,
             parsed.body(),
             parsed.publishedAt(),
-            new TrendingNote.Author(
-                username,
-                cut(text(account.get("display_name")), MAX_NAME),
-                https(text(account.get("avatar"))),
-                https(text(account.get("url")))),
-            parsed.media(),
-            parsed.contentWarning(),
-            parsed.sensitive(),
-            parsed.language(),
+            RemoteNoteParser.updated(object),
             count(status.get("favourites_count")),
             count(status.get("reblogs_count")),
             count(status.get("replies_count")),
-            poll(parsed.shape().poll()),
+            new TrendingNote.Author(
+                null,
+                username,
+                https(text(account.get("avatar"))),
+                cut(text(account.get("display_name")), MAX_NAME),
+                null,
+                https(text(account.get("url")))),
+            parsed.media(),
             card(status.get("card")),
+            parsed.contentWarning(),
+            parsed.sensitive(),
+            parsed.language(),
+            poll(parsed.shape().poll()),
             new TrendingNote.Remote(
                 parsed.shape().kind().name(),
                 parsed.shape().title(),
                 parsed.url(),
                 parsed.shape().community()),
+            uri,
+            parsed.url() != null ? parsed.url() : uri,
             List.of(server));
     return Optional.of(new Read(note, actorUri, domain));
   }
@@ -97,6 +101,7 @@ class TrendingStatusReader {
     object.put("id", uri);
     object.set("url", status.get("url"));
     object.set("published", status.get("created_at"));
+    object.set("updated", status.get("edited_at"));
     object.put("sensitive", status.path("sensitive").asBoolean(false));
     object.set("summary", status.get("spoiler_text"));
     object.set("content", status.get("content"));
@@ -171,7 +176,14 @@ class TrendingStatusReader {
       votes += poll.votes().get(i);
     }
     return new TrendingNote.Poll(
-        poll.endsAt(), poll.closed(), poll.multiple(), votes, poll.voters(), List.copyOf(options));
+        poll.endsAt(),
+        poll.closed(),
+        poll.multiple(),
+        votes,
+        poll.voters(),
+        List.copyOf(options),
+        null,
+        null);
   }
 
   private static TrendingNote.LinkPreview card(JsonNode card) {

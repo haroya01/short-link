@@ -99,7 +99,7 @@ public class TrendingPosts {
                 !hidden.actorUris().contains(read.actorUri())
                     && !hidden.domains().contains(read.domain()))
         .limit(size)
-        .map(TrendingStatusReader.Read::note)
+        .map(read -> read.note().seenBy(viewerId != null))
         .toList();
   }
 
@@ -122,7 +122,26 @@ public class TrendingPosts {
       backoffs.remove(server);
       answers.add(answer.get().stream().filter(read -> !blocked(read.domain(), blocked)).toList());
     }
-    trending = blend(answers);
+    trending = known(blend(answers));
+  }
+
+  private List<TrendingStatusReader.Read> known(List<TrendingStatusReader.Read> reads) {
+    if (reads.isEmpty()) {
+      return reads;
+    }
+    Map<String, Long> ids =
+        standings.idsOf(
+            reads.stream().map(TrendingStatusReader.Read::actorUri).distinct().toList());
+    return reads.stream()
+        .map(
+            read ->
+                ids.containsKey(read.actorUri())
+                    ? new TrendingStatusReader.Read(
+                        read.note().by(read.note().author().known(ids.get(read.actorUri()))),
+                        read.actorUri(),
+                        read.domain())
+                    : read)
+        .toList();
   }
 
   // A server blocked here leaves at once, without waiting for the next refresh.

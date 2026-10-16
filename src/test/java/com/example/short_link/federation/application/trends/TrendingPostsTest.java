@@ -24,7 +24,9 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,6 +36,7 @@ import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
@@ -60,6 +63,7 @@ class TrendingPostsTest {
   void trending() {
     lenient().when(signingKeys.forInstance()).thenReturn(instance);
     lenient().when(serverBlocks.severityFor(anyString())).thenReturn(Optional.empty());
+    lenient().when(standings.idsOf(any())).thenReturn(Map.of());
     trending =
         new TrendingPosts(
             PROPS,
@@ -248,6 +252,94 @@ class TrendingPostsTest {
     assertThat(uris(trending.list(null, 0))).containsExactly(post("x.example", 1));
     assertThat(trending.list(null, 1000)).hasSize(3);
     verify(standings, times(1)).hidden(any(), any(), any(), any());
+  }
+
+  @Test
+  void anItemIsANoteWithoutAnIdOrReaderMarksAndAKnownAuthorCarriesTheirIdHere() {
+    ObjectNode question = status(post("x.example", 1), 0, 0);
+    question.set(
+        "poll",
+        JSON.readTree(
+            """
+            {"expires_at":null,"expired":false,"multiple":false,"voters_count":3,
+             "options":[{"title":"a","votes_count":1},{"title":"b","votes_count":2}]}"""));
+    answers("a.example", question, status(post("y.example", 2), 0, 0));
+    when(standings.idsOf(List.of("https://x.example/users/u1", "https://y.example/users/u2")))
+        .thenReturn(Map.of("https://x.example/users/u1", 41L));
+    when(standings.hidden(any(), any(), any(), any()))
+        .thenReturn(RemoteAccountStandingReader.Hidden.NONE);
+
+    trending.refresh();
+    List<TrendingNote> anyone = trending.list(null, 20);
+    List<TrendingNote> member = trending.list(7L, 20);
+
+    assertThat(anyone.get(0).author().id()).isEqualTo(-41L);
+    assertThat(anyone.get(0).author().remoteId()).isEqualTo(41L);
+    assertThat(anyone.get(1).author().id()).isNull();
+    assertThat(anyone.get(1).author().remoteId()).isNull();
+    assertThat(anyone.get(0).poll().voted()).isNull();
+    assertThat(anyone.get(0).poll().ownVotes()).isNull();
+    assertThat(member.get(0).poll().voted()).isTrue();
+    assertThat(member.get(0).poll().ownVotes()).isEmpty();
+    assertThat(member.get(1).poll()).isNull();
+
+    JsonNode item = JSON.valueToTree(anyone.get(0));
+    List<String> fields = new ArrayList<>(item.propertyNames());
+    assertThat(fields)
+        .containsExactlyInAnyOrder(
+            "id",
+            "body",
+            "createdAt",
+            "editedAt",
+            "likeCount",
+            "likedByMe",
+            "author",
+            "media",
+            "quotedPost",
+            "inReplyToId",
+            "replyCount",
+            "repostCount",
+            "repostedByMe",
+            "quotedNote",
+            "linkPreview",
+            "repostedBy",
+            "quoteCount",
+            "bookmarkedByMe",
+            "mentions",
+            "contentWarning",
+            "sensitive",
+            "pinned",
+            "visibility",
+            "poll",
+            "conversationMuted",
+            "language",
+            "thread",
+            "replyPolicy",
+            "canReply",
+            "hidden",
+            "remote",
+            "uri",
+            "url",
+            "sourceHost",
+            "servers");
+    assertThat(item.get("id").isNull()).isTrue();
+    assertThat(item.get("likedByMe").isNull()).isTrue();
+    assertThat(item.get("mentions").isEmpty()).isTrue();
+    assertThat(item.get("visibility").asString()).isEqualTo("public");
+    assertThat(item.get("replyPolicy").asString()).isEqualTo("everyone");
+    assertThat(item.get("sourceHost").asString()).isEqualTo("a.example");
+    assertThat(new ArrayList<>(item.get("author").propertyNames()))
+        .containsExactlyInAnyOrder("id", "username", "avatarUrl", "displayName", "remoteId", "url");
+    assertThat(new ArrayList<>(item.get("poll").propertyNames()))
+        .containsExactlyInAnyOrder(
+            "expiresAt",
+            "expired",
+            "multiple",
+            "votesCount",
+            "votersCount",
+            "options",
+            "voted",
+            "ownVotes");
   }
 
   @Test

@@ -60,6 +60,25 @@ class RemoteAccountStandingReaderAdapter implements RemoteAccountStandingReader 
 
   @Override
   @SuppressWarnings("unchecked")
+  public Map<String, Long> idsOf(Collection<String> actorUris) {
+    Map<String, Long> ids = new HashMap<>();
+    if (actorUris.isEmpty()) {
+      return ids;
+    }
+    List<Object[]> rows =
+        em.createNativeQuery(
+                "SELECT a.actor_uri, a.id FROM federation_remote_actor a"
+                    + " WHERE a.actor_uri IN (:uris)")
+            .setParameter("uris", actorUris)
+            .getResultList();
+    for (Object[] row : rows) {
+      ids.put((String) row[0], ((Number) row[1]).longValue());
+    }
+    return ids;
+  }
+
+  @Override
+  @SuppressWarnings("unchecked")
   public Hidden hidden(
       Long userId, Collection<String> actorUris, Collection<String> domains, Instant now) {
     if (userId == null || actorUris.isEmpty() || domains.isEmpty()) {

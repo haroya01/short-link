@@ -380,7 +380,7 @@ class RemoteBlockMuteIntegrationTest {
   }
 
   @Test
-  void whatAMemberHidFromTrendsComesInOneReadByAddressAndServer() {
+  void whatAMemberHidFromTrendsAndWhoIsKnownHereComeInOneReadEach() {
     Long carol = actor("carol");
     block(blocker, alice);
     mute(blocker, bob, false, future());
@@ -412,6 +412,9 @@ class RemoteBlockMuteIntegrationTest {
         .isSameAs(RemoteAccountStandingReader.Hidden.NONE);
     assertThat(standings.hidden(blocker, List.of(), List.of(), Instant.now()))
         .isSameAs(RemoteAccountStandingReader.Hidden.NONE);
+    assertThat(standings.idsOf(List.of(accounts.get(0), accounts.get(2), "https://" + unknown)))
+        .isEqualTo(Map.of(accounts.get(0), alice, accounts.get(2), carol));
+    assertThat(standings.idsOf(List.of())).isEmpty();
   }
 
   @Test

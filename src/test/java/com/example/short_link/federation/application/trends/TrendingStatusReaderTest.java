@@ -83,12 +83,15 @@ class TrendingStatusReaderTest {
     assertThat(note.sensitive()).isTrue();
     assertThat(note.language()).isEqualTo("ja");
     assertThat(note.createdAt()).isEqualTo(Instant.parse("2026-10-16T13:48:01.441Z"));
+    assertThat(note.editedAt()).isNull();
     assertThat(note.author())
         .isEqualTo(
             new TrendingNote.Author(
+                null,
                 "alice@mastodon.example",
-                "Name",
                 "https://mastodon.example/avatar.png",
+                "Name",
+                null,
                 "https://mastodon.example/@alice"));
     assertThat(note.media())
         .containsExactly(
@@ -105,7 +108,9 @@ class TrendingStatusReaderTest {
     assertThat(note.remote())
         .isEqualTo(
             new TrendingNote.Remote("NOTE", null, "https://mastodon.example/@alice/1", null));
+    assertThat(note.url()).isEqualTo("https://mastodon.example/@alice/1");
     assertThat(note.servers()).containsExactly(SERVER);
+    assertThat(note.sourceHost()).isEqualTo(SERVER);
   }
 
   @Test
@@ -113,6 +118,7 @@ class TrendingStatusReaderTest {
     ObjectNode status = status("https://misskey.example/notes/9", "Bob_1@Misskey.Example");
     status.put("url", "https://mirror.example/notes/9");
     status.put("language", (String) null);
+    status.put("edited_at", "2026-10-16T14:00:00.000Z");
     ((ObjectNode) status.get("account")).put("avatar", "http://misskey.example/a.png");
 
     TrendingNote note = read(status).orElseThrow().note();
@@ -122,6 +128,8 @@ class TrendingStatusReaderTest {
     assertThat(note.language()).isNull();
     assertThat(note.contentWarning()).isNull();
     assertThat(note.remote().url()).isNull();
+    assertThat(note.url()).isEqualTo("https://misskey.example/notes/9");
+    assertThat(note.editedAt()).isEqualTo(Instant.parse("2026-10-16T14:00:00Z"));
   }
 
   @Test
@@ -148,7 +156,9 @@ class TrendingStatusReaderTest {
                 5,
                 List.of(
                     new TrendingNote.PollOption("tea", 4),
-                    new TrendingNote.PollOption("coffee", 3))));
+                    new TrendingNote.PollOption("coffee", 3)),
+                null,
+                null));
 
     status.set(
         "poll",
