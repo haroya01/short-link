@@ -30,6 +30,7 @@ public class SignedFederationHttp implements FederationHttp {
 
   private final HttpFetcher fetcher;
   private final boolean allowPlainHttp;
+  private final String userAgent;
   private final Clock clock;
 
   @Autowired
@@ -40,6 +41,7 @@ public class SignedFederationHttp implements FederationHttp {
   SignedFederationHttp(HttpFetcher fetcher, FederationProperties props, Clock clock) {
     this.fetcher = fetcher;
     this.allowPlainHttp = props.baseUrl().startsWith("http://");
+    this.userAgent = "kurl (+" + props.baseUrl() + "/)";
     this.clock = clock;
   }
 
@@ -118,6 +120,7 @@ public class SignedFederationHttp implements FederationHttp {
     Map<String, String> headers = new LinkedHashMap<>();
     headers.put("Date", signed.get("date"));
     headers.put("Accept", accept);
+    headers.put("User-Agent", userAgent);
     if (post) {
       headers.put("Digest", signed.get("digest"));
     }
@@ -147,7 +150,8 @@ public class SignedFederationHttp implements FederationHttp {
                       : HttpFetcher.Request.getNoRedirects(
                           resolved.get(), headers, connectTimeout, readTimeout, MAX_BODY_BYTES));
     } catch (RuntimeException e) {
-      return new Sent(new Result.Unreachable(e.getClass().getSimpleName()));
+      Throwable cause = e.getCause() == null ? e : e.getCause();
+      return new Sent(new Result.Unreachable(cause.getClass().getSimpleName()));
     }
     int status = response.status();
     if (status >= 200 && status < 300) {

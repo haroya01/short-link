@@ -184,6 +184,29 @@ class SignedFederationHttpTest {
   }
 
   @Test
+  void everyRequestSaysWhoIsAskingAndAServersOwnApiIsAskedForJson() {
+    when(fetcher.fetch(any()))
+        .thenReturn(new HttpFetcher.Response(200, Map.of(), "[]".getBytes(StandardCharsets.UTF_8)));
+
+    http("https://kurl.me")
+        .getJson(
+            URI.create("https://93.184.216.34/api/v1/directory?local=true"),
+            SIGNER,
+            java.time.Duration.ofSeconds(5));
+    http("https://kurl.me").get(URI.create("https://93.184.216.34/users/a"), SIGNER);
+    http("https://kurl.me").post(INBOX, new byte[] {1}, SIGNER);
+
+    ArgumentCaptor<HttpFetcher.Request> sent = ArgumentCaptor.forClass(HttpFetcher.Request.class);
+    verify(fetcher, times(3)).fetch(sent.capture());
+    assertThat(sent.getAllValues().get(0).headers().get("Accept")).isEqualTo("application/json");
+    assertThat(sent.getAllValues())
+        .allSatisfy(
+            request ->
+                assertThat(request.headers().get("User-Agent"))
+                    .isEqualTo("kurl (+https://kurl.me/)"));
+  }
+
+  @Test
   void refusesPlainHttpPrivateAddressesAndReportsFailures() {
     assertThat(http("https://kurl.me").get(URI.create("http://93.184.216.34/a"), SIGNER))
         .isInstanceOf(FederationHttp.Result.Refused.class);
@@ -200,6 +223,6 @@ class SignedFederationHttpTest {
     when(fetcher.fetch(any()))
         .thenThrow(new java.io.UncheckedIOException(new java.io.IOException("x")));
     assertThat(http("https://kurl.me").post(INBOX, new byte[] {1}, SIGNER))
-        .isEqualTo(new FederationHttp.Result.Unreachable("UncheckedIOException"));
+        .isEqualTo(new FederationHttp.Result.Unreachable("IOException"));
   }
 }
