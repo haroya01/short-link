@@ -2,6 +2,7 @@ package com.example.short_link.federation.infrastructure.persistence;
 
 import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.federation.domain.FederationDomainBlockEntity;
+import com.example.short_link.federation.domain.ServerBlockSeverity;
 import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -34,13 +35,23 @@ class FederationDomainBlockRepositoryAdapter implements FederationDomainBlockRep
     if (host == null || host.isBlank()) {
       return false;
     }
-    return !em.createNativeQuery(
-            "SELECT 1 FROM federation_domain_block b WHERE b.severity = 'SUSPEND' AND "
-                + ServerBlockSql.covers("b", ":host")
-                + " LIMIT 1")
+    return !em.createNativeQuery("SELECT 1 FROM DUAL WHERE " + ServerBlockSql.suspends(":host"))
         .setParameter("host", host.toLowerCase(Locale.ROOT))
         .getResultList()
         .isEmpty();
+  }
+
+  @Override
+  public Optional<ServerBlockSeverity> severityFor(String host) {
+    if (host == null || host.isBlank()) {
+      return Optional.empty();
+    }
+    Object severity =
+        em.createNativeQuery("SELECT " + ServerBlockSql.severity(":host"))
+            .setParameter("host", host.toLowerCase(Locale.ROOT))
+            .getSingleResult();
+    return Optional.ofNullable(severity)
+        .map(value -> ServerBlockSeverity.valueOf(value.toString()));
   }
 
   @Override

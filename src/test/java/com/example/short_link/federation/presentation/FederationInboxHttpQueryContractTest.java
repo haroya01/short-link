@@ -8,8 +8,11 @@ import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.LocalActor;
 import com.example.short_link.federation.application.inbox.SignedInboxRequests;
+import com.example.short_link.federation.application.relay.RelaySubscriptions;
 import com.example.short_link.federation.application.signature.HttpSignatures;
 import com.example.short_link.federation.application.signature.SigningKeys;
+import com.example.short_link.federation.domain.RelayMode;
+import com.example.short_link.federation.scheduler.RelayWorker;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import com.example.short_link.testsupport.FederationFixtures;
 import java.net.URI;
@@ -33,6 +36,8 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   @Autowired private FederationActorService actors;
   @Autowired private FederationProperties props;
   @Autowired private SigningKeys signingKeys;
+  @Autowired private RelaySubscriptions relays;
+  @Autowired private RelayWorker relayWorker;
 
   private String remote;
   private String alice;
@@ -57,9 +62,13 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
   }
 
   private Map<String, String> signed(String path, Map<String, Object> activity) {
+    return signedBy(alice + "#main-key", path, activity);
+  }
+
+  private Map<String, String> signedBy(String keyId, String path, Map<String, Object> activity) {
     byte[] body = json.writeValueAsString(activity).getBytes(StandardCharsets.UTF_8);
     return SignedInboxRequests.headers(
-        alice + "#main-key",
+        keyId,
         KEYS.privateKey(),
         HttpSignatures.host(URI.create(props.baseUrl())),
         path,
@@ -1166,6 +1175,151 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
         204);
     assertThat(count("SELECT COUNT(*) FROM user_domain_block WHERE user_id = ?", owner.getId()))
         .isZero();
+  }
+
+  private Map<String, Object> relayed(String relay, String id, String type, Object object) {
+    Map<String, Object> activity = new LinkedHashMap<>();
+    activity.put("@context", "https://www.w3.org/ns/activitystreams");
+    activity.put("id", id);
+    activity.put("type", type);
+    activity.put("actor", relay);
+    activity.put("object", object);
+    return activity;
+  }
+
+  @Test
+  void anAdminSubscribesToARelayThatAcceptsAndAnnouncesUntilUnsubscribed() throws Exception {
+    String admin = jwt.createAccessToken(createUser().getId(), "ADMIN");
+    String relay = remote + "/tag/dev";
+    String post = alice + "/statuses/5";
+    jdbc.update(
+        "INSERT INTO federation_remote_actor (actor_uri, key_id, public_key_pem, inbox,"
+            + " shared_inbox, domain, display_name, fetched_at, created_at, updated_at)"
+            + " VALUES (?, ?, ?, ?, ?, ?, '#dev', NOW(6), NOW(6), NOW(6))",
+        relay,
+        relay + "#key",
+        KEYS.publicKey(),
+        relay,
+        remote + "/inbox",
+        URI.create(remote).getHost());
+    try {
+      var subscribed =
+          body(
+              call(
+                  "admin-relay-subscribe",
+                  "POST",
+                  "/api/v1/admin/federation/relays",
+                  Map.of("actorUri", relay),
+                  admin,
+                  200));
+      assertThat(subscribed.path("state").asString()).isEqualTo("PENDING");
+      assertThat(subscribed.path("label").asString()).isEqualTo("#dev");
+      String followId =
+          jdbc.queryForObject(
+              "SELECT follow_activity_id FROM federation_relay WHERE actor_uri = ?",
+              String.class,
+              relay);
+      var follow =
+          json.readTree(
+              jdbc.queryForObject(
+                  "SELECT body FROM federation_delivery WHERE activity_id = ?"
+                      + " AND signer_user_id IS NULL AND inbox = ?",
+                  String.class,
+                  followId,
+                  relay));
+      assertThat(follow.path("actor").asString()).isEqualTo(urls.instance());
+      assertThat(follow.path("object").asString())
+          .isEqualTo("https://www.w3.org/ns/activitystreams#Public");
+
+      Map<String, Object> ours = new LinkedHashMap<>();
+      ours.put("id", followId);
+      ours.put("type", "Follow");
+      ours.put("actor", urls.instance());
+      ours.put("object", "https://www.w3.org/ns/activitystreams#Public");
+      Map<String, Object> accept = relayed(relay, remote + "/accept/1", "Accept", ours);
+      callWithHeaders(
+          "federation-inbox-relay-accept",
+          "POST",
+          "/ap/inbox",
+          accept,
+          signedBy(relay + "#key", "/ap/inbox", accept),
+          202);
+      Map<String, Object> announce = relayed(relay, remote + "/announce/1", "Announce", post);
+      callWithHeaders(
+          "federation-inbox-relay-announce",
+          "POST",
+          "/ap/inbox",
+          announce,
+          signedBy(relay + "#key", "/ap/inbox", announce),
+          202);
+
+      var status =
+          body(call("admin-relays", "GET", "/api/v1/admin/federation/relays", null, admin, 200));
+      assertThat(status.path("enabled").asBoolean()).isTrue();
+      assertThat(status.path("mode").asString()).isEqualTo("COUNT");
+      assertThat(status.path("queued").asInt()).isEqualTo(1);
+      assertThat(status.path("today").path("queued").asLong()).isEqualTo(1);
+      assertThat(status.path("relays").get(0).path("state").asString()).isEqualTo("ACCEPTED");
+      call("admin-relays-member", "GET", "/api/v1/admin/federation/relays", null, token, 403);
+
+      captureBackgroundWork(
+          "federation-relay-worker", () -> assertThat(relayWorker.processNext()).isTrue());
+      var counted =
+          body(
+              call(
+                  "admin-relays-after-work",
+                  "GET",
+                  "/api/v1/admin/federation/relays",
+                  null,
+                  admin,
+                  200));
+      assertThat(counted.path("queued").asInt()).isZero();
+      assertThat(counted.path("today").path("unanswered").asLong()).isEqualTo(1);
+
+      var off =
+          body(
+              call(
+                  "admin-relay-setting",
+                  "PUT",
+                  "/api/v1/admin/federation/relays/setting",
+                  Map.of("mode", "OFF", "languages", List.of("ko", "ja", "en")),
+                  admin,
+                  200));
+      assertThat(off.path("mode").asString()).isEqualTo("OFF");
+      assertThat(off.path("languages").size()).isEqualTo(3);
+
+      call(
+          "admin-relay-unsubscribe",
+          "DELETE",
+          "/api/v1/admin/federation/relays/" + subscribed.path("id").asLong(),
+          null,
+          admin,
+          204);
+      assertThat(count("SELECT COUNT(*) FROM federation_relay WHERE actor_uri = ?", relay))
+          .isZero();
+      assertThat(
+              json.readTree(
+                      jdbc.queryForObject(
+                          "SELECT body FROM federation_delivery WHERE activity_id = ?",
+                          String.class,
+                          followId + "/undo"))
+                  .path("type")
+                  .asString())
+          .isEqualTo("Undo");
+      Map<String, Object> late = relayed(relay, remote + "/announce/2", "Announce", post);
+      callWithHeaders(
+          "federation-inbox-relay-unsubscribed",
+          "POST",
+          "/ap/inbox",
+          late,
+          signedBy(relay + "#key", "/ap/inbox", late),
+          202);
+    } finally {
+      relays.change(RelayMode.COUNT, List.of("ko", "ja"));
+      jdbc.update("DELETE FROM federation_relay WHERE actor_uri = ?", relay);
+      jdbc.update("DELETE FROM federation_delivery WHERE inbox = ?", relay);
+      jdbc.update("DELETE FROM federation_remote_actor WHERE actor_uri = ?", relay);
+    }
   }
 
   @Test

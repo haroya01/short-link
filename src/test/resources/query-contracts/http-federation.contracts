@@ -310,9 +310,12 @@
 @junit | federation-remote-reply-delete | 9 | 1 | 0 | 4 | 14
 # Searching accounts this server already knows: one statement with the viewer's follow and mute
 # joined in and suspended servers, the viewer's blocked servers and blocked accounts left out. A
-# term under two characters asks nothing.
+# name finds an account that lets itself be found, one the viewer follows, or one whose whole
+# handle was typed; that rule is part of the same statement, so the counts stayed. A term under two
+# characters asks nothing.
 @junit | federation-account-search | 1 | 0 | 0 | 0 | 1
 @junit | federation-account-search-anonymous | 1 | 0 | 0 | 0 | 1
+@junit | federation-account-search-handle | 1 | 0 | 0 | 0 | 1
 @junit | federation-account-search-short | 0 | 0 | 0 | 0 | 0
 # Suggestions: one statement over the accounts the member's follows follow, counted and ranked,
 # leaving out accounts not open to suggestions, already followed or asked, blocked or muted, and
@@ -353,3 +356,26 @@
 @junit | federation-resolve-invalid | 0 | 0 | 0 | 0 | 0
 @junit | federation-resolve-unreachable | 2 | 0 | 0 | 0 | 2
 @junit | federation-resolve-suspended | 1 | 0 | 0 | 0 | 1
+# Relays, which an admin subscribes the server to. Subscribing: the relay's actor (cached and fresh,
+# so nothing is fetched), whether it is subscribed already, its row, then the Follow from the
+# instance actor (dedupe check, insert).
+@junit | admin-relay-subscribe | 3 | 2 | 0 | 0 | 5
+# The relay accepts: its key, our follow by id and its state, then the accepted relays again (held
+# in memory from then on).
+@junit | federation-inbox-relay-accept | 3 | 0 | 1 | 0 | 4
+# An accepted relay's announce is known from memory; only its key is read before the address is
+# queued, and nothing about the post is looked at on the request.
+@junit | federation-inbox-relay-announce | 1 | 0 | 0 | 0 | 1
+# The admin view: the relays; the setting, the queue and the day's counts are in memory.
+@junit | admin-relays | 1 | 0 | 0 | 0 | 1
+@junit | admin-relays-member | 0 | 0 | 0 | 0 | 0
+# The worker's step for one announced post: is it kept already, its server's block, the instance key
+# that signs the fetch; its server does not resolve here, so it is counted as unanswered.
+@junit | federation-relay-worker | 3 | 0 | 0 | 0 | 3
+@junit | admin-relays-after-work | 1 | 0 | 0 | 0 | 1
+# Changing the setting: its row and the update, then the view.
+@junit | admin-relay-setting | 2 | 0 | 1 | 0 | 3
+# Unsubscribing: the row, the Undo (dedupe check, insert), the delete, then the accepted relays
+# again. An announce from it after that is not a relay's and costs nothing.
+@junit | admin-relay-unsubscribe | 3 | 1 | 0 | 1 | 5
+@junit | federation-inbox-relay-unsubscribed | 0 | 0 | 0 | 0 | 0

@@ -108,6 +108,16 @@ public abstract class AccountHttpJourneySupport extends DockerHttpTest {
     return captured.response();
   }
 
+  protected void captureBackgroundWork(String id, Runnable work) throws Exception {
+    captures.add(
+        contracts.captureBackgroundDelivery(
+            id,
+            () -> {
+              work.run();
+              return null;
+            }));
+  }
+
   protected JsonNode body(HttpResponse<String> response) {
     return json.readTree(response.body());
   }

@@ -70,9 +70,23 @@ public class RemoteActorEntity extends BaseTimeEntity {
 
   // The moderators' decision about this account's server rides along with every load of the
   // account, so the inbox, lookups and follows need no query of their own.
+  // The strongest block on the account's domain or a parent down to two labels, as ServerBlockSql
+  // reads it; each parent is its own unique-key lookup, because a formula cannot alias a derived
+  // table.
   @Formula(
-      "(SELECT b.severity FROM federation_domain_block b WHERE b.domain = domain"
-          + " OR domain LIKE CONCAT('%.', b.domain) ORDER BY b.severity DESC LIMIT 1)")
+      "NULLIF(GREATEST("
+          + "COALESCE((SELECT cb.severity FROM federation_domain_block cb"
+          + " WHERE cb.domain = domain), ''),"
+          + " COALESCE((SELECT cb.severity FROM federation_domain_block cb"
+          + " WHERE cb.domain = SUBSTRING_INDEX(domain, '.', -6)), ''),"
+          + " COALESCE((SELECT cb.severity FROM federation_domain_block cb"
+          + " WHERE cb.domain = SUBSTRING_INDEX(domain, '.', -5)), ''),"
+          + " COALESCE((SELECT cb.severity FROM federation_domain_block cb"
+          + " WHERE cb.domain = SUBSTRING_INDEX(domain, '.', -4)), ''),"
+          + " COALESCE((SELECT cb.severity FROM federation_domain_block cb"
+          + " WHERE cb.domain = SUBSTRING_INDEX(domain, '.', -3)), ''),"
+          + " COALESCE((SELECT cb.severity FROM federation_domain_block cb"
+          + " WHERE cb.domain = SUBSTRING_INDEX(domain, '.', -2)), '')), '')")
   private String serverBlock;
 
   public RemoteActorEntity(RemoteActorDocument document, Instant fetchedAt) {

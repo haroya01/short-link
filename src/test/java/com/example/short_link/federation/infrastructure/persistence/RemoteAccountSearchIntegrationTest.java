@@ -4,11 +4,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.federation.domain.RemoteAccountMatch;
 import com.example.short_link.federation.domain.RemoteActorEntity;
+import com.example.short_link.federation.domain.ServerBlockSeverity;
+import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 class RemoteAccountSearchIntegrationTest {
 
   @Autowired private RemoteActorRepository actors;
+  @Autowired private FederationDomainBlockRepository blocks;
   @Autowired private UserRepository users;
   @Autowired private EntityManager em;
 
@@ -100,10 +104,10 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void aUsernameOrDisplayNameStartingWithTheTermMatchesInAnyCase() {
-    Long byName = actor(tag + "alice", domain("one"), "Zed");
-    Long byDisplayName = actor("bob", domain("two"), tag.toUpperCase() + " Bob");
-    actor("carol", domain("three"), "Carol " + tag);
-    actor("dave" + tag, domain("four"), null);
+    Long byName = findable(tag + "alice", domain("one"), "Zed");
+    Long byDisplayName = findable("bob", domain("two"), tag.toUpperCase() + " Bob");
+    findable("carol", domain("three"), "Carol " + tag);
+    findable("dave" + tag, domain("four"), null);
 
     assertThat(ids(viewer, tag)).containsExactly(byDisplayName, byName);
     assertThat(ids(viewer, tag.toUpperCase())).containsExactly(byDisplayName, byName);
@@ -111,8 +115,8 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void aTermWithAServerMatchesUserAtDomain() {
-    Long one = actor(tag, domain("one"), null);
-    actor(tag, domain("two"), null);
+    Long one = findable(tag, domain("one"), null);
+    findable(tag, domain("two"), null);
 
     assertThat(ids(viewer, tag + "@one-" + tag.substring(0, 3))).containsExactly(one);
     assertThat(ids(viewer, tag + "@" + domain("one"))).containsExactly(one);
@@ -120,10 +124,10 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void theViewersFollowsComeFirstThenAnExactNameThenTheRestByName() {
-    Long followed = actor(tag + "zz", domain("one"), null);
-    Long exact = actor(tag, domain("two"), null);
-    Long first = actor(tag + "aa", domain("three"), null);
-    Long requested = actor(tag + "bb", domain("four"), null);
+    Long followed = findable(tag + "zz", domain("one"), null);
+    Long exact = findable(tag, domain("two"), null);
+    Long first = findable(tag + "aa", domain("three"), null);
+    Long requested = findable(tag + "bb", domain("four"), null);
     follow(followed, true);
     follow(requested, false);
 
@@ -141,10 +145,10 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void accountsOnSuspendedServersAndOnServersTheViewerBlockedStayOut() {
-    Long open = actor(tag + "a", domain("open"), null);
-    actor(tag + "b", "social." + domain("gone"), null);
-    Long limited = actor(tag + "c", domain("quiet"), null);
-    Long blocked = actor(tag + "d", domain("muted"), null);
+    Long open = findable(tag + "a", domain("open"), null);
+    findable(tag + "b", "social." + domain("gone"), null);
+    Long limited = findable(tag + "c", domain("quiet"), null);
+    Long blocked = findable(tag + "d", domain("muted"), null);
     actor(null, domain("open"), tag + " no username");
     serverBlock(domain("gone"), "SUSPEND");
     serverBlock(domain("quiet"), "LIMIT");
@@ -156,9 +160,9 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void anAccountTheViewerBlockedStaysOutAndOneTheyMutedSaysSoUntilTheMuteEnds() {
-    Long blocked = actor(tag + "a", domain("one"), null);
-    Long muted = actor(tag + "b", domain("two"), null);
-    Long lapsed = actor(tag + "c", domain("three"), null);
+    Long blocked = findable(tag + "a", domain("one"), null);
+    Long muted = findable(tag + "b", domain("two"), null);
+    Long lapsed = findable(tag + "c", domain("three"), null);
     em.createNativeQuery(
             "INSERT INTO federation_remote_block (user_id, remote_actor_id, created_at)"
                 + " VALUES (?, ?, NOW(6))")
@@ -183,8 +187,25 @@ class RemoteAccountSearchIntegrationTest {
   }
 
   @Test
+  void aNameFindsOnlyAnAccountThatLetsItselfBeFoundUnlessTheViewerFollowsItOrTypesItsHandle() {
+    Long hidden = actor(tag + "hid", domain("one"), tag + " Hidden");
+    Long open = findable(tag + "open", domain("two"), null);
+    Long followed = actor(tag + "fol", domain("three"), null);
+    Long requested = actor(tag + "req", domain("four"), null);
+    follow(followed, true);
+    follow(requested, false);
+
+    assertThat(ids(viewer, tag)).containsExactly(followed, open, requested);
+    assertThat(ids(null, tag)).containsExactly(open);
+    assertThat(ids(null, tag + "hid@" + domain("one"))).containsExactly(hidden);
+    assertThat(ids(viewer, (tag + "HID@" + domain("one")).toUpperCase())).containsExactly(hidden);
+    assertThat(ids(null, tag + "hid@" + domain("one").substring(0, 5))).isEmpty();
+    assertThat(ids(null, tag + "hid@")).isEmpty();
+  }
+
+  @Test
   void wildcardsInTheTermAreMatchedLiterally() {
-    actor(tag + "alice", domain("one"), null);
+    findable(tag + "alice", domain("one"), null);
 
     assertThat(ids(viewer, tag.substring(0, 4) + "%")).isEmpty();
     assertThat(ids(viewer, tag.substring(0, 4) + "_")).isEmpty();
@@ -203,6 +224,12 @@ class RemoteAccountSearchIntegrationTest {
       query.setParameter(i + 1, values[i]);
     }
     query.executeUpdate();
+  }
+
+  private Long findable(String username, String domain, String displayName) {
+    Long id = actor(username, domain, displayName);
+    exec("UPDATE federation_remote_actor SET discoverable = TRUE WHERE id = ?", id);
+    return id;
   }
 
   private Long discoverable(String username, String domain) {
@@ -294,9 +321,9 @@ class RemoteAccountSearchIntegrationTest {
 
   @Test
   void anAccountByItsAddressIsFoundByTheExactNameAndAServerPrefixOnly() {
-    Long exact = actor(tag, domain("one"), null);
-    actor(tag + "x", domain("one"), null);
-    actor(tag, "other.example", null);
+    Long exact = findable(tag, domain("one"), null);
+    findable(tag + "x", domain("one"), null);
+    findable(tag, "other.example", null);
 
     assertThat(ids(viewer, tag + "@one")).containsExactly(exact);
     assertThat(ids(viewer, tag + "@")).hasSize(2);
@@ -320,5 +347,47 @@ class RemoteAccountSearchIntegrationTest {
     assertThat(actors.findByAcct(tag, domain("other")).map(RemoteActorEntity::getId))
         .contains(elsewhere);
     assertThat(actors.findByAcct(tag + "x", domain("home"))).isEmpty();
+  }
+
+  @Test
+  void aServersStrongestBlockCoversItsSubdomainsToo() {
+    serverBlock(domain("loud"), "LIMIT");
+    serverBlock(domain("gone"), "SUSPEND");
+    serverBlock("sub." + domain("gone"), "LIMIT");
+
+    assertThat(blocks.severityFor(domain("loud"))).contains(ServerBlockSeverity.LIMIT);
+    assertThat(blocks.severityFor("a.b." + domain("loud").toUpperCase()))
+        .contains(ServerBlockSeverity.LIMIT);
+    assertThat(blocks.severityFor("sub." + domain("gone"))).contains(ServerBlockSeverity.SUSPEND);
+    assertThat(blocks.severityFor("x" + domain("loud"))).isEmpty();
+    assertThat(blocks.severityFor(null)).isEmpty();
+  }
+
+  @Test
+  void aBlockCoversSubdomainsDownToSixLabelsAndADeeperOneOnlyItself() {
+    String host = "a.b.c.d.e.f." + domain("deep");
+    Long deep = actor(tag + "deep", host, null);
+    em.createNativeQuery("UPDATE federation_remote_actor SET discoverable = TRUE WHERE id = ?")
+        .setParameter(1, deep)
+        .executeUpdate();
+    String[] labels = host.split("\\.");
+    for (int kept = labels.length; kept >= 2; kept--) {
+      String blocked =
+          String.join(".", Arrays.copyOfRange(labels, labels.length - kept, labels.length));
+      serverBlock(blocked, "SUSPEND");
+      em.flush();
+      em.clear();
+      boolean covers = kept == labels.length || kept <= 6;
+      assertThat(blocks.suspends(host)).as("block on %s", blocked).isEqualTo(covers);
+      assertThat(actors.findById(deep).orElseThrow().onSuspendedServer())
+          .as("formula, block on %s", blocked)
+          .isEqualTo(covers);
+      assertThat(ids(viewer, tag + "deep"))
+          .as("search, block on %s", blocked)
+          .isEqualTo(covers ? List.of() : List.of(deep));
+      em.createNativeQuery("DELETE FROM federation_domain_block WHERE domain = ?")
+          .setParameter(1, blocked)
+          .executeUpdate();
+    }
   }
 }
