@@ -12,7 +12,11 @@ public enum FederationErrorCode {
   REMOTE_DOMAIN_BLOCKED(HttpStatus.CONFLICT, "you blocked %s"),
   REMOTE_ACCOUNT_BLOCKED(HttpStatus.CONFLICT, "unblock account %s before following it"),
   MUTE_DURATION_INVALID(HttpStatus.BAD_REQUEST, "a mute lasts from a minute to a year, or forever"),
-  REMOTE_FOLLOW_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "no follow request from that account");
+  REMOTE_FOLLOW_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "no follow request from that account"),
+  SERVER_LIST_INVALID(
+      HttpStatus.BAD_REQUEST,
+      "a server list is Mastodon's domain_blocks.csv: #domain and #severity columns, at most %s"
+          + " servers");
 
   private final HttpStatus status;
   private final String template;

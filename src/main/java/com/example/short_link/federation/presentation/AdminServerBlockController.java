@@ -1,5 +1,6 @@
 package com.example.short_link.federation.presentation;
 
+import com.example.short_link.federation.application.ServerBlockImport;
 import com.example.short_link.federation.application.ServerBlocks;
 import com.example.short_link.federation.presentation.request.ServerBlockRequest;
 import jakarta.validation.Valid;
@@ -9,9 +10,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -20,10 +23,17 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminServerBlockController {
 
   private final ServerBlocks serverBlocks;
+  private final ServerBlockImport serverBlockImport;
 
   @GetMapping
   public List<ServerBlocks.View> list() {
     return serverBlocks.list();
+  }
+
+  @PostMapping("/import")
+  public ServerBlockImport.Imported importList(
+      @RequestBody String csv, @RequestParam(defaultValue = "false") boolean dryRun) {
+    return serverBlockImport.importList(csv, dryRun);
   }
 
   @PutMapping("/{domain:.+}")

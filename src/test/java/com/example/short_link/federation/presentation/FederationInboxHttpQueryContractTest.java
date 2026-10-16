@@ -1174,6 +1174,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
     String host = URI.create(remote).getHost();
     String admin = jwt.createAccessToken(createUser().getId(), "ADMIN");
     String tag = "srv" + UUID.randomUUID().toString().substring(0, 8);
+    String shared = "list" + UUID.randomUUID().toString().substring(0, 8);
     Long aliceId =
         jdbc.queryForObject(
             "SELECT id FROM federation_remote_actor WHERE actor_uri = ?", Long.class, alice);
@@ -1269,6 +1270,62 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
       assertThat(domains).contains(host);
       call("admin-servers-member", "GET", "/api/v1/admin/federation/servers", null, token, 403);
 
+      String csv =
+          "#domain,#severity,#reject_media,#reject_reports,#public_comment,#obfuscate\n"
+              + host
+              + ",silence,false,false,,false\n"
+              + shared
+              + "-a.example,suspend,true,true,\"spam, abuse\",false\n"
+              + shared
+              + "-b.example,silence,false,false,,false\n"
+              + shared
+              + "-c.example,noop,false,false,,false\n"
+              + "*.wild.example,suspend,false,false,,false\n";
+      Map<String, String> asCsv =
+          Map.of("Authorization", "Bearer " + admin, "Content-Type", "text/csv");
+      var preview =
+          body(
+              callWithHeaders(
+                  "admin-servers-import-dry-run",
+                  "POST",
+                  "/api/v1/admin/federation/servers/import?dryRun=true",
+                  csv,
+                  asCsv,
+                  200));
+      assertThat(preview.path("added").asInt()).isEqualTo(2);
+      assertThat(preview.path("kept").asInt()).isEqualTo(1);
+      assertThat(preview.path("skipped").asInt()).isEqualTo(2);
+      assertThat(preview.path("invalid").get(0).asString()).isEqualTo("*.wild.example");
+      assertThat(
+              count(
+                  "SELECT COUNT(*) FROM federation_domain_block WHERE domain LIKE ?",
+                  shared + "-%"))
+          .isZero();
+      var imported =
+          body(
+              callWithHeaders(
+                  "admin-servers-import",
+                  "POST",
+                  "/api/v1/admin/federation/servers/import",
+                  csv,
+                  asCsv,
+                  200));
+      assertThat(imported.path("added").asInt()).isEqualTo(2);
+      assertThat(
+              jdbc.queryForList(
+                  "SELECT CONCAT(domain, ' ', severity, ' ', COALESCE(reason, '-'))"
+                      + " FROM federation_domain_block WHERE domain LIKE ? ORDER BY domain",
+                  String.class,
+                  shared + "-%"))
+          .containsExactly(
+              shared + "-a.example SUSPEND spam, abuse", shared + "-b.example LIMIT -");
+      assertThat(
+              jdbc.queryForObject(
+                  "SELECT severity FROM federation_domain_block WHERE domain = ?",
+                  String.class,
+                  host))
+          .isEqualTo("SUSPEND");
+
       call(
           "admin-server-unblock",
           "DELETE",
@@ -1281,6 +1338,7 @@ class FederationInboxHttpQueryContractTest extends AccountHttpJourneySupport {
       assertThat(taggedIds("notes-tag-unblocked-server", tag, token)).contains(theirs);
     } finally {
       jdbc.update("DELETE FROM federation_domain_block WHERE domain = ?", host);
+      jdbc.update("DELETE FROM federation_domain_block WHERE domain LIKE ?", shared + "-%");
       jdbc.update("DELETE FROM note_tag WHERE note_id = ?", theirs);
       jdbc.update("DELETE FROM note WHERE id = ?", theirs);
     }
