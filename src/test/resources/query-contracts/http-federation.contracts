@@ -226,6 +226,13 @@
 @junit | notes-thread-suspended-server | 5 | 0 | 0 | 0 | 5
 @junit | admin-servers | 1 | 0 | 0 | 0 | 1
 @junit | admin-servers-member | 0 | 0 | 0 | 0 | 0
+# A shared list in Mastodon's CSV form: the blocks already here, once. A preview stops there. The
+# import then adds each new server as a moderator would, in its own transaction: a suspended one as
+# the suspend above (its row, then follows both ways, waiting deliveries and after commit its
+# notices), a limited one as its row only. The server already blocked, the noop and the wildcard
+# cost nothing.
+@junit | admin-servers-import-dry-run | 1 | 0 | 0 | 0 | 1
+@junit | admin-servers-import | 3 | 2 | 0 | 4 | 9
 @junit | admin-server-unblock | 0 | 0 | 0 | 1 | 1
 @junit | notes-tag-unblocked-server | 6 | 0 | 0 | 0 | 6
 # Notes from an account a member follows. Before the key: is anyone following it. Then the key,
