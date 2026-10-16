@@ -186,6 +186,20 @@ class RelaySubscriptionsTest {
   }
 
   @Test
+  void anAcceptNamingAFollowIdOfItsOwnStillAnswersThatRelaysSubscription() {
+    FederationRelayEntity pending = row(4L, RelayState.PENDING);
+    when(relays.findByFollowActivityId("https://relay.example/follows/theirs"))
+        .thenReturn(Optional.empty());
+    when(relays.findByActorUri(RELAY)).thenReturn(Optional.of(pending));
+    when(relays.list()).thenReturn(List.of(pending));
+    RelaySubscriptions subscriptions = subscriptions(true);
+
+    assertThat(subscriptions.answered(relayActor(), "https://relay.example/follows/theirs", true))
+        .isTrue();
+    assertThat(subscriptions.isAccepted(RELAY)).isTrue();
+  }
+
+  @Test
   void unsubscribingSendsUndoAndStopsTheAnnouncesAtOnce() {
     FederationRelayEntity accepted = row(2L, RelayState.ACCEPTED);
     List<FederationRelayEntity> rows = new ArrayList<>(List.of(accepted));

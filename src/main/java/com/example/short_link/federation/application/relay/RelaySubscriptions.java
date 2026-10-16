@@ -175,9 +175,9 @@ public class RelaySubscriptions {
   @Transactional
   public boolean answered(RemoteActorEntity actor, String followId, boolean accepted) {
     Optional<FederationRelayEntity> row =
-        followId == null
-            ? relays.findByActorUri(actor.getActorUri())
-            : relays.findByFollowActivityId(followId);
+        Optional.ofNullable(followId)
+            .flatMap(relays::findByFollowActivityId)
+            .or(() -> relays.findByActorUri(actor.getActorUri()));
     if (row.isEmpty() || !row.get().getActorUri().equals(actor.getActorUri())) {
       return false;
     }
