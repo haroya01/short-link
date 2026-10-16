@@ -29,7 +29,7 @@ public class PublicPostController {
       @PathVariable String username,
       HttpServletRequest req) {
     return PostResponses.list(
-        publicPostQueryService.listPublicPosts(username, PostReaders.from(viewerId, req)));
+        publicPostQueryService.listPublicPosts(username, PostReaderHeaders.from(viewerId, req)));
   }
 
   @GetMapping("/{username}/posts/{slug}")
@@ -41,7 +41,7 @@ public class PublicPostController {
       HttpServletRequest req) {
     return PostResponses.of(
         publicPostQueryService.findPublicPost(
-            username, slug, PostReaders.from(viewerId, req), acceptLanguage));
+            username, slug, PostReaderHeaders.from(viewerId, req), acceptLanguage));
   }
 
   @GetMapping(value = "/{username}/posts/{slug}/markdown", produces = "text/markdown;charset=UTF-8")
@@ -51,7 +51,8 @@ public class PublicPostController {
       @PathVariable String slug,
       HttpServletRequest req) {
     PostScoped<PublicPostDetail> detail =
-        publicPostQueryService.findReadablePost(username, slug, PostReaders.from(viewerId, req));
+        publicPostQueryService.findReadablePost(
+            username, slug, PostReaderHeaders.from(viewerId, req));
     String markdown = markdownBlocks.toMarkdown(detail.body().blocks());
     return PostResponses.restricted(ResponseEntity.ok(), detail.restricted())
         .header("Content-Disposition", "inline; filename=\"" + slug + ".md\"")

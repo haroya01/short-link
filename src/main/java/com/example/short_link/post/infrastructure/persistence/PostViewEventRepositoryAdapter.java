@@ -48,6 +48,11 @@ class PostViewEventRepositoryAdapter implements PostViewEventRepository {
   }
 
   @Override
+  public boolean hasHumanVisit(Long postId, String visitorHash) {
+    return !jpa.findHumanVisit(postId, visitorHash).isEmpty();
+  }
+
+  @Override
   public Map<Long, Set<String>> readersByPostId(Collection<Long> postIds) {
     if (postIds.isEmpty()) {
       return Map.of();

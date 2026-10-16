@@ -33,6 +33,15 @@ public interface JpaPostViewEventRepository extends JpaRepository<PostViewEventE
               + "GROUP BY e.post_id, e.visitor_hash")
   List<ReaderRow> findDistinctReaders(@Param("postIds") Collection<Long> postIds);
 
+  // A locking read: it sees views other transactions committed after this one began.
+  @Query(
+      nativeQuery = true,
+      value =
+          "SELECT e.id FROM post_view_event e "
+              + "WHERE e.post_id = :postId AND e.visitor_hash = :visitorHash AND e.is_bot = FALSE "
+              + "LIMIT 1 FOR SHARE")
+  List<Long> findHumanVisit(@Param("postId") Long postId, @Param("visitorHash") String visitorHash);
+
   // Group by UTC date; viewed_at is stored as an Instant.
   @Query(
       nativeQuery = true,

@@ -38,6 +38,7 @@ public class RecordPostViewUseCase {
   private final AsnResolver asnResolver;
   private final BotClassifier botClassifier;
   private final PostAccessPolicy access;
+  private final PostReaders readers;
   private final Clock clock;
 
   public RecordPostViewUseCase(
@@ -49,6 +50,7 @@ public class RecordPostViewUseCase {
       AsnResolver asnResolver,
       BotClassifier botClassifier,
       PostAccessPolicy access,
+      PostReaders readers,
       Clock clock) {
     this.userRepository = userRepository;
     this.postRepository = postRepository;
@@ -58,6 +60,7 @@ public class RecordPostViewUseCase {
     this.asnResolver = asnResolver;
     this.botClassifier = botClassifier;
     this.access = access;
+    this.readers = readers;
     this.clock = clock;
   }
 
@@ -70,9 +73,11 @@ public class RecordPostViewUseCase {
     PostEntity post =
         postRepository.findByUserIdAndSlugForUpdate(author.getId(), cmd.slug()).orElse(null);
     if (post == null || !access.decide(post, reader).full()) return;
+    PostViewEventEntity event = buildEvent(post.getId(), ctx);
+    readers.countView(post, event.getVisitorHash(), event.isBot(), cmd.viewerId());
     post.incrementViewCount();
     postRepository.save(post);
-    postViewEventRepository.save(buildEvent(post.getId(), ctx));
+    postViewEventRepository.save(event);
   }
 
   private PostViewEventEntity buildEvent(Long postId, ViewContext ctx) {

@@ -361,9 +361,12 @@ class RecordBlogNotificationUseCaseTest {
             Map.entry(NotificationType.POST_QUOTE, "yuki님이 노트에서 회원님의 글을 인용했습니다"),
             Map.entry(NotificationType.NOTE_EMBED, "yuki님이 글에서 회원님의 노트를 인용했습니다"),
             Map.entry(NotificationType.COMMENT_LIKE, "yuki님이 댓글을 좋아합니다"),
-            Map.entry(NotificationType.HIGHLIGHT, "yuki님이 글에 하이라이트를 남겼습니다"));
+            Map.entry(NotificationType.HIGHLIGHT, "yuki님이 글에 하이라이트를 남겼습니다"),
+            Map.entry(NotificationType.POST_FIRST_READER, "글에 첫 독자가 생겼습니다"),
+            Map.entry(NotificationType.POST_READ_MILESTONE, "1,000명이 글을 읽었습니다"));
 
-    NotificationPostRef ref = new NotificationPostRef(10L, "my-post", "글 제목", null);
+    NotificationPostRef ref =
+        new NotificationPostRef(10L, "my-post", "글 제목", null, null, null, 1000);
     for (NotificationType type : NotificationType.values()) {
       useCase().record(9L, type, 2L, ref);
     }
@@ -511,6 +514,39 @@ class RecordBlogNotificationUseCaseTest {
         .sendToAll(org.mockito.ArgumentMatchers.eq(List.of(7L, 8L)), pushed.capture());
     assertThat(pushed.getValue().route())
         .isEqualTo(new PushRoute("yuki", "yuki", "fresh", null, null, null, null));
+  }
+
+  @Test
+  void aReadMilestoneHasNoActorTakesThePreferenceAndOpensTheAuthorsPost() {
+    when(repository.save(org.mockito.ArgumentMatchers.any(NotificationEntity.class)))
+        .thenAnswer(inv -> inv.getArgument(0));
+    when(userRepository.findById(9L)).thenReturn(Optional.of(new NotificationUser(9L, "me", "ja")));
+    NotificationPostRef read = new NotificationPostRef(10L, "3", "글 제목", null, null, null, 100);
+
+    useCase().record(9L, NotificationType.POST_READ_MILESTONE, null, read);
+    when(preferenceService.isEnabled(9L, NotificationType.POST_FIRST_READER)).thenReturn(false);
+    useCase().record(9L, NotificationType.POST_FIRST_READER, null, read);
+
+    ArgumentCaptor<NotificationEntity> saved = ArgumentCaptor.forClass(NotificationEntity.class);
+    org.mockito.Mockito.verify(repository).save(saved.capture());
+    assertThat(saved.getValue().getActorUserId()).isNull();
+    assertThat(saved.getValue().getPayload()).contains("\"milestone\":100");
+    org.mockito.Mockito.verify(policies, org.mockito.Mockito.never())
+        .sender(
+            org.mockito.ArgumentMatchers.anyLong(),
+            org.mockito.ArgumentMatchers.any(NotificationType.class),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any(),
+            org.mockito.ArgumentMatchers.any());
+    ArgumentCaptor<PushSender.PushMessage> pushed =
+        ArgumentCaptor.forClass(PushSender.PushMessage.class);
+    org.mockito.Mockito.verify(pushSender)
+        .send(org.mockito.ArgumentMatchers.eq(9L), pushed.capture());
+    assertThat(pushed.getValue().body()).isEqualTo("100人が記事を読みました");
+    assertThat(pushed.getValue().subtitle()).isEqualTo("글 제목");
+    assertThat(pushed.getValue().app()).isEqualTo(PushApp.BLOG);
+    assertThat(pushed.getValue().route())
+        .isEqualTo(new PushRoute(null, "me", "3", null, null, null, null));
   }
 
   @Test

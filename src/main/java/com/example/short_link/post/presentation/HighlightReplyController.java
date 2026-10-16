@@ -39,7 +39,7 @@ public class HighlightReplyController {
       HttpServletRequest req) {
     return createReply.execute(
         new CreateHighlightReplyCommand(userId, highlightId, request.body()),
-        PostReaders.from(userId, req));
+        PostReaderHeaders.from(userId, req));
   }
 
   @DeleteMapping("/highlight-replies/{id}")
@@ -51,7 +51,7 @@ public class HighlightReplyController {
   @PostMapping("/highlight-replies/{id}/like")
   public HighlightReplyLikeStatus like(
       @AuthenticationPrincipal Long userId, @PathVariable Long id, HttpServletRequest req) {
-    return likeReply.like(PostReaders.from(userId, req), id);
+    return likeReply.like(PostReaderHeaders.from(userId, req), id);
   }
 
   @DeleteMapping("/highlight-replies/{id}/like")

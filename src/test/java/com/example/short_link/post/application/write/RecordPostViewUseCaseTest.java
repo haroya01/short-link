@@ -2,6 +2,8 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -24,11 +26,14 @@ import com.example.short_link.user.domain.repository.UserRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -44,6 +49,7 @@ class RecordPostViewUseCaseTest {
   @Mock private GeoIpResolver geoIpResolver;
   @Mock private AsnResolver asnResolver;
   @Mock private BotHeuristic botHeuristic;
+  @Mock private PostReaders readers;
 
   private RecordPostViewUseCase useCase;
 
@@ -59,6 +65,7 @@ class RecordPostViewUseCaseTest {
             asnResolver,
             new BotClassifier(botHeuristic),
             PostAccessFixtures.policy(),
+            readers,
             Clock.fixed(NOW, ZoneOffset.UTC));
   }
 
@@ -86,6 +93,34 @@ class RecordPostViewUseCaseTest {
     ArgumentCaptor<PostViewEventEntity> event = ArgumentCaptor.forClass(PostViewEventEntity.class);
     verify(postViewEventRepository).save(event.capture());
     assertThat(event.getValue().getViewedAt()).isEqualTo(NOW);
+  }
+
+  @Test
+  void countsTheReaderOnTheUnchangedPostBeforeTheViewIsStored() {
+    UserEntity author = author("john");
+    PostEntity post = new PostEntity(author.getId(), "p", "P", "ko");
+    post.publish();
+    when(userRepository.findByUsername("john")).thenReturn(Optional.of(author));
+    when(postRepository.findByUserIdAndSlugForUpdate(author.getId(), "p"))
+        .thenReturn(Optional.of(post));
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    List<Long> viewCountSeenByReaders = new ArrayList<>();
+    doAnswer(
+            inv -> {
+              viewCountSeenByReaders.add(post.getViewCount());
+              return null;
+            })
+        .when(readers)
+        .countView(post, null, false, 42L);
+
+    useCase.execute(
+        new RecordPostViewCommand("john", "p", 42L), ViewContext.empty(), PostReader.of(null));
+
+    assertThat(viewCountSeenByReaders).containsExactly(0L);
+    assertThat(post.getViewCount()).isEqualTo(1L);
+    InOrder order = inOrder(readers, postViewEventRepository);
+    order.verify(readers).countView(post, null, false, 42L);
+    order.verify(postViewEventRepository).save(any());
   }
 
   @Test

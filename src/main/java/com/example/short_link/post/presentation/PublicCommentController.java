@@ -29,6 +29,7 @@ public class PublicCommentController {
       @RequestParam(name = "tombstones", defaultValue = "false") boolean tombstones,
       HttpServletRequest req) {
     return PostResponses.of(
-        postCommentQueryService.listForPost(postId, PostReaders.from(viewerId, req), tombstones));
+        postCommentQueryService.listForPost(
+            postId, PostReaderHeaders.from(viewerId, req), tombstones));
   }
 }

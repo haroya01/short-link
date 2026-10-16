@@ -26,7 +26,6 @@ public class PublicPostViewBeaconController {
   @PostMapping("/{username}/posts/{slug}/view")
   @ResponseStatus(HttpStatus.ACCEPTED)
   public void recordView(
-      @AuthenticationPrincipal Long viewerId,
       @PathVariable String username,
       @PathVariable String slug,
       @RequestParam(value = "src", required = false) String src,
@@ -40,9 +39,10 @@ public class PublicPostViewBeaconController {
       @RequestHeader(value = "Referer", required = false) String referrer,
       @RequestHeader(value = "User-Agent", required = false) String userAgent,
       @RequestHeader(value = "Accept-Language", required = false) String acceptLanguage,
+      @AuthenticationPrincipal Long viewerId,
       HttpServletRequest req) {
     recordPostView.execute(
-        new RecordPostViewCommand(username, slug),
+        new RecordPostViewCommand(username, slug, viewerId),
         new ViewContext(
             // fetch의 Referer는 글 자체이므로 document.referrer를 담은 ref 쿼리를 우선한다.
             ref != null && !ref.isBlank() ? ref : referrer,
@@ -58,6 +58,6 @@ public class PublicPostViewBeaconController {
             "1".equals(req.getHeader("Sec-GPC")),
             // behavior_event와 조인하는 탭 수명 세션 ID다.
             sid),
-        PostReaders.from(viewerId, req));
+        PostReaderHeaders.from(viewerId, req));
   }
 }

@@ -30,7 +30,7 @@ public class ReadingHistoryController {
   @ResponseStatus(HttpStatus.NO_CONTENT)
   public void record(
       @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
-    recordPostRead.record(PostReaders.from(userId, req), postId);
+    recordPostRead.record(PostReaderHeaders.from(userId, req), postId);
   }
 
   @GetMapping("/users/me/reading-history")

@@ -24,18 +24,18 @@ public class PostLikeController {
   @GetMapping
   public PostLikeStatus status(
       @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
-    return postLikeQueryService.status(PostReaders.from(userId, req), postId);
+    return postLikeQueryService.status(PostReaderHeaders.from(userId, req), postId);
   }
 
   @PutMapping
   public PostLikeStatus like(
       @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
-    return likePost.like(PostReaders.from(userId, req), postId);
+    return likePost.like(PostReaderHeaders.from(userId, req), postId);
   }
 
   @DeleteMapping
   public PostLikeStatus unlike(
       @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
-    return likePost.unlike(PostReaders.from(userId, req), postId);
+    return likePost.unlike(PostReaderHeaders.from(userId, req), postId);
   }
 }

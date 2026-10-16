@@ -48,7 +48,7 @@ public class PostHighlightController {
             request.endOffset(),
             request.quote(),
             request.note()),
-        PostReaders.from(userId, req));
+        PostReaderHeaders.from(userId, req));
   }
 
   @DeleteMapping("/highlights/{id}")

@@ -35,7 +35,9 @@ public class NotificationTargetCodec {
               FOLLOW_REQUEST,
               NOTE_EMBED,
               COMMENT_LIKE,
-              HIGHLIGHT ->
+              HIGHLIGHT,
+              POST_FIRST_READER,
+              POST_READ_MILESTONE ->
           jsonMapper.readValue(payload, NotificationPostRef.class);
       case POST_QUOTE,
               NOTE_LIKE,

@@ -9,6 +9,7 @@ import com.example.short_link.common.event.HighlightReplyLikedEvent;
 import com.example.short_link.common.event.NotesEmbeddedEvent;
 import com.example.short_link.common.event.PostHighlightedEvent;
 import com.example.short_link.common.event.PostPublishedEvent;
+import com.example.short_link.common.event.PostReadMilestoneEvent;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.notification.application.dto.NotificationPostRef;
 import com.example.short_link.notification.application.write.RecordBlogNotificationUseCase;
@@ -229,5 +230,24 @@ public class PostNotificationListener {
     NotificationPostRef post =
         new NotificationPostRef(event.postId(), event.postSlug(), event.postTitle(), null);
     recordUseCase.recordForEach(followers, NotificationType.NEW_POST, event.authorUserId(), post);
+  }
+
+  // Readers are anonymous, so these notices carry no actor.
+  @Async("webhookExecutor")
+  @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+  public void onPostReadMilestone(PostReadMilestoneEvent event) {
+    boolean first = event.readers() == 1;
+    recordUseCase.record(
+        event.authorUserId(),
+        first ? NotificationType.POST_FIRST_READER : NotificationType.POST_READ_MILESTONE,
+        null,
+        new NotificationPostRef(
+            event.postId(),
+            event.postSlug(),
+            event.postTitle(),
+            null,
+            null,
+            null,
+            first ? null : event.readers()));
   }
 }

@@ -22,6 +22,6 @@ public class PublicPreviewController {
   public ResponseEntity<PublicPostDetail> preview(
       @PathVariable String token, HttpServletRequest req) {
     return PostResponses.of(
-        publicPostQueryService.findPreviewPost(token, PostReaders.from(null, req)));
+        publicPostQueryService.findPreviewPost(token, PostReaderHeaders.from(null, req)));
   }
 }

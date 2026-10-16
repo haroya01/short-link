@@ -25,6 +25,6 @@ public class PublicHighlightReplyController {
       @PathVariable Long highlightId,
       HttpServletRequest req) {
     return PostResponses.of(
-        replyQuery.listForHighlight(highlightId, PostReaders.from(viewerId, req)));
+        replyQuery.listForHighlight(highlightId, PostReaderHeaders.from(viewerId, req)));
   }
 }

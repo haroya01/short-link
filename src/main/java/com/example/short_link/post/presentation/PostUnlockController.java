@@ -27,6 +27,7 @@ public class PostUnlockController {
       @PathVariable String slug,
       @Valid @RequestBody UnlockPostRequest request,
       HttpServletRequest req) {
-    return unlockPost.unlock(username, slug, request.password(), PostReaders.from(viewerId, req));
+    return unlockPost.unlock(
+        username, slug, request.password(), PostReaderHeaders.from(viewerId, req));
   }
 }

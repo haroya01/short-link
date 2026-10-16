@@ -137,6 +137,10 @@ public class PostEntity extends BaseTimeEntity {
   @Column(name = "blocked_countries", length = 255)
   private String blockedCountries;
 
+  // Moves only under this row's lock, one reader at a time.
+  @Column(name = "human_reader_count", nullable = false)
+  private int humanReaderCount;
+
   public PostEntity(Long userId, String slug, String title, String languageTag) {
     this.userId = userId;
     this.slug = slug;
@@ -348,6 +352,10 @@ public class PostEntity extends BaseTimeEntity {
 
   public void incrementViewCount() {
     this.viewCount++;
+  }
+
+  public int countReader() {
+    return ++this.humanReaderCount;
   }
 
   public void incrementLikeCount() {
