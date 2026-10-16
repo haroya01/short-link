@@ -77,7 +77,7 @@ dependencies {
 
 tasks.named('test') {
 	useJUnitPlatform()
-	maxHeapSize = '2g'
+	maxHeapSize = '1536m'
 	finalizedBy jacocoTestReport
 	outputs.dir 'build/reports/query-audit/http-contracts'
 	doFirst { delete 'build/reports/query-audit/http-contracts' }
