@@ -28,6 +28,14 @@
 @junit | federation-account-delete | 5 | 1 | 1 | 3 | 10
 @junit | federation-webfinger-after-delete | 1 | 0 | 0 | 0 | 1
 @junit | federation-actor-after-delete | 2 | 0 | 0 | 0 | 2
+# Completing the server part of a handle: the first ask reads, in one statement, the servers with
+# the most known accounts and the named large ones, leaving out those this server blocked; the
+# list is cached for ten minutes, so later asks, any prefix, read nothing. Something no server is
+# called asks nothing.
+@junit | federation-domains-first | 1 | 0 | 0 | 0 | 1
+@junit | federation-domains | 0 | 0 | 0 | 0 | 0
+@junit | federation-domains-top | 0 | 0 | 0 | 0 | 0
+@junit | federation-domains-invalid | 0 | 0 | 0 | 0 | 0
 # The instance actor (signs fetches): first request creates its key, later ones only read it.
 @junit | federation-instance-first | 2 | 1 | 0 | 0 | 3
 @junit | federation-instance-known | 1 | 0 | 0 | 0 | 1

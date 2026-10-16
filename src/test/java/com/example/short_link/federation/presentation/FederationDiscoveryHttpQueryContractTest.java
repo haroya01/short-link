@@ -4,9 +4,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import tools.jackson.databind.JsonNode;
 
 class FederationDiscoveryHttpQueryContractTest extends AccountHttpJourneySupport {
 
@@ -168,5 +174,57 @@ class FederationDiscoveryHttpQueryContractTest extends AccountHttpJourneySupport
         404);
     callWithHeaders(
         "federation-actor-after-delete", "GET", "/ap/actors/" + publicId, null, ACTIVITY_JSON, 404);
+  }
+
+  private void remoteAccounts(String domain, int count) {
+    for (int i = 0; i < count; i++) {
+      String actor = "https://" + domain + "/users/u" + i;
+      jdbc.update(
+          "INSERT INTO federation_remote_actor (actor_uri, key_id, public_key_pem, inbox,"
+              + " username, domain, fetched_at, created_at, updated_at)"
+              + " VALUES (?, ?, 'pem', ?, ?, ?, NOW(6), NOW(6), NOW(6))",
+          actor,
+          actor + "#main-key",
+          actor + "/inbox",
+          "u" + i,
+          domain);
+    }
+  }
+
+  private static List<String> domains(JsonNode found) {
+    List<String> domains = new ArrayList<>();
+    for (JsonNode item : found.path("items")) {
+      domains.add(item.path("domain").asText());
+    }
+    return domains;
+  }
+
+  private JsonNode domainsFor(String id, String query) throws Exception {
+    return body(call(id, "GET", "/api/v1/federation/domains" + query, null, null, 200));
+  }
+
+  @Test
+  void anyoneCompletesTheServerOfAHandleFromKnownServersAndAFewLargeOnes() throws Exception {
+    String tag = "t" + UUID.randomUUID().toString().replace("-", "").substring(0, 8);
+    remoteAccounts(tag + "-a.example", 3);
+    remoteAccounts(tag + "-b.example", 1);
+    remoteAccounts(tag + "-gone.example", 5);
+    jdbc.update(
+        "INSERT INTO federation_domain_block (domain, severity, created_at)"
+            + " VALUES (?, 'SUSPEND', NOW(6))",
+        tag + "-gone.example");
+
+    var typed =
+        domainsFor(
+            "federation-domains-first",
+            "?prefix=" + URLEncoder.encode("@gargron@" + tag, StandardCharsets.UTF_8));
+    assertThat(domains(typed)).containsExactly(tag + "-a.example", tag + "-b.example");
+
+    assertThat(domains(domainsFor("federation-domains", "?prefix=m")))
+        .containsExactly("mastodon.social", "misskey.io", "mstdn.jp", "mastodon.online", "mas.to");
+    assertThat(domains(domainsFor("federation-domains-top", "?limit=3")))
+        .containsExactly(tag + "-a.example", tag + "-b.example", "mastodon.social");
+    assertThat(domains(domainsFor("federation-domains-invalid", "?prefix=not%20a%20server")))
+        .isEmpty();
   }
 }

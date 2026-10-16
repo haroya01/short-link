@@ -78,6 +78,7 @@ public class WebMvcSecurityTestConfig {
           // 이벤트 신청/취소 — 프로드 SecurityConfig 의 익명 POST 표면과 같은 계약.
           || ("POST".equals(method) && uri.matches("/api/v1/public/events/[^/]+/registrations"))
           || ("POST".equals(method) && "/api/v1/public/events/registrations/cancel".equals(uri))
+          || ("GET".equals(method) && "/api/v1/federation/domains".equals(uri))
           || ("GET".equals(method) && "/actuator/health".equals(uri))
           || ("GET".equals(method) && uri.startsWith("/api/v1/public/"))
           || ("GET".equals(method) && "/api/v1/federation/accounts/search".equals(uri))
