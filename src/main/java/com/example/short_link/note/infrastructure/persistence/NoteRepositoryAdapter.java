@@ -840,12 +840,11 @@ class NoteRepositoryAdapter implements NoteRepository {
         + alias
         + ".id"
         + " AND mc.user_id IS NOT NULL))"
-        + " AND NOT EXISTS (SELECT 1 FROM federation_remote_actor ta"
-        + " JOIN federation_domain_block tb ON "
-        + ServerBlockSql.covers("tb", "ta.domain")
-        + " WHERE ta.id = "
+        + " AND NOT EXISTS (SELECT 1 FROM federation_remote_actor ta WHERE ta.id = "
         + alias
-        + ".remote_actor_id)";
+        + ".remote_actor_id AND "
+        + ServerBlockSql.blocks("ta.domain")
+        + ")";
   }
 
   // The last day has no end: a note stamped a little ahead (another server's clock) is today's.

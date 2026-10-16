@@ -29,10 +29,8 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
           + " LEFT JOIN federation_following f"
           + " ON f.user_id = :viewer AND f.remote_actor_id = a.id"
           + " WHERE a.username IS NOT NULL AND (MATCHES)"
-          + " AND NOT EXISTS (SELECT 1 FROM federation_domain_block sb"
-          + " WHERE sb.severity = 'SUSPEND' AND "
-          + ServerBlockSql.covers("sb", "a.domain")
-          + ")"
+          + " AND NOT "
+          + ServerBlockSql.suspends("a.domain")
           + " AND NOT EXISTS (SELECT 1 FROM user_domain_block d"
           + " WHERE d.user_id = :viewer AND d.domain = a.domain)"
           + HeardSql.unblockedRemote("a.id")

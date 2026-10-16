@@ -34,10 +34,7 @@ class FederationDomainBlockRepositoryAdapter implements FederationDomainBlockRep
     if (host == null || host.isBlank()) {
       return false;
     }
-    return !em.createNativeQuery(
-            "SELECT 1 FROM federation_domain_block b WHERE b.severity = 'SUSPEND' AND "
-                + ServerBlockSql.covers("b", ":host")
-                + " LIMIT 1")
+    return !em.createNativeQuery("SELECT 1 FROM DUAL WHERE " + ServerBlockSql.suspends(":host"))
         .setParameter("host", host.toLowerCase(Locale.ROOT))
         .getResultList()
         .isEmpty();
