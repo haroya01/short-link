@@ -3,6 +3,7 @@ package com.example.short_link.federation.infrastructure.http;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -18,6 +19,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
+import java.util.List;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -95,6 +97,73 @@ class SignedFederationHttpTest {
                 .orElseThrow()
                 .headers())
         .containsExactly("(request-target)", "host", "date");
+  }
+
+  private static HttpFetcher.Response moved(String location) {
+    return new HttpFetcher.Response(301, Map.of("Location", List.of(location)), null);
+  }
+
+  @Test
+  void webFingerAsksForJrdAndFollowsARedirectToAnotherHostSignedForThatHost() {
+    when(fetcher.fetch(any()))
+        .thenReturn(
+            moved("https://93.184.216.35/.well-known/webfinger?resource=acct%3Aa%40x.example"),
+            new HttpFetcher.Response(200, Map.of(), "{}".getBytes(StandardCharsets.UTF_8)));
+
+    var result =
+        http("https://kurl.me")
+            .webFinger(
+                URI.create(
+                    "https://93.184.216.34/.well-known/webfinger?resource=acct%3Aa%40x.example"),
+                SIGNER,
+                host -> true);
+
+    assertThat(result).isInstanceOf(FederationHttp.Result.Ok.class);
+    ArgumentCaptor<HttpFetcher.Request> sent = ArgumentCaptor.forClass(HttpFetcher.Request.class);
+    verify(fetcher, times(2)).fetch(sent.capture());
+    var hops = sent.getAllValues();
+    assertThat(hops).allSatisfy(hop -> assertThat(hop.followRedirects()).isFalse());
+    assertThat(hops)
+        .allSatisfy(
+            hop ->
+                assertThat(hop.headers().get("Accept"))
+                    .isEqualTo("application/jrd+json, application/json"));
+    var second = hops.get(1);
+    assertThat(second.uri().getHost()).isEqualTo("93.184.216.35");
+    var params = HttpSignatures.parse(second.headers().get("Signature")).orElseThrow();
+    Map<String, String> received =
+        Map.of(
+            "(request-target)",
+            "get /.well-known/webfinger?resource=acct%3Aa%40x.example",
+            "host",
+            "93.184.216.35",
+            "date",
+            second.headers().get("Date"));
+    assertThat(
+            HttpSignatures.verify(
+                params, received::get, PemKeys.publicKey(PEM.publicKey()).orElseThrow()))
+        .isTrue();
+  }
+
+  @Test
+  void webFingerRedirectsStopAtPlainHttpADisallowedHostOrThreeHops() {
+    URI start = URI.create("https://93.184.216.34/.well-known/webfinger?resource=acct%3Aa%40x");
+
+    when(fetcher.fetch(any())).thenReturn(moved("http://93.184.216.35/wf"));
+    assertThat(http("https://kurl.me").webFinger(start, SIGNER, host -> true))
+        .isInstanceOf(FederationHttp.Result.Refused.class);
+
+    when(fetcher.fetch(any())).thenReturn(moved("https://93.184.216.35/wf"));
+    assertThat(
+            http("https://kurl.me").webFinger(start, SIGNER, host -> !host.equals("93.184.216.35")))
+        .isInstanceOf(FederationHttp.Result.Refused.class);
+    assertThat(http("https://kurl.me").webFinger(start, SIGNER, host -> false))
+        .isInstanceOf(FederationHttp.Result.Refused.class);
+
+    when(fetcher.fetch(any())).thenReturn(moved("/wf"));
+    assertThat(http("https://kurl.me").webFinger(start, SIGNER, host -> true))
+        .isEqualTo(new FederationHttp.Result.Failed(301, "HTTP 301"));
+    verify(fetcher, times(2 + 4)).fetch(any());
   }
 
   @Test

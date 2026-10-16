@@ -44,6 +44,9 @@ public class RemoteActorEntity extends BaseTimeEntity {
   @Column(nullable = false, length = 255)
   private String domain;
 
+  @Column(name = "account_domain", length = 255)
+  private String accountDomain;
+
   @Column(name = "profile_url", length = 512)
   private String profileUrl;
 
@@ -90,6 +93,10 @@ public class RemoteActorEntity extends BaseTimeEntity {
     this.discoverable = document.discoverable();
     this.indexable = document.indexable();
     this.fetchedAt = fetchedAt;
+  }
+
+  public void knownAt(String accountDomain) {
+    this.accountDomain = accountDomain;
   }
 
   public boolean onSuspendedServer() {

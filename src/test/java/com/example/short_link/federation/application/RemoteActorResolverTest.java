@@ -1,13 +1,20 @@
 package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.short_link.federation.application.signature.Signer;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.domain.RemoteActorDocument;
@@ -25,6 +32,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import tools.jackson.databind.json.JsonMapper;
 
@@ -148,6 +156,66 @@ class RemoteActorResolverTest {
 
     assertThat(resolver().byKeyId(MASTODON_KEY, false)).contains(stale);
     assertThat(resolver().byKeyId(MASTODON_KEY, true)).isEmpty();
+  }
+
+  @Test
+  void aStaleCopyItsServerDidNotGiveAgainIsKeptForAnHourBeforeAskingAgain() {
+    Instant[] now = {NOW};
+    Clock clock = mock(Clock.class);
+    when(clock.instant()).thenAnswer(call -> now[0]);
+    RemoteActorResolver resolver =
+        new RemoteActorResolver(
+            http, signingKeys, actors, serverBlocks, JsonMapper.builder().build(), clock);
+    RemoteActorEntity stale = cached(NOW.minus(RemoteActorResolver.FRESH_FOR).minusSeconds(1));
+    when(actors.findByActorUri(MASTODON_ACTOR.toString())).thenReturn(Optional.of(stale));
+    when(actors.findByKeyId(MASTODON_KEY)).thenReturn(Optional.of(stale));
+    when(http.get(MASTODON_ACTOR, instance))
+        .thenReturn(
+            new FederationHttp.Result.Failed(401, "HTTP 401"),
+            new FederationHttp.Result.Failed(503, "HTTP 503"),
+            ok(RemoteActorFixtures.MASTODON));
+
+    assertThat(resolver.refreshed(stale)).contains(stale);
+    now[0] = NOW.plus(RemoteActorResolver.RETRY_AFTER).minusSeconds(1);
+    assertThat(resolver.refreshed(stale)).contains(stale);
+    assertThat(resolver.byActorUri(MASTODON_ACTOR.toString())).contains(stale);
+    assertThat(resolver.byKeyId(MASTODON_KEY, false)).contains(stale);
+    verify(http, times(1)).get(MASTODON_ACTOR, instance);
+
+    assertThat(resolver.byKeyId(MASTODON_KEY, true)).isEmpty();
+    verify(http, times(2)).get(MASTODON_ACTOR, instance);
+
+    now[0] = NOW.plus(RemoteActorResolver.RETRY_AFTER);
+    assertThat(resolver.refreshed(stale).orElseThrow().getFetchedAt()).isEqualTo(now[0]);
+    verify(http, times(3)).get(MASTODON_ACTOR, instance);
+  }
+
+  @Test
+  void aServerThatDeniesTheFetchIsAWarningNamingItsHost() {
+    Logger logger = (Logger) LoggerFactory.getLogger(RemoteActorResolver.class);
+    ListAppender<ILoggingEvent> logged = new ListAppender<>();
+    logged.start();
+    logger.addAppender(logged);
+    when(actors.findByActorUri(MASTODON_ACTOR.toString())).thenReturn(Optional.empty());
+    when(http.get(MASTODON_ACTOR, instance))
+        .thenReturn(
+            new FederationHttp.Result.Failed(403, "HTTP 403"),
+            new FederationHttp.Result.Failed(410, "HTTP 410"));
+    try {
+      assertThat(resolver().byActorUri(MASTODON_ACTOR.toString())).isEmpty();
+      assertThat(resolver().byActorUri(MASTODON_ACTOR.toString())).isEmpty();
+    } finally {
+      logger.detachAppender(logged);
+    }
+
+    assertThat(logged.list)
+        .extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage)
+        .containsExactly(
+            tuple(Level.WARN, "federation fetch denied status=403 host=mastodon.example"),
+            tuple(
+                Level.INFO,
+                "federation fetch outcome=Failed[status=410, reason=HTTP 410] uri="
+                    + MASTODON_ACTOR));
   }
 
   @Test

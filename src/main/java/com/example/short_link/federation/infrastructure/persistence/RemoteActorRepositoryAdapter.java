@@ -88,7 +88,8 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
 
   @Override
   public Optional<RemoteActorEntity> findByAcct(String username, String domain) {
-    return jpa.findFirstByDomainAndUsername(domain, username);
+    return jpa.findFirstByUsernameAndDomainOrUsernameAndAccountDomain(
+        username, domain, username, domain);
   }
 
   @Override

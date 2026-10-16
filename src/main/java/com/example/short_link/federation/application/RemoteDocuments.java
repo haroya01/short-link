@@ -28,11 +28,25 @@ public class RemoteDocuments {
     if (serverBlocks.suspends(uri.getHost())) {
       throw notFound(asked);
     }
-    FederationHttp.Result result = http.get(uri, signingKeys.forInstance());
+    return answer(http.get(uri, signingKeys.forInstance()), uri, asked);
+  }
+
+  public JsonNode webFinger(URI uri, String asked) {
+    return answer(
+        http.webFinger(uri, signingKeys.forInstance(), host -> !serverBlocks.suspends(host)),
+        uri,
+        asked);
+  }
+
+  private JsonNode answer(FederationHttp.Result result, URI uri, String asked) {
     if (result instanceof FederationHttp.Result.Ok ok) {
       return document(ok.body(), asked);
     }
-    log.info("federation resolve outcome={} uri={}", result, uri);
+    if (result instanceof FederationHttp.Result.Failed failed && failed.deniedAccess()) {
+      log.warn("federation resolve denied status={} host={}", failed.status(), uri.getHost());
+    } else {
+      log.info("federation resolve outcome={} uri={}", result, uri);
+    }
     if (result instanceof FederationHttp.Result.Unreachable
         || (result instanceof FederationHttp.Result.Failed failed
             && (failed.status() >= 500 || failed.status() == TOO_MANY_REQUESTS))) {

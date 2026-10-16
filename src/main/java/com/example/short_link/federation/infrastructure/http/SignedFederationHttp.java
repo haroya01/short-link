@@ -11,6 +11,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.function.Predicate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
@@ -20,6 +21,8 @@ public class SignedFederationHttp implements FederationHttp {
   static final String ACTIVITY_JSON = "application/activity+json";
   private static final String ACCEPT =
       "application/activity+json, application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"";
+  private static final String JRD = "application/jrd+json, application/json";
+  private static final int MAX_REDIRECTS = 3;
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
   private static final int MAX_BODY_BYTES = 1_048_576;
@@ -41,22 +44,47 @@ public class SignedFederationHttp implements FederationHttp {
 
   @Override
   public Result get(URI uri, Signer signer) {
-    return send(uri, null, signer);
+    return send(uri, null, signer, ACCEPT, true).result();
+  }
+
+  @Override
+  public Result webFinger(URI uri, Signer signer, Predicate<String> allowedHost) {
+    URI next = uri;
+    for (int redirects = 0; ; redirects++) {
+      if (!allowedHost.test(next.getHost())) {
+        return new Result.Refused("host " + next.getHost());
+      }
+      Sent sent = send(next, null, signer, JRD, false);
+      if (sent.location() == null || redirects == MAX_REDIRECTS) {
+        return sent.result();
+      }
+      if (!"https".equalsIgnoreCase(sent.location().getScheme())) {
+        return new Result.Refused("redirect scheme " + sent.location().getScheme());
+      }
+      next = sent.location();
+    }
   }
 
   @Override
   public Result post(URI inbox, byte[] body, Signer signer) {
-    return send(inbox, body, signer);
+    return send(inbox, body, signer, ACCEPT, true).result();
   }
 
-  private Result send(URI uri, byte[] body, Signer signer) {
+  private record Sent(Result result, URI location) {
+
+    Sent(Result result) {
+      this(result, null);
+    }
+  }
+
+  private Sent send(URI uri, byte[] body, Signer signer, String accept, boolean followRedirects) {
     if (!"https".equalsIgnoreCase(uri.getScheme())
         && !(allowPlainHttp && "http".equalsIgnoreCase(uri.getScheme()))) {
-      return new Result.Refused("scheme " + uri.getScheme());
+      return new Sent(new Result.Refused("scheme " + uri.getScheme()));
     }
     var resolved = PublicHttpUrlGuard.resolve(uri.toString());
     if (resolved.isEmpty()) {
-      return new Result.Refused("not a public address");
+      return new Sent(new Result.Refused("not a public address"));
     }
     boolean post = body != null;
     Map<String, String> signed = new LinkedHashMap<>();
@@ -70,7 +98,7 @@ public class SignedFederationHttp implements FederationHttp {
     }
     Map<String, String> headers = new LinkedHashMap<>();
     headers.put("Date", signed.get("date"));
-    headers.put("Accept", ACCEPT);
+    headers.put("Accept", accept);
     if (post) {
       headers.put("Digest", signed.get("digest"));
     }
@@ -94,15 +122,31 @@ public class SignedFederationHttp implements FederationHttp {
                       CONNECT_TIMEOUT,
                       READ_TIMEOUT,
                       MAX_BODY_BYTES)
-                  : HttpFetcher.Request.get(
-                      resolved.get(), headers, CONNECT_TIMEOUT, READ_TIMEOUT, MAX_BODY_BYTES));
+                  : followRedirects
+                      ? HttpFetcher.Request.get(
+                          resolved.get(), headers, CONNECT_TIMEOUT, READ_TIMEOUT, MAX_BODY_BYTES)
+                      : HttpFetcher.Request.getNoRedirects(
+                          resolved.get(), headers, CONNECT_TIMEOUT, READ_TIMEOUT, MAX_BODY_BYTES));
     } catch (RuntimeException e) {
-      return new Result.Unreachable(e.getClass().getSimpleName());
+      return new Sent(new Result.Unreachable(e.getClass().getSimpleName()));
     }
     int status = response.status();
     if (status >= 200 && status < 300) {
-      return new Result.Ok(status, response.body());
+      return new Sent(new Result.Ok(status, response.body()));
     }
-    return new Result.Failed(status, "HTTP " + status);
+    return new Sent(
+        new Result.Failed(status, "HTTP " + status),
+        followRedirects ? null : location(uri, status, response.header("Location")));
+  }
+
+  private static URI location(URI from, int status, String header) {
+    if (status < 300 || status >= 400 || header == null || header.isBlank()) {
+      return null;
+    }
+    try {
+      return from.resolve(header.strip());
+    } catch (IllegalArgumentException malformed) {
+      return null;
+    }
   }
 }

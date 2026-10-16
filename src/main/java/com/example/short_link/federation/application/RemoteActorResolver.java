@@ -8,7 +8,10 @@ import com.example.short_link.federation.domain.repository.RemoteActorRepository
 import java.net.URI;
 import java.time.Clock;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -20,11 +23,14 @@ import tools.jackson.databind.json.JsonMapper;
 // Key ids differ by server (Mastodon "<actor>#main-key", GoToSocial "<actor>/main-key"), so a key
 // is resolved by fetching it and following its owner to the full actor document. Cached actors are
 // refetched after a day, or at once when a signature fails (the remote may have rotated its key).
+// A day-old copy its server did not give again is kept as is for an hour; that hour is held in
+// process memory only, so a restart asks again at once.
 @Slf4j
 @Service
 public class RemoteActorResolver {
 
   static final Duration FRESH_FOR = Duration.ofDays(1);
+  static final Duration RETRY_AFTER = Duration.ofHours(1);
 
   private final FederationHttp http;
   private final SigningKeys signingKeys;
@@ -32,6 +38,7 @@ public class RemoteActorResolver {
   private final FederationDomainBlockRepository serverBlocks;
   private final JsonMapper json;
   private final Clock clock;
+  private final Map<String, Instant> unanswered = new ConcurrentHashMap<>();
 
   @Autowired
   public RemoteActorResolver(
@@ -69,7 +76,7 @@ public class RemoteActorResolver {
     }
     Optional<JsonNode> keyDocument = fetch(keyUri);
     if (keyDocument.isEmpty()) {
-      return refetch ? Optional.empty() : cached;
+      return refetch ? Optional.empty() : unanswered(cached);
     }
     Optional<RemoteActorDocument> parsed =
         RemoteActorParser.parse(keyDocument.get(), keyUri, keyId);
@@ -95,7 +102,7 @@ public class RemoteActorResolver {
     }
     Optional<RemoteActorDocument> parsed =
         fetch(uri).flatMap(doc -> RemoteActorParser.parse(doc, uri, null));
-    return parsed.map(this::store).or(() -> cached);
+    return parsed.map(this::store).or(() -> unanswered(cached));
   }
 
   public Optional<RemoteActorEntity> refreshed(RemoteActorEntity cached) {
@@ -119,6 +126,10 @@ public class RemoteActorResolver {
           yield Optional.empty();
         }
       }
+      case FederationHttp.Result.Failed failed when failed.deniedAccess() -> {
+        log.warn("federation fetch denied status={} host={}", failed.status(), uri.getHost());
+        yield Optional.empty();
+      }
       case FederationHttp.Result result -> {
         log.info("federation fetch outcome={} uri={}", result, uri);
         yield Optional.empty();
@@ -126,7 +137,14 @@ public class RemoteActorResolver {
     };
   }
 
+  private Optional<RemoteActorEntity> unanswered(Optional<RemoteActorEntity> cached) {
+    cached.ifPresent(
+        actor -> unanswered.put(actor.getActorUri(), clock.instant().plus(RETRY_AFTER)));
+    return cached;
+  }
+
   private RemoteActorEntity store(RemoteActorDocument document) {
+    unanswered.remove(document.actorUri());
     Optional<RemoteActorEntity> existing = actors.findByActorUri(document.actorUri());
     if (existing.isPresent()) {
       existing.get().refresh(document, clock.instant());
@@ -140,7 +158,12 @@ public class RemoteActorResolver {
   }
 
   private boolean fresh(RemoteActorEntity actor) {
-    return actor.getFetchedAt().plus(FRESH_FOR).isAfter(clock.instant());
+    Instant now = clock.instant();
+    if (actor.getFetchedAt().plus(FRESH_FOR).isAfter(now)) {
+      return true;
+    }
+    Instant retryAt = unanswered.get(actor.getActorUri());
+    return retryAt != null && now.isBefore(retryAt);
   }
 
   private static boolean sameHost(URI a, URI b) {
