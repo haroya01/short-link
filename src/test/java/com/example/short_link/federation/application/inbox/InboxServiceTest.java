@@ -24,6 +24,8 @@ import com.example.short_link.federation.application.RemoteActorResolver;
 import com.example.short_link.federation.application.RemoteFollowing;
 import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
+import com.example.short_link.federation.application.relay.RelayIntake;
+import com.example.short_link.federation.application.relay.RelaySubscriptions;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.FederationUser;
 import com.example.short_link.federation.domain.RemoteActorDocument;
@@ -67,6 +69,8 @@ class InboxServiceTest {
   @Mock private EarlyDeletes earlyDeletes;
   @Mock private FederationFollowingRepository followingRows;
   @Mock private RemoteActorResolver resolver;
+  @Mock private RelaySubscriptions relays;
+  @Mock private RelayIntake relayIntake;
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
 
@@ -98,7 +102,9 @@ class InboxServiceTest {
         followingRows,
         URLS,
         JsonMapper.builder().build(),
-        meters);
+        meters,
+        relays,
+        relayIntake);
   }
 
   private static RemoteActorEntity remote(String actorUri, String domain) {
@@ -610,6 +616,80 @@ class InboxServiceTest {
     verify(reactions).remove(1L, 42L, Kind.LIKE);
     verify(reactions).removeByActivity(42L, "https://mastodon.example/s/5/activity");
     verifyNoInteractions(followers);
+  }
+
+  private static final String RELAY = "https://relay.example/tag/dev";
+  private static final String POST = "https://mastodon.example/users/alice/statuses/9";
+
+  private static String relayed(String id, String type, String object) {
+    return """
+        {"id":"%s","type":"%s","actor":"%s","object":%s}"""
+        .formatted(id, type, RELAY, object);
+  }
+
+  @Test
+  void anAnnounceFromAnAcceptedRelayIsVerifiedThenHandedToTheRelayQueue() {
+    RemoteActorEntity relay = remote(RELAY, "relay.example");
+    when(relays.isAccepted(RELAY)).thenReturn(true);
+    verifiedAs(relay);
+    when(relayIntake.offer(POST)).thenReturn("queued", "daily-cap");
+    InboxService service = service();
+
+    assertThat(
+            service.receive(
+                request(
+                    relayed("https://relay.example/announce/1", "Announce", "\"" + POST + "\"")),
+                null))
+        .isEqualTo(InboxOutcome.accepted("relay"));
+    assertThat(
+            service.receive(
+                request(
+                    relayed(
+                        "https://relay.example/announce/2",
+                        "Announce",
+                        "{\"id\":\"" + POST + "\",\"type\":\"Note\"}")),
+                null))
+        .isEqualTo(InboxOutcome.ignored("relay-daily-cap"));
+    verifyNoInteractions(reactions, notes);
+  }
+
+  @Test
+  void anAnnounceFromAnyoneElseIsNotARelayAnnounceAndCostsNoKeyFetch() {
+    when(relays.isAccepted(ALICE)).thenReturn(false);
+
+    assertThat(
+            service()
+                .receive(request(activity(ALICE + "#a/1", "Announce", "\"" + POST + "\"")), null))
+        .isEqualTo(InboxOutcome.ignored("unknown-target"));
+    verifyNoInteractions(verifier, relayIntake);
+  }
+
+  @Test
+  void aRelaysAcceptOrRejectOfTheInstanceFollowAnswersTheSubscription() {
+    RemoteActorEntity relay = remote(RELAY, "relay.example");
+    verifiedAs(relay);
+    String followId = URLS.relayFollow("f1");
+    when(relays.answered(relay, followId, true)).thenReturn(true);
+    when(relays.answered(relay, followId, false)).thenReturn(false);
+
+    String embedded =
+        """
+        {"id":"%s","type":"Follow","actor":"%s","object":"https://www.w3.org/ns/activitystreams#Public"}"""
+            .formatted(followId, URLS.instance());
+    assertThat(
+            service()
+                .receive(
+                    request(relayed("https://relay.example/accept/1", "Accept", embedded)), null))
+        .isEqualTo(InboxOutcome.accepted("accept"));
+    assertThat(
+            service()
+                .receive(
+                    request(
+                        relayed(
+                            "https://relay.example/reject/1", "Reject", "\"" + followId + "\"")),
+                    null))
+        .isEqualTo(InboxOutcome.ignored("unknown-follow"));
+    verifyNoInteractions(following);
   }
 
   @Test

@@ -15,6 +15,7 @@ public class FederationUrls {
 
   public static final String ACTOR_PATH = "/ap/actors/";
   private static final String NOTE_PATH = "/ap/notes/";
+  private static final String RELAY_FOLLOW = "#relays/";
 
   private static final Pattern PUBLIC_ID = Pattern.compile("[a-z0-9]{1,32}");
   private static final Pattern NOTE_ID = Pattern.compile("[1-9][0-9]{0,17}");
@@ -76,6 +77,14 @@ public class FederationUrls {
 
   public String instance() {
     return props.baseUrl() + "/ap/instance";
+  }
+
+  public String relayFollow(String token) {
+    return instance() + RELAY_FOLLOW + token;
+  }
+
+  public boolean isRelayFollow(String activityId) {
+    return activityId != null && activityId.startsWith(instance() + RELAY_FOLLOW);
   }
 
   public String instanceKey() {

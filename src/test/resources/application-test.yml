@@ -38,6 +38,9 @@ short-link:
   rate-limit:
     anonymous: 1000000
     authenticated: 1000000
+  federation:
+    relay:
+      enabled: true
 
 query-audit:
   enabled: true

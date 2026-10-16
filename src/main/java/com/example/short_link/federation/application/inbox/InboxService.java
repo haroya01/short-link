@@ -19,6 +19,8 @@ import com.example.short_link.federation.application.RemoteActorParser;
 import com.example.short_link.federation.application.RemoteFollowing;
 import com.example.short_link.federation.application.RemoteNoteIntake;
 import com.example.short_link.federation.application.RemoteNoteParser;
+import com.example.short_link.federation.application.relay.RelayIntake;
+import com.example.short_link.federation.application.relay.RelaySubscriptions;
 import com.example.short_link.federation.domain.FederationActorEntity;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationActorRepository;
@@ -59,6 +61,8 @@ public class InboxService {
   private final FederationUrls urls;
   private final JsonMapper json;
   private final MeterRegistry meters;
+  private final RelaySubscriptions relays;
+  private final RelayIntake relayIntake;
 
   private sealed interface Intent {
     record Follow(LocalActor target) implements Intent {}
@@ -84,6 +88,8 @@ public class InboxService {
     record Retract(String uri) implements Intent {}
 
     record Bury(String uri) implements Intent {}
+
+    record Relayed(String objectUri) implements Intent {}
   }
 
   public InboxOutcome receive(InboxMessage request, String inboxPublicId) {
@@ -136,12 +142,17 @@ public class InboxService {
       }
       case "Like", "Announce" -> {
         Kind kind = reactionKind(type);
-        Optional<NoteSnapshot> note =
-            urls.noteIdOf(idOf(activity.get("object"))).flatMap(noteId -> federated(noteId, owner));
-        if (note.isEmpty() || (kind == Kind.ANNOUNCE && !shareable(note.get()))) {
-          return InboxOutcome.ignored("unknown-target");
+        if (kind == Kind.ANNOUNCE && relays.isAccepted(actorUri)) {
+          intent = new Intent.Relayed(idOf(activity.get("object")));
+        } else {
+          Optional<NoteSnapshot> note =
+              urls.noteIdOf(idOf(activity.get("object")))
+                  .flatMap(noteId -> federated(noteId, owner));
+          if (note.isEmpty() || (kind == Kind.ANNOUNCE && !shareable(note.get()))) {
+            return InboxOutcome.ignored("unknown-target");
+          }
+          intent = new Intent.React(note.get(), kind);
         }
-        intent = new Intent.React(note.get(), kind);
       }
       case "Undo" -> {
         JsonNode object = activity.get("object");
@@ -221,8 +232,9 @@ public class InboxService {
         boolean ours =
             embedded
                 ? "Follow".equals(text(object.get("type")))
-                    && urls.publicIdOf(localActor).isPresent()
-                : urls.isFollow(followId);
+                    && (urls.publicIdOf(localActor).isPresent()
+                        || urls.instance().equals(localActor))
+                : urls.isFollow(followId) || urls.isRelayFollow(followId);
         if (!ours) {
           return InboxOutcome.ignored("unsupported");
         }
@@ -315,7 +327,12 @@ public class InboxService {
             : InboxOutcome.ignored("vote-rejected");
       }
       case Intent.Answer answer -> {
-        if (!following.answered(actor, answer.followId(), answer.localActor(), answer.accepted())) {
+        boolean known =
+            urls.isRelayFollow(answer.followId()) || urls.instance().equals(answer.localActor())
+                ? relays.answered(actor, answer.followId(), answer.accepted())
+                : following.answered(
+                    actor, answer.followId(), answer.localActor(), answer.accepted());
+        if (!known) {
           yield InboxOutcome.ignored("unknown-follow");
         }
         yield InboxOutcome.accepted(answer.accepted() ? "accept" : "reject");
@@ -361,6 +378,12 @@ public class InboxService {
         }
         earlyDeletes.remember(actor.getId(), buried.uri());
         yield InboxOutcome.accepted("delete-early");
+      }
+      case Intent.Relayed relayed -> {
+        String outcome = relayIntake.offer(relayed.objectUri());
+        yield "queued".equals(outcome)
+            ? InboxOutcome.accepted("relay")
+            : InboxOutcome.ignored("relay-" + outcome);
       }
       case Intent.Forget gone -> {
         followers.forget(actor);

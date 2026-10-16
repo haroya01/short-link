@@ -12,7 +12,11 @@ public enum FederationErrorCode {
   REMOTE_DOMAIN_BLOCKED(HttpStatus.CONFLICT, "you blocked %s"),
   REMOTE_ACCOUNT_BLOCKED(HttpStatus.CONFLICT, "unblock account %s before following it"),
   MUTE_DURATION_INVALID(HttpStatus.BAD_REQUEST, "a mute lasts from a minute to a year, or forever"),
-  REMOTE_FOLLOW_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "no follow request from that account");
+  REMOTE_FOLLOW_REQUEST_NOT_FOUND(HttpStatus.NOT_FOUND, "no follow request from that account"),
+  RELAY_DISABLED(HttpStatus.CONFLICT, "relays are off; FEDERATION_RELAY_ENABLED turns them on"),
+  RELAY_INVALID(
+      HttpStatus.BAD_REQUEST, "a relay is the https address of an actor on another server"),
+  RELAY_NOT_FOUND(HttpStatus.NOT_FOUND, "no such relay");
 
   private final HttpStatus status;
   private final String template;

@@ -167,6 +167,23 @@ class SignedFederationHttpTest {
   }
 
   @Test
+  void aGetGivenItsOwnPatienceWaitsNoLonger() {
+    when(fetcher.fetch(any()))
+        .thenReturn(new HttpFetcher.Response(200, Map.of(), "{}".getBytes(StandardCharsets.UTF_8)));
+
+    http("https://kurl.me")
+        .get(URI.create("https://93.184.216.34/users/a"), SIGNER, java.time.Duration.ofSeconds(3));
+    http("https://kurl.me").get(URI.create("https://93.184.216.34/users/a"), SIGNER);
+
+    ArgumentCaptor<HttpFetcher.Request> sent = ArgumentCaptor.forClass(HttpFetcher.Request.class);
+    verify(fetcher, times(2)).fetch(sent.capture());
+    assertThat(sent.getAllValues().get(0).readTimeout()).hasSeconds(3);
+    assertThat(sent.getAllValues().get(0).connectTimeout()).hasSeconds(3);
+    assertThat(sent.getAllValues().get(1).readTimeout()).hasSeconds(10);
+    assertThat(sent.getAllValues().get(1).connectTimeout()).hasSeconds(5);
+  }
+
+  @Test
   void refusesPlainHttpPrivateAddressesAndReportsFailures() {
     assertThat(http("https://kurl.me").get(URI.create("http://93.184.216.34/a"), SIGNER))
         .isInstanceOf(FederationHttp.Result.Refused.class);

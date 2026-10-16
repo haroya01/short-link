@@ -2,6 +2,7 @@ package com.example.short_link.federation.infrastructure.persistence;
 
 import com.example.short_link.common.federation.ServerBlockSql;
 import com.example.short_link.federation.domain.FederationDomainBlockEntity;
+import com.example.short_link.federation.domain.ServerBlockSeverity;
 import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
 import jakarta.persistence.EntityManager;
 import java.util.List;
@@ -41,6 +42,23 @@ class FederationDomainBlockRepositoryAdapter implements FederationDomainBlockRep
         .setParameter("host", host.toLowerCase(Locale.ROOT))
         .getResultList()
         .isEmpty();
+  }
+
+  @Override
+  public Optional<ServerBlockSeverity> severityFor(String host) {
+    if (host == null || host.isBlank()) {
+      return Optional.empty();
+    }
+    List<?> rows =
+        em.createNativeQuery(
+                "SELECT b.severity FROM federation_domain_block b WHERE "
+                    + ServerBlockSql.covers("b", ":host")
+                    + " ORDER BY b.severity DESC LIMIT 1")
+            .setParameter("host", host.toLowerCase(Locale.ROOT))
+            .getResultList();
+    return rows.stream()
+        .findFirst()
+        .map(severity -> ServerBlockSeverity.valueOf(severity.toString()));
   }
 
   @Override
