@@ -84,8 +84,6 @@ services:
       POW_ENFORCE: ${POW_ENFORCE:-true}
       POW_DIFFICULTY: ${POW_DIFFICULTY:-3}
       LINK_QUOTA_AUTHENTICATED: ${LINK_QUOTA_AUTHENTICATED:-200}
-      FEDERATION_TRENDS_ENABLED: ${FEDERATION_TRENDS_ENABLED:-false}
-      FEDERATION_TRENDS_HOSTS: ${FEDERATION_TRENDS_HOSTS:-mastodon.social,mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}
       MAXMIND_LICENSE_KEY: ${MAXMIND_LICENSE_KEY:-}
       SAFE_BROWSING_ENABLED: ${SAFE_BROWSING_ENABLED:-true}
       SAFE_BROWSING_API_KEY: ${SAFE_BROWSING_API_KEY:-}
@@ -104,7 +102,7 @@ services:
       APNS_KEY_ID: ${APNS_KEY_ID:-}
       APNS_PRIVATE_KEY: ${APNS_PRIVATE_KEY:-}
       APNS_PRODUCTION: ${APNS_PRODUCTION:-false}
-      # 연합 릴레이·디렉터리 — 기본 꺼짐. application.yml 의 같은 이름·기본값과 맞춘다
+      # 연합 릴레이·디렉터리·인기 글 — 기본 꺼짐. application.yml 의 같은 이름·기본값과 맞춘다
       # (FederationDeployEnvTest 가 확인한다).
       FEDERATION_RELAY_ENABLED: ${FEDERATION_RELAY_ENABLED:-false}
       FEDERATION_RELAY_PER_MINUTE: ${FEDERATION_RELAY_PER_MINUTE:-30}
@@ -113,6 +111,8 @@ services:
       FEDERATION_DIRECTORY_ENABLED: ${FEDERATION_DIRECTORY_ENABLED:-false}
       FEDERATION_DIRECTORY_NEW_PER_RUN: ${FEDERATION_DIRECTORY_NEW_PER_RUN:-100}
       FEDERATION_DIRECTORY_CONSENT: ${FEDERATION_DIRECTORY_CONSENT:-P3D}
+      FEDERATION_TRENDS_ENABLED: ${FEDERATION_TRENDS_ENABLED:-false}
+      FEDERATION_TRENDS_HOSTS: ${FEDERATION_TRENDS_HOSTS:-mastodon.social,mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}
     networks: [internal]
 
   nginx:
