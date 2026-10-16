@@ -11,6 +11,7 @@ import com.example.short_link.federation.application.ActorKeys;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.FederationUrls;
+import com.example.short_link.federation.application.directory.DirectorySync;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import com.example.short_link.testsupport.FederationFixtures;
@@ -19,6 +20,7 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +36,7 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
   @Autowired private FederationUrls urls;
   @Autowired private FederationActorService localActors;
   @Autowired private SigningKeys signingKeys;
+  @Autowired private DirectorySync directorySync;
 
   private String tag;
 
@@ -367,6 +370,116 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
                 200));
     assertThat(again.path("items")).isEqualTo(filled.path("items"));
     verify(http, times(3)).get(any(), any());
+  }
+
+  @Test
+  void anAdminReadsAnInstanceDirectoryAndItsPeopleAreFoundByName() throws Exception {
+    String admin = jwt.createAccessToken(createUser().getId(), "ADMIN");
+    String dir = host("dir");
+    seed(tag + "known", dir);
+    String fresh = "https://" + dir + "/users/" + tag + "new";
+    when(http.getJson(
+            eq(
+                URI.create(
+                    "https://"
+                        + dir
+                        + "/api/v1/directory?local=true&order=active&limit=80&offset=0")),
+            any(),
+            any()))
+        .thenReturn(
+            ok(
+                """
+                [{"username":"%1$sknown","discoverable":true,"uri":"https://%2$s/users/%1$sknown"},
+                 {"username":"%1$snew","discoverable":true,"bot":true,"uri":"%3$s"},
+                 {"username":"%1$sgone","discoverable":false,"uri":"https://%2$s/users/%1$sgone"}]"""
+                    .formatted(tag, dir, fresh)));
+    when(http.get(eq(URI.create(fresh)), any()))
+        .thenReturn(
+            ok(
+                """
+                {"@context":["https://www.w3.org/ns/activitystreams"],
+                 "id":"%1$s","type":"Service","preferredUsername":"%2$snew","name":"New",
+                 "inbox":"%1$s/inbox","discoverable":true,
+                 "publicKey":{"id":"%1$s#main-key","owner":"%1$s","publicKeyPem":%3$s}}"""
+                    .formatted(fresh, tag, json.writeValueAsString(KEYS.publicKey()))));
+    try {
+      var added =
+          body(
+              call(
+                  "admin-directory-put",
+                  "PUT",
+                  "/api/v1/admin/federation/directories/" + dir,
+                  Map.of("enabled", true, "cap", 80),
+                  admin,
+                  200));
+      assertThat(added.path("host").asString()).isEqualTo(dir);
+      assertThat(added.path("cap").asInt()).isEqualTo(80);
+      assertThat(
+              accts(
+                  body(
+                      call(
+                          "federation-account-search-before-directory",
+                          "GET",
+                          "/api/v1/federation/accounts/search?q=" + tag,
+                          null,
+                          null,
+                          200))))
+          .isEmpty();
+
+      captureBackgroundWork(
+          "federation-directory-sync",
+          () -> assertThat(directorySync.sync(dir).added()).isEqualTo(1));
+
+      var found =
+          body(
+              call(
+                  "federation-account-search-directory",
+                  "GET",
+                  "/api/v1/federation/accounts/search?q=" + tag,
+                  null,
+                  null,
+                  200));
+      assertThat(accts(found)).containsExactly(tag + "known@" + dir, tag + "new@" + dir);
+
+      var status =
+          body(
+              call(
+                  "admin-directories",
+                  "GET",
+                  "/api/v1/admin/federation/directories",
+                  null,
+                  admin,
+                  200));
+      assertThat(status.path("enabled").asBoolean()).isTrue();
+      assertThat(status.path("sources").get(0).path("lastOutcome").asString())
+          .isEqualTo("listed 3, known 1, added 1, later 0, skipped 1");
+      call(
+          "admin-directories-member",
+          "GET",
+          "/api/v1/admin/federation/directories",
+          null,
+          token,
+          403);
+      var run =
+          body(
+              call(
+                  "admin-directory-run",
+                  "POST",
+                  "/api/v1/admin/federation/directories/run",
+                  null,
+                  admin,
+                  202));
+      assertThat(run.path("started").asBoolean()).isFalse();
+      call(
+          "admin-directory-delete",
+          "DELETE",
+          "/api/v1/admin/federation/directories/" + dir,
+          null,
+          admin,
+          204);
+    } finally {
+      jdbc.update("DELETE FROM federation_directory_source WHERE host = ?", dir);
+    }
   }
 
   @Test

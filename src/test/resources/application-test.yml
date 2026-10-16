@@ -41,6 +41,10 @@ short-link:
   federation:
     relay:
       enabled: true
+    directory:
+      enabled: true
+      page-gap: PT0S
+      fetch-gap: PT0S
 
 query-audit:
   enabled: true

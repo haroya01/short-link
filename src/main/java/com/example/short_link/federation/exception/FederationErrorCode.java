@@ -20,7 +20,11 @@ public enum FederationErrorCode {
   RELAY_DISABLED(HttpStatus.CONFLICT, "relays are off; FEDERATION_RELAY_ENABLED turns them on"),
   RELAY_INVALID(
       HttpStatus.BAD_REQUEST, "a relay is the https address of an actor on another server"),
-  RELAY_NOT_FOUND(HttpStatus.NOT_FOUND, "no such relay");
+  RELAY_NOT_FOUND(HttpStatus.NOT_FOUND, "no such relay"),
+  DIRECTORY_DISABLED(
+      HttpStatus.CONFLICT, "directories are off; FEDERATION_DIRECTORY_ENABLED turns them on"),
+  DIRECTORY_SOURCE_BLOCKED(HttpStatus.CONFLICT, "%s is blocked here"),
+  DIRECTORY_SOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "no such directory: %s");
 
   private final HttpStatus status;
   private final String template;

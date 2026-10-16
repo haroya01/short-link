@@ -79,6 +79,11 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
   }
 
   @Override
+  public List<RemoteActorEntity> findAllByActorUri(Collection<String> actorUris) {
+    return actorUris.isEmpty() ? List.of() : jpa.findAllByActorUriIn(actorUris);
+  }
+
+  @Override
   public Optional<RemoteActorEntity> findByKeyId(String keyId) {
     return jpa.findFirstByKeyId(keyId);
   }
@@ -164,6 +169,30 @@ class RemoteActorRepositoryAdapter implements RemoteActorRepository {
             .setParameter("before", lookedAtBefore)
             .executeUpdate()
         == 1;
+  }
+
+  @Override
+  @Transactional
+  public int markListed(Collection<Long> ids, Instant at) {
+    if (ids.isEmpty()) {
+      return 0;
+    }
+    return em.createNativeQuery(
+            "UPDATE federation_remote_actor SET directory_seen_at = :at, discoverable = TRUE"
+                + " WHERE id IN (:ids)")
+        .setParameter("at", at)
+        .setParameter("ids", ids)
+        .executeUpdate();
+  }
+
+  @Override
+  @Transactional
+  public int forgetUnlisted(Instant cutoff) {
+    return em.createNativeQuery(
+            "UPDATE federation_remote_actor SET discoverable = FALSE WHERE discoverable"
+                + " AND directory_seen_at < :cutoff AND fetched_at < :cutoff")
+        .setParameter("cutoff", cutoff)
+        .executeUpdate();
   }
 
   private static String escape(String text) {

@@ -78,6 +78,7 @@ dependencies {
 tasks.named('test') {
 	useJUnitPlatform()
 	maxHeapSize = '2g'
+	inputs.files('deploy/docker-compose.yml', 'deploy/.env.example')
 	finalizedBy jacocoTestReport
 	outputs.dir 'build/reports/query-audit/http-contracts'
 	doFirst { delete 'build/reports/query-audit/http-contracts' }
