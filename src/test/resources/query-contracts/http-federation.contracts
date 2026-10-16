@@ -379,3 +379,20 @@
 # again. An announce from it after that is not a relay's and costs nothing.
 @junit | admin-relay-unsubscribe | 3 | 1 | 0 | 1 | 5
 @junit | federation-inbox-relay-unsubscribed | 0 | 0 | 0 | 0 | 0
+# Instance directories an admin adds so their people can be found by name. Adding one: is its server
+# blocked, is it there already, then its row (looked up again by its own key before the insert).
+@junit | admin-directory-put | 3 | 1 | 0 | 0 | 4
+# A directory account no one has listed is not found by name; after a run it is.
+@junit | federation-account-search-before-directory | 1 | 0 | 0 | 0 | 1
+# One instance's run, three accounts on one page: its row, its server's block, the instance key for
+# the page; the page's accounts already stored, in one statement; the new one fetched from its own
+# server (stored or not, suspended or not, the key again, then the lookup and insert of storing); the
+# listed accounts marked seen and findable in one update; then the row's outcome (read, update). The
+# one listed without consent costs nothing.
+@junit | federation-directory-sync | 9 | 1 | 2 | 0 | 12
+@junit | federation-account-search-directory | 1 | 0 | 0 | 0 | 1
+@junit | admin-directories | 1 | 0 | 0 | 0 | 1
+@junit | admin-directories-member | 0 | 0 | 0 | 0 | 0
+# Asking for a run hands it to the directory thread; where scheduling is off there is none.
+@junit | admin-directory-run | 0 | 0 | 0 | 0 | 0
+@junit | admin-directory-delete | 1 | 0 | 0 | 1 | 2

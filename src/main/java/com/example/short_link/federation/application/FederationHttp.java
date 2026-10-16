@@ -14,6 +14,9 @@ public interface FederationHttp {
   // The same GET, giving up once the server has taken the given time to answer.
   Result get(URI uri, Signer signer, Duration patience);
 
+  // A server's own JSON API (not ActivityPub), with the same patience.
+  Result getJson(URI uri, Signer signer, Duration patience);
+
   // A JRD document. Redirects are followed one signed hop at a time, only to https hosts the
   // predicate allows; every hop, the first included, is asked of it.
   Result webFinger(URI uri, Signer signer, Predicate<String> allowedHost);

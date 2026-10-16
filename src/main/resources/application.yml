@@ -183,6 +183,10 @@ short-link:
     delivery:
       enabled: ${FEDERATION_DELIVERY_ENABLED:true}
       batch-size: ${FEDERATION_DELIVERY_BATCH_SIZE:20}
+    directory:
+      enabled: ${FEDERATION_DIRECTORY_ENABLED:false}
+      new-per-run: ${FEDERATION_DIRECTORY_NEW_PER_RUN:100}
+      consent: ${FEDERATION_DIRECTORY_CONSENT:P3D}
     relay:
       enabled: ${FEDERATION_RELAY_ENABLED:false}
       per-minute: ${FEDERATION_RELAY_PER_MINUTE:30}

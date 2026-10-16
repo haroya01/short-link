@@ -10,6 +10,7 @@ import com.example.short_link.federation.domain.repository.RemoteActorRepository
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
 import jakarta.persistence.EntityManager;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
@@ -389,5 +390,44 @@ class RemoteAccountSearchIntegrationTest {
           .setParameter(1, blocked)
           .executeUpdate();
     }
+  }
+
+  @Test
+  void aListedAccountIsFoundByNameUntilThreeDaysPassWithNoWordOfConsent() {
+    Long listed = actor(tag + "dir", domain("dir"), null);
+    Long confirmed = actor(tag + "doc", domain("doc"), null);
+    Long known = findable(tag + "own", domain("own"), null);
+    assertThat(ids(null, tag + "dir")).isEmpty();
+
+    assertThat(actors.markListed(List.of(listed, confirmed), Instant.now())).isEqualTo(2);
+    em.flush();
+    em.clear();
+    assertThat(ids(null, tag)).containsExactlyInAnyOrder(listed, confirmed, known);
+    assertThat(actors.findById(listed).orElseThrow().getDirectorySeenAt()).isNotNull();
+    assertThat(
+            actors
+                .findAllByActorUri(
+                    List.of(
+                        "https://" + domain("dir") + "/users/" + tag + "dir",
+                        "https://" + domain("doc") + "/users/" + tag + "doc"))
+                .stream()
+                .map(RemoteActorEntity::getId))
+        .containsExactlyInAnyOrder(listed, confirmed);
+
+    exec(
+        "UPDATE federation_remote_actor SET directory_seen_at = NOW(6) - INTERVAL 4 DAY,"
+            + " fetched_at = NOW(6) - INTERVAL 4 DAY WHERE id IN (?, ?)",
+        listed,
+        known);
+    exec(
+        "UPDATE federation_remote_actor SET directory_seen_at = NOW(6) - INTERVAL 4 DAY"
+            + " WHERE id = ?",
+        confirmed);
+    exec("UPDATE federation_remote_actor SET directory_seen_at = NULL WHERE id = ?", known);
+    actors.forgetUnlisted(Instant.now().minus(Duration.ofDays(3)));
+    em.clear();
+
+    assertThat(ids(null, tag)).containsExactlyInAnyOrder(confirmed, known);
+    assertThat(ids(null, tag + "dir@" + domain("dir"))).containsExactly(listed);
   }
 }
