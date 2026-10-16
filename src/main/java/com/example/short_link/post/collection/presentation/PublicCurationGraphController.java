@@ -7,6 +7,7 @@ import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import java.util.List;
 import java.util.Locale;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,8 +33,10 @@ public class PublicCurationGraphController {
 
   @GetMapping("/profiles/{username}/kindred")
   public List<KindredCuratorView> kindred(
-      @PathVariable String username, @RequestParam(defaultValue = "12") int limit) {
-    return graph.kindredCurators(username, limit);
+      @AuthenticationPrincipal Long viewerId,
+      @PathVariable String username,
+      @RequestParam(defaultValue = "12") int limit) {
+    return graph.kindredCurators(username, viewerId, limit);
   }
 
   private static ConnectionBlockType parseType(String raw) {

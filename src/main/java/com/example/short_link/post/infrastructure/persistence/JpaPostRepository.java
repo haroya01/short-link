@@ -332,7 +332,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       nativeQuery = true,
       value =
           "SELECT p.user_id, COUNT(*), COALESCE(SUM(p.view_count), 0) FROM posts p "
-              + "WHERE p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+              + "WHERE p.status = 'PUBLISHED' AND p.user_id <> :viewer"
+              + " AND p.body_text_length >= :minBody"
               + HeardSql.POST_AUTHOR
               + " GROUP BY p.user_id "
               + "ORDER BY COUNT(*) DESC, COALESCE(SUM(p.view_count), 0) DESC")

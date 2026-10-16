@@ -1,5 +1,6 @@
 package com.example.short_link.post.collection.presentation;
 
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -12,6 +13,7 @@ import com.example.short_link.post.collection.application.read.RelatedBlockView;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.presentation.PostExceptionHandler;
 import com.example.short_link.testsupport.KurlWebMvcTest;
+import com.example.short_link.testsupport.WebMvcSecurityTestConfig;
 import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,7 +61,7 @@ class PublicCurationGraphControllerTest {
 
   @Test
   void kindredReturnsOverlappingCurators() throws Exception {
-    when(graph.kindredCurators("honggildong", 12))
+    when(graph.kindredCurators("honggildong", null, 12))
         .thenReturn(
             List.of(
                 new KindredCuratorView(new PublicAuthorView(2L, "minji", "취향이 겹치는 사람", null), 4)));
@@ -68,6 +70,18 @@ class PublicCurationGraphControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$[0].curator.username").value("minji"))
         .andExpect(jsonPath("$[0].sharedItems").value(4));
+  }
+
+  @Test
+  void kindredPassesTheSignedInViewer() throws Exception {
+    when(graph.kindredCurators("honggildong", 7L, 12)).thenReturn(List.of());
+
+    mvc.perform(
+            get("/api/v1/public/profiles/honggildong/kindred")
+                .header(WebMvcSecurityTestConfig.USER_ID_HEADER, 7L))
+        .andExpect(status().isOk());
+
+    verify(graph).kindredCurators("honggildong", 7L, 12);
   }
 
   @Test

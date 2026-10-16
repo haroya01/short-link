@@ -46,5 +46,5 @@ public interface CollectionConnectionRepository {
 
   List<CooccurrenceRow> findCooccurring(ConnectionBlockType blockType, Long refId, int limit);
 
-  List<CuratorOverlapRow> findOverlappingCurators(Long ownerId, int limit);
+  List<CuratorOverlapRow> findOverlappingCurators(Long ownerId, Long viewerId, int limit);
 }
