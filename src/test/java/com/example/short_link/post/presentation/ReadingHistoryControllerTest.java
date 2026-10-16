@@ -1,5 +1,7 @@
 package com.example.short_link.post.presentation;
 
+import static com.example.short_link.post.application.access.PostReaderMatchers.viewer;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -37,7 +39,7 @@ class ReadingHistoryControllerTest {
             post("/api/v1/posts/5/read").header(WebMvcSecurityTestConfig.USER_ID_HEADER, USER_ID))
         .andExpect(status().isNoContent());
 
-    verify(recordPostRead).record(USER_ID, 5L);
+    verify(recordPostRead).record(viewer(USER_ID), eq(5L));
   }
 
   @Test

@@ -2,6 +2,7 @@ package com.example.short_link.post.application.write;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.repository.PostRepository;
 import com.example.short_link.support.DiscoverableBodies;
@@ -133,7 +134,9 @@ class PostReadMilestoneConcurrencyIntegrationTest {
         tasks.add(
             () ->
                 views.execute(
-                    new RecordPostViewCommand(username, "together"), visitor(visitor, BROWSER)));
+                    new RecordPostViewCommand(username, "together"),
+                    visitor(visitor, BROWSER),
+                    PostReader.of(null)));
       }
     }
 
@@ -159,14 +162,19 @@ class PostReadMilestoneConcurrencyIntegrationTest {
   @Test
   void theAuthorABotAndAPrivacyRequestAreNotReaders() throws Exception {
     PostEntity post = written("alone");
-    views.execute(new RecordPostViewCommand(username, "alone", authorId), visitor(50, BROWSER));
+    views.execute(
+        new RecordPostViewCommand(username, "alone", authorId),
+        visitor(50, BROWSER),
+        PostReader.of(authorId));
     views.execute(
         new RecordPostViewCommand(username, "alone"),
-        visitor(51, "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"));
+        visitor(51, "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"),
+        PostReader.of(null));
     views.execute(
         new RecordPostViewCommand(username, "alone"),
         new ViewContext(
-            null, BROWSER, "203.0.113.52", "ko", null, null, null, null, null, null, true, null));
+            null, BROWSER, "203.0.113.52", "ko", null, null, null, null, null, null, true, null),
+        PostReader.of(null));
 
     assertThat(
             jdbc.queryForObject(

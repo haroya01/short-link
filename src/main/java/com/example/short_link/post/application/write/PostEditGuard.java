@@ -13,6 +13,12 @@ public class PostEditGuard {
   private final PostRevisionCapture revisions;
   private final UserModerationGuard moderation;
 
+  public void checkAccessChange(PostEntity post) {
+    if (post.isPublished()) {
+      moderation.requireCanWrite(post.getUserId());
+    }
+  }
+
   public void check(PostEntity post, Long baseVersion, boolean overwrite) {
     if (post.isPublished()) {
       moderation.requireCanWrite(post.getUserId());

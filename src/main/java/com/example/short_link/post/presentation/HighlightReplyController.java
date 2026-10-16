@@ -8,6 +8,7 @@ import com.example.short_link.post.application.write.DeleteHighlightReplyCommand
 import com.example.short_link.post.application.write.DeleteHighlightReplyUseCase;
 import com.example.short_link.post.application.write.LikeHighlightReplyUseCase;
 import com.example.short_link.post.presentation.request.CreateHighlightReplyRequest;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -34,9 +35,11 @@ public class HighlightReplyController {
   public HighlightReplyView create(
       @AuthenticationPrincipal Long userId,
       @PathVariable Long highlightId,
-      @Valid @RequestBody CreateHighlightReplyRequest request) {
+      @Valid @RequestBody CreateHighlightReplyRequest request,
+      HttpServletRequest req) {
     return createReply.execute(
-        new CreateHighlightReplyCommand(userId, highlightId, request.body()));
+        new CreateHighlightReplyCommand(userId, highlightId, request.body()),
+        PostReaderHeaders.from(userId, req));
   }
 
   @DeleteMapping("/highlight-replies/{id}")
@@ -47,8 +50,8 @@ public class HighlightReplyController {
 
   @PostMapping("/highlight-replies/{id}/like")
   public HighlightReplyLikeStatus like(
-      @AuthenticationPrincipal Long userId, @PathVariable Long id) {
-    return likeReply.like(userId, id);
+      @AuthenticationPrincipal Long userId, @PathVariable Long id, HttpServletRequest req) {
+    return likeReply.like(PostReaderHeaders.from(userId, req), id);
   }
 
   @DeleteMapping("/highlight-replies/{id}/like")

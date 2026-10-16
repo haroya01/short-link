@@ -1,0 +1,31 @@
+# Exact JDBC execution counts for real HTTP requests; fixtures and DB assertions are outside capture.
+# Review changes with the actual SQL evidence in build/reports/query-audit/http-contracts/.
+# identityType | identityValue | selectCount | insertCount | updateCount | deleteCount | totalCount
+# Writing the post is the same create, body replace and first publish as interaction-access-*.
+@junit | audience-post-create | 2 | 1 | 0 | 0 | 3
+@junit | audience-body-write | 3 | 2 | 1 | 1 | 7
+@junit | audience-publish | 7 | 2 | 1 | 0 | 10
+# An access-only PATCH: locked post + the author's moderation row + the post update + tags for the
+# response. No body, search text or revision is read or written. The profile cache eviction and the
+# unlisted link reuse the author row already in the persistence context.
+@junit | audience-owner-set-followers | 3 | 0 | 1 | 0 | 4
+@junit | audience-owner-set-password | 3 | 0 | 1 | 0 | 4
+@junit | audience-owner-set-unlisted | 3 | 0 | 1 | 0 | 4
+@junit | audience-owner-block-country | 3 | 0 | 1 | 0 | 4
+# Rotating the key: locked post + the author's name for the link + the post update.
+@junit | audience-owner-rotate-key | 2 | 0 | 1 | 0 | 3
+# A locked FOLLOWERS read: author + post + one follow lookup; no tags or body are read.
+@junit | audience-followers-read-locked | 3 | 0 | 0 | 0 | 3
+# The follower's read adds tags and body to the same three.
+@junit | audience-followers-read-follower | 5 | 0 | 0 | 0 | 5
+# Unlock: author + post; the attempt counter and the grant live in Redis and the HMAC, not MySQL.
+@junit | audience-unlock-fail | 2 | 0 | 0 | 0 | 2
+@junit | audience-unlock-ok | 2 | 0 | 0 | 0 | 2
+# A read with a grant or the unlisted key is the public read: author + post + tags + body. The grant
+# is checked against the post row it already has.
+@junit | audience-password-read-grant | 4 | 0 | 0 | 0 | 4
+@junit | audience-unlisted-read-with-key | 4 | 0 | 0 | 0 | 4
+# Without the key, or locked by country or a server render, the read stops at author + post.
+@junit | audience-unlisted-read-without-key | 2 | 0 | 0 | 0 | 2
+@junit | audience-region-blocked-read | 2 | 0 | 0 | 0 | 2
+@junit | audience-region-server-render | 2 | 0 | 0 | 0 | 2

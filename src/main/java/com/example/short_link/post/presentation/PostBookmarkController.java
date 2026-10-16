@@ -4,6 +4,7 @@ import com.example.short_link.post.application.read.BookmarkView;
 import com.example.short_link.post.application.read.PostBookmarkQueryService;
 import com.example.short_link.post.application.read.PostBookmarkStatus;
 import com.example.short_link.post.application.write.BookmarkPostUseCase;
+import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,8 +31,8 @@ public class PostBookmarkController {
 
   @PutMapping("/posts/{postId}/bookmark")
   public PostBookmarkStatus bookmark(
-      @AuthenticationPrincipal Long userId, @PathVariable Long postId) {
-    return bookmarkPost.bookmark(userId, postId);
+      @AuthenticationPrincipal Long userId, @PathVariable Long postId, HttpServletRequest req) {
+    return bookmarkPost.bookmark(PostReaderHeaders.from(userId, req), postId);
   }
 
   @DeleteMapping("/posts/{postId}/bookmark")

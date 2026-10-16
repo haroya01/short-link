@@ -52,7 +52,7 @@ abstract class ContentHttpJourneySupport extends DockerHttpTest {
     outsider = person("journey-outsider");
   }
 
-  private Actor person(String username) {
+  protected Actor person(String username) {
     long id =
         new TransactionTemplate(transactionManager)
             .execute(
@@ -75,6 +75,19 @@ abstract class ContentHttpJourneySupport extends DockerHttpTest {
       String id, String method, String path, Actor actor, Object body, int status)
       throws Exception {
     return rawStep(id, method, path, actor, body, status, Map.of());
+  }
+
+  protected JsonNode step(
+      String id,
+      String method,
+      String path,
+      Actor actor,
+      Object body,
+      int status,
+      Map<String, String> headers)
+      throws Exception {
+    String response = rawStep(id, method, path, actor, body, status, headers);
+    return response.isBlank() ? json.nullNode() : json.readTree(response);
   }
 
   protected String rawStep(

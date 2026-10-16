@@ -1,5 +1,6 @@
 package com.example.short_link.post.presentation;
 
+import static com.example.short_link.post.application.access.PostReaderMatchers.viewer;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -44,7 +45,7 @@ class PostBookmarkControllerTest {
 
   @Test
   void bookmarkReturnsTrue() throws Exception {
-    when(bookmarkPost.bookmark(eq(USER_ID), eq(42L))).thenReturn(new PostBookmarkStatus(true));
+    when(bookmarkPost.bookmark(viewer(USER_ID), eq(42L))).thenReturn(new PostBookmarkStatus(true));
 
     mvc.perform(
             put("/api/v1/posts/42/bookmark")

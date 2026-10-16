@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.event.NotesEmbeddedEvent;
+import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostBlockType;
 import com.example.short_link.post.domain.PostEntity;
@@ -179,5 +180,16 @@ class PostNoteQuotesTest {
 
     assertThat(odd.noteIds(List.of(embed("https://blog.kurl.me/@alice/notes/11"))))
         .containsExactly(11L);
+  }
+
+  @Test
+  void anUnlistedPostTellsNoNoteAuthorThatItQuotesThem() {
+    PostEntity post = post(true);
+    post.changeAudience(PostAudience.UNLISTED, "the-key");
+
+    quotes.indexFirstPublish(post, List.of(embed("https://blog.kurl.me/@alice/notes/11")));
+
+    verify(repository).add(42L, Set.of(11L));
+    verifyNoInteractions(events);
   }
 }

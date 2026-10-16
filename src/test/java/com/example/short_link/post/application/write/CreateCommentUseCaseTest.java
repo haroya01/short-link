@@ -15,6 +15,8 @@ import com.example.short_link.common.notification.BlogNotificationKind;
 import com.example.short_link.common.notification.BlogNotificationMuteReader;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.access.PostAccessFixtures;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.CommentMentions;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.domain.CommentEntity;
@@ -59,7 +61,8 @@ class CreateCommentUseCaseTest {
                 mock(PostHighlightRepository.class),
                 mock(PostHighlightReplyRepository.class),
                 moderationGuard,
-                blockChecker),
+                blockChecker,
+                PostAccessFixtures.policy()),
             commentRepository,
             userRepository,
             new CommentNotifications(userRepository, postRepository, events, muteReader),
@@ -107,7 +110,8 @@ class CreateCommentUseCaseTest {
     commentSavesAsId(88L);
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
 
-    CommentView c = useCase.execute(new CreateCommentCommand(9L, 42L, null, "  hello  "));
+    CommentView c =
+        useCase.execute(new CreateCommentCommand(9L, 42L, null, "  hello  "), PostReader.of(9L));
 
     assertThat(c.body()).isEqualTo("hello");
     assertThat(c.parentId()).isNull();
@@ -126,7 +130,8 @@ class CreateCommentUseCaseTest {
   void rejectsWhenPostNotPublished() {
     when(postRepository.findById(42L)).thenReturn(Optional.of(new PostEntity(7L, "s", "T", "ko")));
 
-    assertThatThrownBy(() -> useCase.execute(new CreateCommentCommand(9L, 42L, null, "hi")))
+    assertThatThrownBy(
+            () -> useCase.execute(new CreateCommentCommand(9L, 42L, null, "hi"), PostReader.of(9L)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.POST_NOT_FOUND);
@@ -137,7 +142,8 @@ class CreateCommentUseCaseTest {
     when(postRepository.findById(42L)).thenReturn(Optional.of(publishedPost()));
     when(blockChecker.isBlocked(7L, 9L)).thenReturn(true);
 
-    assertThatThrownBy(() -> useCase.execute(new CreateCommentCommand(9L, 42L, null, "hi")))
+    assertThatThrownBy(
+            () -> useCase.execute(new CreateCommentCommand(9L, 42L, null, "hi"), PostReader.of(9L)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COMMENT_BLOCKED);
@@ -153,7 +159,7 @@ class CreateCommentUseCaseTest {
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"));
+    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"), PostReader.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
@@ -188,7 +194,7 @@ class CreateCommentUseCaseTest {
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"));
+    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"), PostReader.of(9L));
 
     // Owner would get both COMMENT and REPLY — collapse to the single, more specific REPLY.
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
@@ -205,7 +211,7 @@ class CreateCommentUseCaseTest {
     when(commentRepository.save(any(CommentEntity.class))).thenAnswer(inv -> inv.getArgument(0));
     when(userRepository.findById(9L)).thenReturn(Optional.of(commenter()));
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"));
+    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "a reply"), PostReader.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(1)).publishEvent(evt.capture());
@@ -223,7 +229,8 @@ class CreateCommentUseCaseTest {
         .thenReturn(List.of(userWithId(5L, "bob")));
 
     CommentView created =
-        useCase.execute(new CreateCommentCommand(9L, 42L, null, "hey @bob nice post"));
+        useCase.execute(
+            new CreateCommentCommand(9L, 42L, null, "hey @bob nice post"), PostReader.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
@@ -248,7 +255,7 @@ class CreateCommentUseCaseTest {
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
     when(userRepository.findByUsername("olivia")).thenReturn(Optional.of(userWithId(7L, "olivia")));
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"));
+    useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"), PostReader.of(9L));
 
     // Owner would get COMMENT and a MENTION — collapse to the single COMMENT notice.
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
@@ -266,7 +273,7 @@ class CreateCommentUseCaseTest {
     when(userRepository.findByUsername("olivia")).thenReturn(Optional.of(userWithId(7L, "olivia")));
     when(muteReader.isMuted(7L, BlogNotificationKind.COMMENT)).thenReturn(true);
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"));
+    useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"), PostReader.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(evt.capture());
@@ -290,7 +297,7 @@ class CreateCommentUseCaseTest {
     when(userRepository.findByUsername("olivia")).thenReturn(Optional.of(userWithId(7L, "olivia")));
     when(muteReader.isMuted(7L, BlogNotificationKind.COMMENT)).thenReturn(false);
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"));
+    useCase.execute(new CreateCommentCommand(9L, 42L, null, "thanks @olivia"), PostReader.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(1)).publishEvent(evt.capture());
@@ -305,7 +312,7 @@ class CreateCommentUseCaseTest {
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
     when(userRepository.findByUsername("carol")).thenReturn(Optional.of(userWithId(9L, "carol")));
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, null, "it's me @carol"));
+    useCase.execute(new CreateCommentCommand(9L, 42L, null, "it's me @carol"), PostReader.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(1)).publishEvent(evt.capture());
@@ -320,7 +327,8 @@ class CreateCommentUseCaseTest {
     when(userRepository.findById(7L)).thenReturn(Optional.of(owner()));
     when(userRepository.findByUsername("ghost")).thenReturn(Optional.empty());
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, null, "@ghost are you there"));
+    useCase.execute(
+        new CreateCommentCommand(9L, 42L, null, "@ghost are you there"), PostReader.of(9L));
 
     ArgumentCaptor<Object> evt = ArgumentCaptor.forClass(Object.class);
     verify(events, times(1)).publishEvent(evt.capture());
@@ -333,7 +341,10 @@ class CreateCommentUseCaseTest {
     CommentEntity parentReply = new CommentEntity(42L, 1L, 5L, "i am a reply");
     when(commentRepository.findById(99L)).thenReturn(Optional.of(parentReply));
 
-    assertThatThrownBy(() -> useCase.execute(new CreateCommentCommand(9L, 42L, 99L, "nested")))
+    assertThatThrownBy(
+            () ->
+                useCase.execute(
+                    new CreateCommentCommand(9L, 42L, 99L, "nested"), PostReader.of(9L)))
         .isInstanceOf(PostException.class)
         .extracting(e -> ((PostException) e).errorCode())
         .isEqualTo(PostErrorCode.COMMENT_PARENT_INVALID);
@@ -346,7 +357,9 @@ class CreateCommentUseCaseTest {
     removed.softDelete();
     when(commentRepository.findById(99L)).thenReturn(Optional.of(removed));
 
-    assertThatThrownBy(() -> useCase.execute(new CreateCommentCommand(9L, 42L, 99L, "reply")))
+    assertThatThrownBy(
+            () ->
+                useCase.execute(new CreateCommentCommand(9L, 42L, 99L, "reply"), PostReader.of(9L)))
         .isInstanceOf(PostException.class)
         .extracting(error -> ((PostException) error).errorCode())
         .isEqualTo(PostErrorCode.COMMENT_PARENT_INVALID);
@@ -365,7 +378,7 @@ class CreateCommentUseCaseTest {
     when(userRepository.findByUsername("olivia")).thenReturn(Optional.of(userWithId(7L, "olivia")));
     when(muteReader.isMuted(7L, BlogNotificationKind.REPLY)).thenReturn(true);
 
-    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "thanks @olivia"));
+    useCase.execute(new CreateCommentCommand(9L, 42L, 50L, "thanks @olivia"), PostReader.of(9L));
 
     ArgumentCaptor<Object> published = ArgumentCaptor.forClass(Object.class);
     verify(events, times(2)).publishEvent(published.capture());

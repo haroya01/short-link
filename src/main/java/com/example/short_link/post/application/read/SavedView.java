@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.read;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.Instant;
 import java.util.List;
 
@@ -16,7 +17,10 @@ public record SavedView(
     Instant publishedAt,
     long viewCount,
     long likeCount,
-    Long folderId) {
+    Long folderId,
+    String audience,
+    @JsonInclude(JsonInclude.Include.NON_NULL) Boolean regionRestricted,
+    @JsonInclude(JsonInclude.Include.NON_NULL) PostLockView locked) {
 
   public static SavedView of(PublicFeedItem item, Long folderId) {
     return new SavedView(
@@ -32,6 +36,9 @@ public record SavedView(
         item.publishedAt(),
         item.viewCount(),
         item.likeCount(),
-        folderId);
+        folderId,
+        item.audience(),
+        item.regionRestricted(),
+        item.locked());
   }
 }

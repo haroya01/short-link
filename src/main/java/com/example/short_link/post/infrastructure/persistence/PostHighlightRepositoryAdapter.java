@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.DiscoveryQuality;
 import com.example.short_link.post.domain.PostHighlightEntity;
@@ -80,7 +81,8 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
     }
     return em.createNativeQuery(
             ON_POST
-                + "h.user_id IN (:userIds) AND p.status = 'PUBLISHED'"
+                + "h.user_id IN (:userIds) AND "
+                + PostAccessSql.OPEN
                 + HEARD_WRITERS
                 + " ORDER BY h.created_at DESC",
             PostHighlightEntity.class)
@@ -97,7 +99,8 @@ class PostHighlightRepositoryAdapter implements PostHighlightRepository {
   public List<PostHighlightEntity> findRecentOnPublishedPosts(Long viewerId, int page, int size) {
     return em.createNativeQuery(
             ON_POST
-                + "p.status = 'PUBLISHED' AND p.body_text_length >= :minBody"
+                + PostAccessSql.OPEN
+                + " AND p.body_text_length >= :minBody"
                 + HEARD_WRITERS
                 + " ORDER BY h.created_at DESC",
             PostHighlightEntity.class)

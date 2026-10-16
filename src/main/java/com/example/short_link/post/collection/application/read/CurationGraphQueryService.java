@@ -2,6 +2,7 @@ package com.example.short_link.post.collection.application.read;
 
 import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.common.note.NoteBodyReader;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
 import com.example.short_link.post.collection.domain.repository.CollectionConnectionRepository;
@@ -51,7 +52,12 @@ public class CurationGraphQueryService {
 
     Set<Long> postIds = new HashSet<>(refIds(rows, "POST"));
     highlights.values().forEach(h -> postIds.add(h.getPostId()));
-    Map<Long, PostEntity> posts = bulk(postRepository.findAllByIdIn(postIds), PostEntity::getId);
+    Map<Long, PostEntity> posts =
+        bulk(
+            postRepository.findAllByIdIn(postIds).stream()
+                .filter(PostAccessPolicy::isOpen)
+                .toList(),
+            PostEntity::getId);
 
     Set<Long> userIds =
         posts.values().stream().map(PostEntity::getUserId).collect(Collectors.toSet());
@@ -114,15 +120,15 @@ public class CurationGraphQueryService {
       }
       case HIGHLIGHT -> {
         PostHighlightEntity hl = highlights.get(refId);
-        if (hl == null) yield null;
-        PostEntity post = posts.get(hl.getPostId());
-        UserEntity author = post == null ? null : users.get(post.getUserId());
+        PostEntity post = hl == null ? null : posts.get(hl.getPostId());
+        if (post == null) yield null;
+        UserEntity author = users.get(post.getUserId());
         yield new RelatedBlockView(
             "HIGHLIGHT",
             refId,
-            post == null ? null : post.getTitle(),
+            post.getTitle(),
             null,
-            post == null ? null : post.getSlug(),
+            post.getSlug(),
             author == null ? null : author.getUsername(),
             hl.getQuote(),
             null,

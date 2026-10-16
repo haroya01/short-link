@@ -2,9 +2,11 @@ package com.example.short_link;
 
 import archfixtures.CacheFixtures;
 import archfixtures.EntityFixtures;
+import archfixtures.PostVisibilityFixtures;
 import archfixtures.RedisFixtures;
 import archfixtures.TransactionFixtures;
 import archfixtures.domain.ClockFixtures;
+import archfixtures.post.application.write.PublishesAPost;
 import com.tngtech.archunit.lang.ArchRule;
 import java.util.List;
 import java.util.Set;
@@ -38,6 +40,14 @@ final class ArchRuleProofs {
               ArchUnitSemanticRulesTest.redisCountersExpireInTheSameScriptAsTheyIncrement,
               List.of(RedisFixtures.IncrementsThenExpires.class),
               List.of(RedisFixtures.RunsOneScript.class)),
+          new Proof(
+              "ArchUnitSemanticRulesTest.postVisibilityIsDecidedByTheAccessPolicy",
+              ArchUnitSemanticRulesTest.postVisibilityIsDecidedByTheAccessPolicy,
+              List.of(
+                  PostVisibilityFixtures.ShowsAPostBecauseItIsPublished.class,
+                  PostVisibilityFixtures.ListsPostsByStatus.class,
+                  PostVisibilityFixtures.FiltersByAMethodReference.class),
+              List.of(PostVisibilityFixtures.AsksThePolicy.class, PublishesAPost.class)),
           new Proof(
               "ArchUnitSemanticRulesTest.transactionsDoNotCallOutboundClients",
               ArchUnitSemanticRulesTest.transactionsDoNotCallOutboundClients,

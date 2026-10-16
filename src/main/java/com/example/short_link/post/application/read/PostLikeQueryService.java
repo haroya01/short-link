@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostLikeEntity;
 import com.example.short_link.post.domain.repository.PostLikeRepository;
@@ -23,12 +25,16 @@ public class PostLikeQueryService {
   private final PostRepository postRepository;
   private final PostLikeRepository postLikeRepository;
   private final PostFeedItemAssembler feedItemAssembler;
+  private final PostAccessPolicy access;
 
-  public PostLikeStatus status(Long userId, Long postId) {
+  public PostLikeStatus status(PostReader reader, Long postId) {
+    Long userId = reader.viewerId();
     PostEntity post =
-        postRepository
-            .findById(postId)
-            .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId));
+        access.requireReadable(
+            postRepository
+                .findById(postId)
+                .orElseThrow(() -> new PostException(PostErrorCode.POST_NOT_FOUND, postId)),
+            reader);
     boolean liked = userId != null && postLikeRepository.existsByPostIdAndUserId(postId, userId);
     return new PostLikeStatus(post.getLikeCount(), liked);
   }
@@ -40,7 +46,7 @@ public class PostLikeQueryService {
     List<Long> postIds = likes.stream().map(PostLikeEntity::getPostId).toList();
     Map<Long, PostEntity> published =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostEntity::isPublished)
+            .filter(PostAccessPolicy::isCard)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 
     List<PostEntity> ordered =

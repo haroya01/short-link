@@ -1,7 +1,8 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
-import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.PostHighlightReplyEntity;
 import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository;
 import com.example.short_link.post.domain.repository.HighlightReplyLikeRepository.Likes;
@@ -31,15 +32,23 @@ public class PostHighlightReplyQueryService {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final CommentMentions mentions;
+  private final PostAccessPolicy access;
 
-  public List<HighlightReplyView> listForHighlight(Long highlightId, Long viewerId) {
-    // 미발행 글의 하이라이트 답글은 공개 목록에 노출하지 않는다.
-    Long postId =
-        highlightRepository.findById(highlightId).map(PostHighlightEntity::getPostId).orElse(null);
-    if (postId == null
-        || postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
-      return List.of();
+  public PostScoped<List<HighlightReplyView>> listForHighlight(
+      Long highlightId, PostReader reader) {
+    PostEntity post =
+        highlightRepository
+            .findById(highlightId)
+            .flatMap(highlight -> postRepository.findById(highlight.getPostId()))
+            .orElse(null);
+    if (post == null || !access.readable(post, reader)) {
+      return new PostScoped<>(List.of(), false);
     }
+    return new PostScoped<>(
+        replies(highlightId, reader.viewerId()), !PostAccessPolicy.isOpen(post));
+  }
+
+  private List<HighlightReplyView> replies(Long highlightId, Long viewerId) {
     List<PostHighlightReplyEntity> replies =
         replyRepository.findHeardByHighlightId(highlightId, viewerId);
     List<Long> authorIds =

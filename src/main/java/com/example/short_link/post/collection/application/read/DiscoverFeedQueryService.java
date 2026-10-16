@@ -2,6 +2,7 @@ package com.example.short_link.post.collection.application.read;
 
 import com.example.short_link.common.note.NoteBlock;
 import com.example.short_link.common.note.NoteBodyReader;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.application.read.PublicAuthorView;
 import com.example.short_link.post.collection.domain.CollectionKind;
 import com.example.short_link.post.collection.domain.DiscoverConnectionRow;
@@ -77,7 +78,7 @@ public class DiscoverFeedQueryService {
     // 원문이 미발행이거나 발견 품질 하한선 아래면 글과 그 하이라이트 인용을 모두 제외한다. 소유자에게도 같은 규칙이다.
     Map<Long, PostEntity> posts =
         postRepository.findAllByIdIn(postIds).stream()
-            .filter(PostEntity::isPublished)
+            .filter(PostAccessPolicy::isOpen)
             .filter(PostEntity::isDiscoverable)
             .collect(Collectors.toMap(PostEntity::getId, Function.identity()));
 

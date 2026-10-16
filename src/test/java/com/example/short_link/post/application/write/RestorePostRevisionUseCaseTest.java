@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.user.UserModerationGuard;
+import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostRevisionEntity;
@@ -58,7 +59,7 @@ class RestorePostRevisionUseCaseTest {
             postBlockRepository,
             searchTextUpdater,
             noteQuotes,
-            new PostWriteViewAssembler(postRepository));
+            new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()));
   }
 
   private PostRevisionEntity revision(int version, String json) {

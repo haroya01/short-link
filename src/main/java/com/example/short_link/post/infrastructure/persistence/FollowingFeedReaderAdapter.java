@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.FollowingFeedRef;
 import com.example.short_link.post.domain.SeriesItemType;
@@ -21,7 +22,8 @@ class FollowingFeedReaderAdapter implements FollowingFeedReader {
   private static final String POSTS =
       "SELECT DISTINCT 'POST' AS item_type, p.id AS id, NULL AS series_id, p.published_at AS item_at"
           + " FROM posts p LEFT JOIN post_tag t ON t.post_id = p.id"
-          + " WHERE p.status = 'PUBLISHED'"
+          + " WHERE "
+          + PostAccessSql.LISTED
           + " AND (p.user_id IN (:authors) OR p.series_id IN (:series) OR LOWER(t.tag) IN (:tags))"
           + HeardSql.POST_AUTHOR;
 

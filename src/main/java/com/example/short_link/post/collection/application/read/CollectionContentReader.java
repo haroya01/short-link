@@ -1,6 +1,7 @@
 package com.example.short_link.post.collection.application.read;
 
 import com.example.short_link.common.note.NoteBodyReader;
+import com.example.short_link.post.application.access.PostAccessPolicy;
 import com.example.short_link.post.collection.domain.CollectionConnectionEntity;
 import com.example.short_link.post.collection.domain.CollectionEntity;
 import com.example.short_link.post.collection.domain.ConnectionBlockType;
@@ -73,7 +74,7 @@ public class CollectionContentReader {
   private CollectionContentSnapshot loadPreviewContent(
       List<CollectionConnectionEntity> connections, boolean publishedOnly) {
     var candidates = postRepository.findAllByIdIn(refIds(connections, ConnectionBlockType.POST));
-    if (publishedOnly) candidates = candidates.stream().filter(PostEntity::isPublished).toList();
+    if (publishedOnly) candidates = candidates.stream().filter(PostAccessPolicy::isOpen).toList();
     var posts = indexedBy(candidates, PostEntity::getId);
     var highlights =
         indexedBy(
@@ -91,7 +92,7 @@ public class CollectionContentReader {
             .collect(Collectors.toSet());
     Set<Long> publishedParents =
         postRepository.findAllByIdIn(parentIds).stream()
-            .filter(PostEntity::isPublished)
+            .filter(PostAccessPolicy::isOpen)
             .map(PostEntity::getId)
             .collect(Collectors.toSet());
     highlights.values().removeIf(highlight -> !publishedParents.contains(highlight.getPostId()));
@@ -109,7 +110,9 @@ public class CollectionContentReader {
     highlights.values().forEach(highlight -> postIds.add(highlight.getPostId()));
     var posts =
         indexedBy(
-            postRepository.findAllByIdIn(postIds).stream().filter(PostEntity::isPublished).toList(),
+            postRepository.findAllByIdIn(postIds).stream()
+                .filter(PostAccessPolicy::isOpen)
+                .toList(),
             PostEntity::getId);
     Set<Long> authorIds =
         posts.values().stream().map(PostEntity::getUserId).collect(Collectors.toSet());

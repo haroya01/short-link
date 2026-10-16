@@ -2,6 +2,7 @@ package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
 import com.example.short_link.common.event.PostPublishedEvent;
+import com.example.short_link.common.post.PostAudience;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostEntity;
 import java.time.Instant;
@@ -30,7 +31,7 @@ public class PostPublicationCompletion {
       noteQuotes.index(post, body);
     }
     cache.evictByUserId(post.getUserId());
-    if (firstPublish) {
+    if (firstPublish && post.getAudience() != PostAudience.UNLISTED) {
       events.publishEvent(
           new PostPublishedEvent(
               post.getUserId(), post.getId(), post.getSlug(), post.getTitle(), eventTime.get()));

@@ -83,7 +83,14 @@ public class SecurityConfig {
     cors.setAllowedOriginPatterns(origins);
     cors.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
     cors.setAllowedHeaders(
-        List.of("Authorization", "Content-Type", "X-Request-Id", "X-Pow-Challenge", "X-Pow-Nonce"));
+        List.of(
+            "Authorization",
+            "Content-Type",
+            "X-Request-Id",
+            "X-Pow-Challenge",
+            "X-Pow-Nonce",
+            "X-Post-Key",
+            "X-Post-Grant"));
     cors.setExposedHeaders(List.of("X-Request-Id", "Content-Disposition", "X-Content-Version"));
     cors.setAllowCredentials(true);
     cors.setMaxAge(3600L);
@@ -165,6 +172,7 @@ public class SecurityConfig {
                         "/api/v1/public/email-leads",
                         "/api/v1/public/profiles/*/visit",
                         "/api/v1/public/profiles/*/posts/*/view",
+                        "/api/v1/public/profiles/*/posts/*/unlock",
                         "/api/v1/public/behavior-events",
                         "/api/v1/public/abuse-reports",
                         "/api/v1/public/abuse-reports/links",

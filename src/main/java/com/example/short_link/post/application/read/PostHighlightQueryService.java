@@ -1,5 +1,7 @@
 package com.example.short_link.post.application.read;
 
+import com.example.short_link.post.application.access.PostAccessPolicy;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.domain.PostEntity;
 import com.example.short_link.post.domain.PostHighlightEntity;
 import com.example.short_link.post.domain.repository.PostHighlightReplyRepository;
@@ -29,11 +31,17 @@ public class PostHighlightQueryService {
   private final PostRepository postRepository;
   private final UserRepository userRepository;
   private final FollowRepository followRepository;
+  private final PostAccessPolicy access;
 
-  public List<HighlightView> listForPost(Long postId, Long viewerId) {
-    if (postRepository.findById(postId).filter(PostEntity::isPublished).isEmpty()) {
-      return List.of();
+  public PostScoped<List<HighlightView>> listForPost(Long postId, PostReader reader) {
+    PostEntity post = postRepository.findById(postId).orElse(null);
+    if (post == null || !access.readable(post, reader)) {
+      return new PostScoped<>(List.of(), false);
     }
+    return new PostScoped<>(highlights(postId, reader.viewerId()), !PostAccessPolicy.isOpen(post));
+  }
+
+  private List<HighlightView> highlights(Long postId, Long viewerId) {
     List<PostHighlightEntity> highlights = highlightRepository.findHeardByPostId(postId, viewerId);
     List<Long> userIds =
         highlights.stream().map(PostHighlightEntity::getUserId).distinct().toList();

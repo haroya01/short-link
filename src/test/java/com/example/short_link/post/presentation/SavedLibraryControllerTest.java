@@ -57,7 +57,10 @@ class SavedLibraryControllerTest {
                     Instant.parse("2026-01-01T00:00:00Z"),
                     3L,
                     5L,
-                    99L)));
+                    99L,
+                    "PUBLIC",
+                    null,
+                    null)));
 
     mvc.perform(get("/api/v1/me/saved").header(hdr(), USER_ID))
         .andExpect(status().isOk())

@@ -12,6 +12,7 @@ import com.example.short_link.note.domain.repository.NoteRepository;
 import com.example.short_link.note.domain.repository.NoteRepostRepository;
 import com.example.short_link.note.exception.NoteErrorCode;
 import com.example.short_link.note.exception.NoteException;
+import com.example.short_link.post.application.access.PostReader;
 import com.example.short_link.post.application.read.CommentView;
 import com.example.short_link.post.application.read.HighlightFeedItem;
 import com.example.short_link.post.application.read.HighlightReplyView;
@@ -133,12 +134,12 @@ class HeardRuleIntegrationTest {
     comment(post, writer("hr-expired"), tops.get("hr-normal"));
     comment(post, writer("hr-muted"), tops.get("hr-normal"));
 
-    List<CommentView> signedIn = comments.listForPost(post, viewer, false);
+    List<CommentView> signedIn = comments.listForPost(post, PostReader.of(viewer), false).body();
     assertThat(signedIn)
         .extracting(c -> c.author().username())
         .containsExactly("hr-normal", "hr-expired", "hr-expired");
     assertThat(signedIn.get(2).parentId()).isEqualTo(tops.get("hr-normal"));
-    assertThat(comments.listForPost(post, null, false)).hasSize(9);
+    assertThat(comments.listForPost(post, PostReader.of(null), false).body()).hasSize(9);
   }
 
   @Test
@@ -153,10 +154,10 @@ class HeardRuleIntegrationTest {
       commentRepository.save(c);
     }
 
-    assertThat(comments.listForPost(post, viewer, false))
+    assertThat(comments.listForPost(post, PostReader.of(viewer), false).body())
         .extracting(CommentView::id)
         .containsExactly(kept);
-    assertThat(comments.listForPost(post, null, false))
+    assertThat(comments.listForPost(post, PostReader.of(null), false).body())
         .extracting(CommentView::id)
         .containsExactly(kept);
   }
@@ -174,18 +175,25 @@ class HeardRuleIntegrationTest {
     long mutedHighlight = highlight(post, writer("hr-muted"));
     replyRepository.save(new PostHighlightReplyEntity(mutedHighlight, writer("hr-normal"), "답"));
 
-    assertThat(usernames(highlights.listForPost(post, viewer), HighlightView::author))
+    assertThat(
+            usernames(
+                highlights.listForPost(post, PostReader.of(viewer)).body(), HighlightView::author))
         .containsOnly("hr-normal", "hr-expired");
-    assertThat(usernames(highlights.listForPost(post, null), HighlightView::author))
+    assertThat(
+            usernames(
+                highlights.listForPost(post, PostReader.of(null)).body(), HighlightView::author))
         .containsAll(all());
     assertThat(
             usernames(
-                highlightReplies.listForHighlight(heardHighlight, viewer),
+                highlightReplies.listForHighlight(heardHighlight, PostReader.of(viewer)).body(),
                 HighlightReplyView::author))
         .containsExactlyInAnyOrderElementsOf(HEARD);
-    assertThat(highlightReplies.listForHighlight(heardHighlight, null)).hasSize(6);
-    assertThat(highlightReplies.listForHighlight(mutedHighlight, viewer)).isEmpty();
-    assertThat(highlightReplies.listForHighlight(mutedHighlight, null)).hasSize(1);
+    assertThat(highlightReplies.listForHighlight(heardHighlight, PostReader.of(null)).body())
+        .hasSize(6);
+    assertThat(highlightReplies.listForHighlight(mutedHighlight, PostReader.of(viewer)).body())
+        .isEmpty();
+    assertThat(highlightReplies.listForHighlight(mutedHighlight, PostReader.of(null)).body())
+        .hasSize(1);
   }
 
   @Test
@@ -290,7 +298,7 @@ class HeardRuleIntegrationTest {
 
     for (String handle : all()) {
       int shown = BLOCKED.contains(handle) ? 0 : 1;
-      PublicPostListView posts = profilePosts.listPublicPosts(handle, viewer);
+      PublicPostListView posts = profilePosts.listPublicPosts(handle, PostReader.of(viewer)).body();
       assertThat(posts.posts()).hasSize(shown);
       assertThat(posts.author().username()).isEqualTo(handle);
       assertThat(posts.blockedByViewer()).isEqualTo(handle.equals("hr-blocked"));
@@ -298,7 +306,8 @@ class HeardRuleIntegrationTest {
       assertThat(notes.byAuthor(handle, 0, 20, viewer).items()).hasSize(shown);
       assertThat(notes.reposts(handle, 0, 20, viewer).items()).hasSize(shown);
 
-      PublicPostListView anonymous = profilePosts.listPublicPosts(handle, null);
+      PublicPostListView anonymous =
+          profilePosts.listPublicPosts(handle, PostReader.of(null)).body();
       assertThat(anonymous.posts()).hasSize(1);
       assertThat(anonymous.blockedByViewer()).isFalse();
       assertThat(anonymous.blocksViewer()).isFalse();
@@ -330,14 +339,27 @@ class HeardRuleIntegrationTest {
       String slug = handle + "-detail";
       publish(writer(handle), slug);
       if (BLOCKED.contains(handle)) {
-        assertThatThrownBy(() -> profilePosts.findPublicPost(handle, slug, viewer))
+        assertThatThrownBy(
+                () -> profilePosts.findPublicPost(handle, slug, PostReader.of(viewer), null).body())
             .isInstanceOf(PostException.class)
             .extracting(e -> ((PostException) e).errorCode())
             .isEqualTo(PostErrorCode.POST_NOT_FOUND);
       } else {
-        assertThat(profilePosts.findPublicPost(handle, slug, viewer).post().slug()).isEqualTo(slug);
+        assertThat(
+                profilePosts
+                    .findPublicPost(handle, slug, PostReader.of(viewer), null)
+                    .body()
+                    .post()
+                    .slug())
+            .isEqualTo(slug);
       }
-      assertThat(profilePosts.findPublicPost(handle, slug, null).post().slug()).isEqualTo(slug);
+      assertThat(
+              profilePosts
+                  .findPublicPost(handle, slug, PostReader.of(null), null)
+                  .body()
+                  .post()
+                  .slug())
+          .isEqualTo(slug);
     }
   }
 
