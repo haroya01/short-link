@@ -74,6 +74,7 @@ class PostAudienceHttpQueryContractTest extends ContentHttpJourneySupport {
     protectedReadsAreNeverStoredInASharedCache();
     anUnlistedFirstPublishTellsNoFollower();
     theOwnerSettingsRejectWhatTheyCannotStore();
+    aReaderWhoLostAccessCanStillRemoveTheirLikeAndBookmark();
 
     verifyContracts();
   }
@@ -315,6 +316,77 @@ class PostAudienceHttpQueryContractTest extends ContentHttpJourneySupport {
     publishQuietly(loud);
     awaitAsyncWork();
     assertThat(count("notification", "recipient_user_id = ?", reader.id())).isEqualTo(before + 1);
+  }
+
+  private void aReaderWhoLostAccessCanStillRemoveTheirLikeAndBookmark() throws Exception {
+    Actor unfollowed = person("journey-lost-follow");
+    Post followers = protectedPost("lost-follow", "FOLLOWERS", false);
+    follow(unfollowed, author);
+    keep(unfollowed, followers, Map.of());
+    jdbc.update(
+        "DELETE FROM user_follow WHERE follower_id = ? AND following_id = ?",
+        unfollowed.id(),
+        author.id());
+    removeAfterLosing(unfollowed, followers, Map.of(), "FOLLOWERS");
+
+    Actor holder = person("journey-lost-password");
+    Post password = protectedPost("lost-password", "PASSWORD", false);
+    Map<String, String> grant = Map.of("X-Post-Grant", password.grant());
+    keep(holder, password, grant);
+    HttpResponse<String> changed =
+        send(
+            "PATCH",
+            postPath(password.id()),
+            author,
+            Map.of("password", "a brand new password"),
+            Map.of());
+    assertThat(changed.statusCode()).as(changed.body()).isEqualTo(200);
+    removeAfterLosing(holder, password, grant, "PASSWORD");
+
+    Actor traveller = person("journey-lost-country");
+    Post region = protectedPost("lost-country", "PUBLIC", true);
+    when(geoIp.resolve(any())).thenReturn(new GeoLocation("KR", null, null));
+    keep(traveller, region, Map.of());
+    when(geoIp.resolve(any())).thenReturn(JAPAN);
+    removeAfterLosing(traveller, region, Map.of(), "REGION");
+  }
+
+  private void keep(Actor actor, Post post, Map<String, String> credentials) throws Exception {
+    assertThat(send("PUT", postPath(post.id()) + "/like", actor, null, credentials).statusCode())
+        .as("%s likes %s while they can read it", actor.username(), post.slug())
+        .isEqualTo(200);
+    assertThat(
+            send("PUT", postPath(post.id()) + "/bookmark", actor, null, credentials).statusCode())
+        .isEqualTo(200);
+    assertThat(count("post_like", "post_id = ? AND user_id = ?", post.id(), actor.id()))
+        .isEqualTo(1);
+  }
+
+  private void removeAfterLosing(
+      Actor actor, Post post, Map<String, String> credentials, String reason) throws Exception {
+    HttpResponse<String> detail = send("GET", detailPath(post), actor, null, credentials);
+    assertThat(json.readTree(detail.body()).at("/post/locked/reason").asText()).isEqualTo(reason);
+    assertThat(send("PUT", postPath(post.id()) + "/like", actor, null, credentials).statusCode())
+        .isEqualTo(403);
+
+    HttpResponse<String> unlike =
+        send("DELETE", postPath(post.id()) + "/like", actor, null, credentials);
+    assertThat(unlike.statusCode()).as(unlike.body()).isEqualTo(200);
+    JsonNode unliked = json.readTree(unlike.body());
+    assertThat(unliked.propertyNames()).containsExactlyInAnyOrder("likeCount", "liked");
+    assertThat(unliked.path("likeCount").asLong()).isZero();
+    assertThat(unliked.path("liked").asBoolean()).isFalse();
+    HttpResponse<String> unbookmark =
+        send("DELETE", postPath(post.id()) + "/bookmark", actor, null, credentials);
+    assertThat(unbookmark.statusCode()).as(unbookmark.body()).isEqualTo(200);
+    assertThat(json.readTree(unbookmark.body()).propertyNames()).containsExactly("bookmarked");
+
+    assertThat(count("post_like", "post_id = ? AND user_id = ?", post.id(), actor.id())).isZero();
+    assertThat(count("post_bookmark", "post_id = ? AND user_id = ?", post.id(), actor.id()))
+        .isZero();
+    assertThat(
+            jdbc.queryForObject("SELECT like_count FROM posts WHERE id = ?", Long.class, post.id()))
+        .isZero();
   }
 
   private void theOwnerSettingsRejectWhatTheyCannotStore() throws Exception {
