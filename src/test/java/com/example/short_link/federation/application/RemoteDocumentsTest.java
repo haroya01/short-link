@@ -2,10 +2,17 @@ package com.example.short_link.federation.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.tuple;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.example.short_link.federation.application.signature.Signer;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.domain.repository.FederationDomainBlockRepository;
@@ -13,11 +20,13 @@ import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
+import java.util.function.Predicate;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.slf4j.LoggerFactory;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -89,6 +98,56 @@ class RemoteDocumentsTest {
       assertThat(codeOf(() -> documents.fetch(ALICE, "x")))
           .isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND);
     }
+  }
+
+  @Test
+  void webFingerAsksTheSuspensionOfEveryHostItIsSentTo() {
+    URI webFinger =
+        URI.create("https://example.com/.well-known/webfinger?resource=acct%3Aalice%40example.com");
+    when(serverBlocks.suspends(any()))
+        .thenAnswer(call -> "social.example.com".equals(call.getArgument(0)));
+    when(http.webFinger(eq(webFinger), eq(instance), any()))
+        .thenAnswer(
+            call -> {
+              Predicate<String> allowed = call.getArgument(2);
+              assertThat(allowed.test("example.com")).isTrue();
+              assertThat(allowed.test("social.example.com")).isFalse();
+              return ok("{\"subject\":\"acct:alice@example.com\"}");
+            });
+
+    assertThat(documents().webFinger(webFinger, "alice@example.com").path("subject").asString())
+        .isEqualTo("acct:alice@example.com");
+  }
+
+  @Test
+  void aServerThatDeniesUsIsAWarningNamingItsHost() {
+    Logger logger = (Logger) LoggerFactory.getLogger(RemoteDocuments.class);
+    ListAppender<ILoggingEvent> logged = new ListAppender<>();
+    logged.start();
+    logger.addAppender(logged);
+    when(http.get(ALICE, instance))
+        .thenReturn(
+            new FederationHttp.Result.Failed(401, "HTTP 401"),
+            new FederationHttp.Result.Failed(403, "HTTP 403"),
+            new FederationHttp.Result.Failed(404, "HTTP 404"));
+    try {
+      RemoteDocuments documents = documents();
+      for (int i = 0; i < 3; i++) {
+        assertThat(codeOf(() -> documents.fetch(ALICE, "x")))
+            .isEqualTo(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND);
+      }
+    } finally {
+      logger.detachAppender(logged);
+    }
+
+    assertThat(logged.list)
+        .extracting(ILoggingEvent::getLevel, ILoggingEvent::getFormattedMessage)
+        .containsExactly(
+            tuple(Level.WARN, "federation resolve denied status=401 host=mastodon.example"),
+            tuple(Level.WARN, "federation resolve denied status=403 host=mastodon.example"),
+            tuple(
+                Level.INFO,
+                "federation resolve outcome=Failed[status=404, reason=HTTP 404] uri=" + ALICE));
   }
 
   @Test

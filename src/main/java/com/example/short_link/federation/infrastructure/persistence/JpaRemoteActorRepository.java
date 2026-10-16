@@ -10,5 +10,6 @@ public interface JpaRemoteActorRepository extends JpaRepository<RemoteActorEntit
 
   Optional<RemoteActorEntity> findFirstByKeyId(String keyId);
 
-  Optional<RemoteActorEntity> findFirstByDomainAndUsername(String domain, String username);
+  Optional<RemoteActorEntity> findFirstByUsernameAndDomainOrUsernameAndAccountDomain(
+      String username, String domain, String sameUsername, String accountDomain);
 }

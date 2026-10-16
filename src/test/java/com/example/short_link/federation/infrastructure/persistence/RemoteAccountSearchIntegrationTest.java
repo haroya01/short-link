@@ -3,6 +3,7 @@ package com.example.short_link.federation.infrastructure.persistence;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.short_link.federation.domain.RemoteAccountMatch;
+import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.RemoteActorRepository;
 import com.example.short_link.user.domain.UserEntity;
 import com.example.short_link.user.domain.repository.UserRepository;
@@ -301,5 +302,23 @@ class RemoteAccountSearchIntegrationTest {
     assertThat(ids(viewer, tag + "@")).hasSize(2);
     assertThat(ids(viewer, tag + "@one%")).isEmpty();
     assertThat(ids(viewer, tag.toUpperCase() + "@ONE-" + tag)).containsExactly(exact);
+  }
+
+  @Test
+  void aHandleFindsItsAccountByTheServingHostOrByTheDomainThatHostConfirmed() {
+    Long served = actor(tag, domain("social"), null);
+    em.createNativeQuery("UPDATE federation_remote_actor SET account_domain = ? WHERE id = ?")
+        .setParameter(1, domain("home"))
+        .setParameter(2, served)
+        .executeUpdate();
+    Long elsewhere = actor(tag, domain("other"), null);
+
+    assertThat(actors.findByAcct(tag, domain("social")).map(RemoteActorEntity::getId))
+        .contains(served);
+    assertThat(actors.findByAcct(tag.toUpperCase(), domain("home")).map(RemoteActorEntity::getId))
+        .contains(served);
+    assertThat(actors.findByAcct(tag, domain("other")).map(RemoteActorEntity::getId))
+        .contains(elsewhere);
+    assertThat(actors.findByAcct(tag + "x", domain("home"))).isEmpty();
   }
 }
