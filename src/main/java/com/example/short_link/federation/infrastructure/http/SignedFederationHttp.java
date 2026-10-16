@@ -22,6 +22,7 @@ public class SignedFederationHttp implements FederationHttp {
   private static final String ACCEPT =
       "application/activity+json, application/ld+json; profile=\"https://www.w3.org/ns/activitystreams\"";
   private static final String JRD = "application/jrd+json, application/json";
+  private static final String JSON = "application/json";
   private static final int MAX_REDIRECTS = 3;
   private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
   private static final Duration READ_TIMEOUT = Duration.ofSeconds(10);
@@ -50,6 +51,11 @@ public class SignedFederationHttp implements FederationHttp {
   @Override
   public Result get(URI uri, Signer signer, Duration patience) {
     return send(uri, null, signer, ACCEPT, true, patience).result();
+  }
+
+  @Override
+  public Result getJson(URI uri, Signer signer, Duration patience) {
+    return send(uri, null, signer, JSON, true, patience).result();
   }
 
   @Override

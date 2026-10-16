@@ -12,6 +12,7 @@ import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.signature.SigningKeys;
+import com.example.short_link.federation.application.trends.TrendingPosts;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import com.example.short_link.testsupport.FederationFixtures;
 import java.net.URI;
@@ -31,6 +32,7 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
   private static final ActorKeys.Pem KEYS = new ActorKeys().generate();
 
   @MockitoBean private FederationHttp http;
+  @Autowired private TrendingPosts trending;
   @Autowired private FederationUrls urls;
   @Autowired private FederationActorService localActors;
   @Autowired private SigningKeys signingKeys;
@@ -155,6 +157,106 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
                     200))
                 .path("items"))
         .isEmpty();
+  }
+
+  private String trendingStatus(String host, String user, long boosts) {
+    return """
+        {"uri":"https://%1$s/users/%2$s/statuses/1","url":"https://%1$s/@%2$s/1",
+         "created_at":"2026-10-16T13:48:01.441Z","visibility":"public","in_reply_to_id":null,
+         "reblog":null,"sensitive":false,"spoiler_text":"","language":"ko",
+         "content":"<p>%2$s says hi</p>","replies_count":0,"reblogs_count":%3$d,
+         "favourites_count":0,"media_attachments":[],"card":null,"poll":null,
+         "account":{"acct":"%2$s@%1$s","display_name":"%2$s","discoverable":true,
+          "avatar":"https://%1$s/a.png","url":"https://%1$s/@%2$s",
+          "uri":"https://%1$s/users/%2$s"}}"""
+        .formatted(host, user, boosts);
+  }
+
+  private static List<String> trendingUris(JsonNode found) {
+    List<String> uris = new ArrayList<>();
+    for (JsonNode item : found.path("items")) {
+      uris.add(item.path("uri").asString());
+    }
+    return uris;
+  }
+
+  @Test
+  void anyoneSeesWhatTrendsElsewhereAndAMemberMissesWhatTheyHid() throws Exception {
+    String alice = trendingStatus(host("ta"), "alice", 0);
+    String bob = trendingStatus(host("tb"), "bob", 0);
+    String carol = trendingStatus(host("tc"), "carol", 0);
+    String dave = trendingStatus(host("td"), "dave", 0);
+    String erin = trendingStatus(host("te"), "erin", 10);
+    when(http.getJson(
+            eq(URI.create("https://mastodon.social/api/v1/trends/statuses?limit=20")),
+            any(),
+            any()))
+        .thenReturn(ok("[" + String.join(",", alice, bob, carol, dave) + "]"));
+    when(http.getJson(
+            eq(URI.create("https://mstdn.jp/api/v1/trends/statuses?limit=20")), any(), any()))
+        .thenReturn(ok("[" + String.join(",", alice, erin) + "]"));
+    jdbc.update(
+        "INSERT INTO federation_remote_block (user_id, remote_actor_id, created_at)"
+            + " VALUES (?, ?, NOW(6))",
+        owner.getId(),
+        seed("bob", host("tb")));
+    jdbc.update(
+        "INSERT INTO user_domain_block (user_id, domain, created_at) VALUES (?, ?, NOW(6))",
+        owner.getId(),
+        host("tc"));
+    jdbc.update(
+        "INSERT INTO federation_domain_block (domain, severity, created_at)"
+            + " VALUES (?, 'LIMIT', NOW(6))",
+        host("td"));
+
+    assertThat(
+            body(call(
+                    "federation-trending-empty",
+                    "GET",
+                    "/api/v1/federation/trending",
+                    null,
+                    null,
+                    200))
+                .path("items"))
+        .isEmpty();
+
+    captureBackgroundWork("federation-trending-refresh", trending::refresh);
+
+    var anyone =
+        body(
+            call(
+                "federation-trending",
+                "GET",
+                "/api/v1/federation/trending?limit=10",
+                null,
+                null,
+                200));
+    String post = "https://%s/users/%s/statuses/1";
+    assertThat(trendingUris(anyone))
+        .containsExactly(
+            post.formatted(host("ta"), "alice"),
+            post.formatted(host("te"), "erin"),
+            post.formatted(host("tb"), "bob"),
+            post.formatted(host("tc"), "carol"));
+    JsonNode first = anyone.path("items").get(0);
+    assertThat(first.path("body").asString()).isEqualTo("alice says hi");
+    assertThat(first.path("author").path("username").asString()).isEqualTo("alice@" + host("ta"));
+    assertThat(first.path("language").asString()).isEqualTo("ko");
+    assertThat(first.path("remote").path("url").asString())
+        .isEqualTo("https://" + host("ta") + "/@alice/1");
+    assertThat(first.path("servers").toString()).isEqualTo("[\"mastodon.social\",\"mstdn.jp\"]");
+
+    var mine =
+        body(
+            call(
+                "federation-trending-member",
+                "GET",
+                "/api/v1/federation/trending",
+                null,
+                token,
+                200));
+    assertThat(trendingUris(mine))
+        .containsExactly(post.formatted(host("ta"), "alice"), post.formatted(host("te"), "erin"));
   }
 
   @Test
