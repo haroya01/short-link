@@ -29,6 +29,8 @@ spring:
 short-link:
   scheduling:
     enabled: false
+  image-variants:
+    enabled: false
   cache:
     key-prefix: "test:${random.uuid}:"
   safe-browsing:

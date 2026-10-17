@@ -26,7 +26,7 @@ public class NoteImageCleanupListener {
     }
     for (String key : event.mediaKeys()) {
       try {
-        storage.delete(key);
+        storage.deleteWithVariants(key);
       } catch (ObjectStorageException e) {
         log.warn("failed to delete note image key={}", key, e);
       }

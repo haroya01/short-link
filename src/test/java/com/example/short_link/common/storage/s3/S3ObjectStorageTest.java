@@ -14,13 +14,17 @@ import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
+import software.amazon.awssdk.core.ResponseBytes;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectResponse;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.model.S3Exception;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -153,5 +157,39 @@ class S3ObjectStorageTest {
     storage(true).applyImmutableCacheControl("avatars/1/x.webp");
 
     verify(s3, Mockito.never()).copyObject(any(CopyObjectRequest.class));
+  }
+
+  @Test
+  void getObjectReturnsTheBytesOrNothingWhenTheKeyIsMissing() {
+    when(s3.getObjectAsBytes(any(GetObjectRequest.class)))
+        .thenReturn(
+            ResponseBytes.fromByteArray(GetObjectResponse.builder().build(), new byte[] {1, 2}))
+        .thenThrow(NoSuchKeyException.builder().message("gone").build())
+        .thenThrow(S3Exception.builder().message("boom").build());
+
+    assertThat(storage(true).getObject("note-images/1/a.jpg")).contains(new byte[] {1, 2});
+    assertThat(storage(true).getObject("note-images/1/b.jpg")).isEmpty();
+    assertThatThrownBy(() -> storage(true).getObject("note-images/1/c.jpg"))
+        .isInstanceOf(ObjectStorageException.class);
+    ArgumentCaptor<GetObjectRequest> captor = ArgumentCaptor.forClass(GetObjectRequest.class);
+    verify(s3, Mockito.times(3)).getObjectAsBytes(captor.capture());
+    assertThat(captor.getAllValues().getFirst().bucket()).isEqualTo("bucket-x");
+    assertThat(captor.getAllValues().getFirst().key()).isEqualTo("note-images/1/a.jpg");
+  }
+
+  @Test
+  void deletingAnImageDeletesItsVariantsToo() {
+    storage(true).deleteWithVariants("note-images/1/a.jpeg");
+    storage(true).deleteWithVariants("avatars/1/a.jpg");
+
+    ArgumentCaptor<DeleteObjectRequest> captor = ArgumentCaptor.forClass(DeleteObjectRequest.class);
+    verify(s3, Mockito.times(4)).deleteObject(captor.capture());
+    assertThat(captor.getAllValues())
+        .extracting(DeleteObjectRequest::key)
+        .containsExactly(
+            "note-images/1/a.jpeg",
+            "note-images/1/a.w1080.jpg",
+            "note-images/1/a.w480.jpg",
+            "avatars/1/a.jpg");
   }
 }

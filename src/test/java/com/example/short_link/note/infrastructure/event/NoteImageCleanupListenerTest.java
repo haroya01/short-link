@@ -20,12 +20,12 @@ class NoteImageCleanupListenerTest {
   @Test
   void deletesEveryImageAndCarriesOnPastFailures() {
     when(storage.isConfigured()).thenReturn(true);
-    doThrow(new ObjectStorageException("down", null)).when(storage).delete("a");
+    doThrow(new ObjectStorageException("down", null)).when(storage).deleteWithVariants("a");
 
     listener.onNoteDeleted(new NoteDeletedEvent(1L, 7L, List.of("a", "b")));
 
-    verify(storage).delete("a");
-    verify(storage).delete("b");
+    verify(storage).deleteWithVariants("a");
+    verify(storage).deleteWithVariants("b");
   }
 
   @Test
@@ -34,6 +34,6 @@ class NoteImageCleanupListenerTest {
     when(storage.isConfigured()).thenReturn(false);
     listener.onNoteDeleted(new NoteDeletedEvent(1L, 7L, List.of("a")));
 
-    verify(storage, never()).delete("a");
+    verify(storage, never()).deleteWithVariants("a");
   }
 }

@@ -101,11 +101,13 @@ class NoteImagesTest {
   @Test
   void anOversizedUploadIsDeletedEvenIfDeletionFails() {
     when(storage.objectSize("note-images/7/big.png")).thenReturn(Optional.of(101L));
-    doThrow(new ObjectStorageException("down", null)).when(storage).delete("note-images/7/big.png");
+    doThrow(new ObjectStorageException("down", null))
+        .when(storage)
+        .deleteWithVariants("note-images/7/big.png");
 
     assertThatThrownBy(() -> images.verify(7L, new NoteDraft.Image("note-images/7/big.png", null)))
         .isInstanceOf(NoteException.class);
-    verify(storage).delete("note-images/7/big.png");
+    verify(storage).deleteWithVariants("note-images/7/big.png");
   }
 
   @Test

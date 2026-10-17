@@ -11,6 +11,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.net.HttpFetcher;
 import com.example.short_link.common.net.PublicHttpUrlGuard;
 import com.example.short_link.common.net.PublicHttpUrlGuard.Resolved;
@@ -35,6 +36,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 @ExtendWith(MockitoExtension.class)
 class PostImageServiceTest {
@@ -48,6 +50,7 @@ class PostImageServiceTest {
   @Mock private ObjectStorage objectStorage;
   @Mock private PostOwnership postOwnership;
   @Mock private HttpFetcher httpFetcher;
+  @Mock private ApplicationEventPublisher events;
 
   private PostImageService service;
 
@@ -60,7 +63,8 @@ class PostImageServiceTest {
             postOwnership,
             new com.example.short_link.post.infrastructure.image.HttpPostImageReader(httpFetcher),
             new com.example.short_link.common.storage.ObjectStoragePublicUrls(
-                new S3StorageProperties("bucket", "ap-northeast-2", "https://cdn.kurl.me")));
+                new S3StorageProperties("bucket", "ap-northeast-2", "https://cdn.kurl.me")),
+            events);
   }
 
   private static HttpFetcher.Response response(int status, String contentType, byte[] body) {
@@ -143,6 +147,7 @@ class PostImageServiceTest {
 
     assertThat(result.imageUrl()).isEqualTo("https://cdn.kurl.me/post-images/7/42/uuid.png");
     verify(objectStorage).applyImmutableCacheControl("post-images/7/42/uuid.png");
+    verify(events).publishEvent(ImageVariantsRequested.of("post-images/7/42/uuid.png"));
   }
 
   @Test
@@ -161,6 +166,8 @@ class PostImageServiceTest {
 
     assertThatThrownBy(() -> service.commitUpload(7L, 42L, "post-images/7/42/uuid.png"))
         .isInstanceOf(PostException.class);
+    verify(objectStorage).deleteWithVariants("post-images/7/42/uuid.png");
+    verify(events, never()).publishEvent(any());
   }
 
   @Test
@@ -180,6 +187,7 @@ class PostImageServiceTest {
         .startsWith("https://cdn.kurl.me/post-images/7/42/")
         .endsWith(".png");
     verify(objectStorage).putObject(anyString(), eq("image/png"), any(byte[].class));
+    verify(events).publishEvent(ImageVariantsRequested.of(result.key()));
   }
 
   @Test

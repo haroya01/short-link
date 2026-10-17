@@ -1,5 +1,6 @@
 package com.example.short_link.common.storage;
 
+import com.example.short_link.common.image.ImageVariantKeys;
 import java.time.Duration;
 import java.util.Optional;
 
@@ -13,9 +14,18 @@ public interface ObjectStorage {
 
   Optional<Long> objectSize(String key);
 
+  Optional<byte[]> getObject(String key);
+
   // Call after validating a presigned upload. UUID keys are never rewritten, so immutable caching
   // is safe. Best-effort: logs failures without throwing.
   void applyImmutableCacheControl(String key);
 
   void delete(String key);
+
+  default void deleteWithVariants(String key) {
+    delete(key);
+    for (String variant : ImageVariantKeys.variantsOf(key)) {
+      delete(variant);
+    }
+  }
 }

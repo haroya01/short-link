@@ -84,7 +84,7 @@ public class NoteImages {
 
   void deleteQuietly(String key) {
     try {
-      storage.delete(key);
+      storage.deleteWithVariants(key);
     } catch (ObjectStorageException e) {
       log.warn("failed to delete note image key={}", key, e);
     }

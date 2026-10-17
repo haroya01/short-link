@@ -1,5 +1,6 @@
 package com.example.short_link.post.application.image;
 
+import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.storage.ImageUploadPolicy;
 import com.example.short_link.common.storage.ObjectStorage;
 import com.example.short_link.common.storage.ObjectStorageException;
@@ -15,6 +16,7 @@ import java.util.Map;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 // 외부 이미지는 서명 URL 만료로 본문이 깨지지 않도록 서버에서 받아 재호스팅한다.
@@ -37,6 +39,7 @@ public class PostImageService {
   private final PostOwnership postOwnership;
   private final ExternalPostImageReader externalImages;
   private final ObjectStoragePublicUrls publicUrls;
+  private final ApplicationEventPublisher events;
 
   public PresignResult presignUpload(Long userId, Long postId, String contentType) {
     if (userId == null) throw new UserException(UserErrorCode.INVALID_AVATAR, "userId required");
@@ -76,7 +79,7 @@ public class PostImageService {
                 () -> new PostException(PostErrorCode.PERMISSION_DENIED, "upload not found"));
     if (contentLength > uploadPolicy.maxBytes()) {
       try {
-        objectStorage.delete(key);
+        objectStorage.deleteWithVariants(key);
       } catch (ObjectStorageException e) {
         log.warn("failed to delete oversized post image key={}", key, e);
       }
@@ -85,6 +88,7 @@ public class PostImageService {
           "image exceeds maxBytes (" + contentLength + " > " + uploadPolicy.maxBytes() + ")");
     }
     objectStorage.applyImmutableCacheControl(key);
+    events.publishEvent(ImageVariantsRequested.of(key));
     return new CommitResult(publicUrls.forKey(key), key);
   }
 
@@ -107,6 +111,7 @@ public class PostImageService {
             + "."
             + ALLOWED_TYPES.get(contentType);
     objectStorage.putObject(key, contentType, body);
+    events.publishEvent(ImageVariantsRequested.of(key));
     return new CommitResult(publicUrls.forKey(key), key);
   }
 
