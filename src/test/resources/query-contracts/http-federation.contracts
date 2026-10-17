@@ -396,6 +396,13 @@
 # again. An announce from it after that is not a relay's and costs nothing.
 @junit | admin-relay-unsubscribe | 3 | 1 | 0 | 1 | 5
 @junit | federation-inbox-relay-unsubscribed | 0 | 0 | 0 | 0 | 0
+# STORE. The announce costs what it does in COUNT. The worker's step for a post its own server
+# gives back: is it kept already, its server's block, the instance key that signs the fetch, then its
+# author (cached and fresh here; an author seen first is fetched and inserted, three reads and one
+# insert more); the note (insert, then its id), its picture's address, its tag, and the relay mark.
+@junit | federation-inbox-relay-announce-store | 1 | 0 | 0 | 0 | 1
+@junit | federation-relay-worker-store | 5 | 4 | 0 | 0 | 9
+@junit | notes-federated-relayed | 6 | 0 | 0 | 0 | 6
 # Instance directories an admin adds so their people can be found by name. Adding one: is its server
 # blocked, is it there already, then its row (looked up again by its own key before the insert).
 @junit | admin-directory-put | 3 | 1 | 0 | 0 | 4
