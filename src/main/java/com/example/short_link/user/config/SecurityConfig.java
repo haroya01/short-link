@@ -162,7 +162,11 @@ public class SecurityConfig {
                         "/.well-known/nodeinfo",
                         "/ap/**")
                     .permitAll()
+                    .requestMatchers(GET, "/api/v1/federation/trending")
+                    .permitAll()
                     .requestMatchers(GET, "/api/v1/federation/accounts/search")
+                    .permitAll()
+                    .requestMatchers(GET, "/api/v1/federation/domains")
                     .permitAll()
                     // Remote servers deliver anonymously; the inbox verifies their HTTP signature.
                     .requestMatchers(POST, "/ap/inbox", "/ap/actors/*/inbox")

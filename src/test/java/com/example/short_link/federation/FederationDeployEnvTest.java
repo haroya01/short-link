@@ -14,10 +14,10 @@ import org.junit.jupiter.api.Test;
 class FederationDeployEnvTest {
 
   private static final Pattern READ =
-      Pattern.compile("\\$\\{(FEDERATION_(?:RELAY|DIRECTORY)_[A-Z_]+):([^}]*)}");
+      Pattern.compile("\\$\\{(FEDERATION_(?:RELAY|DIRECTORY|TRENDS)_[A-Z_]+):([^}]*)}");
 
   @Test
-  void everyRelayAndDirectorySettingTheAppReadsIsPassedByComposeWithTheSameDefault()
+  void everyRelayDirectoryAndTrendsSettingTheAppReadsIsPassedByComposeWithTheSameDefault()
       throws IOException {
     Map<String, String> read = new LinkedHashMap<>();
     Matcher matcher = READ.matcher(Files.readString(Path.of("src/main/resources/application.yml")));
@@ -27,7 +27,7 @@ class FederationDeployEnvTest {
     String compose = Files.readString(Path.of("deploy/docker-compose.yml"));
     String example = Files.readString(Path.of("deploy/.env.example"));
 
-    assertThat(read).containsKey("FEDERATION_RELAY_ENABLED");
+    assertThat(read).containsKeys("FEDERATION_RELAY_ENABLED", "FEDERATION_TRENDS_HOSTS");
     read.forEach(
         (name, fallback) -> {
           assertThat(compose)
