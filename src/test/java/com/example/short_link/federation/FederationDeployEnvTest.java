@@ -27,7 +27,12 @@ class FederationDeployEnvTest {
     String compose = Files.readString(Path.of("deploy/docker-compose.yml"));
     String example = Files.readString(Path.of("deploy/.env.example"));
 
-    assertThat(read).containsKeys("FEDERATION_RELAY_ENABLED", "FEDERATION_TRENDS_HOSTS");
+    assertThat(read)
+        .containsKeys(
+            "FEDERATION_RELAY_ENABLED",
+            "FEDERATION_RELAY_MODE",
+            "FEDERATION_RELAY_SUBSCRIPTIONS",
+            "FEDERATION_TRENDS_HOSTS");
     read.forEach(
         (name, fallback) -> {
           assertThat(compose)

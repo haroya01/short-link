@@ -2,6 +2,7 @@ package com.example.short_link.federation.application.relay;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Map;
@@ -35,9 +36,21 @@ public class RelayTally {
   }
 
   public void count(String outcome) {
-    meters.counter("federation.relay", "outcome", outcome).increment();
+    count(outcome, 1);
+  }
+
+  public void count(String outcome, long times) {
+    meters.counter("federation.relay", "outcome", outcome).increment(times);
+    seed(outcome, times);
+  }
+
+  public void seed(String outcome, long times) {
     roll();
-    today.computeIfAbsent(outcome, key -> new LongAdder()).increment();
+    today.computeIfAbsent(outcome, key -> new LongAdder()).add(times);
+  }
+
+  public Instant dayStart() {
+    return LocalDate.now(clock.withZone(SEOUL)).atStartOfDay(SEOUL).toInstant();
   }
 
   public long today(String outcome) {

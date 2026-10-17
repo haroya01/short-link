@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test;
 class RelayIntakeTest {
 
   private static final String POST = "https://mastodon.example/users/alice/statuses/1";
+  private static final String RELAY = "https://relay.example/tag/dev";
 
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
   private final RelayTally tally = new RelayTally(meters);
@@ -24,7 +25,8 @@ class RelayIntakeTest {
 
   private RelayIntake intake(int queue, int perDay, RelayBreaker breaker) {
     RelayProperties props =
-        new RelayProperties(true, 30, perDay, queue, Duration.ofSeconds(5), Duration.ofSeconds(4));
+        new RelayProperties(
+            true, 30, perDay, queue, Duration.ofSeconds(5), Duration.ofSeconds(4), null, List.of());
     return new RelayIntake(
         subscriptions,
         breaker,
@@ -36,8 +38,9 @@ class RelayIntakeTest {
 
   private RelayIntake intake(int queue, int perDay) {
     RelayProperties props =
-        new RelayProperties(true, 30, perDay, queue, Duration.ofSeconds(5), Duration.ofSeconds(4));
-    return intake(queue, perDay, new RelayBreaker(props, tally));
+        new RelayProperties(
+            true, 30, perDay, queue, Duration.ofSeconds(5), Duration.ofSeconds(4), null, List.of());
+    return intake(queue, perDay, new RelayBreaker(props, tally, subscriptions));
   }
 
   private void mode(RelayMode mode) {
@@ -49,17 +52,17 @@ class RelayIntakeTest {
     mode(RelayMode.COUNT);
     RelayIntake intake = intake(10, 100);
 
-    assertThat(intake.offer(POST)).isEqualTo("queued");
-    assertThat(intake.offer(null)).isEqualTo("malformed");
-    assertThat(intake.offer("http://mastodon.example/statuses/2")).isEqualTo("malformed");
-    assertThat(intake.offer("not an address")).isEqualTo("malformed");
-    assertThat(intake.offer("https://mastodon.example/" + "x".repeat(RelayIntake.MAX_URI)))
+    assertThat(intake.offer(POST, RELAY)).isEqualTo("queued");
+    assertThat(intake.offer(null, RELAY)).isEqualTo("malformed");
+    assertThat(intake.offer("http://mastodon.example/statuses/2", RELAY)).isEqualTo("malformed");
+    assertThat(intake.offer("not an address", RELAY)).isEqualTo("malformed");
+    assertThat(intake.offer("https://mastodon.example/" + "x".repeat(RelayIntake.MAX_URI), RELAY))
         .isEqualTo("malformed");
-    assertThat(intake.offer("https://kurl.me/ap/notes/1")).isEqualTo("own-server");
-    assertThat(intake.offer("https://blog.kurl.me/@yuki/notes/1")).isEqualTo("own-server");
+    assertThat(intake.offer("https://kurl.me/ap/notes/1", RELAY)).isEqualTo("own-server");
+    assertThat(intake.offer("https://blog.kurl.me/@yuki/notes/1", RELAY)).isEqualTo("own-server");
 
     assertThat(intake.size()).isEqualTo(1);
-    assertThat(intake.poll()).isEqualTo(POST);
+    assertThat(intake.poll()).isEqualTo(new RelayIntake.Announced(POST, RELAY));
     assertThat(tally.today()).isEqualTo(Map.of("queued", 1L, "malformed", 4L, "own-server", 2L));
     assertThat(meters.get("federation.relay.queue").gauge().value()).isZero();
   }
@@ -70,12 +73,12 @@ class RelayIntakeTest {
     RelayIntake intake = intake(2, 100);
 
     for (int i = 1; i <= 3; i++) {
-      assertThat(intake.offer(POST + i)).isEqualTo("queued");
+      assertThat(intake.offer(POST + i, RELAY)).isEqualTo("queued");
     }
 
     List<String> left = new ArrayList<>();
-    for (String next = intake.poll(); next != null; next = intake.poll()) {
-      left.add(next);
+    for (RelayIntake.Announced next = intake.poll(); next != null; next = intake.poll()) {
+      left.add(next.uri());
     }
     assertThat(left).containsExactly(POST + 2, POST + 3);
     assertThat(tally.today("queue-full")).isEqualTo(1);
@@ -86,23 +89,38 @@ class RelayIntakeTest {
     mode(RelayMode.COUNT);
     RelayIntake intake = intake(10, 2);
 
-    assertThat(intake.offer(POST + 1)).isEqualTo("queued");
-    assertThat(intake.offer(POST + 2)).isEqualTo("queued");
-    assertThat(intake.offer(POST + 3)).isEqualTo("daily-cap");
+    assertThat(intake.offer(POST + 1, RELAY)).isEqualTo("queued");
+    assertThat(intake.offer(POST + 2, RELAY)).isEqualTo("queued");
+    assertThat(intake.offer(POST + 3, RELAY)).isEqualTo("daily-cap");
     assertThat(intake.size()).isEqualTo(2);
+  }
+
+  @Test
+  void inStoreTheDayCapAndTheQueueBoundHoldAsInCount() {
+    mode(RelayMode.STORE);
+    RelayIntake capped = intake(10, 2);
+    assertThat(capped.offer(POST + 1, RELAY)).isEqualTo("queued");
+    assertThat(capped.offer(POST + 2, RELAY)).isEqualTo("queued");
+    assertThat(capped.offer(POST + 3, RELAY)).isEqualTo("daily-cap");
+
+    RelayIntake bounded = intake(1, 100);
+    assertThat(bounded.offer(POST + 4, RELAY)).isEqualTo("queued");
+    assertThat(bounded.offer(POST + 5, RELAY)).isEqualTo("queued");
+    assertThat(bounded.size()).isEqualTo(1);
+    assertThat(bounded.poll().uri()).isEqualTo(POST + 5);
   }
 
   @Test
   void nothingIsTakenWhileTheSettingIsOffOrTheWorkHasStoppedItself() {
     mode(RelayMode.OFF);
     RelayIntake off = intake(10, 100);
-    assertThat(off.offer(POST)).isEqualTo("off");
+    assertThat(off.offer(POST, RELAY)).isEqualTo("off");
 
     mode(RelayMode.COUNT);
     RelayBreaker breaker = mock(RelayBreaker.class);
     when(breaker.tripped()).thenReturn(true);
     RelayIntake stopped = intake(10, 100, breaker);
-    assertThat(stopped.offer(POST)).isEqualTo("tripped");
+    assertThat(stopped.offer(POST, RELAY)).isEqualTo("tripped");
 
     assertThat(off.size() + stopped.size()).isZero();
   }

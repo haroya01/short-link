@@ -1,6 +1,9 @@
 package com.example.short_link.federation.application.relay;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import java.time.Clock;
@@ -8,13 +11,15 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.List;
 import org.junit.jupiter.api.Test;
 
 class RelayBreakerTest {
 
   private static final Instant NOW = Instant.parse("2026-10-16T00:00:00Z");
   private static final RelayProperties PROPS =
-      new RelayProperties(true, 30, 2_000, 100, Duration.ofSeconds(5), Duration.ofSeconds(4));
+      new RelayProperties(
+          true, 30, 2_000, 100, Duration.ofSeconds(5), Duration.ofSeconds(4), null, List.of());
 
   private final Instant[] now = {NOW};
   private final Clock clock =
@@ -35,7 +40,8 @@ class RelayBreakerTest {
         }
       };
   private final RelayTally tally = new RelayTally(new SimpleMeterRegistry(), clock);
-  private final RelayBreaker breaker = new RelayBreaker(PROPS, tally, clock);
+  private final RelaySubscriptions subscriptions = mock(RelaySubscriptions.class);
+  private final RelayBreaker breaker = new RelayBreaker(PROPS, tally, subscriptions, clock);
 
   @Test
   void fiveSlowPostsInARowStopTheWorkAndAFastOneInBetweenDoesNot() {
@@ -54,6 +60,20 @@ class RelayBreakerTest {
 
     assertThat(breaker.tripped()).isTrue();
     assertThat(tally.today()).containsEntry("tripped-slow", 1L);
+  }
+
+  @Test
+  void stoppingItselfAlsoTakesTheSettingOutOfStoreOnceSoARestartDoesNotStoreAgain() {
+    for (int i = 0; i < 4; i++) {
+      breaker.processed(Duration.ofSeconds(5), 0);
+    }
+    verify(subscriptions, never()).stopStoring();
+
+    for (int i = 0; i < 3; i++) {
+      breaker.processed(Duration.ofSeconds(5), 0);
+    }
+
+    verify(subscriptions).stopStoring();
   }
 
   @Test

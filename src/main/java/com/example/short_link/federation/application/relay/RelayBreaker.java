@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 // Stops all relay work by itself when the queue stays four-fifths full for five minutes or five
 // posts in a row each take longer than slow-after; an ERROR line reaches the alerts. Only an admin
-// changing the relay setting starts it again.
+// changing the relay setting starts it again, and a STORE setting has become COUNT by then.
 @Slf4j
 @Component
 public class RelayBreaker {
@@ -19,6 +19,7 @@ public class RelayBreaker {
 
   private final RelayProperties props;
   private final RelayTally tally;
+  private final RelaySubscriptions subscriptions;
   private final Clock clock;
 
   private volatile boolean tripped;
@@ -26,13 +27,15 @@ public class RelayBreaker {
   private int slowInARow;
 
   @Autowired
-  public RelayBreaker(RelayProperties props, RelayTally tally) {
-    this(props, tally, Clock.systemUTC());
+  public RelayBreaker(RelayProperties props, RelayTally tally, RelaySubscriptions subscriptions) {
+    this(props, tally, subscriptions, Clock.systemUTC());
   }
 
-  RelayBreaker(RelayProperties props, RelayTally tally, Clock clock) {
+  RelayBreaker(
+      RelayProperties props, RelayTally tally, RelaySubscriptions subscriptions, Clock clock) {
     this.props = props;
     this.tally = tally;
+    this.subscriptions = subscriptions;
     this.clock = clock;
   }
 
@@ -74,5 +77,10 @@ public class RelayBreaker {
     tripped = true;
     tally.count("tripped-" + reason);
     log.error("federation relay stopped itself reason={} queue={}", reason, props.queue());
+    try {
+      subscriptions.stopStoring();
+    } catch (RuntimeException failed) {
+      log.error("federation relay could not leave STORE reason={}", failed.toString());
+    }
   }
 }

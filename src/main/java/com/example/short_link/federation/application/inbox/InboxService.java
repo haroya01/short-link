@@ -380,7 +380,7 @@ public class InboxService {
         yield InboxOutcome.accepted("delete-early");
       }
       case Intent.Relayed relayed -> {
-        String outcome = relayIntake.offer(relayed.objectUri());
+        String outcome = relayIntake.offer(relayed.objectUri(), actor.getActorUri());
         yield "queued".equals(outcome)
             ? InboxOutcome.accepted("relay")
             : InboxOutcome.ignored("relay-" + outcome);

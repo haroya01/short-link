@@ -23,7 +23,9 @@ public class RelayIntake {
   private final RelayTally tally;
   private final RelayProperties props;
   private final FederationUrls urls;
-  private final LinkedBlockingDeque<String> queue;
+  private final LinkedBlockingDeque<Announced> queue;
+
+  public record Announced(String uri, String relay) {}
 
   public RelayIntake(
       RelaySubscriptions subscriptions,
@@ -41,17 +43,17 @@ public class RelayIntake {
     Gauge.builder("federation.relay.queue", queue, LinkedBlockingDeque::size).register(meters);
   }
 
-  public String offer(String objectUri) {
-    String outcome = judged(objectUri);
+  public String offer(String objectUri, String relay) {
+    String outcome = judged(objectUri, relay);
     tally.count(outcome);
     return outcome;
   }
 
-  public String poll() {
+  public Announced poll() {
     return queue.pollFirst();
   }
 
-  public String next(Duration wait) throws InterruptedException {
+  public Announced next(Duration wait) throws InterruptedException {
     return queue.pollFirst(wait.toMillis(), TimeUnit.MILLISECONDS);
   }
 
@@ -59,7 +61,7 @@ public class RelayIntake {
     return queue.size();
   }
 
-  private String judged(String objectUri) {
+  private String judged(String objectUri, String relay) {
     if (subscriptions.setting().mode() == RelayMode.OFF) {
       return "off";
     }
@@ -76,7 +78,8 @@ public class RelayIntake {
     if (tally.today("queued") >= props.perDay()) {
       return "daily-cap";
     }
-    while (!queue.offerLast(objectUri)) {
+    Announced announced = new Announced(objectUri, relay);
+    while (!queue.offerLast(announced)) {
       if (queue.pollFirst() != null) {
         tally.count("queue-full");
       }

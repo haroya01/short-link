@@ -7,6 +7,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.List;
 import lombok.AccessLevel;
@@ -30,6 +31,8 @@ public class FederationRelaySettingEntity extends BaseTimeEntity {
   @Column(nullable = false, length = 255)
   private String languages;
 
+  private Instant chosenAt;
+
   public List<String> languageList() {
     return Arrays.stream(languages.split(","))
         .map(String::strip)
@@ -37,8 +40,17 @@ public class FederationRelaySettingEntity extends BaseTimeEntity {
         .toList();
   }
 
-  public void change(RelayMode mode, List<String> languages) {
+  public void change(RelayMode mode, List<String> languages, Instant chosenAt) {
     this.mode = mode;
     this.languages = String.join(",", languages);
+    this.chosenAt = chosenAt;
+  }
+
+  public boolean startsIn(RelayMode mode) {
+    if (chosenAt != null || mode == null || mode == this.mode) {
+      return false;
+    }
+    this.mode = mode;
+    return true;
   }
 }

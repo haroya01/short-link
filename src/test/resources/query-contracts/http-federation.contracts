@@ -382,15 +382,16 @@
 # An accepted relay's announce is known from memory; only its key is read before the address is
 # queued, and nothing about the post is looked at on the request.
 @junit | federation-inbox-relay-announce | 1 | 0 | 0 | 0 | 1
-# The admin view: the relays; the setting, the queue and the day's counts are in memory.
-@junit | admin-relays | 1 | 0 | 0 | 0 | 1
+# The admin view: the relays and how many kept notes each brought (one grouped count); the setting,
+# the queue and the day's counts are in memory.
+@junit | admin-relays | 2 | 0 | 0 | 0 | 2
 @junit | admin-relays-member | 0 | 0 | 0 | 0 | 0
 # The worker's step for one announced post: is it kept already, its server's block, the instance key
 # that signs the fetch; its server does not resolve here, so it is counted as unanswered.
 @junit | federation-relay-worker | 3 | 0 | 0 | 0 | 3
-@junit | admin-relays-after-work | 1 | 0 | 0 | 0 | 1
-# Changing the setting: its row and the update, then the view.
-@junit | admin-relay-setting | 2 | 0 | 1 | 0 | 3
+@junit | admin-relays-after-work | 2 | 0 | 0 | 0 | 2
+# Changing the setting: its row and the update (with when it was chosen), then the view.
+@junit | admin-relay-setting | 3 | 0 | 1 | 0 | 4
 # Unsubscribing: the row, the Undo (dedupe check, insert), the delete, then the accepted relays
 # again. An announce from it after that is not a relay's and costs nothing.
 @junit | admin-relay-unsubscribe | 3 | 1 | 0 | 1 | 5

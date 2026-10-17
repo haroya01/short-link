@@ -12,4 +12,5 @@ public record RelayStatusResponse(
     boolean stopped,
     int queued,
     Map<String, Long> today,
+    long kept,
     List<RelaySubscriptions.View> relays) {}
