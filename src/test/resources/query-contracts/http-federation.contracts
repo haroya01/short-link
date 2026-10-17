@@ -317,6 +317,14 @@
 @junit | federation-account-search-anonymous | 1 | 0 | 0 | 0 | 1
 @junit | federation-account-search-handle | 1 | 0 | 0 | 0 | 1
 @junit | federation-account-search-short | 0 | 0 | 0 | 0 | 0
+# Posts trending elsewhere live in memory, so anyone's read asks nothing; a member's read asks once
+# which of the listed accounts and servers they blocked or muted. A refresh asks whether each of the
+# six configured servers is blocked here, the instance key once, whether each server the posts come
+# from is blocked, once per server (five here), then which of the posts' accounts are known here.
+@junit | federation-trending-empty | 0 | 0 | 0 | 0 | 0
+@junit | federation-trending-refresh | 13 | 0 | 0 | 0 | 13
+@junit | federation-trending | 0 | 0 | 0 | 0 | 0
+@junit | federation-trending-member | 1 | 0 | 0 | 0 | 1
 # Suggestions: one statement over the accounts the member's follows follow, counted and ranked,
 # leaving out accounts not open to suggestions, already followed or asked, blocked or muted, and
 # servers suspended, limited or blocked by the member. Signing in comes first.

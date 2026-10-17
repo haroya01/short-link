@@ -380,6 +380,44 @@ class RemoteBlockMuteIntegrationTest {
   }
 
   @Test
+  void whatAMemberHidFromTrendsAndWhoIsKnownHereComeInOneReadEach() {
+    Long carol = actor("carol");
+    block(blocker, alice);
+    mute(blocker, bob, false, future());
+    mute(blocker, carol, false, past());
+    String unknown = "dave-" + tag + ".example";
+    update(
+        "INSERT INTO user_domain_block (user_id, domain, created_at) VALUES (?1, ?2, NOW(6))",
+        blocker,
+        unknown);
+    update(
+        "INSERT INTO user_domain_block (user_id, domain, created_at) VALUES (?1, ?2, NOW(6))",
+        blocker,
+        "elsewhere-" + tag + ".example");
+    List<String> accounts =
+        List.of("alice", "bob", "carol").stream()
+            .map(name -> "https://" + name + "-" + tag + ".example/users/" + name)
+            .toList();
+    List<String> servers =
+        List.of("alice-" + tag + ".example", "carol-" + tag + ".example", unknown);
+
+    RemoteAccountStandingReader.Hidden hidden =
+        standings.hidden(blocker, accounts, servers, Instant.now());
+
+    assertThat(hidden.actorUris()).containsExactlyInAnyOrder(accounts.get(0), accounts.get(1));
+    assertThat(hidden.domains()).containsExactly(unknown);
+    assertThat(standings.hidden(stranger, accounts, servers, Instant.now()))
+        .isEqualTo(new RemoteAccountStandingReader.Hidden(Set.of(), Set.of()));
+    assertThat(standings.hidden(null, accounts, servers, Instant.now()))
+        .isSameAs(RemoteAccountStandingReader.Hidden.NONE);
+    assertThat(standings.hidden(blocker, List.of(), List.of(), Instant.now()))
+        .isSameAs(RemoteAccountStandingReader.Hidden.NONE);
+    assertThat(standings.idsOf(List.of(accounts.get(0), accounts.get(2), "https://" + unknown)))
+        .isEqualTo(Map.of(accounts.get(0), alice, accounts.get(2), carol));
+    assertThat(standings.idsOf(List.of())).isEmpty();
+  }
+
+  @Test
   void blockingEndsFollowsBothWaysAndTellsTheirServerThenUnblockingUndoesIt() {
     String me = urls.actor("p" + tag);
     update(
