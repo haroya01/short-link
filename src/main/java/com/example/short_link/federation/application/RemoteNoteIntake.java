@@ -59,6 +59,13 @@ public class RemoteNoteIntake {
     return SHAREABLE.contains(note.visibility()) && keep(actor, note, null, false).isPresent();
   }
 
+  public Optional<Long> relayed(RemoteActorEntity author, RemoteNoteParser.Parsed note) {
+    if (earlyDeletes.remembered(author.getId(), note.uri())) {
+      return Optional.empty();
+    }
+    return keep(author, note, null, false);
+  }
+
   private Optional<Long> keep(
       RemoteActorEntity actor,
       RemoteNoteParser.Parsed note,

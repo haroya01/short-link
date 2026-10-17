@@ -2,8 +2,10 @@ package com.example.short_link.federation.scheduler;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,6 +17,7 @@ import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.application.relay.RelayBreaker;
 import com.example.short_link.federation.application.relay.RelayIntake;
 import com.example.short_link.federation.application.relay.RelayProperties;
+import com.example.short_link.federation.application.relay.RelayStore;
 import com.example.short_link.federation.application.relay.RelaySubscriptions;
 import com.example.short_link.federation.application.relay.RelayTally;
 import com.example.short_link.federation.application.signature.Signer;
@@ -40,17 +43,20 @@ import tools.jackson.databind.json.JsonMapper;
 class RelayWorkerTest {
 
   private static final String POST = "https://mastodon.example/users/alice/statuses/1";
+  private static final String RELAY = "https://relay.example/tag/dev";
   private static final URI POST_URI = URI.create(POST);
   private static final FederationUrls URLS =
       new FederationUrls(new FederationProperties("https://kurl.me", "https://blog.kurl.me"));
   private static final RelayProperties PROPS =
-      new RelayProperties(true, 30, 2_000, 10, Duration.ofSeconds(3), Duration.ofSeconds(4));
+      new RelayProperties(
+          true, 30, 2_000, 10, Duration.ofSeconds(3), Duration.ofSeconds(4), null, List.of());
 
   @Mock private RelaySubscriptions subscriptions;
   @Mock private RemoteNotes remoteNotes;
   @Mock private FederationDomainBlockRepository serverBlocks;
   @Mock private FederationHttp http;
   @Mock private SigningKeys signingKeys;
+  @Mock private RelayStore store;
 
   private final Signer instance = new Signer("https://kurl.me/ap/instance#main-key", null);
   private final SimpleMeterRegistry meters = new SimpleMeterRegistry();
@@ -65,15 +71,20 @@ class RelayWorkerTest {
     lenient()
         .when(subscriptions.setting())
         .thenReturn(new RelaySubscriptions.Setting(RelayMode.COUNT, List.of("ko", "ja")));
-    breaker = new RelayBreaker(PROPS, tally);
-    intake = new RelayIntake(subscriptions, breaker, tally, PROPS, URLS, meters);
+    build(PROPS);
+  }
+
+  private void build(RelayProperties props) {
+    breaker = new RelayBreaker(props, tally, subscriptions);
+    intake = new RelayIntake(subscriptions, breaker, tally, props, URLS, meters);
     worker =
         new RelayWorker(
             intake,
             subscriptions,
             breaker,
             tally,
-            PROPS,
+            store,
+            props,
             remoteNotes,
             serverBlocks,
             http,
@@ -103,7 +114,7 @@ class RelayWorkerTest {
   }
 
   private String processed() {
-    intake.offer(POST);
+    intake.offer(POST, RELAY);
     Map<String, Long> before = tally.today();
     assertThat(worker.processNext()).isTrue();
     Map<String, Long> after = tally.today();
@@ -120,6 +131,24 @@ class RelayWorkerTest {
     verify(http).get(POST_URI, instance, PROPS.patience());
     assertThat(meters.get("federation.relay.process").timer().count()).isEqualTo(1);
     assertThat(worker.processNext()).isFalse();
+    verify(store, never()).keep(any(), any(), any(), any());
+  }
+
+  @Test
+  void inStoreAWantedPostIsHandedToTheStoreWithTheRelayThatAnnouncedIt() {
+    when(subscriptions.setting())
+        .thenReturn(new RelaySubscriptions.Setting(RelayMode.STORE, List.of("ko", "ja")));
+    when(store.keep(eq("mastodon.example"), any(), any(), eq(RELAY))).thenReturn("stored");
+
+    assertThat(outcomeOf(ok(note(POST, "https://mastodon.example/users/alice", ""))))
+        .isEqualTo("stored");
+    assertThat(
+            outcomeOf(
+                ok(
+                    note(POST, "https://mastodon.example/users/alice", "")
+                        .replace("\"contentMap\":{\"ko\"", "\"contentMap\":{\"en\""))))
+        .isEqualTo("language");
+    verify(store).keep(eq("mastodon.example"), any(), any(), eq(RELAY));
   }
 
   @Test
@@ -193,7 +222,7 @@ class RelayWorkerTest {
 
   @Test
   void nothingIsFetchedWhileTheSettingIsOffOrTheWorkHasStoppedItself() {
-    intake.offer(POST);
+    intake.offer(POST, RELAY);
     when(subscriptions.setting())
         .thenReturn(new RelaySubscriptions.Setting(RelayMode.OFF, List.of("ko")));
     assertThat(worker.processNext()).isTrue();
@@ -201,7 +230,7 @@ class RelayWorkerTest {
 
     when(subscriptions.setting())
         .thenReturn(new RelaySubscriptions.Setting(RelayMode.COUNT, List.of("ko")));
-    intake.offer(POST);
+    intake.offer(POST, RELAY);
     for (int i = 0; i < 5; i++) {
       breaker.processed(Duration.ofSeconds(10), 0);
     }
@@ -209,6 +238,33 @@ class RelayWorkerTest {
     assertThat(tally.today("tripped")).isEqualTo(1);
     verify(http, never()).get(any(), any(), any());
     verify(remoteNotes, never()).exists(any());
+  }
+
+  @Test
+  void inStoreSlowKeepingStopsTheWorkAndTheStoreAndNothingQueuedIsFetchedOrKeptAfter() {
+    build(
+        new RelayProperties(
+            true, 30, 2_000, 10, Duration.ofSeconds(3), Duration.ofMillis(20), null, List.of()));
+    when(subscriptions.setting())
+        .thenReturn(new RelaySubscriptions.Setting(RelayMode.STORE, List.of("ko", "ja")));
+    when(http.get(eq(POST_URI), eq(instance), any()))
+        .thenReturn(ok(note(POST, "https://mastodon.example/users/alice", "")));
+    when(store.keep(eq("mastodon.example"), any(), any(), eq(RELAY)))
+        .thenAnswer(
+            call -> {
+              Thread.sleep(30);
+              return "stored";
+            });
+
+    for (int i = 0; i < 5; i++) {
+      assertThat(processed()).isEqualTo("stored");
+    }
+    assertThat(breaker.tripped()).isTrue();
+    verify(subscriptions).stopStoring();
+
+    assertThat(intake.offer(POST, RELAY)).isEqualTo("tripped");
+    verify(store, times(5)).keep(any(), any(), any(), any());
+    verify(http, times(5)).get(any(), any(), any());
   }
 
   @Test

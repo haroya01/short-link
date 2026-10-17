@@ -10,6 +10,7 @@ import com.example.short_link.federation.domain.RelayMode;
 import com.example.short_link.federation.domain.RelayState;
 import com.example.short_link.federation.domain.RemoteActorEntity;
 import com.example.short_link.federation.domain.repository.FederationRelayRepository;
+import com.example.short_link.federation.domain.repository.FederationRelayedNoteRepository;
 import com.example.short_link.federation.exception.FederationErrorCode;
 import com.example.short_link.federation.exception.FederationException;
 import java.net.URI;
@@ -19,9 +20,9 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
@@ -32,10 +33,12 @@ import tools.jackson.databind.json.JsonMapper;
 // The instance actor follows a relay with the Public collection as the object, as Mastodon does.
 // Which relays have accepted, and the one setting, are held in memory so an announce costs no query
 // to recognise.
+@Slf4j
 @Service
 public class RelaySubscriptions {
 
   private final FederationRelayRepository relays;
+  private final FederationRelayedNoteRepository relayed;
   private final RemoteActorResolver resolver;
   private final DeliveryQueue deliveries;
   private final FederationUrls urls;
@@ -43,10 +46,12 @@ public class RelaySubscriptions {
   private final RelayProperties props;
   private final Clock clock;
 
-  private volatile Set<String> accepted = Set.of();
+  private volatile Map<String, Long> accepted = Map.of();
   private volatile Setting setting = new Setting(RelayMode.OFF, List.of());
 
   public record Setting(RelayMode mode, List<String> languages) {}
+
+  public record Listing(List<View> relays, long kept) {}
 
   public record View(
       Long id,
@@ -54,32 +59,36 @@ public class RelaySubscriptions {
       String label,
       RelayState state,
       Instant acceptedAt,
-      Instant createdAt) {
+      Instant createdAt,
+      long kept) {
 
-    static View of(FederationRelayEntity row) {
+    static View of(FederationRelayEntity row, long kept) {
       return new View(
           row.getId(),
           row.getActorUri(),
           row.getLabel(),
           row.getState(),
           row.getAcceptedAt(),
-          row.getCreatedAt());
+          row.getCreatedAt(),
+          kept);
     }
   }
 
   @Autowired
   public RelaySubscriptions(
       FederationRelayRepository relays,
+      FederationRelayedNoteRepository relayed,
       RemoteActorResolver resolver,
       DeliveryQueue deliveries,
       FederationUrls urls,
       JsonMapper json,
       RelayProperties props) {
-    this(relays, resolver, deliveries, urls, json, props, Clock.systemUTC());
+    this(relays, relayed, resolver, deliveries, urls, json, props, Clock.systemUTC());
   }
 
   RelaySubscriptions(
       FederationRelayRepository relays,
+      FederationRelayedNoteRepository relayed,
       RemoteActorResolver resolver,
       DeliveryQueue deliveries,
       FederationUrls urls,
@@ -87,6 +96,7 @@ public class RelaySubscriptions {
       RelayProperties props,
       Clock clock) {
     this.relays = relays;
+    this.relayed = relayed;
     this.resolver = resolver;
     this.deliveries = deliveries;
     this.urls = urls;
@@ -96,14 +106,22 @@ public class RelaySubscriptions {
   }
 
   @EventListener(ApplicationReadyEvent.class)
-  @Transactional(readOnly = true)
+  @Transactional
   public void load() {
     if (!props.enabled()) {
       return;
     }
     reloadAccepted();
     FederationRelaySettingEntity row = relays.setting();
+    if (row.startsIn(props.mode())) {
+      relays.save(row);
+    }
     setting = new Setting(row.getMode(), row.languageList());
+    log.info(
+        "federation relay mode={} chosen={} environment={}",
+        row.getMode(),
+        row.getChosenAt() != null,
+        props.mode());
   }
 
   public boolean enabled() {
@@ -111,7 +129,11 @@ public class RelaySubscriptions {
   }
 
   public boolean isAccepted(String actorUri) {
-    return props.enabled() && actorUri != null && accepted.contains(actorUri);
+    return props.enabled() && actorUri != null && accepted.containsKey(actorUri);
+  }
+
+  public Long relayId(String actorUri) {
+    return actorUri == null ? null : accepted.get(actorUri);
   }
 
   public Setting setting() {
@@ -119,8 +141,13 @@ public class RelaySubscriptions {
   }
 
   @Transactional(readOnly = true)
-  public List<View> list() {
-    return relays.list().stream().map(View::of).toList();
+  public Listing list() {
+    Map<Long, Long> kept = relayed.countByRelay();
+    return new Listing(
+        relays.list().stream()
+            .map(row -> View.of(row, kept.getOrDefault(row.getId(), 0L)))
+            .toList(),
+        kept.values().stream().mapToLong(Long::longValue).sum());
   }
 
   @Transactional
@@ -137,7 +164,7 @@ public class RelaySubscriptions {
                 () -> new FederationException(FederationErrorCode.REMOTE_ACCOUNT_NOT_FOUND, asked));
     Optional<FederationRelayEntity> existing = relays.findByActorUri(actor.getActorUri());
     if (existing.isPresent()) {
-      return View.of(existing.get());
+      return View.of(existing.get(), 0);
     }
     String followId = urls.relayFollow(UUID.randomUUID().toString());
     FederationRelayEntity row =
@@ -149,7 +176,7 @@ public class RelaySubscriptions {
         followId,
         json.writeValueAsString(activity(follow(followId))),
         List.of(row.getInbox()));
-    return View.of(row);
+    return View.of(row, 0);
   }
 
   @Transactional
@@ -190,18 +217,28 @@ public class RelaySubscriptions {
   @Transactional
   public Setting change(RelayMode mode, List<String> languages) {
     FederationRelaySettingEntity row = relays.setting();
-    row.change(mode, languages);
+    row.change(mode, languages, clock.instant());
     relays.save(row);
     setting = new Setting(mode, List.copyOf(languages));
     return setting;
+  }
+
+  // Kept in the database, so storing does not come back with the next start.
+  @Transactional
+  public void stopStoring() {
+    Setting current = setting;
+    if (current.mode() == RelayMode.STORE) {
+      change(RelayMode.COUNT, current.languages());
+    }
   }
 
   private void reloadAccepted() {
     accepted =
         relays.list().stream()
             .filter(row -> row.getState() == RelayState.ACCEPTED)
-            .map(FederationRelayEntity::getActorUri)
-            .collect(Collectors.toUnmodifiableSet());
+            .collect(
+                Collectors.toUnmodifiableMap(
+                    FederationRelayEntity::getActorUri, FederationRelayEntity::getId));
   }
 
   private String address(String raw) {

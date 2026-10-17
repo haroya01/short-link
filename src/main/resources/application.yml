@@ -199,6 +199,8 @@ short-link:
       per-minute: ${FEDERATION_RELAY_PER_MINUTE:30}
       per-day: ${FEDERATION_RELAY_PER_DAY:2000}
       queue: ${FEDERATION_RELAY_QUEUE:500}
+      mode: ${FEDERATION_RELAY_MODE:}
+      subscriptions: ${FEDERATION_RELAY_SUBSCRIPTIONS:}
     trends:
       enabled: ${FEDERATION_TRENDS_ENABLED:false}
       hosts: ${FEDERATION_TRENDS_HOSTS:mastodon.social,mstdn.jp,fedibird.com,qdon.space,planet.moe,social.silicon.moe}

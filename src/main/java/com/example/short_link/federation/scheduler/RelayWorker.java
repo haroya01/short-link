@@ -10,6 +10,7 @@ import com.example.short_link.federation.application.RemoteNoteParser;
 import com.example.short_link.federation.application.relay.RelayBreaker;
 import com.example.short_link.federation.application.relay.RelayIntake;
 import com.example.short_link.federation.application.relay.RelayProperties;
+import com.example.short_link.federation.application.relay.RelayStore;
 import com.example.short_link.federation.application.relay.RelaySubscriptions;
 import com.example.short_link.federation.application.relay.RelayTally;
 import com.example.short_link.federation.application.signature.SigningKeys;
@@ -30,8 +31,9 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 
 // One low-priority thread works the relay queue, one post at a time and at most per-minute posts a
-// minute, so no server is asked twice at once. A post is believed only as its own server gives it.
-// The thread does not run where scheduling is off; processNext does the same step by hand.
+// minute, so no server is asked twice at once. A post is believed only as its own server gives it,
+// and kept only in STORE. The thread does not run where scheduling is off; processNext does the
+// same step by hand.
 @Slf4j
 @Component
 public class RelayWorker implements SmartLifecycle {
@@ -40,6 +42,7 @@ public class RelayWorker implements SmartLifecycle {
   private final RelaySubscriptions subscriptions;
   private final RelayBreaker breaker;
   private final RelayTally tally;
+  private final RelayStore store;
   private final RelayProperties props;
   private final RemoteNotes remoteNotes;
   private final FederationDomainBlockRepository serverBlocks;
@@ -58,6 +61,7 @@ public class RelayWorker implements SmartLifecycle {
       RelaySubscriptions subscriptions,
       RelayBreaker breaker,
       RelayTally tally,
+      RelayStore store,
       RelayProperties props,
       RemoteNotes remoteNotes,
       FederationDomainBlockRepository serverBlocks,
@@ -71,6 +75,7 @@ public class RelayWorker implements SmartLifecycle {
     this.subscriptions = subscriptions;
     this.breaker = breaker;
     this.tally = tally;
+    this.store = store;
     this.props = props;
     this.remoteNotes = remoteNotes;
     this.serverBlocks = serverBlocks;
@@ -110,11 +115,11 @@ public class RelayWorker implements SmartLifecycle {
   }
 
   public boolean processNext() {
-    String uri = intake.poll();
-    if (uri == null) {
+    RelayIntake.Announced announced = intake.poll();
+    if (announced == null) {
       return false;
     }
-    process(uri);
+    process(announced);
     return true;
   }
 
@@ -123,8 +128,8 @@ public class RelayWorker implements SmartLifecycle {
     long last = System.nanoTime() - gap;
     while (running) {
       try {
-        String uri = intake.next(Duration.ofSeconds(5));
-        if (uri == null) {
+        RelayIntake.Announced announced = intake.next(Duration.ofSeconds(5));
+        if (announced == null) {
           continue;
         }
         long wait = last + gap - System.nanoTime();
@@ -132,7 +137,7 @@ public class RelayWorker implements SmartLifecycle {
           TimeUnit.NANOSECONDS.sleep(wait);
         }
         last = System.nanoTime();
-        process(uri);
+        process(announced);
       } catch (InterruptedException stopping) {
         Thread.currentThread().interrupt();
         return;
@@ -142,16 +147,17 @@ public class RelayWorker implements SmartLifecycle {
     }
   }
 
-  private void process(String uri) {
+  private void process(RelayIntake.Announced announced) {
     long started = System.nanoTime();
-    String outcome = outcome(uri);
+    String outcome = outcome(announced);
     Duration took = Duration.ofNanos(System.nanoTime() - started);
     tally.count(outcome);
     meters.timer("federation.relay.process").record(took);
     breaker.processed(took, intake.size());
   }
 
-  private String outcome(String uri) {
+  private String outcome(RelayIntake.Announced announced) {
+    String uri = announced.uri();
     RelaySubscriptions.Setting setting = subscriptions.setting();
     if (setting.mode() == RelayMode.OFF) {
       return "off";
@@ -201,6 +207,8 @@ public class RelayWorker implements SmartLifecycle {
     if (note.language() == null || !setting.languages().contains(note.language())) {
       return "language";
     }
-    return "wanted";
+    return setting.mode() == RelayMode.STORE
+        ? store.keep(host, post, note, announced.relay())
+        : "wanted";
   }
 }

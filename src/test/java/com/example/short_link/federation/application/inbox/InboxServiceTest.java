@@ -632,7 +632,7 @@ class InboxServiceTest {
     RemoteActorEntity relay = remote(RELAY, "relay.example");
     when(relays.isAccepted(RELAY)).thenReturn(true);
     verifiedAs(relay);
-    when(relayIntake.offer(POST)).thenReturn("queued", "daily-cap");
+    when(relayIntake.offer(POST, RELAY)).thenReturn("queued", "daily-cap");
     InboxService service = service();
 
     assertThat(

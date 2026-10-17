@@ -10,16 +10,25 @@ import static org.mockito.Mockito.when;
 import com.example.short_link.federation.application.ActorKeys;
 import com.example.short_link.federation.application.FederationActorService;
 import com.example.short_link.federation.application.FederationHttp;
+import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
 import com.example.short_link.federation.application.directory.DirectorySync;
+import com.example.short_link.federation.application.inbox.SignedInboxRequests;
+import com.example.short_link.federation.application.relay.RelaySubscriptions;
+import com.example.short_link.federation.application.signature.HttpSignatures;
 import com.example.short_link.federation.application.signature.SigningKeys;
 import com.example.short_link.federation.application.trends.TrendingPosts;
+import com.example.short_link.federation.domain.RelayMode;
+import com.example.short_link.federation.scheduler.RelayWorker;
 import com.example.short_link.testsupport.AccountHttpJourneySupport;
 import com.example.short_link.testsupport.FederationFixtures;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -39,6 +48,9 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
   @Autowired private FederationActorService localActors;
   @Autowired private SigningKeys signingKeys;
   @Autowired private DirectorySync directorySync;
+  @Autowired private RelaySubscriptions relays;
+  @Autowired private FederationProperties federation;
+  @Autowired private RelayWorker relayWorker;
 
   private String tag;
 
@@ -656,5 +668,86 @@ class FederationSearchHttpQueryContractTest extends AccountHttpJourneySupport {
                 token,
                 404));
     assertThat(suspended.path("code").asString()).isEqualTo("REMOTE_ACCOUNT_NOT_FOUND");
+  }
+
+  @Test
+  void aPostATagRelayAnnouncesIsKeptAndReadInTheOtherServersFeed() throws Exception {
+    String server = host("relayed");
+    long author = seed("alice", server);
+    String alice = "https://" + server + "/users/alice";
+    String post = alice + "/statuses/1";
+    String relay = "https://" + host("relay") + "/tag/gaebal";
+    jdbc.update(
+        "INSERT INTO federation_remote_actor (actor_uri, key_id, public_key_pem, inbox, domain,"
+            + " display_name, fetched_at, created_at, updated_at)"
+            + " VALUES (?, ?, ?, ?, ?, '#gaebal', NOW(6), NOW(6), NOW(6))",
+        relay,
+        relay + "#key",
+        KEYS.publicKey(),
+        relay,
+        host("relay"));
+    jdbc.update(
+        "INSERT INTO federation_relay (actor_uri, inbox, follow_activity_id, state, accepted_at,"
+            + " created_at, updated_at) VALUES (?, ?, ?, 'ACCEPTED', NOW(6), NOW(6), NOW(6))",
+        relay,
+        relay,
+        urls.relayFollow(tag));
+    relays.load();
+    relays.change(RelayMode.STORE, List.of("ko", "ja"));
+    when(http.get(eq(URI.create(post)), any(), any(Duration.class)))
+        .thenReturn(
+            ok(
+                """
+                {"id":"%s","type":"Note","attributedTo":"%s",
+                 "to":["https://www.w3.org/ns/activitystreams#Public"],
+                 "published":"2026-10-17T00:00:00Z",
+                 "content":"<p>개발 일지 #개발</p>","contentMap":{"ko":"<p>개발 일지 #개발</p>"},
+                 "attachment":[{"type":"Document","mediaType":"image/png",
+                   "url":"https://%s/media/a.png","name":"screen"}]}"""
+                    .formatted(post, alice, server)));
+    try {
+      Map<String, Object> announce = new LinkedHashMap<>();
+      announce.put("@context", "https://www.w3.org/ns/activitystreams");
+      announce.put("id", "https://" + host("relay") + "/announce/1");
+      announce.put("type", "Announce");
+      announce.put("actor", relay);
+      announce.put("object", post);
+      byte[] signed = json.writeValueAsString(announce).getBytes(StandardCharsets.UTF_8);
+      callWithHeaders(
+          "federation-inbox-relay-announce-store",
+          "POST",
+          "/ap/inbox",
+          announce,
+          SignedInboxRequests.headers(
+              relay + "#key",
+              KEYS.privateKey(),
+              HttpSignatures.host(URI.create(federation.baseUrl())),
+              "/ap/inbox",
+              signed,
+              Instant.now()),
+          202);
+
+      captureBackgroundWork(
+          "federation-relay-worker-store", () -> assertThat(relayWorker.processNext()).isTrue());
+      long note =
+          jdbc.queryForObject(
+              "SELECT id FROM note WHERE uri = ? AND remote_actor_id = ?",
+              Long.class,
+              post,
+              author);
+      assertThat(count("SELECT COUNT(*) FROM federation_relayed_note WHERE note_id = ?", note))
+          .isEqualTo(1);
+
+      var feed =
+          body(call("notes-federated-relayed", "GET", "/api/v1/notes/federated", null, token, 200));
+      List<Long> ids = new ArrayList<>();
+      feed.path("items").forEach(item -> ids.add(item.path("id").asLong()));
+      assertThat(ids).contains(note);
+    } finally {
+      relays.change(RelayMode.COUNT, List.of("ko", "ja"));
+      jdbc.update("UPDATE federation_relay_setting SET chosen_at = NULL");
+      jdbc.update("DELETE FROM federation_relay WHERE actor_uri = ?", relay);
+      relays.load();
+    }
   }
 }

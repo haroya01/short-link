@@ -32,6 +32,7 @@ public class AdminRelayController {
   @GetMapping
   public RelayStatusResponse status() {
     RelaySubscriptions.Setting setting = subscriptions.setting();
+    RelaySubscriptions.Listing listing = subscriptions.list();
     return new RelayStatusResponse(
         subscriptions.enabled(),
         setting.mode(),
@@ -39,7 +40,8 @@ public class AdminRelayController {
         breaker.tripped(),
         intake.size(),
         tally.today(),
-        subscriptions.list());
+        listing.kept(),
+        listing.relays());
   }
 
   @PostMapping
