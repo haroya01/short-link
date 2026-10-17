@@ -195,7 +195,11 @@ class RelayedNoteRetentionIntegrationTest {
         untouched);
     update("INSERT INTO note_tag (note_id, tag) VALUES (?1, ?2)", untouched, tag);
 
-    assertThat(relayed.deleteExpired(BEFORE, 200)).isEqualTo(5);
+    List<Long> expired = relayed.expired(BEFORE, 200);
+    assertThat(expired)
+        .containsExactly(
+            untouched, byARequestedAuthor, answeredElsewhere, quotedElsewhere, likedElsewhere);
+    assertThat(relayed.deleteUntouched(expired)).isEqualTo(5);
 
     assertThat(
             left(
@@ -238,8 +242,34 @@ class RelayedNoteRetentionIntegrationTest {
     Long first = relayedNote(alice, OLD);
     Long second = relayedNote(alice, OLD.plusSeconds(1));
 
-    assertThat(relayed.deleteExpired(BEFORE, 2)).isEqualTo(2);
+    assertThat(relayed.expired(BEFORE, 2)).containsExactly(first, second);
+    assertThat(relayed.deleteUntouched(List.of(first, second))).isEqualTo(2);
     assertThat(left(first, second, third)).containsExactly(third);
+  }
+
+  @Test
+  void aTouchThatCameAfterTheReadStillKeepsItsNote() {
+    Long liked = relayedNote(alice, OLD);
+    Long answered = relayedNote(alice, OLD.plusSeconds(1));
+    Long quoted = relayedNote(alice, OLD.plusSeconds(2));
+    Long byAFollowedAuthor = relayedNote(bob, OLD.plusSeconds(3));
+    Long untouched = relayedNote(alice, OLD.plusSeconds(4));
+    List<Long> read = relayed.expired(BEFORE, 200);
+    assertThat(read).contains(liked, answered, quoted, byAFollowedAuthor, untouched);
+
+    update(
+        "INSERT INTO note_like (note_id, user_id, created_at) VALUES (?1, ?2, NOW(6))",
+        liked,
+        member);
+    localNote("in_reply_to_id", answered);
+    localNote("quoted_note_id", quoted);
+    follow(bob, true);
+
+    assertThat(
+            relayed.deleteUntouched(List.of(liked, answered, quoted, byAFollowedAuthor, untouched)))
+        .isEqualTo(1);
+    assertThat(left(liked, answered, quoted, byAFollowedAuthor, untouched))
+        .containsExactly(liked, answered, quoted, byAFollowedAuthor);
   }
 
   @Test

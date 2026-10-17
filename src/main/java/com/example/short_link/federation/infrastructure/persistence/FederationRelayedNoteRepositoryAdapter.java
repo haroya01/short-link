@@ -15,25 +15,48 @@ import org.springframework.transaction.annotation.Transactional;
 class FederationRelayedNoteRepositoryAdapter implements FederationRelayedNoteRepository {
 
   // A member's touch keeps the note: a like, repost, bookmark or poll vote, a reply or quote of
-  // their own, a post quoting it, or a follow of its author. The candidates sit in a derived table
-  // so MySQL materializes them before deleting from note, which they also read.
-  private static final String DELETE_EXPIRED =
-      "DELETE FROM note WHERE id IN (SELECT note_id FROM ("
-          + "SELECT r.note_id FROM federation_relayed_note r"
-          + " JOIN note n ON n.id = r.note_id"
+  // their own, a post quoting it, or a follow of its author.
+  private static String unmarked(String note, String author) {
+    return " AND NOT EXISTS (SELECT 1 FROM note_like l WHERE l.note_id = "
+        + note
+        + ") AND NOT EXISTS (SELECT 1 FROM note_repost p WHERE p.note_id = "
+        + note
+        + ") AND NOT EXISTS (SELECT 1 FROM note_bookmark b WHERE b.note_id = "
+        + note
+        + ") AND NOT EXISTS (SELECT 1 FROM note_poll_vote v WHERE v.note_id = "
+        + note
+        + ") AND NOT EXISTS (SELECT 1 FROM post_note_quote pq WHERE pq.note_id = "
+        + note
+        + ") AND NOT EXISTS (SELECT 1 FROM federation_following f"
+        + " WHERE f.remote_actor_id = "
+        + author
+        + " AND f.accepted_at IS NOT NULL)";
+  }
+
+  // Found by a plain read, which locks nothing: a DELETE that searched itself would hold shared
+  // next-key locks on every note it scanned. NO_SEMIJOIN keeps answers and quotes to one index
+  // lookup per candidate instead of a scan of every note.
+  private static final String EXPIRED =
+      "SELECT r.note_id FROM federation_relayed_note r JOIN note n ON n.id = r.note_id"
           + " WHERE r.received_at < :before"
-          + " AND NOT EXISTS (SELECT 1 FROM note_like l WHERE l.note_id = r.note_id)"
-          + " AND NOT EXISTS (SELECT 1 FROM note_repost p WHERE p.note_id = r.note_id)"
-          + " AND NOT EXISTS (SELECT 1 FROM note_bookmark b WHERE b.note_id = r.note_id)"
-          + " AND NOT EXISTS (SELECT 1 FROM note_poll_vote v WHERE v.note_id = r.note_id)"
-          + " AND NOT EXISTS (SELECT 1 FROM note a"
+          + unmarked("r.note_id", "n.remote_actor_id")
+          + " AND NOT EXISTS (SELECT /*+ NO_SEMIJOIN() */ 1 FROM note a"
           + " WHERE a.in_reply_to_id = r.note_id AND a.user_id IS NOT NULL)"
-          + " AND NOT EXISTS (SELECT 1 FROM note q"
+          + " AND NOT EXISTS (SELECT /*+ NO_SEMIJOIN() */ 1 FROM note q"
           + " WHERE q.quoted_note_id = r.note_id AND q.user_id IS NOT NULL)"
-          + " AND NOT EXISTS (SELECT 1 FROM post_note_quote pq WHERE pq.note_id = r.note_id)"
-          + " AND NOT EXISTS (SELECT 1 FROM federation_following f"
-          + " WHERE f.remote_actor_id = n.remote_actor_id AND f.accepted_at IS NOT NULL)"
-          + " ORDER BY r.received_at, r.note_id LIMIT :limit) expired)";
+          + " ORDER BY r.received_at, r.note_id LIMIT :limit";
+
+  // Checks the touches again for its own ids, so one that came after the read keeps its note. A
+  // DELETE may read its own table only through a derived table; without the forced indexes MySQL
+  // scans every note for it, since most rows have neither column set.
+  private static final String DELETE_UNTOUCHED =
+      "DELETE FROM note WHERE id IN (:ids)"
+          + unmarked("note.id", "note.remote_actor_id")
+          + " AND id NOT IN (SELECT kept.id FROM ("
+          + "SELECT a.in_reply_to_id AS id FROM note a FORCE INDEX (idx_note_reply_created)"
+          + " WHERE a.in_reply_to_id IN (:ids) AND a.user_id IS NOT NULL"
+          + " UNION ALL SELECT q.quoted_note_id FROM note q FORCE INDEX (fk_note_quoted_note)"
+          + " WHERE q.quoted_note_id IN (:ids) AND q.user_id IS NOT NULL) kept)";
 
   private final EntityManager em;
 
@@ -73,11 +96,22 @@ class FederationRelayedNoteRepositoryAdapter implements FederationRelayedNoteRep
   }
 
   @Override
+  @SuppressWarnings("unchecked")
+  public List<Long> expired(Instant receivedBefore, int limit) {
+    List<Number> ids =
+        em.createNativeQuery(EXPIRED)
+            .setParameter("before", receivedBefore)
+            .setParameter("limit", limit)
+            .getResultList();
+    return ids.stream().map(Number::longValue).toList();
+  }
+
+  @Override
   @Transactional
-  public int deleteExpired(Instant receivedBefore, int limit) {
-    return em.createNativeQuery(DELETE_EXPIRED)
-        .setParameter("before", receivedBefore)
-        .setParameter("limit", limit)
-        .executeUpdate();
+  public int deleteUntouched(List<Long> noteIds) {
+    if (noteIds.isEmpty()) {
+      return 0;
+    }
+    return em.createNativeQuery(DELETE_UNTOUCHED).setParameter("ids", noteIds).executeUpdate();
   }
 }

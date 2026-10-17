@@ -6,6 +6,7 @@ import jakarta.annotation.PreDestroy;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -91,10 +92,10 @@ public class RelayRetentionJob {
     int deleted = 0;
     int batches = 0;
     while (true) {
-      int batch = relayed.deleteExpired(before, BATCH);
-      deleted += batch;
+      List<Long> expired = relayed.expired(before, BATCH);
+      deleted += relayed.deleteUntouched(expired);
       batches++;
-      if (batch < BATCH) {
+      if (expired.size() < BATCH) {
         break;
       }
       TimeUnit.NANOSECONDS.sleep(pause.toNanos());
