@@ -1,5 +1,6 @@
 package com.example.short_link.federation.infrastructure.redis;
 
+import com.example.short_link.federation.application.KnownRemoteDomains;
 import com.example.short_link.federation.application.NodeInfoService;
 import java.time.Duration;
 import org.springframework.boot.cache.autoconfigure.RedisCacheManagerBuilderCustomizer;
@@ -11,6 +12,7 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 public class FederationCacheConfig {
 
   static final Duration NODEINFO_USAGE_TTL = Duration.ofHours(1);
+  static final Duration KNOWN_DOMAINS_TTL = Duration.ofMinutes(10);
 
   @Bean
   public RedisCacheManagerBuilderCustomizer nodeInfoUsageCacheCustomizer(
@@ -18,5 +20,13 @@ public class FederationCacheConfig {
     return builder ->
         builder.withCacheConfiguration(
             NodeInfoService.USAGE_CACHE, cacheConfiguration.entryTtl(NODEINFO_USAGE_TTL));
+  }
+
+  @Bean
+  public RedisCacheManagerBuilderCustomizer knownDomainsCacheCustomizer(
+      RedisCacheConfiguration cacheConfiguration) {
+    return builder ->
+        builder.withCacheConfiguration(
+            KnownRemoteDomains.CACHE, cacheConfiguration.entryTtl(KNOWN_DOMAINS_TTL));
   }
 }
