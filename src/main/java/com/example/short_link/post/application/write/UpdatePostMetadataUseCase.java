@@ -1,6 +1,8 @@
 package com.example.short_link.post.application.write;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.image.ImageVariantKeys;
+import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.post.application.read.PostView;
 import com.example.short_link.post.domain.PostBlockEntity;
 import com.example.short_link.post.domain.PostEntity;
@@ -11,6 +13,7 @@ import com.example.short_link.post.exception.PostException;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +30,7 @@ public class UpdatePostMetadataUseCase {
   private final PostWriteViewAssembler writeViews;
   private final PostAccessSettings accessSettings;
   private final ProfileCacheInvalidator profileCache;
+  private final ApplicationEventPublisher events;
 
   @Transactional
   public PostView execute(UpdatePostMetadataCommand cmd) {
@@ -61,7 +65,12 @@ public class UpdatePostMetadataUseCase {
       if (cmd.ogImageUrl().isBlank()) {
         post.clearOgImage();
       } else {
+        boolean newCover = !cmd.ogImageUrl().equals(post.getOgImageUrl());
         post.updateOgImage(cmd.ogImageUrl(), cmd.ogImageKey(), coverChosen(post, cmd));
+        List<String> cover = ImageVariantKeys.keysIn(cmd.ogImageUrl());
+        if (newCover && !cover.isEmpty()) {
+          events.publishEvent(new ImageVariantsRequested(cover));
+        }
       }
     }
     if (cmd.languageTag() != null && !cmd.languageTag().isBlank()) {

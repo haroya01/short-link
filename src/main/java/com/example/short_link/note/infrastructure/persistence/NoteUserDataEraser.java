@@ -65,7 +65,7 @@ class NoteUserDataEraser implements UserDataEraser {
             .getResultList();
     for (Object key : keys) {
       try {
-        storage.delete((String) key);
+        storage.deleteWithVariants((String) key);
       } catch (ObjectStorageException e) {
         log.warn("failed to delete note image key={}", key, e);
       }

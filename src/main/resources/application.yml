@@ -74,6 +74,13 @@ short-link:
     public-base-url: ${AVATAR_S3_PUBLIC_BASE_URL:}
     presign-ttl-seconds: ${AVATAR_PRESIGN_TTL:300}
     max-bytes: ${AVATAR_MAX_BYTES:5242880}
+  image-variants:
+    enabled: ${IMAGE_VARIANTS_ENABLED:true}
+    queue: 100
+    recent-rows: 200
+    sweep-delay: PT10M
+    backfill-enabled: ${IMAGE_VARIANTS_BACKFILL_ENABLED:false}
+    backfill-interval: ${IMAGE_VARIANTS_BACKFILL_INTERVAL:PT1S}
   pow:
     difficulty: ${POW_DIFFICULTY:3}
     enforce: ${POW_ENFORCE:true}

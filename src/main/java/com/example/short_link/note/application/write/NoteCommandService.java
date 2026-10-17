@@ -11,6 +11,7 @@ import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
+import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.note.Hashtags;
 import com.example.short_link.common.note.Mentions;
 import com.example.short_link.common.post.SeriesItemCleaner;
@@ -353,6 +354,10 @@ public class NoteCommandService {
               image.height()));
     }
     media.saveAll(rows);
+    if (!rows.isEmpty()) {
+      events.publishEvent(
+          new ImageVariantsRequested(rows.stream().map(NoteMediaEntity::getStorageKey).toList()));
+    }
     notes.tag(note.getId(), Hashtags.of(body));
     events.publishEvent(
         new NotePublishedEvent(

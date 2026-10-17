@@ -1357,7 +1357,7 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
         403);
 
     step("note-delete", "DELETE", "/api/v1/notes/" + noteId, writer, null, 204);
-    verify(objectStorage, timeout(5_000)).delete(key);
+    verify(objectStorage, timeout(5_000)).deleteWithVariants(key);
     assertThat(count("note_media", "note_id = ?", noteId)).isZero();
     assertThat(count("note", "id = ? AND in_reply_to_id IS NULL AND reply", replyId)).isEqualTo(1);
     assertThat(count("note", "id = ? AND quoted_note_id IS NULL", quoteId)).isEqualTo(1);

@@ -94,6 +94,11 @@ services:
       AVATAR_S3_PUBLIC_BASE_URL: ${AVATAR_S3_PUBLIC_BASE_URL:-}
       AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-}
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-}
+      # note-images/·post-images/ 원본의 w480·w1080 사본 — application.yml 의 같은 이름·기본값과 맞춘다
+      # (ImageVariantsDeployEnvTest 가 확인한다). 백필은 배포 뒤 켜고, 끝나면 다시 끈다.
+      IMAGE_VARIANTS_ENABLED: ${IMAGE_VARIANTS_ENABLED:-true}
+      IMAGE_VARIANTS_BACKFILL_ENABLED: ${IMAGE_VARIANTS_BACKFILL_ENABLED:-false}
+      IMAGE_VARIANTS_BACKFILL_INTERVAL: ${IMAGE_VARIANTS_BACKFILL_INTERVAL:-PT1S}
       SENTRY_DSN: ${SENTRY_DSN:-}
       SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-prod}
       SENTRY_RELEASE: ${APP_IMAGE_TAG:-latest}

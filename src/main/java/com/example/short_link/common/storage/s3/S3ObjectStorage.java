@@ -11,9 +11,11 @@ import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.CopyObjectRequest;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectRequest;
 import software.amazon.awssdk.services.s3.model.HeadObjectResponse;
 import software.amazon.awssdk.services.s3.model.MetadataDirective;
+import software.amazon.awssdk.services.s3.model.NoSuchKeyException;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
@@ -102,6 +104,20 @@ public class S3ObjectStorage implements ObjectStorage {
       return Optional.ofNullable(head.contentLength());
     } catch (RuntimeException e) {
       return Optional.empty();
+    }
+  }
+
+  @Override
+  public Optional<byte[]> getObject(String key) {
+    try {
+      return Optional.of(
+          s3Client
+              .getObjectAsBytes(GetObjectRequest.builder().bucket(props.bucket()).key(key).build())
+              .asByteArrayUnsafe());
+    } catch (NoSuchKeyException missing) {
+      return Optional.empty();
+    } catch (RuntimeException e) {
+      throw new ObjectStorageException("S3 getObject failed for key=" + key, e);
     }
   }
 

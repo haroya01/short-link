@@ -23,6 +23,7 @@ import com.example.short_link.common.event.NoteRevisedEvent;
 import com.example.short_link.common.event.NoteUnrepostedEvent;
 import com.example.short_link.common.event.PostQuotedEvent;
 import com.example.short_link.common.event.RemoteNoteLikedEvent;
+import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.post.SeriesItemCleaner;
 import com.example.short_link.common.user.UserBlockChecker;
 import com.example.short_link.common.user.UserModerationGuard;
@@ -248,6 +249,7 @@ class NoteCommandServiceTest {
             org.assertj.core.groups.Tuple.tuple(1, "k2"));
     verify(events).publishEvent(new NotePublishedEvent(100L, 7L));
     verify(events).publishEvent(new PostQuotedEvent(3L, 7L, 100L, "hello"));
+    verify(events).publishEvent(new ImageVariantsRequested(List.of("k1", "k2")));
     assertThat(view.body()).isEqualTo("hello");
     assertThat(view.quotedPost()).isEqualTo(quoted);
     assertThat(view.author()).isEqualTo(WRITER);
@@ -267,6 +269,7 @@ class NoteCommandServiceTest {
     service().create(7L, new NoteDraft("only us", null, 5L, null, null, null, false, "PRIVATE"));
 
     verify(events, never()).publishEvent(any(PostQuotedEvent.class));
+    verify(events, never()).publishEvent(any(ImageVariantsRequested.class));
   }
 
   @Test

@@ -5,10 +5,12 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.example.short_link.common.cache.ProfileCacheInvalidator;
+import com.example.short_link.common.image.ImageVariantsRequested;
 import com.example.short_link.common.user.UserModerationGuard;
 import com.example.short_link.post.application.access.PostAccessFixtures;
 import com.example.short_link.post.application.access.PostPasswords;
@@ -27,6 +29,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import tools.jackson.databind.json.JsonMapper;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,10 +58,12 @@ class UpdatePostMetadataUseCaseTest {
             revisionCapture,
             new PostWriteViewAssembler(postRepository, PostAccessFixtures.unlistedUrls()),
             new PostAccessSettings(new PostPasswords()),
-            profileCache);
+            profileCache,
+            events);
   }
 
   @Mock private ProfileCacheInvalidator profileCache;
+  @Mock private ApplicationEventPublisher events;
 
   private UpdatePostMetadataCommand access(String audience, String password, List<String> blocked) {
     return new UpdatePostMetadataCommand(
@@ -275,6 +280,22 @@ class UpdatePostMetadataUseCaseTest {
 
     useCase.execute(cover("https://cdn/body-first.png", null));
     assertThat(post.isCoverChosen()).isFalse();
+  }
+
+  @Test
+  void aNewCoverStoredHereAsksForItsResizedCopiesOnce() {
+    PostEntity post = ownedPost();
+    when(postOwnership.requireOwnedForUpdate(7L, 42L)).thenReturn(post);
+    when(postRepository.save(any(PostEntity.class))).thenAnswer(inv -> inv.getArgument(0));
+    String stored = "https://cdn.kurl.me/post-images/7/42/cover.jpg";
+
+    useCase.execute(cover(stored, true));
+    useCase.execute(cover(stored, true));
+    useCase.execute(cover("https://elsewhere.example/picture.jpg", true));
+
+    verify(events).publishEvent(new ImageVariantsRequested(List.of("post-images/7/42/cover.jpg")));
+    verify(events, never()).publishEvent(new ImageVariantsRequested(List.of("picture.jpg")));
+    verify(events, times(1)).publishEvent(any(ImageVariantsRequested.class));
   }
 
   @Test
