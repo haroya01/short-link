@@ -296,4 +296,71 @@ class DirectorySyncTest {
     assertThat(outcomes).extracting(DirectorySync.Outcome::host).containsExactly("due.example");
     verify(actors).forgetUnlisted(NOW.minus(Duration.ofDays(3)));
   }
+
+  @Test
+  void eachSourceIsRecordedAsItEndsAndOneThatBreaksDoesNotStopTheRest() {
+    FederationDirectorySourceEntity first =
+        new FederationDirectorySourceEntity("first.example", true, 80);
+    FederationDirectorySourceEntity broken =
+        new FederationDirectorySourceEntity("broken.example", true, 80);
+    FederationDirectorySourceEntity last =
+        new FederationDirectorySourceEntity("last.example", true, 80);
+    when(sources.list()).thenReturn(List.of(first, broken, last));
+    when(sources.find("first.example")).thenReturn(Optional.of(first));
+    when(sources.find("broken.example")).thenThrow(new IllegalStateException("lost connection"));
+    when(sources.find("last.example")).thenReturn(Optional.of(last));
+    when(http.getJson(any(), any(), any())).thenReturn(ok(List.of()));
+    List<String> saved = new ArrayList<>();
+    when(sources.save(any()))
+        .thenAnswer(
+            call -> {
+              saved.add(call.<FederationDirectorySourceEntity>getArgument(0).getHost());
+              return call.getArgument(0);
+            });
+
+    List<DirectorySync.Outcome> outcomes = sync(100).run();
+
+    assertThat(outcomes)
+        .extracting(DirectorySync.Outcome::host)
+        .containsExactly("first.example", "last.example");
+    assertThat(saved).containsExactly("first.example", "last.example");
+    assertThat(first.getLastSyncedAt()).isEqualTo(NOW);
+    assertThat(last.getLastSyncedAt()).isEqualTo(NOW);
+    verify(actors).forgetUnlisted(NOW.minus(Duration.ofDays(3)));
+  }
+
+  private static FederationDirectorySourceEntity row(
+      String host, boolean enabled, Instant lastSyncedAt, Instant retryAfter) {
+    FederationDirectorySourceEntity row = new FederationDirectorySourceEntity(host, enabled, 100);
+    ReflectionTestUtils.setField(row, "lastSyncedAt", lastSyncedAt);
+    ReflectionTestUtils.setField(row, "retryAfter", retryAfter);
+    return row;
+  }
+
+  @Test
+  void aSourceNeverReadOrNotReadSinceTheGivenTimeIsUnreadUnlessItIsOffOrWaitingOutAFailure() {
+    Instant since = NOW.minus(Duration.ofMinutes(30));
+    FederationDirectorySourceEntity read = row("read.example", true, since.plusSeconds(1), null);
+    DirectorySync sync = sync(100);
+
+    when(sources.list()).thenReturn(List.of(read));
+    assertThat(sync.unreadSince(since)).isFalse();
+
+    when(sources.list()).thenReturn(List.of(read, row("new.example", true, null, null)));
+    assertThat(sync.unreadSince(since)).isTrue();
+
+    when(sources.list())
+        .thenReturn(List.of(read, row("cut.example", true, since.minusSeconds(1), null)));
+    assertThat(sync.unreadSince(since)).isTrue();
+
+    when(sources.list()).thenReturn(List.of(read, row("off.example", false, null, null)));
+    assertThat(sync.unreadSince(since)).isFalse();
+
+    when(sources.list())
+        .thenReturn(List.of(read, row("waits.example", true, null, NOW.plusSeconds(1))));
+    assertThat(sync.unreadSince(since)).isFalse();
+
+    when(sources.list()).thenReturn(List.of(read, row("waited.example", true, null, NOW)));
+    assertThat(sync.unreadSince(since)).isTrue();
+  }
 }

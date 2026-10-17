@@ -124,13 +124,31 @@ public class DirectorySync {
     for (FederationDirectorySourceEntity source : sources.list()) {
       if (source.isEnabled()
           && (source.getRetryAfter() == null || !started.isBefore(source.getRetryAfter()))) {
-        outcomes.add(sync(source.getHost()));
+        try {
+          outcomes.add(sync(source.getHost()));
+        } catch (RuntimeException failed) {
+          log.warn(
+              "federation directory host={} failed reason={}", source.getHost(), failed.toString());
+        }
       }
     }
     int forgotten = actors.forgetUnlisted(clock.instant().minus(props.consent()));
     meters.counter("federation.directory", "outcome", "forgotten").increment(forgotten);
     log.info("federation directory run sources={} forgotten={}", outcomes.size(), forgotten);
     return outcomes;
+  }
+
+  // Whether an enabled source not waiting out a failure has gone unread since the given time:
+  // never read, or its last run was cut short.
+  public boolean unreadSince(Instant since) {
+    Instant now = clock.instant();
+    return sources.list().stream()
+        .anyMatch(
+            source ->
+                source.isEnabled()
+                    && (source.getRetryAfter() == null || !now.isBefore(source.getRetryAfter()))
+                    && (source.getLastSyncedAt() == null
+                        || source.getLastSyncedAt().isBefore(since)));
   }
 
   public Outcome sync(String host) {
