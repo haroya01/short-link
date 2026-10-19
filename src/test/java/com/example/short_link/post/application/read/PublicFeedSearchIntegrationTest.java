@@ -357,6 +357,16 @@ class PublicFeedSearchIntegrationTest {
   }
 
   @Test
+  void aLatinWordFindsItselfButNotALongerWordThatStartsWithIt() {
+    long a = author("wordfinder");
+    publish(a, "java-ko", "Java로 서버 만들기", "백엔드", List.of("server"));
+    publish(a, "javascript", "JavaScript 입문", "프런트엔드", List.of("web"));
+
+    assertThat(relevanceSlugs("java")).containsExactly("java-ko");
+    assertThat(relevanceSlugs("javascript")).containsExactly("javascript");
+  }
+
+  @Test
   void everyWordOfAQueryMustMatch() {
     long a = author("kmeans");
     publish(a, "kmeans", "K-means 가속기 설계", "RISC-V", List.of("riscv"));

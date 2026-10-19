@@ -101,4 +101,16 @@ class PostRepositoryAdapterBooleanMatchTest {
     assertThat(PostRepositoryAdapter.titleLikeFallback("%")).isEqualTo("%!%%");
     assertThat(PostRepositoryAdapter.titleLikeFallback("_")).isEqualTo("%!_%");
   }
+
+  @Test
+  void latinEdgedTermsMustStandAsWordsAndKoreanOnesNeedNot() {
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("java"))
+        .isEqualTo("^(?=[\\s\\S]*(^|[^a-z0-9])java([^a-z0-9]|$))");
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("Java 성능"))
+        .isEqualTo("^(?=[\\s\\S]*(^|[^a-z0-9])java([^a-z0-9]|$))");
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("node.js"))
+        .isEqualTo("^(?=[\\s\\S]*(^|[^a-z0-9])node\\.js([^a-z0-9]|$))");
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("성능 튜닝")).isNull();
+    assertThat(PostRepositoryAdapter.matchWordBoundaries("AI")).isNull();
+  }
 }

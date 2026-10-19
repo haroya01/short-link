@@ -461,7 +461,7 @@ class NoteQueryServiceTest {
     org.mockito.Mockito.verifyNoInteractions(notes);
 
     NoteEntity hit = note(4L, null);
-    when(notes.search("헥사고날", null, 7L, 0, 21)).thenReturn(List.of(hit));
+    when(notes.search("+(헥사고날)", null, 7L, 0, 21)).thenReturn(List.of(hit));
     when(views.ofFeed(List.of(hit), 7L)).thenReturn(List.of(view(4L, null, 0L)));
     assertThat(service.search(" 헥사고날 ", 0, 20, 7L).items())
         .extracting(NoteView::id)

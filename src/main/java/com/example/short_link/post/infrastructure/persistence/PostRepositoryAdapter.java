@@ -231,6 +231,7 @@ class PostRepositoryAdapter implements PostRepository {
       Long viewerId, String query, String lang, int page, int size) {
     return jpa.searchPublishedByRelevance(
         booleanMatch(query),
+        matchWordBoundaries(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
@@ -245,6 +246,7 @@ class PostRepositoryAdapter implements PostRepository {
       Long viewerId, String query, String lang, int page, int size) {
     return jpa.searchPublishedRecent(
         booleanMatch(query),
+        matchWordBoundaries(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
@@ -260,6 +262,7 @@ class PostRepositoryAdapter implements PostRepository {
     Instant now = Instant.now();
     return jpa.searchPublishedTrendingSince(
         booleanMatch(query),
+        matchWordBoundaries(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
@@ -274,6 +277,7 @@ class PostRepositoryAdapter implements PostRepository {
   public long countSearchPublished(Long viewerId, String query, String lang) {
     return jpa.countSearchPublished(
         booleanMatch(query),
+        matchWordBoundaries(query),
         likePattern(query),
         titleLikeFallback(query),
         titleWordFallback(query),
@@ -307,6 +311,27 @@ class PostRepositoryAdapter implements PostRepository {
 
   private static String scrub(String query) {
     return query.replaceAll("[+\\-><()~*\"@#]", " ").replaceAll("\\s+", " ").trim();
+  }
+
+  static String matchWordBoundaries(String query) {
+    StringBuilder pattern = new StringBuilder();
+    for (String term : scrub(query).split(" ")) {
+      if (!indexed(term)) {
+        continue;
+      }
+      String word = term.toLowerCase(Locale.ROOT);
+      boolean head = isAsciiAlnum(word.charAt(0));
+      boolean tail = isAsciiAlnum(word.charAt(word.length() - 1));
+      if (head || tail) {
+        pattern
+            .append("(?=[\\s\\S]*")
+            .append(head ? "(^|[^a-z0-9])" : "")
+            .append(regexLiteral(word))
+            .append(tail ? "([^a-z0-9]|$)" : "")
+            .append(')');
+      }
+    }
+    return pattern.isEmpty() ? null : "^" + pattern;
   }
 
   // 두 글자 영문·숫자(AI·Go)는 ngram이 email·google 속까지 맞추므로 색인 대신 낱말 폴백에 둔다.

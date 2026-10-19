@@ -263,7 +263,9 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   List<Object[]> findPopularTags(@Param("minBody") int minBody, Pageable pageable);
 
   // 검색 평문이 없는 글도 작성자 핸들로 찾을 수 있도록 LEFT JOIN한다.
-  // :match는 연산자를 제거한 BOOLEAN 검색어, :like는 이스케이프한 핸들 검색어다.
+  // :match는 항마다 +( )로 모두 요구하는 BOOLEAN 검색어, :like는 이스케이프한 핸들 검색어다.
+  // :matchWord는 영문·숫자로 시작하거나 끝나는 항이 낱말 속(javascript의 java)에 걸리지 않게 하는 경계
+  // 정규식이다(ngram은 낱말 경계를 모른다).
   // :titleLike는 ngram 색인에 남는 항이 없는 질의(두 글자 미만·스톱워드)의 제목·요약 폴백에만 사용한다.
   // :titleWord는 그 폴백이 영문·숫자 낱말 속(email의 ai)에 걸리지 않게 하는 경계 정규식이다.
   // ngram에서 접두·구문 연산자는 한글 다중 바이그램을 깨뜨리고 NATURAL MODE는 일부 바이그램만
@@ -272,7 +274,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       "WHERE "
           + PostAccessSql.LISTED
           + " AND ("
-          + "MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
+          + "(MATCH(s.search_text) AGAINST(:match IN BOOLEAN MODE) "
+          + "AND (:matchWord IS NULL OR REGEXP_LIKE(LOWER(s.search_text), :matchWord))) "
           + "OR p.user_id IN (SELECT u.id FROM users u "
           + "WHERE LOWER(u.username) LIKE :like ESCAPE '!' AND u.deleted_at IS NULL) "
           + "OR (:titleLike IS NOT NULL AND (LOWER(p.title) LIKE :titleLike ESCAPE '!' "
@@ -292,6 +295,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
               + "ORDER BY p.published_at DESC")
   List<PostEntity> searchPublishedRecent(
       @Param("match") String match,
+      @Param("matchWord") String matchWord,
       @Param("like") String like,
       @Param("titleLike") String titleLike,
       @Param("titleWord") String titleWord,
@@ -311,6 +315,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
               + "p.published_at DESC")
   List<PostEntity> searchPublishedByRelevance(
       @Param("match") String match,
+      @Param("matchWord") String matchWord,
       @Param("like") String like,
       @Param("titleLike") String titleLike,
       @Param("titleWord") String titleWord,
@@ -329,6 +334,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
               + TRENDING_ORDER)
   List<PostEntity> searchPublishedTrendingSince(
       @Param("match") String match,
+      @Param("matchWord") String matchWord,
       @Param("like") String like,
       @Param("titleLike") String titleLike,
       @Param("titleWord") String titleWord,
@@ -346,6 +352,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
               + SEARCH_PREDICATE)
   long countSearchPublished(
       @Param("match") String match,
+      @Param("matchWord") String matchWord,
       @Param("like") String like,
       @Param("titleLike") String titleLike,
       @Param("titleWord") String titleWord,

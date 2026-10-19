@@ -52,13 +52,4 @@ class PostSearchWordFallbackIntegrationTest {
     assertThat(titlesFor("AI"))
         .containsExactlyInAnyOrder("AI가 바꾼 swf648 코드 리뷰", "Notes on AI swf648");
   }
-
-  @Test
-  void stopwordDeadTermMatchesTheWordButNotALongerWord() {
-    Long a = author("swf648b");
-    publish(a, "swf648-java-ko", "Java로 서버 swf648 만들기");
-    publish(a, "swf648-javascript", "JavaScript swf648 입문");
-
-    assertThat(titlesFor("java")).containsExactly("Java로 서버 swf648 만들기");
-  }
 }
