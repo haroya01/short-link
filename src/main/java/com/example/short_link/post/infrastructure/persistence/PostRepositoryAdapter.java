@@ -1,5 +1,6 @@
 package com.example.short_link.post.infrastructure.persistence;
 
+import com.example.short_link.common.discovery.TrendingSpread;
 import com.example.short_link.common.user.HeardSql;
 import com.example.short_link.post.domain.AuthorPostStats;
 import com.example.short_link.post.domain.DiscoveryQuality;
@@ -27,6 +28,7 @@ class PostRepositoryAdapter implements PostRepository {
   private static final Duration TRENDING_WINDOW = Duration.ofDays(7);
 
   private final JpaPostRepository jpa;
+  private final TrendingSpread spread;
 
   @Override
   public Optional<PostEntity> findById(Long id) {
@@ -174,6 +176,7 @@ class PostRepositoryAdapter implements PostRepository {
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
         HeardSql.viewer(viewerId),
         now,
+        spread.perAuthor(),
         PageRequest.of(page, size));
   }
 
@@ -211,6 +214,7 @@ class PostRepositoryAdapter implements PostRepository {
         DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
         HeardSql.viewer(viewerId),
         now,
+        spread.perAuthor(),
         PageRequest.of(page, size));
   }
 

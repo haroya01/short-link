@@ -9,6 +9,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.short_link.common.discovery.TrendingSpread;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.FederationProperties;
 import com.example.short_link.federation.application.FederationUrls;
@@ -67,6 +68,7 @@ class TrendingPostsTest {
     trending =
         new TrendingPosts(
             PROPS,
+            new TrendingSpread(2),
             http,
             signingKeys,
             serverBlocks,
@@ -149,6 +151,24 @@ class TrendingPostsTest {
     order.verify(http).getJson(trendsOf("c.example"), instance, PATIENCE);
     verify(signingKeys, times(1)).forInstance();
     verify(standings, never()).hidden(any(), any(), any(), any());
+  }
+
+  @Test
+  void anAccountPlacesTwoPostsPerRoundSoAThirdWaitsForTheOthers() {
+    String mina = "https://x.example/users/mina/statuses/";
+    answers("a.example", status(mina + 1, 0, 0), status(mina + 2, 0, 0), status(mina + 3, 0, 0));
+    answers(
+        "b.example",
+        status(mina + 4, 0, 0),
+        status(mina + 5, 0, 0),
+        status(post("z.example", 6), 0, 0));
+
+    trending.refresh();
+
+    assertThat(uris(trending.list(null, 20)))
+        .containsExactly(mina + 1, mina + 4, post("z.example", 6), mina + 2, mina + 5, mina + 3);
+    assertThat(uris(trending.list(null, 3)))
+        .containsExactly(mina + 1, mina + 4, post("z.example", 6));
   }
 
   @Test

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
+import com.example.short_link.common.discovery.TrendingSpread;
 import com.example.short_link.post.domain.DiscoveryQuality;
 import java.time.Instant;
 import java.util.List;
@@ -16,7 +17,7 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void followingListAndCountTranslateOnlyEmptyOperands() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
+    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, new TrendingSpread(2));
     adapter.findPublishedByAuthorsSeriesOrTags(9L, List.of(), List.of(3L), List.of(), 0, 20);
     adapter.countPublishedByAuthorsSeriesOrTags(9L, List.of(), List.of(3L), List.of());
     verify(jpa)
@@ -35,7 +36,7 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void unreadFeedAcceptsAnEmptyExclusionList() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
+    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, new TrendingSpread(2));
     adapter.findForYouCandidates(7L, List.of("java"), List.of(), 0, 20);
     adapter.countForYouCandidates(7L, List.of("java"), List.of());
     verify(jpa)
@@ -58,7 +59,7 @@ class PostRepositoryAdapterFeedParametersTest {
   @Test
   void anAnonymousReaderIsBoundAsNobodyAndASignedInOneAsThemselves() {
     JpaPostRepository jpa = mock(JpaPostRepository.class);
-    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa);
+    PostRepositoryAdapter adapter = new PostRepositoryAdapter(jpa, new TrendingSpread(2));
     adapter.findPublishedRecent(null, null, 0, 20);
     adapter.findPublishedRecent(7L, null, 0, 20);
     verify(jpa)

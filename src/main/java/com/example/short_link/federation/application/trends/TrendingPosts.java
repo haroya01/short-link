@@ -1,5 +1,6 @@
 package com.example.short_link.federation.application.trends;
 
+import com.example.short_link.common.discovery.TrendingSpread;
 import com.example.short_link.federation.application.FederationHttp;
 import com.example.short_link.federation.application.signature.Signer;
 import com.example.short_link.federation.application.signature.SigningKeys;
@@ -38,6 +39,7 @@ public class TrendingPosts {
   private static final int MAX_FAILURES = 4;
 
   private final TrendsProperties props;
+  private final TrendingSpread spread;
   private final FederationHttp http;
   private final SigningKeys signingKeys;
   private final FederationDomainBlockRepository serverBlocks;
@@ -54,17 +56,20 @@ public class TrendingPosts {
   @Autowired
   public TrendingPosts(
       TrendsProperties props,
+      TrendingSpread spread,
       FederationHttp http,
       SigningKeys signingKeys,
       FederationDomainBlockRepository serverBlocks,
       RemoteAccountStandingReader standings,
       TrendingStatusReader reader,
       JsonMapper json) {
-    this(props, http, signingKeys, serverBlocks, standings, reader, json, Clock.systemUTC());
+    this(
+        props, spread, http, signingKeys, serverBlocks, standings, reader, json, Clock.systemUTC());
   }
 
   TrendingPosts(
       TrendsProperties props,
+      TrendingSpread spread,
       FederationHttp http,
       SigningKeys signingKeys,
       FederationDomainBlockRepository serverBlocks,
@@ -73,6 +78,7 @@ public class TrendingPosts {
       JsonMapper json,
       Clock clock) {
     this.props = props;
+    this.spread = spread;
     this.http = http;
     this.signingKeys = signingKeys;
     this.serverBlocks = serverBlocks;
@@ -93,14 +99,30 @@ public class TrendingPosts {
                 all.stream().map(TrendingStatusReader.Read::actorUri).distinct().toList(),
                 all.stream().map(TrendingStatusReader.Read::domain).distinct().toList(),
                 clock.instant());
-    return all.stream()
-        .filter(
-            read ->
-                !hidden.actorUris().contains(read.actorUri())
-                    && !hidden.domains().contains(read.domain()))
+    return inRounds(
+            all.stream()
+                .filter(
+                    read ->
+                        !hidden.actorUris().contains(read.actorUri())
+                            && !hidden.domains().contains(read.domain()))
+                .toList())
+        .stream()
         .limit(size)
         .map(read -> read.note().seenBy(viewerId != null))
         .toList();
+  }
+
+  private List<TrendingStatusReader.Read> inRounds(List<TrendingStatusReader.Read> reads) {
+    Map<String, Integer> placed = new HashMap<>();
+    List<List<TrendingStatusReader.Read>> rounds = new ArrayList<>();
+    for (TrendingStatusReader.Read read : reads) {
+      int round = (placed.merge(read.actorUri(), 1, Integer::sum) - 1) / spread.perAuthor();
+      while (rounds.size() <= round) {
+        rounds.add(new ArrayList<>());
+      }
+      rounds.get(round).add(read);
+    }
+    return rounds.stream().flatMap(List::stream).toList();
   }
 
   public void refresh() {
