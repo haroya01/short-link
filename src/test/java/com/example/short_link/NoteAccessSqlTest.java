@@ -69,8 +69,10 @@ class NoteAccessSqlTest {
     assertThat(NoteAccessSql.shareable("s")).isEqualTo("s.visibility IN ('PUBLIC', 'UNLISTED')");
     assertThat(NoteAccessSql.direct("d")).isEqualTo("d.visibility IN ('DIRECT')");
     assertThat(NoteAccessSql.readable("o"))
-        .startsWith("(o.visibility IN ('PUBLIC', 'UNLISTED') OR o.user_id = :viewer")
-        .contains("o.visibility IN ('PRIVATE')")
+        .startsWith(
+            "(o.visibility IN ('PUBLIC', 'UNLISTED')"
+                + " OR (o.visibility IN ('PRIVATE', 'DIRECT') AND o.user_id = :viewer)")
+        .contains("(o.visibility IN ('PRIVATE') AND (EXISTS (SELECT 1 FROM user_follow")
         .doesNotContain(" n.");
   }
 

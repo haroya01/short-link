@@ -1,5 +1,7 @@
 package com.example.short_link.common.note;
 
+import com.example.short_link.common.note.NoteVisibility.Reader;
+import java.util.List;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -22,22 +24,40 @@ public final class NoteAccessSql {
   }
 
   public static String readable(String alias) {
-    return "("
-        + shareable(alias)
-        + " OR "
-        + alias
-        + ".user_id = :viewer OR "
-        + named(alias)
-        + " OR ("
-        + followersOnly(alias)
-        + " AND (EXISTS (SELECT 1 FROM user_follow vf"
-        + " WHERE vf.follower_id = :viewer AND vf.following_id = "
-        + alias
-        + ".user_id)"
-        + " OR EXISTS (SELECT 1 FROM federation_following vff"
-        + " WHERE vff.user_id = :viewer AND vff.remote_actor_id = "
-        + alias
-        + ".remote_actor_id AND vff.accepted_at IS NOT NULL))))";
+    StringBuilder readable = new StringBuilder("(").append(shareable(alias));
+    for (Reader reader : Reader.values()) {
+      List<NoteVisibility> beyondAnyone =
+          NoteVisibility.where(
+              visibility -> visibility.readBy(reader) && !visibility.readBy(Reader.ANYONE));
+      if (!beyondAnyone.isEmpty()) {
+        readable
+            .append(" OR (")
+            .append(in(alias, beyondAnyone::contains))
+            .append(" AND ")
+            .append(holds(reader, alias))
+            .append(")");
+      }
+    }
+    return readable.append(")").toString();
+  }
+
+  private static String holds(Reader reader, String alias) {
+    return switch (reader) {
+      case ANYONE -> "TRUE";
+      case AUTHOR -> alias + ".user_id = :viewer";
+      case NAMED ->
+          "EXISTS (SELECT 1 FROM note_recipient vr WHERE vr.note_id = "
+              + alias
+              + ".id AND vr.user_id = :viewer)";
+      case FOLLOWER ->
+          "(EXISTS (SELECT 1 FROM user_follow vf WHERE vf.follower_id = :viewer"
+              + " AND vf.following_id = "
+              + alias
+              + ".user_id) OR EXISTS (SELECT 1 FROM federation_following vff"
+              + " WHERE vff.user_id = :viewer AND vff.remote_actor_id = "
+              + alias
+              + ".remote_actor_id AND vff.accepted_at IS NOT NULL))";
+    };
   }
 
   public static String onProfile(String alias) {
@@ -47,16 +67,6 @@ public final class NoteAccessSql {
         + ".user_id = :viewer OR NOT ("
         + direct(alias)
         + "))";
-  }
-
-  private static String named(String alias) {
-    return "EXISTS (SELECT 1 FROM note_recipient vr WHERE vr.note_id = "
-        + alias
-        + ".id AND vr.user_id = :viewer)";
-  }
-
-  private static String followersOnly(String alias) {
-    return in(alias, visibility -> visibility.followersRead() && !visibility.shareable());
   }
 
   private static String in(String alias, Predicate<NoteVisibility> question) {

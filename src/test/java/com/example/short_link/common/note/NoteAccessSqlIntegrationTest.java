@@ -93,7 +93,15 @@ class NoteAccessSqlIntegrationTest {
   }
 
   private boolean readable(Reader reader, Written note) {
-    return note.visibility().readableBy(owns(reader, note), reader.named(), reader::follows);
+    return note.visibility()
+        .readableBy(
+            relation ->
+                switch (relation) {
+                  case ANYONE -> true;
+                  case AUTHOR -> owns(reader, note);
+                  case NAMED -> reader.named();
+                  case FOLLOWER -> reader.follows();
+                });
   }
 
   private boolean owns(Reader reader, Written note) {

@@ -66,14 +66,27 @@ class NoteReadersMatrixE2ETest {
     AUTHOR
   }
 
+  enum Relation {
+    ANYONE,
+    AUTHOR,
+    NAMED,
+    FOLLOWER
+  }
+
   enum Vis {
-    PUBLIC,
-    UNLISTED,
-    PRIVATE,
-    DIRECT;
+    PUBLIC(Relation.ANYONE),
+    UNLISTED(Relation.ANYONE),
+    PRIVATE(Relation.AUTHOR, Relation.NAMED, Relation.FOLLOWER),
+    DIRECT(Relation.AUTHOR, Relation.NAMED);
+
+    final Set<Relation> readers;
+
+    Vis(Relation... readers) {
+      this.readers = Set.of(readers);
+    }
 
     boolean shareable() {
-      return this == PUBLIC || this == UNLISTED;
+      return readers.contains(Relation.ANYONE);
     }
 
     String api() {
@@ -611,21 +624,21 @@ class NoteReadersMatrixE2ETest {
   }
 
   private Predicate<Note> readableBy(Viewer viewer) {
-    return note -> {
-      if (note.vis().shareable()) {
-        return true;
-      }
-      if (note.writer() == Writer.OTHER) {
-        return false;
-      }
-      if (viewer == Viewer.MENTIONED) {
-        return true;
-      }
-      if (viewer == Viewer.AUTHOR) {
-        return note.writer() == Writer.MEMBER;
-      }
-      return note.vis() == Vis.PRIVATE && (viewer == Viewer.FOLLOWER || viewer == Viewer.MUTER);
-    };
+    return note -> note.vis().readers.stream().anyMatch(relations(viewer, note)::contains);
+  }
+
+  private static Set<Relation> relations(Viewer viewer, Note note) {
+    Set<Relation> held = new java.util.HashSet<>(Set.of(Relation.ANYONE));
+    if (viewer == Viewer.AUTHOR && note.writer() == Writer.MEMBER) {
+      held.add(Relation.AUTHOR);
+    }
+    if (viewer == Viewer.MENTIONED && note.writer() != Writer.OTHER) {
+      held.add(Relation.NAMED);
+    }
+    if ((viewer == Viewer.FOLLOWER || viewer == Viewer.MUTER) && note.writer() != Writer.OTHER) {
+      held.add(Relation.FOLLOWER);
+    }
+    return held;
   }
 
   private static Predicate<Note> shareable() {

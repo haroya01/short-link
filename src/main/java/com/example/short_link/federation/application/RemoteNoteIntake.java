@@ -133,6 +133,13 @@ public class RemoteNoteIntake {
             && Mentions.remote(note.body())
                 .contains((actor.getUsername() + "@" + actor.getDomain()).toLowerCase(Locale.ROOT));
     return note.visibility()
-        .readableBy(false, named, () -> followers.accepts(note.authorId(), actor.getId()));
+        .readableBy(
+            reader ->
+                switch (reader) {
+                  case ANYONE -> true;
+                  case AUTHOR -> false;
+                  case NAMED -> named;
+                  case FOLLOWER -> followers.accepts(note.authorId(), actor.getId());
+                });
   }
 }

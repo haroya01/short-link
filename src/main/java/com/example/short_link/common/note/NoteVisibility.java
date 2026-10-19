@@ -4,13 +4,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
-import java.util.function.BooleanSupplier;
 import java.util.function.Predicate;
 
 // Mastodon's four: public shows everywhere; unlisted is public but stays out of the shared feeds
 // (everyone, trending, tags); private is for followers and mentioned members; direct is for
 // mentioned members only and never leaves kurl. Every decision about who sees a note is one of the
-// questions below, and NoteAccessSql asks the same ones in SQL: a new boundary answers each here.
+// questions below, and NoteAccessSql asks the same ones in SQL: a new boundary answers each here,
+// and a new kind of reader is a new Reader that NoteAccessSql gives its condition.
 public enum NoteVisibility {
   PUBLIC,
   UNLISTED,
@@ -26,18 +26,47 @@ public enum NoteVisibility {
     };
   }
 
-  public boolean shareable() {
-    return switch (this) {
-      case PUBLIC, UNLISTED -> true;
-      case PRIVATE, DIRECT -> false;
+  public enum Reader {
+    ANYONE,
+    AUTHOR,
+    NAMED,
+    FOLLOWER
+  }
+
+  public boolean readBy(Reader reader) {
+    return switch (reader) {
+      case ANYONE ->
+          switch (this) {
+            case PUBLIC, UNLISTED -> true;
+            case PRIVATE, DIRECT -> false;
+          };
+      case AUTHOR, NAMED ->
+          switch (this) {
+            case PUBLIC, UNLISTED, PRIVATE, DIRECT -> true;
+          };
+      case FOLLOWER ->
+          switch (this) {
+            case PUBLIC, UNLISTED, PRIVATE -> true;
+            case DIRECT -> false;
+          };
     };
   }
 
+  public boolean readableBy(Predicate<Reader> holds) {
+    for (Reader reader : Reader.values()) {
+      if (readBy(reader) && holds.test(reader)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  public boolean shareable() {
+    return readBy(Reader.ANYONE);
+  }
+
   public boolean followersRead() {
-    return switch (this) {
-      case PUBLIC, UNLISTED, PRIVATE -> true;
-      case DIRECT -> false;
-    };
+    return readBy(Reader.FOLLOWER);
   }
 
   public boolean direct() {
@@ -49,10 +78,6 @@ public enum NoteVisibility {
 
   public boolean restricted() {
     return !shareable();
-  }
-
-  public boolean readableBy(boolean author, boolean named, BooleanSupplier follower) {
-    return shareable() || author || named || (followersRead() && follower.getAsBoolean());
   }
 
   public String apiName() {
