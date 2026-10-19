@@ -1,6 +1,7 @@
 package com.example.short_link.search.infrastructure.persistence;
 
 import com.example.short_link.common.federation.ServerBlockSql;
+import com.example.short_link.common.note.NoteAccessSql;
 import com.example.short_link.common.post.PostAccessSql;
 import com.example.short_link.search.domain.RelatedTag;
 import com.example.short_link.search.domain.repository.RelatedTagReader;
@@ -31,7 +32,8 @@ class RelatedTagReaderAdapter implements RelatedTagReader {
                     + " UNION ALL "
                     + "SELECT g.tag, 2, m.author FROM ("
                     + "SELECT n.id, COALESCE(n.user_id, -n.remote_actor_id) AS author FROM note n"
-                    + " WHERE n.visibility = 'PUBLIC'"
+                    + " WHERE "
+                    + NoteAccessSql.listed("n")
                     + " AND MATCH(n.body) AGAINST(:match IN BOOLEAN MODE)"
                     + " AND (n.remote_actor_id IS NULL OR EXISTS ("
                     + "SELECT 1 FROM federation_remote_actor ia WHERE ia.id = n.remote_actor_id"
