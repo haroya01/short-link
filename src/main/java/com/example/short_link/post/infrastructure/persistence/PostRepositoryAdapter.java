@@ -166,6 +166,45 @@ class PostRepositoryAdapter implements PostRepository {
   }
 
   @Override
+  public List<PostEntity> findPublishedRecentAt(Long viewerId, int offset, int limit) {
+    return jpa.findPublishedRecent(
+        null,
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        HeardSql.viewer(viewerId),
+        Instant.now(),
+        new OffsetLimit(offset, limit));
+  }
+
+  @Override
+  public List<PostEntity> findPublishedTrendingAt(Long viewerId, int offset, int limit) {
+    Instant now = Instant.now();
+    return jpa.findPublishedTrendingSince(
+        now.minus(TRENDING_WINDOW),
+        null,
+        DiscoveryQuality.MIN_BODY_TEXT_LENGTH,
+        HeardSql.viewer(viewerId),
+        now,
+        new OffsetLimit(offset, limit));
+  }
+
+  @Override
+  public List<PostEntity> findPublishedByAuthorsSeriesOrTagsAt(
+      Long viewerId,
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags,
+      int offset,
+      int limit) {
+    return jpa.findPublishedByAuthorsSeriesOrTags(
+        idsForIn(authorIds),
+        idsForIn(seriesIds),
+        tagsForIn(tags),
+        HeardSql.viewer(viewerId),
+        Instant.now(),
+        new OffsetLimit(offset, limit));
+  }
+
+  @Override
   public List<PostEntity> findPublishedTrending(Long viewerId, String lang, int page, int size) {
     Instant now = Instant.now();
     return jpa.findPublishedTrendingSince(

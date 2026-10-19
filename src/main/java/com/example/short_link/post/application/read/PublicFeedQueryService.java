@@ -155,6 +155,50 @@ public class PublicFeedQueryService {
         seriesNotes(refs.stream().filter(r -> r.type() == SeriesItemType.NOTE).toList()));
   }
 
+  public PostSlice recentAt(Long viewerId, int offset, int limit) {
+    List<PostEntity> rows = postRepository.findPublishedRecentAt(viewerId, offset, limit);
+    return slice(rows, feedItemAssembler.assemble(rows), offset, limit);
+  }
+
+  public PostSlice trendingAt(Long viewerId, int offset, int limit) {
+    List<PostEntity> rows = postRepository.findPublishedTrendingAt(viewerId, offset, limit);
+    return slice(rows, feedItemAssembler.assemble(rows), offset, limit);
+  }
+
+  public PostSlice followingAt(Long userId, int offset, int limit) {
+    List<Long> followingIds = followRepository.findFollowingIds(userId);
+    List<Long> subscribedSeriesIds = seriesSubscriptionRepository.findSubscribedSeriesIds(userId);
+    List<String> followedTags =
+        tagPrefQueryService.get(userId).followed().stream()
+            .map(t -> t.toLowerCase(Locale.ROOT))
+            .toList();
+    if (followingIds.isEmpty() && subscribedSeriesIds.isEmpty() && followedTags.isEmpty()) {
+      return new PostSlice(List.of(), true);
+    }
+    Following following =
+        new Following(
+            Set.copyOf(followingIds), Set.copyOf(subscribedSeriesIds), Set.copyOf(followedTags));
+    List<PostEntity> rows =
+        postRepository.findPublishedByAuthorsSeriesOrTagsAt(
+            userId, followingIds, subscribedSeriesIds, followedTags, offset, limit);
+    return slice(rows, annotate(rows, following), offset, limit);
+  }
+
+  private static PostSlice slice(
+      List<PostEntity> rows, List<PublicFeedItem> shown, int offset, int limit) {
+    Map<Long, PublicFeedItem> byId =
+        shown.stream()
+            .collect(Collectors.toMap(PublicFeedItem::id, Function.identity(), (a, b) -> a));
+    List<PostSlice.At> items = new ArrayList<>(rows.size());
+    for (int i = 0; i < rows.size(); i++) {
+      PublicFeedItem item = byId.get(rows.get(i).getId());
+      if (item != null) {
+        items.add(new PostSlice.At(offset + i, item));
+      }
+    }
+    return new PostSlice(items, rows.size() < limit);
+  }
+
   private record Following(Set<Long> authors, Set<Long> series, Set<String> tags) {}
 
   // Key reasons by post ID: the assembler can remove deleted-author posts and shift positions.

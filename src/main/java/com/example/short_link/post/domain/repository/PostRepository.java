@@ -71,6 +71,18 @@ public interface PostRepository {
 
   List<PostEntity> findPublishedTrending(Long viewerId, String lang, int page, int size);
 
+  List<PostEntity> findPublishedRecentAt(Long viewerId, int offset, int limit);
+
+  List<PostEntity> findPublishedTrendingAt(Long viewerId, int offset, int limit);
+
+  List<PostEntity> findPublishedByAuthorsSeriesOrTagsAt(
+      Long viewerId,
+      Collection<Long> authorIds,
+      Collection<Long> seriesIds,
+      Collection<String> tags,
+      int offset,
+      int limit);
+
   long countPublished(Long viewerId, String lang);
 
   long countPublishedByUserId(Long userId);

@@ -1008,6 +1008,71 @@ class NoteHttpQueryContractTest extends OperationalHttpJourneySupport {
     assertThat(count("note_filter", "user_id = ?", owner.id())).isZero();
   }
 
+  private long postAt(Actor author, String title, int minutesAgo) {
+    String slug = "home-" + UUID.randomUUID().toString().substring(0, 8);
+    jdbc.update(
+        "INSERT INTO posts (user_id, slug, title, created_at, updated_at, status, audience,"
+            + " published_at, body_text_length, language_tag)"
+            + " VALUES (?, ?, ?, NOW(6), NOW(6), 'PUBLISHED', 'PUBLIC',"
+            + " NOW(6) - INTERVAL ? MINUTE, 500, 'ko')",
+        author.id(),
+        slug,
+        title,
+        minutesAgo);
+    return jdbc.queryForObject("SELECT id FROM posts WHERE slug = ?", Long.class, slug);
+  }
+
+  private static List<String> homeKeys(JsonNode page) {
+    List<String> keys = new ArrayList<>();
+    for (JsonNode item : page.path("items")) {
+      String kind = item.path("kind").asText();
+      keys.add(kind + ":" + item.path(kind).path("id").asLong());
+    }
+    return keys;
+  }
+
+  @Test
+  void theHomeFeedRunsNotesAndPostsTogetherAndPagesAcrossBoth() throws Exception {
+    Actor reader = actor("home-reader", false);
+    Actor writer = actor("home-writer", false);
+    Actor stranger = actor("home-stranger", false);
+    jdbc.update(
+        "INSERT INTO user_follow (follower_id, following_id, created_at) VALUES (?, ?, NOW(6))",
+        reader.id(),
+        writer.id());
+    long newest = noteAt(writer, "홈 노트 하나", 1);
+    long post = postAt(writer, "홈에 실린 글", 2);
+    long older = noteAt(stranger, "모르는 사람의 노트", 3);
+
+    var latest =
+        step("home-latest", "GET", "/api/v1/public/home?tab=latest&limit=2", null, null, 200);
+    assertThat(homeKeys(latest)).containsSubsequence("note:" + newest, "post:" + post);
+    var trending =
+        step("home-trending", "GET", "/api/v1/public/home?tab=trending&limit=2", null, null, 200);
+    assertThat(homeKeys(trending).getFirst()).startsWith("note:");
+
+    var following =
+        step(
+            "home-following",
+            "GET",
+            "/api/v1/public/home?tab=following&limit=1",
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(following)).containsExactly("note:" + newest);
+    String next = following.path("next").asText();
+    var onward =
+        step(
+            "home-following-next",
+            "GET",
+            "/api/v1/public/home?tab=following&limit=1&cursor=" + next,
+            reader,
+            null,
+            200);
+    assertThat(homeKeys(onward)).containsExactly("post:" + post);
+    assertThat(homeKeys(onward)).doesNotContain("note:" + older);
+  }
+
   @Test
   void anyoneFindsPublicNotesByWordsInThem() throws Exception {
     Actor writer = actor("search-writer", false);

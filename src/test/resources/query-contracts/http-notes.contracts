@@ -285,3 +285,10 @@
 # first note, then the usual delete; after commit the Delete goes out as the replier's actor (made
 # on first use here), to the server of what it answered and their followers.
 @junit | note-reply-removed-by-thread-writer | 9 | 1 | 0 | 4 | 14
+# The home feed: a page of notes and a page of posts cut from the same lists their own feeds use,
+# each built as those feeds build them, merged in memory; following also reads whom the reader
+# follows, their series and tags.
+@junit | home-latest | 9 | 0 | 0 | 0 | 9
+@junit | home-trending | 9 | 0 | 0 | 0 | 9
+@junit | home-following | 12 | 0 | 0 | 0 | 12
+@junit | home-following-next | 12 | 0 | 0 | 0 | 12
