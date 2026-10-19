@@ -108,15 +108,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
   String TRENDING_ORDER =
       "GROUP BY p.id ORDER BY COUNT(DISTINCT e.visitor_hash) DESC, p.published_at DESC";
 
-  String SPREAD_RANKED =
-      "SELECT p.* FROM posts p JOIN (SELECT p.id, COUNT(DISTINCT e.visitor_hash) AS views, "
-          + "ROW_NUMBER() OVER (PARTITION BY p.user_id ORDER BY COUNT(DISTINCT e.visitor_hash) "
-          + "DESC, p.published_at DESC, p.id DESC) AS author_rank FROM posts p ";
-
-  String SPREAD_ORDER =
-      "GROUP BY p.id) d ON d.id = p.id ORDER BY CEIL(d.author_rank / :perAuthor), d.views DESC, "
-          + "p.published_at DESC, p.id DESC";
-
   String BROWSE_PREDICATE =
       "WHERE "
           + PostAccessSql.LISTED
@@ -133,14 +124,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   @Query(
       nativeQuery = true,
-      value = SPREAD_RANKED + RECENT_HUMAN_VIEWS + BROWSE_PREDICATE + SPREAD_ORDER)
+      value = "SELECT p.* FROM posts p " + RECENT_HUMAN_VIEWS + BROWSE_PREDICATE + TRENDING_ORDER)
   List<PostEntity> findPublishedTrendingSince(
       @Param("since") Instant since,
       @Param("lang") String lang,
       @Param("minBody") int minBody,
       @Param("viewer") long viewer,
       @Param("now") Instant now,
-      @Param("perAuthor") int perAuthor,
       Pageable pageable);
 
   @Query(
@@ -181,14 +171,14 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
   @Query(
       nativeQuery = true,
-      value = SPREAD_RANKED + TAGGED + RECENT_HUMAN_VIEWS + TAG_PREDICATE + SPREAD_ORDER)
+      value =
+          "SELECT p.* FROM posts p " + TAGGED + RECENT_HUMAN_VIEWS + TAG_PREDICATE + TRENDING_ORDER)
   List<PostEntity> findPublishedTrendingByTagSince(
       @Param("tag") String tag,
       @Param("since") Instant since,
       @Param("minBody") int minBody,
       @Param("viewer") long viewer,
       @Param("now") Instant now,
-      @Param("perAuthor") int perAuthor,
       Pageable pageable);
 
   @Query(nativeQuery = true, value = "SELECT COUNT(*) FROM posts p " + TAGGED + TAG_PREDICATE)
@@ -269,8 +259,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
       value =
           "SELECT t.tag, COUNT(p.id) FROM posts p JOIN post_tag t ON t.post_id = p.id WHERE "
               + PostAccessSql.LISTED
-              + " AND p.body_text_length >= :minBody GROUP BY t.tag"
-              + " ORDER BY COUNT(DISTINCT p.user_id) DESC, COUNT(p.id) DESC")
+              + " AND p.body_text_length >= :minBody GROUP BY t.tag ORDER BY COUNT(p.id) DESC")
   List<Object[]> findPopularTags(@Param("minBody") int minBody, Pageable pageable);
 
   // 검색 평문이 없는 글도 작성자 핸들로 찾을 수 있도록 LEFT JOIN한다.
